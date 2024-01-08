@@ -99,9 +99,14 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       engineConfig,
       printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
     );
-    const { childNodes, rootNodes, keys, provides, events, requires } = configurationDataMapToDataSourceConfiguration(
-      subgraph.configurationDataMap,
-    );
+    const {
+      childNodes,
+      events,
+      keys,
+      provides,
+      requires,
+      rootNodes,
+    } = configurationDataMapToDataSourceConfiguration(subgraph.configurationDataMap);
     const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
     let kind: DataSourceKind;
     // eslint-disable-next-line camelcase

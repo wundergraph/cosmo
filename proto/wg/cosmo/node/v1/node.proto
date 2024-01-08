@@ -137,6 +137,11 @@ message RequiredField {
   string selection_set = 3;
 }
 
+message EntityInterfaceConfiguration {
+  string interface_type_name = 1;
+  repeated string concrete_type_names = 2;
+}
+
 message FetchConfiguration {
   // You should either configure url OR a combination of baseURL and path
   // If url resolves to a non empty string, it takes precedence over baseURL and path

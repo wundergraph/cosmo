@@ -46,6 +46,7 @@ import {
   stringToNamedTypeNode,
 } from '../ast/utils';
 import {
+  undefinedEntityInterfaceImplementationsError,
   allFieldDefinitionsAreInaccessibleError,
   argumentTypeMergeFatalError,
   federationInvalidParentTypeError,
@@ -131,21 +132,21 @@ import {
 import {
   addIterableValuesToSet,
   doSetsHaveAnyOverlap,
-  EntityInterfaceDatas,
+  EntityInterfaceFederationData,
   getAllMutualEntries,
   getEntriesNotInHashSet,
-  getOrThrowError,
+  getOrThrowError, getValueOrDefault,
   hasSimplePath,
-  ImplementationErrors,
+  ImplementationErrors, UndefinedEntityInterfaceImplementations,
   InvalidFieldImplementation,
   InvalidRequiredArgument,
   kindToTypeString,
-  newEntityInterfaceDatas,
+  newEntityInterfaceFederationData,
   subtractSourceSetFromTargetSet,
-  upsertEntityInterfaceDatas,
+  upsertEntityInterfaceFederationData,
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import { ArgumentConfigurationData } from '../subgraph/field-configuration';
+import { ArgumentConfigurationData, ConfigurationData } from '../subgraph/field-configuration';
 import { BASE_SCALARS } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
 import { isNodeQuery } from '../normalization/utils';
@@ -156,7 +157,7 @@ export class FederationFactory {
   areFieldsShareable = false;
   argumentTypeNameSet = new Set<string>();
   argumentConfigurations: ArgumentConfigurationData[] = [];
-  entityInterfaceDatasByTypeName: Map<string, EntityInterfaceDatas>;
+  entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   executableDirectives = new Set<string>();
   parentTypeName = '';
   persistedDirectives = new Set<string>([DEPRECATED, INACCESSIBLE, TAG]);
@@ -177,7 +178,7 @@ export class FederationFactory {
   isCurrentParentExtensionType = false;
   isParentRootType = false;
   isParentInputObject = false;
-  keyFieldsByParentTypeName = new Map<string, Set<string>>();
+  keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
   outputFieldTypeNameSet = new Set<string>();
   parents: ParentMap = new Map<string, ParentContainer>();
   rootTypeNames = new Set<string>([DEFAULT_MUTATION, DEFAULT_QUERY, DEFAULT_SUBSCRIPTION]);
@@ -189,12 +190,12 @@ export class FederationFactory {
   constructor(
     subgraphs: InternalSubgraph[],
     subgraphConfigBySubgraphName: Map<string, SubgraphConfig>,
-    entityInterfaceDatasByTypeName: Map<string, EntityInterfaceDatas>,
+    entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
     warnings?: string[],
   ) {
     this.subgraphs = subgraphs;
     this.subgraphConfigBySubgraphName = subgraphConfigBySubgraphName;
-    this.entityInterfaceDatasByTypeName = entityInterfaceDatasByTypeName;
+    this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.warnings = warnings || [];
   }
 
@@ -279,7 +280,7 @@ export class FederationFactory {
         break;
       case Kind.OBJECT:
         break;
-      // BOOLEAN, ENUM, FLOAT, INT, and STRING purposely fall through
+      // BOOLEAN, ENUM, FLOAT, INT, and STRING intentionally fall through
       case Kind.BOOLEAN:
       case Kind.ENUM:
       case Kind.FLOAT:
@@ -430,7 +431,7 @@ export class FederationFactory {
   }
 
   isFieldEntityKey(): boolean {
-    const parent = this.keyFieldsByParentTypeName.get(this.parentTypeName);
+    const parent = this.keyFieldNamesByParentTypeName.get(this.parentTypeName);
     if (parent) {
       return parent.has(this.childName);
     }
@@ -584,7 +585,7 @@ export class FederationFactory {
         isFieldExternal ||
         (existingFieldContainer.isShareable && isFieldShareable) ||
         this.isShareabilityOfAllFieldInstancesValid(existingFieldContainer) ||
-        this.entityInterfaceDatasByTypeName.has(this.parentTypeName) // TODO handle shareability with interfaceObjects
+        this.entityInterfaceFederationDataByTypeName.has(this.parentTypeName) // TODO handle shareability with interfaceObjects
       ) {
         return;
       }
@@ -1404,10 +1405,10 @@ export class FederationFactory {
     for (const subgraph of this.subgraphs) {
       this.isCurrentSubgraphVersionTwo = subgraph.isVersionTwo;
       this.currentSubgraphName = subgraph.name;
-      this.keyFieldsByParentTypeName = subgraph.keyFieldsByParentTypeName;
+      this.keyFieldNamesByParentTypeName = subgraph.keyFieldNamesByParentTypeName;
       walkSubgraphToFederate(subgraph.definitions, subgraph.overriddenFieldNamesByParentTypeName, factory);
     }
-    for (const [typeName, entityInterfaceData] of this.entityInterfaceDatasByTypeName) {
+    for (const [typeName, entityInterfaceData] of this.entityInterfaceFederationDataByTypeName) {
       subtractSourceSetFromTargetSet(
         entityInterfaceData.interfaceFieldNames,
         entityInterfaceData.interfaceObjectFieldNames,
@@ -1417,20 +1418,52 @@ export class FederationFactory {
         // TODO error
         continue;
       }
-      const concreteTypes = this.abstractToConcreteTypeNames.get(typeName) || [];
-      for (const concreteType of concreteTypes) {
-        const parentContainer = getOrThrowError(this.parents, concreteType, 'parents');
-        if (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+      for (const subgraphName of entityInterfaceData.interfaceObjectSubgraphs) {
+        const configurationDataMap = getOrThrowError(
+          this.subgraphConfigBySubgraphName, subgraphName, 'subgraphConfigBySubgraphName',
+        ).configurationDataMap;
+        const concreteTypeNames = this.abstractToConcreteTypeNames.get(typeName);
+        if (!concreteTypeNames) {
           continue;
         }
-        for (const fieldName of entityInterfaceData.interfaceObjectFieldNames) {
-          const existingFieldContainer = parentContainer.fields.get(fieldName);
-          if (existingFieldContainer) {
-            // TODO handle shareability
+        const interfaceObjectConfiguration = getOrThrowError(
+          configurationDataMap, typeName, 'configurationDataMap',
+        );
+        const keys = interfaceObjectConfiguration.keys;
+        if (!keys) {
+          // error TODO no keys
+          continue;
+        }
+        interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
+        const entityInterfaceConcreteTypeNames = interfaceObjectConfiguration.entityInterfaceConcreteTypeNames;
+        const fieldNames = interfaceObjectConfiguration.fieldNames;
+        for (const concreteTypeName of concreteTypeNames) {
+          if (configurationDataMap.has(concreteTypeName)) {
+            // error TODO
             continue;
           }
-          const interfaceFieldContainer = getOrThrowError(entityInterface.fields, fieldName, 'entityInterface.fields');
-          parentContainer.fields.set(fieldName, { ...interfaceFieldContainer });
+          const concreteTypeContainer = getOrThrowError(this.parents, concreteTypeName, 'parents');
+          if (concreteTypeContainer.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+            continue;
+          }
+          const configurationData: ConfigurationData = {
+            fieldNames,
+            isRootNode: true,
+            keys,
+            typeName: concreteTypeName,
+          };
+          for (const fieldName of entityInterfaceData.interfaceObjectFieldNames) {
+            const existingFieldContainer = concreteTypeContainer.fields.get(fieldName);
+            if (existingFieldContainer) {
+              // TODO handle shareability
+              continue;
+            }
+            const interfaceFieldContainer = getOrThrowError(
+              entityInterface.fields, fieldName, 'entityInterface.fields',
+            );
+            concreteTypeContainer.fields.set(fieldName, { ...interfaceFieldContainer });
+          }
+          configurationDataMap.set(concreteTypeName, configurationData);
         }
       }
     }
@@ -1696,7 +1729,9 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
   }
   const internalSubgraphs: InternalSubgraph[] = [];
   const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
-  const entityInterfaceDatas = new Map<string, EntityInterfaceDatas>();
+  const entityInterfaceFederationDataByTypeName = new Map<string, EntityInterfaceFederationData>();
+  const undefinedImplementationsByTypeName =
+    new Map<string, UndefinedEntityInterfaceImplementations[]>();
   for (const [subgraphName, internalSubgraph] of internalSubgraphsBySubgraphName) {
     internalSubgraphs.push(internalSubgraph);
     subgraphConfigBySubgraphName.set(subgraphName, {
@@ -1704,18 +1739,36 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
       schema: internalSubgraph.schema,
     });
     for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
-      const existingDatas = entityInterfaceDatas.get(typeName);
-      if (!existingDatas) {
-        entityInterfaceDatas.set(typeName, newEntityInterfaceDatas(entityInterfaceData, subgraphName));
-      } else {
-        upsertEntityInterfaceDatas(existingDatas, entityInterfaceData, subgraphName);
+      const existingData = entityInterfaceFederationDataByTypeName.get(typeName);
+      if (!existingData) {
+        entityInterfaceFederationDataByTypeName.set(typeName, newEntityInterfaceFederationData(entityInterfaceData, subgraphName));
+        continue;
+      }
+      const areAllImplementationsDefined = upsertEntityInterfaceFederationData(
+        existingData, entityInterfaceData, subgraphName,
+      );
+      if (areAllImplementationsDefined) {
+        const undefinedImplementations = getValueOrDefault(
+          undefinedImplementationsByTypeName, typeName, () => [],
+        );
+        undefinedImplementations.push({
+          subgraphName,
+          concreteTypeNames: entityInterfaceData.concreteTypeNames || new Set<string>(),
+        });
       }
     }
+  }
+  if (undefinedImplementationsByTypeName.size > 0) {
+    return {
+      errors: [undefinedEntityInterfaceImplementationsError(
+        undefinedImplementationsByTypeName, entityInterfaceFederationDataByTypeName,
+      )],
+    };
   }
   const federationFactory = new FederationFactory(
     internalSubgraphs,
     subgraphConfigBySubgraphName,
-    entityInterfaceDatas,
+    entityInterfaceFederationDataByTypeName,
     warnings,
   );
   return federationFactory.federate();

@@ -1010,6 +1010,49 @@ export class RequiredField extends Message<RequiredField> {
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.EntityInterfaceConfiguration
+ */
+export class EntityInterfaceConfiguration extends Message<EntityInterfaceConfiguration> {
+  /**
+   * @generated from field: string interface_type_name = 1;
+   */
+  interfaceTypeName = "";
+
+  /**
+   * @generated from field: repeated string concrete_type_names = 2;
+   */
+  concreteTypeNames: string[] = [];
+
+  constructor(data?: PartialMessage<EntityInterfaceConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.EntityInterfaceConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "interface_type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "concrete_type_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityInterfaceConfiguration {
+    return new EntityInterfaceConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EntityInterfaceConfiguration {
+    return new EntityInterfaceConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EntityInterfaceConfiguration {
+    return new EntityInterfaceConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EntityInterfaceConfiguration | PlainMessage<EntityInterfaceConfiguration> | undefined, b: EntityInterfaceConfiguration | PlainMessage<EntityInterfaceConfiguration> | undefined): boolean {
+    return proto3.util.equals(EntityInterfaceConfiguration, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.FetchConfiguration
  */
 export class FetchConfiguration extends Message<FetchConfiguration> {
