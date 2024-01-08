@@ -81,6 +81,43 @@ describe('Discussions', (ctx) => {
     await server.close();
   });
 
+  test('Should update discussion comment', async (testContext) => {
+    const { client, server, graph, schemaVersionId } = await seed(testContext);
+
+    const discussionRes = await client.createDiscussion({
+      contentJson: `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Test"}]}]}`,
+      contentMarkdown: `Test`,
+      targetId: graph?.targetId,
+      referenceLine: 1,
+      schemaVersionId,
+    });
+    expect(discussionRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const discussionsRes = await client.getAllDiscussions({
+      targetId: graph?.targetId,
+    });
+    expect(discussionsRes.discussions.length).toEqual(1);
+
+    const discussion = discussionsRes.discussions[0];
+
+    const updatedContentJSON = `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Test Update"}]}]}`;
+    const updateRes = await client.updateDiscussionComment({
+      commentId: discussion.openingComment?.id,
+      discussionId: discussion.id,
+      contentJson: updatedContentJSON,
+      contentMarkdown: `Test Update`,
+    });
+    expect(updateRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const updatedDiscussionRes = await client.getDiscussion({
+      discussionId: discussion.id,
+    });
+    expect(updatedDiscussionRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedDiscussionRes.discussion?.openingComment?.contentJson).toEqual(updatedContentJSON);
+
+    await server.close();
+  });
+
   test('Should be able to delete reply and discussion correctly', async (testContext) => {
     const { client, server, graph, schemaVersionId } = await seed(testContext);
 
