@@ -1047,6 +1047,7 @@ export const discussionThread = pgTable('discussion_thread', {
     .references(() => users.id, {
       onDelete: 'cascade',
     }),
+  isDeleted: boolean('is_deleted').default(false).notNull(),
 });
 
 export const discussionRelations = relations(discussions, ({ one, many }) => ({

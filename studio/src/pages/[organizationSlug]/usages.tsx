@@ -1,7 +1,4 @@
-import {
-  ChartTooltip,
-  tooltipWrapperClassName,
-} from "@/components/analytics/charts";
+import { ChartTooltip } from "@/components/analytics/charts";
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
@@ -9,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
 import { Separator } from "@/components/ui/separator";
+import { Toolbar } from "@/components/ui/toolbar";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { calURL } from "@/lib/constants";
 import { formatMetric } from "@/lib/format-metric";
 import { NextPageWithLayout } from "@/lib/page";
@@ -17,21 +16,18 @@ import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getOrganizationRequestsCount } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
-import React, { useContext } from "react";
+import { useRouter } from "next/router";
+import { useContext } from "react";
+import { CgDanger } from "react-icons/cg";
+import { IoWarningOutline } from "react-icons/io5";
 import {
   Bar,
   BarChart,
   Legend,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { CgDanger } from "react-icons/cg";
-import { IoWarningOutline } from "react-icons/io5";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useRouter } from "next/router";
-import { cn } from "@/lib/utils";
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 

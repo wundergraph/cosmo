@@ -38,7 +38,7 @@ import { useApplyParams } from "../analytics/use-apply-params";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { useToast } from "../ui/use-toast";
-import { CommentCard, NewDiscussion } from "./discussion";
+import { CommentCard, NewDiscussion } from "../discussions/discussion";
 
 export const hideDiscussionsKey = "hide-discussions";
 export const hideResolvedDiscussionsKey = "hide-resolved-discussions";
@@ -148,7 +148,7 @@ const LineActions = ({
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
-            copy(window.location.href);
+            copy(`${window.location.href.split("#")[0]}#L${lineNo}`);
             toast({
               description: "Copied link to clipboard",
             });

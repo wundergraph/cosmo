@@ -11604,6 +11604,11 @@ export class DiscussionComment extends Message<DiscussionComment> {
    */
   updatedAt?: string;
 
+  /**
+   * @generated from field: bool is_deleted = 6;
+   */
+  isDeleted = false;
+
   constructor(data?: PartialMessage<DiscussionComment>) {
     super();
     proto3.util.initPartial(data, this);
@@ -11617,6 +11622,7 @@ export class DiscussionComment extends Message<DiscussionComment> {
     { no: 3, name: "created_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "updated_at", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "is_deleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DiscussionComment {

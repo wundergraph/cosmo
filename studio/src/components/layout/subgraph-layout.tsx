@@ -27,7 +27,7 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { GetSubgraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { PiGraphLight } from "react-icons/pi";
+import { PiChat, PiGraphLight } from "react-icons/pi";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -77,6 +77,12 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         title: "Federated Graphs",
         href: basePath + "/graphs",
         icon: <PiGraphLight className="h-4 w-4" />,
+      },
+      {
+        title: "Discussions",
+        href: basePath + "/discussions",
+        matchExact: false,
+        icon: <PiChat className="h-4 w-4" />,
       },
     ];
   }, [slug, organizationSlug]);

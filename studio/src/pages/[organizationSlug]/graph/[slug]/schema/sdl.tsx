@@ -10,7 +10,7 @@ import {
   SDLViewerActions,
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
-import { ThreadSheet } from "@/components/schema/thread";
+import { ThreadSheet } from "@/components/discussions/thread";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Loader } from "@/components/ui/loader";
 import {

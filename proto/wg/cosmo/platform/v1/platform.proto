@@ -1458,6 +1458,7 @@ message DiscussionComment {
   string created_by = 3;
   string created_at = 4;
   optional string updated_at = 5;
+  bool is_deleted = 6;
 }
 
 message GetAllDiscussionsResponse {  

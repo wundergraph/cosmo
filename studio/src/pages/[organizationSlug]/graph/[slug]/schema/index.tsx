@@ -5,7 +5,10 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { CommentCard, NewDiscussion } from "@/components/schema/discussion";
+import {
+  CommentCard,
+  NewDiscussion,
+} from "@/components/discussions/discussion";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,6 +65,7 @@ import {
 } from "@heroicons/react/24/outline";
 import {
   ArrowRightIcon,
+  CheckCircledIcon,
   MagnifyingGlassIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
@@ -100,7 +104,7 @@ import {
 } from "@/components/ui/resizable";
 import { useUser } from "@/hooks/use-user";
 import { PiChat } from "react-icons/pi";
-import { ThreadSheet } from "@/components/schema/thread";
+import { ThreadSheet } from "@/components/discussions/thread";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import useWindowSize from "@/hooks/use-window-size";
 import {
@@ -390,7 +394,7 @@ const TypeDiscussions = ({
           return (
             <div
               key={ld.id}
-              className="flex h-auto w-full max-w-2xl flex-col rounded-md border pb-2 pt-4"
+              className="flex h-auto w-full max-w-full flex-col rounded-md border pb-2 pt-4"
             >
               <CommentCard
                 isOpeningComment
@@ -406,9 +410,10 @@ const TypeDiscussions = ({
 
               <div className="mt-auto flex flex-wrap items-center gap-4 px-4">
                 {ld.isResolved && (
-                  <p className="text-xs italic">
-                    This discussion was marked as resolved
-                  </p>
+                  <Badge variant="outline" className="gap-2 py-1.5">
+                    <CheckCircledIcon className="h-4 w-4 text-success" />
+                    <span>Resolved</span>
+                  </Badge>
                 )}
                 <Button
                   size="sm"

@@ -1,0 +1,1 @@
+ALTER TABLE "discussion_thread" ADD COLUMN "is_deleted" boolean DEFAULT false NOT NULL;
