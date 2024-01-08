@@ -186,7 +186,7 @@ export const Thread = ({
           );
         })}
       </div>
-      <div className="flex items-center gap-x-2 border-t p-2">
+      <div className="flex items-start gap-x-2 border-t p-2">
         {!discussionData?.discussion?.isResolved ? (
           <NewComment discussionId={discussionId} refetch={() => refetch()} />
         ) : (

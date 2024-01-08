@@ -145,7 +145,6 @@ export const CommentCard = ({
   onUpdate?: () => void;
   onDelete?: () => void;
 }) => {
-  const graph = useContext(GraphContext);
   const user = useUser();
 
   const [editable, setEditable] = useState(false);
@@ -214,6 +213,9 @@ export const CommentCard = ({
   }, [comment.contentJson, editor]);
 
   const canEdit = user?.id === author?.userID;
+  const canDelete =
+    user?.id === author?.userID ||
+    user?.currentOrganization.roles.includes("admin");
 
   return (
     <div className="px-4">
@@ -264,18 +266,25 @@ export const CommentCard = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {canEdit && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setEditable(true);
-                        }}
-                      >
+                    <DropdownMenuItem
+                      className="w-full justify-start font-normal"
+                      asChild
+                      onClick={() => {
+                        setEditable(true);
+                      }}
+                    >
+                      <Button variant="ghost" size="sm" disabled={!canEdit}>
                         Edit
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem asChild className="text-destructive">
-                      <AlertDialogTrigger className="w-full">
-                        Delete
+                      </Button>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      asChild
+                      className="justify-start font-normal text-destructive"
+                    >
+                      <AlertDialogTrigger className="w-full" asChild>
+                        <Button variant="ghost" size="sm" disabled={!canDelete}>
+                          Delete
+                        </Button>
                       </AlertDialogTrigger>
                     </DropdownMenuItem>
                   </DropdownMenuContent>

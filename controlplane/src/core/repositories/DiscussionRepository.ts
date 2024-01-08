@@ -215,4 +215,10 @@ export class DiscussionRepository {
       })
       .where(eq(schema.discussions.id, input.discussionId));
   }
+
+  public async getCommentById(commentId: string) {
+    return await this.db.query.discussionThread.findFirst({
+      where: eq(schema.discussionThread.id, commentId),
+    });
+  }
 }
