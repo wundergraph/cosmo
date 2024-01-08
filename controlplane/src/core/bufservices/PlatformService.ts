@@ -13,8 +13,8 @@ import {
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
-  CreateDiscussionResponse,
   CreateCheckoutSessionResponse,
+  CreateDiscussionResponse,
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
@@ -22,6 +22,7 @@ import {
   CreateOIDCProviderResponse,
   CreateOrganizationResponse,
   CreateOrganizationWebhookConfigResponse,
+  DateRange as DateRangeProto,
   DeleteAPIKeyResponse,
   DeleteDiscussionCommentResponse,
   DeleteFederatedGraphResponse,
@@ -97,17 +98,14 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
-  DateRange as DateRangeProto,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
-import { discussionThread, discussions, schemaVersion as schemaVersionTable } from '../../db/schema.js';
 import {
-  GraphApiKeyDTO,
   DateRange,
+  GraphApiKeyDTO,
   GraphApiKeyJwtPayload,
   PublishedOperationData,
   UpdatedPersistedOperation,
@@ -117,6 +115,8 @@ import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { signJwt } from '../crypto/jwt.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
+import { BillingRepository } from '../repositories/BillingRepository.js';
+import { DiscussionRepository } from '../repositories/DiscussionRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
@@ -126,6 +126,7 @@ import { OrganizationInvitationRepository } from '../repositories/OrganizationIn
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { TargetRepository } from '../repositories/TargetRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
@@ -133,9 +134,11 @@ import { MetricsRepository } from '../repositories/analytics/MetricsRepository.j
 import { MonthlyRequestViewRepository } from '../repositories/analytics/MonthlyRequestViewRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
+import { parseTimeFilters } from '../repositories/analytics/util.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import { BillingService } from '../services/BillingService.js';
 import OidcProvider from '../services/OidcProvider.js';
 import {
   InspectorOperationResult,
@@ -155,11 +158,6 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { BillingRepository } from '../repositories/BillingRepository.js';
-import { TargetRepository } from '../repositories/TargetRepository.js';
-import { BillingService } from '../services/BillingService.js';
-import { DiscussionRepository } from '../repositories/DiscussionRepository.js';
-import { getGranularity, parseTimeFilters } from '../repositories/analytics/util.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
