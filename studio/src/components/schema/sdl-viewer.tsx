@@ -38,7 +38,7 @@ import { useApplyParams } from "../analytics/use-apply-params";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { useToast } from "../ui/use-toast";
-import { CommentCard, NewDiscussion } from "./discussion";
+import { CommentCard, NewDiscussion } from "../discussions/discussion";
 
 export const hideDiscussionsKey = "hide-discussions";
 export const hideResolvedDiscussionsKey = "hide-resolved-discussions";

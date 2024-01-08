@@ -4,7 +4,7 @@ import {
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
-import { Thread } from "@/components/schema/thread";
+import { Thread } from "@/components/discussions/thread";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";

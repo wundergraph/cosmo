@@ -5,7 +5,10 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { CommentCard, NewDiscussion } from "@/components/schema/discussion";
+import {
+  CommentCard,
+  NewDiscussion,
+} from "@/components/discussions/discussion";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,7 +104,7 @@ import {
 } from "@/components/ui/resizable";
 import { useUser } from "@/hooks/use-user";
 import { PiChat } from "react-icons/pi";
-import { ThreadSheet } from "@/components/schema/thread";
+import { ThreadSheet } from "@/components/discussions/thread";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import useWindowSize from "@/hooks/use-window-size";
 import {
