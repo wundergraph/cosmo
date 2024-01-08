@@ -405,6 +405,7 @@ export type DiscussionThreadDTO = {
   contentJson: unknown;
   updatedAt: Date | null;
   createdById: string;
+  isDeleted: boolean;
 }[];
 export interface SubgraphLatencyResult {
   subgraphID: string;

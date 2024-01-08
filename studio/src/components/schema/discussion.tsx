@@ -208,8 +208,8 @@ export const CommentCard = ({
   );
 
   useEffect(() => {
-    if (!editor) return;
-    editor.commands.setContent(JSON.parse(comment?.contentJson ?? "{}"));
+    if (!editor || !comment.contentJson) return;
+    editor.commands.setContent(JSON.parse(comment?.contentJson));
   }, [comment.contentJson, editor]);
 
   const canEdit = user?.id === author?.userID;
@@ -257,64 +257,72 @@ export const CommentCard = ({
                 )}
               </div>
             </div>
-            <div className="ml-auto flex items-center gap-x-2">
-              <AlertDialog>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="-mr-2" variant="ghost" size="icon-sm">
-                      <DotsVerticalIcon />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="w-full justify-start font-normal"
-                      asChild
-                      onClick={() => {
-                        setEditable(true);
-                      }}
-                    >
-                      <Button variant="ghost" size="sm" disabled={!canEdit}>
-                        Edit
+            {!comment.isDeleted && (
+              <div className="ml-auto flex items-center gap-x-2">
+                <AlertDialog>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="-mr-2" variant="ghost" size="icon-sm">
+                        <DotsVerticalIcon />
                       </Button>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      asChild
-                      className="justify-start font-normal text-destructive"
-                    >
-                      <AlertDialogTrigger className="w-full" asChild>
-                        <Button variant="ghost" size="sm" disabled={!canDelete}>
-                          Delete
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="w-full justify-start font-normal"
+                        asChild
+                        onClick={() => {
+                          setEditable(true);
+                        }}
+                      >
+                        <Button variant="ghost" size="sm" disabled={!canEdit}>
+                          Edit
                         </Button>
-                      </AlertDialogTrigger>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {isOpeningComment
-                        ? `This is the opening comment. Deleting this will delete the
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        asChild
+                        className="justify-start font-normal text-destructive"
+                      >
+                        <AlertDialogTrigger className="w-full" asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!canDelete}
+                          >
+                            Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {isOpeningComment
+                          ? `This is the opening comment. Deleting this will delete the
                       discussion and associated replies.`
-                        : `Are you sure you want to delete this reply from the thread?`}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        deleteComment({
-                          discussionId,
-                          commentId: comment.id,
-                        });
-                      }}
-                    >
-                      {isOpeningComment ? `Delete Discussion` : `Delete reply`}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
+                          : `Are you sure you want to delete this reply from the thread?`}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          deleteComment({
+                            discussionId,
+                            commentId: comment.id,
+                          });
+                        }}
+                      >
+                        {isOpeningComment
+                          ? `Delete Discussion`
+                          : `Delete reply`}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
           </div>
           {editable && (
             <div className="mt-2 h-auto w-full max-w-3xl rounded-md">
@@ -341,10 +349,15 @@ export const CommentCard = ({
               </div>
             </div>
           )}
+          {comment.isDeleted && (
+            <p className="mt-2 text-xs italic text-muted-foreground">
+              This comment was deleted
+            </p>
+          )}
         </div>
       </div>
 
-      {!editable && <EditorContent editor={editor} />}
+      {!editable && !comment.isDeleted && <EditorContent editor={editor} />}
     </div>
   );
 };

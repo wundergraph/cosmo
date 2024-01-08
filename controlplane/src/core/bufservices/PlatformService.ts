@@ -5632,6 +5632,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               createdAt: gd.thread[0].createdAt.toISOString(),
               updatedAt: gd.thread[0].updatedAt?.toISOString(),
               createdBy: gd.thread[0].createdById,
+              isDeleted: gd.thread[0].isDeleted,
             },
           })),
         };
@@ -5794,6 +5795,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           createdAt: t.createdAt.toISOString(),
           updatedAt: t.updatedAt?.toISOString(),
           createdBy: t.createdById,
+          isDeleted: t.isDeleted,
         }));
 
         return {
