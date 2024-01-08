@@ -57,8 +57,6 @@ export const Thread = ({
   const router = useRouter();
   const discussionId = router.query.discussionId as string;
 
-  const graph = useContext(GraphContext);
-
   const { toast } = useToast();
 
   const applyParams = useApplyParams();
@@ -180,7 +178,13 @@ export const Thread = ({
                   (m) => m.userID === dc?.createdBy,
                 )}
                 onUpdate={refetch}
-                onDelete={onDelete}
+                onDelete={() => {
+                  if (idx !== 0) {
+                    refetch();
+                  } else {
+                    onDelete?.();
+                  }
+                }}
               />
             </div>
           );
