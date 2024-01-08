@@ -5568,6 +5568,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const isResolved = await discussionRepo.isResolved(req.discussionId);
+        if (isResolved) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'You cannot reply to a resolved discussion',
+            },
+          };
+        }
+
         await discussionRepo.replyToDiscussion({
           ...req,
           createdById: authContext.userId,

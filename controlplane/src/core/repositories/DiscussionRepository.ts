@@ -25,6 +25,17 @@ export class DiscussionRepository {
     return !!discussion;
   }
 
+  public async isResolved(discussionId: string): Promise<boolean> {
+    const discussion = await this.db.query.discussions.findFirst({
+      where: eq(schema.discussions.id, discussionId),
+      columns: {
+        isResolved: true,
+      },
+    });
+
+    return !!discussion?.isResolved;
+  }
+
   public async canAccessDiscussion(discussionId: string): Promise<boolean> {
     const discussion = await this.db.query.discussions.findFirst({
       where: eq(schema.discussions.id, discussionId),

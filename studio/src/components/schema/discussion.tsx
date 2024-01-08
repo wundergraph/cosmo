@@ -436,8 +436,6 @@ export const NewComment = ({
 
   const [showEditor, setShowEditor] = useState(false);
 
-  const graph = useContext(GraphContext);
-
   const { mutate, isPending } = useMutation({
     ...replyToDiscussion.useMutation(),
     onSuccess(data) {

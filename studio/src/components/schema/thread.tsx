@@ -186,12 +186,19 @@ export const Thread = ({
           );
         })}
       </div>
-      <div className="flex items-start gap-x-2 border-t p-2">
-        <NewComment discussionId={discussionId} refetch={() => refetch()} />
+      <div className="flex items-center gap-x-2 border-t p-2">
+        {!discussionData?.discussion?.isResolved ? (
+          <NewComment discussionId={discussionId} refetch={() => refetch()} />
+        ) : (
+          <p className="mr-auto max-w-sm text-xs text-muted-foreground">
+            This discussion is resolved. To continue discussing please mark it
+            as unresolved.
+          </p>
+        )}
         <AlertDialog>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="secondary">
+              <Button size="icon" variant="secondary" className="flex-shrink-0">
                 <DotsVerticalIcon />
               </Button>
             </DropdownMenuTrigger>
