@@ -7,6 +7,7 @@ import {
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { CommentCard } from "@/components/schema/discussion";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
@@ -25,6 +26,7 @@ import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
   ArrowRightIcon,
+  CheckCircledIcon,
   Component2Icon,
   Cross1Icon,
   MagnifyingGlassIcon,
@@ -113,9 +115,10 @@ const Discussions = ({
 
                       <div className="mt-auto flex items-center gap-4 px-4">
                         {ld.isResolved && (
-                          <p className="text-xs italic">
-                            This discussion was marked as resolved
-                          </p>
+                          <Badge variant="outline" className="gap-2 py-1.5">
+                            <CheckCircledIcon className="h-4 w-4 text-success" />{" "}
+                            <span>Resolved</span>
+                          </Badge>
                         )}
                         <Button
                           size="sm"
