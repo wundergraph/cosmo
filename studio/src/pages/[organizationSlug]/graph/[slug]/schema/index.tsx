@@ -390,7 +390,7 @@ const TypeDiscussions = ({
           return (
             <div
               key={ld.id}
-              className="flex h-auto w-full max-w-2xl flex-col rounded-md border pb-2 pt-4"
+              className="flex h-auto w-full max-w-full flex-col rounded-md border pb-2 pt-4"
             >
               <CommentCard
                 isOpeningComment
