@@ -1435,7 +1435,6 @@ export class FederationFactory {
           continue;
         }
         interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
-        const entityInterfaceConcreteTypeNames = interfaceObjectConfiguration.entityInterfaceConcreteTypeNames;
         const fieldNames = interfaceObjectConfiguration.fieldNames;
         for (const concreteTypeName of concreteTypeNames) {
           if (configurationDataMap.has(concreteTypeName)) {
@@ -1445,6 +1444,12 @@ export class FederationFactory {
           const concreteTypeContainer = getOrThrowError(this.parents, concreteTypeName, 'parents');
           if (concreteTypeContainer.kind !== Kind.OBJECT_TYPE_DEFINITION) {
             continue;
+          }
+          // The subgraph locations of the interface object must be added to the concrete types that implement it
+          const entity = this.entities.get(concreteTypeName);
+          if (entity) {
+            // TODO error if not an entity
+            entity.subgraphs.add(subgraphName);
           }
           const configurationData: ConfigurationData = {
             fieldNames,
