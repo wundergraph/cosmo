@@ -170,7 +170,8 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       });
     }
     const datasourceConfig = new DataSourceConfiguration({
-      // When changing this, please do it in the router subgraph override as well
+      // When changing the id, make sure to change it in the router subgraph override also
+      // https://github.com/wundergraph/cosmo/blob/main/router/core/router.go#L342
       id: subgraph.id,
       childNodes,
       customEvents,
