@@ -148,7 +148,7 @@ const LineActions = ({
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
-            copy(window.location.href);
+            copy(`${window.location.href.split("#")[0]}#L${lineNo}`);
             toast({
               description: "Copied link to clipboard",
             });
