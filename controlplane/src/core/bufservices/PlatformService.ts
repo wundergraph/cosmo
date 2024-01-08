@@ -5791,7 +5791,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const comments = graphDiscussion.thread.map((t) => ({
           id: t.id,
-          contentJson: JSON.stringify(t.contentJson),
+          contentJson: t.contentJson ? JSON.stringify(t.contentJson) : '',
           createdAt: t.createdAt.toISOString(),
           updatedAt: t.updatedAt?.toISOString(),
           createdBy: t.createdById,

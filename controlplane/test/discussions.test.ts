@@ -161,7 +161,10 @@ describe('Discussions', (ctx) => {
       discussionId: discussion.id,
     });
     expect(discussionAfterFirstDeleteRes.response?.code).toBe(EnumStatusCode.OK);
-    expect(discussionAfterFirstDeleteRes.comments.length).toEqual(1);
+    // Ensure it was only soft deleted
+    expect(discussionAfterFirstDeleteRes.comments.length).toEqual(2);
+    // Ensure that we do not return the content of soft deleted comments
+    expect(discussionAfterFirstDeleteRes.comments[1].contentJson).toEqual('');
 
     // Now delete the first comment. Since this the opening comment, the discussion itself should be deleted
     expect(discussionAfterFirstDeleteRes.comments[0].id).toEqual(discussion.openingComment?.id);

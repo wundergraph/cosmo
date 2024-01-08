@@ -211,7 +211,7 @@ export class DiscussionRepository {
         if (comment.isDeleted) {
           return {
             ...comment,
-            contentJson: '',
+            contentJson: null,
             contentMarkdown: '',
           };
         }
