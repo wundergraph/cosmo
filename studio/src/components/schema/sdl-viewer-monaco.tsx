@@ -136,7 +136,8 @@ export const SDLViewerMonaco = ({
             },
           ]);
 
-          editor.setScrollPosition({ scrollTop: line * 14 });
+          const y = editor.getTopForLineNumber(line);
+          editor.setScrollPosition({ scrollTop: y - 10 });
         }
       }}
     />
