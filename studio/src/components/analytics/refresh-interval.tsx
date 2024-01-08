@@ -44,7 +44,7 @@ export const RefreshInterval: React.FC<RefreshIntervalProps> = (props) => {
           {refreshIntervals.find((ri) => ri.value === props.value)?.label}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
+      <DropdownMenuContent align="end">
         {refreshIntervals.map((ri) => {
           return (
             <DropdownMenuCheckboxItem

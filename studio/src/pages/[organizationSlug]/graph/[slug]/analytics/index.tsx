@@ -973,7 +973,7 @@ const OverviewToolbar = () => {
             });
           }}
           variant="outline"
-          className="px-3"
+          size="icon"
         >
           <UpdateIcon />
         </Button>
