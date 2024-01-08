@@ -4,7 +4,7 @@ import {
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
-import { Thread } from "@/components/schema/thread";
+import { Thread } from "@/components/discussions/thread";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toolbar } from "@/components/ui/toolbar";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { FileTextIcon } from "@radix-ui/react-icons";
+import { CheckCircledIcon, FileTextIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -116,7 +116,10 @@ const DiscussionPage: NextPageWithLayout = () => {
             </TabsList>
           </Tabs>
           {discussionData?.discussion?.isResolved && (
-            <Badge className="ml-auto">resolved</Badge>
+            <Badge variant="outline" className="ml-auto gap-2 py-1.5">
+              <CheckCircledIcon className="h-4 w-4 text-success" />{" "}
+              <span>Resolved</span>
+            </Badge>
           )}
         </Toolbar>
       }

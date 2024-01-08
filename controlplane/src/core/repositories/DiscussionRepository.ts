@@ -25,6 +25,17 @@ export class DiscussionRepository {
     return !!discussion;
   }
 
+  public async isResolved(discussionId: string): Promise<boolean> {
+    const discussion = await this.db.query.discussions.findFirst({
+      where: eq(schema.discussions.id, discussionId),
+      columns: {
+        isResolved: true,
+      },
+    });
+
+    return !!discussion?.isResolved;
+  }
+
   public async canAccessDiscussion(discussionId: string): Promise<boolean> {
     const discussion = await this.db.query.discussions.findFirst({
       where: eq(schema.discussions.id, discussionId),
@@ -143,6 +154,10 @@ export class DiscussionRepository {
       .returning();
   }
 
+  /* 
+    Deleting the opening comment, results in the discussion being deleted.
+    Deleting a reply in the thread only soft deletes that comment.
+  */
   public async deleteComment(input: { discussionId: string; commentId: string }): Promise<{ success: boolean }> {
     const discussion = await this.db.query.discussions.findFirst({
       where: eq(schema.discussions.id, input.discussionId),
@@ -158,14 +173,18 @@ export class DiscussionRepository {
       return { success: false };
     }
 
-    // We delete the discussion itself if it is the opening comment or else we only delete the comment
     const isOpeningComment = discussion.thread[0].id === input.commentId;
 
     await this.db.transaction(async (tx) => {
       if (isOpeningComment) {
         await tx.delete(schema.discussions).where(eq(schema.discussions.id, input.discussionId));
       } else {
-        await tx.delete(schema.discussionThread).where(eq(schema.discussionThread.id, input.commentId));
+        await tx
+          .update(schema.discussionThread)
+          .set({
+            isDeleted: true,
+          })
+          .where(eq(schema.discussionThread.id, input.commentId));
       }
     });
 
@@ -173,7 +192,7 @@ export class DiscussionRepository {
   }
 
   public async byId(discussionId: string) {
-    return await this.db.query.discussions.findFirst({
+    const res = await this.db.query.discussions.findFirst({
       where: eq(schema.discussions.id, discussionId),
       with: {
         thread: {
@@ -181,6 +200,25 @@ export class DiscussionRepository {
         },
       },
     });
+
+    if (!res) {
+      return;
+    }
+
+    return {
+      ...res,
+      thread: res.thread.map((comment) => {
+        if (comment.isDeleted) {
+          return {
+            ...comment,
+            contentJson: null,
+            contentMarkdown: '',
+          };
+        }
+
+        return comment;
+      }),
+    };
   }
 
   public async getSchemas(input: { targetId: string; schemaVersionId: string }) {
@@ -203,5 +241,11 @@ export class DiscussionRepository {
         isResolved: input.isResolved,
       })
       .where(eq(schema.discussions.id, input.discussionId));
+  }
+
+  public async getCommentById(commentId: string) {
+    return await this.db.query.discussionThread.findFirst({
+      where: eq(schema.discussionThread.id, commentId),
+    });
   }
 }

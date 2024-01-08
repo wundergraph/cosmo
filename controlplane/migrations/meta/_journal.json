@@ -519,6 +519,13 @@
       "when": 1704373791894,
       "tag": "0073_misty_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "5",
+      "when": 1704725954995,
+      "tag": "0074_sloppy_thunderbolts",
+      "breakpoints": true
     }
   ]
 }
