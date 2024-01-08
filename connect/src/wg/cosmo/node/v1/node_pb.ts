@@ -742,6 +742,16 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
    */
   customEvents?: DataSourceCustom_Events;
 
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.EntityInterfaceConfiguration entity_interfaces = 14;
+   */
+  entityInterfaces: EntityInterfaceConfiguration[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.EntityInterfaceConfiguration interface_objects = 15;
+   */
+  interfaceObjects: EntityInterfaceConfiguration[] = [];
+
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -763,6 +773,8 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 11, name: "provides", kind: "message", T: RequiredField, repeated: true },
     { no: 12, name: "requires", kind: "message", T: RequiredField, repeated: true },
     { no: 13, name: "custom_events", kind: "message", T: DataSourceCustom_Events },
+    { no: 14, name: "entity_interfaces", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
+    { no: 15, name: "interface_objects", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {

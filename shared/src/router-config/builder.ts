@@ -101,7 +101,9 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     );
     const {
       childNodes,
+      entityInterfaces,
       events,
+      interfaceObjects,
       keys,
       provides,
       requires,
@@ -171,16 +173,18 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       // When changing this, please do it in the router subgraph override as well
       id: subgraph.id,
       childNodes,
-      rootNodes,
-      keys,
-      provides,
-      requires,
-      kind,
-      customGraphql,
       customEvents,
+      customGraphql,
       directives: [],
+      entityInterfaces,
+      interfaceObjects,
+      keys,
+      kind,
       overrideFieldPathFromAlias: true,
+      provides,
       requestTimeoutSeconds: BigInt(10),
+      requires,
+      rootNodes,
     });
     engineConfig.datasourceConfigurations.push(datasourceConfig);
   }
