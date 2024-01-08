@@ -512,6 +512,13 @@
       "when": 1704032955613,
       "tag": "0072_messy_silvermane",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "5",
+      "when": 1704373791894,
+      "tag": "0073_misty_queen_noir",
+      "breakpoints": true
     }
   ]
 }

@@ -109,7 +109,7 @@ const Organizations = () => {
         >
           {user?.organizations?.map(({ name, slug }) => {
             return (
-              <DropdownMenuRadioItem key={slug} value={slug}>
+              <DropdownMenuRadioItem className="pl-2" key={slug} value={slug}>
                 {name}
               </DropdownMenuRadioItem>
             );

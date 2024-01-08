@@ -153,3 +153,30 @@
     transform: translate3d(10px, 0, 0);
   }
 }
+
+pre[class*="language-"] code {
+  display: block;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  @apply text-muted-foreground;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.monaco-editor {
+  position: absolute !important;
+}
+
+.CodeMirror-vscrollbar,
+.CodeMirror-hscrollbar,
+.graphiql-plugin {
+  @apply scrollbar-custom;
+}
+
+.monaco-editor .highlighted-line {
+  background-color: #ffff00;
+  border-left: 3px solid #ff0000;
+}

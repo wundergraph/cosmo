@@ -85,7 +85,7 @@ enum Nationality {
   UKRAINIAN
 }
 
-type Details  {
+type Details {
   forename: String! @shareable
   surname: String! @shareable
   hasChildren: Boolean!

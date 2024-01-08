@@ -1,3 +1,5 @@
+@tailwind components;
+
 .graphiql-container,
 .CodeMirror-info,
 .CodeMirror-lint-tooltip,
@@ -31,11 +33,6 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
   --color-base: var(--background);
 }
 
-.CodeMirror-vscrollbar,
-.CodeMirror-hscrollbar {
-  @apply scrollbar-custom;
-}
-
 .graphiql-history-header,
 .graphiql-doc-explorer-title,
 .doc-explorer-title {
@@ -48,10 +45,6 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 
 .graphiql-container {
   @apply h-screen !font-sans;
-}
-
-.graphiql-plugin {
-  @apply scrollbar-custom;
 }
 
 .graphiql-button {

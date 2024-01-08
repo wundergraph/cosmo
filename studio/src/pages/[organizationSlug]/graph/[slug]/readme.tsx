@@ -4,14 +4,15 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { OverviewToolbar } from "@/components/overview/OverviewToolbar";
 import { CLI } from "@/components/ui/cli";
 import { docsBaseURL } from "@/lib/constants";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import Markdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import { OverviewToolbar } from "./index";
 
 export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
   return (
@@ -53,8 +54,10 @@ const FederatedGraphReadmePage = () => {
     <div>
       {readme ? (
         <div className="flex h-full w-full">
-          <div className="prose h-full w-full max-w-full dark:prose-invert">
-            <Markdown remarkPlugins={[remarkGfm]}>{readme}</Markdown>
+          <div className="prose-pre:scrollbar-custom prose mx-auto h-full w-full max-w-full dark:prose-invert prose-code:bg-secondary prose-pre:!bg-secondary/50">
+            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              {readme}
+            </Markdown>
           </div>
         </div>
       ) : (

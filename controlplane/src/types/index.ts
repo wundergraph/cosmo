@@ -387,6 +387,25 @@ export interface SubgraphMemberDTO {
   email: string;
 }
 
+export type DiscussionDTO = {
+  id: string;
+  createdAt: Date;
+  targetId: string;
+  schemaVersionId: string;
+  referenceLine: number;
+  isResolved: boolean;
+  thread: DiscussionThreadDTO;
+}[];
+
+export type DiscussionThreadDTO = {
+  id: string;
+  createdAt: Date;
+  discussionId: string;
+  contentMarkdown: string | null;
+  contentJson: unknown;
+  updatedAt: Date | null;
+  createdById: string;
+}[];
 export interface SubgraphLatencyResult {
   subgraphID: string;
   latency: number;

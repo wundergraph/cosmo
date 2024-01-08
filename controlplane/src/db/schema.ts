@@ -14,6 +14,7 @@ import {
   customType,
   real,
 } from 'drizzle-orm/pg-core';
+import type { JSONContent } from '@tiptap/core';
 import { FeatureIds } from '../types/index.js';
 
 // JSON/JSONB custom types to workaround insert bug
@@ -1012,3 +1013,58 @@ export const subgraphMembers = pgTable(
     };
   },
 );
+
+export const discussions = pgTable('discussions', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  targetId: uuid('target_id')
+    .references(() => targets.id, {
+      onDelete: 'cascade',
+    })
+    .notNull(),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, {
+      onDelete: 'cascade',
+    }),
+  referenceLine: integer('reference_line').notNull(),
+  isResolved: boolean('is_resolved').default(false).notNull(),
+});
+
+export const discussionThread = pgTable('discussion_thread', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  discussionId: uuid('discussion_id')
+    .notNull()
+    .references(() => discussions.id, {
+      onDelete: 'cascade',
+    }),
+  contentMarkdown: text('content_markdown'),
+  contentJson: customJson<JSONContent>('content_json'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+  createdById: uuid('created_by_id')
+    .notNull()
+    .references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+});
+
+export const discussionRelations = relations(discussions, ({ one, many }) => ({
+  target: one(targets, {
+    fields: [discussions.targetId],
+    references: [targets.id],
+  }),
+  schemaVersion: one(schemaVersion),
+  thread: many(discussionThread),
+}));
+
+export const discussionThreadRelations = relations(discussionThread, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [discussionThread.createdById],
+    references: [users.id],
+  }),
+  discussion: one(discussions, {
+    fields: [discussionThread.discussionId],
+    references: [discussions.id],
+  }),
+}));

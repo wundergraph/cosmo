@@ -1,6 +1,7 @@
 import * as React from "react";
 import { CaretSortIcon, CheckIcon } from "@radix-ui/react-icons";
 import * as SelectPrimitive from "@radix-ui/react-select";
+import * as ScrollArea from "@radix-ui/react-scroll-area";
 
 import { cn } from "@/lib/utils";
 
@@ -17,7 +18,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "hover:border-input-active flex h-9 w-full items-center justify-between rounded-md border border-input px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+      "flex h-9 w-full items-center justify-between rounded-md border border-input px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground hover:border-input-active focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}
     {...props}
@@ -46,15 +47,22 @@ const SelectContent = React.forwardRef<
       position={position}
       {...props}
     >
-      <SelectPrimitive.Viewport
-        className={cn(
-          "p-1",
-          position === "popper" &&
-            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
-        )}
-      >
-        {children}
-      </SelectPrimitive.Viewport>
+      <ScrollArea.Root className="h-full w-full" type="auto">
+        <SelectPrimitive.Viewport asChild>
+          <ScrollArea.Viewport
+            className={cn(
+              "p-1",
+              position === "popper" &&
+                "max-h-[var(--radix-select-content-available-height)] w-full min-w-[var(--radix-select-trigger-width)]",
+            )}
+          >
+            {children}
+          </ScrollArea.Viewport>
+        </SelectPrimitive.Viewport>
+        <ScrollArea.Scrollbar className="w-2" orientation="vertical">
+          <ScrollArea.Thumb className="rounded-md bg-stone-300 hover:bg-stone-400 dark:bg-secondary dark:hover:bg-muted" />
+        </ScrollArea.Scrollbar>
+      </ScrollArea.Root>
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ));
