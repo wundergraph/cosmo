@@ -37,15 +37,16 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*Executor, error) {
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, reporter resolve.Reporter) (*Executor, error) {
 	planConfig, err := b.buildPlannerConfiguration(routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(context.Background(), resolve.ResolverOptions{
-		MaxConcurrency: 1024,
+	resolver := resolve.New(ctx, resolve.ResolverOptions{
+		MaxConcurrency: routerEngineConfig.Execution.MaxConcurrentResolvers,
+		Reporter:       reporter,
 	})
 
 	// this is the GraphQL Schema that we will expose from our API

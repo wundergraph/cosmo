@@ -2,3 +2,95 @@
 
 # See pkg/config/config.go for the full list of configuration options.
 # Please keep this file empty if you don't want to override the defaults.
+
+version: "1"
+
+# General router options
+graph:
+  name: "production"
+  token: ""
+
+log_level: "fatal"
+listen_addr: "localhost:3003"
+controlplane_url: "https://cosmo-cp.wundergraph.com"
+playground_enabled: true
+introspection_enabled: true
+json_log: true
+shutdown_delay: 15s
+grace_period: 20s
+poll_interval: 10s
+health_check_path: "/health"
+readiness_check_path: "/health/ready"
+liveness_check_path: "/health/live"
+router_config_path: "./__schemas/config.json"
+dev_mode: false
+
+engine:
+  max_concurrent_resolvers: 1024
+  debug:
+    report_websocket_connections: true
+    report_memory_usage: true
+
+cors:
+  allow_origins: ["*"]
+  allow_methods:
+    - HEAD
+    - GET
+    - POST
+  allow_headers:
+    - Origin
+    - Content-Length
+    - Content-Type
+  allow_credentials: true
+  max_age_minutes: 5m
+
+# Config for custom modules
+# See "https://cosmo-docs.wundergraph.com/router/metrics-and-monitoring" for more information
+telemetry:
+  # Common options
+  service_name: "cosmo-router"
+  # uses https://cosmo-otel.wundergraph.com for tracing and metrics
+
+  # OpenTelemetry Tracing
+  tracing:
+    enabled: false
+    sampling_rate: 1
+
+  # OpenTelemetry Metrics
+  metrics:
+    otlp:
+      enabled: false
+          # headers: {Authorization: Bearer <my-token>}
+    # Expose OpenTelemetry metrics for scraping
+    prometheus:
+      enabled: false
+
+# Traffic configuration
+# See "https://cosmo-docs.wundergraph.com/router/traffic-shaping" for more information
+traffic_shaping:
+  # Apply to all requests from clients to the router
+  router:
+    # Is the maximum size of the request body in MB, mib
+    max_request_body_size: 5MB
+  all: # Rules are applied to all subgraph requests.
+    # Subgraphs transport options
+    request_timeout: 60s
+    dial_timeout: 30s
+    tls_handshake_timeout: 0s
+    response_header_timeout: 0s
+    expect_continue_timeout: 0s
+    keep_alive_idle_timeout: 0s
+    keep_alive_probe_interval: 30s
+    # Retry
+    retry: # Rule is only applied to GraphQL operations of type "query"
+      enabled: true
+      algorithm: "backoff_jitter"
+      max_attempts: 5
+      interval: 3s
+      max_duration: 10s
+
+
+events:
+  sources:
+    - provider: NATS
+      url: "nats://localhost:4222"

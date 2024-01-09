@@ -150,21 +150,26 @@ type RequestHeaderRule struct {
 }
 
 type EngineDebugConfiguration struct {
-	PrintOperationTransformations bool `envconfig:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS"`
-	PrintOperationEnableASTRefs   bool `envconfig:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS"`
-	PrintPlanningPaths            bool `envconfig:"ENGINE_DEBUG_PRINT_PLANNING_PATHS"`
-	PrintQueryPlans               bool `envconfig:"ENGINE_DEBUG_PRINT_QUERY_PLANS"`
-	PrintNodeSuggestions          bool `envconfig:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS"`
-	ConfigurationVisitor          bool `envconfig:"ENGINE_DEBUG_CONFIGURATION_VISITOR"`
-	PlanningVisitor               bool `envconfig:"ENGINE_DEBUG_PLANNING_VISITOR"`
-	DatasourceVisitor             bool `envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR"`
+	PrintOperationTransformations bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS" yaml:"print_operation_transformations"`
+	PrintOperationEnableASTRefs   bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
+	PrintPlanningPaths            bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
+	PrintQueryPlans               bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
+	PrintNodeSuggestions          bool `default:"false" envconfig:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
+	ConfigurationVisitor          bool `default:"false" envconfig:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
+	PlanningVisitor               bool `default:"false" envconfig:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
+	DatasourceVisitor             bool `default:"false" envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
+	ReportWebSocketConnections    bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
+	ReportMemoryUsage             bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
 }
 
 type EngineExecutionConfiguration struct {
-	Debug                                  EngineDebugConfiguration
-	EnableSingleFlight                     bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
-	EnableRequestTracing                   bool `default:"true" envconfig:"ENGINE_ENABLE_REQUEST_TRACING"`
-	EnableExecutionPlanCacheResponseHeader bool `default:"false" envconfig:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER"`
+	Debug                                  EngineDebugConfiguration `yaml:"debug"`
+	EnableSingleFlight                     bool                     `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
+	EnableRequestTracing                   bool                     `default:"true" envconfig:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+	EnableExecutionPlanCacheResponseHeader bool                     `default:"false" envconfig:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
+	MaxConcurrentResolvers                 int                      `default:"1024" envconfig:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers"`
+	EnableWebSocketEpollKqueue             bool                     `default:"true" envconfig:"ENGINE_ENABLE_WEBSOCKET_EPOLL_KQUEUE" yaml:"enable_websocket_epoll_kqueue"`
+	WebSocketReadTimeout                   time.Duration            `default:"5s" envconfig:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout"`
 }
 
 type OverrideRoutingURLConfiguration struct {
@@ -243,7 +248,7 @@ type Config struct {
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
-	EngineExecutionConfiguration EngineExecutionConfiguration
+	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
 }
 
 // ValidateRequiredWithRouterConfigPath validates that either the field or the router config path is set

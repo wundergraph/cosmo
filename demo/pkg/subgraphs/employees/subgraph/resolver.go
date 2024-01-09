@@ -2,6 +2,8 @@ package subgraph
 
 import (
 	"sync"
+
+	"github.com/nats-io/nats.go"
 )
 
 // This file will not be regenerated automatically.
@@ -10,4 +12,5 @@ import (
 
 type Resolver struct {
 	mux sync.Mutex
+	NC  *nats.Conn
 }

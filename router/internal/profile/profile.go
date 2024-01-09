@@ -44,6 +44,9 @@ func (p *profiler) Finish() {
 // Start starts profiling and returns a Profiler that must be finished with
 // Finish() (usually via defer)
 func Start() Profiler {
+
+	initPprofHandlers()
+
 	var cpuProfileFile *os.File
 	if *cpuprofile != "" {
 		var err error
@@ -55,8 +58,6 @@ func Start() Profiler {
 			log.Fatal("Could not start CPU profile", err)
 		}
 	}
-
-	initPprofHandlers()
 
 	return &profiler{
 		cpuProfileFile: cpuProfileFile,

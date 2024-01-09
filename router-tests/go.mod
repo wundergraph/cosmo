@@ -9,13 +9,15 @@ require (
 	github.com/hasura/go-graphql-client v0.10.0
 	github.com/nats-io/nats-server/v2 v2.10.7
 	github.com/nats-io/nats.go v1.31.0
+	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/stretchr/testify v1.8.4
-	github.com/tidwall/sjson v1.2.5
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/router v0.0.0-20231210173116-4cf620b03fbb
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.26.0
+	golang.org/x/sync v0.4.0
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
@@ -89,6 +91,7 @@ require (
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/urfave/cli/v2 v2.25.7 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
@@ -113,7 +116,6 @@ require (
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
@@ -122,7 +124,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/grpc v1.58.3 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect

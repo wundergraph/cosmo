@@ -12,16 +12,16 @@ type Proto interface {
 	Initialize() (json.RawMessage, error)
 	ReadMessage() (*Message, error)
 
-	Pong(*Message) (int, error)
-	GraphQLData(id string, data json.RawMessage, extensions json.RawMessage) (int, error)
-	GraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) (int, error)
+	Pong(*Message) error
+	GraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error
+	GraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error
 	// Done is sent to indicate the requested operation is done and no more results will come in
-	Done(id string) (int, error)
+	Done(id string) error
 }
 
 type JSONConn interface {
 	ReadJSON(v interface{}) error
-	WriteJSON(v interface{}) (int, error)
+	WriteJSON(v interface{}) error
 }
 
 // MessageType indicates the type of the message received from the client
@@ -32,6 +32,7 @@ const (
 	MessageTypePong
 	MessageTypeSubscribe
 	MessageTypeComplete
+	MessageTypeTerminate
 )
 
 type Message struct {
@@ -47,8 +48,17 @@ func Subprotocols() []string {
 	}
 }
 
-func NewProtocol(subprotocol string, conn JSONConn) (Proto, error) {
-	switch subprotocol {
+func IsSupportedSubprotocol(subProtocol string) bool {
+	for _, s := range Subprotocols() {
+		if s == subProtocol {
+			return true
+		}
+	}
+	return false
+}
+
+func NewProtocol(subProtocol string, conn JSONConn) (Proto, error) {
+	switch subProtocol {
 	case graphQLWSSubprotocol:
 		return newGraphQLWSProtocol(conn), nil
 	case subscriptionsTransportWSSubprotocol:
