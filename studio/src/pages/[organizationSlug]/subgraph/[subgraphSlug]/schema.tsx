@@ -9,7 +9,7 @@ import {
   SDLViewerActions,
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
-import { ThreadSheet } from "@/components/schema/thread";
+import { ThreadSheet } from "@/components/discussions/thread";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
@@ -111,8 +111,11 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
             />
           </div>
           <ThreadSheet schemaVersionId={data.versionId ?? ""} />
-          <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
-            <p className="flex items-center gap-x-1">
+          <div className="flex w-full flex-col items-center gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
+            <p className="text-center">
+              Displaying the latest published schema of this subgraph
+            </p>
+            <p className="flex items-center gap-x-1 lg:ml-auto">
               Routing URL :
               <Link
                 className="hover:underline"
