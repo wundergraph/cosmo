@@ -19,7 +19,7 @@ describe('Entity Interface Tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-        `
+          `
       interface Interface {
         id: ID!
         name: String!
@@ -46,7 +46,7 @@ describe('Entity Interface Tests', () => {
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-        `
+          `
       interface Interface {
         id: ID!
         name: String!
@@ -133,42 +133,46 @@ describe('Entity Interface Tests', () => {
   test('that an error is returned if a subgraph does not define all implementations of an entity interface', () => {
     const { errors } = federateSubgraphs([subgraphE, subgraphF]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(undefinedEntityInterfaceImplementationsError(
-      new Map<string, InvalidEntityInterface[]>([
-        ['Interface', [
-          {
-            subgraphName: 'subgraph-e',
-            concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
-          },
-          {
-            subgraphName: 'subgraph-f',
-            concreteTypeNames: new Set<string>(['EntityOne', 'EntityThree'])
-          },
-        ]],
-      ]),
-      new Map<string, EntityInterfaceFederationData>([
-        ['Interface', {
-          interfaceFieldNames: new Set<string>(['id', 'name', 'age', 'isEntity']),
-          interfaceObjectFieldNames: new Set<string>(),
-          interfaceObjectSubgraphs: new Set<string>(),
-          typeName: 'Interface',
-          concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
-        }],
-      ]),
-    ));
+    expect(errors![0]).toStrictEqual(
+      undefinedEntityInterfaceImplementationsError(
+        new Map<string, InvalidEntityInterface[]>([
+          [
+            'Interface',
+            [
+              {
+                subgraphName: 'subgraph-e',
+                concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+              },
+              {
+                subgraphName: 'subgraph-f',
+                concreteTypeNames: new Set<string>(['EntityOne', 'EntityThree']),
+              },
+            ],
+          ],
+        ]),
+        new Map<string, EntityInterfaceFederationData>([
+          [
+            'Interface',
+            {
+              interfaceFieldNames: new Set<string>(['id', 'name', 'age', 'isEntity']),
+              interfaceObjectFieldNames: new Set<string>(),
+              interfaceObjectSubgraphs: new Set<string>(),
+              typeName: 'Interface',
+              concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
+            },
+          ],
+        ]),
+      ),
+    );
   });
 
-  test.skip('that an error is returned if a type declared with @interfaceObject is not an interface in other subgraphs', () => {
-  });
+  test.skip('that an error is returned if a type declared with @interfaceObject is not an interface in other subgraphs', () => {});
 
-  test.skip('that an error is returned if a type declared with @interfaceObject is not an entity', () => {
-  });
+  test.skip('that an error is returned if a type declared with @interfaceObject is not an entity', () => {});
 
-  test.skip('that an error is returned if an interface object does not include the same primary keys as its interface definition', () => {
-  });
+  test.skip('that an error is returned if an interface object does not include the same primary keys as its interface definition', () => {});
 
-  test.skip('that an error is returned if the concerete types that implement the entity interface are present in the same graph as the interface object', () => {
-  });
+  test.skip('that an error is returned if the concerete types that implement the entity interface are present in the same graph as the interface object', () => {});
 });
 
 const subgraphA: Subgraph = {

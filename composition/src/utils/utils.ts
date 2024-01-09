@@ -234,7 +234,8 @@ export function upsertEntityInterfaceFederationData(
   }
   // entity interface concrete types should be consistent
   return addSetsAndReturnMutationBoolean(
-    subgraphData.concreteTypeNames || new Set<string>(), federationData.concreteTypeNames,
+    subgraphData.concreteTypeNames || new Set<string>(),
+    federationData.concreteTypeNames,
   );
 }
 

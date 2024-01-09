@@ -812,7 +812,9 @@ function validateKeyFieldSets(
             keyFieldNames.add(fieldName);
             fieldNames.add(fieldName);
           }
-          getValueOrDefault(factory.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
+          getValueOrDefault(factory.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(
+            fieldName,
+          );
           const namedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {

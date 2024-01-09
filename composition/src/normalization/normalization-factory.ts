@@ -1644,8 +1644,8 @@ export class NormalizationFactory {
           };
           const entityInterfaceData = this.entityInterfaces.get(parentTypeName);
           if (entityInterfaceData) {
-            entityInterfaceData.concreteTypeNames = this.abstractToConcreteTypeNames.get(parentTypeName)
-              || new Set<string>();
+            entityInterfaceData.concreteTypeNames =
+              this.abstractToConcreteTypeNames.get(parentTypeName) || new Set<string>();
             configurationData.isInterfaceObject = entityInterfaceData.isInterfaceObject;
             configurationData.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
           }

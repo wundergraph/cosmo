@@ -135,9 +135,11 @@ import {
   EntityInterfaceFederationData,
   getAllMutualEntries,
   getEntriesNotInHashSet,
-  getOrThrowError, getValueOrDefault,
+  getOrThrowError,
+  getValueOrDefault,
   hasSimplePath,
-  ImplementationErrors, InvalidEntityInterface,
+  ImplementationErrors,
+  InvalidEntityInterface,
   InvalidFieldImplementation,
   InvalidRequiredArgument,
   kindToTypeString,
@@ -1420,15 +1422,15 @@ export class FederationFactory {
       }
       for (const subgraphName of entityInterfaceData.interfaceObjectSubgraphs) {
         const configurationDataMap = getOrThrowError(
-          this.subgraphConfigBySubgraphName, subgraphName, 'subgraphConfigBySubgraphName',
+          this.subgraphConfigBySubgraphName,
+          subgraphName,
+          'subgraphConfigBySubgraphName',
         ).configurationDataMap;
         const concreteTypeNames = this.abstractToConcreteTypeNames.get(typeName);
         if (!concreteTypeNames) {
           continue;
         }
-        const interfaceObjectConfiguration = getOrThrowError(
-          configurationDataMap, typeName, 'configurationDataMap',
-        );
+        const interfaceObjectConfiguration = getOrThrowError(configurationDataMap, typeName, 'configurationDataMap');
         const keys = interfaceObjectConfiguration.keys;
         if (!keys) {
           // error TODO no keys
@@ -1464,7 +1466,9 @@ export class FederationFactory {
               continue;
             }
             const interfaceFieldContainer = getOrThrowError(
-              entityInterface.fields, fieldName, 'entityInterface.fields',
+              entityInterface.fields,
+              fieldName,
+              'entityInterface.fields',
             );
             concreteTypeContainer.fields.set(fieldName, { ...interfaceFieldContainer });
           }
@@ -1746,9 +1750,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
     for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
       // Always add each entity interface to the invalid entity interfaces map
       // If not, earlier checks would not account for implementations not yet seen
-      const invalidEntityInterfaces = getValueOrDefault(
-        invalidEntityInterfacesByTypeName, typeName, () => [],
-      );
+      const invalidEntityInterfaces = getValueOrDefault(invalidEntityInterfacesByTypeName, typeName, () => []);
       invalidEntityInterfaces.push({
         subgraphName,
         concreteTypeNames: entityInterfaceData.concreteTypeNames || new Set<string>(),
@@ -1756,11 +1758,16 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
       const existingData = entityInterfaceFederationDataByTypeName.get(typeName);
       if (!existingData) {
         validEntityInterfaceTypeNames.add(typeName);
-        entityInterfaceFederationDataByTypeName.set(typeName, newEntityInterfaceFederationData(entityInterfaceData, subgraphName));
+        entityInterfaceFederationDataByTypeName.set(
+          typeName,
+          newEntityInterfaceFederationData(entityInterfaceData, subgraphName),
+        );
         continue;
       }
       const areAnyImplementationsUndefined = upsertEntityInterfaceFederationData(
-        existingData, entityInterfaceData, subgraphName,
+        existingData,
+        entityInterfaceData,
+        subgraphName,
       );
       if (areAnyImplementationsUndefined) {
         validEntityInterfaceTypeNames.delete(typeName);
@@ -1774,9 +1781,12 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
   }
   if (invalidEntityInterfacesByTypeName.size > 0) {
     return {
-      errors: [undefinedEntityInterfaceImplementationsError(
-        invalidEntityInterfacesByTypeName, entityInterfaceFederationDataByTypeName,
-      )],
+      errors: [
+        undefinedEntityInterfaceImplementationsError(
+          invalidEntityInterfacesByTypeName,
+          entityInterfaceFederationDataByTypeName,
+        ),
+      ],
     };
   }
   const federationFactory = new FederationFactory(
