@@ -5,14 +5,19 @@ import {
   EventConfiguration,
   EventType,
   FieldConfiguration,
+  HTTPOperationConfiguration,
   RequiredField,
   TypeField,
+  HTTPObjMap,
+  HTTPObjMapValue,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   ArgumentConfigurationData,
   ConfigurationDataMap,
   RequiredFieldConfiguration,
   EventType as CompositionEventType,
+  HttpObjMap,
+  HttpConfiguration,
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
@@ -20,6 +25,8 @@ export type DataSourceConfiguration = {
   childNodes: TypeField[];
   provides: RequiredField[];
   events: EventConfiguration[];
+  httpConfiguration?: HttpConfiguration;
+  httpOperations: HTTPOperationConfiguration[];
   keys: RequiredField[];
   requires: RequiredField[];
 };
@@ -58,6 +65,32 @@ function eventType(type: CompositionEventType) {
   throw new Error(`Unknown event type ${type}`);
 }
 
+function convertObjMapValue(objMap: HttpObjMap): HTTPObjMapValue {
+  const output = new HTTPObjMapValue();
+  for (const [key, value] of Object.entries(objMap)) {
+    const mapValue = new HTTPObjMapValue({
+      stringValue: typeof value === 'string' ? value : undefined,
+      mapValues: typeof value === 'object' ? convertObjMapValue(value).mapValues : undefined,
+    });
+    output.mapValues[key] = mapValue;
+  }
+  return output;
+}
+
+export function convertObjMap(objMap?: HttpObjMap): HTTPObjMap {
+  const output = new HTTPObjMap();
+  if (objMap) {
+    for (const [key, value] of Object.entries(objMap)) {
+      const mapValue = new HTTPObjMapValue({
+        stringValue: typeof value === 'string' ? value : undefined,
+        mapValues: typeof value === 'object' ? convertObjMapValue(value).mapValues : undefined,
+      });
+      output.values[key] = mapValue;
+    }
+  }
+  return output;
+}
+
 export function configurationDataMapToDataSourceConfiguration(dataMap: ConfigurationDataMap): DataSourceConfiguration {
   const output: DataSourceConfiguration = {
     rootNodes: [],
@@ -65,6 +98,7 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
     keys: [],
     provides: [],
     events: [],
+    httpOperations: [],
     requires: [],
   };
   for (const data of dataMap.values()) {
@@ -86,6 +120,26 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
           typeName,
           fieldName: event.fieldName,
           topic: event.topic,
+        }),
+      );
+    }
+
+    if (!output.httpConfiguration && data.httpConfiguration) {
+      output.httpConfiguration = data.httpConfiguration;
+    }
+
+    for (const operation of data.httpOperations ?? []) {
+      output.httpOperations.push(
+        new HTTPOperationConfiguration({
+          typeName,
+          fieldName: operation.fieldName,
+          path: operation.path,
+          operationSpecificHeaders: convertObjMap(operation.operationSpecificHeaders),
+          httpMethod: operation.httpMethod || 'GET',
+          isBinary: operation.isBinary ?? false,
+          requestBaseBody: convertObjMap(operation.requestBaseBody),
+          queryParamArgMap: convertObjMap(operation.queryParamArgMap),
+          queryStringOptionsByParam: convertObjMap(operation.queryStringOptionsByParam),
         }),
       );
     }

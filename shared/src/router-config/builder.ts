@@ -11,16 +11,20 @@ import {
   DataSourceCustom_Events,
   // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
+  // eslint-disable-next-line camelcase
+  DataSourceCustom_HTTP,
   DataSourceKind,
   EngineConfiguration,
   HTTPMethod,
   InternedString,
   RouterConfig,
   TypeField,
+  HTTPFetchConfiguration,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   argumentConfigurationDatasToFieldConfigurations,
   configurationDataMapToDataSourceConfiguration,
+  convertObjMap,
 } from './graphql-configuration.js';
 import { normalizationFailureError } from './errors.js';
 
@@ -99,15 +103,17 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       engineConfig,
       printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
     );
-    const { childNodes, rootNodes, keys, provides, events, requires } = configurationDataMapToDataSourceConfiguration(
-      subgraph.configurationDataMap,
-    );
+    const { childNodes, rootNodes, keys, provides, events, httpConfiguration, httpOperations, requires } =
+      configurationDataMapToDataSourceConfiguration(subgraph.configurationDataMap);
     const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
     let kind: DataSourceKind;
     // eslint-disable-next-line camelcase
     let customGraphql: DataSourceCustom_GraphQL | undefined;
     // eslint-disable-next-line camelcase
     let customEvents: DataSourceCustom_Events | undefined;
+    // eslint-disable-next-line camelcase
+    let customHttp: DataSourceCustom_HTTP | undefined;
+    // TODO: Validate that data sources do not mix GraphQL/HTTP/PUBSUB
     if (events.length > 0) {
       kind = DataSourceKind.PUBSUB;
       customEvents = new DataSourceCustom_Events({
@@ -131,6 +137,23 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
         ii++;
       }
       rootNodes.length = filtered;
+    } else if (httpConfiguration || httpOperations.length > 0) {
+      kind = DataSourceKind.HTTP;
+      customHttp = new DataSourceCustom_HTTP({
+        fetch: new HTTPFetchConfiguration({
+          sourceName: httpConfiguration?.sourceName ?? '',
+          endpoint: httpConfiguration?.endpoint ?? '',
+          operationHeaders: convertObjMap(httpConfiguration?.operationHeaders),
+          queryStringOptions: convertObjMap(httpConfiguration?.queryStringOptions),
+          queryParams: convertObjMap(httpConfiguration?.queryParams),
+        }),
+        operations: httpOperations,
+        upstreamSchema,
+        federation: {
+          enabled: true,
+          serviceSdl: subgraph.sdl,
+        },
+      });
     } else {
       kind = DataSourceKind.GRAPHQL;
       customGraphql = new DataSourceCustom_GraphQL({
@@ -173,6 +196,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       kind,
       customGraphql,
       customEvents,
+      customHttp,
       directives: [],
       overrideFieldPathFromAlias: true,
       requestTimeoutSeconds: BigInt(10),

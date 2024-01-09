@@ -71,12 +71,18 @@ export enum DataSourceKind {
    * @generated from enum value: PUBSUB = 2;
    */
   PUBSUB = 2,
+
+  /**
+   * @generated from enum value: HTTP = 3;
+   */
+  HTTP = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(DataSourceKind)
 proto3.util.setEnumType(DataSourceKind, "wg.cosmo.node.v1.DataSourceKind", [
   { no: 0, name: "STATIC" },
   { no: 1, name: "GRAPHQL" },
   { no: 2, name: "PUBSUB" },
+  { no: 3, name: "HTTP" },
 ]);
 
 /**
@@ -742,6 +748,11 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
    */
   customEvents?: DataSourceCustom_Events;
 
+  /**
+   * @generated from field: wg.cosmo.node.v1.DataSourceCustom_HTTP custom_http = 14;
+   */
+  customHttp?: DataSourceCustom_HTTP;
+
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -763,6 +774,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 11, name: "provides", kind: "message", T: RequiredField, repeated: true },
     { no: 12, name: "requires", kind: "message", T: RequiredField, repeated: true },
     { no: 13, name: "custom_events", kind: "message", T: DataSourceCustom_Events },
+    { no: 14, name: "custom_http", kind: "message", T: DataSourceCustom_HTTP },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
@@ -1315,6 +1327,293 @@ export class DataSourceCustom_Events extends Message<DataSourceCustom_Events> {
 
   static equals(a: DataSourceCustom_Events | PlainMessage<DataSourceCustom_Events> | undefined, b: DataSourceCustom_Events | PlainMessage<DataSourceCustom_Events> | undefined): boolean {
     return proto3.util.equals(DataSourceCustom_Events, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.HTTPFetchConfiguration
+ */
+export class HTTPFetchConfiguration extends Message<HTTPFetchConfiguration> {
+  /**
+   * @generated from field: string source_name = 1;
+   */
+  sourceName = "";
+
+  /**
+   * @generated from field: string endpoint = 2;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.HTTPObjMap operationHeaders = 3;
+   */
+  operationHeaders?: HTTPObjMap;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.HTTPObjMap queryStringOptions = 4;
+   */
+  queryStringOptions?: HTTPObjMap;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.HTTPObjMap queryParams = 5;
+   */
+  queryParams?: HTTPObjMap;
+
+  constructor(data?: PartialMessage<HTTPFetchConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.HTTPFetchConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "source_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operationHeaders", kind: "message", T: HTTPObjMap },
+    { no: 4, name: "queryStringOptions", kind: "message", T: HTTPObjMap },
+    { no: 5, name: "queryParams", kind: "message", T: HTTPObjMap },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HTTPFetchConfiguration {
+    return new HTTPFetchConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HTTPFetchConfiguration {
+    return new HTTPFetchConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HTTPFetchConfiguration {
+    return new HTTPFetchConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: HTTPFetchConfiguration | PlainMessage<HTTPFetchConfiguration> | undefined, b: HTTPFetchConfiguration | PlainMessage<HTTPFetchConfiguration> | undefined): boolean {
+    return proto3.util.equals(HTTPFetchConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.HTTPObjMapValue
+ */
+export class HTTPObjMapValue extends Message<HTTPObjMapValue> {
+  /**
+   * @generated from field: string string_value = 1;
+   */
+  stringValue = "";
+
+  /**
+   * @generated from field: map<string, wg.cosmo.node.v1.HTTPObjMapValue> map_values = 2;
+   */
+  mapValues: { [key: string]: HTTPObjMapValue } = {};
+
+  constructor(data?: PartialMessage<HTTPObjMapValue>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.HTTPObjMapValue";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "string_value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "map_values", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: HTTPObjMapValue} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HTTPObjMapValue {
+    return new HTTPObjMapValue().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HTTPObjMapValue {
+    return new HTTPObjMapValue().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HTTPObjMapValue {
+    return new HTTPObjMapValue().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: HTTPObjMapValue | PlainMessage<HTTPObjMapValue> | undefined, b: HTTPObjMapValue | PlainMessage<HTTPObjMapValue> | undefined): boolean {
+    return proto3.util.equals(HTTPObjMapValue, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.HTTPObjMap
+ */
+export class HTTPObjMap extends Message<HTTPObjMap> {
+  /**
+   * @generated from field: map<string, wg.cosmo.node.v1.HTTPObjMapValue> values = 1;
+   */
+  values: { [key: string]: HTTPObjMapValue } = {};
+
+  constructor(data?: PartialMessage<HTTPObjMap>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.HTTPObjMap";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "values", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: HTTPObjMapValue} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HTTPObjMap {
+    return new HTTPObjMap().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HTTPObjMap {
+    return new HTTPObjMap().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HTTPObjMap {
+    return new HTTPObjMap().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: HTTPObjMap | PlainMessage<HTTPObjMap> | undefined, b: HTTPObjMap | PlainMessage<HTTPObjMap> | undefined): boolean {
+    return proto3.util.equals(HTTPObjMap, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.HTTPOperationConfiguration
+ */
+export class HTTPOperationConfiguration extends Message<HTTPOperationConfiguration> {
+  /**
+   * @generated from field: string type_name = 1;
+   */
+  typeName = "";
+
+  /**
+   * @generated from field: string field_name = 2;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: string path = 3;
+   */
+  path = "";
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.HTTPObjMap operation_specific_headers = 4;
+   */
+  operationSpecificHeaders?: HTTPObjMap;
+
+  /**
+   * @generated from field: string http_method = 5;
+   */
+  httpMethod = "";
+
+  /**
+   * @generated from field: bool is_binary = 6;
+   */
+  isBinary = false;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.HTTPObjMap request_base_body = 7;
+   */
+  requestBaseBody?: HTTPObjMap;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.HTTPObjMap query_param_arg_map = 8;
+   */
+  queryParamArgMap?: HTTPObjMap;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.HTTPObjMap query_string_options_by_param = 9;
+   */
+  queryStringOptionsByParam?: HTTPObjMap;
+
+  constructor(data?: PartialMessage<HTTPOperationConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.HTTPOperationConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operation_specific_headers", kind: "message", T: HTTPObjMap },
+    { no: 5, name: "http_method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "is_binary", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "request_base_body", kind: "message", T: HTTPObjMap },
+    { no: 8, name: "query_param_arg_map", kind: "message", T: HTTPObjMap },
+    { no: 9, name: "query_string_options_by_param", kind: "message", T: HTTPObjMap },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HTTPOperationConfiguration {
+    return new HTTPOperationConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HTTPOperationConfiguration {
+    return new HTTPOperationConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HTTPOperationConfiguration {
+    return new HTTPOperationConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: HTTPOperationConfiguration | PlainMessage<HTTPOperationConfiguration> | undefined, b: HTTPOperationConfiguration | PlainMessage<HTTPOperationConfiguration> | undefined): boolean {
+    return proto3.util.equals(HTTPOperationConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.DataSourceCustom_HTTP
+ */
+export class DataSourceCustom_HTTP extends Message<DataSourceCustom_HTTP> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.HTTPFetchConfiguration fetch = 1;
+   */
+  fetch?: HTTPFetchConfiguration;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.GraphQLFederationConfiguration federation = 2;
+   */
+  federation?: GraphQLFederationConfiguration;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.InternedString upstream_schema = 3;
+   */
+  upstreamSchema?: InternedString;
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.SingleTypeField custom_scalar_type_fields = 4;
+   */
+  customScalarTypeFields: SingleTypeField[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.HTTPOperationConfiguration operations = 5;
+   */
+  operations: HTTPOperationConfiguration[] = [];
+
+  constructor(data?: PartialMessage<DataSourceCustom_HTTP>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.DataSourceCustom_HTTP";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fetch", kind: "message", T: HTTPFetchConfiguration },
+    { no: 2, name: "federation", kind: "message", T: GraphQLFederationConfiguration },
+    { no: 3, name: "upstream_schema", kind: "message", T: InternedString },
+    { no: 4, name: "custom_scalar_type_fields", kind: "message", T: SingleTypeField, repeated: true },
+    { no: 5, name: "operations", kind: "message", T: HTTPOperationConfiguration, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceCustom_HTTP {
+    return new DataSourceCustom_HTTP().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DataSourceCustom_HTTP {
+    return new DataSourceCustom_HTTP().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DataSourceCustom_HTTP {
+    return new DataSourceCustom_HTTP().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DataSourceCustom_HTTP | PlainMessage<DataSourceCustom_HTTP> | undefined, b: DataSourceCustom_HTTP | PlainMessage<DataSourceCustom_HTTP> | undefined): boolean {
+    return proto3.util.equals(DataSourceCustom_HTTP, a, b);
   }
 }
 

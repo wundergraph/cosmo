@@ -91,6 +91,7 @@ message DataSourceConfiguration {
   repeated RequiredField provides = 11;
   repeated RequiredField requires = 12;
   DataSourceCustom_Events custom_events = 13;
+  DataSourceCustom_HTTP custom_http = 14;
 }
 
 message FieldConfiguration {
@@ -124,6 +125,7 @@ enum DataSourceKind {
   STATIC = 0;
   GRAPHQL = 1;
   PUBSUB = 2;
+  HTTP = 3;
 }
 
 message TypeField {
@@ -188,6 +190,44 @@ message EventConfiguration {
 
 message DataSourceCustom_Events {
   repeated EventConfiguration events = 1;
+}
+
+message HTTPFetchConfiguration {
+  string source_name = 1;
+  string endpoint = 2;
+  HTTPObjMap operationHeaders = 3;
+  HTTPObjMap queryStringOptions = 4;
+  HTTPObjMap queryParams = 5;
+}
+
+message HTTPObjMapValue {
+  string string_value = 1;
+  map<string, HTTPObjMapValue> map_values = 2;
+}
+
+message HTTPObjMap {
+  map <string, HTTPObjMapValue> values = 1;
+}
+
+message HTTPOperationConfiguration {
+  string type_name = 1;
+  string field_name = 2;
+
+  string path = 3;
+  HTTPObjMap operation_specific_headers = 4;
+  string http_method = 5;
+  bool is_binary = 6;
+  HTTPObjMap request_base_body = 7;
+  HTTPObjMap query_param_arg_map = 8;
+  HTTPObjMap query_string_options_by_param = 9;
+}
+
+message DataSourceCustom_HTTP {
+  HTTPFetchConfiguration fetch = 1;
+  GraphQLFederationConfiguration federation = 2;
+  InternedString upstream_schema = 3;
+  repeated SingleTypeField custom_scalar_type_fields = 4;
+  repeated HTTPOperationConfiguration operations = 5;
 }
 
 message DataSourceCustom_Static {

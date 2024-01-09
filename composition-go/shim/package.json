@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@graphql-tools/utils": "^10.0.11",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
     "graphql": "^16.7.1"
