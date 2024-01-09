@@ -434,7 +434,7 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>Request Rate</h4>
-            <InfoTooltip>RPM in last {getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>RPM in {getInfoTip(range)}</InfoTooltip>
           </div>
 
           <p className="text-xl font-semibold">{formatter(value)}</p>
@@ -973,7 +973,7 @@ const OverviewToolbar = () => {
             });
           }}
           variant="outline"
-          className="px-3"
+          size="icon"
         >
           <UpdateIcon />
         </Button>

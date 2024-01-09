@@ -19,6 +19,7 @@ import {
   targets,
 } from '../../db/schema.js';
 import {
+  DateRange,
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
   GraphApiKeyDTO,
@@ -595,10 +596,7 @@ export class FederatedGraphRepository {
       limit: number;
       offset: number;
     },
-    dateRange: {
-      start: string;
-      end: string;
-    },
+    dateRange: DateRange,
   ): Promise<{ federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined> {
     return this.db.transaction<
       { federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined

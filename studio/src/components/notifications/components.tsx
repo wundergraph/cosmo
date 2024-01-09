@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { PartialMessage } from "@bufbuild/protobuf";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { FaSlack } from "react-icons/fa";
+import { Toolbar } from "../ui/toolbar";
 
 export type EventsMeta = Array<PartialMessage<EventMeta>>;
 
@@ -133,7 +134,7 @@ export const NotificationToolbar = ({ tab }: { tab: NotificationTab }) => {
   const router = useRouter();
 
   return (
-    <div className="flex items-center gap-2 border-b px-4 py-3 lg:px-8">
+    <Toolbar>
       <Tabs defaultValue={tab}>
         <TabsList>
           <TabsTrigger value="webhooks" asChild>
@@ -160,6 +161,6 @@ export const NotificationToolbar = ({ tab }: { tab: NotificationTab }) => {
           </TabsTrigger>
         </TabsList>
       </Tabs>
-    </div>
+    </Toolbar>
   );
 };

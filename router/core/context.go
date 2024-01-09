@@ -356,6 +356,8 @@ type operationContext struct {
 	planCacheHit   bool
 	initialPayload []byte
 	extensions     []byte
+	persistedID    string
+	protocol       OperationProtocol
 }
 
 func (o *operationContext) Variables() []byte {
@@ -376,6 +378,14 @@ func (o *operationContext) Hash() uint64 {
 
 func (o *operationContext) Content() string {
 	return o.content
+}
+
+func (o *operationContext) PersistedID() string {
+	return o.persistedID
+}
+
+func (o *operationContext) Protocol() OperationProtocol {
+	return o.protocol
 }
 
 func (o *operationContext) ClientInfo() ClientInfo {

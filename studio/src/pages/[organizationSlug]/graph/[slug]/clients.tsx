@@ -726,7 +726,7 @@ const ClientsPage: NextPageWithLayout = () => {
 
 ClientsPage.getLayout = (page) =>
   getGraphLayout(
-    <PageHeader title="Studio | Clients">
+    <PageHeader title="Clients | Studio">
       <GraphPageLayout
         title="Clients"
         subtitle="View registered clients and their persisted operations"

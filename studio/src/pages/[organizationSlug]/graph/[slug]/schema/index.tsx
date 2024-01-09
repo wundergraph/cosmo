@@ -1,9 +1,11 @@
 import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import { EmptyState } from "@/components/empty-state";
 import {
+  GraphContext,
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { CommentCard, NewDiscussion } from "@/components/schema/discussion";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,11 +17,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import { Kbd } from "@/components/ui/kbd";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -63,17 +60,55 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import {
+  ArrowRightIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getFederatedGraphSDLByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  getFederatedGraphSDLByName,
+  getAllDiscussions,
+  getOrganizationMembers,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
 import { useCommandState } from "cmdk";
 import { GraphQLSchema } from "graphql";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
-import { FiEye } from "react-icons/fi";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { useUser } from "@/hooks/use-user";
+import { PiChat } from "react-icons/pi";
+import { ThreadSheet } from "@/components/schema/thread";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import useWindowSize from "@/hooks/use-window-size";
+import {
+  SchemaSettings,
+  hideDiscussionsKey,
+  hideResolvedDiscussionsKey,
+} from "@/components/schema/sdl-viewer";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 const TypeLink = ({
   name,
@@ -251,6 +286,151 @@ const Fields = (props: {
   );
 };
 
+const TypeDiscussions = ({
+  name,
+  schemaVersionId,
+  startLineNo,
+  endLineNo,
+}: {
+  name: string;
+  schemaVersionId: string;
+  startLineNo: number;
+  endLineNo: number;
+}) => {
+  const router = useRouter();
+  const graphName = router.query.slug as string;
+  const graphData = useContext(GraphContext);
+
+  const [hideResolvedDiscussions] = useLocalStorage(
+    hideResolvedDiscussionsKey,
+    false,
+  );
+
+  const [newDiscussionLine, setNewDiscussionLine] = useState(-1);
+
+  const applyParams = useApplyParams();
+
+  const user = useUser();
+
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getAllDiscussions.useQuery({
+      targetId: graphData?.graph?.targetId,
+      schemaVersionId,
+    }),
+  });
+
+  const { data: membersData } = useQuery({
+    ...getOrganizationMembers.useQuery(),
+    queryKey: [
+      user?.currentOrganization.slug || "",
+      "GetOrganizationMembers",
+      {},
+    ],
+  });
+
+  if (isLoading) return <Loader fullscreen />;
+
+  if (error || data?.response?.code !== EnumStatusCode.OK) {
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title={`Could not retrieve discussions for ${name}`}
+        description={
+          data?.response?.details || error?.message || "Please try again"
+        }
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  }
+
+  const discussions = data?.discussions
+    .filter(
+      (d) => d.referenceLine >= startLineNo && d.referenceLine <= endLineNo,
+    )
+    .filter((ld) => !(ld.isResolved && hideResolvedDiscussions));
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between text-lg font-semibold">
+        Discussions{" "}
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setNewDiscussionLine(startLineNo)}
+        >
+          <PlusIcon className="mr-2" />
+          New
+        </Button>
+      </div>
+      {discussions.length === 0 && newDiscussionLine === -1 && (
+        <EmptyState
+          icon={<PiChat />}
+          title="No discussions found"
+          className="mt-24"
+          description={`You can start a new one for type ${name}`}
+        />
+      )}
+      {startLineNo &&
+        graphData?.graph?.targetId &&
+        newDiscussionLine !== -1 && (
+          <div className="mt-4">
+            <NewDiscussion
+              className="w-auto px-0"
+              lineNo={startLineNo}
+              versionId={schemaVersionId}
+              targetId={graphData.graph.targetId}
+              setNewDiscussionLine={setNewDiscussionLine}
+              placeholder={`Write something to discuss about \`${name}\``}
+              refetch={() => refetch()}
+            />
+          </div>
+        )}
+      <div className="scrollbar-custom mt-4 flex h-full flex-col gap-y-4 overflow-y-auto">
+        {discussions.map((ld) => {
+          return (
+            <div
+              key={ld.id}
+              className="flex h-auto w-full max-w-2xl flex-col rounded-md border pb-2 pt-4"
+            >
+              <CommentCard
+                isOpeningComment
+                discussionId={ld.id}
+                comment={ld.openingComment!}
+                author={membersData?.members.find(
+                  (m) => m.userID === ld.openingComment?.createdBy,
+                )}
+                onUpdate={() => refetch()}
+                onDelete={() => refetch()}
+              />
+              <Separator className="mb-2 mt-4" />
+
+              <div className="mt-auto flex flex-wrap items-center gap-4 px-4">
+                {ld.isResolved && (
+                  <p className="text-xs italic">
+                    This discussion was marked as resolved
+                  </p>
+                )}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="ml-auto w-max"
+                  onClick={() => {
+                    applyParams({
+                      discussionId: ld.id,
+                    });
+                  }}
+                >
+                  View thread <ArrowRightIcon className="ml-2" />
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const Type = (props: {
   name: string;
   category: GraphQLTypeCategory;
@@ -258,47 +438,60 @@ const Type = (props: {
   interfaces?: string[];
   fields?: GraphQLField[];
   ast: GraphQLSchema;
+  startLineNo?: number;
+  endLineNo?: number;
+  schemaVersionId: string;
 }) => {
+  const [hideDiscussions] = useLocalStorage(hideDiscussionsKey, false);
+
   const router = useRouter();
 
-  return (
-    <div className="flex flex-col">
-      <div className="flex items-center gap-x-4">
-        <div className="flex flex-wrap items-center gap-x-2 text-lg font-semibold tracking-tight">
-          <h3>{props.name}</h3>
-          {props.interfaces && props.interfaces.length > 0 && (
-            <div className="font-normal text-muted-foreground">implements</div>
-          )}
-          {props.interfaces &&
-            props.interfaces.map((t, index) => (
-              <div key={index} className="flex items-center gap-x-2">
-                <TypeLink ast={props.ast} name={t} isHeading />
-                {index !== props.interfaces!.length - 1 && (
-                  <p className="font-normal text-muted-foreground">&</p>
-                )}
-              </div>
-            ))}
+  const { isMobile } = useWindowSize();
+
+  const typeContent = (
+    <div className="scrollbar-custom flex h-full flex-col overflow-auto">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-x-4">
+            <div className="flex flex-wrap items-center gap-x-2 text-lg font-semibold tracking-tight">
+              <h3>{props.name}</h3>
+              {props.interfaces && props.interfaces.length > 0 && (
+                <div className="font-normal text-muted-foreground">
+                  implements
+                </div>
+              )}
+              {props.interfaces &&
+                props.interfaces.map((t, index) => (
+                  <div key={index} className="flex items-center gap-x-2">
+                    <TypeLink ast={props.ast} name={t} isHeading />
+                    {index !== props.interfaces!.length - 1 && (
+                      <p className="font-normal text-muted-foreground">&</p>
+                    )}
+                  </div>
+                ))}
+            </div>
+            <Badge className="w-max">
+              <Link
+                href={{
+                  pathname: `/[organizationSlug]/graph/[slug]/schema`,
+                  query: {
+                    organizationSlug: router.query.organizationSlug,
+                    slug: router.query.slug,
+                    category: props.category,
+                  },
+                }}
+              >
+                {props.category}
+              </Link>
+            </Badge>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {props.description || getRootDescription(props.name) || (
+              <span className="italic">No description provided</span>
+            )}
+          </p>
         </div>
-        <Badge className="w-max">
-          <Link
-            href={{
-              pathname: `/[organizationSlug]/graph/[slug]/schema`,
-              query: {
-                organizationSlug: router.query.organizationSlug,
-                slug: router.query.slug,
-                category: props.category,
-              },
-            }}
-          >
-            {props.category}
-          </Link>
-        </Badge>
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {props.description || getRootDescription(props.name) || (
-          <span className="italic">No description provided</span>
-        )}
-      </p>
       <div className="mt-6">
         {props.fields && (
           <Fields
@@ -310,9 +503,46 @@ const Type = (props: {
       </div>
     </div>
   );
+
+  return (
+    <ResizablePanelGroup direction="horizontal" className="flex max-w-full">
+      <ResizablePanel
+        className={cn(
+          !!props.startLineNo && !isMobile && !hideDiscussions && "pr-4",
+        )}
+        minSize={35}
+        defaultSize={isMobile ? 1000 : 65}
+      >
+        {typeContent}
+      </ResizablePanel>
+      {!!props.startLineNo &&
+        !!props.endLineNo &&
+        !isMobile &&
+        !hideDiscussions && (
+          <>
+            <ResizableHandle withHandle />
+            <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
+              <TypeDiscussions
+                name={props.name}
+                schemaVersionId={props.schemaVersionId}
+                startLineNo={props.startLineNo}
+                endLineNo={props.endLineNo}
+              />
+              <ThreadSheet schemaVersionId={props.schemaVersionId} />
+            </ResizablePanel>
+          </>
+        )}
+    </ResizablePanelGroup>
+  );
 };
 
-const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
+const TypeWrapper = ({
+  ast,
+  schemaVersionId,
+}: {
+  ast: GraphQLSchema;
+  schemaVersionId: string;
+}) => {
   const router = useRouter();
 
   const category = router.query.category as GraphQLTypeCategory;
@@ -406,13 +636,16 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
   const type = mapGraphQLType(astType);
 
   return (
-    <div className="mt-2 flex-1">
+    <div className="h-full flex-1 pt-2">
       <Type
         name={type.name}
         category={type.category}
         description={type.description}
         interfaces={type.interfaces}
         fields={type.fields}
+        startLineNo={type.loc?.startToken.line}
+        endLineNo={type.loc?.endToken.line}
+        schemaVersionId={schemaVersionId}
         ast={ast}
       />
     </div>
@@ -592,6 +825,7 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
           </SelectGroup>
         </SelectContent>
       </Select>
+      <SchemaSettings />
     </SchemaToolbar>
   );
 };
@@ -604,13 +838,15 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const selectedCategory = (router.query.category as string) ?? "query";
   const typename = router.query.typename as string;
 
+  const [ast, setAst] = useState<GraphQLSchema | null>(null);
+
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphSDLByName.useQuery({
       name: graphName,
     }),
   );
 
-  const ast = useMemo(() => parseSchema(data?.sdl), [data?.sdl]);
+  useMemo(() => parseSchema(data?.sdl).then((res) => setAst(res)), [data?.sdl]);
 
   const typeCounts = ast ? getTypeCounts(ast) : undefined;
 
@@ -723,7 +959,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 actions={<Button onClick={() => refetch()}>Retry</Button>}
               />
             )}
-          {ast && <TypeWrapper ast={ast} />}
+          {ast && (
+            <TypeWrapper ast={ast} schemaVersionId={data?.versionId ?? ""} />
+          )}
           <FieldUsageSheet />
         </div>
       </div>

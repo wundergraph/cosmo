@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.50.6",
+  "version": "0.52.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -47,6 +47,7 @@
     "@graphql-inspector/core": "^5.0.1",
     "@keycloak/keycloak-admin-client": "^22.0.4",
     "@octokit/webhooks-types": "^7.3.1",
+    "@tiptap/core": "^2.1.13",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",

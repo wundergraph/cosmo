@@ -9,12 +9,12 @@ import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
   AddSubgraphMemberResponse,
-  AnalyticsConfig,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
   CreateCheckoutSessionResponse,
+  CreateDiscussionResponse,
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
@@ -22,8 +22,9 @@ import {
   CreateOIDCProviderResponse,
   CreateOrganizationResponse,
   CreateOrganizationWebhookConfigResponse,
-  DateRange,
+  DateRange as DateRangeProto,
   DeleteAPIKeyResponse,
+  DeleteDiscussionCommentResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   DeleteIntegrationResponse,
@@ -33,6 +34,7 @@ import {
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GetAPIKeysResponse,
+  GetAllDiscussionsResponse,
   GetAnalyticsViewResponse,
   GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
@@ -44,6 +46,8 @@ import {
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
   GetDashboardAnalyticsViewResponse,
+  GetDiscussionResponse,
+  GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
@@ -81,7 +85,10 @@ import {
   PublishedOperationStatus,
   RemoveInvitationResponse,
   RemoveSubgraphMemberResponse,
+  ReplyToDiscussionResponse,
   RequestSeriesItem,
+  SetDiscussionResolutionResponse,
+  UpdateDiscussionCommentResponse,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateOrgMemberRoleResponse,
@@ -97,6 +104,7 @@ import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
 import {
+  DateRange,
   GraphApiKeyDTO,
   GraphApiKeyJwtPayload,
   PublishedOperationData,
@@ -106,6 +114,9 @@ import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { signJwt } from '../crypto/jwt.js';
+import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
+import { BillingRepository } from '../repositories/BillingRepository.js';
+import { DiscussionRepository } from '../repositories/DiscussionRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
@@ -115,6 +126,7 @@ import { OrganizationInvitationRepository } from '../repositories/OrganizationIn
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { TargetRepository } from '../repositories/TargetRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
@@ -122,9 +134,11 @@ import { MetricsRepository } from '../repositories/analytics/MetricsRepository.j
 import { MonthlyRequestViewRepository } from '../repositories/analytics/MonthlyRequestViewRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
+import { parseTimeFilters } from '../repositories/analytics/util.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import { BillingService } from '../services/BillingService.js';
 import OidcProvider from '../services/OidcProvider.js';
 import {
   InspectorOperationResult,
@@ -144,14 +158,10 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
-import { BillingRepository } from '../repositories/BillingRepository.js';
-import { TargetRepository } from '../repositories/TargetRepository.js';
-import { BillingService } from '../services/BillingService.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
-    /* 
+    /*
     Mutations
     */
     createFederatedGraph: (req, ctx) => {
@@ -1386,6 +1396,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingURL: s.routingUrl,
           labels: s.labels,
           lastUpdatedAt: s.lastUpdatedAt,
+          targetId: s.targetId,
           subscriptionUrl: s.subscriptionUrl,
         }));
 
@@ -1586,7 +1597,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 await opts.mailerClient.sendInviteEmail({
                   inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
                   organizationName: organization.name,
-                  recieverEmail: req.email,
+                  receiverEmail: req.email,
                   invitedBy: orgInvitation.invitedBy,
                 });
               }
@@ -1628,7 +1639,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             await opts.mailerClient.sendInviteEmail({
               inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
               organizationName: organization.name,
-              recieverEmail: req.email,
+              receiverEmail: req.email,
               invitedBy: inviter?.email,
             });
           }
@@ -3488,7 +3499,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    /* 
+    /*
     Queries
     */
     getSubgraphs: (req, ctx) => {
@@ -3514,6 +3525,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
             createdUserId: g.creatorUserId,
+            targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
           })),
           response: {
@@ -3552,6 +3564,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: subgraph.lastUpdatedAt,
             routingURL: subgraph.routingUrl,
             labels: subgraph.labels,
+            targetId: subgraph.targetId,
             readme: subgraph.readme,
             subscriptionUrl: subgraph.subscriptionUrl,
           },
@@ -3588,6 +3601,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return {
           graphs: list.map((g) => ({
             id: g.id,
+            targetId: g.targetId,
             name: g.name,
             labelMatchers: g.labelMatchers,
             routingURL: g.routingUrl,
@@ -3640,6 +3654,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: g.compositionErrors ?? '',
             isComposable: g.isComposable,
             requestSeries: [],
+            targetId: g.targetId,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -3657,18 +3672,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const schemaVersion = await fedRepo.getLatestValidSchemaVersion(req.name);
-        if (schemaVersion && schemaVersion.schema) {
+
+        if (!schemaVersion || !schemaVersion.schema) {
           return {
             response: {
-              code: EnumStatusCode.OK,
+              code: EnumStatusCode.ERR_NOT_FOUND,
             },
-            sdl: schemaVersion.schema,
           };
         }
+
         return {
           response: {
-            code: EnumStatusCode.ERR_NOT_FOUND,
+            code: EnumStatusCode.OK,
           },
+          sdl: schemaVersion.schema,
+          versionId: schemaVersion.schemaVersionId,
         };
       });
     },
@@ -3704,6 +3722,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           sdl: schemaVersion.schema || undefined,
+          versionId: schemaVersion.schemaVersionId,
         };
       });
     },
@@ -3730,6 +3749,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           sdl: subgraph.schemaSDL,
+          versionId: subgraph.schemaVersionId,
         };
       });
     },
@@ -3762,8 +3782,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         let requestSeries: PlainMessage<RequestSeriesItem>[] = [];
         if (req.includeMetrics && opts.chClient) {
           const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-          const graphResponse = await analyticsDashRepo.getView(federatedGraph.id, authContext.organizationId);
-          requestSeries = graphResponse.requestSeries;
+          requestSeries = await analyticsDashRepo.getWeeklyRequestSeries(federatedGraph.id, authContext.organizationId);
         }
 
         const list = await subgraphRepo.listByFederatedGraph(req.name, { published: true });
@@ -3815,6 +3834,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return {
           graph: {
             id: federatedGraph.id,
+            targetId: federatedGraph.targetId,
             name: federatedGraph.name,
             routingURL: federatedGraph.routingUrl,
             labelMatchers: federatedGraph.labelMatchers,
@@ -3831,6 +3851,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
+            targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
           })),
           graphToken: graphToken.token,
@@ -3885,10 +3906,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           dateRange: req.dateRange,
         });
 
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            federatedGraphChangelogOutput: [],
+            hasNextPage: false,
+          };
+        }
+
         const result = await fedgraphRepo.fetchFederatedGraphChangelog(
           federatedGraph.targetId,
           req.pagination,
-          dateRange!,
+          dateRange,
         );
 
         if (!result) {
@@ -3945,15 +3977,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           dateRange: {
             start: req.startDate,
             end: req.endDate,
-          } as DateRange,
+          },
         });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            checks: [],
+            checksCountBasedOnDateRange: '0',
+            totalChecksCount: '0',
+          };
+        }
 
         const checksData = await subgraphRepo.checks({
           federatedGraphName: req.name,
           limit: req.limit,
           offset: req.offset,
-          startDate: dateRange!.start,
-          endDate: dateRange!.end,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
         });
         const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
@@ -4184,15 +4228,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           dateRange: req.config?.dateRange,
         });
 
+        if (req.config) {
+          if (range) {
+            req.config.range = range;
+          }
+          if (dateRange) {
+            req.config.dateRange = new DateRangeProto({
+              start: dateRange.start,
+              end: dateRange.end,
+            });
+          }
+        }
+
+        const view = await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, req.config);
+
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, {
-            ...req.config,
-            range,
-            dateRange,
-          } as AnalyticsConfig),
+          view,
         };
       });
     },
@@ -4211,6 +4265,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             mostRequestedOperations: [],
             requestSeries: [],
+            subgraphMetrics: [],
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4226,20 +4281,58 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             mostRequestedOperations: [],
             requestSeries: [],
+            subgraphMetrics: [],
           };
         }
 
-        const { requestSeries, mostRequestedOperations } = await analyticsDashRepo.getView(
-          graph.id,
-          authContext.organizationId,
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          range: 0,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          },
+        });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            mostRequestedOperations: [],
+            requestSeries: [],
+            subgraphMetrics: [],
+          };
+        }
+
+        const timeFilters = parseTimeFilters(
+          {
+            start: dateRange.start,
+            end: dateRange.end,
+          },
+          req.range,
         );
+
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name, { published: true });
+        const view = await analyticsDashRepo.getView(graph.id, authContext.organizationId, timeFilters, subgraphs);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          mostRequestedOperations,
-          requestSeries,
+          mostRequestedOperations: view.mostRequestedOperations,
+          requestSeries: view.requestSeries,
+          subgraphMetrics: view.subgraphMetrics,
+          federatedGraphMetrics: view.federatedGraphMetrics,
         };
       });
     },
@@ -4702,6 +4795,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let dr: DateRange | undefined;
+
+        if (req.dateRange?.start && req.dateRange?.end) {
+          dr = {
+            start: req.dateRange?.start,
+            end: req.dateRange?.end,
+          };
+        }
+
         const { clients, requestSeries, meta } = await usageRepo.getFieldUsage({
           federatedGraphId: graph.id,
           organizationId: authContext.organizationId,
@@ -4709,7 +4811,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           field: req.field,
           namedType: req.namedType,
           range: req.range,
-          dateRange: req.dateRange,
+          dateRange: dr,
         });
 
         return {
@@ -4958,16 +5060,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           dateRange: {
             start: req.startDate,
             end: req.endDate,
-          } as DateRange,
+          },
         });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            compositions: [],
+          };
+        }
 
         const compositions = await graphCompositionRepository.getGraphCompositions({
           fedGraphTargetId: federatedGraph.targetId,
           organizationId: authContext.organizationId,
           limit: req.limit,
           offset: req.offset,
-          startDate: dateRange!.start,
-          endDate: dateRange!.end,
+          dateRange: {
+            start: dateRange.start,
+            end: dateRange.end,
+          },
         });
 
         return {
@@ -5397,6 +5511,350 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           sessionId: session.id,
           url: session.url,
+        };
+      });
+    },
+
+    createDiscussion: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateDiscussionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+
+        const canCreateDiscussion = await discussionRepo.canAccessTarget(req.targetId);
+        if (!canCreateDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to create a discussion in this graph',
+            },
+          };
+        }
+
+        await discussionRepo.createDiscussion({
+          ...req,
+          createdById: authContext.userId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    replyToDiscussion: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<ReplyToDiscussionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
+            },
+          };
+        }
+
+        await discussionRepo.replyToDiscussion({
+          ...req,
+          createdById: authContext.userId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getAllDiscussions: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetAllDiscussionsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+
+        const canReply = await discussionRepo.canAccessTarget(req.targetId);
+        if (!canReply) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to the discussions of this graph',
+            },
+            discussions: [],
+          };
+        }
+
+        const graphDiscussions = await discussionRepo.getAllDiscussions({
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          discussions: graphDiscussions.map((gd) => ({
+            id: gd.id,
+            schemaVersionId: gd.schemaVersionId,
+            targetId: gd.targetId,
+            referenceLine: gd.referenceLine ?? '',
+            isResolved: gd.isResolved,
+            openingComment: {
+              id: gd.thread[0].id,
+              contentJson: JSON.stringify(gd.thread[0].contentJson),
+              createdAt: gd.thread[0].createdAt.toISOString(),
+              updatedAt: gd.thread[0].updatedAt?.toISOString(),
+              createdBy: gd.thread[0].createdById,
+            },
+          })),
+        };
+      });
+    },
+
+    updateDiscussionComment: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateDiscussionCommentResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
+            },
+          };
+        }
+        const updated = await discussionRepo.updateComment({
+          ...req,
+          createdById: authContext.userId,
+        });
+
+        if (updated.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Failed to update comment',
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    deleteDiscussionComment: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteDiscussionCommentResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
+            },
+          };
+        }
+
+        const success = await discussionRepo.deleteComment({
+          ...req,
+        });
+
+        if (!success) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getDiscussion: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetDiscussionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+
+        const exists = await discussionRepo.exists(req.discussionId);
+        if (!exists) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Could not find discussion',
+            },
+            comments: [],
+          };
+        }
+
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
+            },
+            comments: [],
+          };
+        }
+
+        const graphDiscussion = await discussionRepo.byId(req.discussionId);
+
+        if (!graphDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Discussion not found`,
+            },
+            comments: [],
+          };
+        }
+
+        const comments = graphDiscussion.thread.map((t) => ({
+          id: t.id,
+          contentJson: JSON.stringify(t.contentJson),
+          createdAt: t.createdAt.toISOString(),
+          updatedAt: t.updatedAt?.toISOString(),
+          createdBy: t.createdById,
+        }));
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          discussion: {
+            id: graphDiscussion.id,
+            schemaVersionId: graphDiscussion.schemaVersionId,
+            targetId: graphDiscussion.targetId,
+            referenceLine: graphDiscussion.referenceLine ?? '',
+            openingComment: comments[0],
+            isResolved: graphDiscussion.isResolved,
+          },
+          comments,
+        };
+      });
+    },
+
+    getDiscussionSchemas: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetDiscussionSchemasResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
+            },
+          };
+        }
+
+        const graphDiscussion = await discussionRepo.byId(req.discussionId);
+
+        if (!graphDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Discussion not found`,
+            },
+            comments: [],
+          };
+        }
+
+        const { referenceResult, latestResult } = await discussionRepo.getSchemas({
+          targetId: graphDiscussion.targetId,
+          schemaVersionId: graphDiscussion.schemaVersionId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          schemas: {
+            reference: referenceResult?.schemaSDL ?? '',
+            latest: latestResult?.schemaSDL ?? '',
+          },
+        };
+      });
+    },
+
+    setDiscussionResolution: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<SetDiscussionResolutionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
+            },
+          };
+        }
+
+        await discussionRepo.setResolution({
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

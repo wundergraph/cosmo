@@ -386,3 +386,49 @@ export interface SubgraphMemberDTO {
   subgraphMemberId: string;
   email: string;
 }
+
+export type DiscussionDTO = {
+  id: string;
+  createdAt: Date;
+  targetId: string;
+  schemaVersionId: string;
+  referenceLine: number;
+  isResolved: boolean;
+  thread: DiscussionThreadDTO;
+}[];
+
+export type DiscussionThreadDTO = {
+  id: string;
+  createdAt: Date;
+  discussionId: string;
+  contentMarkdown: string | null;
+  contentJson: unknown;
+  updatedAt: Date | null;
+  createdById: string;
+}[];
+export interface SubgraphLatencyResult {
+  subgraphID: string;
+  latency: number;
+}
+
+export interface SubgraphRequestRateResult {
+  subgraphID: string;
+  requestRate: number;
+  errorRate: number;
+}
+
+export interface FederatedGraphRequestRateResult {
+  federatedGraphID: string;
+  requestRate: number;
+  errorRate: number;
+}
+
+export interface DateRange<T extends string | number = string> {
+  start: T;
+  end: T;
+}
+
+export type TimeFilters = {
+  granule: string;
+  dateRange: DateRange<number>;
+};
