@@ -5568,6 +5568,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const isResolved = await discussionRepo.isResolved(req.discussionId);
+        if (isResolved) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'You cannot reply to a resolved discussion',
+            },
+          };
+        }
+
         await discussionRepo.replyToDiscussion({
           ...req,
           createdById: authContext.userId,
@@ -5622,6 +5632,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               createdAt: gd.thread[0].createdAt.toISOString(),
               updatedAt: gd.thread[0].updatedAt?.toISOString(),
               createdBy: gd.thread[0].createdById,
+              isDeleted: gd.thread[0].isDeleted,
             },
           })),
         };
@@ -5678,6 +5689,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteDiscussionCommentResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
         if (!canAccessDiscussion) {
@@ -5685,6 +5697,30 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
               details: 'You are not authorized to view or modify this discussion',
+            },
+          };
+        }
+
+        const comment = await discussionRepo.getCommentById(req.commentId);
+        if (!comment) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'The comment could not be found',
+            },
+          };
+        }
+
+        const userRoles = await orgRepo.getOrganizationMemberRoles({
+          userID: authContext.userId || '',
+          organizationID: authContext.organizationId,
+        });
+
+        if (!(comment.createdById === authContext.userId || userRoles.includes('admin'))) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `You are not authorized to delete this comment'`,
             },
           };
         }
@@ -5755,10 +5791,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const comments = graphDiscussion.thread.map((t) => ({
           id: t.id,
-          contentJson: JSON.stringify(t.contentJson),
+          contentJson: t.contentJson ? JSON.stringify(t.contentJson) : '',
           createdAt: t.createdAt.toISOString(),
           updatedAt: t.updatedAt?.toISOString(),
           createdBy: t.createdById,
+          isDeleted: t.isDeleted,
         }));
 
         return {
