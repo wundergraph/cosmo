@@ -61,7 +61,8 @@ export default class Keycloak {
       credentials: [
         {
           type: 'password',
-          value: password || uid(12),
+          // must follow the password policy on keycloak
+          value: password || uid(12) + '@123',
           temporary: isPasswordTemp,
         },
       ],
