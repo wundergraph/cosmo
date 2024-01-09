@@ -8,7 +8,8 @@ import {
   TypeExtensionNode,
 } from 'graphql';
 import {
-  ImplementationErrorsMap,
+  EntityInterfaceFederationData, getAllSetDisparities, getEntriesNotInHashSet, getOrThrowError,
+  ImplementationErrorsMap, UndefinedEntityInterfaceImplementations,
   InvalidArgument,
   InvalidRequiredArgument,
   kindToTypeString,
@@ -880,4 +881,28 @@ export function equivalentSourceAndTargetOverrideError(subgraphName: string, hos
   return new Error(
     `Cannot override field "${hostPath}" because the source and target subgraph names are both "${subgraphName}"`,
   );
+}
+
+export function undefinedEntityInterfaceImplementationsError(
+  undefinedImplementationsByTypeName: Map<string, UndefinedEntityInterfaceImplementations[]>,
+  entityInterfaceDatasByTypeName: Map<string, EntityInterfaceFederationData>,
+): Error {
+  let message = `Federation was unsuccessful because any one subgraph that defines a specific entity interface` +
+    ` must also define implementations for all objects that implement that respective entity interface elsewhere.\n`;
+  for (const [typeName, undefinedImplementations] of undefinedImplementationsByTypeName) {
+    const entityInterfaceDatas = getOrThrowError(
+      entityInterfaceDatasByTypeName, typeName, 'entityInterfaceDatas',
+    );
+    const implementedConcreteTypeNames = entityInterfaceDatas.concreteTypeNames!;
+    message += ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following object` +
+      (implementedConcreteTypeNames.size > 1 ? `s` : ``) + `:\n  "` +
+      Array.from(implementedConcreteTypeNames).join(QUOTATION_JOIN) + `"\n` +
+      ` However:\n`;
+    for (const { subgraphName, concreteTypeNames } of undefinedImplementations) {
+      const disparities = getEntriesNotInHashSet(implementedConcreteTypeNames, concreteTypeNames);
+      message += `  Subgraph "${subgraphName}" does not define the following implementations: "`
+        + disparities.join(QUOTATION_JOIN) + `"\n`;
+    }
+  }
+  return new Error(message);
 }

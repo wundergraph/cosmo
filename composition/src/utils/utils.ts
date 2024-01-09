@@ -103,6 +103,18 @@ export function addIterableValuesToSet<T>(iterable: T[] | Iterable<T>, set: Set<
   }
 }
 
+export function addSetsAndReturnMutationBoolean<T>(source: Set<T>, target: Set<T>): boolean {
+  let wasMutated = false;
+  for (const entry of source) {
+    if (target.has(entry)) {
+      continue;
+    }
+    wasMutated = true;
+    target.add(entry);
+  }
+  return wasMutated;
+}
+
 export function kindToTypeString(kind: Kind): string {
   switch (kind) {
     case Kind.ENUM_TYPE_DEFINITION:
@@ -172,26 +184,29 @@ export type InvalidArgument = {
   typeString: string;
 };
 
-export type EntityInterfaceData = {
+export type EntityInterfaceSubgraphData = {
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   isInterfaceObject: boolean;
   typeName: string;
+  concreteTypeNames?: Set<string>;
 };
 
-// The accumulation of all EntityInterfaceData for the type name
-export type EntityInterfaceDatas = {
+// The accumulation of all EntityInterfaceSubgraphData for the type name
+export type EntityInterfaceFederationData = {
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   interfaceObjectSubgraphs: Set<string>;
   typeName: string;
+  concreteTypeNames?: Set<string>;
 };
 
-export function newEntityInterfaceDatas(
-  entityInterfaceData: EntityInterfaceData,
+export function newEntityInterfaceFederationData(
+  entityInterfaceData: EntityInterfaceSubgraphData,
   subgraphName: string,
-): EntityInterfaceDatas {
+): EntityInterfaceFederationData {
   return {
+    concreteTypeNames: entityInterfaceData.concreteTypeNames,
     interfaceFieldNames: entityInterfaceData.interfaceFieldNames,
     interfaceObjectFieldNames: entityInterfaceData.interfaceObjectFieldNames,
     interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
@@ -199,17 +214,33 @@ export function newEntityInterfaceDatas(
   };
 }
 
-export function upsertEntityInterfaceDatas(
-  entityInterfaceDatas: EntityInterfaceDatas,
-  entityInterfaceData: EntityInterfaceData,
+export function upsertEntityInterfaceFederationData(
+  federationData: EntityInterfaceFederationData,
+  subgraphData: EntityInterfaceSubgraphData,
   subgraphName: string,
-) {
-  if (entityInterfaceData.isInterfaceObject) {
-    entityInterfaceDatas.interfaceObjectSubgraphs.add(subgraphName);
+): boolean {
+  addIterableValuesToSet(subgraphData.interfaceFieldNames, federationData.interfaceFieldNames);
+  addIterableValuesToSet(subgraphData.interfaceObjectFieldNames, federationData.interfaceObjectFieldNames);
+  // interface objects should not define any concrete types
+  if (subgraphData.isInterfaceObject) {
+    federationData.interfaceObjectSubgraphs.add(subgraphName);
+    return false;
   }
-  addIterableValuesToSet(entityInterfaceData.interfaceFieldNames, entityInterfaceDatas.interfaceFieldNames);
-  addIterableValuesToSet(entityInterfaceData.interfaceObjectFieldNames, entityInterfaceDatas.interfaceObjectFieldNames);
+  // the concreteTypeNames set is null if only interfaceObjects have been encountered
+  if (!federationData.concreteTypeNames) {
+    federationData.concreteTypeNames = new Set<string>(subgraphData.concreteTypeNames);
+    return false;
+  }
+  // entity interface concrete types should be consistent
+  return addSetsAndReturnMutationBoolean(
+    subgraphData.concreteTypeNames || new Set<string>(), federationData.concreteTypeNames,
+  );
 }
+
+export type UndefinedEntityInterfaceImplementations = {
+  subgraphName: string;
+  concreteTypeNames: Set<string>;
+};
 
 class StackSet {
   set = new Set<string>();

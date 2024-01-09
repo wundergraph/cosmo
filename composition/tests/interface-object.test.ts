@@ -1,4 +1,4 @@
-import { federateSubgraphs, Subgraph } from '../src';
+import { batchNormalize, ConfigurationData, federateSubgraphs, Subgraph } from '../src';
 import { describe, expect, test } from 'vitest';
 import {
   documentNodeToNormalizedString,
@@ -61,6 +61,69 @@ describe('@interfaceObject Tests', () => {
       }
     `,
       ),
+    );
+  });
+
+  test('that interface objects produce the correct engine configuration', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB])
+    expect(errors).toBeUndefined();
+    const subgraphConfigBySubgraphName = federationResult!.subgraphConfigBySubgraphName;
+    expect(subgraphConfigBySubgraphName).toBeDefined();
+    expect(subgraphConfigBySubgraphName.get('subgraph-a')!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Interface',
+          {
+            entityInterfaceConcreteTypeNames: new Set<string>(['Entity']),
+            fieldNames: new Set<string>(['id']),
+            isInterfaceObject: false,
+            isRootNode: true,
+            typeName: 'Interface',
+            keys: [{ fieldName: '', selectionSet: 'id'}],
+          },
+        ],
+        [
+          'Entity',
+          {
+            fieldNames: new Set<string>(['id']),
+            isRootNode: true,
+            typeName: 'Entity',
+            keys: [{ fieldName: '', selectionSet: 'id'}],
+          },
+        ],
+      ]),
+    );
+    expect(subgraphConfigBySubgraphName.get('subgraph-b')!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Query',
+          {
+            fieldNames: new Set<string>(['interface']),
+            isRootNode: true,
+            typeName: 'Query',
+          },
+        ],
+        [
+          'Interface',
+          {
+            entityInterfaceConcreteTypeNames: new Set<string>(['Entity']),
+            fieldNames: new Set<string>(['id', 'name', 'age']),
+            isInterfaceObject: true,
+            isRootNode: true,
+            typeName: 'Interface',
+            keys: [{ fieldName: '', selectionSet: 'id'}],
+          },
+        ],
+        [
+          'Entity',
+          {
+            fieldNames: new Set<string>(['id', 'name', 'age']),
+            isRootNode: true,
+            typeName: 'Entity',
+            keys: [{ fieldName: '', selectionSet: 'id'}],
+          },
+        ],
+      ]),
     );
   });
 
