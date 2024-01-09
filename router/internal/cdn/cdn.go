@@ -225,6 +225,9 @@ func (cdn *CDN) RouterConfig(ctx context.Context, version string) (*nodev1.Route
 		return nil, fmt.Errorf("unexpected status code when loading router config %d: %s", resp.StatusCode, string(data))
 	}
 	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.New("could not read the response body. " + err.Error())
+	}
 
 	var routerConfig nodev1.RouterConfig
 	err = protojson.Unmarshal(data, &routerConfig)
