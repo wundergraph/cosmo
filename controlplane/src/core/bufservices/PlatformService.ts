@@ -275,7 +275,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             })),
           );
 
-          await compChecker.deployComposition(composition, authContext.userId);
+          await compChecker.deployComposition({
+            composedGraph: composition,
+            composedBy: authContext.userId,
+            blobStorage: opts.blobStorage,
+            organizationId: authContext.organizationId,
+          });
         });
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -824,17 +829,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update({
-          name: req.name,
-          labels: req.labels,
-          routingUrl: req.routingUrl,
-          subscriptionUrl: req.subscriptionUrl,
-          schemaSDL: subgraphSchemaSDL,
-          subscriptionProtocol: req.subscriptionProtocol
-            ? formatSubscriptionProtocol(req.subscriptionProtocol)
-            : undefined,
-          updatedBy: authContext.userId,
-        });
+        const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
+          {
+            name: req.name,
+            labels: req.labels,
+            routingUrl: req.routingUrl,
+            subscriptionUrl: req.subscriptionUrl,
+            schemaSDL: subgraphSchemaSDL,
+            subscriptionProtocol: req.subscriptionProtocol
+              ? formatSubscriptionProtocol(req.subscriptionProtocol)
+              : undefined,
+            updatedBy: authContext.userId,
+          },
+          opts.blobStorage,
+        );
 
         for (const graph of updatedFederatedGraphs) {
           orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -1074,7 +1082,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           for (const federatedGraph of affectedFederatedGraphs) {
             const composition = await composer.composeFederatedGraph(federatedGraph);
 
-            await composer.deployComposition(composition, authContext.userId);
+            await composer.deployComposition({
+              composedGraph: composition,
+              composedBy: authContext.userId,
+              blobStorage: opts.blobStorage,
+              organizationId: authContext.organizationId,
+            });
 
             // Collect all composition errors
 
@@ -1189,6 +1202,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
           updatedBy: authContext.userId,
           readme: req.readme,
+          blobStorage: opts.blobStorage,
         });
 
         if (errors) {
@@ -1298,17 +1312,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update({
-          name: req.name,
-          labels: req.labels,
-          subscriptionUrl: req.subscriptionUrl,
-          routingUrl: req.routingUrl,
-          subscriptionProtocol: req.subscriptionProtocol
-            ? formatSubscriptionProtocol(req.subscriptionProtocol)
-            : undefined,
-          updatedBy: authContext.userId,
-          readme: req.readme,
-        });
+        const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
+          {
+            name: req.name,
+            labels: req.labels,
+            subscriptionUrl: req.subscriptionUrl,
+            routingUrl: req.routingUrl,
+            subscriptionProtocol: req.subscriptionProtocol
+              ? formatSubscriptionProtocol(req.subscriptionProtocol)
+              : undefined,
+            updatedBy: authContext.userId,
+            readme: req.readme,
+          },
+          opts.blobStorage,
+        );
 
         for (const graph of updatedFederatedGraphs) {
           orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -2141,7 +2158,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           const composition = await composer.composeFederatedGraph(federatedGraph);
 
-          await composer.deployComposition(composition, authContext.userId);
+          await composer.deployComposition({
+            composedGraph: composition,
+            composedBy: authContext.userId,
+            blobStorage: opts.blobStorage,
+            organizationId: authContext.organizationId,
+          });
         });
 
         const migratedGraph = await fedGraphRepo.byName(graph.name);

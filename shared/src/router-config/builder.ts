@@ -27,6 +27,7 @@ import { normalizationFailureError } from './errors.js';
 export interface Input {
   argumentConfigurations: ArgumentConfigurationData[];
   federatedSDL: string;
+  federatedSchemaVersionId: string;
   subgraphs: ComposedSubgraph[];
 }
 
@@ -183,6 +184,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   engineConfig.graphqlSchema = input.federatedSDL;
   return new RouterConfig({
     engineConfig,
+    version: input.federatedSchemaVersionId,
     subgraphs: input.subgraphs.map((s) => ({
       id: s.id,
       name: s.name,

@@ -30,6 +30,7 @@ import {
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -125,6 +126,7 @@ export class FederatedGraphRepository {
     labelMatchers: string[];
     updatedBy: string;
     readme?: string;
+    blobStorage: BlobStorage;
   }) {
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -202,7 +204,12 @@ export class FederatedGraphRepository {
         const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
         const composedGraph = await composer.composeFederatedGraph(federatedGraph);
 
-        await composer.deployComposition(composedGraph, data.updatedBy);
+        await composer.deployComposition({
+          composedGraph,
+          composedBy: data.updatedBy,
+          blobStorage: data.blobStorage,
+          organizationId: this.organizationId,
+        });
 
         return composedGraph.errors;
       }
@@ -381,13 +388,17 @@ export class FederatedGraphRepository {
     routerConfig,
     subgraphSchemaVersionIds,
     composedBy,
+    routerConfigPath,
+    schemaVersionId,
   }: {
     graphName: string;
+    schemaVersionId: string;
     composedSDL?: string;
     compositionErrors?: Error[];
     routerConfig?: JsonValue;
     subgraphSchemaVersionIds: string[];
     composedBy: string;
+    routerConfigPath: string | null;
   }) {
     return this.db.transaction<FederatedGraphDTO | undefined>(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
@@ -406,6 +417,7 @@ export class FederatedGraphRepository {
       const insertedVersion = await tx
         .insert(schemaVersion)
         .values({
+          id: schemaVersionId,
           targetId: fedGraph.targetId,
           schemaSDL: composedSDL,
         })
@@ -420,6 +432,7 @@ export class FederatedGraphRepository {
         .update(federatedGraphs)
         .set({
           composedSchemaVersionId: insertedVersion[0].insertedId,
+          routerConfigPath,
         })
         .where(eq(federatedGraphs.id, fedGraph.id));
 

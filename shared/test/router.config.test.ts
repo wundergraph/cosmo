@@ -14,13 +14,13 @@ describe('Router Config Builder', () => {
     const { errors, federationResult } = federateTestSubgraphs();
     expect(errors).toBeUndefined();
     expect(federationResult).toBeDefined();
-    const accountsSubgraphConfig = federationResult.subgraphConfigBySubgraphName.get('accounts');
+    const accountsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('accounts');
     expect(accountsSubgraphConfig).toBeDefined();
-    const productsSubgraphConfig = federationResult.subgraphConfigBySubgraphName.get('products');
+    const productsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('products');
     expect(productsSubgraphConfig).toBeDefined();
-    const reviewsSubgraphConfig = federationResult.subgraphConfigBySubgraphName.get('reviews');
+    const reviewsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('reviews');
     expect(reviewsSubgraphConfig).toBeDefined();
-    const inventorySubgraphConfig = federationResult.subgraphConfigBySubgraphName.get('inventory');
+    const inventorySubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('inventory');
     expect(inventorySubgraphConfig).toBeDefined();
 
     const accounts: ComposedSubgraph = {
@@ -33,7 +33,7 @@ describe('Router Config Builder', () => {
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
       schema: accountsSubgraphConfig!.schema,
-      configurationDataMap: accountsSubgraphConfig.configurationDataMap,
+      configurationDataMap: accountsSubgraphConfig!.configurationDataMap,
     };
     const products: ComposedSubgraph = {
       id: '1',
@@ -44,8 +44,8 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-products.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
-      schema: productsSubgraphConfig.schema,
-      configurationDataMap: productsSubgraphConfig.configurationDataMap,
+      schema: productsSubgraphConfig!.schema,
+      configurationDataMap: productsSubgraphConfig!.configurationDataMap,
     };
     const reviews: ComposedSubgraph = {
       id: '2',
@@ -56,8 +56,8 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-reviews.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
-      schema: reviewsSubgraphConfig.schema,
-      configurationDataMap: reviewsSubgraphConfig.configurationDataMap,
+      schema: reviewsSubgraphConfig!.schema,
+      configurationDataMap: reviewsSubgraphConfig!.configurationDataMap,
     };
     const inventory: ComposedSubgraph = {
       id: '3',
@@ -68,14 +68,15 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-inventory.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
-      schema: inventorySubgraphConfig.schema,
-      configurationDataMap: inventorySubgraphConfig.configurationDataMap,
+      schema: inventorySubgraphConfig!.schema,
+      configurationDataMap: inventorySubgraphConfig!.configurationDataMap,
     };
     const routerConfig = buildRouterConfig({
       argumentConfigurations: [],
       subgraphs: [accounts, products, reviews, inventory],
       // Passed as it is to the router config
       federatedSDL: `type Query {}`,
+      federatedSchemaVersionId: '',
     });
     const json = routerConfig.toJsonString({
       enumAsInteger: true,
@@ -102,6 +103,7 @@ describe('Router Config Builder', () => {
         argumentConfigurations: [],
         subgraphs: [subgraph],
         federatedSDL: '',
+        federatedSchemaVersionId: '',
       });
     } catch (e) {
       error = e;

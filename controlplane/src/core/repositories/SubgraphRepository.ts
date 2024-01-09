@@ -27,6 +27,7 @@ import {
 } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -145,6 +146,7 @@ export class SubgraphRepository {
 
   public async update(
     data: UpdateSubgraphOptions,
+    blobStorage: BlobStorage,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
@@ -275,7 +277,12 @@ export class SubgraphRepository {
       for (const federatedGraph of updatedFederatedGraphs) {
         const composition = await composer.composeFederatedGraph(federatedGraph);
 
-        await composer.deployComposition(composition, data.updatedBy);
+        await composer.deployComposition({
+          composedGraph: composition,
+          composedBy: data.updatedBy,
+          blobStorage,
+          organizationId: this.organizationId,
+        });
 
         // Collect all composition errors
 

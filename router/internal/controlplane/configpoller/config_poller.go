@@ -8,6 +8,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
@@ -38,13 +39,15 @@ type configPoller struct {
 	latestRouterConfigVersion string
 	poller                    controlplane.Poller
 	pollInterval              time.Duration
+	cdn                       *cdn.CDN
 }
 
-func New(graphName, endpoint, token string, opts ...Option) ConfigPoller {
+func New(graphName, endpoint, token string, cdn *cdn.CDN, opts ...Option) ConfigPoller {
 	c := &configPoller{
 		controlplaneEndpoint: endpoint,
 		graphApiToken:        token,
 		federatedGraphName:   graphName,
+		cdn:                  cdn,
 	}
 
 	for _, opt := range opts {
@@ -90,15 +93,22 @@ func (c *configPoller) Stop(_ context.Context) error {
 func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersions string) error) {
 
 	c.poller.Subscribe(ctx, func() {
-		cfg, err := c.getRouterConfigFromCP(ctx, &c.latestRouterConfigVersion)
-		if err != nil {
-			return
-		}
-		if cfg == nil {
+		cfg, err := c.cdn.RouterConfig(ctx, c.latestRouterConfigVersion)
+		// both being nil indicates that no new router config available
+		if cfg == nil && err == nil {
 			c.logger.Debug("No new router config available, received nil router config, trying again in 10 seconds")
 			return
 		}
-
+		if err != nil {
+			cfg, err := c.getRouterConfigFromCP(ctx, &c.latestRouterConfigVersion)
+			if err != nil {
+				return
+			}
+			if cfg == nil {
+				c.logger.Debug("No new router config available, received nil router config, trying again in 10 seconds")
+				return
+			}
+		}
 		newVersion := cfg.GetVersion()
 
 		latestVersion := c.latestRouterConfigVersion
@@ -151,12 +161,21 @@ func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *strin
 	return resp.Msg.GetConfig(), nil
 }
 
-// GetRouterConfig returns the latest router config from the controlplane. Not safe for concurrent use.
+// GetRouterConfig returns the latest router config from the cdn first, if not found then it fetches from the controlplane. Not safe for concurrent use.
 func (c *configPoller) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
+	c.logger.Info("Fetching initial router configuration from cdn")
+
+	cfg, err := c.cdn.RouterConfig(ctx, c.latestRouterConfigVersion)
+	if cfg != nil {
+		c.latestRouterConfigVersion = cfg.GetVersion()
+		return cfg, nil
+	}
+
+	c.logger.Warn("Failed to fetch the router config from cdn.", zap.Error(err))
 
 	c.logger.Info("Fetching initial router configuration from control plane")
 
-	cfg, err := c.getRouterConfigFromCP(ctx, nil)
+	cfg, err = c.getRouterConfigFromCP(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

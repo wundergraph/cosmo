@@ -1,8 +1,9 @@
 import { JWTVerifyResult, jwtVerify } from 'jose';
 import { Context, Env, Hono, Next, Schema } from 'hono';
+import { streamToJSON } from './utils';
 
 export interface BlobStorage {
-  getObject(context: Context, key: string): Promise<ReadableStream>;
+  getObject(context: Context, key: string, cacheControl?: string): Promise<ReadableStream>;
 }
 
 export class BlobNotFoundError extends Error {
@@ -88,6 +89,47 @@ const persistedOperation = (storage: BlobStorage) => {
   };
 };
 
+const routerConfig = (storage: BlobStorage) => {
+  return async (c: Context) => {
+    const organizationId = c.req.param('organization_id');
+    const federatedGraphId = c.req.param('federated_graph_id');
+    // Check authentication
+    if (
+      organizationId !== c.get('authenticatedOrganizationId') ||
+      federatedGraphId !== c.get('authenticatedFederatedGraphId')
+    ) {
+      return c.text('Forbidden', 403);
+    }
+    const key = `${organizationId}/${federatedGraphId}/routerConfigs/latest.json`;
+    let configStream: ReadableStream;
+    try {
+      configStream = await storage.getObject(c, key, 'no-cache');
+    } catch (e: any) {
+      if (e instanceof Error && e.constructor.name === 'BlobNotFoundError') {
+        return c.notFound();
+      }
+      throw e;
+    }
+    c.header('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
+    c.header('Content-Type', 'application/json; charset=utf-8');
+
+    const teedStream = configStream.tee();
+
+    const routerConfig = await streamToJSON(teedStream[0]);
+    const body = await c.req.json();
+
+    if (body?.version === routerConfig?.version) {
+      c.status(308);
+      return c.body('The latest config has already been retrieved.');
+    }
+
+    return c.stream(async (stream) => {
+      await stream.pipe(teedStream[1]);
+      await stream.close();
+    });
+  };
+};
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = '/'>(
   hono: Hono<E, S, BasePath>,
@@ -95,6 +137,9 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
 ) => {
   const operations = '/:organization_id/:federated_graph_id/operations/:client_id/:operation{.+\\.json$}';
   hono.use(operations, jwtMiddleware(opts.authJwtSecret));
-
   hono.get(operations, persistedOperation(opts.blobStorage));
+
+  const routerConfigs = '/:organization_id/:federated_graph_id/routerconfigs/latest.json';
+  hono.use(routerConfigs, jwtMiddleware(opts.authJwtSecret));
+  hono.post(routerConfigs, routerConfig(opts.blobStorage));
 };

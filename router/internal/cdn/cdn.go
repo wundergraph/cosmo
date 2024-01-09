@@ -1,9 +1,13 @@
 package cdn
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"net/http"
 	"net/url"
@@ -161,6 +165,74 @@ func (cdn *CDN) PersistedOperation(ctx context.Context, clientName string, sha25
 	}
 	cdn.operationsCache.Set(clientName, sha256Hash, unscaped)
 	return unscaped, nil
+}
+
+type RouterConfigNotFoundError interface {
+	error
+	FederatedGraphId() string
+}
+
+type routerConfigNotFoundError struct {
+	federatedGraphId string
+}
+
+func (e *routerConfigNotFoundError) FederatedGraphId() string {
+	return e.federatedGraphId
+}
+
+func (e *routerConfigNotFoundError) Error() string {
+	return fmt.Sprintf("router config of the federated graph %s not found", e.federatedGraphId)
+}
+
+func (cdn *CDN) RouterConfig(ctx context.Context, version string) (*nodev1.RouterConfig, error) {
+	routerConfigPath := fmt.Sprintf("/%s/%s/routerconfigs/latest.json",
+		cdn.organizationID,
+		cdn.federatedGraphID,
+	)
+	routerConfigURL := cdn.cdnURL.ResolveReference(&url.URL{Path: routerConfigPath})
+
+	body, err := json.Marshal(map[string]interface{}{
+		"version": version,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", routerConfigURL.String(), bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
+	resp, err := cdn.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, &routerConfigNotFoundError{
+				federatedGraphId: cdn.federatedGraphID,
+			}
+		}
+		if resp.StatusCode == http.StatusForbidden {
+			return nil, errors.New("could not authenticate against CDN")
+		}
+		if resp.StatusCode == http.StatusPermanentRedirect {
+			// indicates that the router config is not updated, the same as what was fetched previously
+			return nil, nil
+		}
+		data, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status code when loading router config %d: %s", resp.StatusCode, string(data))
+	}
+	data, err := io.ReadAll(resp.Body)
+
+	var routerConfig nodev1.RouterConfig
+	err = protojson.Unmarshal(data, &routerConfig)
+	if err != nil {
+		return nil, errors.New("could not unmarshal router config. " + err.Error())
+	}
+
+	return &routerConfig, nil
 }
 
 func New(opts CDNOptions) (*CDN, error) {

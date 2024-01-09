@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -45,7 +46,16 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 	} else {
-		configPoller = configpoller.New(cfg.Graph.Name, cfg.ControlplaneURL, cfg.Graph.Token,
+		routerCDN, err := cdn.New(cdn.CDNOptions{
+			URL:                 cfg.CDN.URL,
+			AuthenticationToken: cfg.Graph.Token,
+			CacheSize:           cfg.CDN.CacheSize.Uint64(),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		configPoller = configpoller.New(cfg.Graph.Name, cfg.ControlplaneURL, cfg.Graph.Token, routerCDN,
 			configpoller.WithLogger(logger),
 			configpoller.WithPollInterval(cfg.PollInterval),
 		)

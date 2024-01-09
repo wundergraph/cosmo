@@ -1,0 +1,1 @@
+ALTER TABLE "federated_graphs" ADD COLUMN "router_config_path" text;

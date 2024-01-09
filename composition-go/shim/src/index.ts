@@ -52,6 +52,7 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
   const config = buildRouterConfig({
     argumentConfigurations: result.federationResult.argumentConfigurations,
     federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
+    federatedSchemaVersionId: '',
     subgraphs: subgraphs.map((s, index) => {
       const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
       const schema = subgraphConfig?.schema;
@@ -65,7 +66,7 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
         subscriptionProtocol: s.subscription_protocol ?? 'ws',
         schema,
         configurationDataMap,
-      }
+      };
     }),
   });
   return config.toJsonString();

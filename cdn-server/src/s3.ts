@@ -11,11 +11,13 @@ class S3BlobStorage implements BlobStorage {
     private bucketName: string,
   ) {}
 
-  async getObject(_c: Context, key: string): Promise<ReadableStream> {
+  async getObject(_c: Context, key: string, cacheControl?: string): Promise<ReadableStream> {
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,
+      ResponseCacheControl: cacheControl,
     });
+
     try {
       const resp = await this.s3Client.send(command);
       if (resp.$metadata.httpStatusCode !== 200) {
