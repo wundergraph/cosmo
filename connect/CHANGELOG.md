@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.44.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.43.1...@wundergraph/cosmo-connect@0.44.0) (2024-01-09)
+
+### Features
+
+* add support of interface objects ([#407](https://github.com/wundergraph/cosmo/issues/407)) ([3d7b0e1](https://github.com/wundergraph/cosmo/commit/3d7b0e1f55fd8087945923a8e4f5e7d66f6b559a)) (@Aenimus)
+
 ## [0.43.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.43.0...@wundergraph/cosmo-connect@0.43.1) (2024-01-09)
 
 ### Bug Fixes
