@@ -2,6 +2,7 @@ import { Kind, TypeNode } from 'graphql';
 import {
   ArgumentConfiguration,
   ArgumentSource,
+  EntityInterfaceConfiguration,
   EventConfiguration,
   EventType,
   FieldConfiguration,
@@ -22,6 +23,8 @@ export type DataSourceConfiguration = {
   events: EventConfiguration[];
   keys: RequiredField[];
   requires: RequiredField[];
+  entityInterfaces: EntityInterfaceConfiguration[];
+  interfaceObjects: EntityInterfaceConfiguration[];
 };
 
 function addRequiredFields(
@@ -66,6 +69,8 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
     provides: [],
     events: [],
     requires: [],
+    entityInterfaces: [],
+    interfaceObjects: [],
   };
   for (const data of dataMap.values()) {
     const typeName = data.typeName;
@@ -75,6 +80,15 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
       output.rootNodes.push(typeField);
     } else {
       output.childNodes.push(typeField);
+    }
+    if (data.entityInterfaceConcreteTypeNames) {
+      const entityInterfaceConfiguration = new EntityInterfaceConfiguration({
+        interfaceTypeName: typeName,
+        concreteTypeNames: [...data.entityInterfaceConcreteTypeNames],
+      });
+      data.isInterfaceObject
+        ? output.interfaceObjects.push(entityInterfaceConfiguration)
+        : output.entityInterfaces.push(entityInterfaceConfiguration);
     }
     addRequiredFields(data.keys, output.keys, typeName);
     addRequiredFields(data.provides, output.provides, typeName);

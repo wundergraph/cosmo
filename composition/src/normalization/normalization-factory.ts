@@ -70,7 +70,7 @@ import {
   UnionContainer,
   unionContainerToNode,
   UnionExtensionContainer,
-  validateDirectivesWithFieldSet,
+  validateAndAddDirectivesWithFieldSetToConfigurationData,
 } from './utils';
 import {
   BASE_DIRECTIVE_DEFINITIONS,
@@ -83,7 +83,7 @@ import {
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import {
   addIterableValuesToSet,
-  EntityInterfaceData,
+  EntityInterfaceSubgraphData,
   getEntriesNotInHashSet,
   getOrThrowError,
   getValueOrDefault,
@@ -170,7 +170,6 @@ import {
   ConfigurationDataMap,
   EventConfiguration,
   EventType,
-  RequiredFieldConfiguration,
 } from '../subgraph/field-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode, ObjectLikeTypeNode } from '../ast/ast';
@@ -179,9 +178,9 @@ import { invalidOverrideTargetSubgraphNameWarning } from '../warnings/warnings';
 
 export type NormalizationResult = {
   configurationDataMap: ConfigurationDataMap;
-  entityInterfaces: Map<string, EntityInterfaceData>;
+  entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   isVersionTwo: boolean;
-  keyFieldsByParentTypeName: Map<string, Set<string>>;
+  keyFieldNamesByParentTypeName: Map<string, Set<string>>;
   operationTypes: Map<string, OperationTypeNode>;
   overridesByTargetSubgraphName: Map<string, Map<string, Set<string>>>;
   schema: GraphQLSchema;
@@ -223,7 +222,7 @@ export class NormalizationFactory {
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
   errors: Error[] = [];
   entities = new Set<string>();
-  entityInterfaces = new Map<string, EntityInterfaceData>();
+  entityInterfaces = new Map<string, EntityInterfaceSubgraphData>();
   extensions: ExtensionMap = new Map<string, ExtensionContainer>();
   isCurrentParentExtension = false;
   isCurrentParentRootType = false;
@@ -232,7 +231,7 @@ export class NormalizationFactory {
   handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
-  keyFieldsByParentTypeName = new Map<string, Set<string>>();
+  keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
   operationTypeNames = new Map<string, OperationTypeNode>();
   parents: ParentMap = new Map<string, ParentContainer>();
   parentTypeName = '';
@@ -920,7 +919,7 @@ export class NormalizationFactory {
     }
   }
 
-  normalize(document: DocumentNode) {
+  normalize(document: DocumentNode): NormalizationResultContainer {
     const factory = this;
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
     after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
@@ -1267,6 +1266,7 @@ export class NormalizationFactory {
           const isEntity = isObjectLikeNodeEntity(node);
           if (isEntity) {
             factory.entityInterfaces.set(name, {
+              concreteTypeNames: new Set<string>(),
               interfaceFieldNames: new Set<string>(node.fields?.map((field) => field.name.value)),
               interfaceObjectFieldNames: new Set<string>(),
               isInterfaceObject: false,
@@ -1642,6 +1642,13 @@ export class NormalizationFactory {
             isRootNode: isEntity,
             typeName: parentTypeName,
           };
+          const entityInterfaceData = this.entityInterfaces.get(parentTypeName);
+          if (entityInterfaceData) {
+            entityInterfaceData.concreteTypeNames =
+              this.abstractToConcreteTypeNames.get(parentTypeName) || new Set<string>();
+            configurationData.isInterfaceObject = entityInterfaceData.isInterfaceObject;
+            configurationData.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
+          }
           const events = this.eventsConfigurations.get(parentTypeName);
           if (events) {
             configurationData.events = events;
@@ -1745,7 +1752,8 @@ export class NormalizationFactory {
         this.errors.push(undefinedObjectLikeParentError(parentTypeName));
         continue;
       }
-      validateDirectivesWithFieldSet(this, parentContainer, fieldSets);
+      // this is where keys, provides, and requires are added to the ConfigurationData
+      validateAndAddDirectivesWithFieldSetToConfigurationData(this, parentContainer, fieldSets);
     }
     if (this.errors.length > 0) {
       return { errors: this.errors };
@@ -1761,7 +1769,7 @@ export class NormalizationFactory {
         configurationDataMap: this.configurationDataMap,
         entityInterfaces: this.entityInterfaces,
         isVersionTwo: this.isSubgraphVersionTwo,
-        keyFieldsByParentTypeName: this.keyFieldsByParentTypeName,
+        keyFieldNamesByParentTypeName: this.keyFieldNamesByParentTypeName,
         operationTypes: this.operationTypeNames,
         overridesByTargetSubgraphName: this.overridesByTargetSubgraphName,
         subgraphAST: newAST,
@@ -1808,7 +1816,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
         configurationDataMap: normalizationResult.configurationDataMap,
         definitions: normalizationResult.subgraphAST,
         entityInterfaces: normalizationResult.entityInterfaces,
-        keyFieldsByParentTypeName: normalizationResult.keyFieldsByParentTypeName,
+        keyFieldNamesByParentTypeName: normalizationResult.keyFieldNamesByParentTypeName,
         isVersionTwo: normalizationResult.isVersionTwo,
         name: subgraphName,
         operationTypes: normalizationResult.operationTypes,

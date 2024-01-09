@@ -99,9 +99,8 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       engineConfig,
       printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
     );
-    const { childNodes, rootNodes, keys, provides, events, requires } = configurationDataMapToDataSourceConfiguration(
-      subgraph.configurationDataMap,
-    );
+    const { childNodes, entityInterfaces, events, interfaceObjects, keys, provides, requires, rootNodes } =
+      configurationDataMapToDataSourceConfiguration(subgraph.configurationDataMap);
     const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
     let kind: DataSourceKind;
     // eslint-disable-next-line camelcase
@@ -163,19 +162,22 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       });
     }
     const datasourceConfig = new DataSourceConfiguration({
-      // When changing this, please do it in the router subgraph override as well
+      // When changing the id, make sure to change it in the router subgraph override also
+      // https://github.com/wundergraph/cosmo/blob/main/router/core/router.go#L342
       id: subgraph.id,
       childNodes,
-      rootNodes,
-      keys,
-      provides,
-      requires,
-      kind,
-      customGraphql,
       customEvents,
+      customGraphql,
       directives: [],
+      entityInterfaces,
+      interfaceObjects,
+      keys,
+      kind,
       overrideFieldPathFromAlias: true,
+      provides,
       requestTimeoutSeconds: BigInt(10),
+      requires,
+      rootNodes,
     });
     engineConfig.datasourceConfigurations.push(datasourceConfig);
   }

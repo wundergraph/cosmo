@@ -420,7 +420,9 @@ describe('Field Configuration tests', () => {
           [
             'Interface',
             {
+              entityInterfaceConcreteTypeNames: new Set<string>(['Entity']),
               fieldNames: new Set<string>(['id', 'age']),
+              isInterfaceObject: false,
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Interface',
@@ -443,7 +445,9 @@ describe('Field Configuration tests', () => {
           [
             'Interface',
             {
+              entityInterfaceConcreteTypeNames: new Set<string>(),
               fieldNames: new Set<string>(['id', 'name']),
+              isInterfaceObject: true,
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Interface',

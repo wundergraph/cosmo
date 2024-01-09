@@ -8,11 +8,12 @@ import (
 
 	"github.com/jensneuse/abstractlogger"
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
@@ -313,6 +314,19 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				SelectionSet: requiresConfiguration.SelectionSet,
 			})
 		}
+		for _, entityInterfacesConfiguration := range in.EntityInterfaces {
+			out.FederationMetaData.EntityInterfaces = append(out.FederationMetaData.EntityInterfaces, plan.EntityInterfaceConfiguration{
+				InterfaceTypeName: entityInterfacesConfiguration.InterfaceTypeName,
+				ConcreteTypeNames: entityInterfacesConfiguration.ConcreteTypeNames,
+			})
+		}
+		for _, interfaceObjectConfiguration := range in.InterfaceObjects {
+			out.FederationMetaData.InterfaceObjects = append(out.FederationMetaData.InterfaceObjects, plan.EntityInterfaceConfiguration{
+				InterfaceTypeName: interfaceObjectConfiguration.InterfaceTypeName,
+				ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
+			})
+		}
+
 		outConfig.DataSources = append(outConfig.DataSources, out)
 	}
 	return &outConfig, nil

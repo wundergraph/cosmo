@@ -812,7 +812,9 @@ function validateKeyFieldSets(
             keyFieldNames.add(fieldName);
             fieldNames.add(fieldName);
           }
-          getValueOrDefault(factory.keyFieldsByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
+          getValueOrDefault(factory.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(
+            fieldName,
+          );
           const namedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
@@ -1016,7 +1018,7 @@ function validateProvidesOrRequires(
   }
 }
 
-export function validateDirectivesWithFieldSet(
+export function validateAndAddDirectivesWithFieldSetToConfigurationData(
   factory: NormalizationFactory,
   parentContainer: ObjectLikeContainer,
   fieldSetContainer: FieldSetContainer,

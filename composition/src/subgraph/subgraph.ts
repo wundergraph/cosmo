@@ -11,7 +11,7 @@ import {
   stringToNameNode,
 } from '../ast/utils';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
-import { EntityInterfaceData, getOrThrowError } from '../utils/utils';
+import { EntityInterfaceSubgraphData, getOrThrowError } from '../utils/utils';
 import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
 import { ConfigurationDataMap } from './field-configuration';
 
@@ -24,9 +24,9 @@ export type Subgraph = {
 export type InternalSubgraph = {
   configurationDataMap: ConfigurationDataMap;
   definitions: DocumentNode;
-  entityInterfaces: Map<string, EntityInterfaceData>;
+  entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   isVersionTwo: boolean;
-  keyFieldsByParentTypeName: Map<string, Set<string>>;
+  keyFieldNamesByParentTypeName: Map<string, Set<string>>;
   name: string;
   operationTypes: Map<string, OperationTypeNode>;
   overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
