@@ -137,7 +137,7 @@ import {
   getEntriesNotInHashSet,
   getOrThrowError, getValueOrDefault,
   hasSimplePath,
-  ImplementationErrors, UndefinedEntityInterfaceImplementations,
+  ImplementationErrors, InvalidEntityInterface,
   InvalidFieldImplementation,
   InvalidRequiredArgument,
   kindToTypeString,
@@ -1735,8 +1735,8 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
   const internalSubgraphs: InternalSubgraph[] = [];
   const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
   const entityInterfaceFederationDataByTypeName = new Map<string, EntityInterfaceFederationData>();
-  const undefinedImplementationsByTypeName =
-    new Map<string, UndefinedEntityInterfaceImplementations[]>();
+  const invalidEntityInterfacesByTypeName = new Map<string, InvalidEntityInterface[]>();
+  const validEntityInterfaceTypeNames = new Set<string>();
   for (const [subgraphName, internalSubgraph] of internalSubgraphsBySubgraphName) {
     internalSubgraphs.push(internalSubgraph);
     subgraphConfigBySubgraphName.set(subgraphName, {
@@ -1744,29 +1744,38 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
       schema: internalSubgraph.schema,
     });
     for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
+      // Always add each entity interface to the invalid entity interfaces map
+      // If not, earlier checks would not account for implementations not yet seen
+      const invalidEntityInterfaces = getValueOrDefault(
+        invalidEntityInterfacesByTypeName, typeName, () => [],
+      );
+      invalidEntityInterfaces.push({
+        subgraphName,
+        concreteTypeNames: entityInterfaceData.concreteTypeNames || new Set<string>(),
+      });
       const existingData = entityInterfaceFederationDataByTypeName.get(typeName);
       if (!existingData) {
+        validEntityInterfaceTypeNames.add(typeName);
         entityInterfaceFederationDataByTypeName.set(typeName, newEntityInterfaceFederationData(entityInterfaceData, subgraphName));
         continue;
       }
-      const areAllImplementationsDefined = upsertEntityInterfaceFederationData(
+      const areAnyImplementationsUndefined = upsertEntityInterfaceFederationData(
         existingData, entityInterfaceData, subgraphName,
       );
-      if (areAllImplementationsDefined) {
-        const undefinedImplementations = getValueOrDefault(
-          undefinedImplementationsByTypeName, typeName, () => [],
-        );
-        undefinedImplementations.push({
-          subgraphName,
-          concreteTypeNames: entityInterfaceData.concreteTypeNames || new Set<string>(),
-        });
+      if (areAnyImplementationsUndefined) {
+        validEntityInterfaceTypeNames.delete(typeName);
       }
     }
   }
-  if (undefinedImplementationsByTypeName.size > 0) {
+
+  // Remove the valid entity interfaces type names so only genuinely invalid entity interfaces remain
+  for (const typeName of validEntityInterfaceTypeNames) {
+    invalidEntityInterfacesByTypeName.delete(typeName);
+  }
+  if (invalidEntityInterfacesByTypeName.size > 0) {
     return {
       errors: [undefinedEntityInterfaceImplementationsError(
-        undefinedImplementationsByTypeName, entityInterfaceFederationDataByTypeName,
+        invalidEntityInterfacesByTypeName, entityInterfaceFederationDataByTypeName,
       )],
     };
   }

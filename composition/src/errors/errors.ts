@@ -9,7 +9,7 @@ import {
 } from 'graphql';
 import {
   EntityInterfaceFederationData, getAllSetDisparities, getEntriesNotInHashSet, getOrThrowError,
-  ImplementationErrorsMap, UndefinedEntityInterfaceImplementations,
+  ImplementationErrorsMap, InvalidEntityInterface,
   InvalidArgument,
   InvalidRequiredArgument,
   kindToTypeString,
@@ -884,20 +884,21 @@ export function equivalentSourceAndTargetOverrideError(subgraphName: string, hos
 }
 
 export function undefinedEntityInterfaceImplementationsError(
-  undefinedImplementationsByTypeName: Map<string, UndefinedEntityInterfaceImplementations[]>,
-  entityInterfaceDatasByTypeName: Map<string, EntityInterfaceFederationData>,
+  invalidEntityInterfacesByTypeName: Map<string, InvalidEntityInterface[]>,
+  entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
 ): Error {
   let message = `Federation was unsuccessful because any one subgraph that defines a specific entity interface` +
-    ` must also define implementations for all objects that implement that respective entity interface elsewhere.\n`;
-  for (const [typeName, undefinedImplementations] of undefinedImplementationsByTypeName) {
+    ` must also define each and every entity object that implements that entity interface.\n`;
+  for (const [typeName, undefinedImplementations] of invalidEntityInterfacesByTypeName) {
     const entityInterfaceDatas = getOrThrowError(
-      entityInterfaceDatasByTypeName, typeName, 'entityInterfaceDatas',
+      entityInterfaceFederationDataByTypeName, typeName, 'entityInterfaceFederationDataByTypeName',
     );
     const implementedConcreteTypeNames = entityInterfaceDatas.concreteTypeNames!;
-    message += ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following object` +
+    message += ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entity object` +
       (implementedConcreteTypeNames.size > 1 ? `s` : ``) + `:\n  "` +
       Array.from(implementedConcreteTypeNames).join(QUOTATION_JOIN) + `"\n` +
-      ` However:\n`;
+      ` However, the definition of at least one of these implementations is missing in a subgraph that` +
+      ` defines the entity interface "${typeName}":\n`;
     for (const { subgraphName, concreteTypeNames } of undefinedImplementations) {
       const disparities = getEntriesNotInHashSet(implementedConcreteTypeNames, concreteTypeNames);
       message += `  Subgraph "${subgraphName}" does not define the following implementations: "`

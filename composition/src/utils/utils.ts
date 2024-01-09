@@ -206,14 +206,15 @@ export function newEntityInterfaceFederationData(
   subgraphName: string,
 ): EntityInterfaceFederationData {
   return {
-    concreteTypeNames: entityInterfaceData.concreteTypeNames,
-    interfaceFieldNames: entityInterfaceData.interfaceFieldNames,
-    interfaceObjectFieldNames: entityInterfaceData.interfaceObjectFieldNames,
+    concreteTypeNames: new Set<string>(entityInterfaceData.concreteTypeNames),
+    interfaceFieldNames: new Set<string>(entityInterfaceData.interfaceFieldNames),
+    interfaceObjectFieldNames: new Set<string>(entityInterfaceData.interfaceObjectFieldNames),
     interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
     typeName: entityInterfaceData.typeName,
   };
 }
 
+// Returns true if the federation data concrete types set was mutated and false otherwise
 export function upsertEntityInterfaceFederationData(
   federationData: EntityInterfaceFederationData,
   subgraphData: EntityInterfaceSubgraphData,
@@ -237,7 +238,7 @@ export function upsertEntityInterfaceFederationData(
   );
 }
 
-export type UndefinedEntityInterfaceImplementations = {
+export type InvalidEntityInterface = {
   subgraphName: string;
   concreteTypeNames: Set<string>;
 };
