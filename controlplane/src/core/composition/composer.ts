@@ -94,11 +94,7 @@ export class Composer {
       routerConfigJson = routerConfig.toJson();
 
       try {
-        await blobStorage.putObject(
-          path,
-          Buffer.from(JSON.stringify(routerConfigJson), 'utf8'),
-          'application/json; charset=utf-8',
-        );
+        await blobStorage.putObject(path, Buffer.from(JSON.stringify(routerConfigJson), 'utf8'));
       } catch {
         throw new Error(
           `Could not upload the latest config of the federated graph ${composedGraph.name}. Please try again.`,

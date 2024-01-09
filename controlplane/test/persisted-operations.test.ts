@@ -136,7 +136,7 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
       const storageKeys = blobStorage.keys();
-      expect(storageKeys.length).toBe(1);
+      expect(storageKeys.length).toBe(2);
       const keyComponents = storageKeys[0].split('/');
       const keyFilename = keyComponents.at(-1)!;
       const keyBasename = keyFilename.split('.')[0];
@@ -163,7 +163,7 @@ describe('Persisted operations', (ctx) => {
 
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
-      expect(blobStorage.keys().length).toBe(1);
+      expect(blobStorage.keys().length).toBe(2);
 
       const deleteFederatedGraphResp = await client.deleteFederatedGraph({
         name: fedGraphName,
