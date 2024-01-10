@@ -13,7 +13,7 @@ body,
 }
 
 #kc-page-title {
-  @apply font-medium text-left;
+  @apply font-semibold text-left;
 }
 
 #kc-header,
@@ -63,7 +63,7 @@ div.kc-logo-text span {
 }
 
 .login-pf-header h1 {
-  @apply text-center text-3xl font-bold text-white my-3 sm:my-2;
+  @apply text-white my-3 sm:my-2;
 }
 
 #id-hidden-input {
