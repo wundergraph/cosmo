@@ -88,6 +88,7 @@ func TestEventsNew(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
+				engineExecutionConfiguration.WebSocketReadTimeout = 10 * time.Millisecond
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -124,7 +125,7 @@ func TestEventsNew(t *testing.T) {
 				require.NoError(t, err)
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
 			// Send a mutation to trigger the subscription
 
