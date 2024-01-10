@@ -118,7 +118,7 @@ const routerConfig = (storage: BlobStorage) => {
     const routerConfig = await streamToJSON(teedStream[0]);
     const body = await c.req.json();
 
-    if (body?.version === routerConfig?.version) {
+    if (body?.version && routerConfig?.version && body.version === routerConfig.version) {
       c.status(308);
       return c.body('The latest config has already been retrieved.');
     }
