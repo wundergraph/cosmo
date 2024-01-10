@@ -275,6 +275,8 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	metrics.AddOperationContext(operationContext)
 
+	// TODO: Instrument subscription with tracing & metrics
+
 	/**
 	* Create the context for all subscription execution with shared values
 	 */
