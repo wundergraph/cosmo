@@ -16,7 +16,7 @@ require (
 	github.com/gobwas/ws v1.3.1
 	github.com/goccy/go-yaml v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.0.0
-	github.com/gorilla/websocket v1.5.0
+	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.7.5
 	github.com/jensneuse/abstractlogger v0.0.4
@@ -31,7 +31,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240109133639-633da603da17
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240110181439-71bf34cedd29
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
