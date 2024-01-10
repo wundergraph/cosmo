@@ -258,6 +258,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	/**
 	* Parse and create the operation context during upgrade once.
+	* A subscription is immutable, so we can reuse the context for all messages
 	 */
 
 	_, operationContext, err := handler.parseAndPlan(msg.Payload)
