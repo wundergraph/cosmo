@@ -757,10 +757,10 @@ func (h *WebSocketConnectionHandler) Close() {
 	// Remove any pending IDs associated with this connection
 	err := h.graphqlHandler.executor.Resolver.AsyncUnsubscribeClient(h.connectionID)
 	if err != nil {
-		h.logger.Warn("Unsubscribing client", zap.Error(err))
+		h.logger.Debug("Unsubscribing client", zap.Error(err))
 	}
 	err = h.conn.Close()
 	if err != nil {
-		h.logger.Warn("Closing websocket connection", zap.Error(err))
+		h.logger.Debug("Closing websocket connection", zap.Error(err))
 	}
 }
