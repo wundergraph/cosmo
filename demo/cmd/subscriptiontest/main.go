@@ -115,7 +115,7 @@ func main() {
 }
 
 func connect(ctx context.Context, num int, tick chan struct{}, acked *sync.WaitGroup) {
-	u, err := url.Parse(fmt.Sprintf("ws://%s:3003/graphql", *host))
+	u, err := url.Parse(fmt.Sprintf("ws://%s:3002/graphql", *host))
 	if err != nil {
 		slog.Error(err.Error())
 		return
@@ -166,7 +166,7 @@ func connect(ctx context.Context, num int, tick chan struct{}, acked *sync.WaitG
 }
 
 func runProcess(ctx context.Context, instance int) {
-	cmd := exec.CommandContext(ctx, "/subscriptiontest", "-host", *host)
+	cmd := exec.CommandContext(ctx, "./subscriptiontest", "-host", *host)
 	// pipe stdout and stderr to the same pipe with a process prefix
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

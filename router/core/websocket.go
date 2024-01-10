@@ -489,10 +489,10 @@ func (rw *websocketResponseWriter) WriteHeader(statusCode int) {
 
 func (rw *websocketResponseWriter) Complete() {
 	err := rw.protocol.Done(rw.id)
+	defer rw.stats.SubscriptionsDec()
 	if err != nil {
-		rw.logger.Warn("Sending complete message", zap.Error(err))
+		rw.logger.Debug("Sending complete message", zap.Error(err))
 	}
-	rw.stats.SubscriptionsDec()
 }
 
 func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
