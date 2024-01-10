@@ -66,31 +66,40 @@ import {
   deleteOIDCProvider,
   deleteOrganization,
   getOIDCProvider,
+  getOrganization,
   isRBACEnabled,
   leaveOrganization,
   updateOrganizationDetails,
   updateRBACSettings,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { GetOIDCProviderResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
   Dispatch,
   SetStateAction,
   useContext,
-  useEffect,
-  useState,
+  useState
 } from "react";
 import { z } from "zod";
 
-const OrganizationDetails = () => {
+const OrganizationDetails = ({
+  name,
+  slug,
+  refetch,
+}: {
+  name: string;
+  slug: string;
+  refetch: () => void;
+}) => {
   const user = useContext(UserContext);
   const router = useRouter();
 
   const schema = z.object({
     organizationName: z
       .string()
-      .min(3, {
-        message: "Organization name must be a minimum of 3 characters",
+      .min(1, {
+        message: "Organization name must be a minimum of 1 character",
       })
       .max(32, { message: "Organization name must be maximum 32 characters" }),
     organizationSlug: z
@@ -105,7 +114,7 @@ const OrganizationDetails = () => {
       })
       .max(24, { message: "Organization slug must be maximum 24 characters" })
       .refine(
-        (value) => !["login", "signup", "create"].includes(value),
+        (value) => !["login", "signup", "create", "account"].includes(value),
         "This slug is a reserved keyword",
       ),
   });
@@ -116,13 +125,6 @@ const OrganizationDetails = () => {
     schema,
     mode: "onChange",
   });
-
-  useEffect(() => {
-    if (!user?.currentOrganization) return;
-
-    form.setValue("organizationName", user.currentOrganization.name);
-    form.setValue("organizationSlug", user.currentOrganization.slug);
-  }, [form, user?.currentOrganization]);
 
   const { mutate, isPending } = useMutation(
     updateOrganizationDetails.useMutation(),
@@ -145,6 +147,7 @@ const OrganizationDetails = () => {
               description: "Organization details updated successfully.",
               duration: 3000,
             });
+            refetch();
           } else if (d.response?.details) {
             toast({ description: d.response.details, duration: 3000 });
           }
@@ -169,7 +172,7 @@ const OrganizationDetails = () => {
         <FormField
           control={form.control}
           name="organizationName"
-          defaultValue={user?.currentOrganization.name}
+          defaultValue={name}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Organization name</FormLabel>
@@ -187,7 +190,7 @@ const OrganizationDetails = () => {
         <FormField
           control={form.control}
           name="organizationSlug"
-          defaultValue={user?.currentOrganization.slug}
+          defaultValue={slug}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Organization slug</FormLabel>
@@ -372,20 +375,18 @@ const AddNewMappers = ({
 
 const OpenIDConnectProvider = ({
   currentMode,
+  providerData,
+  refetch,
 }: {
   currentMode: "create" | "map" | "result";
+  providerData: GetOIDCProviderResponse | undefined;
+  refetch: () => void;
 }) => {
   const user = useUser();
   const oidc = useHas("oidc");
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
-
-  const {
-    data: providerData,
-    refetch,
-    isLoading,
-  } = useQuery(getOIDCProvider.useQuery());
 
   const { mutate, isPending, data } = useMutation(
     createOIDCProvider.useMutation(),
@@ -512,7 +513,7 @@ const OpenIDConnectProvider = ({
             </Link>
           </Button>
         )}
-        {!isLoading && oidc && (
+        {oidc && (
           <>
             {providerData && providerData.name ? (
               <AlertDialog
@@ -821,8 +822,7 @@ const OpenIDConnectProvider = ({
           </>
         )}
       </CardHeader>
-      {isLoading && <Loader />}
-      {!isLoading && providerData && providerData.name && (
+      {providerData && providerData.name && (
         <CardContent className="flex flex-col gap-y-3">
           <div className="flex flex-col gap-y-2">
             <span className="px-1">OIDC provider</span>
@@ -1191,7 +1191,18 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
   const isAdmin = useIsAdmin();
   const isCreator = useIsCreator();
 
+  const { data, refetch, isLoading } = useQuery(getOrganization.useQuery());
+  const {
+    data: providerData,
+    refetch: refetchOIDCProvider,
+    isLoading: fetchingOIDCProvider,
+  } = useQuery(getOIDCProvider.useQuery());
+
   const orgs = user?.organizations?.length || 0;
+
+  if (isLoading || fetchingOIDCProvider) {
+    return <Loader fullscreen />;
+  }
 
   if (!isAdmin) {
     return (
@@ -1204,13 +1215,21 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <OrganizationDetails />
+      <OrganizationDetails
+        name={data?.organization?.name || ""}
+        slug={data?.organization?.slug || ""}
+        refetch={refetch}
+      />
       <Separator className="my-2" />
 
       <RBAC />
       <Separator className="my-2" />
 
-      <OpenIDConnectProvider currentMode="create" />
+      <OpenIDConnectProvider
+        currentMode="create"
+        providerData={providerData}
+        refetch={refetchOIDCProvider}
+      />
       <Separator className="my-2" />
 
       {!isCreator && <LeaveOrganization />}

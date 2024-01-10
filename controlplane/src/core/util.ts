@@ -187,11 +187,17 @@ export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) =
 };
 
 export const isValidOrganizationSlug = (slug: string): boolean => {
+  const reservedSlugs = ['login', 'signup', 'create', 'account'];
+
   if (slug.length < 3 || slug.length > 24) {
     return false;
   }
 
   if (!organizationSlugRegex.test(slug)) {
+    return false;
+  }
+
+  if (reservedSlugs.includes(slug)) {
     return false;
   }
 

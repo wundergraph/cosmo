@@ -64,6 +64,7 @@ import {
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationRequestsCountResponse,
+  GetOrganizationResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
   GetPersistedOperationsResponse,
@@ -3502,6 +3503,43 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     /*
     Queries
     */
+    getOrganization: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const organization = await orgRepo.bySlug(authContext.organizationSlug);
+
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization '${authContext.organizationSlug}' not found`,
+            },
+            members: [],
+          };
+        }
+
+        return {
+          organization: {
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+            creatorUserId: organization.creatorUserId,
+            createdAt: organization.createdAt,
+          },
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
     getSubgraphs: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,

@@ -7392,6 +7392,80 @@ export class DeleteIntegrationResponse extends Message<DeleteIntegrationResponse
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationRequest
+ */
+export class GetOrganizationRequest extends Message<GetOrganizationRequest> {
+  constructor(data?: PartialMessage<GetOrganizationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationRequest {
+    return new GetOrganizationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationRequest {
+    return new GetOrganizationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationRequest {
+    return new GetOrganizationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationRequest | PlainMessage<GetOrganizationRequest> | undefined, b: GetOrganizationRequest | PlainMessage<GetOrganizationRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationResponse
+ */
+export class GetOrganizationResponse extends Message<GetOrganizationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Organization organization = 2;
+   */
+  organization?: Organization;
+
+  constructor(data?: PartialMessage<GetOrganizationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "organization", kind: "message", T: Organization },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationResponse {
+    return new GetOrganizationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationResponse {
+    return new GetOrganizationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationResponse {
+    return new GetOrganizationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationResponse | PlainMessage<GetOrganizationResponse> | undefined, b: GetOrganizationResponse | PlainMessage<GetOrganizationResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.DeleteOrganizationRequest
  */
 export class DeleteOrganizationRequest extends Message<DeleteOrganizationRequest> {

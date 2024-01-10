@@ -955,6 +955,13 @@ message DeleteIntegrationResponse {
   Response response = 1;
 }
 
+message GetOrganizationRequest {}
+
+message GetOrganizationResponse {
+  Response response = 1;
+  Organization organization = 2;
+}
+
 message DeleteOrganizationRequest {
   string userID = 1;
 }
@@ -1606,6 +1613,8 @@ service PlatformService {
   // DeleteIntegration deletes an organization webhintegrationook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
+  // GetOrganization returns an organization 
+  rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse) {}
   // DeleteOrganization deletes an organization 
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
