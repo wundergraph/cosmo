@@ -121,18 +121,6 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 		setSubscriptionHeaders(w)
 	}
 
-	w.WriteHeader(http.StatusOK)
-
-	/*// hijack the connection
-	hj, ok := w.(http.Hijacker)
-	if !ok {
-		return ctx, nil, false
-	}
-	conn, rw, err := hj.Hijack()
-	if err != nil {
-		return ctx, nil, false
-	}*/
-
 	flushWriter := &HttpFlushWriter{
 		writer:       w,
 		flusher:      flusher,

@@ -13,8 +13,8 @@ type Proto interface {
 	ReadMessage() (*Message, error)
 
 	Pong(*Message) error
-	GraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error
-	GraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error
+	WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error
+	WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error
 	// Done is sent to indicate the requested operation is done and no more results will come in
 	Done(id string) error
 }

@@ -46,7 +46,7 @@ func newSubscriptionsTransportWSProtocol(conn JSONConn) *subscriptionsTransportW
 	}
 }
 
-func (subscriptionsTransportWSProtocol) Subprotocol() string {
+func (p *subscriptionsTransportWSProtocol) Subprotocol() string {
 	return subscriptionsTransportWSSubprotocol
 }
 
@@ -100,7 +100,7 @@ func (p *subscriptionsTransportWSProtocol) Pong(msg *Message) error {
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) GraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
+func (p *subscriptionsTransportWSProtocol) WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:         id,
 		Type:       subscriptionsTransportWSMessageTypeData,
@@ -109,7 +109,7 @@ func (p *subscriptionsTransportWSProtocol) GraphQLData(id string, data json.RawM
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) GraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
+func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
 	// This protocol has errors inside an object, so we need to wrap it
 	data, err := sjson.SetBytes([]byte(`{}`), "errors", errors)
 	if err != nil {

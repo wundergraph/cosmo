@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"github.com/wundergraph/cosmo/router/config"
 	"net/http"
 	"sync"
 	"testing"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/nats-io/nats.go"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
@@ -42,7 +42,7 @@ func TestEventsNew(t *testing.T) {
 
 			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
 				require.NoError(t, errValue)
-				assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				defer wg.Done()
 				return nil
 			})
@@ -51,15 +51,15 @@ func TestEventsNew(t *testing.T) {
 
 			go func() {
 				err := client.Run()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}()
 
 			go func() {
 				wg.Wait()
 				err = client.Unsubscribe(subscriptionID)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				err := client.Close()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -69,10 +69,13 @@ func TestEventsNew(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
 			})
-			assert.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
 			err = xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NC.Flush()
 			require.NoError(t, err)
 
 			xEnv.WaitForMessagesSent(2, time.Second*5)
@@ -81,9 +84,7 @@ func TestEventsNew(t *testing.T) {
 		})
 	})
 
-	// times out on github actions
-
-	/*t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
+	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
@@ -111,7 +112,7 @@ func TestEventsNew(t *testing.T) {
 
 			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
 				require.NoError(t, errValue)
-				assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				defer wg.Done()
 				return nil
 			})
@@ -120,15 +121,7 @@ func TestEventsNew(t *testing.T) {
 
 			go func() {
 				err := client.Run()
-				assert.NoError(t, err)
-			}()
-
-			go func() {
-				wg.Wait()
-				err = client.Unsubscribe(subscriptionID)
-				assert.NoError(t, err)
-				err := client.Close()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -138,74 +131,26 @@ func TestEventsNew(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
 			})
-			assert.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
 			err = xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
+			err = xEnv.NC.Flush()
+			require.NoError(t, err)
+
+			wg.Wait()
+
+			err = client.Unsubscribe(subscriptionID)
+			require.NoError(t, err)
+
+			err = client.Close()
+			require.NoError(t, err)
+
 			xEnv.WaitForMessagesSent(2, time.Second*5)
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 			xEnv.WaitForConnectionCount(0, time.Second*5)
-		})
-	})*/
-
-	t.Run("subscribe sync", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
-
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
-
-			go func() {
-				req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
-				require.NoError(t, err)
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Accept", "text/event-stream")
-				req.Header.Set("Connection", "keep-alive")
-				req.Header.Set("Cache-Control", "no-cache")
-
-				resp, err := xEnv.RouterServer.Client().Do(req)
-				require.NoError(t, err)
-				require.Equal(t, http.StatusOK, resp.StatusCode)
-				defer resp.Body.Close()
-				reader := bufio.NewReader(resp.Body)
-				count := 0
-				for {
-					// set a timeout to avoid blocking forever
-					line, err := reader.ReadString('\n')
-					require.NoError(t, err)
-					_, err = reader.ReadString('\n')
-					require.NoError(t, err)
-					require.NoError(t, err)
-					assert.JSONEq(t, `{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}}`, line)
-					count++
-					if count == 2 {
-						require.NoError(t, err)
-						wg.Done()
-						return
-					}
-				}
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
-
-			go func() {
-				// Send a mutation to trigger the subscription
-
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
-				})
-				assert.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
-
-				// Trigger the subscription via NATS
-				err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-			}()
-
-			xEnv.WaitForMessagesSent(2, time.Second*5)
-			wg.Wait()
 		})
 	})
 
@@ -215,14 +160,16 @@ func TestEventsNew(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
 
-			done := make(chan struct{})
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
 
 			go func() {
 				client := http.Client{
-					Timeout: time.Second * 5,
+					Timeout: time.Second * 10,
 				}
-				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQL_SSE_URL(), bytes.NewReader(subscribePayload))
+				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, err)
+
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Accept", "text/event-stream")
 				req.Header.Set("Connection", "keep-alive")
@@ -233,47 +180,42 @@ func TestEventsNew(t *testing.T) {
 				require.Equal(t, http.StatusOK, resp.StatusCode)
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
-				count := 0
-				for {
-					// set a timeout to avoid blocking forever
-					line, err := reader.ReadString('\n')
-					require.NoError(t, err)
-					_, err = reader.ReadString('\n')
-					require.NoError(t, err)
-					require.NoError(t, err)
-					// sse -> line starts with 'data: '
-					assert.Equal(t, "data: ", line[:6])
-					assert.JSONEq(t, `{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}}`, line[6:])
-					done <- struct{}{}
-					count++
-					if count == 2 {
-						return
-					}
-				}
+
+				line, err := reader.ReadString('\n')
+				require.NoError(t, err)
+				_, err = reader.ReadString('\n')
+				require.NoError(t, err)
+				require.Equal(t, "data: ", line[:6])
+				require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}}`, line[6:])
+
+				line, err = reader.ReadString('\n')
+				require.NoError(t, err)
+				_, err = reader.ReadString('\n')
+				require.NoError(t, err)
+				require.Equal(t, "data: ", line[:6])
+				require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}}`, line[6:])
+
+				wg.Done()
+
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			go func() {
-				// Send a mutation to trigger the subscription
+			// Send a mutation to trigger the subscription
 
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
-				})
-				assert.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
-				// Trigger the subscription via NATS
-				err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-			}()
+			// Trigger the subscription via NATS
+			err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
 
-			for i := 0; i < 2; i++ {
-				select {
-				case <-done:
-				case <-time.After(5 * time.Second):
-					t.Fatal("timeout waiting for SSE")
-				}
-			}
+			err = xEnv.NC.Flush()
+			require.NoError(t, err)
+
+			wg.Wait()
 		})
 	})
 
@@ -282,14 +224,16 @@ func TestEventsNew(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
 
-			done := make(chan struct{})
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
 
 			go func() {
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
-				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQL_SSE_URL(), bytes.NewReader(subscribePayload))
+				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, err)
+
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Accept", "text/event-stream")
 				req.Header.Set("Connection", "keep-alive")
@@ -300,40 +244,32 @@ func TestEventsNew(t *testing.T) {
 				require.Equal(t, http.StatusOK, resp.StatusCode)
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
-				for {
-					// set a timeout to avoid blocking forever
-					line, err := reader.ReadString('\n')
-					require.NoError(t, err)
-					_, err = reader.ReadString('\n')
-					require.NoError(t, err)
-					require.NoError(t, err)
-					// sse -> line starts with 'data: '
-					assert.Equal(t, "data: ", line[:6])
-					assert.JSONEq(t, `{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}}`, line[6:])
-					done <- struct{}{}
-					return
-				}
+
+				line, err := reader.ReadString('\n')
+				require.NoError(t, err)
+				// sse -> line starts with 'data: '
+				require.Equal(t, "data: ", line[:6])
+				require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}}`, line[6:])
+
+				wg.Done()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			go func() {
-				// Send a mutation to trigger the subscription
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
-				})
-				assert.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+			// Send a mutation to trigger the subscription
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
-				// Trigger the subscription via NATS
-				err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-			}()
+			// Trigger the subscription via NATS
+			err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
 
-			select {
-			case <-done:
-			case <-time.After(5 * time.Second):
-				t.Fatal("timeout waiting for SSE")
-			}
+			err = xEnv.NC.Flush()
+			require.NoError(t, err)
+
+			wg.Wait()
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 			xEnv.WaitForConnectionCount(0, time.Second*5)
@@ -351,7 +287,7 @@ func TestEventsNew(t *testing.T) {
 
 			t.Cleanup(func() {
 				err := sub.Unsubscribe()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			})
 
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -359,7 +295,7 @@ func TestEventsNew(t *testing.T) {
 			})
 
 			// Send a query to receive the response from the NATS message
-			assert.JSONEq(t, `{"data":{"employeeFromEvent": {"id": 3, "details": {"forename": "Stefan"}}}}`, res.Body)
+			require.JSONEq(t, `{"data":{"employeeFromEvent": {"id": 3, "details": {"forename": "Stefan"}}}}`, res.Body)
 
 		})
 	})
@@ -378,7 +314,7 @@ func TestEventsNew(t *testing.T) {
 
 			t.Cleanup(func() {
 				err := sub.Unsubscribe()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			})
 
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -389,7 +325,7 @@ func TestEventsNew(t *testing.T) {
 			})
 
 			// Send a query to receive the response from the NATS message
-			assert.JSONEq(t, `{"data":{"updateEmployee": {"success": true}}}`, res.Body)
+			require.JSONEq(t, `{"data":{"updateEmployee": {"success": true}}}`, res.Body)
 
 			select {
 			case <-done:

@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
@@ -33,7 +32,7 @@ func TestSingleFlight(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 			}()
 		}
 		close(trigger)
@@ -62,7 +61,7 @@ func TestSingleFlightMutations(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
 				})
-				assert.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, res.Body)
+				require.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, res.Body)
 			}()
 		}
 		close(trigger)
@@ -107,7 +106,7 @@ func TestSingleFlightDifferentHeaders(t *testing.T) {
 						"Authorization": []string{fmt.Sprintf("Bearer test-%d", i)},
 					},
 				})
-				assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 			}(i)
 		}
 		close(trigger)
@@ -151,7 +150,7 @@ func TestSingleFlightSameHeaders(t *testing.T) {
 						"Authorization": []string{"Bearer test"},
 					},
 				})
-				assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 			}()
 		}
 		close(trigger)

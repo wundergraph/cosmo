@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-retryablehttp"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -41,7 +43,6 @@ var (
 
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
-	t.Parallel()
 	env, err := createTestEnv(t, cfg)
 	if err != nil {
 		t.Fatalf("could not create environment: %s", err)
@@ -93,21 +94,21 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
-	natsPort, err := freeport.GetFreePort()
+	port, err := freeport.GetFreePort()
 	if err != nil {
-		panic(err)
+		t.Fatalf("could not get free port: %s", err)
 	}
 
 	opts := natsserver.Options{
 		Host:   "localhost",
-		Port:   natsPort,
+		Port:   port,
 		NoLog:  true,
 		NoSigs: true,
 	}
 
 	ns := natstest.RunServer(&opts)
 	if ns == nil {
-		panic("could not start NATS test server")
+		t.Fatalf("could not start NATS test server")
 	}
 
 	nc, err := nats.Connect(ns.ClientURL())
@@ -231,17 +232,31 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	cdn := setupCDNServer()
 
-	rr, err := configureRouter(cfg, &routerConfig, cdn, ns)
+	port, err = freeport.GetFreePort()
+	if err != nil {
+		t.Fatalf("could not get free port: %s", err)
+	}
+
+	listenerAddr := fmt.Sprintf("localhost:%d", port)
+	routerURL := fmt.Sprintf("http://%s", listenerAddr)
+
+	client := retryablehttp.NewClient()
+	client.Logger = nil
+
+	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, ns)
 	if err != nil {
 		return nil, err
 	}
 
-	rs, err := rr.NewTestServer(ctx)
-	if err != nil {
-		return nil, err
-	}
+	svr, err := rr.NewTestServer(ctx)
+	require.NoError(t, err)
 
-	router := httptest.NewServer(rs.Server.Handler)
+	go func() {
+		if err := svr.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Errorf("could not start router: %s", err)
+		}
+	}()
+
 	graphQLPath := "/graphql"
 	if cfg.OverrideGraphQLPath != "" {
 		graphQLPath = cfg.OverrideGraphQLPath
@@ -275,7 +290,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Context:              ctx,
 		cancel:               cancel,
 		Router:               rr,
-		RouterServer:         router,
+		RouterURL:            routerURL,
+		RouterClient:         client.StandardClient(),
 		CDN:                  cdn,
 		Nats:                 ns,
 		NC:                   nc,
@@ -292,7 +308,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}, nil
 }
 
-func configureRouter(testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, nats *natsserver.Server) (*core.Router, error) {
+func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, nats *natsserver.Server) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{
 			Name: "production",
@@ -348,6 +364,7 @@ func configureRouter(testConfig *Config, routerConfig *nodev1.RouterConfig, cdn 
 		core.WithPlayground(true),
 		core.WithEngineExecutionConfig(engineExecutionConfig),
 		core.WithCDN(cfg.CDN),
+		core.WithListenerAddr(listenerAddr),
 		core.WithEvents(config.EventsConfiguration{
 			Sources: []config.EventSource{
 				{
@@ -390,6 +407,9 @@ func setupCDNServer() *httptest.Server {
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
+		if authorization == "" {
+			panic("missing authorization header")
+		}
 		token := authorization[len("Bearer "):]
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
@@ -416,8 +436,9 @@ type Environment struct {
 
 	Context              context.Context
 	cancel               context.CancelCauseFunc
-	RouterServer         *httptest.Server
 	Router               *core.Router
+	RouterURL            string
+	RouterClient         *http.Client
 	Servers              []*httptest.Server
 	CDN                  *httptest.Server
 	Nats                 *natsserver.Server
@@ -426,8 +447,13 @@ type Environment struct {
 }
 
 func (e *Environment) Shutdown() {
+	// Terminate test server resources
 	e.cancel(errors.New("test environment closed"))
-	e.RouterServer.Close()
+
+	// Gracefully shutdown router
+	ctx, cancel := context.WithTimeout(e.Context, 5*time.Second)
+	defer cancel()
+	e.Router.Shutdown(ctx)
 }
 
 type SubgraphRequestCount struct {
@@ -471,7 +497,7 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 	if request.Header != nil {
 		req.Header = request.Header
 	}
-	resp, err := e.RouterServer.Client().Do(req)
+	resp, err := e.RouterClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -489,7 +515,7 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 }
 
 func (e *Environment) MakeRequest(method, path string, header http.Header, body io.Reader) (*http.Response, error) {
-	requestURL, err := url.JoinPath(e.RouterServer.URL, path)
+	requestURL, err := url.JoinPath(e.RouterURL, path)
 	if err != nil {
 		return nil, err
 	}
@@ -498,12 +524,12 @@ func (e *Environment) MakeRequest(method, path string, header http.Header, body 
 		return nil, err
 	}
 	req.Header = header
-	return e.RouterServer.Client().Do(req)
+	return e.RouterClient.Do(req)
 
 }
 
 func (e *Environment) GraphQLRequestURL() string {
-	u, err := url.JoinPath(e.RouterServer.URL, e.graphQLPath)
+	u, err := url.JoinPath(e.RouterURL, e.graphQLPath)
 	require.NoError(e.t, err)
 	return u
 }
@@ -515,7 +541,7 @@ func (e *Environment) GraphQLSubscriptionURL() string {
 	return u.String()
 }
 
-func (e *Environment) GraphQL_SSE_URL() string {
+func (e *Environment) GraphQLServeSentEventsURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
 	u.RawQuery = "wg_sse"
@@ -537,11 +563,42 @@ type GraphQLError struct {
 	Message string `json:"message"`
 }
 
-func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initialPayload json.RawMessage) *websocket.Conn {
+const maxSocketRetries = 5
+
+func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
 	}
-	conn, _, err := dialer.Dial(e.GraphQLSubscriptionURL(), header)
+
+	waitBetweenRetriesInMs := rand.Intn(10)
+	timeToSleep := time.Duration(waitBetweenRetriesInMs) * time.Millisecond
+
+	var err error
+
+	for i := 0; i < maxSocketRetries; i++ {
+		url := e.GraphQLSubscriptionURL()
+		conn, resp, err := dialer.Dial(url, header)
+
+		if resp != nil && err == nil {
+			return conn, resp, err
+		}
+
+		if errors.Is(err, websocket.ErrBadHandshake) {
+			return conn, resp, err
+		}
+
+		// Make sure that on the final attempt we won't wait
+		if i != maxSocketRetries {
+			time.Sleep(timeToSleep)
+			timeToSleep *= 2
+		}
+	}
+
+	return nil, nil, err
+}
+
+func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initialPayload json.RawMessage) *websocket.Conn {
+	conn, _, err := e.GraphQLWebsocketDialWithRetry(header)
 	require.NoError(e.t, err)
 	e.t.Cleanup(func() {
 		_ = conn.Close()
@@ -559,85 +616,117 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initial
 }
 
 func (e *Environment) close() {
+	// Give the router some time to shut down
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Gracefully shutdown router
+	e.Router.Shutdown(ctx)
+
+	// Terminate test server resources
 	e.cancel(errors.New("test environment closed"))
-	e.RouterServer.Client().CloseIdleConnections()
-	e.RouterServer.CloseClientConnections()
-	e.RouterServer.Close()
+
+	// Close all test servers
 	for _, s := range e.Servers {
 		s.CloseClientConnections()
 		s.Close()
 	}
+
+	// Close the CDN
 	e.CDN.CloseClientConnections()
 	e.CDN.Close()
+
+	// Close NATS
 	e.NC.Close()
 	e.Nats.Shutdown()
 }
 
-func (e *Environment) WaitForSubscriptionCount(desiredCount int64, timeout time.Duration) {
-	report, err := e.Router.WebsocketStats.GetReport()
-	require.NoError(e.t, err)
+func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
+	e.t.Helper()
+
+	report := e.Router.WebsocketStats.GetReport()
 	if report.Subscriptions == desiredCount {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
-	sub, err := e.Router.WebsocketStats.Subscribe(ctx)
-	require.NoError(e.t, err)
+
+	sub := e.Router.WebsocketStats.Subscribe()
+
 	for {
-		report, ok := <-sub
-		if !ok {
-			e.t.Helper()
+		select {
+		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
 			return
-		}
-		if report.Subscriptions == desiredCount {
-			return
+		case report, ok := <-sub:
+			if !ok {
+				e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
+				return
+			}
+			if report.Subscriptions == desiredCount {
+				return
+			}
 		}
 	}
 }
 
-func (e *Environment) WaitForConnectionCount(desiredCount int64, timeout time.Duration) {
-	report, err := e.Router.WebsocketStats.GetReport()
-	require.NoError(e.t, err)
+func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.Duration) {
+	e.t.Helper()
+
+	report := e.Router.WebsocketStats.GetReport()
+
 	if report.Connections == desiredCount {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
-	sub, err := e.Router.WebsocketStats.Subscribe(ctx)
-	require.NoError(e.t, err)
+
+	sub := e.Router.WebsocketStats.Subscribe()
+
 	for {
-		report, ok := <-sub
-		if !ok {
-			e.t.Helper()
+		select {
+		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
 			return
-		}
-		if report.Connections == desiredCount {
-			return
+		case report, ok := <-sub:
+			if !ok {
+				e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
+				return
+			}
+			if report.Connections == desiredCount {
+				return
+			}
 		}
 	}
 }
 
-func (e *Environment) WaitForMessagesSent(desiredCount int64, timeout time.Duration) {
-	report, err := e.Router.WebsocketStats.GetReport()
-	require.NoError(e.t, err)
+func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Duration) {
+	report := e.Router.WebsocketStats.GetReport()
 	if report.MessagesSent == desiredCount {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
-	sub, err := e.Router.WebsocketStats.Subscribe(ctx)
-	require.NoError(e.t, err)
+
+	sub := e.Router.WebsocketStats.Subscribe()
+
 	for {
-		report, ok := <-sub
-		if !ok {
-			e.t.Helper()
+		select {
+		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
 			return
-		}
-		if report.MessagesSent == desiredCount {
-			return
+		case report, ok := <-sub:
+			if !ok {
+				e.t.Helper()
+				e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
+				return
+			}
+			if report.MessagesSent == desiredCount {
+				return
+			}
 		}
 	}
 }

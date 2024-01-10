@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood"
 	"log"
 	"net/http"
 	"os"
@@ -15,13 +16,12 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/otel"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const (
-	defaultPort = "4001"
-	serviceName = "employees"
+	defaultPort = "4008"
+	serviceName = "mood"
 )
 
 func main() {
@@ -31,7 +31,8 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := subgraphs.NewDemoServer(employees.NewSchema(nil))
+	srv := subgraphs.NewDemoServer(mood.NewSchema(nil))
+
 	srv.Use(&debug.Tracer{})
 	srv.Use(otelgqlgen.Middleware(otelgqlgen.WithCreateSpanFromFields(func(ctx *graphql.FieldContext) bool {
 		return true

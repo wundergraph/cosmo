@@ -2,7 +2,7 @@ package debug
 
 import (
 	"context"
-	"fmt"
+	"github.com/dustin/go-humanize"
 	"runtime"
 	"time"
 
@@ -28,17 +28,10 @@ func printLoop(ctx context.Context, logger *zap.Logger) {
 func printMemoryUsage(logger *zap.Logger) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	logger.Info("memory usage",
-		zap.Uint64("alloc_mb", bToMb(m.Alloc)),
-		zap.Uint64("total_alloc_mb", bToMb(m.TotalAlloc)),
-		zap.Uint64("sys_mb", bToMb(m.Sys)),
+	logger.Info("Memory usage",
+		zap.String("alloc_mb", humanize.Bytes(m.Alloc)),
+		zap.String("total_alloc_mb", humanize.Bytes(m.TotalAlloc)),
+		zap.String("sys_mb", humanize.Bytes(m.Sys)),
 		zap.Uint32("num_gc", m.NumGC),
 	)
-	if logger.Level() != zap.InfoLevel {
-		fmt.Printf("memory usage: alloc_mb=%d total_alloc_mb=%d sys_mb=%d num_gc=%d\n", bToMb(m.Alloc), bToMb(m.TotalAlloc), bToMb(m.Sys), m.NumGC)
-	}
-}
-
-func bToMb(b uint64) uint64 {
-	return b / 1024 / 1024
 }

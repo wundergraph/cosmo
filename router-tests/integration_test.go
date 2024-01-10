@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
@@ -171,8 +170,8 @@ func TestVariables(t *testing.T) {
 				Variables: json.RawMessage(`true`),
 			})
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			assert.Equal(t, `{"errors":[{"message":"variables value must not be a boolean"}],"data":null}`, res.Body)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"variables value must not be a boolean"}],"data":null}`, res.Body)
 		})
 
 		t.Run("invalid array", func(t *testing.T) {
@@ -212,7 +211,7 @@ func TestAnonymousQuery(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id } }`,
 		})
-		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
 }
 
@@ -229,7 +228,7 @@ func TestTracing(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
 		tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
 		require.NoError(t, err)
 		// we generate a random port for the test server, so we need to replace the port in the tracing json
@@ -242,7 +241,7 @@ func TestTracing(t *testing.T) {
 		require.NoError(t, err)
 		tracingJson = rex2.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
 		resultBody = rex2.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
-		assert.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
+		require.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
 		if t.Failed() {
 			t.Log(resultBody)
 		}
@@ -255,15 +254,15 @@ func TestTracing(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res2.Response.StatusCode)
+		require.Equal(t, http.StatusOK, res2.Response.StatusCode)
 		body := []byte(res2.Body)
 		data, _, _, err := jsonparser.Get(body, "data")
 		require.NoError(t, err)
-		assert.NotNilf(t, data, "data should not be nil: %s", body)
+		require.NotNilf(t, data, "data should not be nil: %s", body)
 		tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
 		require.NoError(t, err)
-		assert.NotNilf(t, tracing, "tracing should not be nil: %s", body)
-		assert.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, string(body)))
+		require.NotNilf(t, tracing, "tracing should not be nil: %s", body)
+		require.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, string(body)))
 	})
 }
 
@@ -284,7 +283,7 @@ func TestOperationSelection(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 		})
 	})
 
@@ -293,7 +292,7 @@ func TestOperationSelection(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } } { employees { id } }`,
 			})
-			assert.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}],"data":null}`, res.Body)
 		})
 	})
 
@@ -303,7 +302,7 @@ func TestOperationSelection(t *testing.T) {
 				Query:         `{ employees { id } }`,
 				OperationName: []byte(`null`),
 			})
-			assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 		})
 	})
 
@@ -313,7 +312,7 @@ func TestOperationSelection(t *testing.T) {
 				Query:         `{ employees { id } }`,
 				OperationName: []byte(`"Missing"`),
 			})
-			assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, res.Body)
 		})
 	})
 
@@ -323,7 +322,7 @@ func TestOperationSelection(t *testing.T) {
 				Query:         `query Exists { employees { id } }`,
 				OperationName: []byte(`"Missing"`),
 			})
-			assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, res.Body)
 		})
 
 		t.Run("multiple named operations", func(t *testing.T) {
@@ -332,7 +331,7 @@ func TestOperationSelection(t *testing.T) {
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
 					OperationName: []byte(`"A"`),
 				})
-				assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 			})
 		})
 
@@ -342,7 +341,7 @@ func TestOperationSelection(t *testing.T) {
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
 					OperationName: []byte(`"B"`),
 				})
-				assert.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 			})
 		})
 
@@ -352,7 +351,7 @@ func TestOperationSelection(t *testing.T) {
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
 					OperationName: []byte(`"C"`),
 				})
-				assert.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}],"data":null}`, res.Body)
+				require.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}],"data":null}`, res.Body)
 			})
 		})
 	})
@@ -389,7 +388,7 @@ func TestTestdataQueries(t *testing.T) {
 
 				expected := normalizeJSON(t, expectedData)
 				actual := normalizeJSON(t, result)
-				assert.Equal(t, expected, actual)
+				require.Equal(t, expected, actual)
 			})
 		})
 	}
@@ -400,7 +399,7 @@ func TestIntegrationWithUndefinedField(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id notDefined } }`,
 		})
-		assert.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}],"data":null}`, res.Body)
+		require.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}],"data":null}`, res.Body)
 	})
 }
 
@@ -416,7 +415,7 @@ func TestParallel(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
-				assert.JSONEq(t, expect, res.Body)
+				require.JSONEq(t, expect, res.Body)
 				wg.Done()
 			}()
 		}
@@ -582,7 +581,7 @@ func TestPlannerErrorMessage(t *testing.T) {
 			t.Fatal(err)
 		}
 		require.Len(t, resp.Errors, 1)
-		assert.Equal(t, `Unknown argument "does_not_exist" on field "Query.employee".`, resp.Errors[0].Message)
+		require.Equal(t, `Unknown argument "does_not_exist" on field "Query.employee".`, resp.Errors[0].Message)
 	})
 }
 
@@ -612,7 +611,7 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: query,
 				})
-				assert.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), res.Body, "query %d failed", ii)
+				require.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), res.Body, "query %d failed", ii)
 			}(ii)
 		}
 		wg.Wait()
@@ -630,7 +629,7 @@ func TestPartialOriginErrors(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 	})
 }
 
@@ -649,7 +648,7 @@ func TestPartialOriginErrors500(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 	})
 }
 
@@ -664,7 +663,7 @@ func TestWithOriginErrors(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, res.Body)
 	})
 }
 
@@ -683,6 +682,6 @@ func TestWithOriginErrors500(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, res.Body)
 	})
 }

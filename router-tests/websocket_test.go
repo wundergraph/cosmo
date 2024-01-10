@@ -10,13 +10,14 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
 )
 
 func TestWebSockets(t *testing.T) {
+	t.Parallel()
+
 	t.Run("query", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
@@ -29,14 +30,14 @@ func TestWebSockets(t *testing.T) {
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
 			require.NoError(t, err)
-			assert.Equal(t, "next", res.Type)
-			assert.Equal(t, "1", res.ID)
-			assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
-			assert.Equal(t, "complete", complete.Type)
-			assert.Equal(t, "1", complete.ID)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -69,8 +70,8 @@ func TestWebSockets(t *testing.T) {
 			// Read a result and store its timestamp, next result should be 1 second later
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.Equal(t, "1", msg.ID)
-			assert.Equal(t, "next", msg.Type)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 
@@ -78,13 +79,13 @@ func TestWebSockets(t *testing.T) {
 
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.Equal(t, "1", msg.ID)
-			assert.Equal(t, "next", msg.Type)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 
 			unix2 := payload.Data.CurrentTime.UnixTime
-			assert.Equal(t, unix1+1, unix2)
+			require.Equal(t, unix1+1, unix2)
 
 			// Sending a complete must stop the subscription
 			err = conn.WriteJSON(&testenv.WebSocketMessage{
@@ -107,9 +108,9 @@ func TestWebSockets(t *testing.T) {
 			require.Error(t, err)
 			var netErr net.Error
 			if errors.As(err, &netErr) {
-				assert.True(t, netErr.Timeout())
+				require.True(t, netErr.Timeout())
 			} else {
-				assert.Fail(t, "expected net.Error")
+				require.Fail(t, "expected net.Error")
 			}
 		})
 	})
@@ -125,13 +126,13 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.Equal(t, "error", msg.Type)
+			require.Equal(t, "error", msg.Type)
 			// Payload should be an array of GraphQLError
 			var errs []testenv.GraphQLError
 			err = json.Unmarshal(msg.Payload, &errs)
 			require.NoError(t, err)
-			assert.Len(t, errs, 1)
-			assert.Equal(t, errs[0].Message, `field: does_not_exist not defined on type: Subscription`)
+			require.Len(t, errs, 1)
+			require.Equal(t, errs[0].Message, `field: does_not_exist not defined on type: Subscription`)
 		})
 	})
 	t.Run("subscription with library", func(t *testing.T) {
@@ -153,7 +154,7 @@ func TestWebSockets(t *testing.T) {
 					client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).WithProtocol(p)
 					t.Cleanup(func() {
 						err := client.Close()
-						assert.NoError(t, err)
+						require.NoError(t, err)
 					})
 					var firstTime float64
 					subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
@@ -164,7 +165,7 @@ func TestWebSockets(t *testing.T) {
 						if firstTime == 0 {
 							firstTime = data.CurrentTime.UnixTime
 						} else {
-							assert.Equal(t, firstTime+1, data.CurrentTime.UnixTime)
+							require.Equal(t, firstTime+1, data.CurrentTime.UnixTime)
 							return graphql.ErrSubscriptionStopped
 						}
 						return nil
@@ -211,13 +212,13 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			assert.Equal(t, "123", payload.Data.InitialPayload.Extensions.Token)
+			require.Equal(t, "123", payload.Data.InitialPayload.Extensions.Token)
 
 			err = conn2.ReadJSON(&msg)
 			require.NoError(t, err)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			assert.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
+			require.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
 		})
 	})
 	t.Run("same graphql path as playground", func(t *testing.T) {
@@ -235,7 +236,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("different path", func(t *testing.T) {
@@ -253,13 +254,13 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
 		})
 	})
 
 	// times out on GitHub Actions
 
-	/*t.Run("shutdown with epoll", func(t *testing.T) {
+	t.Run("shutdown with epoll", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.EnableWebSocketEpollKqueue = true
@@ -282,9 +283,10 @@ func TestWebSockets(t *testing.T) {
 			// Check that the WS client error indicates the connection was unexpectedly closed
 			closeError, ok := err.(*websocket.CloseError)
 			require.True(t, ok)
-			assert.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
+			require.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
 		})
-	})*/
+	})
+
 	t.Run("shutdown without epoll", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
@@ -308,7 +310,7 @@ func TestWebSockets(t *testing.T) {
 			// Check that the WS client error indicates the connection was unexpectedly closed
 			closeError, ok := err.(*websocket.CloseError)
 			require.True(t, ok)
-			assert.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
+			require.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
 		})
 	})
 	t.Run("single connection with initial payload", func(t *testing.T) {
@@ -327,7 +329,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("single connection with initial payload and extensions in the request", func(t *testing.T) {
@@ -347,7 +349,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2"}}}}`, string(msg.Payload))
+			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2"}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("multiple connections with different initial payloads", func(t *testing.T) {
@@ -374,11 +376,11 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn1.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.JSONEq(t, `{"data":{"initialPayload":{"id":1}}}`, string(msg.Payload))
+			require.JSONEq(t, `{"data":{"initialPayload":{"id":1}}}`, string(msg.Payload))
 
 			err = conn2.ReadJSON(&msg)
 			require.NoError(t, err)
-			assert.JSONEq(t, `{"data":{"initialPayload":{"id":2}}}`, string(msg.Payload))
+			require.JSONEq(t, `{"data":{"initialPayload":{"id":2}}}`, string(msg.Payload))
 		})
 	})
 }

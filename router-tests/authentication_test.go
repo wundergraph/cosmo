@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gorilla/websocket"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -47,11 +45,11 @@ func TestAuthentication(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			assert.Equal(t, http.StatusOK, res.StatusCode)
-			assert.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			assert.Equal(t, employeesExpectedData, string(data))
+			require.Equal(t, employeesExpectedData, string(data))
 		})
 	})
 
@@ -68,11 +66,11 @@ func TestAuthentication(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
-			assert.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			assert.Equal(t, unauthorizedExpectedData, string(data))
+			require.Equal(t, unauthorizedExpectedData, string(data))
 		})
 	})
 
@@ -91,11 +89,11 @@ func TestAuthentication(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			assert.Equal(t, http.StatusOK, res.StatusCode)
-			assert.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			assert.Equal(t, employeesExpectedData, string(data))
+			require.Equal(t, employeesExpectedData, string(data))
 		})
 	})
 }
@@ -137,11 +135,11 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			assert.Equal(t, http.StatusOK, res.StatusCode)
-			assert.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			assert.Equal(t, employeesExpectedData, string(data))
+			require.Equal(t, employeesExpectedData, string(data))
 		})
 	}
 
@@ -181,11 +179,11 @@ func TestAuthorization(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
-			assert.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			assert.JSONEq(t, unauthorizedExpectedData, string(data))
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
 	})
 
@@ -202,11 +200,11 @@ func TestAuthorization(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
-			assert.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			assert.JSONEq(t, unauthorizedExpectedData, string(data))
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
 	})
 
@@ -223,11 +221,11 @@ func TestAuthorization(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			assert.Equal(t, http.StatusOK, res.StatusCode)
-			assert.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			assert.Equal(t, employeesExpectedData, string(data))
+			require.Equal(t, employeesExpectedData, string(data))
 		})
 	})
 }
@@ -277,11 +275,11 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 					require.NoError(t, err)
 					defer res.Body.Close()
-					assert.Equal(t, http.StatusOK, res.StatusCode)
-					assert.Equal(t, "1", res.Header.Get(xAuthenticatedByHeader))
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, "1", res.Header.Get(xAuthenticatedByHeader))
 					data, err := io.ReadAll(res.Body)
 					require.NoError(t, err)
-					assert.Equal(t, employeesExpectedData, string(data))
+					require.Equal(t, employeesExpectedData, string(data))
 				})
 			}
 		})
@@ -304,11 +302,11 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 					require.NoError(t, err)
 					defer res.Body.Close()
-					assert.Equal(t, http.StatusOK, res.StatusCode)
-					assert.Equal(t, "2", res.Header.Get(xAuthenticatedByHeader))
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, "2", res.Header.Get(xAuthenticatedByHeader))
 					data, err := io.ReadAll(res.Body)
 					require.NoError(t, err)
-					assert.Equal(t, employeesExpectedData, string(data))
+					require.Equal(t, employeesExpectedData, string(data))
 				})
 			}
 		})
@@ -326,11 +324,11 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
-			assert.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			assert.JSONEq(t, unauthorizedExpectedData, string(data))
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
 	})
 }
@@ -355,21 +353,23 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 
-		dialer := websocket.Dialer{
-			Subprotocols: []string{"graphql-transport-ws"},
-		}
-		_, res, err := dialer.Dial(xEnv.GraphQLSubscriptionURL(), nil)
+		conn, res, err := xEnv.GraphQLWebsocketDialWithRetry(nil)
+		require.Nil(t, conn)
 		require.Error(t, err)
-		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 
 		token, err := authServer.Token(nil)
 		require.NoError(t, err)
+
 		headers := http.Header{
 			"Authorization": []string{"Bearer " + token},
 		}
-		conn, res, err := dialer.Dial(xEnv.GraphQLSubscriptionURL(), headers)
+		conn, res, err = xEnv.GraphQLWebsocketDialWithRetry(headers)
+		defer func() {
+			require.NoError(t, conn.Close())
+		}()
+
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusSwitchingProtocols, res.StatusCode)
-		defer conn.Close()
+		require.Equal(t, http.StatusSwitchingProtocols, res.StatusCode)
 	})
 }

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
@@ -17,8 +16,8 @@ func TestPersistedOperationNotFound(t *testing.T) {
 			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
 		})
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-		assert.JSONEq(t, `{"data": null, "errors": [{ "message": "PersistedQueryNotFound" }]}`, res.Body)
+		require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+		require.JSONEq(t, `{"data": null, "errors": [{ "message": "PersistedQueryNotFound" }]}`, res.Body)
 	})
 }
 
@@ -32,7 +31,7 @@ func TestPersistedOperation(t *testing.T) {
 			Header:        header,
 		})
 		require.NoError(t, err)
-		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
 }
 
@@ -48,10 +47,10 @@ func TestPersistedOperationsCache(t *testing.T) {
 		}
 		res1, err := xEnv.MakeGraphQLRequest(req)
 		require.NoError(t, err)
-		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res1.Body)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res1.Body)
 		res2, err := xEnv.MakeGraphQLRequest(req)
 		require.NoError(t, err)
-		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
 	}
 
 	retrieveNumberOfCDNRequests := func(t *testing.T, cdnURL string) int {
@@ -69,7 +68,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			sendTwoRequests(t, xEnv)
 			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
-			assert.Equal(t, 1, numberOfCDNRequests)
+			require.Equal(t, 1, numberOfCDNRequests)
 		})
 	})
 
@@ -81,7 +80,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			sendTwoRequests(t, xEnv)
 			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
-			assert.Equal(t, 2, numberOfCDNRequests)
+			require.Equal(t, 2, numberOfCDNRequests)
 		})
 	})
 }

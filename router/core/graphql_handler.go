@@ -58,7 +58,7 @@ type HandlerOptions struct {
 	Executor                               *Executor
 	Log                                    *zap.Logger
 	EnableExecutionPlanCacheResponseHeader bool
-	WebSocketStats                         *WebSocketStats
+	WebSocketStats                         WebSocketsStatistics
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -85,7 +85,7 @@ type GraphQLHandler struct {
 	log                                    *zap.Logger
 	executor                               *Executor
 	enableExecutionPlanCacheResponseHeader bool
-	websocketStats                         *WebSocketStats
+	websocketStats                         WebSocketsStatistics
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
