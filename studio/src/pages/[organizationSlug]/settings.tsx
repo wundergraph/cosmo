@@ -59,7 +59,7 @@ import { calURL, docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOIDCProvider,
@@ -75,12 +75,7 @@ import {
 import { GetOIDCProviderResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import {
-  Dispatch,
-  SetStateAction,
-  useContext,
-  useState
-} from "react";
+import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { z } from "zod";
 
 const OrganizationDetails = ({
@@ -94,6 +89,7 @@ const OrganizationDetails = ({
 }) => {
   const user = useContext(UserContext);
   const router = useRouter();
+  const client = useQueryClient();
 
   const schema = z.object({
     organizationName: z
@@ -148,6 +144,9 @@ const OrganizationDetails = ({
               duration: 3000,
             });
             refetch();
+            client.invalidateQueries({
+              queryKey: ["user", router.asPath],
+            });
           } else if (d.response?.details) {
             toast({ description: d.response.details, duration: 3000 });
           }
@@ -1191,7 +1190,12 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
   const isAdmin = useIsAdmin();
   const isCreator = useIsCreator();
 
-  const { data, refetch, isLoading } = useQuery(getOrganization.useQuery());
+  const { data, refetch, isLoading, isRefetching } = useQuery({
+    ...getOrganization.useQuery(),
+    queryKey: [user?.currentOrganization.slug || "", "Settings", {}],
+    refetchOnWindowFocus: false,
+  });
+
   const {
     data: providerData,
     refetch: refetchOIDCProvider,
@@ -1200,7 +1204,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
 
   const orgs = user?.organizations?.length || 0;
 
-  if (isLoading || fetchingOIDCProvider) {
+  if (isLoading || fetchingOIDCProvider || isRefetching) {
     return <Loader fullscreen />;
   }
 
