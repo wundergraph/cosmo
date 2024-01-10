@@ -161,7 +161,7 @@ describe('Test router config handler', async () => {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(''),
+      body: JSON.stringify({ version: '' }),
     });
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(routerConfig);
@@ -173,6 +173,7 @@ describe('Test router config handler', async () => {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({ version: '' }),
     });
     expect(res.status).toBe(404);
   });

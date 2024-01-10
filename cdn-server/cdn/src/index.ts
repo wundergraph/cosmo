@@ -126,7 +126,11 @@ const routerConfig = (storage: BlobStorage) => {
     const routerConfig = await streamToJSON(teedStream[0]);
     const body = await c.req.json();
 
-    if (body?.version && routerConfig?.version && body.version === routerConfig.version) {
+    if (body?.version === undefined || null) {
+      return c.text('Bad Request', 400);
+    }
+
+    if (routerConfig?.version && body.version === routerConfig.version) {
       return c.body(null, 204);
     }
 
