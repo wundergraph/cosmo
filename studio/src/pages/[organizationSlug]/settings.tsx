@@ -66,7 +66,6 @@ import {
   deleteOIDCProvider,
   deleteOrganization,
   getOIDCProvider,
-  getOrganization,
   isRBACEnabled,
   leaveOrganization,
   updateOrganizationDetails,
@@ -78,15 +77,7 @@ import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { z } from "zod";
 
-const OrganizationDetails = ({
-  name,
-  slug,
-  refetch,
-}: {
-  name: string;
-  slug: string;
-  refetch: () => void;
-}) => {
+const OrganizationDetails = () => {
   const user = useContext(UserContext);
   const router = useRouter();
   const client = useQueryClient();
@@ -97,7 +88,7 @@ const OrganizationDetails = ({
       .min(1, {
         message: "Organization name must be a minimum of 1 character",
       })
-      .max(32, { message: "Organization name must be maximum 32 characters" }),
+      .max(24, { message: "Organization name must be maximum 24 characters" }),
     organizationSlug: z
       .string()
       .toLowerCase()
@@ -143,7 +134,6 @@ const OrganizationDetails = ({
               description: "Organization details updated successfully.",
               duration: 3000,
             });
-            refetch();
             client.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
@@ -171,7 +161,7 @@ const OrganizationDetails = ({
         <FormField
           control={form.control}
           name="organizationName"
-          defaultValue={name}
+          defaultValue={user?.currentOrganization.name}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Organization name</FormLabel>
@@ -189,7 +179,7 @@ const OrganizationDetails = ({
         <FormField
           control={form.control}
           name="organizationSlug"
-          defaultValue={slug}
+          defaultValue={user?.currentOrganization.slug}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Organization slug</FormLabel>
@@ -1190,12 +1180,6 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
   const isAdmin = useIsAdmin();
   const isCreator = useIsCreator();
 
-  const { data, refetch, isLoading, isRefetching } = useQuery({
-    ...getOrganization.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "Settings", {}],
-    refetchOnWindowFocus: false,
-  });
-
   const {
     data: providerData,
     refetch: refetchOIDCProvider,
@@ -1204,7 +1188,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
 
   const orgs = user?.organizations?.length || 0;
 
-  if (isLoading || fetchingOIDCProvider || isRefetching) {
+  if (fetchingOIDCProvider) {
     return <Loader fullscreen />;
   }
 
@@ -1219,11 +1203,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <OrganizationDetails
-        name={data?.organization?.name || ""}
-        slug={data?.organization?.slug || ""}
-        refetch={refetch}
-      />
+      <OrganizationDetails key={user?.currentOrganization.slug || ""} />
       <Separator className="my-2" />
 
       <RBAC />

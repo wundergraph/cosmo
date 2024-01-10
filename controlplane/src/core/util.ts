@@ -204,6 +204,14 @@ export const isValidOrganizationSlug = (slug: string): boolean => {
   return true;
 };
 
+export const isValidOrganizationName = (name: string): boolean => {
+  if (name.length === 0 || name.length > 24) {
+    return false;
+  }
+
+  return true;
+};
+
 export const validateDateRanges = ({
   limit,
   range,

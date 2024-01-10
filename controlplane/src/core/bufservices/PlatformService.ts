@@ -64,7 +64,6 @@ import {
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationRequestsCountResponse,
-  GetOrganizationResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
   GetPersistedOperationsResponse,
@@ -155,6 +154,7 @@ import {
   handleError,
   isValidLabelMatchers,
   isValidLabels,
+  isValidOrganizationName,
   isValidOrganizationSlug,
   validateDateRanges,
 } from '../util.js';
@@ -2528,7 +2528,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR,
               details:
-                'Invalid slug. It must of 3-24 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
+                'Invalid slug. It must be of 3-24 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
+            },
+          };
+        }
+
+        if (!isValidOrganizationName(req.organizationName)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid name. It must be of 1-24 characters in length.',
             },
           };
         }
@@ -3503,43 +3512,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     /*
     Queries
     */
-    getOrganization: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetOrganizationResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const organization = await orgRepo.bySlug(authContext.organizationSlug);
-
-        if (!organization) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Organization '${authContext.organizationSlug}' not found`,
-            },
-            members: [],
-          };
-        }
-
-        return {
-          organization: {
-            id: organization.id,
-            name: organization.name,
-            slug: organization.slug,
-            creatorUserId: organization.creatorUserId,
-            createdAt: organization.createdAt,
-          },
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
-      });
-    },
-
     getSubgraphs: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
