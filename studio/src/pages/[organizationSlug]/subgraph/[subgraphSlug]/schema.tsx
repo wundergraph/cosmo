@@ -4,6 +4,12 @@ import {
   SubgraphPageLayout,
   getSubgraphLayout,
 } from "@/components/layout/subgraph-layout";
+import {
+  SDLViewer,
+  SDLViewerActions,
+  SchemaSettings,
+} from "@/components/schema/sdl-viewer";
+import { ThreadSheet } from "@/components/discussions/thread";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
@@ -61,23 +67,11 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
       subtitle="View the SDL of your subgraph"
       noPadding
       toolbar={
-        data.sdl !== "" && (
-          <Toolbar>
-            <div className="flex w-full flex-col items-end justify-between gap-y-3 md:flex-row">
-              <div>
-                <p className="flex text-sm text-muted-foreground">
-                  The below schema is the latest published schema of this
-                  subgraph.
-                </p>
-              </div>
-              <CodeViewerActions
-                className="md:ml-0"
-                code={data.sdl ?? ""}
-                subgraphName={name}
-              />
-            </div>
-          </Toolbar>
-        )
+        <Toolbar className="w-auto flex-nowrap py-0">
+          <div className="mr-auto" />
+          <SDLViewerActions sdl={data?.sdl ?? ""} size="icon-sm" />
+          <SchemaSettings size="icon-sm" />
+        </Toolbar>
       }
     >
       {data.sdl === "" ? (
@@ -109,10 +103,19 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
             id="schema-container"
             className="scrollbar-custom flex-1 overflow-auto"
           >
-            <CodeViewer className="h-0 w-0" code={data.sdl ?? ""} />
+            <SDLViewer
+              className="h-0 w-0"
+              sdl={data.sdl ?? ""}
+              targetId={graph?.subgraph.targetId}
+              versionId={data?.versionId ?? ""}
+            />
           </div>
-          <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
-            <p className="flex items-center gap-x-1">
+          <ThreadSheet schemaVersionId={data.versionId ?? ""} />
+          <div className="flex w-full flex-col items-center gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
+            <p className="text-center">
+              Displaying the latest published schema of this subgraph
+            </p>
+            <p className="flex items-center gap-x-1 lg:ml-auto">
               Routing URL :
               <Link
                 className="hover:underline"

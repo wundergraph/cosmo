@@ -742,6 +742,16 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
    */
   customEvents?: DataSourceCustom_Events;
 
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.EntityInterfaceConfiguration entity_interfaces = 14;
+   */
+  entityInterfaces: EntityInterfaceConfiguration[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.EntityInterfaceConfiguration interface_objects = 15;
+   */
+  interfaceObjects: EntityInterfaceConfiguration[] = [];
+
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -763,6 +773,8 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 11, name: "provides", kind: "message", T: RequiredField, repeated: true },
     { no: 12, name: "requires", kind: "message", T: RequiredField, repeated: true },
     { no: 13, name: "custom_events", kind: "message", T: DataSourceCustom_Events },
+    { no: 14, name: "entity_interfaces", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
+    { no: 15, name: "interface_objects", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
@@ -1006,6 +1018,49 @@ export class RequiredField extends Message<RequiredField> {
 
   static equals(a: RequiredField | PlainMessage<RequiredField> | undefined, b: RequiredField | PlainMessage<RequiredField> | undefined): boolean {
     return proto3.util.equals(RequiredField, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.EntityInterfaceConfiguration
+ */
+export class EntityInterfaceConfiguration extends Message<EntityInterfaceConfiguration> {
+  /**
+   * @generated from field: string interface_type_name = 1;
+   */
+  interfaceTypeName = "";
+
+  /**
+   * @generated from field: repeated string concrete_type_names = 2;
+   */
+  concreteTypeNames: string[] = [];
+
+  constructor(data?: PartialMessage<EntityInterfaceConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.EntityInterfaceConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "interface_type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "concrete_type_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityInterfaceConfiguration {
+    return new EntityInterfaceConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EntityInterfaceConfiguration {
+    return new EntityInterfaceConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EntityInterfaceConfiguration {
+    return new EntityInterfaceConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EntityInterfaceConfiguration | PlainMessage<EntityInterfaceConfiguration> | undefined, b: EntityInterfaceConfiguration | PlainMessage<EntityInterfaceConfiguration> | undefined): boolean {
+    return proto3.util.equals(EntityInterfaceConfiguration, a, b);
   }
 }
 

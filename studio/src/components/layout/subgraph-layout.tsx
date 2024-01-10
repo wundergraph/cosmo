@@ -27,7 +27,7 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { GetSubgraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { PiGraphLight } from "react-icons/pi";
+import { PiChat, PiGraphLight } from "react-icons/pi";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -77,6 +77,12 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         title: "Federated Graphs",
         href: basePath + "/graphs",
         icon: <PiGraphLight className="h-4 w-4" />,
+      },
+      {
+        title: "Discussions",
+        href: basePath + "/discussions",
+        matchExact: false,
+        icon: <PiChat className="h-4 w-4" />,
       },
     ];
   }, [slug, organizationSlug]);
@@ -189,14 +195,10 @@ export const SubgraphPageLayout = ({
 
   return (
     <div className="flex flex-col lg:h-screen">
-      <div className="bg-background">
+      <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">
         <div
           className={cn(
-            "flex flex-col justify-between gap-y-4 px-4 pb-2 pt-4 lg:flex-row lg:items-center lg:px-6 xl:px-8",
-            {
-              "border-b": !toolbar,
-              "pb-4": !toolbar,
-            },
+            "flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8",
           )}
         >
           {breadcrumb}

@@ -91,6 +91,8 @@ message DataSourceConfiguration {
   repeated RequiredField provides = 11;
   repeated RequiredField requires = 12;
   DataSourceCustom_Events custom_events = 13;
+  repeated EntityInterfaceConfiguration entity_interfaces = 14;
+  repeated EntityInterfaceConfiguration interface_objects = 15;
 }
 
 message FieldConfiguration {
@@ -135,6 +137,11 @@ message RequiredField {
   string type_name = 1;
   string field_name = 2;
   string selection_set = 3;
+}
+
+message EntityInterfaceConfiguration {
+  string interface_type_name = 1;
+  repeated string concrete_type_names = 2;
 }
 
 message FetchConfiguration {

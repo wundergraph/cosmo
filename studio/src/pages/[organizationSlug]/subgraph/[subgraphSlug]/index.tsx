@@ -24,6 +24,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
@@ -150,13 +151,18 @@ const SubgraphOverviewPage = () => {
           </div>
         </dl>
       </div>
-      <div className="flex min-h-0 flex-1 grid-cols-3 flex-col gap-4 p-4 lg:grid">
+      <div className="flex min-h-0 flex-1 grid-cols-3 flex-col gap-4 p-4 lg:grid lg:px-6">
         <div className="col-span-2 flex flex-col rounded-md border">
-          <div className="border-b px-4 py-2 font-bold">README</div>
+          <h3 className="border-b px-4 py-2 font-semibold tracking-tight">
+            README
+          </h3>
           {subgraph.readme ? (
-            <div className="scrollbar-custom flex h-full w-full px-6 py-4">
-              <div className="prose h-full w-full max-w-full flex-1 overflow-auto dark:prose-invert">
-                <Markdown remarkPlugins={[remarkGfm]}>
+            <div className="flex h-full w-full px-6 py-4">
+              <div className="scrollbar-custom prose-pre:scrollbar-custom prose mx-auto h-full w-full max-w-none overflow-auto overflow-y-auto dark:prose-invert prose-code:bg-secondary prose-pre:!bg-secondary/50">
+                <Markdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
+                >
                   {subgraph.readme}
                 </Markdown>
               </div>
@@ -166,7 +172,7 @@ const SubgraphOverviewPage = () => {
           )}
         </div>
         <div className="scrollbar-custom col-span-1 flex flex-col rounded-md border">
-          <div className="border-b px-4 py-2 font-bold">Subgraph Members</div>
+          <h3 className="border-b px-4 py-2 font-semibold">Subgraph Members</h3>
           <div className="px-4 py-4">
             <AddSubgraphUsersContent
               subgraphName={subgraph.name}

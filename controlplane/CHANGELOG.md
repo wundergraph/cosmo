@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.52.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.52.2...controlplane@0.52.3) (2024-01-09)
+
+**Note:** Version bump only for package controlplane
+
+## [0.52.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.52.1...controlplane@0.52.2) (2024-01-09)
+
+### Bug Fixes
+
+* invite user ([#410](https://github.com/wundergraph/cosmo/issues/410)) ([56322b0](https://github.com/wundergraph/cosmo/commit/56322b0158b7b47367e21d1ae918cf1cac8b96d0)) (@JivusAyrus)
+
+## [0.52.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.52.0...controlplane@0.52.1) (2024-01-09)
+
+### Bug Fixes
+
+* discussion improvements ([#408](https://github.com/wundergraph/cosmo/issues/408)) ([dce1c48](https://github.com/wundergraph/cosmo/commit/dce1c480c6c8dac97ec6e5dd7491375d4c00b73f)) (@thisisnithin)
+
+# [0.52.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.51.0...controlplane@0.52.0) (2024-01-08)
+
+### Features
+
+* discussions ([#394](https://github.com/wundergraph/cosmo/issues/394)) ([3d81052](https://github.com/wundergraph/cosmo/commit/3d810521e552b3146a4a4b2cb5a13285aceb4476)) (@thisisnithin)
+
 # [0.51.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.6...controlplane@0.51.0) (2024-01-06)
 
 ### Features

@@ -530,7 +530,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   if (!graphContext?.graph) return null;
 
   return (
-    <PageHeader title="Studio | Playground">
+    <PageHeader title="Playground | Studio">
       <TraceContext.Provider
         value={{
           query,
