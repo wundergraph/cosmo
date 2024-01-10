@@ -55,7 +55,7 @@ export const SchemaSettings = ({
 
   const [hideResolvedDiscussions, setHideResolvedDiscussions] = useLocalStorage(
     hideResolvedDiscussionsKey,
-    false,
+    true,
   );
 
   return (

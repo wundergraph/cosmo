@@ -1,10 +1,10 @@
+import { DiscussionSchemas } from "@/components/discussions/schemas";
+import { Thread } from "@/components/discussions/thread";
 import { EmptyState } from "@/components/empty-state";
 import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
-import { Thread } from "@/components/discussions/thread";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
@@ -16,58 +16,11 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { CheckCircledIcon, FileTextIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import {
-  getDiscussion,
-  getDiscussionSchemas,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { Discussion } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { getDiscussion } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { PiGitBranch } from "react-icons/pi";
-
-const Schemas = ({
-  view,
-  discussion,
-}: {
-  view: "single" | "diff";
-  discussion?: Discussion;
-}) => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
-  const id = router.query.discussionId as string;
-
-  const { data, isLoading, error, refetch } = useQuery(
-    getDiscussionSchemas.useQuery({
-      discussionId: id,
-    }),
-  );
-
-  if (isLoading) return <Loader fullscreen />;
-
-  if (error || data?.response?.code !== EnumStatusCode.OK) {
-    return (
-      <EmptyState
-        icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve reference schema"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
-        actions={<Button onClick={() => refetch()}>Retry</Button>}
-      />
-    );
-  }
-
-  if (!data || !discussion) return null;
-
-  return (
-    <SDLViewerMonaco
-      schema={data?.schemas?.reference ?? ""}
-      newSchema={view === "diff" ? data?.schemas?.latest ?? "" : undefined}
-      line={discussion?.referenceLine}
-    />
-  );
-};
 
 const DiscussionPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -142,7 +95,10 @@ const DiscussionPage: NextPageWithLayout = () => {
               />
             )}
           {discussionData && (
-            <Schemas view={view} discussion={discussionData?.discussion} />
+            <DiscussionSchemas
+              view={view}
+              discussion={discussionData?.discussion}
+            />
           )}
         </div>
         <Separator orientation="vertical" className="hidden md:block" />

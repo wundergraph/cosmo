@@ -21,14 +21,15 @@ import { PiChat } from "react-icons/pi";
 
 const Discussions = ({
   discussions,
+  graphLink,
   refetch,
 }: {
   discussions: Record<string, Discussion[]>;
+  graphLink: string;
   refetch: () => void;
 }) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
-  const slug = router.query.slug as string;
 
   const user = useUser();
 
@@ -100,9 +101,7 @@ const Discussions = ({
                           className="ml-auto w-max flex-shrink-0"
                           asChild
                         >
-                          <Link
-                            href={`/${organizationSlug}/graph/${slug}/discussions/${ld.id}`}
-                          >
+                          <Link href={`${graphLink}/discussions/${ld.id}`}>
                             View thread <ArrowRightIcon className="ml-2" />
                           </Link>
                         </Button>
@@ -171,6 +170,7 @@ export const GraphDiscussions = ({
         <Discussions
           discussions={discussionsBySchema}
           refetch={() => refetch()}
+          graphLink={linkToSchema.split("/").slice(0, 4).join("/")}
         />
       )}
       {Object.keys(discussionsBySchema ?? {}).length === 0 && !isLoading && (
