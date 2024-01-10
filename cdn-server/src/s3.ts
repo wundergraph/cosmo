@@ -11,7 +11,15 @@ class S3BlobStorage implements BlobStorage {
     private bucketName: string,
   ) {}
 
-  async getObject(_c: Context, key: string, cacheControl?: string): Promise<ReadableStream> {
+  async getObject({
+    context,
+    key,
+    cacheControl,
+  }: {
+    context: Context;
+    key: string;
+    cacheControl?: string;
+  }): Promise<ReadableStream> {
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,

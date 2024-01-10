@@ -52,7 +52,7 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
   const config = buildRouterConfig({
     argumentConfigurations: result.federationResult.argumentConfigurations,
     federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
-    federatedSchemaVersionId: '',
+    schemaVersionId: '',
     subgraphs: subgraphs.map((s, index) => {
       const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
       const schema = subgraphConfig?.schema;

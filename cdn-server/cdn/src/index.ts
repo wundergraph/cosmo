@@ -3,7 +3,15 @@ import { Context, Env, Hono, Next, Schema } from 'hono';
 import { streamToJSON } from './utils';
 
 export interface BlobStorage {
-  getObject(context: Context, key: string, cacheControl?: string): Promise<ReadableStream>;
+  getObject({
+    context,
+    key,
+    cacheControl,
+  }: {
+    context: Context;
+    key: string;
+    cacheControl?: string;
+  }): Promise<ReadableStream>;
 }
 
 export class BlobNotFoundError extends Error {
@@ -65,7 +73,7 @@ const persistedOperation = (storage: BlobStorage) => {
       organizationId !== c.get('authenticatedOrganizationId') ||
       federatedGraphId !== c.get('authenticatedFederatedGraphId')
     ) {
-      return c.text('Forbidden', 403);
+      return c.text('Bad Request', 400);
     }
     const clientId = c.req.param('client_id');
     const operation = c.req.param('operation');
@@ -75,7 +83,7 @@ const persistedOperation = (storage: BlobStorage) => {
     const key = `${organizationId}/${federatedGraphId}/operations/${clientId}/${operation}`;
     let operationStream: ReadableStream;
     try {
-      operationStream = await storage.getObject(c, key);
+      operationStream = await storage.getObject({ context: c, key });
     } catch (e: any) {
       if (e instanceof Error && e.constructor.name === 'BlobNotFoundError') {
         return c.notFound();
@@ -98,12 +106,12 @@ const routerConfig = (storage: BlobStorage) => {
       organizationId !== c.get('authenticatedOrganizationId') ||
       federatedGraphId !== c.get('authenticatedFederatedGraphId')
     ) {
-      return c.text('Forbidden', 403);
+      return c.text('Bad Request', 400);
     }
     const key = `${organizationId}/${federatedGraphId}/routerConfigs/latest.json`;
     let configStream: ReadableStream;
     try {
-      configStream = await storage.getObject(c, key, 'no-cache');
+      configStream = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
     } catch (e: any) {
       if (e instanceof Error && e.constructor.name === 'BlobNotFoundError') {
         return c.notFound();
@@ -119,8 +127,7 @@ const routerConfig = (storage: BlobStorage) => {
     const body = await c.req.json();
 
     if (body?.version && routerConfig?.version && body.version === routerConfig.version) {
-      c.status(308);
-      return c.body('The latest config has already been retrieved.');
+      return c.body(null, 204);
     }
 
     return c.stream(async (stream) => {

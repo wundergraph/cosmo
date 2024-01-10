@@ -89,7 +89,7 @@ export class Composer {
         argumentConfigurations: composedGraph.argumentConfigurations,
         subgraphs: composedGraph.subgraphs,
         federatedSDL: composedGraph.composedSchema,
-        federatedSchemaVersionId,
+        schemaVersionId: federatedSchemaVersionId,
       });
       routerConfigJson = routerConfig.toJson();
 

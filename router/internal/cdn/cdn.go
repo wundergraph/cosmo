@@ -6,16 +6,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/buger/jsonparser"
+	"github.com/dgraph-io/ristretto"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/hashicorp/go-retryablehttp"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"net/http"
 	"net/url"
-
-	"github.com/buger/jsonparser"
-	"github.com/dgraph-io/ristretto"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"time"
 )
 
 const (
@@ -139,6 +140,9 @@ func (cdn *CDN) PersistedOperation(ctx context.Context, clientName string, sha25
 		if resp.StatusCode == http.StatusForbidden {
 			return nil, errors.New("could not authenticate against CDN")
 		}
+		if resp.StatusCode == http.StatusBadRequest {
+			return nil, errors.New("bad request")
+		}
 		data, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("unexpected status code when loading persisted operation %d: %s", resp.StatusCode, string(data))
 	}
@@ -176,6 +180,10 @@ type routerConfigNotFoundError struct {
 	federatedGraphId string
 }
 
+type GetRouterConfigRequestBody struct {
+	Version string `json:"version"`
+}
+
 func (e *routerConfigNotFoundError) FederatedGraphId() string {
 	return e.federatedGraphId
 }
@@ -191,8 +199,8 @@ func (cdn *CDN) RouterConfig(ctx context.Context, version string) (*nodev1.Route
 	)
 	routerConfigURL := cdn.cdnURL.ResolveReference(&url.URL{Path: routerConfigPath})
 
-	body, err := json.Marshal(map[string]interface{}{
-		"version": version,
+	body, err := json.Marshal(GetRouterConfigRequestBody{
+		Version: version,
 	})
 	if err != nil {
 		return nil, err
@@ -217,7 +225,10 @@ func (cdn *CDN) RouterConfig(ctx context.Context, version string) (*nodev1.Route
 		if resp.StatusCode == http.StatusForbidden {
 			return nil, errors.New("could not authenticate against CDN")
 		}
-		if resp.StatusCode == http.StatusPermanentRedirect {
+		if resp.StatusCode == http.StatusBadRequest {
+			return nil, errors.New("bad request")
+		}
+		if resp.StatusCode == http.StatusNoContent {
 			// indicates that the router config is not updated, the same as what was fetched previously
 			return nil, nil
 		}
@@ -272,10 +283,14 @@ func New(opts CDNOptions) (*CDN, error) {
 			return nil, fmt.Errorf("invalid CDN authentication token claims, %q is not a string, it's %T", OrganizationIDClaim, organizationIDValue)
 		}
 	}
-	httpClient := opts.HTTPClient
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryWaitMax = 10 * time.Second
+	retryClient.RetryMax = 5
+	retryClient.Backoff = retryablehttp.DefaultBackoff
+	retryClient.Logger = nil
+	httpClient := retryClient.StandardClient()
+
 	cacheSize := int64(opts.CacheSize)
 	var cache *ristretto.Cache
 	if cacheSize > 0 {

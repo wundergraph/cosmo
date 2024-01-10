@@ -65,7 +65,7 @@ func New(graphName, endpoint, token string, cdn *cdn.CDN, opts ...Option) Config
 	retryClient.Logger = nil
 	retryClient.RequestLogHook = func(_ retryablehttp.Logger, _ *http.Request, retry int) {
 		if retry > 0 {
-			c.logger.Info("Fetch router config from controlplane", zap.Int("retry", retry))
+			c.logger.Info("Fetch router config", zap.Int("retry", retry))
 		}
 	}
 

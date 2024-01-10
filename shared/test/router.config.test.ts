@@ -76,7 +76,7 @@ describe('Router Config Builder', () => {
       subgraphs: [accounts, products, reviews, inventory],
       // Passed as it is to the router config
       federatedSDL: `type Query {}`,
-      federatedSchemaVersionId: '',
+      schemaVersionId: '',
     });
     const json = routerConfig.toJsonString({
       enumAsInteger: true,
@@ -103,7 +103,7 @@ describe('Router Config Builder', () => {
         argumentConfigurations: [],
         subgraphs: [subgraph],
         federatedSDL: '',
-        federatedSchemaVersionId: '',
+        schemaVersionId: '',
       });
     } catch (e) {
       error = e;
