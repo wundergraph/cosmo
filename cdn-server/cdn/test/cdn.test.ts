@@ -14,7 +14,15 @@ const generateToken = async (organizationId: string, federatedGraphId: string, s
 
 class InMemoryBlobStorage implements BlobStorage {
   objects: Map<string, Buffer> = new Map();
-  getObject(context: Context, key: string): Promise<ReadableStream> {
+  getObject({
+    context,
+    key,
+    cacheControl,
+  }: {
+    context: Context;
+    key: string;
+    cacheControl?: string;
+  }): Promise<ReadableStream> {
     const obj = this.objects.get(key);
     if (!obj) {
       return Promise.reject(new BlobNotFoundError(`Object with key ${key} not found`));
@@ -118,5 +126,65 @@ describe('Test persisted operations handler', async () => {
       },
     );
     expect(res.status).toBe(404);
+  });
+});
+
+describe('Test router config handler', async () => {
+  const federatedGraphId = 'federatedGraphId';
+  const organizationId = 'organizationId';
+  const token = await generateToken(organizationId, federatedGraphId, secretKey);
+  const blobStorage = new InMemoryBlobStorage();
+  const routerConfig = JSON.stringify({
+    version: '1',
+    engineConfig: {
+      defaultFlushInterval: '500',
+      datasourceConfigurations: [],
+      fieldConfigurations: [],
+      graphqlSchema: '',
+      stringStorage: {},
+    },
+    subgraphs: [],
+  });
+
+  blobStorage.objects.set(`${organizationId}/${federatedGraphId}/routerConfigs/latest.json`, Buffer.from(routerConfig));
+
+  const app = new Hono();
+
+  cdn(app, {
+    authJwtSecret: secretKey,
+    blobStorage,
+  });
+
+  test('it returns a router config', async () => {
+    const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/latest.json`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(""),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(routerConfig);
+  });
+
+  test('it returns a 404 if the router config does not exist', async () => {
+    const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/does_not_exist.json`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test('it returns a 204 if the version is the same as before', async () => {
+    const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/latest.json`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ version: '1' }),
+    });
+    expect(res.status).toBe(204);
   });
 });
