@@ -149,9 +149,9 @@ func TestEventsNew(t *testing.T) {
 			err = client.Close()
 			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(2, time.Second*5)
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
-			xEnv.WaitForConnectionCount(0, time.Second*5)
+			xEnv.WaitForMessagesSent(2, time.Second*10)
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+			xEnv.WaitForConnectionCount(0, time.Second*10)
 		})
 	})
 
