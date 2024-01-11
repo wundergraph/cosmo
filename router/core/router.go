@@ -99,7 +99,7 @@ type (
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
-		cdn                      *cdn.CDN
+		cdnPersistentOpClient    *cdn.PersistentOperationClient
 		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -288,15 +288,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
-	routerCDN, err := cdn.New(cdn.CDNOptions{
-		URL:                 r.cdnConfig.URL,
-		AuthenticationToken: r.graphApiToken,
-		CacheSize:           r.cdnConfig.CacheSize.Uint64(),
+	routerCDN, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
+		CacheSize: r.cdnConfig.CacheSize.Uint64(),
+		Logger:    r.logger,
 	})
 	if err != nil {
 		return nil, err
 	}
-	r.cdn = routerCDN
+	r.cdnPersistentOpClient = routerCDN
 
 	if r.developmentMode {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
@@ -787,7 +786,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	operationParser := NewOperationParser(OperationParserOptions{
 		Executor:                executor,
 		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
-		CDN:                     r.cdn,
+		PersistentOpClient:      r.cdnPersistentOpClient,
 	})
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
