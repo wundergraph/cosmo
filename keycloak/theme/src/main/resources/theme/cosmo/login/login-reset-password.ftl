@@ -28,7 +28,7 @@
 
                   <div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
                       <input tabindex="4"
-                        class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-sky-900 transition disabled:cursor-not-allowed text-white bg-sky-600 border-sky-500 hover:bg-sky-500 hover:border-sky-400" type="submit" value="${msg("doSubmit")}"/>
+                        class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-pink-900 transition disabled:cursor-not-allowed text-white bg-pink-600 border-pink-500 hover:bg-pink-500 hover:border-pink-400" type="submit" value="${msg("doSubmit")}"/>
                   </div>
               </div>
           </form>

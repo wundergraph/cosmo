@@ -154,6 +154,7 @@ import {
   handleError,
   isValidLabelMatchers,
   isValidLabels,
+  isValidOrganizationName,
   isValidOrganizationSlug,
   validateDateRanges,
 } from '../util.js';
@@ -2549,7 +2550,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR,
               details:
-                'Invalid slug. It must of 3-24 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
+                'Invalid slug. It must be of 3-24 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
+            },
+          };
+        }
+
+        if (!isValidOrganizationName(req.organizationName)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid name. It must be of 1-24 characters in length.',
             },
           };
         }
