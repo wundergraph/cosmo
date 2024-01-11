@@ -2,7 +2,7 @@ type Query {
   employee(id: Int!): Employee
   employees: [Employee!]!
   products: [Products!]!
-  teammates(team: Department!): [Employee!]!
+  teammates(team: Department! @deprecated): [Employee!]!
 }
 
 type Mutation {
@@ -43,7 +43,7 @@ type Engineer implements RoleType {
   title: [String!]!
 }
 
-type Marketer implements RoleType{
+type Marketer implements RoleType {
   departments: [Department!]!
   title: [String!]!
 }

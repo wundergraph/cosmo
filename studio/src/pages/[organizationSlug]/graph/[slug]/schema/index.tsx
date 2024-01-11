@@ -1,4 +1,10 @@
 import { FieldUsageSheet } from "@/components/analytics/field-usage";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import {
+  CommentCard,
+  NewDiscussion,
+} from "@/components/discussions/discussion";
+import { ThreadSheet } from "@/components/discussions/thread";
 import { EmptyState } from "@/components/empty-state";
 import {
   GraphContext,
@@ -6,9 +12,10 @@ import {
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import {
-  CommentCard,
-  NewDiscussion,
-} from "@/components/discussions/discussion";
+  SchemaSettings,
+  hideDiscussionsKey,
+  hideResolvedDiscussionsKey,
+} from "@/components/schema/sdl-viewer";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +29,11 @@ import {
 } from "@/components/ui/command";
 import { Kbd } from "@/components/ui/kbd";
 import { Loader } from "@/components/ui/loader";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import {
   Select,
   SelectContent,
@@ -44,12 +56,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useUser } from "@/hooks/use-user";
+import useWindowSize from "@/hooks/use-window-size";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   GraphQLField,
   GraphQLTypeCategory,
   getCategoryDescription,
   getCategoryForType,
+  getDeprecatedTypes,
   getRootDescription,
   getTypeCounts,
   getTypesByCategory,
@@ -72,8 +88,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getFederatedGraphSDLByName,
   getAllDiscussions,
+  getFederatedGraphSDLByName,
   getOrganizationMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
@@ -89,30 +105,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { useUser } from "@/hooks/use-user";
 import { PiChat } from "react-icons/pi";
-import { ThreadSheet } from "@/components/discussions/thread";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import useWindowSize from "@/hooks/use-window-size";
-import {
-  SchemaSettings,
-  hideDiscussionsKey,
-  hideResolvedDiscussionsKey,
-} from "@/components/schema/sdl-viewer";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 
 const TypeLink = ({
   name,
@@ -224,9 +217,22 @@ const Fields = (props: {
                     <span>-</span>
                   )}
                   {hasDetails && (
-                    <p className="text-muted-foreground group-hover:text-current">
-                      {field.description}
-                    </p>
+                    <div className="flex flex-col gap-y-4">
+                      {field.description && (
+                        <p className="text-muted-foreground group-hover:text-current">
+                          {field.description}
+                        </p>
+                      )}
+                      {field.deprecationReason && (
+                        <p className="flex flex-col items-start gap-x-1">
+                          <span className="flex items-center gap-x-1 font-semibold">
+                            <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
+                            Deprecated
+                          </span>{" "}
+                          {field.deprecationReason}
+                        </p>
+                      )}
+                    </div>
                   )}
                   {field.args && (
                     <div className="flex flex-col gap-y-2">
@@ -245,7 +251,12 @@ const Fields = (props: {
                               }
                             >
                               <TooltipTrigger>
-                                <Badge variant="secondary">{arg.name}</Badge>
+                                <Badge variant="secondary">
+                                  {arg.deprecationReason && (
+                                    <ExclamationTriangleIcon className="mr-1 h-3 w-3 flex-shrink-0" />
+                                  )}
+                                  {arg.name}
+                                </Badge>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="flex w-96 flex-col gap-y-4">
@@ -262,6 +273,7 @@ const Fields = (props: {
                                 </div>
                               </TooltipContent>
                             </Tooltip>
+
                             <TypeLink ast={props.ast} name={`: ${arg.type}`} />
                           </div>
                         );
@@ -370,7 +382,7 @@ const TypeDiscussions = ({
         <EmptyState
           icon={<PiChat />}
           title="No discussions found"
-          className="mt-24"
+          className="my-24 h-auto"
           description={`You can start a new one for type ${name}`}
         />
       )}
@@ -509,34 +521,33 @@ const Type = (props: {
     </div>
   );
 
+  const showDiscussions =
+    // router.query.category !== "deprecated" &&
+    !!props.startLineNo && !!props.endLineNo && !isMobile && !hideDiscussions;
+
   return (
     <ResizablePanelGroup direction="horizontal" className="flex max-w-full">
       <ResizablePanel
-        className={cn(
-          !!props.startLineNo && !isMobile && !hideDiscussions && "pr-4",
-        )}
+        className={cn(showDiscussions && "pr-4")}
         minSize={35}
         defaultSize={isMobile ? 1000 : 65}
       >
         {typeContent}
       </ResizablePanel>
-      {!!props.startLineNo &&
-        !!props.endLineNo &&
-        !isMobile &&
-        !hideDiscussions && (
-          <>
-            <ResizableHandle withHandle />
-            <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
-              <TypeDiscussions
-                name={props.name}
-                schemaVersionId={props.schemaVersionId}
-                startLineNo={props.startLineNo}
-                endLineNo={props.endLineNo}
-              />
-              <ThreadSheet schemaVersionId={props.schemaVersionId} />
-            </ResizablePanel>
-          </>
-        )}
+      {showDiscussions && (
+        <>
+          <ResizableHandle withHandle />
+          <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
+            <TypeDiscussions
+              name={props.name}
+              schemaVersionId={props.schemaVersionId}
+              startLineNo={props.startLineNo!}
+              endLineNo={props.endLineNo!}
+            />
+            <ThreadSheet schemaVersionId={props.schemaVersionId} />
+          </ResizablePanel>
+        </>
+      )}
     </ResizablePanelGroup>
   );
 };
@@ -828,6 +839,17 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
               );
             })}
           </SelectGroup>
+          <Separator className="my-2" />
+          <SelectGroup>
+            <SelectItem value="deprecated">
+              <span>Deprecated</span>
+              {typeCounts && (
+                <Badge variant="secondary" className="ml-2">
+                  2
+                </Badge>
+              )}
+            </SelectItem>
+          </SelectGroup>
         </SelectContent>
       </Select>
       <SchemaSettings />
@@ -948,6 +970,31 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               );
             })}
           </div>
+          <Separator className="my-2" />
+          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-8">
+            <Button
+              asChild
+              variant="ghost"
+              className={cn("justify-start px-3", {
+                "bg-accent text-accent-foreground":
+                  selectedCategory === "deprecated",
+              })}
+            >
+              <Link
+                href={`/${organizationSlug}/graph/${graphName}/schema?category=deprecated`}
+              >
+                <span>Deprecated</span>
+                {typeCounts && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-auto bg-accent/50 px-1.5"
+                  >
+                    2
+                  </Badge>
+                )}
+              </Link>
+            </Button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin lg:px-8">
           {isLoading && <Loader fullscreen />}
@@ -964,13 +1011,52 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 actions={<Button onClick={() => refetch()}>Retry</Button>}
               />
             )}
-          {ast && (
+          {ast && selectedCategory === "deprecated" && (
+            <DeprecatedTypes ast={ast} />
+          )}
+          {ast && selectedCategory !== "deprecated" && (
             <TypeWrapper ast={ast} schemaVersionId={data?.versionId ?? ""} />
           )}
           <FieldUsageSheet />
         </div>
       </div>
     </GraphPageLayout>
+  );
+};
+
+const DeprecatedTypes = ({ ast }: { ast: GraphQLSchema }) => {
+  const types = getDeprecatedTypes(ast);
+
+  if (types.length === 0) {
+    return (
+      <EmptyState
+        icon={<InformationCircleIcon />}
+        title="No deprecated fields found"
+        description="You can view all deprecated fields or fields with deprecated arguments here"
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col divide-y">
+      {types.map((type) => {
+        return (
+          <div key={type.name} className="pt-12 first:pt-0">
+            <Type
+              name={type.name}
+              category={type.category}
+              description={type.description}
+              interfaces={type.interfaces}
+              fields={type.fields}
+              startLineNo={type.loc?.startToken.line}
+              endLineNo={type.loc?.endToken.line}
+              schemaVersionId={""}
+              ast={ast}
+            />
+          </div>
+        );
+      })}
+    </div>
   );
 };
 
