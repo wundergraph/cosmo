@@ -119,14 +119,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { data, error, isFetching } = useQuery<
     Session | null,
     UnauthorizedError | Error
-  >({
-    queryKey: ["user", router.asPath],
-    queryFn: () => fetchSession(),
-    retry(failureCount, error) {
-      if (error instanceof UnauthorizedError) return false;
-      return failureCount < 3;
+  >(
+    {
+      queryKey: ["user", router.asPath],
+      queryFn: () => fetchSession(),
+      retry(failureCount, error) {
+        if (error instanceof UnauthorizedError) return false;
+        return failureCount < 3;
+      },
     },
-  });
+    queryClient,
+  );
   const [user, setUser] = useState<User>();
   const [transport, setTransport] = useState<Transport>();
 
