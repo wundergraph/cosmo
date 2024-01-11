@@ -134,7 +134,7 @@ export class InMemoryBlobStorage implements BlobStorage {
     return [...this.objects.keys()];
   }
 
-  putObject(key: string, body: Buffer): Promise<void> {
+  putObject({ key, body, contentType }: { key: string; body: Buffer; contentType: string }): Promise<void> {
     this.objects.set(key, body);
     return Promise.resolve();
   }
