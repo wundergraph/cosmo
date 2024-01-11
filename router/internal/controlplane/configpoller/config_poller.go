@@ -171,7 +171,8 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfi
 	return cfg, nil
 }
 
-// GetRouterConfig returns the latest router config from the cdnConfigClient first, if not found then it fetches from the controlplane. Not safe for concurrent use.
+// GetRouterConfig returns the latest router config from the CDN first, if not found then it fetches from the controlplane.
+// Not safe for concurrent use.
 func (c *configPoller) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
 	cfg, err := c.getRouterConfig(ctx)
 	if err == nil {
