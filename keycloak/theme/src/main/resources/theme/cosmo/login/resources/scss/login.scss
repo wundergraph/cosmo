@@ -13,7 +13,7 @@ body,
 }
 
 #kc-page-title {
-  @apply font-medium text-left;
+  @apply font-semibold text-left;
 }
 
 #kc-header,
@@ -30,7 +30,7 @@ body,
 }
 
 #kc-header .logo {
-  @apply flex flex-row items-center space-x-2 text-lg font-semibold mb-8 text-white;
+  @apply flex flex-row items-center space-x-2 text-lg font-semibold text-white;
 }
 
 #kc-locale-wrapper {
@@ -63,7 +63,7 @@ div.kc-logo-text span {
 }
 
 .login-pf-header h1 {
-  @apply text-center text-3xl font-bold text-white my-3 sm:my-2;
+  @apply text-white my-3 sm:my-2;
 }
 
 #id-hidden-input {
@@ -88,18 +88,23 @@ div.kc-logo-text span {
 }
 
 .login-pf-settings div span a,
-.instruction a {
+.instructionText a {
   @apply font-medium text-link hover:text-link-hover no-underline text-sm;
 }
 
 .login-pf-settings div span a:hover,
-.instruction a:hover {
+.instructionText a:hover {
   @apply no-underline;
 }
 
 .instruction {
-  @apply text-center text-sm text-gray-400;
+  @apply text-left text-sm text-gray-400;
   @apply mb-2;
+  @apply flex flex-col;
+}
+
+.instructionText {
+  @apply text-left text-sm text-gray-400;
 }
 
 #kc-registration a {
