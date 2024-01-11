@@ -1,5 +1,5 @@
-<#import "template.ftl" as layout>
-<@layout.registrationLayout; section>
+<#import "layout-cloud-iam.ftl" as layoutCloudIAM>
+<@layoutCloudIAM.registrationCloudIamLayout; section>
     <#if section = "header">
         ${msg("emailLinkIdpTitle", idpDisplayName)}
     <#elseif section = "form">
@@ -7,10 +7,12 @@
             ${msg("emailLinkIdp1", idpDisplayName, brokerContext.username, realm.displayName)}
         </p>
         <p id="instruction2" class="instruction">
-            ${msg("emailLinkIdp2")} <a href="${url.loginAction}">${msg("doClickHere")}</a> ${msg("emailLinkIdp3")}
+            <p class="instructionText">${msg("emailLinkIdp2")}</p> 
+            <p class="instructionText"><a href="${url.loginAction}">${msg("doClickHere")}</a> ${msg("emailLinkIdp3")}</p>
         </p>
         <p id="instruction3" class="instruction">
-            ${msg("emailLinkIdp4")} <a href="${url.loginAction}">${msg("doClickHere")}</a> ${msg("emailLinkIdp5")}
+            <p class="instructionText">${msg("emailLinkIdp4")}</p> 
+            <p class="instructionText"><a href="${url.loginAction}">${msg("doClickHere")}</a> ${msg("emailLinkIdp5")}</p>
         </p>
     </#if>
-</@layout.registrationLayout>
+</@layoutCloudIAM.registrationCloudIamLayout>
