@@ -225,6 +225,9 @@ func (cdn *CDN) RouterConfig(ctx context.Context, version string) (*nodev1.Route
 		if resp.StatusCode == http.StatusForbidden {
 			return nil, errors.New("could not authenticate against CDN")
 		}
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, errors.New("unauthorized")
+		}
 		if resp.StatusCode == http.StatusBadRequest {
 			return nil, errors.New("bad request")
 		}

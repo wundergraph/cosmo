@@ -3240,7 +3240,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               body: operation.contents,
             };
             try {
-              await opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
+              await opts.blobStorage.putObject({
+                key: path,
+                body: Buffer.from(JSON.stringify(data), 'utf8'),
+                contentType: 'application/json; charset=utf-8',
+              });
             } catch (e) {
               logger.error(e, `Could not store operation contents for ${operationId} at ${path}`);
               return {
