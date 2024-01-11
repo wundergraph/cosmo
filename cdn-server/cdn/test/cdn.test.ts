@@ -1,7 +1,7 @@
 import { SignJWT } from 'jose';
 import { describe, test, expect } from 'vitest';
 import { Context, Hono } from 'hono';
-import { BlobStorage, BlobNotFoundError, cdn } from '../dist';
+import { BlobStorage, BlobNotFoundError, cdn } from '../src';
 
 const secretKey = 'hunter2';
 
@@ -66,7 +66,7 @@ describe('Test JWT authentication', async () => {
         Authorization: `Bearer ${token.slice(0, -1)}}`,
       },
     });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 
   test('it authenticates the request when a valid Authorization header is provided', async () => {
@@ -146,7 +146,7 @@ describe('Test router config handler', async () => {
     subgraphs: [],
   });
 
-  blobStorage.objects.set(`${organizationId}/${federatedGraphId}/routerConfigs/latest.json`, Buffer.from(routerConfig));
+  blobStorage.objects.set(`${organizationId}/${federatedGraphId}/routerconfigs/latest.json`, Buffer.from(routerConfig));
 
   const app = new Hono();
 
@@ -165,6 +165,25 @@ describe('Test router config handler', async () => {
     });
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(routerConfig);
+  });
+
+  test('it returns a 401 if no token was passed', async () => {
+    const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/latest.json`, {
+      method: 'POST',
+      body: JSON.stringify({ version: '' }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test('it returns a 401 if invalid token as passed', async () => {
+    const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/latest.json`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer 123`,
+      },
+      body: JSON.stringify({ version: '' }),
+    });
+    expect(res.status).toBe(401);
   });
 
   test('it returns a 404 if the router config does not exist', async () => {

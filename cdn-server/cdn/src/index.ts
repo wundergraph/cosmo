@@ -49,7 +49,7 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
       result = await jwtVerify(token, secretKey);
     } catch (e: any) {
       if (e instanceof Error && (e.name === 'JWSSignatureVerificationFailed' || e.name === 'JWSInvalid')) {
-        return c.text('Forbidden', 403);
+        return c.text('Unauthorized', 401);
       }
       throw e;
     }
@@ -108,7 +108,7 @@ const routerConfig = (storage: BlobStorage) => {
     ) {
       return c.text('Bad Request', 400);
     }
-    const key = `${organizationId}/${federatedGraphId}/routerConfigs/latest.json`;
+    const key = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
     let configStream: ReadableStream;
     try {
       configStream = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
@@ -118,6 +118,9 @@ const routerConfig = (storage: BlobStorage) => {
       }
       throw e;
     }
+
+    // Because we work with a fixed path of /routerconfigs/latest.json
+    // we need to enforce no-cache headers here.
     c.header('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
     c.header('Content-Type', 'application/json; charset=utf-8');
 

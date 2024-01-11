@@ -81,7 +81,7 @@ export class Composer {
     const federatedSchemaVersionId = randomUUID();
 
     let routerConfigJson: JsonValue = null;
-    const path = `${organizationId}/${composedGraph.id}/routerConfigs/latest.json`;
+    const path = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
 
     // Build router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
