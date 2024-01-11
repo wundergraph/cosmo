@@ -80,6 +80,7 @@ func (s *WebSocketStats) run(ctx context.Context) {
 				select {
 				case subscriber <- s.GetReport():
 				default:
+					s.logger.Warn("WebSocketStats subscriber event queue full, dropping event")
 				}
 			}
 			s.mu.Unlock()

@@ -69,7 +69,7 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: go test -race -run "^subscribe async epoll/kqueue disabled$"
+        run: make test
 
       - name: Build
         working-directory: ./router

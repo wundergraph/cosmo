@@ -88,7 +88,6 @@ func TestEventsNew(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
-				engineExecutionConfiguration.WebSocketReadTimeout = 10 * time.Millisecond
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
