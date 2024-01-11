@@ -232,7 +232,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("Initializing websocket connection", zap.Error(err))
 
 		hasErrored = true
-		_ = c.Close()
+		handler.Close()
 		return
 	}
 
@@ -242,7 +242,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.logger.Error("Setting read deadline", zap.Error(err))
 
 			hasErrored = true
-			_ = c.Close()
+			handler.Close()
 			return
 		}
 	}
@@ -252,7 +252,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.logger.Debug("Client closed connection. Could not read initial message.", zap.Error(err))
 
 		hasErrored = true
-		_ = c.Close()
+		handler.Close()
 		return
 	}
 
@@ -263,12 +263,12 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	_, operationContext, err := handler.parseAndPlan(msg.Payload)
 	if err != nil {
-		h.logger.Error("Could not parse and plan initial operation", zap.Error(err))
+		h.logger.Debug("Could not parse and plan initial operation", zap.Error(err))
 
 		hasErrored = true
 		// If the operation is invalid, send an error message immediately
 		handler.writeErrorMessage(msg.ID, err)
-		_ = c.Close()
+		handler.Close()
 		return
 	}
 
@@ -297,7 +297,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("Handling websocket message", zap.Error(err))
 
 		hasErrored = true
-		_ = c.Close()
+		handler.Close()
 		return
 	}
 
@@ -307,7 +307,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.logger.Error("Adding connection to epoll", zap.Error(err))
 
 			hasErrored = true
-			_ = c.Close()
+			handler.Close()
 		}
 		return
 	}
@@ -322,6 +322,7 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 	defer h.stats.ConnectionsDec()
 	serverDone := h.ctx.Done()
 	defer handler.Close()
+
 	for {
 		select {
 		case <-serverDone:
@@ -337,11 +338,11 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 			}
 			err = h.HandleMessage(handler, msg)
 			if err != nil {
+				h.logger.Debug("Handling websocket message", zap.Error(err))
+
 				if errors.Is(err, errClientTerminatedConnection) {
 					return
 				}
-				h.logger.Warn("Handling websocket connection", zap.Error(err))
-				return
 			}
 		}
 	}
@@ -448,8 +449,11 @@ func (h *WebsocketHandler) runPoller() {
 				err = h.HandleMessage(handler, msg)
 				if err != nil {
 					h.logger.Debug("Handling websocket message", zap.Error(err))
-					h.removeConnection(conn, handler, fd)
-					continue
+
+					if errors.Is(err, errClientTerminatedConnection) {
+						h.removeConnection(conn, handler, fd)
+						return
+					}
 				}
 			}
 		}
@@ -707,7 +711,6 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
 	switch msg.Type {
 	case wsproto.MessageTypeTerminate:
-		handler.Close()
 		return errClientTerminatedConnection
 	case wsproto.MessageTypePing:
 		_ = handler.protocol.Pong(msg)
