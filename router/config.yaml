@@ -2,3 +2,5 @@
 
 # See pkg/config/config.go for the full list of configuration options.
 # Please keep this file empty if you don't want to override the defaults.
+
+version: "1"

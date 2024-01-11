@@ -29,8 +29,15 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 	}
 	for _, employee := range employees {
 		if id == employee.ID {
-			employee.UpdatedAt = time.Now().String()
-			return employee, nil
+			emp := &model.Employee{
+				Details:   employee.Details,
+				ID:        employee.ID,
+				Tag:       employee.Tag,
+				Role:      employee.Role,
+				Notes:     employee.Notes,
+				UpdatedAt: time.Now().String(),
+			}
+			return emp, nil
 		}
 	}
 	return nil, nil

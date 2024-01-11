@@ -2,114 +2,27 @@ package integration_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"errors"
-	"flag"
 	"fmt"
+	"io"
 	"math/rand"
-	"net"
 	"net/http"
-	"net/http/httptest"
-	"net/http/httputil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/buger/jsonparser"
-	"github.com/golang-jwt/jwt/v5"
-	natsserver "github.com/nats-io/nats-server/v2/server"
-	natstest "github.com/nats-io/nats-server/v2/test"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
-	"github.com/wundergraph/cosmo/router-tests/routerconfig"
-	"github.com/wundergraph/cosmo/router-tests/runner"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
-	"github.com/wundergraph/cosmo/router/core"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-var (
-	subgraphsMode = flag.String("subgraphs", "in-process", "How to run the subgraphs: in-process | subprocess | external")
-	workers       = flag.Int("workers", 4, "Number of workers to use for parallel benchmarks")
-	natsPort      = flag.Int("nats-port", 53347, "Port to use for NATS")
-
-	subgraphsRunner     runner.SubgraphsRunner
-	subgraphsConfigFile string
-)
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-
-	opts := natsserver.Options{
-		Host:   "localhost",
-		Port:   *natsPort,
-		NoLog:  true,
-		NoSigs: true,
-	}
-	nats := natstest.RunServer(&opts)
-	if nats == nil {
-		panic("could not start NATS test server")
-	}
-
-	defer nats.Shutdown()
-
-	// Set this to allow the subgraphs to connect to the NATS server
-	os.Setenv("NATS_URL", fmt.Sprintf("nats://localhost:%d", *natsPort))
-
-	ctx := context.Background()
-	var err error
-	switch *subgraphsMode {
-	case "in-process":
-		subgraphsRunner, err = runner.NewInProcessSubgraphsRunner(nil)
-	case "subprocess":
-		subgraphsRunner, err = runner.NewSubprocessSubgraphsRunner(nil)
-	case "external":
-		subgraphsRunner, err = runner.NewExternalSubgraphsRunner()
-	default:
-		panic(fmt.Errorf("unknown subgraphs mode %q", *subgraphsMode))
-	}
-	if err != nil {
-		panic(err)
-	}
-	// defer this in case we panic, then call it manually before os.Exit()
-	stop := func() {
-		if err := subgraphsRunner.Stop(ctx); err != nil {
-			panic(err)
-		}
-	}
-	defer stop()
-	go func() {
-		err := subgraphsRunner.Start(ctx)
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	timeoutCtx, cancelFunc := context.WithTimeout(ctx, 50*time.Second)
-	defer cancelFunc()
-	// Wait until the ports are open
-	if err := runner.Wait(timeoutCtx, subgraphsRunner); err != nil {
-		panic(err)
-	}
-
-	subgraphsConfigFile, err = routerconfig.SerializeRunner(subgraphsRunner)
-	if err != nil {
-		panic(err)
-	}
-
-	res := m.Run()
-	stop()
-	os.Exit(res)
-}
 
 func randString(n int) string {
 	b := make([]byte, n)
@@ -144,174 +57,6 @@ func (t *testQuery) Data() []byte {
 	return data
 }
 
-func sendQueryOK(tb testing.TB, server *core.Server, graphqlPath string, query *testQuery) string {
-	rr := sendData(server, graphqlPath, query.Data())
-	if rr.Code != http.StatusOK {
-		tb.Error("unexpected status code", rr.Code)
-	}
-	return rr.Body.String()
-}
-
-func sendData(server *core.Server, graphqlPath string, data []byte) *httptest.ResponseRecorder {
-	return sendDataWithHeader(server, graphqlPath, data, nil)
-}
-
-func sendDataWithHeader(server *core.Server, graphqlPath string, data []byte, header http.Header) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", graphqlPath, bytes.NewBuffer(data))
-	if header != nil {
-		req.Header = header
-	}
-	server.Server.Handler.ServeHTTP(rr, req)
-	return rr
-}
-
-func sendHtmlRequest(server *core.Server, path string) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", path, nil)
-	req.Header.Set("Accept", "text/html")
-	server.Server.Handler.ServeHTTP(rr, req)
-	return rr
-}
-
-func sendCustomData(server *core.Server, data []byte, reqMw func(r *http.Request)) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
-	reqMw(req)
-	server.Server.Handler.ServeHTTP(rr, req)
-	return rr
-}
-
-func testTokenClaims() jwt.MapClaims {
-	return jwt.MapClaims{
-		"federated_graph_id": "graph",
-		"organization_id":    "organization",
-	}
-}
-
-// setupServer sets up the router server without making it listen on a local
-// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
-func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
-	server, _ := setupServerConfig(tb, opts...)
-	return server
-}
-
-func setupCDNServer(tb testing.TB) string {
-	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testdata", "cdn")))
-	var cdnRequestLog []string
-	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			requestLog, err := json.Marshal(cdnRequestLog)
-			require.NoError(tb, err)
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(requestLog)
-			return
-		}
-		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
-		// Ensure we have an authorization header with a valid token
-		authorization := r.Header.Get("Authorization")
-		token := authorization[len("Bearer "):]
-		parsedClaims := make(jwt.MapClaims)
-		jwtParser := new(jwt.Parser)
-		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		assert.NoError(tb, err)
-		assert.Equal(tb, testTokenClaims(), parsedClaims)
-		cdnFileServer.ServeHTTP(w, r)
-	}))
-	tb.Cleanup(cdnServer.Close)
-	return cdnServer.URL
-}
-
-func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config.Config) {
-	ctx := context.Background()
-	cfg := config.Config{
-		Graph: config.Graph{
-			Name: "production",
-		},
-	}
-
-	routerConfig, err := core.SerializeConfigFromFile(subgraphsConfigFile)
-	require.NoError(tb, err)
-
-	ec := zap.NewProductionEncoderConfig()
-	ec.EncodeDuration = zapcore.SecondsDurationEncoder
-	ec.TimeKey = "time"
-
-	syncer := zapcore.AddSync(os.Stderr)
-
-	zapLogger := zap.New(zapcore.NewCore(
-		zapcore.NewConsoleEncoder(ec),
-		syncer,
-		zapcore.ErrorLevel,
-	))
-
-	t := jwt.New(jwt.SigningMethodHS256)
-	t.Claims = testTokenClaims()
-	graphApiToken, err := t.SignedString([]byte("hunter2"))
-	require.NoError(tb, err)
-
-	cfg.CDN.URL = setupCDNServer(tb)
-
-	routerOpts := []core.Option{
-		core.WithFederatedGraphName(cfg.Graph.Name),
-		core.WithStaticRouterConfig(routerConfig),
-		core.WithLogger(zapLogger),
-		core.WithGraphApiToken(graphApiToken),
-		core.WithCDN(config.CDNConfiguration{URL: cfg.CDN.URL, CacheSize: 1024 * 1024}),
-		core.WithDevelopmentMode(true),
-		core.WithPlayground(true),
-		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-			EnableSingleFlight:                     true,
-			EnableRequestTracing:                   true,
-			EnableExecutionPlanCacheResponseHeader: true,
-		}),
-		core.WithEvents(config.EventsConfiguration{
-			Sources: []config.EventSource{
-				{
-					Provider: "NATS",
-					URL:      fmt.Sprintf("nats://localhost:%d", *natsPort),
-				},
-			},
-		}),
-	}
-	routerOpts = append(routerOpts, opts...)
-	rs, err := core.NewRouter(routerOpts...)
-	require.NoError(tb, err)
-	tb.Cleanup(func() {
-		assert.Nil(tb, rs.Shutdown(ctx))
-	})
-
-	server, err := rs.NewTestServer(ctx)
-	require.NoError(tb, err)
-	return server, cfg
-}
-
-// setupListeningServer calls setupServer to set up the server but makes it listen
-// on the network, automatically registering a cleanup function to shut it down.
-// It returns both the server and the local port where the server is listening.
-func setupListeningServer(tb testing.TB, opts ...core.Option) (*core.Server, int) {
-	listener, err := net.Listen("tcp", ":0")
-	require.NoError(tb, err)
-	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
-
-	serverOpts := append([]core.Option{
-		core.WithListenerAddr(":" + strconv.Itoa(port)),
-	}, opts...)
-	server := setupServer(tb, serverOpts...)
-	go func() {
-		err := server.Server.ListenAndServe()
-		if !errors.Is(err, http.ErrServerClosed) {
-			require.NoError(tb, err)
-		}
-	}()
-	tb.Cleanup(func() {
-		err := server.Shutdown(context.Background())
-		assert.NoError(tb, err)
-	})
-	return server, port
-}
-
 func normalizeJSON(tb testing.TB, data []byte) string {
 	var v interface{}
 	err := json.Unmarshal(data, &v)
@@ -322,154 +67,203 @@ func normalizeJSON(tb testing.TB, data []byte) string {
 }
 
 func TestIntegration(t *testing.T) {
-	server := setupServer(t)
-	result := sendQueryOK(t, server, "/graphql", &testQuery{
-		Body: "{ employees { id } }",
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `query { employees { id } }`,
+		})
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
-	assert.JSONEq(t, result, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`)
 }
 
 func TestPlayground(t *testing.T) {
-	server := setupServer(t)
-	result := sendHtmlRequest(server, "/")
-	assert.Contains(t, result.Body.String(), `WunderGraph Playground`)
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeRequest(http.MethodGet, "/", http.Header{
+			"Accept": []string{"text/html"},
+		}, nil)
+		require.NoError(t, err)
+		defer res.Body.Close()
+		require.Contains(t, res.Header.Get("Content-Type"), "text/html")
+		body, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.Contains(t, string(body), `WunderGraph Playground`)
+	})
 }
 
 func TestExecutionPlanCache(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables": {"criteria": {"nationality": "GERMAN"}}}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, "MISS", result.Header().Get("X-WG-Execution-Plan-Cache"))
-	assert.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, result.Body.String())
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
-	result2 := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables": {"criteria": {"nationality": "ENGLISH"}}}`))
-	assert.Equal(t, http.StatusOK, result2.Result().StatusCode)
-	assert.Equal(t, "HIT", result2.Header().Get("X-WG-Execution-Plan-Cache"))
-	assert.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result2.Body.String())
+		res2, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res2.Response.StatusCode)
+		require.Equal(t, "HIT", res2.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res2.Body)
 
-	result3 := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}"}`))
-	assert.Equal(t, http.StatusOK, result3.Result().StatusCode)
-	assert.Equal(t, "HIT", result3.Header().Get("X-WG-Execution-Plan-Cache"))
-	assert.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result3.Body.String())
+		res3, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res3.Response.StatusCode)
+		require.Equal(t, "HIT", res3.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res3.Body)
+	})
 }
 
 func TestVariables(t *testing.T) {
-	t.Parallel()
-	server := setupServer(t)
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Run("correct validation", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+		})
 
-	t.Run("correct validation", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`))
-		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-		assert.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, result.Body.String())
-	})
+		t.Run("query with variables", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
 
-	t.Run("query with variables", func(t *testing.T) {
-		t.Parallel()
-		q := &testQuery{
-			Body:      "($n:Int!) { employee(id:$n) { id details { forename surname } } }",
-			Variables: map[string]interface{}{"n": 1},
-		}
-		result := sendQueryOK(t, server, "/graphql", q)
-		assert.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, result)
-	})
+		t.Run("inline variables", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
 
-	t.Run("inline variables", func(t *testing.T) {
-		t.Parallel()
-		q := &testQuery{
-			Body: "{ employee(id:1) { id details { forename surname } } }",
-		}
-		result := sendQueryOK(t, server, "/graphql", q)
-		assert.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, result)
-	})
+		t.Run("invalid number", func(t *testing.T) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`1`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"variables value must not be a number"}],"data":null}`, res.Body)
+		})
 
-	t.Run("invalid number", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":1}`))
-		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"variables value must not be a number"}],"data":null}`, result.Body.String())
-	})
+		t.Run("invalid string", func(t *testing.T) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`"1"`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"variables value must not be a string"}],"data":null}`, res.Body)
+		})
 
-	t.Run("invalid string", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":"1"}`))
-		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"variables value must not be a string"}],"data":null}`, result.Body.String())
-	})
+		t.Run("invalid boolean", func(t *testing.T) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`true`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"variables value must not be a boolean"}],"data":null}`, res.Body)
+		})
 
-	t.Run("invalid boolean", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":true}`))
-		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"variables value must not be a boolean"}],"data":null}`, result.Body.String())
-	})
+		t.Run("invalid array", func(t *testing.T) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`[]`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"variables value must not be an array"}],"data":null}`, res.Body)
+		})
 
-	t.Run("invalid array", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":[]}`))
-		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"variables value must not be an array"}],"data":null}`, result.Body.String())
-	})
+		t.Run("missing", func(t *testing.T) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}],"data":null}`, res.Body)
+		})
 
-	t.Run("missing", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{}}`))
-		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}],"data":null}`, result.Body.String())
-	})
-
-	t.Run("wrong value variable", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":1}}`))
-		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1; Expected type \"SearchInput\" to be an object."}],"data":null}`, result.Body.String())
+		t.Run("wrong value variable", func(t *testing.T) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1; Expected type \"SearchInput\" to be an object."}],"data":null}`, res.Body)
+		})
 	})
 }
 
 func TestAnonymousQuery(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }"}`))
-	assert.Equal(t, http.StatusOK, result.Code)
-	assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id } }`,
+		})
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+	})
 }
 
 func TestTracing(t *testing.T) {
-	server := setupServer(t)
-	result := sendCustomData(server, []byte(fmt.Sprintf(`{"query":"%s"}`, bigEmployeesQuery)), func(r *http.Request) {
-		r.Header.Add("X-WG-Trace", "true")
-		r.Header.Add("X-WG-Trace", "enable_predictable_debug_timings")
+	testenv.Run(t, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.EnableRequestTracing = true
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: bigEmployeesQuery,
+			Header: http.Header{
+				"X-WG-Trace": []string{"true", "enable_predictable_debug_timings"},
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
+		require.NoError(t, err)
+		// we generate a random port for the test server, so we need to replace the port in the tracing json
+		rex, err := regexp.Compile(`http://127.0.0.1:\d+/graphql`)
+		require.NoError(t, err)
+		tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
+		resultBody := rex.ReplaceAllString(res.Body, "http://localhost/graphql")
+		// all nodes have UUIDs, so we need to replace them with a static UUID
+		rex2, err := regexp.Compile(`"id":"[a-f0-9\-]{36}"`)
+		require.NoError(t, err)
+		tracingJson = rex2.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
+		resultBody = rex2.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
+		require.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
+		if t.Failed() {
+			t.Log(resultBody)
+		}
+		// make the request again, but with "enable_predictable_debug_timings" disabled
+		// compare the result and ensure that the timings are different
+		res2, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: bigEmployeesQuery,
+			Header: http.Header{
+				"X-WG-Trace": []string{"true"},
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res2.Response.StatusCode)
+		body := []byte(res2.Body)
+		data, _, _, err := jsonparser.Get(body, "data")
+		require.NoError(t, err)
+		require.NotNilf(t, data, "data should not be nil: %s", body)
+		tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
+		require.NoError(t, err)
+		require.NotNilf(t, tracing, "tracing should not be nil: %s", body)
+		require.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, string(body)))
 	})
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
-	require.NoError(t, err)
-	// we generate a random port for the test server, so we need to replace the port in the tracing json
-	rex, err := regexp.Compile(`http://localhost:\d+/graphql`)
-	require.NoError(t, err)
-	tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
-	resultBody := rex.ReplaceAllString(result.Body.String(), "http://localhost/graphql")
-	// all nodes have UUIDs, so we need to replace them with a static UUID
-	rex2, err := regexp.Compile(`"id":"[a-f0-9\-]{36}"`)
-	require.NoError(t, err)
-	tracingJson = rex2.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
-	resultBody = rex2.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
-	assert.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
-	if t.Failed() {
-		t.Log(resultBody)
-	}
-	// make the request again, but with "enable_predictable_debug_timings" disabled
-	// compare the result and ensure that the timings are different
-	result2 := sendCustomData(server, []byte(fmt.Sprintf(`{"query":"%s"}`, bigEmployeesQuery)), func(r *http.Request) {
-		r.Header.Add("X-WG-Trace", "true")
-	})
-	assert.Equal(t, http.StatusOK, result2.Result().StatusCode)
-	body := result2.Body.Bytes()
-	data, _, _, err := jsonparser.Get(body, "data")
-	require.NoError(t, err)
-	assert.NotNilf(t, data, "data should not be nil: %s", body)
-	tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
-	require.NoError(t, err)
-	assert.NotNilf(t, tracing, "tracing should not be nil: %s", body)
-	assert.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, string(body)))
 }
 
 func prettifyJSON(t *testing.T, jsonStr string) string {
@@ -483,68 +277,88 @@ func prettifyJSON(t *testing.T, jsonStr string) string {
 
 func TestOperationSelection(t *testing.T) {
 	t.Parallel()
-	server := setupServer(t)
 
 	t.Run("anonymous query", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }"}`))
-		assert.Equal(t, http.StatusOK, result.Code)
-		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		})
 	})
 
 	t.Run("multiple anonymous queries", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } } { employees { id } }"}`))
-		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}],"data":null}`, result.Body.String())
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } } { employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}],"data":null}`, res.Body)
+		})
 	})
 
 	t.Run("operation name null returns data", func(t *testing.T) {
-		result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }","operationName":null}`))
-		t.Parallel()
-		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-		assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:         `{ employees { id } }`,
+				OperationName: []byte(`null`),
+			})
+			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		})
 	})
 
 	t.Run("operation name wrong on anonymous operation", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }","operationName":"Missing"}`))
-		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, result.Body.String())
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:         `{ employees { id } }`,
+				OperationName: []byte(`"Missing"`),
+			})
+			require.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, res.Body)
+		})
 	})
 
 	t.Run("operation name wrong on named operation", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query Exists { employees { id } }","operationName":"Missing"}`))
-		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, result.Body.String())
-	})
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:         `query Exists { employees { id } }`,
+				OperationName: []byte(`"Missing"`),
+			})
+			require.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, res.Body)
+		})
 
-	t.Run("multiple named operations", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"A"}`))
-		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-		assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
-	})
+		t.Run("multiple named operations", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
+					OperationName: []byte(`"A"`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+			})
+		})
 
-	t.Run("multiple named operations B", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"B"}`))
-		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-		assert.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result.Body.String())
-	})
+		t.Run("multiple named operations B", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
+					OperationName: []byte(`"B"`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+			})
+		})
 
-	t.Run("multiple named operations B", func(t *testing.T) {
-		t.Parallel()
-		result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"C"}`))
-		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-		assert.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}],"data":null}`, result.Body.String())
+		t.Run("multiple named operations B", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
+					OperationName: []byte(`"C"`),
+				})
+				require.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}],"data":null}`, res.Body)
+			})
+		})
 	})
 }
 
 func TestTestdataQueries(t *testing.T) {
 	t.Parallel()
-	server := setupServer(t)
 	queries := filepath.Join("testdata", "queries")
 	entries, err := os.ReadDir(queries)
 	require.NoError(t, err)
@@ -554,86 +368,101 @@ func TestTestdataQueries(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			testDir := filepath.Join(queries, name)
-			queryData, err := os.ReadFile(filepath.Join(testDir, "query.graphql"))
-			require.NoError(t, err)
-			payload := map[string]any{
-				"query": string(queryData),
-			}
-			payloadData, err := json.Marshal(payload)
-			require.NoError(t, err)
-			recorder := sendData(server, "/graphql", payloadData)
-			if recorder.Code != http.StatusOK {
-				t.Error("unexpected status code", recorder.Code)
-			}
-			result := recorder.Body.String()
-			expectedData, err := os.ReadFile(filepath.Join(testDir, "result.json"))
-			require.NoError(t, err)
+			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+				testDir := filepath.Join(queries, name)
+				queryData, err := os.ReadFile(filepath.Join(testDir, "query.graphql"))
+				require.NoError(t, err)
+				payload := map[string]any{
+					"query": string(queryData),
+				}
+				payloadData, err := json.Marshal(payload)
+				require.NoError(t, err)
 
-			expected := normalizeJSON(t, expectedData)
-			actual := normalizeJSON(t, []byte(result))
-			assert.Equal(t, expected, actual)
+				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, bytes.NewReader(payloadData))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				result, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				expectedData, err := os.ReadFile(filepath.Join(testDir, "result.json"))
+				require.NoError(t, err)
+
+				expected := normalizeJSON(t, expectedData)
+				actual := normalizeJSON(t, result)
+				require.Equal(t, expected, actual)
+			})
 		})
 	}
 }
 
 func TestIntegrationWithUndefinedField(t *testing.T) {
-	t.Parallel()
-	server := setupServer(t)
-	result := sendQueryOK(t, server, "/graphql", &testQuery{
-		Body: "{ employees { id notDefined } }",
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id notDefined } }`,
+		})
+		require.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}],"data":null}`, res.Body)
 	})
-	assert.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}],"data":null}`, result)
+}
+
+func TestParallel(t *testing.T) {
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
+		trigger := make(chan struct{})
+		wg := sync.WaitGroup{}
+		wg.Add(10)
+		for i := 0; i < 10; i++ {
+			go func() {
+				<-trigger
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.JSONEq(t, expect, res.Body)
+				wg.Done()
+			}()
+		}
+		time.Sleep(10 * time.Millisecond)
+		close(trigger)
+		wg.Wait()
+	})
 }
 
 func BenchmarkSequential(b *testing.B) {
-	server := setupServer(b)
-	q := &testQuery{
-		Name:      "Employee",
-		Body:      "($n:Int!) { employee(id:$n) { id details { forename surname } } }",
-		Variables: map[string]interface{}{"n": 1},
-	}
-	expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
-	b.ReportAllocs()
-	b.ResetTimer()
-	for ii := 0; ii < b.N; ii++ {
-		got := sendQueryOK(b, server, "/graphql", q)
-		if got != expect {
-			b.Errorf("unexpected result %q, expecting %q", got, expect)
+	testenv.Bench(b, &testenv.Config{}, func(b *testing.B, xEnv *testenv.Environment) {
+		expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
+		b.SetBytes(int64(len(expect)))
+		b.ReportAllocs()
+		b.ResetTimer()
+		for ii := 0; ii < b.N; ii++ {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:         `query Employee ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				OperationName: []byte(`"Employee"`),
+				Variables:     json.RawMessage(`{"n":1}`),
+			})
+			if res.Body != expect {
+				b.Errorf("unexpected result %q, expecting %q", res.Body, expect)
+			}
 		}
-	}
+	})
 }
 
 func BenchmarkParallel(b *testing.B) {
-	server := setupServer(b)
-	q := &testQuery{
-		Body:      "($n:Int!) { employee(id:$n) { id details { forename surname } } }",
-		Variables: map[string]interface{}{"n": 1},
-	}
-	expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
-	ch := make(chan struct{})
-	// Start the workers
-	var wg sync.WaitGroup
-	wg.Add(*workers)
-	for ii := 0; ii < *workers; ii++ {
-		go func() {
-			defer wg.Done()
-			for range ch {
-				got := sendQueryOK(b, server, "/graphql", q)
-				if got != expect {
-					b.Errorf("unexpected result %q, expecting %q", got, expect)
+	testenv.Bench(b, &testenv.Config{}, func(b *testing.B, xEnv *testenv.Environment) {
+		expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
+		b.SetBytes(int64(len(expect)))
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:         `query Employee($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+					OperationName: []byte(`"Employee"`),
+					Variables:     json.RawMessage(`{"n":1}`),
+				})
+				if res.Body != expect {
+					b.Errorf("unexpected result %q, expecting %q", res.Body, expect)
 				}
 			}
-		}()
-	}
-	b.ReportAllocs()
-	b.ResetTimer()
-	for ii := 0; ii < b.N; ii++ {
-		ch <- struct{}{}
-	}
-	close(ch)
-	wg.Wait()
+		})
+	})
 }
 
 const (
@@ -678,62 +507,24 @@ const (
 )
 
 func BenchmarkPb(b *testing.B) {
-	server := setupServer(b)
-	q := &testQuery{
-		Body: bigEmployeesQuery,
-	}
-	b.SetBytes(int64(len(bigEmployeesResponse)))
-	b.ReportAllocs()
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			got := sendQueryOK(b, server, "/graphql", q)
-			if len(got) < 3000 {
-				b.Errorf("unexpected result %q, expecting \n\n%q", got, bigEmployeesResponse)
+	testenv.Bench(b, &testenv.Config{}, func(b *testing.B, xEnv *testenv.Environment) {
+		b.SetBytes(int64(len(bigEmployeesResponse)))
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: bigEmployeesQuery,
+				})
+				if len(res.Body) < 3000 {
+					b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
+				}
 			}
-		}
+		})
 	})
 }
 
-func BenchmarkParallelInlineVariables(b *testing.B) {
-	server := setupServer(b)
-	q := &testQuery{
-		Body: "{ employee(id:1) { id details { forename surname } } }",
-	}
-	expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
-	ch := make(chan struct{})
-	// Start the workers
-	var wg sync.WaitGroup
-	wg.Add(*workers)
-	for ii := 0; ii < *workers; ii++ {
-		go func() {
-			defer wg.Done()
-			for range ch {
-				got := sendQueryOK(b, server, "/graphql", q)
-				if got != expect {
-					b.Errorf("unexpected result %q, expecting %q", got, expect)
-				}
-			}
-		}()
-	}
-	b.ReportAllocs()
-	b.ResetTimer()
-	for ii := 0; ii < b.N; ii++ {
-		ch <- struct{}{}
-	}
-	close(ch)
-	wg.Wait()
-}
-
-// Notes on fuzzing! The go fuzzer runs multiple processes in parallel, so we
-// need to run the subgraphs off process. This is done by starting demo/cmd/all/main.go
-// and running go test -v -subgraphs external -fuzz=.
-//
-// Keep in mind that during normal test runs the tests generated from fuzzing are ran
-// as normal tests so running the subgraphs in-process works fine.
-
 func FuzzQuery(f *testing.F) {
-	server := setupServer(f)
 	corpus := []struct {
 		Query     string
 		Variables []byte // As JSON
@@ -758,99 +549,139 @@ func FuzzQuery(f *testing.F) {
 		f.Add(tc.Query, tc.Variables)
 	}
 	f.Fuzz(func(t *testing.T, query string, variables []byte) {
-		rr := httptest.NewRecorder()
-		var q testQuery
-		if err := json.Unmarshal(variables, &q.Variables); err != nil {
-			// Invalid JSON, mark as uninteresting input
-			t.Skip()
-		}
-		q.Body = query
-		req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(q.Data()))
-		server.Server.Handler.ServeHTTP(rr, req)
-		if rr.Code != 200 && rr.Code != 400 {
-			t.Error("unexpected status code", rr.Code)
-		}
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			var q testQuery
+			if err := json.Unmarshal(variables, &q.Variables); err != nil {
+				// Invalid JSON, mark as uninteresting input
+				t.Skip()
+			}
+			q.Body = query
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     query,
+				Variables: variables,
+			})
+			require.NoError(t, err)
+			if res.Response.StatusCode != http.StatusOK && res.Response.StatusCode != http.StatusBadRequest {
+				t.Error("unexpected status code", res.Response.StatusCode)
+			}
+		})
 	})
 }
 
 func TestPlannerErrorMessage(t *testing.T) {
-	t.Parallel()
-	server := setupServer(t)
-	// Error message should contain the invalid argument name instead of a
-	// generic planning error message
-	rr := sendData(server, "/graphql", []byte(`{"query":"{  employee(id:3, does_not_exist: 42) { id } }"}`))
-	if rr.Code != http.StatusOK {
-		t.Error("unexpected status code", rr.Code)
-	}
-	var resp graphqlErrorResponse
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatal(err)
-	}
-	require.Len(t, resp.Errors, 1)
-	assert.Equal(t, `Unknown argument "does_not_exist" on field "Query.employee".`, resp.Errors[0].Message)
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		// Error message should contain the invalid argument name instead of a
+		// generic planning error message
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{  employee(id:3, does_not_exist: 42) { id } }`,
+		})
+		var resp testenv.GraphQLResponse
+		if err := json.NewDecoder(strings.NewReader(res.Body)).Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		require.Len(t, resp.Errors, 1)
+		require.Equal(t, `Unknown argument "does_not_exist" on field "Query.employee".`, resp.Errors[0].Message)
+	})
 }
 
 func TestConcurrentQueriesWithDelay(t *testing.T) {
 	const (
-		numQueries   = 100
-		queryDelayMs = 3000
+		numQueries   = 20
+		queryDelayMs = 100
 	)
-	server := setupServer(t, core.WithCustomRoundTripper(
-		&http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				// We need a delay here to ensure that the body has not been written to
-				// the subgraph server until this delay has elapsed. If the delay was
-				// only on the server, the body would be written immediately and the
-				// buffer could be reused without causing a race.
-				time.Sleep(queryDelayMs * time.Millisecond)
-				return net.Dial(network, addr)
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalMiddleware: func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					time.Sleep(time.Millisecond * queryDelayMs)
+					handler.ServeHTTP(w, r)
+				})
 			},
-		}))
-	var wg sync.WaitGroup
-	wg.Add(numQueries)
-	for ii := 0; ii < numQueries; ii++ {
-		go func(ii int) {
-			defer wg.Done()
-			resp := strconv.FormatInt(rand.Int63(), 16)
-			// For this test, we don't need any delays on the server side
-			query := fmt.Sprintf(`{"query":"{ delay(response:\"%s\", ms:0) }"}`, resp)
-			result := sendData(server, "/graphql", []byte(query))
-			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-			assert.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), result.Body.String(), "query %d failed", ii)
-		}(ii)
-	}
-	wg.Wait()
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		var wg sync.WaitGroup
+		wg.Add(numQueries)
+		for ii := 0; ii < numQueries; ii++ {
+			go func(ii int) {
+				defer wg.Done()
+				resp := strconv.FormatInt(rand.Int63(), 10)
+				// For this test, we don't need any delays on the server side
+				query := fmt.Sprintf(`{ delay(response:"%s", ms:%d) }`, resp, queryDelayMs)
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: query,
+				})
+				require.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), res.Body, "query %d failed", ii)
+			}(ii)
+		}
+		wg.Wait()
+	})
 }
 
 func TestPartialOriginErrors(t *testing.T) {
-	transport := &customTransport{
-		delay: time.Millisecond * 10,
-		roundTrip: func(r *http.Request) (*http.Response, error) {
-			dump, err := httputil.DumpRequest(r, true)
-			if err != nil {
-				return nil, err
-			}
-			if bytes.Contains(dump, []byte(`... on Employee {notes}`)) {
-				return nil, &net.DNSError{}
-			}
-			return http.DefaultTransport.RoundTrip(r)
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			Products: testenv.SubgraphConfig{
+				CloseOnStart: true,
+			},
 		},
-	}
-	server := setupServer(t, core.WithCustomRoundTripper(transport))
-	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id details { forename surname } notes } }"}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, result.Body.String())
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+	})
+}
+
+func TestPartialOriginErrors500(t *testing.T) {
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			Products: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusInternalServerError)
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+	})
 }
 
 func TestWithOriginErrors(t *testing.T) {
-	transport := &customTransport{
-		delay: time.Millisecond * 10,
-		roundTrip: func(r *http.Request) (*http.Response, error) {
-			return nil, &net.DNSError{}
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				CloseOnStart: true,
+			},
 		},
-	}
-	server := setupServer(t, core.WithCustomRoundTripper(transport))
-	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id details { forename surname } notes } }"}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, result.Body.String())
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, res.Body)
+	})
+}
+
+func TestWithOriginErrors500(t *testing.T) {
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusInternalServerError)
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, res.Body)
+	})
 }

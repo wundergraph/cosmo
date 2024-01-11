@@ -7,171 +7,154 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
-	"go.uber.org/atomic"
 )
 
-type customTransport struct {
-	delay        time.Duration
-	requestCount atomic.Int64
-	roundTrip    func(r *http.Request) (*http.Response, error)
-}
-
-func (c *customTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	c.requestCount.Inc()
-	if c.delay > 0 {
-		time.Sleep(c.delay)
-	}
-	return c.roundTrip(r)
-}
-
 func TestSingleFlight(t *testing.T) {
-	t.Parallel()
-	var (
-		numOfOperations = 10
-		wg              sync.WaitGroup
-	)
-	transport := &customTransport{
-		delay: time.Millisecond * 10,
-		roundTrip: func(r *http.Request) (*http.Response, error) {
-			return http.DefaultTransport.RoundTrip(r)
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalDelay: time.Millisecond * 100,
 		},
-	}
-	server := setupServer(t, core.WithCustomRoundTripper(transport))
-	wg.Add(numOfOperations)
-	trigger := make(chan struct{})
-	for i := 0; i < numOfOperations; i++ {
-		go func() {
-			defer wg.Done()
-			<-trigger
-			result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }"}`))
-			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-			assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
-		}()
-	}
-	close(trigger)
-	wg.Wait()
-	// We expect that the number of requests is less than the number of operations
-	assert.NotEqual(t, int64(numOfOperations), transport.requestCount.Load())
-	t.Logf("Number of origin requests: %d", transport.requestCount.Load())
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		var (
+			numOfOperations = 10
+			wg              sync.WaitGroup
+		)
+		wg.Add(numOfOperations)
+		trigger := make(chan struct{})
+		for i := 0; i < numOfOperations; i++ {
+			go func() {
+				defer wg.Done()
+				<-trigger
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+			}()
+		}
+		close(trigger)
+		wg.Wait()
+		// We expect that the number of requests is less than the number of operations
+		require.NotEqual(t, int64(numOfOperations), xEnv.SubgraphRequestCount.Global.Load())
+	})
 }
 
 func TestSingleFlightMutations(t *testing.T) {
-	t.Parallel()
-	var (
-		numOfOperations = 5
-		wg              sync.WaitGroup
-	)
-	transport := &customTransport{
-		delay: time.Millisecond * 10,
-		roundTrip: func(r *http.Request) (*http.Response, error) {
-			return http.DefaultTransport.RoundTrip(r)
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalDelay: time.Millisecond * 100,
 		},
-	}
-	server := setupServer(t, core.WithCustomRoundTripper(transport))
-	wg.Add(numOfOperations)
-	trigger := make(chan struct{})
-	for i := 0; i < numOfOperations; i++ {
-		go func() {
-			defer wg.Done()
-			<-trigger
-			result := sendData(server, "/graphql", []byte(`{"query":"mutation { updateEmployeeTag(id: 1, tag: \"test\") { id tag } }"}`))
-			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-			assert.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, result.Body.String())
-		}()
-	}
-	close(trigger)
-	wg.Wait()
-	// As this is a mutation, we expect that the number of requests is equal to the number of operations
-	assert.Equal(t, int64(numOfOperations), transport.requestCount.Load())
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		var (
+			numOfOperations = 10
+			wg              sync.WaitGroup
+		)
+		wg.Add(numOfOperations)
+		trigger := make(chan struct{})
+		for i := 0; i < numOfOperations; i++ {
+			go func() {
+				defer wg.Done()
+				<-trigger
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
+				})
+				require.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, res.Body)
+			}()
+		}
+		close(trigger)
+		wg.Wait()
+		// We expect that the number of requests is less than the number of operations
+		require.Equal(t, int64(numOfOperations), xEnv.SubgraphRequestCount.Global.Load())
+	})
 }
 
 func TestSingleFlightDifferentHeaders(t *testing.T) {
-	t.Parallel()
-	var (
-		numOfOperations = 10
-		wg              sync.WaitGroup
-	)
-	transport := &customTransport{
-		delay: time.Millisecond * 10,
-		roundTrip: func(r *http.Request) (*http.Response, error) {
-			return http.DefaultTransport.RoundTrip(r)
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalDelay: time.Millisecond * 100,
 		},
-	}
-	server := setupServer(t,
-		core.WithCustomRoundTripper(transport),
-		core.WithHeaderRules(config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
-					{
-						Named:     "Authorization",
-						Operation: config.HeaderRuleOperationPropagate,
+		RouterOptions: []core.Option{
+			core.WithHeaderRules(config.HeaderRules{
+				All: config.GlobalHeaderRule{
+					Request: []config.RequestHeaderRule{
+						{
+							Named:     "Authorization",
+							Operation: config.HeaderRuleOperationPropagate,
+						},
 					},
 				},
-			},
-		}),
-	)
-	wg.Add(numOfOperations)
-	for i := 0; i < numOfOperations; i++ {
-		go func(num int) {
-			defer wg.Done()
-			result := sendDataWithHeader(server, "/graphql", []byte(`{"query":"{ employees { id } }"}`), http.Header{
-				"Authorization": []string{fmt.Sprintf("Bearer test-%d", num)},
-			})
-			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-			assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
-		}(i)
-	}
-	wg.Wait()
-	// As the Authorization header is propagated, and the value is different for each request,
-	// we expect that the number of requests is equal to the number of operations
-	assert.Equal(t, int64(numOfOperations), transport.requestCount.Load())
+			}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		var (
+			numOfOperations = 10
+			wg              sync.WaitGroup
+		)
+		wg.Add(numOfOperations)
+		trigger := make(chan struct{})
+		for i := 0; i < numOfOperations; i++ {
+			i := i
+			go func(num int) {
+				defer wg.Done()
+				<-trigger
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+					Header: http.Header{
+						"Authorization": []string{fmt.Sprintf("Bearer test-%d", i)},
+					},
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+			}(i)
+		}
+		close(trigger)
+		wg.Wait()
+		// We expect that the number of requests is less than the number of operations
+		require.Equal(t, int64(numOfOperations), xEnv.SubgraphRequestCount.Global.Load())
+	})
 }
 
 func TestSingleFlightSameHeaders(t *testing.T) {
-	t.Parallel()
-	var (
-		numOfOperations = 10
-		wg              sync.WaitGroup
-	)
-	transport := &customTransport{
-		delay: time.Millisecond * 10,
-		roundTrip: func(r *http.Request) (*http.Response, error) {
-			return http.DefaultTransport.RoundTrip(r)
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalDelay: time.Millisecond * 100,
 		},
-	}
-	server := setupServer(t,
-		core.WithCustomRoundTripper(transport),
-		core.WithHeaderRules(config.HeaderRules{
-			All: config.GlobalHeaderRule{
-				Request: []config.RequestHeaderRule{
-					{
-						Named:     "Authorization",
-						Operation: config.HeaderRuleOperationPropagate,
+		RouterOptions: []core.Option{
+			core.WithHeaderRules(config.HeaderRules{
+				All: config.GlobalHeaderRule{
+					Request: []config.RequestHeaderRule{
+						{
+							Named:     "Authorization",
+							Operation: config.HeaderRuleOperationPropagate,
+						},
 					},
 				},
-			},
-		}),
-	)
-	wg.Add(numOfOperations)
-	trigger := make(chan struct{})
-	for i := 0; i < numOfOperations; i++ {
-		go func() {
-			defer wg.Done()
-			<-trigger
-			result := sendDataWithHeader(server, "/graphql", []byte(`{"query":"{ employees { id } }"}`), http.Header{
-				"Authorization": []string{"Bearer test"},
-			})
-			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-			assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
-		}()
-	}
-	close(trigger)
-	wg.Wait()
-	// As the Authorization header is propagated, and the value is the same for each request,
-	// we expect that the number of requests is less than the number of operations
-	assert.NotEqual(t, int64(numOfOperations), transport.requestCount.Load())
-	t.Logf("Number of origin requests: %d", transport.requestCount.Load())
+			}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		var (
+			numOfOperations = 10
+			wg              sync.WaitGroup
+		)
+		wg.Add(numOfOperations)
+		trigger := make(chan struct{})
+		for i := 0; i < numOfOperations; i++ {
+			go func() {
+				defer wg.Done()
+				<-trigger
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+					Header: http.Header{
+						"Authorization": []string{"Bearer test"},
+					},
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+			}()
+		}
+		close(trigger)
+		wg.Wait()
+		require.NotEqual(t, int64(numOfOperations), xEnv.SubgraphRequestCount.Global.Load())
+	})
 }

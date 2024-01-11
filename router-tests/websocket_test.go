@@ -1,419 +1,386 @@
 package integration_test
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net"
-	"net/http"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/config"
 )
 
-type wsMessage struct {
-	ID      string          `json:"id,omitempty"`
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload,omitempty"`
-}
-
-func connReadJSON(conn *websocket.Conn, v interface{}) error {
-	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	defer conn.SetReadDeadline(time.Time{})
-	return conn.ReadJSON(v)
-}
-
-type connectedWebsocketOptions struct {
-	Header         http.Header
-	InitialPayload map[string]interface{}
-}
-
-func connectedWebsocket(tb testing.TB, serverPort int, serverPath string, opts *connectedWebsocketOptions) *websocket.Conn {
-	dialer := websocket.Dialer{
-		Subprotocols: []string{"graphql-transport-ws"},
-	}
-	var header http.Header
-	var payload []byte
-	if opts != nil {
-		header = opts.Header
-
-		if len(opts.InitialPayload) > 0 {
-			var err error
-			payload, err = json.Marshal(opts.InitialPayload)
-			require.NoError(tb, err)
-		}
-	}
-	conn, _, err := dialer.Dial(fmt.Sprintf("ws://localhost:%d%s", serverPort, serverPath), header)
-	require.NoError(tb, err)
-	err = conn.WriteJSON(&wsMessage{
-		Type:    "connection_init",
-		Payload: payload,
-	})
-	require.NoError(tb, err)
-	var msg wsMessage
-	err = connReadJSON(conn, &msg)
-	require.NoError(tb, err)
-	require.Equal(tb, "connection_ack", msg.Type)
-	tb.Cleanup(func() {
-		err := conn.Close()
-		assert.NoError(tb, err)
-	})
-
-	return conn
-}
-
-func TestWebsockets(t *testing.T) {
+func TestWebSockets(t *testing.T) {
 	t.Parallel()
-
-	_, port := setupListeningServer(t)
 
 	t.Run("query", func(t *testing.T) {
-		const (
-			query           = `{ employees { id } }`
-			expectedPayload = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`
-		)
-
-		conn := connectedWebsocket(t, port, "/graphql", nil)
-		var err error
-		q := &testQuery{
-			Body: query,
-		}
-		const messageID = "1"
-		err = conn.WriteJSON(&wsMessage{
-			ID:      messageID,
-			Type:    "subscribe",
-			Payload: q.Data(),
-		})
-		assert.NoError(t, err)
-		var msg wsMessage
-		err = connReadJSON(conn, &msg)
-		require.NoError(t, err)
-		assert.Equal(t, "next", msg.Type)
-		assert.Equal(t, messageID, msg.ID)
-		// Delete any "extensions" field from the payload, we don't care about it for now
-		var payload map[string]json.RawMessage
-		err = json.Unmarshal(msg.Payload, &payload)
-		require.NoError(t, err)
-		delete(payload, "extensions")
-		payloadBytes, err := json.Marshal(payload)
-		require.NoError(t, err)
-		assert.Equal(t, expectedPayload, string(payloadBytes))
-		err = connReadJSON(conn, &msg)
-		require.NoError(t, err)
-		assert.Equal(t, "complete", msg.Type)
-		assert.Equal(t, messageID, msg.ID)
-	})
-
-	t.Run("subscription", func(t *testing.T) {
-
-		type currentTimePayload struct {
-			Data struct {
-				CurrentTime struct {
-					UnixTime  float64 `json:"unixTime"`
-					Timestamp string  `json:"timestamp"`
-				} `json:"currentTime"`
-			} `json:"data"`
-		}
-
-		conn := connectedWebsocket(t, port, "/graphql", nil)
-		var err error
-		const messageID = "1"
-		err = conn.WriteJSON(&wsMessage{
-			ID:      messageID,
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
-		})
-		require.NoError(t, err)
-		var msg wsMessage
-		var payload currentTimePayload
-
-		// Read a result and store its timestamp, next result should be 1 second later
-		err = connReadJSON(conn, &msg)
-		require.NoError(t, err)
-		assert.Equal(t, messageID, msg.ID)
-		assert.Equal(t, "next", msg.Type)
-		err = json.Unmarshal(msg.Payload, &payload)
-		require.NoError(t, err)
-
-		unix1 := payload.Data.CurrentTime.UnixTime
-
-		err = connReadJSON(conn, &msg)
-		require.NoError(t, err)
-		assert.Equal(t, messageID, msg.ID)
-		assert.Equal(t, "next", msg.Type)
-		err = json.Unmarshal(msg.Payload, &payload)
-		require.NoError(t, err)
-
-		unix2 := payload.Data.CurrentTime.UnixTime
-		assert.Equal(t, unix1+1, unix2)
-
-		// Sending a complete must stop the subscription
-		err = conn.WriteJSON(&wsMessage{
-			ID:   messageID,
-			Type: "complete",
-		})
-		require.NoError(t, err)
-		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-		// This should timeout because no more data is coming
-		_, _, err = conn.NextReader()
-		netErr, ok := err.(net.Error)
-		require.True(t, ok, "error is not a net.Error, got %T = %v", err, err)
-		assert.True(t, netErr.Timeout())
-		conn.SetReadDeadline(time.Time{})
-	})
-
-	t.Run("error", func(t *testing.T) {
-
-		conn := connectedWebsocket(t, port, "/graphql", nil)
-		var err error
-		const messageID = "1"
-		err = conn.WriteJSON(&wsMessage{
-			ID:      messageID,
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
-		})
-		require.NoError(t, err)
-		var msg wsMessage
-		err = connReadJSON(conn, &msg)
-		require.NoError(t, err)
-		assert.Equal(t, "error", msg.Type)
-		// Payload should be an array of GraphQLError
-		var errors []graphqlError
-		err = json.Unmarshal(msg.Payload, &errors)
-		require.NoError(t, err)
-		assert.Len(t, errors, 1)
-		assert.Equal(t, errors[0].Message, `field: does_not_exist not defined on type: Subscription`)
-	})
-
-	t.Run("subscription with library", func(t *testing.T) {
-		var subscription struct {
-			CurrentTime struct {
-				UnixTime  float64 `graphql:"unixTime"`
-				Timestamp string  `graphql:"timeStamp"`
-			} `graphql:"currentTime"`
-		}
-		subscriptionURL := fmt.Sprintf("ws://localhost:%d/graphql", port)
-		protocols := []graphql.SubscriptionProtocolType{
-			graphql.GraphQLWS,
-			graphql.SubscriptionsTransportWS,
-		}
-		for _, p := range protocols {
-			p := p
-			t.Run(string(p), func(t *testing.T) {
-				client := graphql.NewSubscriptionClient(subscriptionURL).WithProtocol(p)
-				t.Cleanup(func() {
-					err := client.Close()
-					assert.NoError(t, err)
-				})
-				var firstTime float64
-				subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-					require.NoError(t, errValue)
-					data := subscription
-					err := jsonutil.UnmarshalGraphQL(dataValue, &data)
-					require.NoError(t, err)
-					if firstTime == 0 {
-						firstTime = data.CurrentTime.UnixTime
-					} else {
-						assert.Equal(t, firstTime+1, data.CurrentTime.UnixTime)
-						return graphql.ErrSubscriptionStopped
-					}
-					return nil
-				})
-				require.NoError(t, err)
-				require.NotEqual(t, "", subscriptionID)
-				require.NoError(t, client.Run())
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id } }"}`),
 			})
-		}
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
+			var complete testenv.WebSocketMessage
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
 	})
+	t.Run("subscription", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
+			type currentTimePayload struct {
+				Data struct {
+					CurrentTime struct {
+						UnixTime  float64 `json:"unixTime"`
+						Timestamp string  `json:"timestamp"`
+					} `json:"currentTime"`
+				} `json:"data"`
+			}
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload currentTimePayload
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+
+			unix1 := payload.Data.CurrentTime.UnixTime
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+
+			unix2 := payload.Data.CurrentTime.UnixTime
+			require.Equal(t, unix1+1, unix2)
+
+			// Sending a complete must stop the subscription
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "complete",
+			})
+			require.NoError(t, err)
+
+			var complete testenv.WebSocketMessage
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "1", complete.ID)
+			require.Equal(t, "complete", complete.Type)
+
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			_, _, err = conn.ReadMessage()
+			require.Error(t, err)
+			var netErr net.Error
+			if errors.As(err, &netErr) {
+				require.True(t, netErr.Timeout())
+			} else {
+				require.Fail(t, "expected net.Error")
+			}
+		})
+	})
+	t.Run("error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "error", msg.Type)
+			// Payload should be an array of GraphQLError
+			var errs []testenv.GraphQLError
+			err = json.Unmarshal(msg.Payload, &errs)
+			require.NoError(t, err)
+			require.Len(t, errs, 1)
+			require.Equal(t, errs[0].Message, `field: does_not_exist not defined on type: Subscription`)
+		})
+	})
+	t.Run("subscription with library", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscription struct {
+				CurrentTime struct {
+					UnixTime  float64 `graphql:"unixTime"`
+					Timestamp string  `graphql:"timeStamp"`
+				} `graphql:"currentTime"`
+			}
+			protocols := []graphql.SubscriptionProtocolType{
+				graphql.GraphQLWS,
+				graphql.SubscriptionsTransportWS,
+			}
+			for _, p := range protocols {
+				p := p
+				t.Run(string(p), func(t *testing.T) {
+					t.Parallel()
+					client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).WithProtocol(p)
+					t.Cleanup(func() {
+						err := client.Close()
+						require.NoError(t, err)
+					})
+					var firstTime float64
+					subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+						require.NoError(t, errValue)
+						data := subscription
+						err := jsonutil.UnmarshalGraphQL(dataValue, &data)
+						require.NoError(t, err)
+						if firstTime == 0 {
+							firstTime = data.CurrentTime.UnixTime
+						} else {
+							require.Equal(t, firstTime+1, data.CurrentTime.UnixTime)
+							return graphql.ErrSubscriptionStopped
+						}
+						return nil
+					})
+					require.NoError(t, err)
+					require.NotEqual(t, "", subscriptionID)
+					require.NoError(t, client.Run())
+				})
+			}
+		})
+	})
 	t.Run("forward extensions", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make sure sending two simultaneous subscriptions with different extensions
+			// triggers two subscriptions to the upstream
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			var err error
+			err = conn1.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"123"}}`),
+			})
+			require.NoError(t, err)
 
-		// Make sure sending two simultaneous subscriptions with different extensions
-		// triggers two subscriptions to the upstream
-		conn1 := connectedWebsocket(t, port, "/graphql", nil)
-		conn2 := connectedWebsocket(t, port, "/graphql", nil)
-		var err error
-		err = conn1.WriteJSON(&wsMessage{
-			ID:      "1",
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"123"}}`),
+			err = conn2.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "2",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"456"}}`),
+			})
+			require.NoError(t, err)
+
+			var msg testenv.WebSocketMessage
+			var payload struct {
+				Data struct {
+					InitialPayload struct {
+						Extensions struct {
+							Token string `json:"token"`
+						} `json:"extensions"`
+					} `json:"initialPayload"`
+				} `json:"data"`
+			}
+			err = conn1.ReadJSON(&msg)
+			require.NoError(t, err)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, "123", payload.Data.InitialPayload.Extensions.Token)
+
+			err = conn2.ReadJSON(&msg)
+			require.NoError(t, err)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
 		})
-		require.NoError(t, err)
-
-		err = conn2.WriteJSON(&wsMessage{
-			ID:      "2",
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"456"}}`),
+	})
+	t.Run("same graphql path as playground", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			OverrideGraphQLPath: "/",
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"123": 456, "extensions": {"hello": "world"}}`))
+			var err error
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
 		})
-		require.NoError(t, err)
-
-		var msg wsMessage
-		var payload struct {
-			Data struct {
-				InitialPayload struct {
-					Extensions struct {
-						Token string `json:"token"`
-					} `json:"extensions"`
-				} `json:"initialPayload"`
-			} `json:"data"`
-		}
-		err = connReadJSON(conn1, &msg)
-		require.NoError(t, err)
-		err = json.Unmarshal(msg.Payload, &payload)
-		require.NoError(t, err)
-		assert.Equal(t, "123", payload.Data.InitialPayload.Extensions.Token)
-
-		err = connReadJSON(conn2, &msg)
-		require.NoError(t, err)
-		err = json.Unmarshal(msg.Payload, &payload)
-		require.NoError(t, err)
-		assert.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
 	})
-}
-
-type graphqlErrorResponse struct {
-	Errors []graphqlError `json:"errors"`
-}
-
-type graphqlError struct {
-	Message string `json:"message"`
-}
-
-func TestWsConnectionWithSameGraphQLPathAsPlayground(t *testing.T) {
-	t.Parallel()
-	_, port := setupListeningServer(t, core.WithGraphQLPath("/"))
-	conn := connectedWebsocket(t, port, "/", &connectedWebsocketOptions{
-		InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
+	t.Run("different path", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			OverrideGraphQLPath: "/foo",
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"123": 456, "extensions": {"hello": "world"}}`))
+			var err error
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+		})
 	})
-	var err error
-	err = conn.WriteJSON(&wsMessage{
-		ID:      "1",
-		Type:    "subscribe",
-		Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
-	})
-	require.NoError(t, err)
-	var msg wsMessage
-	err = connReadJSON(conn, &msg)
-	require.NoError(t, err)
-	assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
-}
 
-func TestWsConnectionWithDifferentGraphQLPath(t *testing.T) {
-	t.Parallel()
-	_, port := setupListeningServer(t, core.WithGraphQLPath("/foo"))
-	conn := connectedWebsocket(t, port, "/foo", &connectedWebsocketOptions{
-		InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
-	})
-	var err error
-	err = conn.WriteJSON(&wsMessage{
-		ID:      "1",
-		Type:    "subscribe",
-		Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
-	})
-	require.NoError(t, err)
-	var msg wsMessage
-	err = connReadJSON(conn, &msg)
-	require.NoError(t, err)
-	assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
-}
+	// times out on GitHub Actions
 
-func TestShutdownWithActiveWebsocket(t *testing.T) {
-	t.Parallel()
-	server, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port, "/graphql", nil)
-	var err error
-	const messageID = "1"
-	err = conn.WriteJSON(&wsMessage{
-		ID:      messageID,
-		Type:    "subscribe",
-		Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
+	t.Run("shutdown with epoll", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableWebSocketEpollKqueue = true
+				cfg.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
+			})
+			require.NoError(t, err)
+			// Discard the first message
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			xEnv.Shutdown()
+			_, _, err = conn.NextReader()
+			// Check that the WS client error indicates the connection was unexpectedly closed
+			closeError, ok := err.(*websocket.CloseError)
+			require.True(t, ok)
+			require.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
+		})
 	})
-	require.NoError(t, err)
-	// Discard the first message
-	var msg wsMessage
-	err = connReadJSON(conn, &msg)
-	require.NoError(t, err)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	require.NoError(t, server.Shutdown(ctx))
-	_, _, err = conn.NextReader()
-	// Check that the WS client error indicates the connection was unexpectedly closed
-	cerr, ok := err.(*websocket.CloseError)
-	require.True(t, ok)
-	assert.Equal(t, websocket.CloseAbnormalClosure, cerr.Code)
-}
 
-func TestExtensionsForwardingOverWebsocketWithInitialPayload(t *testing.T) {
-	t.Parallel()
-	_, port := setupListeningServer(t)
+	t.Run("shutdown without epoll", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.EnableWebSocketEpollKqueue = false
+				cfg.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
+			})
+			require.NoError(t, err)
+			// Discard the first message
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			xEnv.Shutdown()
+			_, _, err = conn.NextReader()
+			// Check that the WS client error indicates the connection was unexpectedly closed
+			closeError, ok := err.(*websocket.CloseError)
+			require.True(t, ok)
+			require.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
+		})
+	})
 	t.Run("single connection with initial payload", func(t *testing.T) {
-		conn := connectedWebsocket(t, port, "/graphql", &connectedWebsocketOptions{
-			InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
 		})
-		var err error
-		err = conn.WriteJSON(&wsMessage{
-			ID:      "1",
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
-		})
-		require.NoError(t, err)
-		var msg wsMessage
-		err = connReadJSON(conn, &msg)
-		require.NoError(t, err)
-		assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
 	})
 	t.Run("single connection with initial payload and extensions in the request", func(t *testing.T) {
-		// "extensions" in the request should override the "extensions" in initial payload
-		conn := connectedWebsocket(t, port, "/graphql", &connectedWebsocketOptions{
-			InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// "extensions" in the request should override the "extensions" in initial payload
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"hello":"world2"}}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2"}}}}`, string(msg.Payload))
 		})
-		var err error
-		err = conn.WriteJSON(&wsMessage{
-			ID:      "1",
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }", "extensions": {"hello": "world2"}}`),
-		})
-		require.NoError(t, err)
-		var msg wsMessage
-		err = connReadJSON(conn, &msg)
-		require.NoError(t, err)
-		assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2"}}}}`, string(msg.Payload))
 	})
-
 	t.Run("multiple connections with different initial payloads", func(t *testing.T) {
-		// "extensions" in the request should override the "extensions" in initial payload
-		conn1 := connectedWebsocket(t, port, "/graphql", &connectedWebsocketOptions{
-			InitialPayload: map[string]any{"id": 1},
-		})
-		conn2 := connectedWebsocket(t, port, "/graphql", &connectedWebsocketOptions{
-			InitialPayload: map[string]any{"id": 2},
-		})
-		var err error
-		err = conn1.WriteJSON(&wsMessage{
-			ID:      "1",
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
-		})
-		require.NoError(t, err)
-		err = conn2.WriteJSON(&wsMessage{
-			ID:      "2",
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
-		})
-		require.NoError(t, err)
-		var msg wsMessage
-		err = connReadJSON(conn1, &msg)
-		require.NoError(t, err)
-		assert.JSONEq(t, `{"data":{"initialPayload":{"id":1}}}`, string(msg.Payload))
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// "extensions" in the request should override the "extensions" in initial payload
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"id":1}`))
+			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"id":2}`))
+			err := conn1.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+			})
+			require.NoError(t, err)
+			err = conn2.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "2",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			err = conn1.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.JSONEq(t, `{"data":{"initialPayload":{"id":1}}}`, string(msg.Payload))
 
-		err = connReadJSON(conn2, &msg)
-		require.NoError(t, err)
-		assert.JSONEq(t, `{"data":{"initialPayload":{"id":2}}}`, string(msg.Payload))
+			err = conn2.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.JSONEq(t, `{"data":{"initialPayload":{"id":2}}}`, string(msg.Payload))
+		})
 	})
 }

@@ -4,7 +4,8 @@ go 1.21
 
 require (
 	github.com/99designs/gqlgen v0.17.39
-	github.com/gorilla/websocket v1.5.0
+	github.com/google/uuid v1.4.0
+	github.com/gorilla/websocket v1.5.1
 	github.com/nats-io/nats.go v1.31.0
 	github.com/ravilushqa/otelgqlgen v0.13.1
 	github.com/rs/cors v1.10.1
@@ -24,7 +25,6 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/uuid v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect

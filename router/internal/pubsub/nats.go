@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/nats-io/nats.go"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
@@ -36,6 +37,10 @@ type natsPubSub struct {
 	conn *nats.Conn
 }
 
+func (p *natsPubSub) ID() string {
+	return "nats"
+}
+
 func (p *natsPubSub) ensureConn() error {
 	if p.conn == nil {
 		return errors.New("NATS is not configured")
@@ -43,7 +48,7 @@ func (p *natsPubSub) ensureConn() error {
 	return nil
 }
 
-func (p *natsPubSub) Subscribe(ctx context.Context, topic string, next chan<- []byte) error {
+func (p *natsPubSub) Subscribe(ctx context.Context, topic string, updater resolve.SubscriptionUpdater) error {
 	if err := p.ensureConn(); err != nil {
 		return err
 	}
@@ -60,7 +65,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, topic string, next chan<- []
 				close(ch)
 				return
 			case msg := <-ch:
-				next <- msg.Data
+				updater.Update(msg.Data)
 			}
 		}
 	}()

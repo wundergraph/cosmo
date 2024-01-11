@@ -1,0 +1,19 @@
+# config.yaml
+
+# See pkg/config/config.go for the full list of configuration options.
+# This file is used to debugging purposes only.
+
+version: "1"
+
+router_config_path: "./__schemas/config.json"
+
+engine:
+  max_concurrent_resolvers: 1024
+  debug:
+    report_websocket_connections: true
+    report_memory_usage: true
+
+events:
+  sources:
+    - provider: NATS
+      url: "nats://localhost:4222"

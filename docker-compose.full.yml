@@ -64,6 +64,36 @@ services:
     networks:
       - primary
 
+  availability:
+    container_name: availability
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.availability
+    profiles:
+      - subgraphs
+    ports:
+      - '4007:4007'
+    networks:
+      - primary
+
+  mood:
+    container_name: mood
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.mood
+    profiles:
+      - subgraphs
+    ports:
+      - '4008:4008'
+    networks:
+      - primary
+
   # Infrastructure services
 
   clickhouse:
@@ -147,6 +177,8 @@ services:
 
   nats:
     image: nats:${DC_NATS_VERSION:-2.10.6}
+    profiles:
+      - default
     ports:
       - "4222:4222"
       - "8222:8222"

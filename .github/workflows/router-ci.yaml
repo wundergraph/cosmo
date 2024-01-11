@@ -53,6 +53,11 @@ jobs:
         working-directory: ./router
         run: go mod download
 
+      - name: Run linters on router-tests
+        uses: ./.github/actions/go-linter
+        with:
+          working-directory: ./router-tests
+
       - name: Run linters on router
         uses: ./.github/actions/go-linter
         with:
@@ -62,15 +67,10 @@ jobs:
         working-directory: ./router
         run: make test
 
-      - name: Build
-        working-directory: ./router
-        run: make build
-
-      - name: Run linters on router-tests
-        uses: ./.github/actions/go-linter
-        with:
-          working-directory: ./router-tests
-
       - name: Run Integration tests
         working-directory: ./router-tests
         run: make test
+
+      - name: Build
+        working-directory: ./router
+        run: make build
