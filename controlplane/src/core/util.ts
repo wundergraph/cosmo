@@ -187,6 +187,8 @@ export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) =
 };
 
 export const isValidOrganizationSlug = (slug: string): boolean => {
+  // these reserved slugs are the root paths of the studio,
+  // so the org slug should not be the same as one of our root paths
   const reservedSlugs = ['login', 'signup', 'create', 'account'];
 
   if (slug.length < 3 || slug.length > 24) {
