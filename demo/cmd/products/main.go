@@ -33,7 +33,7 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := subgraphs.NewDemoServer(products.NewSchema())
+	srv := subgraphs.NewDemoServer(products.NewSchema(nil))
 
 	srv.Use(&debug.Tracer{})
 	srv.Use(otelgqlgen.Middleware(otelgqlgen.WithCreateSpanFromFields(func(ctx *graphql.FieldContext) bool {
