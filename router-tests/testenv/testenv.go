@@ -703,6 +703,8 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 }
 
 func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Duration) {
+	e.t.Helper()
+
 	report := e.Router.WebsocketStats.GetReport()
 	if report.MessagesSent == desiredCount {
 		return
@@ -720,7 +722,6 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 			return
 		case report, ok := <-sub:
 			if !ok {
-				e.t.Helper()
 				e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
 				return
 			}
