@@ -122,7 +122,7 @@ const routerConfig = (storage: BlobStorage) => {
     // Because we work with a fixed path of /routerconfigs/latest.json
     // we need to enforce no-cache headers here.
     c.header('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
-    c.header('Content-Type', 'application/json; charset=utf-8');
+    c.header('Content-Type', 'application/json; charset=UTF-8');
 
     const teedStream = configStream.tee();
 

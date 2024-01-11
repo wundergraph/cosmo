@@ -111,7 +111,10 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
+
 	resp, err := cdn.httpClient.Do(req)
 	if err != nil {
 		return nil, err

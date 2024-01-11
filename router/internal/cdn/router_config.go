@@ -71,6 +71,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 		return nil, err
 	}
 
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
 
 	resp, err := cdn.httpClient.Do(req)
