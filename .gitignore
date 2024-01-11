@@ -12,3 +12,4 @@ tsconfig.tsbuildinfo
 #lerna
 lerna-debug.log
 .DS_Store
+/demo/cmd/subscriptiontest/subscriptiontest

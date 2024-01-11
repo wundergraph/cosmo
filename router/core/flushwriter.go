@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 
 	"github.com/mattbaird/jsonpatch"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -20,24 +21,21 @@ const (
 
 type HttpFlushWriter struct {
 	ctx           context.Context
+	cancel        context.CancelFunc
 	writer        http.ResponseWriter
 	flusher       http.Flusher
 	subscribeOnce bool
 	sse           bool
 	useJsonPatch  bool
-	close         func()
 	buf           *bytes.Buffer
 	lastMessage   *bytes.Buffer
 	variables     []byte
 	logger        *zap.Logger
+	mux           sync.Mutex
 }
 
-func (f *HttpFlushWriter) Header() http.Header {
-	return f.writer.Header()
-}
-
-func (f *HttpFlushWriter) WriteHeader(statusCode int) {
-	f.writer.WriteHeader(statusCode)
+func (f *HttpFlushWriter) Complete() {
+	f.Close()
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
@@ -45,13 +43,14 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 }
 
 func (f *HttpFlushWriter) Close() {
-	if f.sse {
-		_, _ = f.writer.Write([]byte("event: done\n\n"))
-		f.flusher.Flush()
-	}
+	f.cancel()
 }
 
 func (f *HttpFlushWriter) Flush() {
+
+	f.mux.Lock()
+	defer f.mux.Unlock()
+
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
@@ -97,19 +96,19 @@ func (f *HttpFlushWriter) Flush() {
 
 	if f.subscribeOnce {
 		f.flusher.Flush()
-		f.close()
+		f.cancel()
 		return
 	}
 	_, _ = f.writer.Write([]byte("\n\n"))
 	f.flusher.Flush()
 }
 
-func GetFlushWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.FlushWriter, bool) {
+func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
 	type withFlushWriter interface {
-		FlushWriter() resolve.FlushWriter
+		SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
 	}
 	if wfw, ok := w.(withFlushWriter); ok {
-		return ctx, wfw.FlushWriter(), true
+		return ctx, wfw.SubscriptionResponseWriter(), true
 	}
 	wgParams := NewWgRequestParams(r)
 
@@ -135,10 +134,9 @@ func GetFlushWriter(ctx *resolve.Context, variables []byte, r *http.Request, w h
 
 	if wgParams.SubscribeOnce {
 		flushWriter.subscribeOnce = true
-		var cancellableCtx context.Context
-		cancellableCtx, flushWriter.close = context.WithCancel(ctx.Context())
-		ctx = ctx.WithContext(cancellableCtx)
 	}
+	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
+	ctx = ctx.WithContext(flushWriter.ctx)
 
 	return ctx, flushWriter, true
 }

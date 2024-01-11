@@ -1,3 +1,7 @@
+directive @eventsRequest(topic: String!) on FIELD_DEFINITION
+directive @eventsPublish(topic: String!) on FIELD_DEFINITION
+directive @eventsSubscribe(topic: String!) on FIELD_DEFINITION
+
 type PublishEventResult {
     success: Boolean!
 }

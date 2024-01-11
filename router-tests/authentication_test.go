@@ -1,94 +1,100 @@
 package integration_test
 
 import (
-	"encoding/json"
-	"fmt"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/gorilla/websocket"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/authentication"
 	"github.com/wundergraph/cosmo/router/core"
 )
 
 const (
-	jwksName               = "my-jwks-server"
-	employeesQuery         = `{"query":"{ employees { id } }"}`
-	employeesExpectedData  = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`
-	xAuthenticatedByHeader = "X-Authenticated-By"
+	jwksName                 = "my-jwks-server"
+	employeesQuery           = `{"query":"{ employees { id } }"}`
+	employeesExpectedData    = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`
+	unauthorizedExpectedData = `{"errors":[{"message":"unauthorized"}],"data":null}`
+	xAuthenticatedByHeader   = "X-Authenticated-By"
 )
-
-func setupServerWithJWKS(tb testing.TB, jwksOpts *authentication.JWKSAuthenticatorOptions, authRequired bool, opts ...core.Option) (*core.Server, *jwks.Server) {
-	authServer, err := jwks.NewServer()
-	require.NoError(tb, err)
-	tb.Cleanup(authServer.Close)
-	if jwksOpts == nil {
-		jwksOpts = new(authentication.JWKSAuthenticatorOptions)
-	}
-	jwksOpts.Name = jwksName
-	jwksOpts.URL = authServer.JWKSURL()
-	authenticator, err := authentication.NewJWKSAuthenticator(*jwksOpts)
-	require.NoError(tb, err)
-	authenticators := []authentication.Authenticator{authenticator}
-	serverOpts := []core.Option{
-		core.WithAccessController(core.NewAccessController(authenticators, authRequired)),
-	}
-	serverOpts = append(serverOpts, opts...)
-	return setupServer(tb, serverOpts...), authServer
-}
-
-func assertHasGraphQLErrors(t *testing.T, rr *httptest.ResponseRecorder) {
-	var m map[string]interface{}
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &m))
-	assert.NotNil(t, m["errors"])
-}
 
 func TestAuthentication(t *testing.T) {
 	t.Parallel()
-	server, jwksServer := setupServerWithJWKS(t, nil, false)
+
+	authServer, err := jwks.NewServer()
+	require.NoError(t, err)
+	t.Cleanup(authServer.Close)
+	authOptions := authentication.JWKSAuthenticatorOptions{
+		Name: jwksName,
+		URL:  authServer.JWKSURL(),
+	}
+	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+	require.NoError(t, err)
+	authenticators := []authentication.Authenticator{authenticator}
 
 	t.Run("no token", func(t *testing.T) {
-		t.Parallel()
-		// Operations without token should work succeed
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-		server.Server.Handler.ServeHTTP(rr, req)
-		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.Equal(t, employeesExpectedData, rr.Body.String())
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations without token should work succeed
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
-		t.Parallel()
-		// Operations with an invalid token should fail
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-		req.Header.Set("Authorization", "Bearer invalid")
-		server.Server.Handler.ServeHTTP(rr, req)
-
-		assert.Equal(t, http.StatusUnauthorized, rr.Code)
-		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.NotEqual(t, employeesExpectedData, rr.Body.String())
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with an invalid token should fail
+			header := http.Header{
+				"Authorization": []string{"Bearer invalid"},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, unauthorizedExpectedData, string(data))
+		})
 	})
 
 	t.Run("valid token", func(t *testing.T) {
-		t.Parallel()
-		// Operations with an token should succeed
-		token, err := jwksServer.Token(nil)
-		require.NoError(t, err)
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-		req.Header.Set("Authorization", "Bearer "+token)
-		server.Server.Handler.ServeHTTP(rr, req)
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Equal(t, jwksName, rr.Header().Get(xAuthenticatedByHeader))
-		assert.Equal(t, employeesExpectedData, rr.Body.String())
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with an token should succeed
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
 	})
 }
 
@@ -99,23 +105,42 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 		headerName        = "X-My-Header"
 		headerValuePrefix = "Token"
 	)
-	jwksOpts := &authentication.JWKSAuthenticatorOptions{
+
+	authServer, err := jwks.NewServer()
+	require.NoError(t, err)
+	t.Cleanup(authServer.Close)
+	authOptions := authentication.JWKSAuthenticatorOptions{
+		Name:                jwksName,
+		URL:                 authServer.JWKSURL(),
 		HeaderNames:         []string{headerName},
 		HeaderValuePrefixes: []string{headerValuePrefix},
 	}
-	server, jwksServer := setupServerWithJWKS(t, jwksOpts, false)
-	token, err := jwksServer.Token(nil)
+	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+	require.NoError(t, err)
+	authenticators := []authentication.Authenticator{authenticator}
+
+	token, err := authServer.Token(nil)
 	require.NoError(t, err)
 
 	runTest := func(t *testing.T, headerValue string) {
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-		req.Header.Set(headerName, headerValue)
-		server.Server.Handler.ServeHTTP(rr, req)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Equal(t, jwksName, rr.Header().Get(xAuthenticatedByHeader))
-		assert.Equal(t, employeesExpectedData, rr.Body.String())
+			header := http.Header{
+				headerName: []string{headerValue},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
 	}
 
 	t.Run("with space", func(t *testing.T) {
@@ -129,45 +154,79 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 
 func TestAuthorization(t *testing.T) {
 	t.Parallel()
-	server, jwksServer := setupServerWithJWKS(t, nil, true)
+
+	authServer, err := jwks.NewServer()
+	require.NoError(t, err)
+	t.Cleanup(authServer.Close)
+	authOptions := authentication.JWKSAuthenticatorOptions{
+		Name: jwksName,
+		URL:  authServer.JWKSURL(),
+	}
+	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+	require.NoError(t, err)
+	authenticators := []authentication.Authenticator{authenticator}
+
+	token, err := authServer.Token(nil)
+	require.NoError(t, err)
 
 	t.Run("no token", func(t *testing.T) {
-		t.Parallel()
-		// Operations without token should fail
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-		server.Server.Handler.ServeHTTP(rr, req)
-		assert.Equal(t, http.StatusUnauthorized, rr.Code)
-		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, rr.Body.String())
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations without token should fail
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
-		t.Parallel()
-		// Operations with an invalid token should fail
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-		req.Header.Set("Authorization", "Bearer invalid")
-		server.Server.Handler.ServeHTTP(rr, req)
-
-		assert.Equal(t, http.StatusUnauthorized, rr.Code)
-		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assertHasGraphQLErrors(t, rr)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with an invalid token should fail
+			header := http.Header{
+				"Authorization": []string{"Bearer invalid"},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
 	})
 
 	t.Run("valid token", func(t *testing.T) {
-		t.Parallel()
-		// Operations with an token should succeed
-		token, err := jwksServer.Token(nil)
-		require.NoError(t, err)
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-		req.Header.Set("Authorization", "Bearer "+token)
-		server.Server.Handler.ServeHTTP(rr, req)
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Equal(t, jwksName, rr.Header().Get(xAuthenticatedByHeader))
-		assert.Equal(t, employeesExpectedData, rr.Body.String())
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with an token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
 	})
 }
 
@@ -198,54 +257,79 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
 	accessController := core.NewAccessController(authenticators, false)
-	server := setupServer(t, core.WithAccessController(accessController))
 
 	t.Run("authenticate with first provider", func(t *testing.T) {
-		t.Parallel()
-		for _, prefix := range authenticator1HeaderValuePrefixes {
-			prefix := prefix
-			t.Run("prefix "+prefix, func(t *testing.T) {
-				token, err := authServer1.Token(nil)
-				require.NoError(t, err)
-				rr := httptest.NewRecorder()
-				req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-				req.Header.Add("Authorization", prefix+token)
-				server.Server.Handler.ServeHTTP(rr, req)
-				assert.Equal(t, http.StatusOK, rr.Code)
-				assert.Equal(t, "1", rr.Header().Get(xAuthenticatedByHeader))
-				assert.Equal(t, employeesExpectedData, rr.Body.String())
-			})
-		}
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			for _, prefix := range authenticator1HeaderValuePrefixes {
+				prefix := prefix
+				t.Run("prefix "+prefix, func(t *testing.T) {
+					token, err := authServer1.Token(nil)
+					require.NoError(t, err)
+					header := http.Header{
+						"Authorization": []string{prefix + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, "1", res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.Equal(t, employeesExpectedData, string(data))
+				})
+			}
+		})
 	})
 
 	t.Run("authenticate with second provider", func(t *testing.T) {
-		t.Parallel()
-		for _, prefix := range authenticator2HeaderValuePrefixes {
-			prefix := prefix
-			t.Run("prefix "+prefix, func(t *testing.T) {
-				token, err := authServer2.Token(nil)
-				require.NoError(t, err)
-				rr := httptest.NewRecorder()
-				req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-				req.Header.Add("Authorization", prefix+token)
-				server.Server.Handler.ServeHTTP(rr, req)
-				assert.Equal(t, http.StatusOK, rr.Code)
-				assert.Equal(t, "2", rr.Header().Get(xAuthenticatedByHeader))
-				assert.Equal(t, employeesExpectedData, rr.Body.String())
-			})
-		}
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			for _, prefix := range authenticator2HeaderValuePrefixes {
+				prefix := prefix
+				t.Run("prefix "+prefix, func(t *testing.T) {
+					token, err := authServer2.Token(nil)
+					require.NoError(t, err)
+					header := http.Header{
+						"Authorization": []string{prefix + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, "2", res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.Equal(t, employeesExpectedData, string(data))
+				})
+			}
+		})
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
-		t.Parallel()
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
-		req.Header.Set("Authorization", "Bearer invalid")
-		server.Server.Handler.ServeHTTP(rr, req)
-
-		assert.Equal(t, http.StatusUnauthorized, rr.Code)
-		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assertHasGraphQLErrors(t, rr)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Authorization": []string{"Bearer invalid"},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
 	})
 }
 
@@ -262,23 +346,30 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	authenticator, err := authentication.NewJWKSAuthenticator(jwksOpts)
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator}
-	serverOpts := []core.Option{
-		core.WithAccessController(core.NewAccessController(authenticators, true)),
-	}
-	_, serverPort := setupListeningServer(t, serverOpts...)
 
-	dialer := websocket.Dialer{
-		Subprotocols: []string{"graphql-transport-ws"},
-	}
-	_, _, err = dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), nil)
-	require.Error(t, err)
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{
+			core.WithAccessController(core.NewAccessController(authenticators, true)),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
 
-	token, err := authServer.Token(nil)
-	require.NoError(t, err)
-	headers := http.Header{
-		"Authorization": []string{"Bearer " + token},
-	}
-	_, _, err = dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), headers)
-	require.NoError(t, err)
+		conn, res, err := xEnv.GraphQLWebsocketDialWithRetry(nil)
+		require.Nil(t, conn)
+		require.Error(t, err)
+		require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 
+		token, err := authServer.Token(nil)
+		require.NoError(t, err)
+
+		headers := http.Header{
+			"Authorization": []string{"Bearer " + token},
+		}
+		conn, res, err = xEnv.GraphQLWebsocketDialWithRetry(headers)
+		defer func() {
+			require.NoError(t, conn.Close())
+		}()
+
+		require.NoError(t, err)
+		require.Equal(t, http.StatusSwitchingProtocols, res.StatusCode)
+	})
 }
