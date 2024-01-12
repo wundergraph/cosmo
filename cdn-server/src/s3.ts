@@ -1,4 +1,4 @@
-import { GetObjectCommand, HeadObjectCommand, NoSuchKey, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, HeadObjectCommand, NoSuchKey, NotFound, S3Client } from '@aws-sdk/client-s3';
 import { BlobNotFoundError, BlobStorage } from '@wundergraph/cosmo-cdn';
 import { Context } from 'hono';
 
@@ -60,7 +60,7 @@ class S3BlobStorage implements BlobStorage {
       }
       return true;
     } catch (e: any) {
-      if (e instanceof NoSuchKey) {
+      if (e instanceof NoSuchKey || e instanceof NotFound) {
         throw new BlobNotFoundError(`Object not found: ${e}`);
       }
       throw e;
