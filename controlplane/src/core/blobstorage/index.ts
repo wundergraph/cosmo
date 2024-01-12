@@ -16,7 +16,17 @@ export interface BlobStorage {
    * @param key Key to store the object under
    * @param body Data to store into the object
    */
-  putObject({ key, body, contentType }: { key: string; body: Buffer; contentType: string }): Promise<void>;
+  putObject({
+    key,
+    body,
+    contentType,
+    version,
+  }: {
+    key: string;
+    body: Buffer;
+    contentType: string;
+    version?: string;
+  }): Promise<void>;
   /**
    * Retrieves an object from the blob storage using the given key. If the blob doesn't exist, it throws
    * BlobNotFoundError.

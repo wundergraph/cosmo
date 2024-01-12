@@ -94,7 +94,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 			return nil, errors.New("bad request")
 		}
 
-		if resp.StatusCode == http.StatusNoContent {
+		if resp.StatusCode == http.StatusNotModified {
 			// indicates that the CDN has no updates for us
 			return nil, nil
 		}

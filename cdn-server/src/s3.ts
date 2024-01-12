@@ -1,4 +1,4 @@
-import { GetObjectCommand, NoSuchKey, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, HeadObjectCommand, NoSuchKey, S3Client } from '@aws-sdk/client-s3';
 import { BlobNotFoundError, BlobStorage } from '@wundergraph/cosmo-cdn';
 import { Context } from 'hono';
 
@@ -35,6 +35,34 @@ class S3BlobStorage implements BlobStorage {
     } catch (e: any) {
       if (e instanceof NoSuchKey) {
         throw new BlobNotFoundError(`Failed to retrieve object from S3: ${e}`);
+      }
+      throw e;
+    }
+  }
+
+  async headObject({ key, schemaVersionId }: { key: string; schemaVersionId: string }): Promise<boolean> {
+    const command = new HeadObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+
+    try {
+      const resp = await this.s3Client.send(command);
+      if (resp.$metadata.httpStatusCode === 404) {
+        throw new BlobNotFoundError(`Object not found`);
+      } else if (resp.$metadata.httpStatusCode === 304) {
+        return false;
+      } else if (resp.$metadata.httpStatusCode !== 200) {
+        // TODO
+        throw new Error(`Blob has not been modified`);
+      }
+      if (resp.Metadata && resp.Metadata.version === schemaVersionId) {
+        return false;
+      }
+      return true;
+    } catch (e: any) {
+      if (e instanceof NoSuchKey) {
+        throw new BlobNotFoundError(`Object not found: ${e}`);
       }
       throw e;
     }

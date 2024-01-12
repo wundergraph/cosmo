@@ -1,6 +1,5 @@
 import { JWTVerifyResult, jwtVerify } from 'jose';
 import { Context, Env, Hono, Next, Schema } from 'hono';
-import { streamToJSON } from './utils';
 
 export interface BlobStorage {
   getObject({
@@ -12,6 +11,7 @@ export interface BlobStorage {
     key: string;
     cacheControl?: string;
   }): Promise<ReadableStream>;
+  headObject({ key, schemaVersionId }: { key: string; schemaVersionId: string }): Promise<boolean>;
 }
 
 export class BlobNotFoundError extends Error {
@@ -109,6 +109,26 @@ const routerConfig = (storage: BlobStorage) => {
       return c.text('Bad Request', 400);
     }
     const key = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
+    const body = await c.req.json();
+
+    if (body?.version === undefined || null) {
+      return c.text('Bad Request', 400);
+    }
+
+    let isModified: boolean;
+    try {
+      isModified = await storage.headObject({ key, schemaVersionId: body.version });
+    } catch (e: any) {
+      if (e instanceof Error && e.constructor.name === 'BlobNotFoundError') {
+        return c.notFound();
+      }
+      throw e;
+    }
+
+    if (!isModified) {
+      return c.body(null, 304);
+    }
+
     let configStream: ReadableStream;
     try {
       configStream = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
@@ -119,26 +139,10 @@ const routerConfig = (storage: BlobStorage) => {
       throw e;
     }
 
-    // Because we work with a fixed path of /routerconfigs/latest.json
-    // we need to enforce no-cache headers here.
-    c.header('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
     c.header('Content-Type', 'application/json; charset=UTF-8');
 
-    const teedStream = configStream.tee();
-
-    const routerConfig = await streamToJSON(teedStream[0]);
-    const body = await c.req.json();
-
-    if (body?.version === undefined || null) {
-      return c.text('Bad Request', 400);
-    }
-
-    if (routerConfig?.version && body.version === routerConfig.version) {
-      return c.body(null, 204);
-    }
-
     return c.stream(async (stream) => {
-      await stream.pipe(teedStream[1]);
+      await stream.pipe(configStream);
       await stream.close();
     });
   };

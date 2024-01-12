@@ -98,6 +98,7 @@ export class Composer {
           key: path,
           body: Buffer.from(routerConfig.toJsonString(), 'utf8'),
           contentType: 'application/json; charset=utf-8',
+          version: federatedSchemaVersionId,
         });
       } catch {
         throw new Error(
