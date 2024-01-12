@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { cdn } from '@wundergraph/cosmo-cdn';
+import { compress } from 'hono/compress';
 import { createS3BlobStorage } from './s3';
 
 dotenv.config();
@@ -17,6 +18,7 @@ const app = new Hono();
 if (process.env.NODE_ENV !== 'production') {
   app.use('*', logger());
 }
+app.use('*', compress());
 cdn(app, {
   authJwtSecret: process.env.AUTH_JWT_SECRET!,
   blobStorage,
@@ -33,6 +35,9 @@ app.get('/health', (c) => {
 
 const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 8787;
 const server = serve({ fetch: app.fetch, port });
+
+console.log(`Listening on port ${port}`);
+
 const exit = () => {
   exiting = true;
   server.close();

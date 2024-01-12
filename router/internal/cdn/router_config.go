@@ -2,6 +2,7 @@ package cdn
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -73,6 +74,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
+	req.Header.Set("Accept-Encoding", "gzip")
 
 	resp, err := cdn.httpClient.Do(req)
 	if err != nil {
@@ -102,13 +104,24 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 		return nil, fmt.Errorf("unexpected status code when loading router config, statusCode: %d", resp.StatusCode)
 	}
 
-	data, err := io.ReadAll(resp.Body)
+	var reader io.Reader = resp.Body
+
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		r, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, errors.New("could not create gzip reader. " + err.Error())
+		}
+		defer r.Close()
+		reader = r
+	}
+
+	body, err = io.ReadAll(reader)
 	if err != nil {
 		return nil, errors.New("could not read the response body. " + err.Error())
 	}
 
 	var routerConfig nodev1.RouterConfig
-	err = protojson.Unmarshal(data, &routerConfig)
+	err = protojson.Unmarshal(body, &routerConfig)
 	if err != nil {
 		return nil, errors.New("could not unmarshal router config. " + err.Error())
 	}

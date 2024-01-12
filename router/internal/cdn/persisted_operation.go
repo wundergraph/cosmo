@@ -1,6 +1,7 @@
 package cdn
 
 import (
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -114,6 +115,7 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
+	req.Header.Set("Accept-Encoding", "gzip")
 
 	resp, err := cdn.httpClient.Do(req)
 	if err != nil {
@@ -134,20 +136,30 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 		if resp.StatusCode == http.StatusBadRequest {
 			return nil, errors.New("bad request")
 		}
-		data, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("unexpected status code when loading persisted operation %d: %s", resp.StatusCode, string(data))
+		return nil, fmt.Errorf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode)
 	}
 
-	data, err := io.ReadAll(resp.Body)
+	var reader io.Reader = resp.Body
+
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		r, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, errors.New("could not create gzip reader. " + err.Error())
+		}
+		defer r.Close()
+		reader = r
+	}
+
+	body, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, fmt.Errorf("reading persisted operation body: %w", err)
+		return nil, errors.New("could not read the response body. " + err.Error())
 	}
 
 	var (
 		operationVersion []byte
 		operationBody    []byte
 	)
-	jsonparser.EachKey(data, func(idx int, value []byte, vt jsonparser.ValueType, err error) {
+	jsonparser.EachKey(body, func(idx int, value []byte, vt jsonparser.ValueType, err error) {
 		switch idx {
 		case persistedOperationKeyIndexVersion:
 			operationVersion = value

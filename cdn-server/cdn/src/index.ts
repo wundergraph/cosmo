@@ -1,5 +1,6 @@
 import { JWTVerifyResult, jwtVerify } from 'jose';
 import { Context, Env, Hono, Next, Schema } from 'hono';
+import { stream } from 'hono/streaming';
 
 export interface BlobStorage {
   getObject({
@@ -141,9 +142,8 @@ const routerConfig = (storage: BlobStorage) => {
 
     c.header('Content-Type', 'application/json; charset=UTF-8');
 
-    return c.stream(async (stream) => {
+    return stream(c, async (stream) => {
       await stream.pipe(configStream);
-      await stream.close();
     });
   };
 };
