@@ -53,10 +53,11 @@ export const federatedGraphs = pgTable('federated_graphs', {
     .references(() => targets.id, {
       onDelete: 'cascade',
     }),
-  // This is the latest valid composed schema of the federated graph. Only set for a static composition of subgraphs.
+  // This is the latest composed schema of the federated graph. Only set for a static composition of subgraphs.
   composedSchemaVersionId: uuid('composed_schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',
   }),
+  routerConfigPath: text('router_config_path'),
 });
 
 export const federatedGraphClients = pgTable(

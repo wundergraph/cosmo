@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { DocumentNode, parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
@@ -6,6 +7,7 @@ import { FederatedGraphRepository } from '../repositories/FederatedGraphReposito
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
 
@@ -64,10 +66,22 @@ export class Composer {
    * Build and store the final router config and federated schema to the database. A diff between the
    * previous and current schema is stored as changelog.
    */
-  async deployComposition(composedGraph: ComposedFederatedGraph, composedBy: string) {
+  async deployComposition({
+    composedGraph,
+    composedBy,
+    blobStorage,
+    organizationId,
+  }: {
+    composedGraph: ComposedFederatedGraph;
+    composedBy: string;
+    blobStorage: BlobStorage;
+    organizationId: string;
+  }) {
     const hasCompositionErrors = composedGraph.errors.length > 0;
+    const federatedSchemaVersionId = randomUUID();
 
     let routerConfigJson: JsonValue = null;
+    const path = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
 
     // Build router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
@@ -75,8 +89,22 @@ export class Composer {
         argumentConfigurations: composedGraph.argumentConfigurations,
         subgraphs: composedGraph.subgraphs,
         federatedSDL: composedGraph.composedSchema,
+        schemaVersionId: federatedSchemaVersionId,
       });
       routerConfigJson = routerConfig.toJson();
+
+      try {
+        await blobStorage.putObject({
+          key: path,
+          body: Buffer.from(routerConfig.toJsonString(), 'utf8'),
+          contentType: 'application/json; charset=utf-8',
+          version: federatedSchemaVersionId,
+        });
+      } catch {
+        throw new Error(
+          `Could not upload the latest config of the federated graph ${composedGraph.name}. Please try again.`,
+        );
+      }
     }
 
     const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion(composedGraph.name);
@@ -88,6 +116,9 @@ export class Composer {
       compositionErrors: composedGraph.errors,
       routerConfig: routerConfigJson,
       composedBy,
+      schemaVersionId: federatedSchemaVersionId,
+      // passing the path only when there exists a previous valid version or when the compostion passes.
+      routerConfigPath: prevValidFederatedSDL || (!hasCompositionErrors && composedGraph.composedSchema) ? path : null,
     });
 
     // Only create changelog when the composed schema is valid

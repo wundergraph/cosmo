@@ -94,6 +94,7 @@ export default (opts: BaseCommandOptions) => {
     const routerConfig = buildRouterConfig({
       argumentConfigurations: result.federationResult.argumentConfigurations,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
+      schemaVersionId: '',
       subgraphs: config.subgraphs.map((s, index) => {
         const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;

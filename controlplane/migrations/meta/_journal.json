@@ -526,6 +526,13 @@
       "when": 1704725954995,
       "tag": "0074_sloppy_thunderbolts",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "5",
+      "when": 1704817596666,
+      "tag": "0075_nostalgic_lord_tyger",
+      "breakpoints": true
     }
   ]
 }
