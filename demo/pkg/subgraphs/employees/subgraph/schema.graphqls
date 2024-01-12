@@ -2,7 +2,7 @@ type Query {
   employee(id: Int!): Employee
   employees: [Employee!]!
   products: [Products!]!
-  teammates(team: Department! @deprecated): [Employee!]!
+  teammates(team: Department!): [Employee!]!
 }
 
 type Mutation {
