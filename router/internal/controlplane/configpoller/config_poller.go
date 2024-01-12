@@ -157,7 +157,7 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfi
 		return cfg, nil
 	}
 
-	c.logger.Warn("Fallback fetching initial router configuration from control plane")
+	c.logger.Debug("Fallback fetching initial router configuration from control plane because CDN returned error")
 
 	cfg, err = c.getRouterConfigFromCP(ctx, nil)
 	if err == nil {
