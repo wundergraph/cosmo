@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.53.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.52.4...controlplane@0.53.0) (2024-01-12)
+
+### Features
+
+* provide router config over cdn ([#411](https://github.com/wundergraph/cosmo/issues/411)) ([f04ac84](https://github.com/wundergraph/cosmo/commit/f04ac84d2f6c155409f7db69e7646c04047e32b5)) (@JivusAyrus)
+
 ## [0.52.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.52.3...controlplane@0.52.4) (2024-01-11)
 
 ### Bug Fixes
