@@ -158,7 +158,7 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfi
 		return cfg, nil
 	}
 
-	joinErr := errors.Join(err, fmt.Errorf("could not get router config from CDN: %w", err))
+	joinErr := fmt.Errorf("could not get router config from CDN: %w", err)
 
 	c.logger.Debug("Fallback fetching initial router configuration from control plane because CDN returned error")
 
@@ -167,7 +167,7 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfi
 		return cfg, nil
 	}
 
-	joinErr = errors.Join(err, fmt.Errorf("could not get router config from control plane: %w", err))
+	joinErr = errors.Join(joinErr, fmt.Errorf("could not get router config from control plane: %w", err))
 
 	return nil, joinErr
 }
