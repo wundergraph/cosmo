@@ -3,6 +3,7 @@ package configpoller
 import (
 	"connectrpc.com/connect"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
@@ -157,6 +158,8 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfi
 		return cfg, nil
 	}
 
+	joinErr := fmt.Errorf("could not get router config from CDN: %w", err)
+
 	c.logger.Debug("Fallback fetching initial router configuration from control plane because CDN returned error")
 
 	cfg, err = c.getRouterConfigFromCP(ctx, nil)
@@ -164,11 +167,9 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfi
 		return cfg, nil
 	}
 
-	if err != nil {
-		return nil, err
-	}
+	joinErr = errors.Join(joinErr, fmt.Errorf("could not get router config from control plane: %w", err))
 
-	return cfg, nil
+	return nil, joinErr
 }
 
 // GetRouterConfig returns the latest router config from the CDN first, if not found then it fetches from the controlplane.
