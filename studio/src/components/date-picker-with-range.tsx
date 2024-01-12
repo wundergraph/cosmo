@@ -9,7 +9,7 @@ import useWindowSize from "@/hooks/use-window-size";
 import { formatDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import { addDays, addYears, subHours, subYears } from "date-fns";
+import { addDays, addYears, startOfDay, subHours, subYears } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
 import { Input } from "./ui/input";
 
@@ -158,7 +158,7 @@ export function DatePickerWithRange({
   };
 
   const onRangeClick = (range: Range) => {
-    const start = subHours(new Date(), range);
+    const start = subHours(startOfDay(new Date()), range);
     const end = new Date();
 
     setStartTime(getFormattedTime(start));
