@@ -119,7 +119,7 @@ const routerConfig = (storage: BlobStorage) => {
     try {
       isModified = await storage.headObject({ key, schemaVersionId: body.version });
     } catch (e: any) {
-      if (e instanceof Error && e.constructor.name === 'BlobNotFoundError') {
+      if (e instanceof BlobNotFoundError) {
         return c.notFound();
       }
       throw e;
@@ -133,7 +133,7 @@ const routerConfig = (storage: BlobStorage) => {
     try {
       configStream = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
     } catch (e: any) {
-      if (e instanceof Error && e.constructor.name === 'BlobNotFoundError') {
+      if (e instanceof BlobNotFoundError) {
         return c.notFound();
       }
       throw e;

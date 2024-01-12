@@ -13,7 +13,7 @@ const generateToken = async (organizationId: string, federatedGraphId: string, s
 };
 
 class InMemoryBlobStorage implements BlobStorage {
-  objects: Map<string, Buffer> = new Map();
+  objects: Map<string, { buffer: Buffer; version?: string }> = new Map();
   getObject({
     context,
     key,
@@ -29,11 +29,22 @@ class InMemoryBlobStorage implements BlobStorage {
     }
     const stream = new ReadableStream({
       start(controller) {
-        controller.enqueue(obj);
+        controller.enqueue(obj.buffer);
         controller.close();
       },
     });
     return Promise.resolve(stream);
+  }
+
+  headObject({ key, schemaVersionId }: { key: string; schemaVersionId: string }): Promise<boolean> {
+    const obj = this.objects.get(key);
+    if (!obj) {
+      return Promise.reject(new BlobNotFoundError(`Object with key ${key} not found`));
+    }
+    if (obj.version && obj.version === schemaVersionId) {
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(true);
   }
 }
 
@@ -89,10 +100,9 @@ describe('Test persisted operations handler', async () => {
   const operationHash = 'operationHash';
   const operationContents = JSON.stringify({ version: 1, body: 'query { hello }' });
 
-  blobStorage.objects.set(
-    `${organizationId}/${federatedGraphId}/operations/${clientName}/${operationHash}.json`,
-    Buffer.from(operationContents),
-  );
+  blobStorage.objects.set(`${organizationId}/${federatedGraphId}/operations/${clientName}/${operationHash}.json`, {
+    buffer: Buffer.from(operationContents),
+  });
 
   const app = new Hono();
 
@@ -146,7 +156,10 @@ describe('Test router config handler', async () => {
     subgraphs: [],
   });
 
-  blobStorage.objects.set(`${organizationId}/${federatedGraphId}/routerconfigs/latest.json`, Buffer.from(routerConfig));
+  blobStorage.objects.set(`${organizationId}/${federatedGraphId}/routerconfigs/latest.json`, {
+    buffer: Buffer.from(routerConfig),
+    version: '1',
+  });
 
   const app = new Hono();
 
@@ -197,7 +210,7 @@ describe('Test router config handler', async () => {
     expect(res.status).toBe(404);
   });
 
-  test('it returns a 204 if the version is the same as before', async () => {
+  test('it returns a 304 if the version is the same as before', async () => {
     const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/latest.json`, {
       method: 'POST',
       headers: {
@@ -205,6 +218,6 @@ describe('Test router config handler', async () => {
       },
       body: JSON.stringify({ version: '1' }),
     });
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(304);
   });
 });

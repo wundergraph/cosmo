@@ -53,8 +53,7 @@ class S3BlobStorage implements BlobStorage {
       } else if (resp.$metadata.httpStatusCode === 304) {
         return false;
       } else if (resp.$metadata.httpStatusCode !== 200) {
-        // TODO
-        throw new Error(`Blob has not been modified`);
+        throw new Error(`Failed to fetch the metadata of the object.`);
       }
       if (resp.Metadata && resp.Metadata.version === schemaVersionId) {
         return false;
