@@ -87,6 +87,7 @@ enum Nationality {
 
 type Details {
   forename: String! @shareable
+  middlename: String @deprecated
   surname: String! @shareable
   hasChildren: Boolean!
   maritalStatus: MaritalStatus
