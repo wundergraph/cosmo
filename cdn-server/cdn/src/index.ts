@@ -12,7 +12,15 @@ export interface BlobStorage {
     key: string;
     cacheControl?: string;
   }): Promise<ReadableStream>;
-  headObject({ key, schemaVersionId }: { key: string; schemaVersionId: string }): Promise<boolean>;
+  headObject({
+    context,
+    key,
+    schemaVersionId,
+  }: {
+    context: Context;
+    key: string;
+    schemaVersionId: string;
+  }): Promise<boolean>;
 }
 
 export class BlobNotFoundError extends Error {
@@ -118,7 +126,7 @@ const routerConfig = (storage: BlobStorage) => {
 
     let isModified: boolean;
     try {
-      isModified = await storage.headObject({ key, schemaVersionId: body.version });
+      isModified = await storage.headObject({ context: c, key, schemaVersionId: body.version });
     } catch (e: any) {
       if (e instanceof BlobNotFoundError) {
         return c.notFound();

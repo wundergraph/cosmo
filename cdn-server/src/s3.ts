@@ -40,7 +40,15 @@ class S3BlobStorage implements BlobStorage {
     }
   }
 
-  async headObject({ key, schemaVersionId }: { key: string; schemaVersionId: string }): Promise<boolean> {
+  async headObject({
+    context,
+    key,
+    schemaVersionId,
+  }: {
+    context: Context;
+    key: string;
+    schemaVersionId: string;
+  }): Promise<boolean> {
     const command = new HeadObjectCommand({
       Bucket: this.bucketName,
       Key: key,
