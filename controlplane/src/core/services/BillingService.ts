@@ -277,22 +277,8 @@ export class BillingService {
     }
   };
 
-  cancelSubscription = async (organizationId: string, comment: string) => {
-    const subscription = await this.db.query.billingSubscriptions.findFirst({
-      where: and(
-        eq(billingSubscriptions.organizationId, organizationId),
-        not(eq(billingSubscriptions.status, 'canceled')),
-      ),
-      columns: {
-        id: true,
-      },
-    });
-
-    if (!subscription) {
-      throw new Error(`Could not find an active subscription for organizationId: ${organizationId}`);
-    }
-
-    await this.stripe.subscriptions.cancel(subscription.id, {
+  cancelSubscription = async (organizationId: string, subscriptionId: string, comment: string) => {
+    await this.stripe.subscriptions.cancel(subscriptionId, {
       cancellation_details: {
         comment,
       },
