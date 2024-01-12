@@ -1,5 +1,10 @@
 import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import {
+  DatePickerWithRange,
+  DateRangePickerChangeHandler,
+} from "@/components/date-picker-with-range";
 import {
   CommentCard,
   NewDiscussion,
@@ -59,6 +64,7 @@ import {
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUser } from "@/hooks/use-user";
 import useWindowSize from "@/hooks/use-window-size";
+import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   GraphQLField,
@@ -90,10 +96,12 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   getAllDiscussions,
   getFederatedGraphSDLByName,
+  getFieldUsage,
   getOrganizationMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
 import { useCommandState } from "cmdk";
+import { formatISO } from "date-fns";
 import { GraphQLSchema } from "graphql";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -106,6 +114,7 @@ import {
   useState,
 } from "react";
 import { PiChat } from "react-icons/pi";
+import { Line, LineChart, ResponsiveContainer } from "recharts";
 
 const TypeLink = ({
   name,
@@ -138,7 +147,55 @@ const TypeLink = ({
   );
 };
 
+const FieldUsageColumn = ({
+  fieldName,
+  typename,
+}: {
+  typename: string;
+  fieldName: string;
+}) => {
+  const { range, dateRange } = useAnalyticsQueryState();
+  const graph = useContext(GraphContext);
+
+  const { data: usageData } = useQuery({
+    ...getFieldUsage.useQuery({
+      field: fieldName,
+      typename,
+      graphName: graph?.graph?.name,
+      range: range,
+      dateRange: {
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end),
+      },
+    }),
+    enabled: !!graph?.graph?.name,
+  });
+
+  const { data } = useChartData(range, usageData?.requestSeries ?? []);
+
+  if (!usageData) return null;
+
+  return (
+    <div className="h-8">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <Line
+            type="monotone"
+            dataKey="totalRequests"
+            animationDuration={300}
+            animateNewValues={false}
+            stroke="#0284C7"
+            dot={false}
+            strokeWidth={1.5}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
 const Fields = (props: {
+  typename: string;
   category: GraphQLTypeCategory;
   fields: GraphQLField[];
   ast: GraphQLSchema;
@@ -158,7 +215,7 @@ const Fields = (props: {
     if (props.category === "unions") {
       query.showUsage = fieldName;
     } else {
-      query.showUsage = `${router.query.typename || "Query"}.${fieldName}`;
+      query.showUsage = `${props.typename || "Query"}.${fieldName}`;
     }
 
     router.replace({
@@ -176,8 +233,11 @@ const Fields = (props: {
         <TableRow>
           <TableHead className="w-3/12">Field</TableHead>
           {(hasArgs || hasDetails) && <TableHead>Details</TableHead>}
+          {router.query.category === "deprecated" && (
+            <TableHead className="w-3/12 2xl:w-2/12">Requests</TableHead>
+          )}
           {hasUsage && (
-            <TableHead className="w-2/12 text-right lg:w-3/12 2xl:w-2/12" />
+            <TableHead className="w-2/12 text-right lg:w-3/12 xl:w-2/12" />
           )}
         </TableRow>
       </TableHeader>
@@ -283,6 +343,14 @@ const Fields = (props: {
                 </div>
               </TableCell>
             )}
+            {router.query.category === "deprecated" && (
+              <TableCell>
+                <FieldUsageColumn
+                  fieldName={field.name}
+                  typename={props.typename}
+                />
+              </TableCell>
+            )}
             {hasUsage && (
               <TableCell className="text-right align-top">
                 <Button
@@ -314,7 +382,6 @@ const TypeDiscussions = ({
   endLineNo: number;
 }) => {
   const router = useRouter();
-  const graphName = router.query.slug as string;
   const graphData = useContext(GraphContext);
 
   const [hideResolvedDiscussions] = useLocalStorage(
@@ -512,6 +579,7 @@ const Type = (props: {
       <div className="mt-6">
         {props.fields && (
           <Fields
+            typename={props.name}
             category={props.category}
             fields={props.fields}
             ast={props.ast}
@@ -522,7 +590,6 @@ const Type = (props: {
   );
 
   const showDiscussions =
-    // router.query.category !== "deprecated" &&
     !!props.startLineNo && !!props.endLineNo && !isMobile && !hideDiscussions;
 
   return (
@@ -774,6 +841,30 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
 
   const typeCounts = ast ? getTypeCounts(ast) : undefined;
 
+  const applyParams = useApplyParams();
+  const { range, dateRange } = useAnalyticsQueryState();
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    range,
+    dateRange,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
+
+      applyParams({
+        range: null,
+        dateRange: stringifiedDateRange,
+      });
+    }
+  };
+
   return (
     <SchemaToolbar tab="explorer">
       <div className="hidden md:ml-auto md:block" />
@@ -843,15 +934,23 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
           <SelectGroup>
             <SelectItem value="deprecated">
               <span>Deprecated</span>
-              {typeCounts && (
+              {typeCounts && ast && (
                 <Badge variant="secondary" className="ml-2">
-                  2
+                  {getDeprecatedTypes(ast).length}
                 </Badge>
               )}
             </SelectItem>
           </SelectGroup>
         </SelectContent>
       </Select>
+      {selectedCategory === "deprecated" && (
+        <DatePickerWithRange
+          range={range}
+          dateRange={dateRange}
+          onChange={onDateRangeChange}
+          calendarDaysLimit={90}
+        />
+      )}
       <SchemaSettings />
     </SchemaToolbar>
   );
@@ -984,12 +1083,12 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 href={`/${organizationSlug}/graph/${graphName}/schema?category=deprecated`}
               >
                 <span>Deprecated</span>
-                {typeCounts && (
+                {typeCounts && ast && (
                   <Badge
                     variant="secondary"
                     className="ml-auto bg-accent/50 px-1.5"
                   >
-                    2
+                    {getDeprecatedTypes(ast).length}
                   </Badge>
                 )}
               </Link>
@@ -1038,10 +1137,10 @@ const DeprecatedTypes = ({ ast }: { ast: GraphQLSchema }) => {
   }
 
   return (
-    <div className="flex flex-col divide-y">
+    <div className="flex flex-col gap-y-12 divide-y">
       {types.map((type) => {
         return (
-          <div key={type.name} className="pt-12 first:pt-0">
+          <div key={type.name} className="pt-12 first:pt-2">
             <Type
               name={type.name}
               category={type.category}
