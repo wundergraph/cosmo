@@ -65,7 +65,7 @@ var (
 type OperationParser struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
-	cdn                     *cdn.CDN
+	cdn                     *cdn.PersistentOperationClient
 	parseKitPool            *sync.Pool
 }
 
@@ -83,14 +83,14 @@ type parseKit struct {
 type OperationParserOptions struct {
 	Executor                *Executor
 	MaxOperationSizeInBytes int64
-	CDN                     *cdn.CDN
+	PersistentOpClient      *cdn.PersistentOperationClient
 }
 
 func NewOperationParser(opts OperationParserOptions) *OperationParser {
 	return &OperationParser{
 		executor:                opts.Executor,
 		maxOperationSizeInBytes: opts.MaxOperationSizeInBytes,
-		cdn:                     opts.CDN,
+		cdn:                     opts.PersistentOpClient,
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{

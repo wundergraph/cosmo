@@ -8,6 +8,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
@@ -23,6 +24,7 @@ type ConfigPoller interface {
 	// to execute, the next invocation will be skipped.
 	Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error)
 	// GetRouterConfig returns the latest router config from the controlplane
+	// If the Config is nil, no new config is available and the current config should be used.
 	// and updates the latest router config version. This method is only used for the initial config
 	GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error)
 	// Stop stops the config poller. After calling stop, the config poller cannot be used again.
@@ -38,6 +40,7 @@ type configPoller struct {
 	latestRouterConfigVersion string
 	poller                    controlplane.Poller
 	pollInterval              time.Duration
+	cdnConfigClient           *cdn.RouterConfigClient
 }
 
 func New(graphName, endpoint, token string, opts ...Option) ConfigPoller {
@@ -90,17 +93,14 @@ func (c *configPoller) Stop(_ context.Context) error {
 func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersions string) error) {
 
 	c.poller.Subscribe(ctx, func() {
-		cfg, err := c.getRouterConfigFromCP(ctx, &c.latestRouterConfigVersion)
-		if err != nil {
-			return
-		}
-		if cfg == nil {
-			c.logger.Debug("No new router config available, received nil router config, trying again in 10 seconds")
+		cfg, err := c.getRouterConfig(ctx)
+		// both being nil indicates that no new router config available
+		if cfg == nil && err == nil {
+			c.logger.Sugar().Debugf("No new router config available. Trying again in %s", c.pollInterval.String())
 			return
 		}
 
 		newVersion := cfg.GetVersion()
-
 		latestVersion := c.latestRouterConfigVersion
 
 		// If the version hasn't changed, don't invoke the handler
@@ -151,23 +151,34 @@ func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *strin
 	return resp.Msg.GetConfig(), nil
 }
 
-// GetRouterConfig returns the latest router config from the controlplane. Not safe for concurrent use.
-func (c *configPoller) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
+func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
+	cfg, err := c.cdnConfigClient.RouterConfig(ctx, c.latestRouterConfigVersion)
+	if err == nil {
+		return cfg, nil
+	}
 
-	c.logger.Info("Fetching initial router configuration from control plane")
+	c.logger.Warn("Fallback fetching initial router configuration from control plane")
 
-	cfg, err := c.getRouterConfigFromCP(ctx, nil)
+	cfg, err = c.getRouterConfigFromCP(ctx, nil)
+	if err == nil {
+		return cfg, nil
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	if cfg == nil {
-		return nil, fmt.Errorf("received nil router config from control plane")
-	}
-
-	c.latestRouterConfigVersion = cfg.GetVersion()
-
 	return cfg, nil
+}
+
+// GetRouterConfig returns the latest router config from the CDN first, if not found then it fetches from the controlplane.
+// Not safe for concurrent use.
+func (c *configPoller) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
+	cfg, err := c.getRouterConfig(ctx)
+	if err == nil {
+		c.latestRouterConfigVersion = cfg.GetVersion()
+	}
+	return cfg, err
 }
 
 func WithLogger(logger *zap.Logger) Option {
@@ -179,5 +190,11 @@ func WithLogger(logger *zap.Logger) Option {
 func WithPollInterval(interval time.Duration) Option {
 	return func(s *configPoller) {
 		s.pollInterval = interval
+	}
+}
+
+func WithCDNClient(cdnConfigClient *cdn.RouterConfigClient) Option {
+	return func(s *configPoller) {
+		s.cdnConfigClient = cdnConfigClient
 	}
 }

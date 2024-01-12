@@ -136,13 +136,13 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
       const storageKeys = blobStorage.keys();
-      expect(storageKeys.length).toBe(1);
-      const keyComponents = storageKeys[0].split('/');
+      expect(storageKeys.length).toBe(2);
+      const keyComponents = storageKeys[1].split('/');
       const keyFilename = keyComponents.at(-1)!;
       const keyBasename = keyFilename.split('.')[0];
       expect(keyBasename).toBe(id);
 
-      const stream = await blobStorage.getObject(storageKeys[0]);
+      const stream = await blobStorage.getObject(storageKeys[1]);
       const text = await new Response(stream).text();
       expect(JSON.parse(text)).toEqual({ version: 1, body: query });
       await server.close();
@@ -163,7 +163,7 @@ describe('Persisted operations', (ctx) => {
 
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
-      expect(blobStorage.keys().length).toBe(1);
+      expect(blobStorage.keys().length).toBe(2);
 
       const deleteFederatedGraphResp = await client.deleteFederatedGraph({
         name: fedGraphName,

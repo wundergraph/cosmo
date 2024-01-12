@@ -17,11 +17,27 @@ export class S3BlobStorage implements BlobStorage {
     private bucketName: string,
   ) {}
 
-  async putObject(key: string, body: Buffer): Promise<void> {
+  async putObject({
+    key,
+    body,
+    contentType,
+    version,
+  }: {
+    key: string;
+    body: Buffer;
+    contentType: string;
+    version?: string;
+  }): Promise<void> {
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,
       Body: body,
+      ContentType: contentType,
+      Metadata: version
+        ? {
+            version,
+          }
+        : undefined,
     });
     const resp = await this.s3Client.send(command);
     if (resp.$metadata.httpStatusCode !== 200) {
