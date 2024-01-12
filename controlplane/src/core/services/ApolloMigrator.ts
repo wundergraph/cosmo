@@ -240,6 +240,11 @@ export default class ApolloMigrator {
         await subgraphRepo.addSchemaVersion(subgraph.name, subgraph.schema);
       }
 
+      await fedGraphRepo.createGraphCryptoKeyPairs({
+        federatedGraphId: federatedGraph.id,
+        organizationId: organizationID,
+      });
+
       return federatedGraph;
     });
   }
