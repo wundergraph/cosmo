@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.4.1](https://github.com/wundergraph/cosmo/compare/cdn@0.4.0...cdn@0.4.1) (2024-01-12)
+
+### Bug Fixes
+
+* pass context for r2 ([#416](https://github.com/wundergraph/cosmo/issues/416)) ([b34b2db](https://github.com/wundergraph/cosmo/commit/b34b2dbac8d9bd57b5b8bb9405a20055fc22f856)) (@JivusAyrus)
+
 # [0.4.0](https://github.com/wundergraph/cosmo/compare/cdn@0.3.2...cdn@0.4.0) (2024-01-12)
 
 ### Bug Fixes
