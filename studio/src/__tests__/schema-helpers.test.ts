@@ -44,7 +44,7 @@ test("returns correct type counts", async () => {
 
   expect(ast).not.toBeNull();
 
-  const counts = await getTypeCounts(ast!);
+  const counts = getTypeCounts(ast!);
 
   expect(counts["query"]).toEqual(2);
   expect(counts["objects"]).toEqual(1);
