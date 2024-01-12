@@ -2398,7 +2398,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const billingRepo = new BillingRepository(tx);
           const billingService = new BillingService(tx, billingRepo);
 
-          await billingService.cancelSubscription(authContext.organizationId, 'Deleted by api');
+          const subscription = await billingRepo.getActiveSubscriptionOfOrganization(authContext.organizationId);
+          if (subscription) {
+            await billingService.cancelSubscription(authContext.organizationId, subscription.id, 'Deleted by api');
+          }
           await orgRepo.deleteOrganization(authContext.organizationId);
 
           return {

@@ -1,6 +1,6 @@
 import { and, asc, eq, not } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
-import { billingPlans } from '../../db/schema.js';
+import { billingPlans, billingSubscriptions } from '../../db/schema.js';
 
 import { BillingPlanDTO } from '../../types/index.js';
 
@@ -45,5 +45,19 @@ export class BillingRepository {
     return this.db.query.billingPlans.findFirst({
       where: and(eq(billingPlans.stripePriceId, priceId), not(eq(billingPlans.active, false))),
     });
+  }
+
+  public async getActiveSubscriptionOfOrganization(organizationId: string) {
+    const subscription = await this.db.query.billingSubscriptions.findFirst({
+      where: and(
+        eq(billingSubscriptions.organizationId, organizationId),
+        not(eq(billingSubscriptions.status, 'canceled')),
+      ),
+      columns: {
+        id: true,
+      },
+    });
+
+    return subscription;
   }
 }
