@@ -6,6 +6,7 @@ package subgraph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/model"
@@ -14,7 +15,12 @@ import (
 // UpdateMood is the resolver for the updateMood field.
 func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood model.Mood) (*model.Employee, error) {
 	storage.Set(employeeID, mood)
-	pubsub.Publish("employeeUpdated", employeeID)
+	topic := fmt.Sprintf("employeeUpdated.%d", employeeID)
+	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
+	err := r.NC.Publish(topic, []byte(payload))
+	if err != nil {
+		return nil, err
+	}
 	return &model.Employee{ID: employeeID, CurrentMood: mood}, nil
 }
 
