@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.52.0](https://github.com/wundergraph/cosmo/compare/router@0.51.0...router@0.52.0) (2024-01-12)
+
+### Bug Fixes
+
+* **cdn:** return 404 when config does not exist ([#415](https://github.com/wundergraph/cosmo/issues/415)) ([63af53b](https://github.com/wundergraph/cosmo/commit/63af53b58ea9f3f77ffaf59847ba62d48e9a03fc)) (@StarpTech)
+
+### Features
+
+* provide router config over cdn ([#411](https://github.com/wundergraph/cosmo/issues/411)) ([f04ac84](https://github.com/wundergraph/cosmo/commit/f04ac84d2f6c155409f7db69e7646c04047e32b5)) (@JivusAyrus)
+
 # [0.51.0](https://github.com/wundergraph/cosmo/compare/router@0.50.0...router@0.51.0) (2024-01-11)
 
 ### Features

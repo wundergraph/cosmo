@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.3.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.2.1...@wundergraph/cosmo-cdn@0.3.0) (2024-01-12)
+
+### Features
+
+* provide router config over cdn ([#411](https://github.com/wundergraph/cosmo/issues/411)) ([f04ac84](https://github.com/wundergraph/cosmo/commit/f04ac84d2f6c155409f7db69e7646c04047e32b5)) (@JivusAyrus)
+
 ## [0.2.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.2.0...@wundergraph/cosmo-cdn@0.2.1) (2023-11-27)
 
 ### Bug Fixes
