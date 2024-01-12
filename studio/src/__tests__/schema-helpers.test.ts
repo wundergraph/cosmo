@@ -1,4 +1,8 @@
-import { getDeprecatedTypes, parseSchema } from "../lib/schema-helpers";
+import {
+  getDeprecatedTypes,
+  getTypeCounts,
+  parseSchema,
+} from "../lib/schema-helpers";
 import { expect, test } from "vitest";
 
 const schema = `
@@ -33,4 +37,16 @@ test("return the correct types with deprecated fields or args", async () => {
   expect(deprecated[0].fields?.[0]?.name).toEqual("teammates");
   expect(deprecated[1].fields?.length).toEqual(1);
   expect(deprecated[1].fields?.[0]?.name).toEqual("fullName");
+});
+
+test("returns correct type counts", async () => {
+  const ast = await parseSchema(schema);
+
+  expect(ast).not.toBeNull();
+
+  const counts = await getTypeCounts(ast!);
+
+  expect(counts["query"]).toEqual(2);
+  expect(counts["objects"]).toEqual(1);
+  expect(counts["enums"]).toEqual(1);
 });
