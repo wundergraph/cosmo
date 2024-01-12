@@ -34,12 +34,14 @@ export const graphqlRootCategories = [
 
 export type GraphQLTypeCategory =
   | (typeof graphqlRootCategories)[number]
-  | (typeof graphqlTypeCategories)[number];
+  | (typeof graphqlTypeCategories)[number]
+  | "deprecated";
 
 export type GraphQLField = {
   name: string;
   description?: string;
   deprecationReason?: string;
+  defaultValue?: any;
   type?: string;
   args?: Array<{
     name: string;
@@ -363,4 +365,108 @@ export const getGraphQLTypeAtLineNumber = (
   }
 
   return null;
+};
+
+export const getDeprecatedTypes = (
+  astSchema: GraphQLSchema,
+): GraphQLTypeDefinition[] => {
+  const deprecatedTypes: GraphQLTypeDefinition[] = [];
+
+  const checkType = (type: any) => {
+    const common = {
+      name: type.name,
+      description: type.description || "",
+      loc: type.astNode?.loc,
+    };
+
+    const deprecatedFields: GraphQLField[] = [];
+
+    let category: GraphQLTypeCategory | null = null;
+
+    if (
+      type instanceof GraphQLObjectType ||
+      type instanceof GraphQLInterfaceType
+    ) {
+      const fields = Object.values(type.getFields());
+
+      for (const field of fields) {
+        if (
+          field.deprecationReason ||
+          field.args.some((arg) => arg.deprecationReason)
+        ) {
+          deprecatedFields.push({
+            name: field.name,
+            description: field.description || "",
+            deprecationReason: field.deprecationReason || "",
+            type: field.type.toString(),
+            args: field.args.map((arg) => ({
+              name: arg.name,
+              description: arg.description || "",
+              defaultValue: arg.defaultValue,
+              type: arg.type.toString(),
+              deprecationReason: arg.deprecationReason || "",
+              loc: arg.astNode?.loc,
+            })),
+            loc: field.astNode?.loc,
+          });
+        }
+      }
+
+      category = type instanceof GraphQLObjectType ? "objects" : "interfaces";
+    }
+
+    if (type instanceof GraphQLInputObjectType) {
+      const fields = Object.values(type.getFields());
+
+      for (const field of fields) {
+        if (field.deprecationReason) {
+          deprecatedFields.push({
+            name: field.name,
+            description: field.description || "",
+            deprecationReason: field.deprecationReason || "",
+            defaultValue: field.defaultValue,
+            type: field.type.toString(),
+            loc: field.astNode?.loc,
+          });
+        }
+      }
+
+      category = "inputs";
+    }
+
+    if (type instanceof GraphQLEnumType) {
+      const values = type.getValues();
+
+      for (const value of values) {
+        if (value.deprecationReason) {
+          deprecatedFields.push({
+            name: value.name,
+            description: value.description || "",
+            deprecationReason: value.deprecationReason || "",
+            loc: value.astNode?.loc,
+          });
+        }
+      }
+
+      category = "enums";
+    }
+
+    if (deprecatedFields.length > 0 && category) {
+      deprecatedTypes.push({
+        ...common,
+        category,
+        fields: deprecatedFields,
+      });
+    }
+  };
+
+  const allTypes = Object.values(astSchema.getTypeMap()).filter(
+    (type) => !type.name.startsWith("__"),
+  );
+
+  for (const type of allTypes) {
+    checkType(type);
+  }
+
+  return deprecatedTypes;
 };
