@@ -158,7 +158,10 @@ export function DatePickerWithRange({
   };
 
   const onRangeClick = (range: Range) => {
-    const start = subHours(startOfDay(new Date()), range);
+    const start = subHours(
+      range >= 24 ? startOfDay(new Date()) : new Date(),
+      range,
+    );
     const end = new Date();
 
     setStartTime(getFormattedTime(start));
