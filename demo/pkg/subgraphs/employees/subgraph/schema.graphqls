@@ -43,7 +43,7 @@ type Engineer implements RoleType {
   title: [String!]!
 }
 
-type Marketer implements RoleType{
+type Marketer implements RoleType {
   departments: [Department!]!
   title: [String!]!
 }
