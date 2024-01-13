@@ -42,6 +42,14 @@ type Tracing struct {
 	Enabled      bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
 	SamplingRate float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
 	Exporters    []TracingExporter `yaml:"exporters"`
+	Propagation  PropagationConfig `yaml:"propagation"`
+}
+
+type PropagationConfig struct {
+	TraceContext bool `yaml:"trace_context" default:"true"`
+	Jaeger       bool `yaml:"jaeger"`
+	B3           bool `yaml:"b3"`
+	Baggage      bool `yaml:"baggage"`
 }
 
 type Prometheus struct {

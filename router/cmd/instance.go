@@ -162,12 +162,29 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 			HTTPPath:      exp.HTTPPath,
 		})
 	}
+
+	var propagators []trace.Propagator
+
+	if cfg.Tracing.Propagation.TraceContext {
+		propagators = append(propagators, trace.PropagatorTraceContext)
+	}
+	if cfg.Tracing.Propagation.B3 {
+		propagators = append(propagators, trace.PropagatorB3)
+	}
+	if cfg.Tracing.Propagation.Jaeger {
+		propagators = append(propagators, trace.PropagatorJaeger)
+	}
+	if cfg.Tracing.Propagation.Baggage {
+		propagators = append(propagators, trace.PropagatorBaggage)
+	}
+
 	return &trace.Config{
-		Enabled:   cfg.Tracing.Enabled,
-		Name:      cfg.ServiceName,
-		Version:   core.Version,
-		Sampler:   cfg.Tracing.SamplingRate,
-		Exporters: exporters,
+		Enabled:     cfg.Tracing.Enabled,
+		Name:        cfg.ServiceName,
+		Version:     core.Version,
+		Sampler:     cfg.Tracing.SamplingRate,
+		Exporters:   exporters,
+		Propagators: propagators,
 	}
 }
 

@@ -123,6 +123,15 @@ func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdktra
 		sdktrace.WithResource(r),
 	}
 
+	if len(c.Propagators) > 0 {
+		propagators, err := NewCompositePropagator(c.Propagators...)
+		if err != nil {
+			log.Error("creating propagators", zap.Error(err))
+			return nil, err
+		}
+		otel.SetTextMapPropagator(propagators)
+	}
+
 	if c.Enabled {
 		for _, exp := range c.Exporters {
 			if exp.Disabled {

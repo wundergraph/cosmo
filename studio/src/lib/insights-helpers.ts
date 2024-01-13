@@ -149,7 +149,7 @@ const bigintE3 = BigInt(1e3);
 const bigintE6 = BigInt(1e6);
 
 export const msToTime = (ms: number = 0) => {
-  if (ms > 1000) return ms / 1000 + " s";
+  if (ms > 1000) return (ms / 1000).toFixed(2) + " s";
 
   return ms.toFixed(2) + " ms";
 };
