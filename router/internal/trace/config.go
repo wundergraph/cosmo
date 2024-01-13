@@ -10,6 +10,15 @@ import (
 // ServerName Default resource name.
 const ServerName = "cosmo-router"
 
+type Propagator string
+
+const (
+	PropagatorTraceContext Propagator = "tracecontext"
+	PropagatorB3           Propagator = "b3"
+	PropagatorJaeger       Propagator = "jaeger"
+	PropagatorBaggage      Propagator = "baggage"
+)
+
 type Exporter struct {
 	Disabled bool
 	Endpoint string
@@ -35,8 +44,9 @@ type Config struct {
 	// Version represents the service version for tracing. The default value is dev.
 	Version string
 	// Sampler represents the sampler for tracing. The default value is 1.
-	Sampler   float64
-	Exporters []*Exporter
+	Sampler     float64
+	Exporters   []*Exporter
+	Propagators []Propagator
 }
 
 func GetDefaultExporter(cfg *Config) *Exporter {

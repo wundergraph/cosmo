@@ -4,3 +4,13 @@
 # Please keep this file empty if you don't want to override the defaults.
 
 version: "1"
+
+cors:
+  allow_headers:
+    - baggage
+
+telemetry:
+  tracing:
+    propagation:
+      trace_context: true
+      baggage: true
