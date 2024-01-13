@@ -219,13 +219,23 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.preOriginHandlers = append(r.preOriginHandlers, r.headerRuleEngine.OnOriginRequest)
 
 	defaultHeaders := []string{
+		// Common headers
+		"authorization",
+		"origin",
+		"content-length",
+		"content-type",
+		// Semi standard client info headers
 		"graphql-client-name",
 		"graphql-client-version",
+		// Apollo client info headers
 		"apollographql-client-name",
 		"apollographql-client-version",
+		// Required for WunderGraph ART
 		"x-wg-trace",
 		"x-wg-token",
-		"authorization",
+		// Required for Trace Context propagation
+		"traceparent",
+		"tracestate",
 	}
 
 	defaultMethods := []string{
@@ -651,9 +661,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					otel.WgRouterVersion.String(Version),
 				),
 			),
-			// Disable built-in metricStore
+			// Disable built-in metricStore through NoopMeterProvider
 			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+			otelhttp.WithTracerProvider(r.tracerProvider),
 		)
 	}
 	requestLogger := requestlogger.New(

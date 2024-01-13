@@ -33,6 +33,8 @@ require (
 	github.com/tidwall/sjson v1.2.5
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240110181439-71bf34cedd29
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
+	go.opentelemetry.io/contrib/propagators/b3 v1.21.1
+	go.opentelemetry.io/contrib/propagators/jaeger v1.21.1
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.44.0
