@@ -31,12 +31,6 @@ jobs:
         with:
           cache-dependency-path: router/go.sum
 
-      - uses: winterjung/split@v2
-        id: split
-        with:
-          separator: "@"
-          msg: "${{ github.event.release.tag_name }}"
-
       - uses: wangyoucao577/go-release-action@v1
         name: Build and attach binaries to GitHub Release
         with:
@@ -47,7 +41,7 @@ jobs:
           project_path: "router/cmd/router"
           binary_name: "router"
           build_flags: -trimpath
-          ldflags: -extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=${{ steps.split.outputs._1 }}
+          ldflags: -extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=0.53.0
           overwrite: true
           extra_files: LICENSE
           release_tag: router@0.53.0
