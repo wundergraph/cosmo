@@ -40,6 +40,7 @@ jobs:
           # Where to run `go build .`
           project_path: "router/cmd/router"
           binary_name: "router"
+          pre_command: export CGO_ENABLED=1
           build_flags: -trimpath
           ldflags: -extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=0.53.0
           overwrite: true
