@@ -411,7 +411,7 @@ func (h *WebsocketHandler) runPoller() {
 		case <-done:
 			return
 		default:
-			connections, err := h.epoll.Wait(8)
+			connections, err := h.epoll.Wait(128)
 			if err != nil {
 				h.logger.Warn("Epoll wait", zap.Error(err))
 				continue
