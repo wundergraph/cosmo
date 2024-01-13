@@ -1,6 +1,8 @@
 name: Build and Release Router Binaries
 on:
-  workflow_dispatch:
+  release:
+    types: [published]
+  #workflow_dispatch:
 
 permissions:
   contents: write
@@ -8,6 +10,7 @@ permissions:
 
 jobs:
   releases-matrix:
+    if: startsWith(github.event.release.tag_name, 'router@')
     name: Build and Release Router Binaries
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -31,6 +34,12 @@ jobs:
         with:
           cache-dependency-path: router/go.sum
 
+      - uses: winterjung/split@v2
+        id: split
+        with:
+          separator: "@"
+          msg: "${{ github.event.release.tag_name }}"
+
       - uses: wangyoucao577/go-release-action@v1
         name: Build and attach binaries to GitHub Release
         with:
@@ -40,9 +49,9 @@ jobs:
           # Where to run `go build .`
           project_path: "router/cmd/router"
           binary_name: "router"
-          pre_command: export CGO_ENABLED=1
+          pre_command: export CGO_ENABLED=0
           build_flags: -trimpath
-          ldflags: -extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=0.53.0
+          ldflags: -extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=${{ steps.split.outputs._1 }}
           overwrite: true
           extra_files: LICENSE
-          release_tag: router@0.53.0
+          #release_tag: router@0.14.0
