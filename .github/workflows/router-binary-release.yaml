@@ -1,7 +1,5 @@
 name: Build and Release Router Binaries
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +8,6 @@ permissions:
 
 jobs:
   releases-matrix:
-    if: startsWith(github.event.release.tag_name, 'router@')
     name: Build and Release Router Binaries
     runs-on: ubuntu-latest
     timeout-minutes: 30
