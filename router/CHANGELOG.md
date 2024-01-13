@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.53.0](https://github.com/wundergraph/cosmo/compare/router@0.52.1...router@0.53.0) (2024-01-13)
+
+### Features
+
+* support custom trace propagation ([#420](https://github.com/wundergraph/cosmo/issues/420)) ([5a0a25e](https://github.com/wundergraph/cosmo/commit/5a0a25e2dd46761459bfa080aa6495a1a82e8549)) (@StarpTech)
+
 ## [0.52.1](https://github.com/wundergraph/cosmo/compare/router@0.52.0...router@0.52.1) (2024-01-12)
 
 **Note:** Version bump only for package router
