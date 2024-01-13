@@ -2,7 +2,7 @@ name: Build and Release Router Binaries
 on:
   release:
     types: [published]
-  #workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -49,9 +49,8 @@ jobs:
           # Where to run `go build .`
           project_path: "router/cmd/router"
           binary_name: "router"
-          pre_command: export CGO_ENABLED=0
           build_flags: -trimpath
           ldflags: -extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=${{ steps.split.outputs._1 }}
           overwrite: true
           extra_files: LICENSE
-          #release_tag: router@0.14.0
+          release_tag: router@0.53.0
