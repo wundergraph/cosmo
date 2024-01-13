@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/epoller"
 	"net"
 	"net/http"
 	"sync"
@@ -18,7 +19,6 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/gorilla/websocket"
-	"github.com/smallnest/epoller"
 	"github.com/tidwall/gjson"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
@@ -67,7 +67,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			pond.MinWorkers(8),
 		)
 		if opts.EnableWebSocketEpollKqueue {
-			poller, err := epoller.NewPoller()
+			poller, err := epoller.NewPoller(128)
 			if err == nil {
 				handler.epoll = poller
 				handler.connections = make(map[int]*WebSocketConnectionHandler)
@@ -301,6 +301,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only when epoll is available. On Windows, epoll is not available
 	if h.epoll != nil {
 		err = h.addConnection(c, handler)
 		if err != nil {
@@ -410,7 +411,7 @@ func (h *WebsocketHandler) runPoller() {
 		case <-done:
 			return
 		default:
-			connections, err := h.epoll.WaitWithBuffer()
+			connections, err := h.epoll.Wait(8)
 			if err != nil {
 				h.logger.Warn("Epoll wait", zap.Error(err))
 				continue
