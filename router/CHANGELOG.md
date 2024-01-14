@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.53.1](https://github.com/wundergraph/cosmo/compare/router@0.53.0...router@0.53.1) (2024-01-14)
+
+### Bug Fixes
+
+* disable epoll for windows to avoid CGO ([#421](https://github.com/wundergraph/cosmo/issues/421)) ([8bdadc6](https://github.com/wundergraph/cosmo/commit/8bdadc67188623e90d1e6a659f906119332dec3f)) (@StarpTech)
+
 # [0.53.0](https://github.com/wundergraph/cosmo/compare/router@0.52.1...router@0.53.0) (2024-01-13)
 
 ### Features
