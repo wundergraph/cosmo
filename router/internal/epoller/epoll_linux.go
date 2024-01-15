@@ -44,7 +44,7 @@ func newPollerWithBuffer(count int, pollTimeout time.Duration) (*Epoll, error) {
 		lock:           &sync.RWMutex{},
 		conns:          make(map[int]net.Conn),
 		connbuf:        make([]net.Conn, count),
-		timeoutMsec:    pollTimeout.Milliseconds(),
+		timeoutMsec:    int(pollTimeout.Milliseconds()),
 	}, nil
 }
 
