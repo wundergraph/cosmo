@@ -305,6 +305,7 @@ export type AuthContext = {
   hasWriteAccess: boolean;
   isAdmin: boolean;
   userId: string;
+  userDisplayName: string;
 };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {

@@ -95,13 +95,16 @@ export function createTestAuthenticator(): {
   const userId = randomUUID();
   const organizationId = randomUUID();
 
-  const userAuthContext: UserTestData = {
+  const userAuthContext: UserTestData & AuthContext = {
     userId,
     organizationId,
     organizationName: 'wundergraph',
     email: userId + '@wg.com',
     apiKey: nuid.next(),
     organizationSlug: `slug-${organizationId}`,
+    hasWriteAccess: true,
+    isAdmin: true,
+    userDisplayName: userId,
   };
 
   return {
@@ -113,7 +116,7 @@ export function createTestAuthenticator(): {
         });
       },
       authenticate(headers: Headers): Promise<AuthContext> {
-        return Promise.resolve({ ...userAuthContext, isAdmin: true, hasWriteAccess: true });
+        return Promise.resolve(userAuthContext);
       },
     },
 

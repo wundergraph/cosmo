@@ -98,6 +98,8 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
+  GetAuditLogsResponse,
+  AuditLog,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -159,6 +161,7 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -182,6 +185,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         );
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -243,6 +247,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await fedGraphRepo.createGraphCryptoKeyPairs({
           federatedGraphId: federatedGraph.id,
           organizationId: authContext.organizationId,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'federated_graph.created',
+          action: 'created',
+          actorId: authContext.userId,
+          auditableType: 'federated_graph',
+          auditableDisplayName: federatedGraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
         });
 
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
@@ -324,6 +339,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -367,6 +383,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               },
             };
           }
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'subgraph.created',
+            action: 'created',
+            actorId: authContext.userId,
+            auditableType: 'subgraph',
+            auditableDisplayName: subgraph.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: 'user',
+          });
         }
 
         return {
@@ -953,6 +980,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -995,6 +1023,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         await fedGraphRepo.delete(federatedGraph.targetId, subgraphsTargetIDs);
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'federated_graph.created',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableType: 'federated_graph',
+          auditableDisplayName: federatedGraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
 
         return {
           response: {
@@ -1061,12 +1100,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
           const compositionRepo = new GraphCompositionRepository(tx);
           const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+          const auditLogRepo = new AuditLogRepository(tx);
 
           // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
           const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
 
           // Delete the subgraph
           await subgraphRepo.delete(subgraph.targetId);
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'subgraph.deleted',
+            action: 'deleted',
+            actorId: authContext.userId,
+            auditableType: 'subgraph',
+            auditableDisplayName: subgraph.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: 'user',
+          });
 
           // Collect all federated graphs that use this subgraph after deleting the subgraph
           const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
@@ -1145,6 +1196,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
           authContext.organizationId,
@@ -1213,6 +1265,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }));
         }
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'federated_graph.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'federated_graph',
+          auditableDisplayName: federatedGraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
+
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
           federated_graph: {
             id: federatedGraph.id,
@@ -1253,6 +1316,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
           authContext.organizationId,
@@ -1327,6 +1391,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           opts.blobStorage,
         );
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'subgraph.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'subgraph',
+          auditableDisplayName: subgraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
 
         for (const graph of updatedFederatedGraphs) {
           orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -1466,6 +1541,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateFederatedGraphTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1519,6 +1595,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
         });
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'graph_token.created',
+          action: 'created',
+          actorId: authContext.userId,
+          targetId: graph.id,
+          targetDisplayName: graph.name,
+          targetType: 'federated_graph',
+          auditableType: 'graph_token',
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+          auditableDisplayName: token.name,
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -1539,6 +1629,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1621,6 +1712,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               }
             }
 
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'organization_invitation.created',
+              action: 'created',
+              actorId: authContext.userId,
+              auditableDisplayName: req.email,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: 'user',
+            });
+
             return {
               response: {
                 code: EnumStatusCode.OK,
@@ -1678,6 +1779,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           inviterUserId: authContext.userId,
         });
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'organization_invitation.created',
+          action: 'created',
+          actorId: authContext.userId,
+          auditableDisplayName: req.email,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -1696,6 +1807,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const apiKeyRepo = new ApiKeyRepository(opts.db);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1743,6 +1855,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           expiresAt: req.expires,
           targetIds: [...req.federatedGraphTargetIds, ...req.subgraphTargetIds],
         });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'api_key.created',
+          action: 'created',
+          actorId: authContext.userId,
+          auditableType: 'api_key',
+          auditableDisplayName: keyName,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -1762,6 +1886,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const apiKeyRepo = new ApiKeyRepository(opts.db);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1801,6 +1926,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationID: authContext.organizationId,
         });
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'api_key.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableType: 'api_key',
+          auditableDisplayName: apiKey.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -1818,6 +1954,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
         const userRepo = new UserRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -1936,8 +2073,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const userMemberships = await orgRepo.memberships({ userId: user.id });
 
-        // delete the user only when user doesnt have any memberships
-        // this will happen only when the user was invited but the user didnt login and the admin removed that user,
+        // delete the user only when user doesn't have any memberships
+        // this will happen only when the user was invited but the user didn't login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0) {
           // deleting the user from keycloak
@@ -1948,6 +2085,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // deleting the user from the db
           await userRepo.deleteUser({ id: user.id });
         }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'organization_member.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableDisplayName: req.email,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
 
         return {
           response: {
@@ -1968,6 +2115,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2031,6 +2179,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // deleting the user from the db
           await userRepo.deleteUser({ id: user.id });
         }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'organization_invitation.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableDisplayName: org.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
 
         return {
           response: {
@@ -2233,6 +2391,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2246,6 +2405,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await orgRepo.createWebhookConfig({
           organizationId: authContext.organizationId,
           ...req,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'webhook_config.created',
+          action: 'created',
+          actorId: authContext.userId,
+          auditableType: 'webhook_config',
+          auditableDisplayName: req.endpoint,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
         });
 
         return {
@@ -2265,6 +2435,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2278,6 +2449,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await orgRepo.updateWebhookConfig({
           organizationId: authContext.organizationId,
           ...req,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'webhook_config.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'webhook_config',
+          auditableDisplayName: req.endpoint,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
         });
 
         return {
@@ -2457,7 +2639,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // checking if the user is an single admin
+        // checking if the user is a single admin
         if (orgMember.roles.includes('admin')) {
           const orgAdmins = await orgRepo.getOrganizationAdmins({ organizationID: authContext.organizationId });
           if (orgAdmins.length === 1) {
@@ -2513,6 +2695,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateOrganizationDetailsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -2606,6 +2789,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           slug: req.organizationSlug,
         });
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'organization_details.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'organization',
+          auditableDisplayName: org.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -2624,6 +2818,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const oidcRepo = new OidcRepository(opts.db);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -2774,6 +2969,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             role: 'admin',
             previousRole: highPriorityRole,
           });
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'member_role.updated',
+            action: 'updated',
+            actorId: authContext.userId,
+            auditableDisplayName: 'admin',
+            actorDisplayName: authContext.userDisplayName,
+            targetId: orgMember.userID,
+            targetDisplayName: orgMember.email,
+            actorType: 'user',
+          });
         } else {
           await opts.keycloakClient.client.users.addToGroup({
             id: users[0].id!,
@@ -2787,11 +2994,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             groupId: adminChildGroup.id!,
           });
 
+          const role = 'developer';
+
           await orgRepo.updateUserRole({
             organizationID: authContext.organizationId,
             orgMemberID: orgMember.orgMemberID,
-            role: 'developer',
+            role,
             previousRole: 'admin',
+          });
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'member_role.updated',
+            action: 'updated',
+            actorId: authContext.userId,
+            auditableDisplayName: role,
+            actorDisplayName: authContext.userDisplayName,
+            targetId: orgMember.userID,
+            targetDisplayName: orgMember.email,
+            actorType: 'user',
           });
         }
 
@@ -2812,6 +3033,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteRouterTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2854,6 +3076,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           tokenName: req.tokenName,
         });
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'graph_token.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          targetId: federatedGraph.id,
+          targetDisplayName: federatedGraph.name,
+          targetType: 'federated_graph',
+          auditableType: 'graph_token',
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+          auditableDisplayName: currToken.name,
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -2871,6 +3107,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2930,6 +3167,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           type: req.type,
         });
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'integration.created',
+          action: 'created',
+          actorId: authContext.userId,
+          auditableType: 'integration',
+          auditableDisplayName: req.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -2947,6 +3195,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2957,9 +3206,30 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const integration = await orgRepo.getIntegration(req.id, authContext.organizationId);
+        if (!integration) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Integration with id ${req.id} not found`,
+            },
+          };
+        }
+
         await orgRepo.updateIntegrationConfig({
           organizationId: authContext.organizationId,
           ...req,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'integration.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'integration',
+          auditableDisplayName: integration.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
         });
 
         return {
@@ -2979,6 +3249,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2989,9 +3260,30 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const integration = await orgRepo.getIntegration(req.id, authContext.organizationId);
+        if (!integration) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Integration with id ${req.id} not found`,
+            },
+          };
+        }
+
         await orgRepo.deleteIntegration({
           organizationId: authContext.organizationId,
           id: req.id,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'integration.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableType: 'integration',
+          auditableDisplayName: integration.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
         });
 
         return {
@@ -3295,6 +3587,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
         const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         const user = await userRepo.byId(authContext.userId);
         if (!user) {
@@ -3355,8 +3648,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
 
           await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'organization_invitation.accepted',
+            action: 'declined',
+            actorId: authContext.userId,
+            auditableDisplayName: organization.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: 'user',
+          });
         } else {
           await orgInvitationRepo.removeInvite({ organizationId: req.organizationId, userId: user.id });
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'organization_invitation.declined',
+            action: 'deleted',
+            actorId: authContext.userId,
+            auditableDisplayName: organization.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: 'user',
+          });
         }
 
         return {
@@ -3411,6 +3724,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         // check if the user to be added exists and if the user is the member of the org
         const user = await userRepo.byEmail(req.userEmail);
@@ -3457,6 +3771,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await subgraphRepo.addSubgraphMember({ subgraphId: subgraph.id, userId: user.id });
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'subgraph_member.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableType: 'subgraph',
+          auditableDisplayName: user.email,
+          actorDisplayName: authContext.userDisplayName,
+          targetDisplayName: subgraph.name,
+          targetId: subgraph.id,
+          targetType: 'subgraph',
+          actorType: 'user',
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -3474,6 +3802,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<RemoveSubgraphMemberResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         // check if the subgraph exists
         const subgraph = await subgraphRepo.byName(req.subgraphName);
@@ -3499,6 +3828,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         await subgraphRepo.removeSubgraphMember({ subgraphId: subgraph.id, subgraphMemberId: req.subgraphMemberId });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'subgraph_member.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableType: 'subgraph',
+          auditableDisplayName: subgraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          targetDisplayName: subgraph.name,
+          targetId: subgraph.id,
+          targetType: 'subgraph',
+          actorType: 'user',
+        });
 
         return {
           response: {
@@ -3803,6 +4146,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         const federatedGraph = await fedRepo.byName(req.name);
 
@@ -3866,6 +4210,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             federatedGraphId: federatedGraph.id,
             tokenName: federatedGraph.name,
             organizationId: authContext.organizationId,
+          });
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'graph_token.created',
+            action: 'created',
+            actorId: authContext.userId,
+            targetId: federatedGraph.id,
+            targetType: 'federated_graph',
+            targetDisplayName: federatedGraph.name,
+            auditableType: 'graph_token',
+            actorDisplayName: authContext.userDisplayName,
+            actorType: 'user',
+            auditableDisplayName: graphToken.name,
           });
         } else {
           graphToken = tokens[0];
@@ -5371,6 +5729,52 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    getAuditLogs: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetAuditLogsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
+        if (!authContext.isAdmin) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            logs: [],
+          };
+        }
+
+        const auditLogs = await auditLogRepo.getAuditLogs({
+          organizationId: authContext.organizationId,
+          limit: req.limit,
+          offset: req.offset,
+        });
+
+        const logs: PlainMessage<AuditLog>[] = auditLogs.map((log) => ({
+          actorDisplayName: log.actorDisplayName ?? '',
+          auditAction: log.auditAction,
+          createdAt: log.createdAt.toISOString(),
+          auditableDisplayName: log.auditableDisplayName ?? '',
+          targetType: log.targetType ?? '',
+          action: log.action,
+          targetDisplayName: log.targetDisplayName ?? '',
+          id: log.id,
+        }));
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          logs,
+        };
+      });
+    },
+
     createOrganization: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -5416,11 +5820,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             const orgRepo = new OrganizationRepository(tx, opts.billingDefaultPlanId);
             const billingRepo = new BillingRepository(tx);
             const billingService = new BillingService(tx, billingRepo);
+            const auditLogRepo = new AuditLogRepository(tx);
 
             const organization = await orgRepo.createOrganization({
               organizationName: req.name,
               organizationSlug: req.slug,
               ownerID: authContext.userId,
+            });
+
+            await auditLogRepo.addAuditLog({
+              organizationId: organization.id,
+              auditAction: 'organization.created',
+              action: 'created',
+              actorId: authContext.userId,
+              targetId: organization.id,
+              targetType: 'organization',
+              targetDisplayName: organization.name,
+              auditableType: 'organization',
+              actorDisplayName: authContext.userDisplayName,
+              actorType: 'user',
+              auditableDisplayName: organization.name,
             });
 
             const orgMember = await orgRepo.addOrganizationMember({

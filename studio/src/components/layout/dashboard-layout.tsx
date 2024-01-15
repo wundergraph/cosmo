@@ -4,7 +4,14 @@ import {
   EnvelopeClosedIcon,
 } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   PiBell,
   PiChartDonut,
@@ -18,10 +25,12 @@ import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { SideNav, NavLink } from "./sidenav";
 import { TitleLayout } from "./title-layout";
-import { cn } from "@/lib/utils";
+import { checkUserAccess, cn } from "@/lib/utils";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useQuery } from "@tanstack/react-query";
 import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { AiOutlineAudit } from "react-icons/ai";
+import { UserContext } from "@/components/app-provider";
 
 export const StarBanner = ({
   setDisableStarBanner,
@@ -64,6 +73,7 @@ export const StarBanner = ({
 
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
+  const user = useContext(UserContext);
   const organizationSlug = router.query.organizationSlug as string;
   const [disableStarBanner, setDisableStarBanner] = useLocalStorage(
     "disableStarBanner",
@@ -76,6 +86,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     gcTime: Infinity,
   });
 
+  const isAdmin = checkUserAccess({
+    rolesToBe: ["admin"],
+    userRoles: user?.currentOrganization.roles || [],
+  });
+
   useEffect(() => {
     if (!disableStarBanner) return;
     setRender(disableStarBanner);
@@ -84,15 +99,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const links = useMemo(() => {
     const basePath = `/${organizationSlug}`;
 
-    const billing = plans.data?.plans?.length
-      ? {
-          title: "Billing",
-          href: basePath + "/billing",
-          icon: <PiReceipt className="h-4 w-4" />,
-        }
-      : undefined;
-
-    return [
+    const navigation: Partial<NavLink>[] = [
       {
         title: "Federated Graphs",
         href: basePath + "/graphs",
@@ -124,7 +131,25 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: basePath + "/usages",
         icon: <PiChartDonut className="h-4 w-4" />,
       },
-      billing,
+    ];
+
+    if (plans.data?.plans?.length) {
+      navigation.push({
+        title: "Billing",
+        href: basePath + "/billing",
+        icon: <PiReceipt className="h-4 w-4" />,
+      });
+    }
+
+    if (isAdmin) {
+      navigation.push({
+        title: "Audit log",
+        href: basePath + "/audit-log",
+        icon: <AiOutlineAudit className="h-4 w-4" />,
+      });
+    }
+
+    navigation.push(
       {
         title: "Settings",
         href: basePath + "/settings",
@@ -139,7 +164,9 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: "/account/invitations",
         icon: <EnvelopeClosedIcon className="h-4 w-4" />,
       },
-    ].filter(Boolean) as Partial<NavLink>[];
+    );
+
+    return navigation;
   }, [organizationSlug, plans.data]);
 
   return (

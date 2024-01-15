@@ -92,6 +92,7 @@ export class Authentication implements Authenticator {
         organizationSlug: organization.slug,
         hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }),
         isAdmin: userRoles.includes('admin'),
+        userDisplayName: user.userDisplayName,
       };
 
       this.#cache.set(cacheKey, userContext);

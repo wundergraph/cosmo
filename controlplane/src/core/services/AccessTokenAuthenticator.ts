@@ -6,6 +6,7 @@ import { checkUserAccess } from '../util.js';
 
 export type AccessTokenAuthContext = {
   userId: string;
+  userDisplayName: string;
   organizationId: string;
   organizationSlug: string;
   hasWriteAccess: boolean;
@@ -50,6 +51,7 @@ export default class AccessTokenAuthenticator {
       organizationId: organization.id,
       organizationSlug: organization.slug,
       userId: userInfoData.sub,
+      userDisplayName: userInfoData.email,
       hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }),
       isAdmin: userRoles.includes('admin'),
     };

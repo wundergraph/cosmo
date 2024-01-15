@@ -709,6 +709,7 @@ export const organizationsMembers = pgTable(
 export const organizationRelations = relations(organizations, ({ many }) => ({
   members: many(organizationsMembers),
   graphApiTokens: many(graphApiTokens),
+  auditLogs: many(auditLogs),
 }));
 
 export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer'] as const);
@@ -941,6 +942,74 @@ export const oidcProviders = pgTable('oidc_providers', {
   name: text('name').notNull(),
   alias: text('alias').notNull().unique(),
   endpoint: text('endpoint').notNull(),
+});
+
+export const auditableType = pgEnum('auditable_type', [
+  'organization',
+  'subgraph',
+  'federated_graph',
+  'graph_token',
+  'api_key',
+  'webhook_config',
+  'integration',
+] as const);
+export const auditTargetType = pgEnum('audit_target_type', ['organization', 'subgraph', 'federated_graph'] as const);
+export const auditActorType = pgEnum('audit_actor_type', ['user', 'system', 'api_key'] as const);
+export const auditAction = pgEnum('audit_action', ['created', 'updated', 'deleted', 'accepted', 'declined'] as const);
+export const auditFullAction = pgEnum('audit_full_action', [
+  'organization.created',
+  'organization.updated',
+  'graph_token.created',
+  'graph_token.deleted',
+  'federated_graph.created',
+  'federated_graph.deleted',
+  'federated_graph.updated',
+  'subgraph.created',
+  'subgraph.deleted',
+  'subgraph.updated',
+  'subgraph_member.created',
+  'subgraph_member.deleted',
+  'webhook_config.created',
+  'webhook_config.deleted',
+  'webhook_config.updated',
+  'organization_details.updated',
+  'integration.created',
+  'integration.deleted',
+  'integration.updated',
+  'api_key.created',
+  'api_key.deleted',
+  'organization_invitation.created',
+  'organization_invitation.accepted',
+  'organization_invitation.declined',
+  'organization_invitation.deleted',
+  'organization_member.deleted',
+  'member_role.updated',
+] as const);
+
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+
+  // Information about the action
+  action: auditAction('action').notNull(), // e.g. created
+  auditAction: auditFullAction('audit_action').notNull(), // e.g. organization.created
+  auditableType: auditableType('auditable_type'), // e.g. organization, the resource that was acted upon
+  auditableDisplayName: text('auditable_display_name'), // e.g. name of the resource e.g. organization name to display in UI
+
+  // Information about the target of the action
+  targetId: uuid('target_id'), // e.g. id of the organization when a federated graph is created
+  targetType: auditTargetType('target_type'), // the type of the target e.g. organization
+  targetDisplayName: text('target_display_name'), // human-readable name of the target e.g. organization name
+
+  actorId: uuid('actor_id'), // e.g. id of the user
+  actorDisplayName: text('actor_display_name'), // human-readable name of the actor e.g. user name, email
+  actorType: auditActorType('actor_type'), // user, system, api_key
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const graphCompositions = pgTable('graph_compositions', {
