@@ -799,6 +799,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistentOpClient:      r.cdnPersistentOpClient,
 	})
+	// Pre-hash all data source IDs to avoid races
+	for i := range executor.PlanConfig.DataSources {
+		executor.PlanConfig.DataSources[i].Hash()
+		// Pre-init the Planner for each data source
+		executor.PlanConfig.DataSources[i].Factory.Planner(ctx)
+	}
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler func(http.Handler) http.Handler

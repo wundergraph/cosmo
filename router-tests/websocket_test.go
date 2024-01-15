@@ -142,7 +142,6 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("subscription with library", func(t *testing.T) {
-		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				CurrentTime struct {
@@ -157,7 +156,6 @@ func TestWebSockets(t *testing.T) {
 			for _, p := range protocols {
 				p := p
 				t.Run(string(p), func(t *testing.T) {
-					t.Parallel()
 					client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).WithProtocol(p)
 					t.Cleanup(func() {
 						err := client.Close()
@@ -405,7 +403,7 @@ func TestWebSockets(t *testing.T) {
 
 				var msg testenv.WebSocketMessage
 				for {
-					err = conn.ReadJSON(&msg)
+					err := conn.ReadJSON(&msg)
 					if err != nil {
 						return
 					}
@@ -466,7 +464,7 @@ func TestWebSockets(t *testing.T) {
 
 			go func() {
 				time.Sleep(time.Millisecond * 100)
-				err = xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 				time.Sleep(time.Millisecond * 100)
 				err = xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
