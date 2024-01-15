@@ -750,7 +750,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		metricStore = m
 	}
 
-	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
+	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion(), r.logger)
 
 	transport := newHTTPTransport(r.subgraphTransportOptions)
 
@@ -843,13 +843,15 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 		Parser:                     operationParser,
 		Planner:                    operationPlanner,
-		Metrics:                    routerMetrics,
 		GraphQLHandler:             graphqlHandler,
+		Metrics:                    routerMetrics,
 		AccessController:           r.accessController,
 		Logger:                     r.logger,
 		Stats:                      r.WebsocketStats,
-		EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
 		ReadTimeout:                r.engineExecutionConfiguration.WebSocketReadTimeout,
+		EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
+		EpollKqueuePollTimeout:     r.engineExecutionConfiguration.EpollKqueuePollTimeout,
+		EpollKqueueConnBufferSize:  r.engineExecutionConfiguration.EpollKqueueConnBufferSize,
 	})
 
 	graphqlChiRouter := chi.NewRouter()

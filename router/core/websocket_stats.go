@@ -2,14 +2,15 @@ package core
 
 import (
 	"context"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
 	"sync"
 	"time"
+
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 )
 
 type WebSocketsStatistics interface {
-	Subscribe() chan *UsageReport
+	Subscribe(ctx context.Context) chan *UsageReport
 	GetReport() *UsageReport
 	SubscriptionUpdateSent()
 	ConnectionsInc()
@@ -28,7 +29,7 @@ type WebSocketStats struct {
 	subscriptions atomic.Uint64
 	messagesSent  atomic.Uint64
 	update        chan struct{}
-	subscribers   []chan *UsageReport
+	subscribers   map[context.Context]chan *UsageReport
 }
 
 type UsageReport struct {
@@ -39,29 +40,32 @@ type UsageReport struct {
 
 func NewWebSocketStats(ctx context.Context, logger *zap.Logger) *WebSocketStats {
 	stats := &WebSocketStats{
-		ctx:    ctx,
-		logger: logger,
-		update: make(chan struct{}),
-		mu:     sync.Mutex{},
+		ctx:         ctx,
+		logger:      logger,
+		update:      make(chan struct{}),
+		mu:          sync.Mutex{},
+		subscribers: map[context.Context]chan *UsageReport{},
 	}
 	go stats.run(ctx)
 	return stats
 }
 
-func (s *WebSocketStats) Subscribe() chan *UsageReport {
+func (s *WebSocketStats) Subscribe(ctx context.Context) chan *UsageReport {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.subscribers = append(s.subscribers, make(chan *UsageReport))
-	return s.subscribers[len(s.subscribers)-1]
+	sub := make(chan *UsageReport)
+	s.subscribers[ctx] = sub
+	return sub
 }
 
 func (s *WebSocketStats) GetReport() *UsageReport {
-	return &UsageReport{
+	report := &UsageReport{
 		Connections:   s.connections.Load(),
 		Subscriptions: s.subscriptions.Load(),
 		MessagesSent:  s.messagesSent.Load(),
 	}
+	return report
 }
 
 func (s *WebSocketStats) run(ctx context.Context) {
@@ -75,12 +79,14 @@ func (s *WebSocketStats) run(ctx context.Context) {
 			s.reportConnections()
 		case <-s.update:
 			s.mu.Lock()
-			for _, subscriber := range s.subscribers {
+			for ctx, subscriber := range s.subscribers {
 				// non-blocking send
 				select {
 				case subscriber <- s.GetReport():
-				default:
-					s.logger.Error("WebSocketStats subscriber event queue full, dropping event")
+				case <-ctx.Done():
+					delete(s.subscribers, ctx)
+				case <-s.ctx.Done():
+					continue
 				}
 			}
 			s.mu.Unlock()
@@ -142,7 +148,7 @@ func NewNoopWebSocketStats() *NoopWebSocketStats {
 	return &NoopWebSocketStats{}
 }
 
-func (s *NoopWebSocketStats) Subscribe() chan *UsageReport {
+func (s *NoopWebSocketStats) Subscribe(_ context.Context) chan *UsageReport {
 	return nil
 }
 
