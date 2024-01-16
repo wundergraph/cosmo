@@ -19,7 +19,7 @@ const AuditLogPage: NextPageWithLayout = () => {
     return <Empty unauthorized={true} />;
   }
 
-  if (!data?.logs) return <Empty unauthorized={false} />;
+  if (!data?.logs.length) return <Empty unauthorized={false} />;
 
   return (
     <div className="flex flex-col gap-y-4 pt-2">
