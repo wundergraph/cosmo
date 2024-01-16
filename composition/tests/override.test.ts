@@ -358,7 +358,7 @@ const subgraphA1: Subgraph = {
   name: 'subgraph-a1',
   url: '',
   definitions: parse(`
-    type Query {
+    type Query @shareable {
       query: Entity!
     }
 
@@ -374,7 +374,7 @@ const subgraphA2: Subgraph = {
   name: 'subgraph-a2',
   url: '',
   definitions: parse(`
-    type Query {
+    type Query @shareable {
       query: Entity!
     }
     
