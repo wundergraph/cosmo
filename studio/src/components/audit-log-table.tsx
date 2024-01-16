@@ -69,16 +69,16 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
             targetDisplayName,
             targetType,
           }) => {
-            let a = null;
-            let s = null;
+            let preParagraph = null;
+            let postParagraph = null;
 
             if (auditAction === "organization_invitation.created") {
-              s = "for";
+              postParagraph = "for";
             } else if (auditAction === "member_role.updated") {
-              a = "role for";
-              s = "to";
+              preParagraph = "role for";
+              postParagraph = "to";
             } else if (auditableDisplayName) {
-              a = "in";
+              preParagraph = "in";
             }
 
             let label = null;
@@ -86,9 +86,9 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
             if (targetDisplayName) {
               label = (
                 <>
-                  {a && (
+                  {preParagraph && (
                     <span className="text-gray-500 dark:text-gray-400">
-                      {a}
+                      {preParagraph}
                     </span>
                   )}
 
@@ -112,9 +112,9 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
                 {label}
                 {auditableDisplayName && (
                   <>
-                    {s && (
+                    {postParagraph && (
                       <span className="text-gray-500 dark:text-gray-400">
-                        {s}
+                        {postParagraph}
                       </span>
                     )}
                     <span className="inline-block max-w-md truncate text-primary">
