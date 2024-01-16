@@ -194,7 +194,7 @@ export const SubgraphPageLayout = ({
   );
 
   return (
-    <div className="flex flex-col lg:h-screen">
+    <div className="flex h-[calc(100vh_-_104px)] flex-col lg:h-screen">
       <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">
         <div
           className={cn(

@@ -55,6 +55,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import {
   Tooltip,
@@ -92,6 +93,7 @@ import {
   PlusIcon,
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getAllDiscussions,
@@ -111,6 +113,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { PiChat } from "react-icons/pi";
@@ -227,146 +230,204 @@ const Fields = (props: {
     });
   };
 
-  return (
-    <Table className="min-w-[1150px] lg:min-w-full">
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-3/12">Field</TableHead>
-          {(hasArgs || hasDetails) && <TableHead>Details</TableHead>}
-          {router.query.category === "deprecated" && (
-            <TableHead className="w-3/12 2xl:w-2/12">Requests</TableHead>
-          )}
-          {hasUsage && (
-            <TableHead className="w-2/12 text-right lg:w-3/12 xl:w-2/12" />
-          )}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {props.fields.map((field) => (
-          <TableRow
-            className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
-            key={field.name}
-          >
-            <TableCell className="align-top font-semibold">
-              <p className="my-2 flex flex-wrap items-center gap-x-1">
-                {props.category !== "unions" ? (
-                  <button
-                    disabled={!hasUsage}
-                    onClick={() => openUsage(field.name)}
-                    className={cn(hasUsage && "hover:underline")}
-                  >
-                    {field.name}
-                  </button>
-                ) : (
-                  <TypeLink ast={props.ast} name={field.name} />
-                )}
-                {field.type && (
-                  <TypeLink ast={props.ast} name={`: ${field.type}`} />
-                )}
-              </p>
-            </TableCell>
-            {(hasDetails || hasArgs) && (
-              <TableCell>
-                <div
-                  className={cn("flex flex-col", {
-                    "gap-y-4":
-                      hasDetails && field.args && field.args.length > 0,
-                  })}
-                >
-                  {(!field.args || field.args?.length === 0) && !hasDetails && (
-                    <span>-</span>
-                  )}
-                  {hasDetails && (
-                    <div className="flex flex-col gap-y-4">
-                      {field.description && (
-                        <p className="text-muted-foreground group-hover:text-current">
-                          {field.description}
-                        </p>
-                      )}
-                      {field.deprecationReason && (
-                        <p className="flex flex-col items-start gap-x-1">
-                          <span className="flex items-center gap-x-1 font-semibold">
-                            <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                            Deprecated
-                          </span>{" "}
-                          {field.deprecationReason}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {field.args && (
-                    <div className="flex flex-col gap-y-2">
-                      {field.args.map((arg) => {
-                        return (
-                          <div
-                            key={arg.name}
-                            className="flex flex-wrap items-center gap-x-1"
-                          >
-                            <Tooltip
-                              delayDuration={200}
-                              open={
-                                !arg.description && !arg.deprecationReason
-                                  ? false
-                                  : undefined
-                              }
-                            >
-                              <TooltipTrigger>
-                                <Badge variant="secondary">
-                                  {arg.deprecationReason && (
-                                    <ExclamationTriangleIcon className="mr-1 h-3 w-3 flex-shrink-0" />
-                                  )}
-                                  {arg.name}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="flex w-96 flex-col gap-y-4">
-                                  {arg.description && <p>{arg.description}</p>}
-                                  {arg.deprecationReason && (
-                                    <p className="flex flex-col items-start gap-x-1">
-                                      <span className="flex items-center gap-x-1 font-semibold">
-                                        <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                                        Deprecated
-                                      </span>{" "}
-                                      {arg.deprecationReason}
-                                    </p>
-                                  )}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
+  const parentRef = useRef<HTMLTableElement>(null);
+  const count = props.fields.length;
+  const virtualizer = useVirtualizer({
+    count,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 300,
+    measureElement:
+      typeof window !== "undefined" &&
+      navigator.userAgent.indexOf("Firefox") === -1
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+    overscan: 5,
+  });
+  const items = virtualizer.getVirtualItems();
 
-                            <TypeLink ast={props.ast} name={`: ${arg.type}`} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </TableCell>
+  return (
+    <TableWrapper ref={parentRef} className="max-h-full">
+      <Table className="min-w-[1150px] lg:min-w-full">
+        <TableHeader className="sticky top-0 z-10 bg-background">
+          <TableRow>
+            <TableHead
+              className={cn(
+                "w-3/12",
+                router.query.category !== "deprecated" && "w-4/12",
+              )}
+            >
+              Field
+            </TableHead>
+            {(hasArgs || hasDetails) && (
+              <TableHead
+                className={cn(
+                  "w-5/2",
+                  router.query.category !== "deprecated" && "w-6/12",
+                )}
+              >
+                Details
+              </TableHead>
             )}
             {router.query.category === "deprecated" && (
-              <TableCell>
-                <FieldUsageColumn
-                  fieldName={field.name}
-                  typename={props.typename}
-                />
-              </TableCell>
+              <TableHead className="w-2/12">Requests</TableHead>
             )}
-            {hasUsage && (
-              <TableCell className="text-right align-top">
-                <Button
-                  onClick={() => openUsage(field.name)}
-                  variant="ghost"
-                  size="sm"
-                  className="table-action"
-                >
-                  View usage
-                </Button>
-              </TableCell>
-            )}
+            {hasUsage && <TableHead className="w-2/12" />}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody
+          className="relative"
+          style={{
+            height: `${virtualizer.getTotalSize() + 1}px`,
+          }}
+        >
+          {items.map((virtualRow) => {
+            const field = props.fields[virtualRow.index];
+            return (
+              <TableRow
+                className="group absolute flex w-full py-1 even:bg-secondary/20 hover:bg-secondary/40"
+                key={virtualRow.index}
+                data-index={virtualRow.index}
+                ref={(node) => virtualizer.measureElement(node)}
+                style={{
+                  transform: `translateY(${virtualRow.start}px)`, // Should be in style prop
+                }}
+              >
+                <TableCell
+                  className={cn(
+                    "my-1.5 w-3/12 flex-shrink-0 align-top font-semibold",
+                    router.query.category !== "deprecated" && "w-4/12",
+                  )}
+                >
+                  <p className="flex flex-wrap items-center gap-x-1 truncate">
+                    {props.category !== "unions" ? (
+                      <button
+                        disabled={!hasUsage}
+                        onClick={() => openUsage(field.name)}
+                        className={cn(hasUsage && "hover:underline")}
+                      >
+                        {field.name}
+                      </button>
+                    ) : (
+                      <TypeLink ast={props.ast} name={field.name} />
+                    )}
+                    {field.type && (
+                      <TypeLink ast={props.ast} name={`: ${field.type}`} />
+                    )}
+                  </p>
+                </TableCell>
+                {(hasDetails || hasArgs) && (
+                  <TableCell
+                    className={cn(
+                      "my-1.5 w-5/12",
+                      router.query.category !== "deprecated" && "w-6/12",
+                    )}
+                  >
+                    <div
+                      className={cn("flex flex-col", {
+                        "gap-y-4":
+                          hasDetails && field.args && field.args.length > 0,
+                      })}
+                    >
+                      {(!field.args || field.args?.length === 0) &&
+                        !hasDetails && <span>-</span>}
+                      {hasDetails && (
+                        <div className="flex flex-col gap-y-4">
+                          {field.description && (
+                            <p className="text-muted-foreground group-hover:text-current">
+                              {field.description}
+                            </p>
+                          )}
+                          {field.deprecationReason && (
+                            <p className="flex flex-col items-start gap-x-1">
+                              <span className="flex items-center gap-x-1 font-semibold">
+                                <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
+                                Deprecated
+                              </span>{" "}
+                              {field.deprecationReason}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {field.args && (
+                        <div className="flex flex-col gap-y-2">
+                          {field.args.map((arg) => {
+                            return (
+                              <div
+                                key={arg.name}
+                                className="flex flex-wrap items-center gap-x-1"
+                              >
+                                <Tooltip
+                                  delayDuration={200}
+                                  open={
+                                    !arg.description && !arg.deprecationReason
+                                      ? false
+                                      : undefined
+                                  }
+                                >
+                                  <TooltipTrigger>
+                                    <Badge variant="secondary">
+                                      {arg.deprecationReason && (
+                                        <ExclamationTriangleIcon className="mr-1 h-3 w-3 flex-shrink-0" />
+                                      )}
+                                      {arg.name}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="flex w-96 flex-col gap-y-4">
+                                      {arg.description && (
+                                        <p>{arg.description}</p>
+                                      )}
+                                      {arg.deprecationReason && (
+                                        <p className="flex flex-col items-start gap-x-1">
+                                          <span className="flex items-center gap-x-1 font-semibold">
+                                            <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
+                                            Deprecated
+                                          </span>{" "}
+                                          {arg.deprecationReason}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <TypeLink
+                                  ast={props.ast}
+                                  name={`: ${arg.type}`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                )}
+                {router.query.category === "deprecated" && (
+                  <TableCell className="w-2/12 flex-shrink-0">
+                    <FieldUsageColumn
+                      fieldName={field.name}
+                      typename={props.typename}
+                    />
+                  </TableCell>
+                )}
+                {hasUsage && (
+                  <TableCell className="w-2/12 flex-shrink-0 text-right align-top">
+                    <Button
+                      onClick={() => openUsage(field.name)}
+                      variant="ghost"
+                      size="sm"
+                      className="table-action"
+                    >
+                      View usage
+                    </Button>
+                  </TableCell>
+                )}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableWrapper>
   );
 };
 
@@ -532,8 +593,16 @@ const Type = (props: {
 
   const { isMobile } = useWindowSize();
 
+  const showDiscussions =
+    !!props.startLineNo && !!props.endLineNo && !isMobile && !hideDiscussions;
+
   const typeContent = (
-    <div className="scrollbar-custom flex h-full flex-col overflow-auto">
+    <div
+      className={cn(
+        "flex h-full flex-col",
+        showDiscussions && "scrollbar-custom overflow-auto",
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col">
           <div className="flex items-center gap-x-4">
@@ -576,7 +645,7 @@ const Type = (props: {
           </p>
         </div>
       </div>
-      <div className="mt-6">
+      <div className="mt-6 h-4/5 flex-1">
         {props.fields && (
           <Fields
             typename={props.name}
@@ -589,8 +658,9 @@ const Type = (props: {
     </div>
   );
 
-  const showDiscussions =
-    !!props.startLineNo && !!props.endLineNo && !isMobile && !hideDiscussions;
+  if (!showDiscussions) {
+    return typeContent;
+  }
 
   return (
     <ResizablePanelGroup direction="horizontal" className="flex max-w-full">
@@ -630,10 +700,24 @@ const TypeWrapper = ({
 
   const category = router.query.category as GraphQLTypeCategory;
   const typename = router.query.typename as string;
+  const list = getTypesByCategory(ast, category);
+
+  const parentRef = useRef<HTMLTableElement>(null);
+  const count = list.length;
+  const virtualizer = useVirtualizer({
+    count,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60,
+    measureElement:
+      typeof window !== "undefined" &&
+      navigator.userAgent.indexOf("Firefox") === -1
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+    overscan: 5,
+  });
+  const items = virtualizer.getVirtualItems();
 
   if (category && !typename) {
-    const list = getTypesByCategory(ast, category);
-
     const openUsage = (type: string) => {
       router.replace({
         pathname: router.pathname,
@@ -656,49 +740,63 @@ const TypeWrapper = ({
     }
 
     return (
-      <div className="mt-2 flex flex-col">
+      <div className="mt-2 flex h-[90%] flex-col">
         <h3 className="text-lg font-semibold tracking-tight">
           {sentenceCase(category)}
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
           {getCategoryDescription(category)}
         </p>
-        <div className="mt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead className="w-8/12 lg:w-7/12 2xl:w-8/12">
-                  Description
-                </TableHead>
-                <TableHead className="w-2/12 text-right lg:w-3/12 2xl:w-2/12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {list.map((l) => (
-                <TableRow
-                  key={l.name}
-                  className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
-                >
-                  <TableCell>
-                    <TypeLink ast={ast} name={l.name} />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground group-hover:text-current">
-                    {l.description || "-"}
-                  </TableCell>
-                  <TableCell className="text-right align-top">
-                    <Button
-                      onClick={() => openUsage(l.name)}
-                      variant="ghost"
-                      size="sm"
-                    >
-                      View usage
-                    </Button>
-                  </TableCell>
+        <div className="mt-6 h-full">
+          <TableWrapper ref={parentRef} className="max-h-full">
+            <Table className="min-w-[1150px] lg:min-w-full">
+              <TableHeader className="sticky top-0 z-10 bg-background">
+                <TableRow className="">
+                  <TableHead className="w-4/12">Type</TableHead>
+                  <TableHead className="w-5/12">Description</TableHead>
+                  <TableHead className="w-3/12" />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody
+                className="relative"
+                style={{
+                  height: `${virtualizer.getTotalSize() + 1}px`,
+                }}
+              >
+                {items.map((virtualRow) => {
+                  const l = list[virtualRow.index];
+                  return (
+                    <TableRow
+                      className="group absolute flex w-full py-1 even:bg-secondary/20 hover:bg-secondary/40"
+                      key={virtualRow.index}
+                      data-index={virtualRow.index}
+                      ref={(node) => virtualizer.measureElement(node)}
+                      style={{
+                        transform: `translateY(${virtualRow.start}px)`, // Should be in style prop
+                      }}
+                    >
+                      <TableCell className="my-1.5 w-4/12 flex-shrink-0 truncate">
+                        <TypeLink ast={ast} name={l.name} />
+                      </TableCell>
+                      <TableCell className="my-1.5 w-5/12 text-muted-foreground group-hover:text-current">
+                        {l.description || "-"}
+                      </TableCell>
+                      <TableCell className="w-3/12 flex-shrink-0 text-right align-top">
+                        <Button
+                          onClick={() => openUsage(l.name)}
+                          variant="ghost"
+                          size="sm"
+                          className="table-action"
+                        >
+                          View usage
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableWrapper>
         </div>
       </div>
     );
@@ -956,6 +1054,42 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
   );
 };
 
+const DeprecatedTypes = ({ ast }: { ast: GraphQLSchema }) => {
+  const types = getDeprecatedTypes(ast);
+
+  if (types.length === 0) {
+    return (
+      <EmptyState
+        icon={<InformationCircleIcon />}
+        title="No deprecated fields found"
+        description="You can view all deprecated fields or fields with deprecated arguments here"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-y-12 divide-y">
+      {types.map((type) => {
+        return (
+          <div key={type.name} className="h-2/3 pt-12 first:pt-2">
+            <Type
+              name={type.name}
+              category={type.category}
+              description={type.description}
+              interfaces={type.interfaces}
+              fields={type.fields}
+              startLineNo={type.loc?.startToken.line}
+              endLineNo={type.loc?.endToken.line}
+              schemaVersionId={""}
+              ast={ast}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const SchemaExplorerPage: NextPageWithLayout = () => {
   const router = useRouter();
 
@@ -1022,6 +1156,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 })}
               >
                 <Link
+                  className="gap-x-4"
                   href={`/${organizationSlug}/graph/${graphName}/schema?category=${category}&typename=${sentenceCase(
                     category,
                   )}`}
@@ -1120,42 +1255,6 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
         </div>
       </div>
     </GraphPageLayout>
-  );
-};
-
-const DeprecatedTypes = ({ ast }: { ast: GraphQLSchema }) => {
-  const types = getDeprecatedTypes(ast);
-
-  if (types.length === 0) {
-    return (
-      <EmptyState
-        icon={<InformationCircleIcon />}
-        title="No deprecated fields found"
-        description="You can view all deprecated fields or fields with deprecated arguments here"
-      />
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-y-12 divide-y">
-      {types.map((type) => {
-        return (
-          <div key={type.name} className="pt-12 first:pt-2">
-            <Type
-              name={type.name}
-              category={type.category}
-              description={type.description}
-              interfaces={type.interfaces}
-              fields={type.fields}
-              startLineNo={type.loc?.startToken.line}
-              endLineNo={type.loc?.endToken.line}
-              schemaVersionId={""}
-              ast={ast}
-            />
-          </div>
-        );
-      })}
-    </div>
   );
 };
 

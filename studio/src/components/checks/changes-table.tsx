@@ -18,6 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "../ui/table";
 import {
   Tooltip,
@@ -83,98 +84,100 @@ export const ChangesTable = ({
 
   return (
     <div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[200px]">Change</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {changes.map(({ changeType, message, isBreaking, path }) => {
-            return (
-              <TableRow
-                key={changeType + message}
-                className="group hover:bg-secondary/20"
-              >
-                <TableCell
-                  className={cn(
-                    isBreaking ? "text-destructive" : "text-muted-foreground",
-                  )}
+      <TableWrapper>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">Change</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {changes.map(({ changeType, message, isBreaking, path }) => {
+              return (
+                <TableRow
+                  key={changeType + message}
+                  className="group hover:bg-secondary/20"
                 >
-                  <div className="flex items-center gap-2">
-                    {isBreaking ? <Cross1Icon /> : <CheckIcon />}
-                    <span
-                      className="block w-[160px] truncate"
-                      title={changeType}
-                    >
-                      {changeType}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>{message}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-x-2">
-                    <TooltipProvider>
-                      <Tooltip delayDuration={100}>
-                        <TooltipTrigger>
-                          <Button
-                            disabled={!path}
-                            variant="ghost"
-                            size="icon-sm"
-                            asChild
-                            className="table-action"
-                          >
-                            <Link
-                              href={
-                                path
-                                  ? {
-                                      pathname: `/[organizationSlug]/graph/[slug]/schema`,
-                                      query: {
-                                        organizationSlug:
-                                          router.query.organizationSlug,
-                                        slug: router.query.slug,
-                                        typename: path?.split(".")?.[0],
-                                      },
-                                    }
-                                  : "#"
-                              }
+                  <TableCell
+                    className={cn(
+                      isBreaking ? "text-destructive" : "text-muted-foreground",
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isBreaking ? <Cross1Icon /> : <CheckIcon />}
+                      <span
+                        className="block w-[160px] truncate"
+                        title={changeType}
+                      >
+                        {changeType}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{message}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-x-2">
+                      <TooltipProvider>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger>
+                            <Button
+                              disabled={!path}
+                              variant="ghost"
+                              size="icon-sm"
+                              asChild
+                              className="table-action"
                             >
-                              <GlobeIcon />
-                            </Link>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {path
-                            ? "Open in Explorer"
-                            : "Cannot open in explorer. Path to type unavailable"}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip delayDuration={100}>
-                        <TooltipTrigger>
-                          <Button
-                            onClick={() => openUsage(changeType, path)}
-                            variant="ghost"
-                            size="icon-sm"
-                            className="table-action"
-                          >
-                            <BarChartIcon />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>View Usage</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-        <TableCaption>{caption}</TableCaption>
-      </Table>
+                              <Link
+                                href={
+                                  path
+                                    ? {
+                                        pathname: `/[organizationSlug]/graph/[slug]/schema`,
+                                        query: {
+                                          organizationSlug:
+                                            router.query.organizationSlug,
+                                          slug: router.query.slug,
+                                          typename: path?.split(".")?.[0],
+                                        },
+                                      }
+                                    : "#"
+                                }
+                              >
+                                <GlobeIcon />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {path
+                              ? "Open in Explorer"
+                              : "Cannot open in explorer. Path to type unavailable"}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger>
+                            <Button
+                              onClick={() => openUsage(changeType, path)}
+                              variant="ghost"
+                              size="icon-sm"
+                              className="table-action"
+                            >
+                              <BarChartIcon />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Usage</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+          <TableCaption>{caption}</TableCaption>
+        </Table>
+      </TableWrapper>
     </div>
   );
 };
