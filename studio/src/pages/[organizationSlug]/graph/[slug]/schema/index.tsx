@@ -79,7 +79,7 @@ import {
   graphqlRootCategories,
   graphqlTypeCategories,
   mapGraphQLType,
-  parseSchema,
+  useParseSchema,
 } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
 import {
@@ -112,7 +112,6 @@ import {
   SetStateAction,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -1098,15 +1097,15 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const selectedCategory = (router.query.category as string) ?? "query";
   const typename = router.query.typename as string;
 
-  const [ast, setAst] = useState<GraphQLSchema | null>(null);
-
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphSDLByName.useQuery({
       name: graphName,
     }),
   );
 
-  useMemo(() => parseSchema(data?.sdl).then((res) => setAst(res)), [data?.sdl]);
+  const { ast, isParsing } = useParseSchema(data?.sdl);
+
+  const isLoadingAST = isLoading || isParsing;
 
   const typeCounts = ast ? getTypeCounts(ast) : undefined;
 
@@ -1231,8 +1230,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin lg:px-8">
-          {isLoading && <Loader fullscreen />}
-          {!isLoading &&
+          {isLoadingAST && <Loader fullscreen />}
+          {!isLoadingAST &&
             (error || data?.response?.code !== EnumStatusCode.OK || !ast) && (
               <EmptyState
                 icon={<ExclamationTriangleIcon />}
