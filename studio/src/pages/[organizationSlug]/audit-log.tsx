@@ -7,7 +7,11 @@ import { AuditLogTable, Empty } from "@/components/audit-log-table";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
 const AuditLogPage: NextPageWithLayout = () => {
-  const { data, isLoading, error } = useQuery(getAuditLogs.useQuery());
+  const { data, isLoading, error } = useQuery(
+    getAuditLogs.useQuery({
+      limit: 100,
+    }),
+  );
 
   if (isLoading) return <Loader fullscreen />;
 
