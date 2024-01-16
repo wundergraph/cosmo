@@ -5,6 +5,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { checkUserAccess } from '../util.js';
 
 export type AccessTokenAuthContext = {
+  auth: 'access_token';
   userId: string;
   userDisplayName: string;
   organizationId: string;
@@ -48,6 +49,7 @@ export default class AccessTokenAuthenticator {
     });
 
     return {
+      auth: 'access_token',
       organizationId: organization.id,
       organizationSlug: organization.slug,
       userId: userInfoData.sub,

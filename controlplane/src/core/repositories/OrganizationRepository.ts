@@ -868,7 +868,7 @@ export class OrganizationRepository {
     return orgIntegrations;
   }
 
-  public async getIntegration(id: string, organizationId: string) {
+  public getIntegration(id: string, organizationId: string) {
     return this.db.query.organizationIntegrations.findFirst({
       where: and(eq(organizationIntegrations.id, id), eq(organizationIntegrations.organizationId, organizationId)),
     });

@@ -257,7 +257,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'federated_graph',
           auditableDisplayName: federatedGraph.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
@@ -392,7 +392,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             auditableType: 'subgraph',
             auditableDisplayName: subgraph.name,
             actorDisplayName: authContext.userDisplayName,
-            actorType: 'user',
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
         }
 
@@ -1032,7 +1032,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'federated_graph',
           auditableDisplayName: federatedGraph.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -1116,7 +1116,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             auditableType: 'subgraph',
             auditableDisplayName: subgraph.name,
             actorDisplayName: authContext.userDisplayName,
-            actorType: 'user',
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
 
           // Collect all federated graphs that use this subgraph after deleting the subgraph
@@ -1273,7 +1273,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'federated_graph',
           auditableDisplayName: federatedGraph.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -1400,7 +1400,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         for (const graph of updatedFederatedGraphs) {
@@ -1605,7 +1605,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetType: 'federated_graph',
           auditableType: 'graph_token',
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           auditableDisplayName: token.name,
         });
 
@@ -1719,7 +1719,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               actorId: authContext.userId,
               auditableDisplayName: req.email,
               actorDisplayName: authContext.userDisplayName,
-              actorType: 'user',
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             });
 
             return {
@@ -1786,7 +1786,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorId: authContext.userId,
           auditableDisplayName: req.email,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -1864,7 +1864,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'api_key',
           auditableDisplayName: keyName,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -1934,7 +1934,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'api_key',
           auditableDisplayName: apiKey.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -2093,7 +2093,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorId: authContext.userId,
           auditableDisplayName: req.email,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -2187,7 +2187,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorId: authContext.userId,
           auditableDisplayName: org.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -2415,7 +2415,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'webhook_config',
           auditableDisplayName: req.endpoint,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -2459,7 +2459,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'webhook_config',
           auditableDisplayName: req.endpoint,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -2797,7 +2797,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'organization',
           auditableDisplayName: org.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -2979,7 +2979,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             actorDisplayName: authContext.userDisplayName,
             targetId: orgMember.userID,
             targetDisplayName: orgMember.email,
-            actorType: 'user',
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
         } else {
           await opts.keycloakClient.client.users.addToGroup({
@@ -3012,7 +3012,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             actorDisplayName: authContext.userDisplayName,
             targetId: orgMember.userID,
             targetDisplayName: orgMember.email,
-            actorType: 'user',
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
         }
 
@@ -3086,7 +3086,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetType: 'federated_graph',
           auditableType: 'graph_token',
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           auditableDisplayName: currToken.name,
         });
 
@@ -3175,7 +3175,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'integration',
           auditableDisplayName: req.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -3229,7 +3229,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'integration',
           auditableDisplayName: integration.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -3283,7 +3283,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableType: 'integration',
           auditableDisplayName: integration.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -3650,25 +3650,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });
 
           await auditLogRepo.addAuditLog({
-            organizationId: authContext.organizationId,
-            auditAction: 'organization_invitation.accepted',
-            action: 'declined',
+            organizationId: req.organizationId,
+            auditAction: 'organization.joined',
+            action: 'joined',
             actorId: authContext.userId,
             auditableDisplayName: organization.name,
             actorDisplayName: authContext.userDisplayName,
-            actorType: 'user',
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
         } else {
           await orgInvitationRepo.removeInvite({ organizationId: req.organizationId, userId: user.id });
 
           await auditLogRepo.addAuditLog({
-            organizationId: authContext.organizationId,
+            organizationId: req.organizationId,
             auditAction: 'organization_invitation.declined',
             action: 'deleted',
             actorId: authContext.userId,
             auditableDisplayName: organization.name,
             actorDisplayName: authContext.userDisplayName,
-            actorType: 'user',
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
         }
 
@@ -3782,7 +3782,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetDisplayName: subgraph.name,
           targetId: subgraph.id,
           targetType: 'subgraph',
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -3840,7 +3840,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetDisplayName: subgraph.name,
           targetId: subgraph.id,
           targetType: 'subgraph',
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
@@ -4222,7 +4222,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetDisplayName: federatedGraph.name,
             auditableType: 'graph_token',
             actorDisplayName: authContext.userDisplayName,
-            actorType: 'user',
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             auditableDisplayName: graphToken.name,
           });
         } else {
@@ -5742,7 +5742,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!authContext.isAdmin) {
           return {
             response: {
-              code: EnumStatusCode.ERR,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
               details: `The user doesnt have the permissions to perform this operation`,
             },
             logs: [],
@@ -5757,6 +5757,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const logs: PlainMessage<AuditLog>[] = auditLogs.map((log) => ({
           actorDisplayName: log.actorDisplayName ?? '',
+          actorType: log.actorType ?? '',
           auditAction: log.auditAction,
           createdAt: log.createdAt.toISOString(),
           auditableDisplayName: log.auditableDisplayName ?? '',
@@ -5838,7 +5839,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               targetDisplayName: organization.name,
               auditableType: 'organization',
               actorDisplayName: authContext.userDisplayName,
-              actorType: 'user',
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
               auditableDisplayName: organization.name,
             });
 

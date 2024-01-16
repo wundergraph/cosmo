@@ -141,13 +141,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       });
     }
 
-    if (isAdmin) {
-      navigation.push({
-        title: "Audit log",
-        href: basePath + "/audit-log",
-        icon: <AiOutlineAudit className="h-4 w-4" />,
-      });
-    }
+    navigation.push({
+      title: "Audit log",
+      href: basePath + "/audit-log",
+      icon: <AiOutlineAudit className="h-4 w-4" />,
+    });
 
     navigation.push(
       {

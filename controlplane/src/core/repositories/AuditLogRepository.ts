@@ -5,10 +5,11 @@ import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction, Audi
 
 export type AddAuditLogInput = {
   organizationId: string;
-  actorId: string;
+  // Empty string means the actor is the system.
+  actorId?: string;
   auditAction: AuditLogFullAction;
   action: AuditLogAction;
-  actorDisplayName: string;
+  actorDisplayName: 'cosmo-bot' | string;
   actorType: AuditActorType;
   targetId?: string;
   targetType?: AuditTargetType;

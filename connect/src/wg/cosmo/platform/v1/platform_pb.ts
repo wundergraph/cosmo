@@ -9478,27 +9478,32 @@ export class AuditLog extends Message<AuditLog> {
   action = "";
 
   /**
-   * @generated from field: string auditAction = 4;
+   * @generated from field: string actorType = 4;
+   */
+  actorType = "";
+
+  /**
+   * @generated from field: string auditAction = 5;
    */
   auditAction = "";
 
   /**
-   * @generated from field: string auditableDisplayName = 5;
+   * @generated from field: string auditableDisplayName = 6;
    */
   auditableDisplayName = "";
 
   /**
-   * @generated from field: string targetDisplayName = 6;
+   * @generated from field: string targetDisplayName = 7;
    */
   targetDisplayName = "";
 
   /**
-   * @generated from field: string targetType = 7;
+   * @generated from field: string targetType = 8;
    */
   targetType = "";
 
   /**
-   * @generated from field: string createdAt = 8;
+   * @generated from field: string createdAt = 9;
    */
   createdAt = "";
 
@@ -9513,11 +9518,12 @@ export class AuditLog extends Message<AuditLog> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "actorDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "action", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "auditAction", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "auditableDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "targetDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "targetType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "actorType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "auditAction", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "auditableDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "targetDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "targetType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuditLog {

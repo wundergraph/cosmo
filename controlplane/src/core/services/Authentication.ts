@@ -87,6 +87,7 @@ export class Authentication implements Authenticator {
       });
 
       const userContext: AuthContext = {
+        auth: user.auth,
         userId: user.userId,
         organizationId: organization.id,
         organizationSlug: organization.slug,

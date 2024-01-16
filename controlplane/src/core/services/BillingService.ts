@@ -5,6 +5,7 @@ import { organizationBilling, billingSubscriptions } from '../../db/schema.js';
 import { toISODateTime } from '../webhooks/utils.js';
 import { NewBillingSubscription } from '../../db/models.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
+import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
 
 /**
  * BillingService for billing related operations.
@@ -62,6 +63,23 @@ export class BillingService {
     return customer.id;
   };
 
+  public async completeCheckoutSession(subscriptionId: string, organizationId: string) {
+    const billing = await this.db.query.billingSubscriptions.findFirst({
+      where: eq(billingSubscriptions.id, subscriptionId),
+      columns: {
+        id: true,
+        organizationId: true,
+        priceId: true,
+      },
+    });
+
+    if (!billing) {
+      throw new Error(`Could not find subscription with with subscriptionId: ${subscriptionId}.`);
+    }
+
+    await this.syncSubscriptionStatus(subscriptionId, billing.organizationId);
+  }
+
   public async createCheckoutSession(params: { organizationId: string; organizationSlug: string; plan: string }) {
     const plan = await this.billingRepository.getPlanById(params.plan);
 
@@ -100,6 +118,7 @@ export class BillingService {
       columns: {
         id: true,
         organizationId: true,
+        priceId: true,
       },
     });
 
@@ -108,6 +127,13 @@ export class BillingService {
     }
 
     return this.db.transaction(async (tx) => {
+      const billingRepository = new BillingRepository(tx);
+      const auditLogRepository = new AuditLogRepository(tx);
+      const plan = await billingRepository.getPlanByPriceId(billing.priceId);
+      if (!plan) {
+        throw new Error('Cannot find corresponding plan');
+      }
+
       await tx.delete(billingSubscriptions).where(eq(billingSubscriptions.id, subscriptionId));
       await tx
         .update(organizationBilling)
@@ -115,6 +141,16 @@ export class BillingService {
           plan: null,
         })
         .where(eq(organizationBilling.organizationId, billing.organizationId));
+
+      await auditLogRepository.addAuditLog({
+        organizationId: billing.organizationId,
+        auditAction: 'subscription.deleted',
+        action: 'deleted',
+        auditableType: 'subscription',
+        auditableDisplayName: plan.name,
+        actorDisplayName: 'cosmo-bot',
+        actorType: 'system',
+      });
     });
   }
 
@@ -197,32 +233,15 @@ export class BillingService {
    * Sync the subscription status with the database. It upserts a organizationBilling entry which represents the
    * customer in Stripe. It also upserts a billingSubscriptions entry which represents the subscription in Stripe.
    *
-   * @param subscriptionId
-   * @param customerId
    */
-  syncSubscriptionStatus = async (subscriptionId: string, customerId: string) => {
-    const billing = await this.db.query.organizationBilling.findFirst({
-      where: eq(organizationBilling.stripeCustomerId, customerId),
-      columns: {
-        id: true,
-        organizationId: true,
-        stripeCustomerId: true,
-      },
-    });
-
-    if (!billing) {
-      throw new Error(
-        `Could not find organization with with stripeCustomerId: ${customerId}. This can happen when the customer is deleted in Stripe.`,
-      );
-    }
-
+  private async syncSubscriptionStatus(subscriptionId: string, organizationId: string) {
     const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {
       expand: ['default_payment_method', 'customer'],
     });
 
     const values: NewBillingSubscription = {
       id: subscriptionId,
-      organizationId: billing.organizationId,
+      organizationId,
       metadata: subscription.metadata,
       status: subscription.status,
       priceId: subscription.items.data[0].price.id,
@@ -238,44 +257,119 @@ export class BillingService {
       trialEnd: subscription.trial_end ? toISODateTime(subscription.trial_end) : null,
     };
 
-    const { id, ...updatedFields } = values;
+    await this.db.insert(billingSubscriptions).values(values).onConflictDoUpdate({
+      target: billingSubscriptions.id,
+      set: values,
+    });
+  }
 
-    await this.db
-      .insert(billingSubscriptions)
-      .values({
-        id: subscriptionId,
-        ...updatedFields,
-      })
-      .onConflictDoUpdate({
-        target: billingSubscriptions.id,
-        set: updatedFields,
-      });
+  public async createSubscription(subscriptionId: string, customerId: string) {
+    const billing = await this.db.query.organizationBilling.findFirst({
+      where: eq(organizationBilling.stripeCustomerId, customerId),
+      columns: {
+        id: true,
+        organizationId: true,
+      },
+    });
+
+    if (!billing) {
+      throw new Error(
+        `Could not find organization with with stripeCustomerId: ${customerId}. This can happen when the customer is deleted in Stripe.`,
+      );
+    }
+
+    await this.syncSubscriptionStatus(subscriptionId, billing.organizationId);
+
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['default_payment_method', 'customer'],
+    });
 
     const plan = await this.billingRepository.getPlanByPriceId(subscription.items.data[0].price.id);
 
-    if (plan) {
-      // Set the plan if the subscription is active or trialing (has to be set manually on the product)
-      if (subscription.status === 'active' || subscription.status === 'trialing') {
-        await this.db
-          .update(organizationBilling)
-          .set({
-            plan: plan.id,
-          })
-          .where(eq(organizationBilling.organizationId, billing.organizationId));
-      }
-      // Give users a grace period to update their payment method
-      // After the grace period, the subscription will be marked as canceled
-      else if (subscription.status !== 'past_due') {
-        // Remove the plan if the subscription is no longer active
-        await this.db
-          .update(organizationBilling)
-          .set({
-            plan: null,
-          })
-          .where(eq(organizationBilling.organizationId, billing.organizationId));
-      }
+    if (!plan) {
+      throw new Error('Cannot find corresponding plan');
     }
-  };
+
+    const auditLogRepository = new AuditLogRepository(this.db);
+
+    await auditLogRepository.addAuditLog({
+      organizationId: billing.organizationId,
+      auditAction: 'subscription.created',
+      action: 'created',
+      auditableType: 'subscription',
+      auditableDisplayName: plan.name,
+      actorDisplayName: 'cosmo-bot',
+      actorType: 'system',
+    });
+  }
+
+  public async updateSubscription(subscriptionId: string, customerId: string) {
+    const billing = await this.db.query.organizationBilling.findFirst({
+      where: eq(organizationBilling.stripeCustomerId, customerId),
+      columns: {
+        id: true,
+        organizationId: true,
+      },
+    });
+
+    if (!billing) {
+      throw new Error(
+        `Could not find organization with with stripeCustomerId: ${customerId}. This can happen when the customer is deleted in Stripe.`,
+      );
+    }
+
+    await this.syncSubscriptionStatus(subscriptionId, billing.organizationId);
+
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['default_payment_method', 'customer'],
+    });
+
+    const plan = await this.billingRepository.getPlanByPriceId(subscription.items.data[0].price.id);
+    if (!plan) {
+      throw new Error('Cannot find corresponding plan');
+    }
+
+    // Set the plan if the subscription is active or trialing (has to be set manually on the product)
+    if (subscription.status === 'active' || subscription.status === 'trialing') {
+      await this.db.transaction(async (tx) => {
+        const billingRepository = new BillingRepository(tx);
+        const auditLogRepository = new AuditLogRepository(tx);
+
+        // Upgrade customer to the new plan
+        await billingRepository.setPlan(plan.id, billing.organizationId);
+
+        await auditLogRepository.addAuditLog({
+          organizationId: billing.organizationId,
+          auditAction: 'subscription.activated',
+          action: 'activated',
+          auditableType: 'subscription',
+          auditableDisplayName: plan.name,
+          actorDisplayName: 'cosmo-bot',
+          actorType: 'system',
+        });
+      });
+    }
+    // Give users a grace period to update their payment method
+    // After the grace period, the subscription will be marked as canceled
+    else if (subscription.status !== 'past_due') {
+      await this.db.transaction(async (tx) => {
+        const billingRepository = new BillingRepository(tx);
+        const auditLogRepository = new AuditLogRepository(tx);
+
+        // Remove the plan if the subscription is no longer active
+        await billingRepository.setPlan(null, billing.organizationId);
+        await auditLogRepository.addAuditLog({
+          organizationId: billing.organizationId,
+          auditAction: 'subscription.canceled',
+          action: 'canceled',
+          auditableType: 'subscription',
+          auditableDisplayName: plan.name,
+          actorDisplayName: 'cosmo-bot',
+          actorType: 'system',
+        });
+      });
+    }
+  }
 
   cancelSubscription = async (organizationId: string, subscriptionId: string, comment: string) => {
     await this.stripe.subscriptions.cancel(subscriptionId, {

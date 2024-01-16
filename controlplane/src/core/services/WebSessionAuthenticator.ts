@@ -6,6 +6,7 @@ import { UserRepository } from '../repositories/UserRepository.js';
 export const OrganizationSlugHeader = 'cosmo-org-slug';
 
 export type WebAuthAuthContext = {
+  auth: 'cookie';
   userId: string;
   organizationSlug: string;
   userDisplayName: string;
@@ -50,6 +51,7 @@ export default class WebSessionAuthenticator {
         }
 
         return {
+          auth: 'cookie',
           userId: decryptedJwt.iss,
           organizationSlug,
           userDisplayName: user.email,

@@ -13,15 +13,25 @@ import { formatDateTime } from "@/lib/format-date";
 import { capitalize } from "@/lib/utils";
 import { pascalCase } from "change-case";
 import { AiOutlineAudit } from "react-icons/ai";
+import { PiKeyBold, PiRobotFill, PiUserBold } from "react-icons/pi";
 
-export const Empty = () => {
+export const Empty = (params: { unauthorized: boolean }) => {
+  if (!params.unauthorized) {
+    return (
+      <EmptyState
+        title="Unauthorized"
+        description="You are not authorized to manage this organization."
+      />
+    );
+  }
+
   return (
     <EmptyState
       icon={<AiOutlineAudit />}
-      title="No audit logs"
+      title={params.unauthorized ? "Unauthorized" : "No audit logs"}
       description={
         <div className="space-x-1">
-          <span>No audit logs have been recorded yet.</span>
+          <span>You are not authorized to view audit logs.</span>
           <a
             target="_blank"
             rel="noreferrer"
@@ -37,8 +47,6 @@ export const Empty = () => {
 };
 
 export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
-  if (!logs || logs.length === 0) return <Empty />;
-
   return (
     <Table>
       <TableHeader>
@@ -49,10 +57,11 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {logs.map(
+        {logs?.map(
           ({
             id,
             actorDisplayName,
+            actorType,
             auditAction,
             createdAt,
             action,
@@ -60,14 +69,28 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
             targetDisplayName,
             targetType,
           }) => {
-            let label = null;
+            let a = null;
+            let s = null;
 
             if (auditAction === "organization_invitation.created") {
-              label = <span>invitation for </span>;
-            } else if (targetDisplayName) {
+              s = "for";
+            } else if (auditAction === "member_role.updated") {
+              a = "role for";
+              s = "to";
+            } else if (auditableDisplayName) {
+              a = "in";
+            }
+
+            let label = null;
+
+            if (targetDisplayName) {
               label = (
                 <>
-                  <span className="text-gray-500 dark:text-gray-400">in</span>
+                  {a && (
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {a}
+                    </span>
+                  )}
 
                   <span
                     className="inline-block max-w-md truncate"
@@ -88,9 +111,16 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
                 </span>
                 {label}
                 {auditableDisplayName && (
-                  <span className="inline-block max-w-md truncate text-primary">
-                    {auditableDisplayName}
-                  </span>
+                  <>
+                    {s && (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {s}
+                      </span>
+                    )}
+                    <span className="inline-block max-w-md truncate text-primary">
+                      {auditableDisplayName}
+                    </span>
+                  </>
                 )}
               </>
             );
@@ -99,8 +129,24 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
                 key={id}
                 className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
               >
-                <TableCell className="px-4 font-medium">
-                  <span className="block font-medium">{actorDisplayName}</span>
+                <TableCell className="flex px-4 font-medium">
+                  <span className="flex items-center justify-center space-x-2">
+                    {actorType === "api_key" && (
+                      <PiKeyBold className="h-4 w-4" title="API Key activity" />
+                    )}
+                    {actorType === "user" && (
+                      <PiUserBold className="h-4 w-4" title="User activity" />
+                    )}
+                    {actorType === "system" && (
+                      <PiRobotFill
+                        className="h-4 w-4"
+                        title="System activity"
+                      />
+                    )}
+                    <span className="block font-medium">
+                      {actorDisplayName}
+                    </span>
+                  </span>
                 </TableCell>
                 <TableCell className="px-4 font-medium">
                   <div className="justify-center space-y-2">

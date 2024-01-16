@@ -1209,11 +1209,12 @@ message AuditLog {
    string id = 1;
    string actorDisplayName = 2;
    string action = 3;
-   string auditAction = 4;
-   string auditableDisplayName = 5;
-   string targetDisplayName = 6;
-   string targetType = 7;
-   string createdAt = 8;
+   string actorType = 4;
+   string auditAction = 5;
+   string auditableDisplayName = 6;
+   string targetDisplayName = 7;
+   string targetType = 8;
+   string createdAt = 9;
 }
 
 message GetAuditLogsResponse {

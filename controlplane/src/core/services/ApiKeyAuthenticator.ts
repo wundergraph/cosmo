@@ -6,6 +6,7 @@ import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 export type ApiKeyAuthContext = {
+  auth: 'api_key';
   organizationId: string;
   organizationSlug: string;
   hasWriteAccess: boolean;
@@ -58,6 +59,7 @@ export default class ApiKeyAuthenticator {
       .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
     return {
+      auth: 'api_key',
       userId: apiKeyModel.userId,
       userDisplayName: apiKeyModel.user.email,
       organizationId: apiKeyModel.organizationId,

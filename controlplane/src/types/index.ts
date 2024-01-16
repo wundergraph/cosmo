@@ -300,6 +300,7 @@ export type UserInfoEndpointResponse = {
 };
 
 export type AuthContext = {
+  auth: 'access_token' | 'api_key' | 'cookie';
   organizationId: string;
   organizationSlug: string;
   hasWriteAccess: boolean;

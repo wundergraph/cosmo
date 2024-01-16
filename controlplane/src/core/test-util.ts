@@ -96,6 +96,7 @@ export function createTestAuthenticator(): {
   const organizationId = randomUUID();
 
   const userAuthContext: UserTestData & AuthContext = {
+    auth: 'api_key',
     userId,
     organizationId,
     organizationName: 'wundergraph',

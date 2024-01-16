@@ -1,5 +1,5 @@
 {
-  "id": "a6bda9e5-6c23-4013-8070-79039ab8f0ec",
+  "id": "b722f753-92f9-4b48-be20-0db2cc75599f",
   "prevId": "f2fe9633-0032-4848-a03c-518f9efeccf5",
   "version": "5",
   "dialect": "pg",
@@ -183,19 +183,19 @@
         },
         "action": {
           "name": "action",
-          "type": "audit_action",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "audit_action": {
           "name": "audit_action",
-          "type": "audit_full_action",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "auditable_type": {
           "name": "auditable_type",
-          "type": "auditable_type",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -213,7 +213,7 @@
         },
         "target_type": {
           "name": "target_type",
-          "type": "audit_target_type",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -237,7 +237,7 @@
         },
         "actor_type": {
           "name": "actor_type",
-          "type": "audit_actor_type",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -3119,76 +3119,6 @@
     }
   },
   "enums": {
-    "audit_action": {
-      "name": "audit_action",
-      "values": {
-        "created": "created",
-        "updated": "updated",
-        "deleted": "deleted",
-        "accepted": "accepted",
-        "declined": "declined"
-      }
-    },
-    "audit_actor_type": {
-      "name": "audit_actor_type",
-      "values": {
-        "user": "user",
-        "system": "system",
-        "api_key": "api_key"
-      }
-    },
-    "audit_full_action": {
-      "name": "audit_full_action",
-      "values": {
-        "organization.created": "organization.created",
-        "organization.updated": "organization.updated",
-        "graph_token.created": "graph_token.created",
-        "graph_token.deleted": "graph_token.deleted",
-        "federated_graph.created": "federated_graph.created",
-        "federated_graph.deleted": "federated_graph.deleted",
-        "federated_graph.updated": "federated_graph.updated",
-        "subgraph.created": "subgraph.created",
-        "subgraph.deleted": "subgraph.deleted",
-        "subgraph.updated": "subgraph.updated",
-        "subgraph_member.created": "subgraph_member.created",
-        "subgraph_member.deleted": "subgraph_member.deleted",
-        "webhook_config.created": "webhook_config.created",
-        "webhook_config.deleted": "webhook_config.deleted",
-        "webhook_config.updated": "webhook_config.updated",
-        "organization_details.updated": "organization_details.updated",
-        "integration.created": "integration.created",
-        "integration.deleted": "integration.deleted",
-        "integration.updated": "integration.updated",
-        "api_key.created": "api_key.created",
-        "api_key.deleted": "api_key.deleted",
-        "organization_invitation.created": "organization_invitation.created",
-        "organization_invitation.accepted": "organization_invitation.accepted",
-        "organization_invitation.declined": "organization_invitation.declined",
-        "organization_invitation.deleted": "organization_invitation.deleted",
-        "organization_member.deleted": "organization_member.deleted",
-        "member_role.updated": "member_role.updated"
-      }
-    },
-    "audit_target_type": {
-      "name": "audit_target_type",
-      "values": {
-        "organization": "organization",
-        "subgraph": "subgraph",
-        "federated_graph": "federated_graph"
-      }
-    },
-    "auditable_type": {
-      "name": "auditable_type",
-      "values": {
-        "organization": "organization",
-        "subgraph": "subgraph",
-        "federated_graph": "federated_graph",
-        "graph_token": "graph_token",
-        "api_key": "api_key",
-        "webhook_config": "webhook_config",
-        "integration": "integration"
-      }
-    },
     "git_installation_type": {
       "name": "git_installation_type",
       "values": {

@@ -3,12 +3,19 @@ import { Loader } from "@/components/ui/loader";
 import { NextPageWithLayout } from "@/lib/page";
 import { useQuery } from "@tanstack/react-query";
 import { getAuditLogs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { AuditLogTable } from "@/components/audit-log-table";
+import { AuditLogTable, Empty } from "@/components/audit-log-table";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
 const AuditLogPage: NextPageWithLayout = () => {
-  const { data, isLoading } = useQuery(getAuditLogs.useQuery());
+  const { data, isLoading, error } = useQuery(getAuditLogs.useQuery());
 
   if (isLoading) return <Loader fullscreen />;
+
+  if (data?.response?.code === EnumStatusCode.ERROR_NOT_AUTHORIZED) {
+    return <Empty unauthorized={true} />;
+  }
+
+  if (!data?.logs) return <Empty unauthorized={false} />;
 
   return (
     <div className="flex flex-col gap-y-4 pt-2">
