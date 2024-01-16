@@ -364,9 +364,7 @@ export const SubgraphsTable = ({
             <TableHead className="px-4">Name</TableHead>
             <TableHead className="w-4/12 px-4">Url</TableHead>
             <TableHead className="w-4/12 px-4">Labels</TableHead>
-            <TableHead className="w-2/12 px-4 text-right">
-              Last Published
-            </TableHead>
+            <TableHead className="w-2/12 px-4">Last Published</TableHead>
             {rbac && <TableHead className="w-1/12"></TableHead>}
           </TableRow>
         </TableHeader>
@@ -396,7 +394,7 @@ export const SubgraphsTable = ({
                       })}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 text-right text-muted-foreground">
+                  <TableCell className="px-4 text-muted-foreground">
                     {lastUpdatedAt
                       ? formatDistanceToNow(new Date(lastUpdatedAt), {
                           addSuffix: true,
