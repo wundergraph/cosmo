@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/logging"
 	"net"
 	"net/http"
 	"sync"
@@ -168,6 +169,8 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		statusCode  = 0
 	)
 
+	requestID := middleware.GetReqID(r.Context())
+	requestLogger := h.logger.With(logging.WithRequestID(requestID))
 	clientInfo := NewClientInfoFromRequest(r)
 
 	// Check access control before upgrading the connection
@@ -194,7 +197,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	c, rw, _, err := upgrader.Upgrade(r, w)
 	if err != nil {
-		h.logger.Warn("Websocket upgrade", zap.Error(err))
+		requestLogger.Warn("Websocket upgrade", zap.Error(err))
 		_ = c.Close()
 		return
 	}
@@ -205,7 +208,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn := newWSConnectionWrapper(c, rw)
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
-		h.logger.Error("Create websocket protocol", zap.Error(err))
+		requestLogger.Error("Create websocket protocol", zap.Error(err))
 		_ = c.Close()
 		return
 	}
@@ -223,10 +226,11 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Stats:          h.stats,
 		ConnectionID:   h.connectionIDs.Inc(),
 		ClientInfo:     clientInfo,
+		InitRequestID:  requestID,
 	})
 	err = handler.Initialize()
 	if err != nil {
-		h.logger.Error("Initializing websocket connection", zap.Error(err))
+		requestLogger.Error("Initializing websocket connection", zap.Error(err))
 		handler.Close()
 		return
 	}
@@ -235,7 +239,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.epoll != nil {
 		err = h.addConnection(c, handler)
 		if err != nil {
-			h.logger.Error("Adding connection to epoll", zap.Error(err))
+			requestLogger.Error("Adding connection to epoll", zap.Error(err))
 			handler.Close()
 		}
 		return
@@ -492,6 +496,7 @@ type WebSocketConnectionHandlerOptions struct {
 	ConnectionID   int64
 	RequestContext context.Context
 	ClientInfo     *ClientInfo
+	InitRequestID  string
 }
 
 type WebSocketConnectionHandler struct {
@@ -508,6 +513,7 @@ type WebSocketConnectionHandler struct {
 	clientInfo     *ClientInfo
 	logger         *zap.Logger
 
+	initRequestID   string
 	connectionID    int64
 	subscriptionIDs atomic.Int64
 	subscriptions   sync.Map
@@ -529,6 +535,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		connectionID:   opts.ConnectionID,
 		stats:          opts.Stats,
 		clientInfo:     opts.ClientInfo,
+		initRequestID:  opts.InitRequestID,
 	}
 }
 
@@ -582,7 +589,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
 			Header: h.r.Header.Clone(),
-			ID:     middleware.GetReqID(h.r.Context()),
+			ID:     h.initRequestID,
 		},
 		RenameTypeNames:       h.graphqlHandler.executor.RenameTypeNames,
 		RequestTracingOptions: operationCtx.traceOptions,
@@ -592,7 +599,12 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, h.r, operationCtx, h.logger)))
 
 	h.stats.SubscriptionsInc()
-	defer h.metrics.ExportSchemaUsageInfo(operationCtx, http.StatusOK, err != nil)
+
+	// Put in a closure to evaluate err after the defer
+	defer func() {
+		// StatusCode has no meaning here. We set it to 0 but set the error.
+		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil)
+	}()
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
