@@ -309,7 +309,7 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 	if len(persistedQuerySha256Hash) > 0 {
 		if p.cdn == nil {
 			return nil, &inputError{
-				message:    "could not resolve persisted query, CDN is not configured",
+				message:    "could not resolve persisted query, feature is not configured",
 				statusCode: http.StatusOK,
 			}
 		}
