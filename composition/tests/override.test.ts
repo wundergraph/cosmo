@@ -358,14 +358,23 @@ const subgraphA1: Subgraph = {
   name: 'subgraph-a1',
   url: '',
   definitions: parse(`
-    type Query @shareable {
-      query: Entity!
+  extend schema
+    @link(
+      url: "https://specs.apollo.dev/federation/v2.3"
+      import: [
+        "@key"
+        "@shareable"
+        "@override"
+      ]
+    )
+
+    type Query {
+      blockedNumber: BlockedNumber! @shareable
     }
 
-    type Entity @key(fields: "id") {
+    type BlockedNumber @shareable {
       id: ID!
       name: String!
-      age: Int!
     }
   `),
 };
@@ -374,14 +383,28 @@ const subgraphA2: Subgraph = {
   name: 'subgraph-a2',
   url: '',
   definitions: parse(`
-    type Query @shareable {
-      query: Entity!
-    }
-    
-    type Entity @key(fields: "id") {
-      id: ID!
-      newField: String!
-    }
+  extend schema
+    @link(
+      url: "https://specs.apollo.dev/federation/v2.3"
+      import: [
+        "@key"
+        "@shareable"
+        "@override"
+      ]
+    )
+  
+  type Query {
+    "Get blocked number by id."
+    blockedNumber(id: ID, disableBatching: Boolean): BlockedNumber @override(from: "giraffe")
+  }
+  
+  
+  type BlockedNumber @shareable {
+    id: ID!
+    createdAt: String
+    number: String
+  }
+  
   `),
 };
 
