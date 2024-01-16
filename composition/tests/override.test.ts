@@ -345,7 +345,47 @@ describe('@override directive Tests', () => {
       ]),
     );
   });
+
+  test('asdf', () => {
+    const { errors } = federateSubgraphs([subgraphA1, subgraphA2]);
+    console.error(errors);
+    expect(errors).toBeUndefined();
+    
+  });
 });
+
+const subgraphA1: Subgraph = {
+  name: 'subgraph-a1',
+  url: '',
+  definitions: parse(`
+    type Query {
+      query: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+      age: Int!
+    }
+  `),
+};
+
+const subgraphA2: Subgraph = {
+  name: 'subgraph-a2',
+  url: '',
+  definitions: parse(`
+    type Query {
+      query: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      newField: String!
+    }
+  `),
+};
+
+
 
 const subgraphA: Subgraph = {
   name: 'subgraph-a',
