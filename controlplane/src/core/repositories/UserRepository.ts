@@ -18,6 +18,7 @@ export class UserRepository {
       })
       .from(users)
       .where(eq(users.email, email))
+      .limit(1)
       .execute();
 
     if (user.length === 0) {
@@ -35,6 +36,7 @@ export class UserRepository {
       })
       .from(users)
       .where(eq(users.id, id))
+      .limit(1)
       .execute();
 
     if (user.length === 0) {

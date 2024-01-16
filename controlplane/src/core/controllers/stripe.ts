@@ -2,7 +2,6 @@ import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 import pino from 'pino';
 import Stripe from 'stripe';
-import { BillingRepository } from '../repositories/BillingRepository.js';
 import { BillingService } from '../services/BillingService.js';
 
 const relevantEvents = new Set([
@@ -43,10 +42,14 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
               await opts.billingService.deleteCustomer(event.data.object.id);
               break;
             }
-            case 'customer.subscription.created':
+            case 'customer.subscription.created': {
+              const subscription = event.data.object as Stripe.Subscription;
+              await opts.billingService.createSubscription(subscription.id, subscription.customer as string);
+              break;
+            }
             case 'customer.subscription.updated': {
               const subscription = event.data.object as Stripe.Subscription;
-              await opts.billingService.syncSubscriptionStatus(subscription.id, subscription.customer as string);
+              await opts.billingService.updateSubscription(subscription.id, subscription.customer as string);
               break;
             }
             case 'customer.subscription.deleted': {
@@ -58,7 +61,7 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
               const checkoutSession = event.data.object as Stripe.Checkout.Session;
               if (checkoutSession.mode === 'subscription') {
                 const subscriptionId = checkoutSession.subscription;
-                await opts.billingService.syncSubscriptionStatus(
+                await opts.billingService.completeCheckoutSession(
                   subscriptionId as string,
                   checkoutSession.customer as string,
                 );
@@ -66,13 +69,13 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
               break;
             }
             default: {
-              log.error('Unhandled relevant event', event);
-              throw new Error('Unhandled relevant event');
+              log.debug('Unhandled event', event);
+              return res.code(200);
             }
           }
         } catch (error) {
           log.error(error);
-          return res.code(400).send('Webhook handler failed');
+          return res.code(500).send('Webhook handler failed');
         }
       } else {
         log.debug(event.type, 'Received unhandled Stripe event');

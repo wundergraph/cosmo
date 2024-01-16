@@ -1,6 +1,6 @@
 import { and, asc, eq, not } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
-import { billingPlans, billingSubscriptions } from '../../db/schema.js';
+import { billingPlans, billingSubscriptions, organizationBilling } from '../../db/schema.js';
 
 import { BillingPlanDTO } from '../../types/index.js';
 
@@ -39,6 +39,15 @@ export class BillingRepository {
     return this.db.query.billingPlans.findFirst({
       where: eq(billingPlans.id, id),
     });
+  }
+
+  public async setPlan(planId: string | null, organizationId: string) {
+    await this.db
+      .update(organizationBilling)
+      .set({
+        plan: planId,
+      })
+      .where(eq(organizationBilling.organizationId, organizationId));
   }
 
   public getPlanByPriceId(priceId: string) {
