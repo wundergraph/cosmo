@@ -79,12 +79,14 @@ func (s *WebSocketStats) run(ctx context.Context) {
 			s.reportConnections()
 		case <-s.update:
 			s.mu.Lock()
+			report := s.GetReport()
 			for ctx, subscriber := range s.subscribers {
 				// non-blocking send
 				select {
-				case subscriber <- s.GetReport():
+				case subscriber <- report:
 				case <-ctx.Done():
 					delete(s.subscribers, ctx)
+					continue
 				case <-s.ctx.Done():
 					continue
 				}

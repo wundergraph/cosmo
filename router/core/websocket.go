@@ -98,8 +98,6 @@ func newWSConnectionWrapper(conn net.Conn, rw *bufio.ReadWriter) *wsConnectionWr
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	text, err := wsutil.ReadClientText(c.conn)
 	if err != nil {
 		return err
@@ -110,7 +108,11 @@ func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
 func (c *wsConnectionWrapper) WriteText(text string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return wsutil.WriteServerText(c.conn, []byte(text))
+	err := wsutil.WriteServerText(c.rw, []byte(text))
+	if err != nil {
+		return err
+	}
+	return c.rw.Flush()
 }
 
 func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
@@ -120,7 +122,11 @@ func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return wsutil.WriteServerText(c.conn, data)
+	err = wsutil.WriteServerText(c.rw, data)
+	if err != nil {
+		return err
+	}
+	return c.rw.Flush()
 }
 
 func (c *wsConnectionWrapper) Close() error {
@@ -576,7 +582,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
 			Header: h.r.Header.Clone(),
-			ID:     middleware.GetReqID(h.ctx),
+			ID:     middleware.GetReqID(h.r.Context()),
 		},
 		RenameTypeNames:       h.graphqlHandler.executor.RenameTypeNames,
 		RequestTracingOptions: operationCtx.traceOptions,
