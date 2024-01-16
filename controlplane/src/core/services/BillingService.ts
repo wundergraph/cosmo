@@ -189,7 +189,7 @@ export class BillingService {
     });
   }
 
-  public async upgradePlan(params: { organizationId: string; plan: string }) {
+  public async upgradePlan(params: { organizationId: string; planId: string }) {
     const subscription = await this.db.query.billingSubscriptions.findFirst({
       where: eq(billingSubscriptions.organizationId, params.organizationId),
       orderBy: [asc(billingSubscriptions.createdAt)],
@@ -199,7 +199,7 @@ export class BillingService {
       throw new Error('Could not find subscription');
     }
 
-    const plan = await this.billingRepository.getPlanById(params.plan);
+    const plan = await this.billingRepository.getPlanById(params.planId);
 
     if (!plan?.stripePriceId) {
       throw new Error('Invalid billing plan');

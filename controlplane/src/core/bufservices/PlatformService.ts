@@ -5957,9 +5957,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const billingService = new BillingService(opts.db, billingRepo);
         const auditLogRepository = new AuditLogRepository(opts.db);
 
+        const plan = await billingRepo.getPlanById(req.plan);
+        if (!plan) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Plan not found',
+            },
+          };
+        }
+
         await billingService.upgradePlan({
           organizationId: authContext.organizationId,
-          plan: req.plan,
+          planId: plan.id,
         });
 
         await auditLogRepository.addAuditLog({
@@ -5967,7 +5977,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditAction: 'subscription.upgraded',
           action: 'upgraded',
           auditableType: 'subscription',
-          auditableDisplayName: req.plan,
+          auditableDisplayName: plan.name,
           actorDisplayName: 'cosmo-bot',
           actorType: 'system',
         });
