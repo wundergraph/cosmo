@@ -800,6 +800,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		PersistentOpClient:      r.cdnPersistentOpClient,
 	})
 	// Pre-hash all data source IDs to avoid races
+	// TODO: Ideally, we would do this in the engine itself
+	// Context:
+	// In case we have 2 concurrent requests that need planning and use the same data source
+	// it's possible that we run into a race by either calling Hash() on the same data source
+	// or by calling Planner(), which might have side effects.
+	// E.g. in a Data Source Factory, we might be lazily initializing a client
 	for i := range executor.PlanConfig.DataSources {
 		executor.PlanConfig.DataSources[i].Hash()
 		// Pre-init the Planner for each data source
