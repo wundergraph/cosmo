@@ -3,6 +3,7 @@ package trace
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -19,8 +20,19 @@ func TracerFromContext(ctx context.Context) (tracer trace.Tracer) {
 	return
 }
 
-func RequestFilter(r *http.Request) bool {
-	if r.URL.Path == "/health" || r.URL.Path == "/favicon.ico" || r.Method == "OPTIONS" {
+func PrefixRequestFilter(prefixes []string) func(r *http.Request) bool {
+	return func(r *http.Request) bool {
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(r.URL.Path, prefix) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+func CommonRequestFilter(r *http.Request) bool {
+	if r.URL.Path == "/favicon.ico" || r.Method == "OPTIONS" {
 		return false
 	}
 	// Ignore websocket connections
