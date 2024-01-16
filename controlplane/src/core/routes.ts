@@ -33,7 +33,7 @@ export interface RouterOptions {
   blobStorage?: BlobStorage;
   mailerClient?: Mailer;
   billingDefaultPlanId?: string;
-  enableRouterConfigCDN: boolean;
+  enableRouterConfigCDN?: boolean;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,
