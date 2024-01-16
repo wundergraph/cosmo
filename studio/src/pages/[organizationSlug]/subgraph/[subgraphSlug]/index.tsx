@@ -92,7 +92,7 @@ const SubgraphOverviewPage = () => {
             <dt className="text-sm text-muted-foreground">Routing URL</dt>
             <dd>
               <Tooltip delayDuration={100}>
-                <TooltipTrigger className="w-full truncate text-sm">
+                <TooltipTrigger className="w-full truncate text-start text-sm">
                   {subgraph.routingURL}
                 </TooltipTrigger>
                 <TooltipContent>{subgraph.routingURL}</TooltipContent>
