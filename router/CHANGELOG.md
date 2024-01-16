@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.1](https://github.com/wundergraph/cosmo/compare/router@0.54.0...router@0.54.1) (2024-01-16)
+
+### Bug Fixes
+
+* poller interface for Windows ([8acf426](https://github.com/wundergraph/cosmo/commit/8acf4268a0447e64dce8892dd318f93c3e50aa2f)) (@StarpTech)
+* skip healthchecks requests for tracing ([#431](https://github.com/wundergraph/cosmo/issues/431)) ([7871888](https://github.com/wundergraph/cosmo/commit/787188800cc0ac84c3f3c4ed80e2fef2fd2c9260)) (@StarpTech)
+
 # [0.54.0](https://github.com/wundergraph/cosmo/compare/router@0.53.1...router@0.54.0) (2024-01-16)
 
 ### Features
