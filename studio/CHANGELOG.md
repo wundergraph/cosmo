@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.51.1](https://github.com/wundergraph/cosmo/compare/studio@0.51.0...studio@0.51.1) (2024-01-16)
+
+### Bug Fixes
+
+* revert start of day on date picker ([#423](https://github.com/wundergraph/cosmo/issues/423)) ([a4ab626](https://github.com/wundergraph/cosmo/commit/a4ab626009861c86613584b57229c043d11421a8)) (@thisisnithin)
+* schema performance, composition crash and minor ui ([#426](https://github.com/wundergraph/cosmo/issues/426)) ([825b647](https://github.com/wundergraph/cosmo/commit/825b6475224624de7215d4395d9d548d47ebf39c)) (@thisisnithin)
+
 # [0.51.0](https://github.com/wundergraph/cosmo/compare/studio@0.50.0...studio@0.51.0) (2024-01-13)
 
 ### Features
