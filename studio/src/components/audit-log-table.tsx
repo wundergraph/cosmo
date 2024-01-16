@@ -16,7 +16,7 @@ import { AiOutlineAudit } from "react-icons/ai";
 import { PiKeyBold, PiRobotFill, PiUserBold } from "react-icons/pi";
 
 export const Empty = (params: { unauthorized: boolean }) => {
-  if (!params.unauthorized) {
+  if (params.unauthorized) {
     return (
       <EmptyState
         title="Unauthorized"
