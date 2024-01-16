@@ -9,7 +9,7 @@ import { pino } from 'pino';
 import { expect, TestContext } from 'vitest';
 import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage/index.js';
 import database from '../src/core/plugins/database.js';
-import routes from '../src/core/routes.js';
+import routes, { RouterOptions } from '../src/core/routes.js';
 import Keycloak from '../src/core/services/Keycloak.js';
 import Mailer from '../src/core/services/Mailer.js';
 import { createTestAuthenticator, seedTest } from '../src/core/test-util.js';
@@ -17,7 +17,11 @@ import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhook
 import { Label } from '../src/types/index.js';
 import { Authorization } from '../src/core/services/Authorization.js';
 
-export const SetupTest = async function (testContext: TestContext, dbname: string) {
+export const SetupTest = async function (
+  testContext: TestContext,
+  dbname: string,
+  routerOptions?: Partial<RouterOptions>,
+) {
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
   const server = Fastify();
 
@@ -70,6 +74,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
       blobStorage,
       mailerClient,
       authorizer: new Authorization(),
+      ...routerOptions,
     }),
   });
 

@@ -17,7 +17,9 @@ describe('Router Config', (ctx) => {
   });
 
   test('Should return routerConfig after federating a valid graph', async (testContext) => {
-    const { client, server, nodeClient } = await SetupTest(testContext, dbname);
+    const { client, server, nodeClient, blobStorage } = await SetupTest(testContext, dbname, {
+      enableRouterConfigCDN: true,
+    });
 
     const inventorySubgraph = genID('inventory');
     const pandasSubgraph = genID('pandas');
@@ -186,6 +188,14 @@ describe('Router Config', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     expect(resp.config?.engineConfig).toBeDefined();
+
+    // Check that the router config is persistent on the CDN
+    const storageKeys = blobStorage.keys();
+    expect(storageKeys.length).toBe(1);
+    const keyComponents = storageKeys[0].split('/');
+    const keyFilename = keyComponents.at(-1)!;
+    const keyBasename = keyFilename.split('.')[0];
+    expect(keyBasename).toBe('latest');
 
     await server.close();
   });
