@@ -20,7 +20,7 @@ func TracerFromContext(ctx context.Context) (tracer trace.Tracer) {
 	return
 }
 
-func RequestPrefixFilter(prefixes []string) func(r *http.Request) bool {
+func PrefixRequestFilter(prefixes []string) func(r *http.Request) bool {
 	return func(r *http.Request) bool {
 		for _, prefix := range prefixes {
 			if strings.HasPrefix(r.URL.Path, prefix) {
@@ -31,7 +31,7 @@ func RequestPrefixFilter(prefixes []string) func(r *http.Request) bool {
 	}
 }
 
-func RequestFilter(r *http.Request) bool {
+func CommonRequestFilter(r *http.Request) bool {
 	if r.URL.Path == "/favicon.ico" || r.Method == "OPTIONS" {
 		return false
 	}
