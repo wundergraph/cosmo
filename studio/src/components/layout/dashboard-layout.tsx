@@ -165,7 +165,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     );
 
     return navigation;
-  }, [organizationSlug, plans.data]);
+  }, [organizationSlug, plans.data?.plans?.length, user?.currentOrganization.slug]);
 
   return (
     render && (
