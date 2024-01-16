@@ -62,9 +62,6 @@ func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error)
 	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeConnectionAck}); err != nil {
 		return nil, fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeConnectionAck, err)
 	}
-	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeKeepAlive}); err != nil {
-		return nil, fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeKeepAlive, err)
-	}
 	return msg.Payload, nil
 }
 

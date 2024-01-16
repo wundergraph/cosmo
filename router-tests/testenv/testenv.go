@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-retryablehttp"
 	"io"
 	"math/rand"
 	"net/http"
@@ -16,8 +15,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
@@ -90,18 +92,28 @@ type SubgraphConfig struct {
 	CloseOnStart bool
 }
 
+var (
+	envCreateMux sync.Mutex
+)
+
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
+
+	// Ensure that only one test environment is created at a time
+	// We use freeport to get a free port for NATS and the Router
+	// If we don't lock here, two parallel tests might get the same port
+	envCreateMux.Lock()
+	defer envCreateMux.Unlock()
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
-	port, err := freeport.GetFreePort()
+	natsPort, err := freeport.GetFreePort()
 	if err != nil {
 		t.Fatalf("could not get free port: %s", err)
 	}
 
 	opts := natsserver.Options{
 		Host:   "localhost",
-		Port:   port,
+		Port:   natsPort,
 		NoLog:  true,
 		NoSigs: true,
 	}
@@ -232,12 +244,12 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	cdn := setupCDNServer()
 
-	port, err = freeport.GetFreePort()
+	routerPort, err := freeport.GetFreePort()
 	if err != nil {
 		t.Fatalf("could not get free port: %s", err)
 	}
 
-	listenerAddr := fmt.Sprintf("localhost:%d", port)
+	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
 	routerURL := fmt.Sprintf("http://%s", listenerAddr)
 
 	client := retryablehttp.NewClient()
@@ -350,6 +362,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
 		},
+		EpollKqueuePollTimeout:    300 * time.Millisecond,
+		EpollKqueueConnBufferSize: 1,
+		WebSocketReadTimeout:      time.Millisecond * 100,
+		MaxConcurrentResolvers:    128,
 	}
 	if testConfig.ModifyEngineExecutionConfiguration != nil {
 		testConfig.ModifyEngineExecutionConfiguration(&engineExecutionConfig)
@@ -652,7 +668,7 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.WebsocketStats.Subscribe()
+	sub := e.Router.WebsocketStats.Subscribe(ctx)
 
 	for {
 		select {
@@ -683,7 +699,7 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.WebsocketStats.Subscribe()
+	sub := e.Router.WebsocketStats.Subscribe(ctx)
 
 	for {
 		select {
@@ -713,7 +729,7 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.WebsocketStats.Subscribe()
+	sub := e.Router.WebsocketStats.Subscribe(ctx)
 
 	for {
 		select {

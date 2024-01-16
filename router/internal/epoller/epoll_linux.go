@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -22,15 +23,17 @@ type Epoll struct {
 	lock           *sync.RWMutex
 	conns          map[int]net.Conn
 	connbuf        []net.Conn
+
+	timeoutMsec int
 }
 
 // NewPoller creates a new epoll poller.
-func NewPoller(connBufferSize int) (*Epoll, error) {
-	return newPollerWithBuffer(connBufferSize)
+func NewPoller(connBufferSize int, pollTimeout time.Duration) (*Epoll, error) {
+	return newPollerWithBuffer(connBufferSize, pollTimeout)
 }
 
 // newPollerWithBuffer creates a new epoll poller with a buffer.
-func newPollerWithBuffer(count int) (*Epoll, error) {
+func newPollerWithBuffer(count int, pollTimeout time.Duration) (*Epoll, error) {
 	fd, err := unix.EpollCreate1(0)
 	if err != nil {
 		return nil, err
@@ -41,6 +44,7 @@ func newPollerWithBuffer(count int) (*Epoll, error) {
 		lock:           &sync.RWMutex{},
 		conns:          make(map[int]net.Conn),
 		connbuf:        make([]net.Conn, count),
+		timeoutMsec:    int(pollTimeout.Milliseconds()),
 	}, nil
 }
 
@@ -99,7 +103,7 @@ func (e *Epoll) Wait(count int) ([]net.Conn, error) {
 	events := make([]unix.EpollEvent, count)
 
 retry:
-	n, err := unix.EpollWait(e.fd, events, -1)
+	n, err := unix.EpollWait(e.fd, events, e.timeoutMsec)
 	if err != nil {
 		if err == unix.EINTR {
 			goto retry

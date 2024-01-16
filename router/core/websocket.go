@@ -7,20 +7,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/epoller"
+	"github.com/wundergraph/cosmo/router/internal/logging"
 	"net"
 	"net/http"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/alitto/pond"
 	"github.com/go-chi/chi/middleware"
+	"github.com/wundergraph/cosmo/router/internal/epoller"
+
+	"github.com/alitto/pond"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -33,15 +34,18 @@ var (
 )
 
 type WebsocketMiddlewareOptions struct {
-	Parser                     *OperationParser
-	Planner                    *OperationPlanner
-	GraphQLHandler             *GraphQLHandler
-	Metrics                    *RouterMetrics
-	AccessController           *AccessController
-	Logger                     *zap.Logger
-	Stats                      WebSocketsStatistics
+	Parser           *OperationParser
+	Planner          *OperationPlanner
+	GraphQLHandler   *GraphQLHandler
+	Metrics          *RouterMetrics
+	AccessController *AccessController
+	Logger           *zap.Logger
+	Stats            WebSocketsStatistics
+	ReadTimeout      time.Duration
+
 	EnableWebSocketEpollKqueue bool
-	ReadTimeout                time.Duration
+	EpollKqueuePollTimeout     time.Duration
+	EpollKqueueConnBufferSize  int
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -67,7 +71,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			pond.MinWorkers(8),
 		)
 		if opts.EnableWebSocketEpollKqueue {
-			poller, err := epoller.NewPoller(128)
+			poller, err := epoller.NewPoller(opts.EpollKqueueConnBufferSize, opts.EpollKqueuePollTimeout)
 			if err == nil {
 				handler.epoll = poller
 				handler.connections = make(map[int]*WebSocketConnectionHandler)
@@ -95,7 +99,7 @@ func newWSConnectionWrapper(conn net.Conn, rw *bufio.ReadWriter) *wsConnectionWr
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
-	text, err := wsutil.ReadClientText(c.rw)
+	text, err := wsutil.ReadClientText(c.conn)
 	if err != nil {
 		return err
 	}
@@ -105,7 +109,11 @@ func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
 func (c *wsConnectionWrapper) WriteText(text string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return wsutil.WriteServerText(c.conn, unsafebytes.StringToBytes(text))
+	err := wsutil.WriteServerText(c.rw, []byte(text))
+	if err != nil {
+		return err
+	}
+	return c.rw.Flush()
 }
 
 func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
@@ -115,7 +123,11 @@ func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return wsutil.WriteServerText(c.conn, data)
+	err = wsutil.WriteServerText(c.rw, data)
+	if err != nil {
+		return err
+	}
+	return c.rw.Flush()
 }
 
 func (c *wsConnectionWrapper) Close() error {
@@ -154,24 +166,16 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		subProtocol string
-		hasErrored  bool
 		statusCode  = 0
 	)
 
+	requestID := middleware.GetReqID(r.Context())
+	requestLogger := h.logger.With(logging.WithRequestID(requestID))
 	clientInfo := NewClientInfoFromRequest(r)
-
-	/**
-	* Track request and schema usage metrics
-	 */
-	metrics := h.metrics.StartOperation(clientInfo, h.logger, r.ContentLength)
-	defer func() {
-		metrics.Finish(hasErrored, statusCode, 0)
-	}()
 
 	// Check access control before upgrading the connection
 	validatedReq, err := h.accessController.Access(w, r)
 	if err != nil {
-		hasErrored = true
 		statusCode = http.StatusForbidden
 		if errors.Is(err, ErrUnauthorized) {
 			statusCode = http.StatusUnauthorized
@@ -193,9 +197,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	c, rw, _, err := upgrader.Upgrade(r, w)
 	if err != nil {
-		h.logger.Warn("Websocket upgrade", zap.Error(err))
-
-		hasErrored = true
+		requestLogger.Warn("Websocket upgrade", zap.Error(err))
 		_ = c.Close()
 		return
 	}
@@ -206,9 +208,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn := newWSConnectionWrapper(c, rw)
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
-		h.logger.Error("Create websocket protocol", zap.Error(err))
-
-		hasErrored = true
+		requestLogger.Error("Create websocket protocol", zap.Error(err))
 		_ = c.Close()
 		return
 	}
@@ -226,77 +226,11 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Stats:          h.stats,
 		ConnectionID:   h.connectionIDs.Inc(),
 		ClientInfo:     clientInfo,
+		InitRequestID:  requestID,
 	})
 	err = handler.Initialize()
 	if err != nil {
-		h.logger.Error("Initializing websocket connection", zap.Error(err))
-
-		hasErrored = true
-		handler.Close()
-		return
-	}
-
-	if h.readTimeout > 0 {
-		err = handler.conn.conn.SetReadDeadline(time.Now().Add(h.readTimeout))
-		if err != nil {
-			h.logger.Error("Setting read deadline", zap.Error(err))
-
-			hasErrored = true
-			handler.Close()
-			return
-		}
-	}
-
-	msg, err := handler.protocol.ReadMessage()
-	if err != nil {
-		h.logger.Debug("Client closed connection. Could not read initial message.", zap.Error(err))
-
-		hasErrored = true
-		handler.Close()
-		return
-	}
-
-	/**
-	* Parse and create the operation context during upgrade once.
-	* A subscription is immutable, so we can reuse the context for all messages
-	 */
-
-	_, operationContext, err := handler.parseAndPlan(msg.Payload)
-	if err != nil {
-		h.logger.Debug("Could not parse and plan initial operation", zap.Error(err))
-
-		hasErrored = true
-		// If the operation is invalid, send an error message immediately
-		handler.writeErrorMessage(msg.ID, err)
-		handler.Close()
-		return
-	}
-
-	handler.operationContext = operationContext
-
-	metrics.AddOperationContext(operationContext)
-
-	// TODO: Instrument subscription with tracing & metrics
-
-	/**
-	* Create the context for all subscription execution with shared values
-	 */
-
-	handler.parentContext = withRequestContext(
-		context.WithValue(
-			context.Background(),
-			middleware.RequestIDKey, middleware.GetReqID(r.Context()),
-		),
-		buildRequestContext(nil, r, operationContext, h.logger),
-	)
-
-	// Handle the first message in the main goroutine, which is faster than polling
-	// then add the connection to the epoll to save resources
-	err = h.HandleMessage(handler, msg)
-	if err != nil {
-		h.logger.Error("Handling websocket message", zap.Error(err))
-
-		hasErrored = true
+		requestLogger.Error("Initializing websocket connection", zap.Error(err))
 		handler.Close()
 		return
 	}
@@ -305,9 +239,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.epoll != nil {
 		err = h.addConnection(c, handler)
 		if err != nil {
-			h.logger.Error("Adding connection to epoll", zap.Error(err))
-
-			hasErrored = true
+			requestLogger.Error("Adding connection to epoll", zap.Error(err))
 			handler.Close()
 		}
 		return
@@ -329,6 +261,13 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 		case <-serverDone:
 			return
 		default:
+			// It's important to set the ReadDeadline
+			// Otherwise, the following "ReadMessage" call will block forever
+			err := handler.conn.conn.SetReadDeadline(time.Now().Add(h.readTimeout))
+			if err != nil {
+				h.logger.Debug("Setting read deadline", zap.Error(err))
+				return
+			}
 			msg, err := handler.protocol.ReadMessage()
 			if err != nil {
 				if isReadTimeout(err) {
@@ -340,7 +279,6 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 			err = h.HandleMessage(handler, msg)
 			if err != nil {
 				h.logger.Debug("Handling websocket message", zap.Error(err))
-
 				if errors.Is(err, errClientTerminatedConnection) {
 					return
 				}
@@ -353,7 +291,7 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 	h.stats.ConnectionsInc()
 	h.connectionsMu.Lock()
 	defer h.connectionsMu.Unlock()
-	fd := sockedFd(conn)
+	fd := socketFd(conn)
 	h.connections[fd] = handler
 	return h.epoll.Add(conn)
 }
@@ -370,7 +308,7 @@ func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketCon
 	handler.Close()
 }
 
-func sockedFd(conn net.Conn) int {
+func socketFd(conn net.Conn) int {
 	if con, ok := conn.(syscall.Conn); ok {
 		raw, err := con.SyscallConn()
 		if err != nil {
@@ -422,7 +360,7 @@ func (h *WebsocketHandler) runPoller() {
 				}
 				conn := connections[i].(epoller.ConnImpl)
 				// check if the connection is still valid
-				fd := sockedFd(conn)
+				fd := socketFd(conn)
 				h.connectionsMu.RLock()
 				handler, exists := h.connections[fd]
 				h.connectionsMu.RUnlock()
@@ -430,7 +368,7 @@ func (h *WebsocketHandler) runPoller() {
 					continue
 				}
 
-				err = handler.conn.conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+				err = handler.conn.conn.SetReadDeadline(time.Now().Add(h.readTimeout))
 				if err != nil {
 					h.logger.Debug("Setting read deadline", zap.Error(err))
 					h.removeConnection(conn, handler, fd)
@@ -450,7 +388,6 @@ func (h *WebsocketHandler) runPoller() {
 				err = h.HandleMessage(handler, msg)
 				if err != nil {
 					h.logger.Debug("Handling websocket message", zap.Error(err))
-
 					if errors.Is(err, errClientTerminatedConnection) {
 						h.removeConnection(conn, handler, fd)
 						return
@@ -559,6 +496,7 @@ type WebSocketConnectionHandlerOptions struct {
 	ConnectionID   int64
 	RequestContext context.Context
 	ClientInfo     *ClientInfo
+	InitRequestID  string
 }
 
 type WebSocketConnectionHandler struct {
@@ -575,12 +513,11 @@ type WebSocketConnectionHandler struct {
 	clientInfo     *ClientInfo
 	logger         *zap.Logger
 
-	connectionID     int64
-	subscriptionIDs  atomic.Int64
-	subscriptions    sync.Map
-	stats            WebSocketsStatistics
-	parentContext    context.Context
-	operationContext *operationContext
+	initRequestID   string
+	connectionID    int64
+	subscriptionIDs atomic.Int64
+	subscriptions   sync.Map
+	stats           WebSocketsStatistics
 }
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
@@ -597,8 +534,8 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		logger:         opts.Logger,
 		connectionID:   opts.ConnectionID,
 		stats:          opts.Stats,
-		parentContext:  opts.RequestContext,
 		clientInfo:     opts.ClientInfo,
+		initRequestID:  opts.InitRequestID,
 	}
 }
 
@@ -638,28 +575,40 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, id resolve.SubscriptionIdentifier) {
 
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger, h.stats)
-	requestID := middleware.GetReqID(h.parentContext)
 
-	resolveCtx := &resolve.Context{
-		Variables: h.operationContext.Variables(),
-		Request: resolve.Request{
-			Header: h.r.Header.Clone(),
-			ID:     requestID,
-		},
-		RenameTypeNames:       h.graphqlHandler.executor.RenameTypeNames,
-		RequestTracingOptions: h.operationContext.traceOptions,
-		InitialPayload:        h.operationContext.initialPayload,
-		Extensions:            h.operationContext.extensions,
+	_, operationCtx, err := h.parseAndPlan(msg.Payload)
+	if err != nil {
+		werr := h.writeErrorMessage(msg.ID, err)
+		if werr != nil {
+			h.logger.Warn("writing error message", zap.Error(werr))
+		}
+		return
 	}
 
-	// Pass the request context, so we don't lose the request ID and trace context
-	resolveCtx = resolveCtx.WithContext(h.parentContext)
+	resolveCtx := &resolve.Context{
+		Variables: operationCtx.Variables(),
+		Request: resolve.Request{
+			Header: h.r.Header.Clone(),
+			ID:     h.initRequestID,
+		},
+		RenameTypeNames:       h.graphqlHandler.executor.RenameTypeNames,
+		RequestTracingOptions: operationCtx.traceOptions,
+		InitialPayload:        operationCtx.initialPayload,
+		Extensions:            operationCtx.extensions,
+	}
+	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, h.r, operationCtx, h.logger)))
 
 	h.stats.SubscriptionsInc()
 
-	switch p := h.operationContext.preparedPlan.preparedPlan.(type) {
+	// Put in a closure to evaluate err after the defer
+	defer func() {
+		// StatusCode has no meaning here. We set it to 0 but set the error.
+		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil)
+	}()
+
+	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		err := h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
+		err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			return
@@ -667,7 +616,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		rw.Flush()
 		rw.Complete()
 	case *plan.SubscriptionResponsePlan:
-		err := h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
+		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
 			return
@@ -710,6 +659,7 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
+
 	switch msg.Type {
 	case wsproto.MessageTypeTerminate:
 		return errClientTerminatedConnection
