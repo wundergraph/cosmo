@@ -91,7 +91,12 @@ const SubgraphOverviewPage = () => {
           <div className="flex-start flex max-w-[300px] flex-1 flex-col gap-1">
             <dt className="text-sm text-muted-foreground">Routing URL</dt>
             <dd>
-              <p className="text-sm">{subgraph.routingURL}</p>
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger className="w-full truncate text-sm">
+                  {subgraph.routingURL}
+                </TooltipTrigger>
+                <TooltipContent>{subgraph.routingURL}</TooltipContent>
+              </Tooltip>
             </dd>
           </div>
 
