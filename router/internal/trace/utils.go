@@ -20,12 +20,18 @@ func TracerFromContext(ctx context.Context) (tracer trace.Tracer) {
 	return
 }
 
-func RequestFilter(r *http.Request) bool {
-
-	// /health and /health/live, /health/ready are ignored
-	if strings.HasPrefix(r.URL.Path, "/health") {
-		return false
+func RequestPrefixFilter(prefixes []string) func(r *http.Request) bool {
+	return func(r *http.Request) bool {
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(r.URL.Path, prefix) {
+				return false
+			}
+		}
+		return true
 	}
+}
+
+func RequestFilter(r *http.Request) bool {
 	if r.URL.Path == "/favicon.ico" || r.Method == "OPTIONS" {
 		return false
 	}
