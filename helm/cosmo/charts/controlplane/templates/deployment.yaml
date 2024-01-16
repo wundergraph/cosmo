@@ -217,6 +217,13 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: defaultBillingPlan
+            {{ if .Values.configuration.enableRouterConfigCDN }}
+            - name: ENABLE_ROUTER_CONFIG_CDN
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: enableRouterConfigCDN
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

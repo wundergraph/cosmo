@@ -26,3 +26,4 @@ data:
   githubAppId: "{{ .Values.configuration.githubAppId }}"
   slackAppClientId: "{{ .Values.configuration.slackAppClientId }}"
   defaultBillingPlan: "{{ .Values.configuration.defaultBillingPlan }}"
+  enableRouterConfigCDN: "{{ .Values.configuration.enableRouterConfigCDN }}"

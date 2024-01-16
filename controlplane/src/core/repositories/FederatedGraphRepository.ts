@@ -126,7 +126,7 @@ export class FederatedGraphRepository {
     labelMatchers: string[];
     updatedBy: string;
     readme?: string;
-    blobStorage: BlobStorage;
+    blobStorage?: BlobStorage;
   }) {
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -135,7 +135,6 @@ export class FederatedGraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(tx);
 
       const federatedGraph = await fedGraphRepo.byName(data.name);
       if (!federatedGraph) {
@@ -201,7 +200,7 @@ export class FederatedGraphRepository {
             .execute();
         }
 
-        const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
         const composedGraph = await composer.composeFederatedGraph(federatedGraph);
 
         await composer.deployComposition({

@@ -280,8 +280,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const compositionRepo = new GraphCompositionRepository(tx);
-          const compChecker = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+          const compChecker = new Composer(fedGraphRepo, subgraphRepo);
           const composition = await compChecker.composeFederatedGraph(federatedGraph);
 
           compositionErrors.push(
@@ -294,7 +293,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           await compChecker.deployComposition({
             composedGraph: composition,
             composedBy: authContext.userId,
-            blobStorage: opts.blobStorage,
+            blobStorage: opts.enableRouterConfigCDN ? opts.blobStorage : undefined,
             organizationId: authContext.organizationId,
           });
         });
@@ -492,7 +491,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           schemaCheckID,
         });
 
-        const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
 
         const result = req.delete
           ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name)
@@ -615,8 +614,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraph = await subgraphRepo.byName(req.subgraphName);
-        const compositionRepo = new GraphCompositionRepository(opts.db);
-        const compChecker = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+        const compChecker = new Composer(fedGraphRepo, subgraphRepo);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1013,8 +1011,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
-        const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
-        await opts.blobStorage.removeDirectory(blobStorageDirectory);
+        if (opts.blobStorage) {
+          const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
+          await opts.blobStorage.removeDirectory(blobStorageDirectory);
+        }
 
         const subgraphsTargetIDs: string[] = [];
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name);
@@ -1098,8 +1098,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const compositionRepo = new GraphCompositionRepository(tx);
-          const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+          const composer = new Composer(fedGraphRepo, subgraphRepo);
           const auditLogRepo = new AuditLogRepository(tx);
 
           // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
@@ -1137,7 +1136,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             await composer.deployComposition({
               composedGraph: composition,
               composedBy: authContext.userId,
-              blobStorage: opts.blobStorage,
+              blobStorage: opts.enableRouterConfigCDN ? opts.blobStorage : undefined,
               organizationId: authContext.organizationId,
             });
 
@@ -1255,7 +1254,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
           updatedBy: authContext.userId,
           readme: req.readme,
-          blobStorage: opts.blobStorage,
+          blobStorage: opts.enableRouterConfigCDN ? opts.blobStorage : undefined,
         });
 
         if (errors) {
@@ -2301,8 +2300,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const compositionRepo = new GraphCompositionRepository(tx);
-          const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+          const composer = new Composer(fedGraphRepo, subgraphRepo);
 
           const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
             fedGraph: {
@@ -2320,7 +2318,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           await composer.deployComposition({
             composedGraph: composition,
             composedBy: authContext.userId,
-            blobStorage: opts.blobStorage,
+            blobStorage: opts.enableRouterConfigCDN ? opts.blobStorage : undefined,
             organizationId: authContext.organizationId,
           });
         });
@@ -3457,6 +3455,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             operations: [],
           };
         }
+
+        const blobStorage = opts.blobStorage;
+
+        if (!blobStorage) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `CDN storage not configured`,
+            },
+            operations: [],
+          };
+        }
+
         const organizationId = authContext.organizationId;
         const federatedGraphRepo = new FederatedGraphRepository(opts.db, organizationId);
 
@@ -3556,7 +3567,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               body: operation.contents,
             };
             try {
-              await opts.blobStorage.putObject({
+              await blobStorage.putObject({
                 key: path,
                 body: Buffer.from(JSON.stringify(data), 'utf8'),
                 contentType: 'application/json; charset=utf-8',

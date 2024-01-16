@@ -10,6 +10,10 @@ export const envVariables = z
       .string()
       .transform((val) => val === 'true')
       .optional(),
+    /*
+     * CDN
+     */
+    ENABLE_ROUTER_CONFIG_CDN: z.boolean().optional(),
     /**
      * Server
      */
@@ -68,7 +72,7 @@ export const envVariables = z
     /**
      * S3 Storage e.g. for persistent operations
      */
-    S3_STORAGE_URL: z.string(),
+    S3_STORAGE_URL: z.string().optional(),
     /**
      * Email
      */

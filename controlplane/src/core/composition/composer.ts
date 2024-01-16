@@ -6,7 +6,6 @@ import { ArgumentConfigurationData, FederationResult } from '@wundergraph/compos
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
-import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
@@ -59,7 +58,6 @@ export class Composer {
   constructor(
     private federatedGraphRepo: FederatedGraphRepository,
     private subgraphRepo: SubgraphRepository,
-    private compositionRepo: GraphCompositionRepository,
   ) {}
 
   /**
@@ -74,7 +72,7 @@ export class Composer {
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
-    blobStorage: BlobStorage;
+    blobStorage?: BlobStorage;
     organizationId: string;
   }) {
     const hasCompositionErrors = composedGraph.errors.length > 0;
@@ -93,17 +91,19 @@ export class Composer {
       });
       routerConfigJson = routerConfig.toJson();
 
-      try {
-        await blobStorage.putObject({
-          key: path,
-          body: Buffer.from(routerConfig.toJsonString(), 'utf8'),
-          contentType: 'application/json; charset=utf-8',
-          version: federatedSchemaVersionId,
-        });
-      } catch {
-        throw new Error(
-          `Could not upload the latest config of the federated graph ${composedGraph.name}. Please try again.`,
-        );
+      if (blobStorage) {
+        try {
+          await blobStorage.putObject({
+            key: path,
+            body: Buffer.from(routerConfig.toJsonString(), 'utf8'),
+            contentType: 'application/json; charset=utf-8',
+            version: federatedSchemaVersionId,
+          });
+        } catch {
+          throw new Error(
+            `Could not upload the latest config of the federated graph ${composedGraph.name}. Please try again.`,
+          );
+        }
       }
     }
 

@@ -42,6 +42,7 @@ const {
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
   DEFAULT_PLAN,
+  ENABLE_ROUTER_CONFIG_CDN,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -86,6 +87,7 @@ const options: BuildConfig = {
     clientID: SLACK_APP_CLIENT_ID,
     clientSecret: SLACK_APP_CLIENT_SECRET,
   },
+  enableRouterConfigCDN: ENABLE_ROUTER_CONFIG_CDN,
   s3StorageUrl: S3_STORAGE_URL,
   smtpUsername: SMTP_USERNAME,
   smtpPassword: SMTP_PASSWORD,

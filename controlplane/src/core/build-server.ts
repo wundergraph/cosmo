@@ -74,8 +74,9 @@ export interface BuildConfig {
     id?: string;
     privateKey?: string;
   };
+  enableRouterConfigCDN?: boolean;
   slack: { clientID?: string; clientSecret?: string };
-  s3StorageUrl: string;
+  s3StorageUrl?: string;
   smtpUsername?: string;
   smtpPassword?: string;
   stripe?: {
@@ -232,23 +233,23 @@ export default async function build(opts: BuildConfig) {
     });
   }
 
-  if (!opts.s3StorageUrl) {
-    throw new Error('S3 storage URL is required');
-  }
+  let blobStorage: S3BlobStorage | undefined;
 
-  const url = new URL(opts.s3StorageUrl);
-  const s3Client = new S3Client({
-    // For AWS S3, the region can be set via the endpoint
-    region: 'auto',
-    endpoint: url.origin,
-    credentials: {
-      accessKeyId: url.username ?? '',
-      secretAccessKey: url.password ?? '',
-    },
-    forcePathStyle: true,
-  });
-  const bucketName = url.pathname.slice(1);
-  const blobStorage = new S3BlobStorage(s3Client, bucketName);
+  if (opts.s3StorageUrl) {
+    const url = new URL(opts.s3StorageUrl);
+    const s3Client = new S3Client({
+      // For AWS S3, the region can be set via the endpoint
+      region: 'auto',
+      endpoint: url.origin,
+      credentials: {
+        accessKeyId: url.username,
+        secretAccessKey: url.password,
+      },
+      forcePathStyle: true,
+    });
+    const bucketName = url.pathname.slice(1);
+    blobStorage = new S3BlobStorage(s3Client, bucketName);
+  }
 
   /**
    * Controllers registration
@@ -298,6 +299,7 @@ export default async function build(opts: BuildConfig) {
       blobStorage,
       mailerClient,
       billingDefaultPlanId: opts.stripe?.defaultPlanId,
+      enableRouterConfigCDN: opts.enableRouterConfigCDN ?? false,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

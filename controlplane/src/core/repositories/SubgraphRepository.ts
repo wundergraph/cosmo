@@ -146,7 +146,7 @@ export class SubgraphRepository {
 
   public async update(
     data: UpdateSubgraphOptions,
-    blobStorage: BlobStorage,
+    blobStorage?: BlobStorage,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
@@ -155,8 +155,7 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(tx);
-      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+      const composer = new Composer(fedGraphRepo, subgraphRepo);
       let subgraphChanged = false;
 
       const subgraph = await subgraphRepo.byName(data.name);
