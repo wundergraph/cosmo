@@ -750,7 +750,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		metricStore = m
 	}
 
-	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
+	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion(), r.logger)
 
 	transport := newHTTPTransport(r.subgraphTransportOptions)
 
@@ -799,6 +799,18 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistentOpClient:      r.cdnPersistentOpClient,
 	})
+	// Pre-hash all data source IDs to avoid races
+	// TODO: Ideally, we would do this in the engine itself
+	// Context:
+	// In case we have 2 concurrent requests that need planning and use the same data source
+	// it's possible that we run into a race by either calling Hash() on the same data source
+	// or by calling Planner(), which might have side effects.
+	// E.g. in a Data Source Factory, we might be lazily initializing a client
+	for i := range executor.PlanConfig.DataSources {
+		executor.PlanConfig.DataSources[i].Hash()
+		// Pre-init the Planner for each data source
+		executor.PlanConfig.DataSources[i].Factory.Planner(ctx)
+	}
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler func(http.Handler) http.Handler
@@ -843,13 +855,15 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 		Parser:                     operationParser,
 		Planner:                    operationPlanner,
-		Metrics:                    routerMetrics,
 		GraphQLHandler:             graphqlHandler,
+		Metrics:                    routerMetrics,
 		AccessController:           r.accessController,
 		Logger:                     r.logger,
 		Stats:                      r.WebsocketStats,
-		EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
 		ReadTimeout:                r.engineExecutionConfiguration.WebSocketReadTimeout,
+		EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
+		EpollKqueuePollTimeout:     r.engineExecutionConfiguration.EpollKqueuePollTimeout,
+		EpollKqueueConnBufferSize:  r.engineExecutionConfiguration.EpollKqueueConnBufferSize,
 	})
 
 	graphqlChiRouter := chi.NewRouter()
