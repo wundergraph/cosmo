@@ -3462,7 +3462,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `CDN storage not configured`,
+              details: `The feature is not configured. Please contact support.`,
             },
             operations: [],
           };
