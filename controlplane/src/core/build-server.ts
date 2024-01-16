@@ -31,6 +31,7 @@ import { OrganizationInvitationRepository } from './repositories/OrganizationInv
 import { Authorization } from './services/Authorization.js';
 import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
+import { UserRepository } from './repositories/UserRepository.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -172,7 +173,8 @@ export default async function build(opts: BuildConfig) {
   const organizationRepository = new OrganizationRepository(fastify.db, opts.stripe?.defaultPlanId);
   const orgInvitationRepository = new OrganizationInvitationRepository(fastify.db, opts.stripe?.defaultPlanId);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
-  const webAuth = new WebSessionAuthenticator(opts.auth.secret);
+  const userRepo = new UserRepository(fastify.db);
+  const webAuth = new WebSessionAuthenticator(opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
   const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);

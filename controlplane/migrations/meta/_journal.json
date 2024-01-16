@@ -533,6 +533,13 @@
       "when": 1704817596666,
       "tag": "0075_nostalgic_lord_tyger",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "5",
+      "when": 1705415801445,
+      "tag": "0076_brave_wilson_fisk",
+      "breakpoints": true
     }
   ]
 }
