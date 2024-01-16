@@ -100,7 +100,7 @@ const Organizations = () => {
             );
             if (currentOrg) {
               router.replace(
-                currentPage === "graph"
+                currentPage === "graph" || currentPage === "invitations"
                   ? `/${currentOrg.slug}/graphs`
                   : `/${currentOrg.slug}/${currentPage}`,
               );

@@ -97,7 +97,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   }, [disableStarBanner]);
 
   const links = useMemo(() => {
-    const basePath = `/${organizationSlug}`;
+    const basePath = `/${user?.currentOrganization.slug || organizationSlug}`;
 
     const navigation: Partial<NavLink>[] = [
       {

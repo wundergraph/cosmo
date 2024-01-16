@@ -9,12 +9,13 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   acceptOrDeclineInvitation,
   getInvitations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { useRouter } from "next/router";
 
 const InvitationCard = ({
   id,
@@ -25,9 +26,11 @@ const InvitationCard = ({
   name: string;
   invitedBy?: string;
 }) => {
+  const router = useRouter();
   const { mutate } = useMutation(acceptOrDeclineInvitation.useMutation());
   const { refetch } = useQuery(getInvitations.useQuery());
   const { toast } = useToast();
+  const client = useQueryClient();
 
   const onSubmit = (accept: boolean) => {
     mutate(
@@ -41,6 +44,9 @@ const InvitationCard = ({
             duration: 3000,
           });
           refetch();
+          client.invalidateQueries({
+            queryKey: ["user", router.asPath],
+          });
         },
         onError: () => {
           toast({
