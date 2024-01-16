@@ -71,7 +71,7 @@ func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, rep
 
 		for ii := 0; ii < *repeat; ii++ {
 			// In our example we'll send the current time every second.
-			time.Sleep(1 * time.Second)
+			time.Sleep(100 * time.Millisecond)
 			select {
 			case <-ctx.Done():
 				return
@@ -107,7 +107,7 @@ func (r *subscriptionResolver) InitPayloadValue(ctx context.Context, key string,
 
 		for ii := 0; ii < *repeat; ii++ {
 			// In our example we'll send the current time every second.
-			time.Sleep(1 * time.Second)
+			time.Sleep(100 * time.Millisecond)
 			select {
 			case <-ctx.Done():
 				return
@@ -143,7 +143,7 @@ func (r *subscriptionResolver) InitialPayload(ctx context.Context, repeat *int) 
 
 		for ii := 0; ii < *repeat; ii++ {
 			// In our example we'll send the current time every second.
-			time.Sleep(1 * time.Second)
+			time.Sleep(100 * time.Millisecond)
 			select {
 			case <-ctx.Done():
 				return

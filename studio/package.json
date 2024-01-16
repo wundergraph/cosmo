@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.51.0",
+  "version": "0.51.1",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -61,6 +61,7 @@
     "@t3-oss/env-nextjs": "^0.4.1",
     "@tanstack/react-query": "^5.4.3",
     "@tanstack/react-table": "^8.9.3",
+    "@tanstack/react-virtual": "^3.0.1",
     "@tiptap/extension-placeholder": "^2.1.13",
     "@tiptap/pm": "^2.1.13",
     "@tiptap/react": "^2.1.13",

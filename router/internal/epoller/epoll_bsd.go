@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 	"syscall"
+	"time"
 )
 
 var _ Poller = (*Epoll)(nil)
@@ -25,12 +26,12 @@ type Epoll struct {
 }
 
 // NewPoller creates a new poller instance.
-func NewPoller(connBufferSize int) (*Epoll, error) {
-	return newPollerWithBuffer(connBufferSize)
+func NewPoller(connBufferSize int, pollTimeout time.Duration) (*Epoll, error) {
+	return newPollerWithBuffer(connBufferSize, pollTimeout)
 }
 
 // newPollerWithBuffer creates a new poller instance with buffer size.
-func newPollerWithBuffer(count int) (*Epoll, error) {
+func newPollerWithBuffer(count int, pollTimeout time.Duration) (*Epoll, error) {
 	p, err := syscall.Kqueue()
 	if err != nil {
 		panic(err)
@@ -46,7 +47,7 @@ func newPollerWithBuffer(count int) (*Epoll, error) {
 
 	return &Epoll{
 		fd:             p,
-		ts:             syscall.NsecToTimespec(1e9),
+		ts:             syscall.NsecToTimespec(pollTimeout.Nanoseconds()),
 		connBufferSize: count,
 		mu:             &sync.RWMutex{},
 		conns:          make(map[int]net.Conn),

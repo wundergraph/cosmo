@@ -207,6 +207,7 @@ func TestVariables(t *testing.T) {
 }
 
 func TestAnonymousQuery(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id } }`,
@@ -216,6 +217,7 @@ func TestAnonymousQuery(t *testing.T) {
 }
 
 func TestTracing(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.EnableRequestTracing = true
@@ -279,6 +281,7 @@ func TestOperationSelection(t *testing.T) {
 	t.Parallel()
 
 	t.Run("anonymous query", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -288,6 +291,7 @@ func TestOperationSelection(t *testing.T) {
 	})
 
 	t.Run("multiple anonymous queries", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } } { employees { id } }`,
@@ -297,6 +301,7 @@ func TestOperationSelection(t *testing.T) {
 	})
 
 	t.Run("operation name null returns data", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:         `{ employees { id } }`,
@@ -307,6 +312,7 @@ func TestOperationSelection(t *testing.T) {
 	})
 
 	t.Run("operation name wrong on anonymous operation", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:         `{ employees { id } }`,
@@ -317,6 +323,7 @@ func TestOperationSelection(t *testing.T) {
 	})
 
 	t.Run("operation name wrong on named operation", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:         `query Exists { employees { id } }`,
@@ -326,6 +333,7 @@ func TestOperationSelection(t *testing.T) {
 		})
 
 		t.Run("multiple named operations", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
@@ -336,6 +344,7 @@ func TestOperationSelection(t *testing.T) {
 		})
 
 		t.Run("multiple named operations B", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
@@ -346,6 +355,7 @@ func TestOperationSelection(t *testing.T) {
 		})
 
 		t.Run("multiple named operations B", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
@@ -395,6 +405,7 @@ func TestTestdataQueries(t *testing.T) {
 }
 
 func TestIntegrationWithUndefinedField(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id notDefined } }`,
@@ -404,6 +415,7 @@ func TestIntegrationWithUndefinedField(t *testing.T) {
 }
 
 func TestParallel(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
 		trigger := make(chan struct{})

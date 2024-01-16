@@ -47,6 +47,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "./ui/table";
 import {
   Tooltip,
@@ -211,48 +212,51 @@ export const AddSubgraphUsersContent = ({
         </Button>
       </form>
       {subgraphMembers.length > 0 && (
-        <Table>
-          <TableBody>
-            {subgraphMembers.map(({ email, userId, subgraphMemberId }) => {
-              return (
-                <TableRow key={userId} className="h-12 py-1">
-                  <TableCell className="px-4 font-medium">{email}</TableCell>
-                  {(isAdmin || (creatorUserId && creatorUserId === user?.id)) &&
-                    rbac?.enabled && (
-                      <TableCell className="flex h-12 items-center justify-end px-4">
-                        <Button
-                          variant="ghost"
-                          className="text-primary"
-                          isLoading={removingMember}
-                          onClick={() => {
-                            removeMember(
-                              { subgraphMemberId, subgraphName },
-                              {
-                                onSuccess: (d) => {
-                                  sendToast(
-                                    d.response?.details ||
-                                      "Removed member successfully.",
-                                  );
-                                  refetchSubgraphMembers();
+        <TableWrapper>
+          <Table>
+            <TableBody>
+              {subgraphMembers.map(({ email, userId, subgraphMemberId }) => {
+                return (
+                  <TableRow key={userId} className="h-12 py-1">
+                    <TableCell className="px-4 font-medium">{email}</TableCell>
+                    {(isAdmin ||
+                      (creatorUserId && creatorUserId === user?.id)) &&
+                      rbac?.enabled && (
+                        <TableCell className="flex h-12 items-center justify-end px-4">
+                          <Button
+                            variant="ghost"
+                            className="text-primary"
+                            isLoading={removingMember}
+                            onClick={() => {
+                              removeMember(
+                                { subgraphMemberId, subgraphName },
+                                {
+                                  onSuccess: (d) => {
+                                    sendToast(
+                                      d.response?.details ||
+                                        "Removed member successfully.",
+                                    );
+                                    refetchSubgraphMembers();
+                                  },
+                                  onError: (error) => {
+                                    sendToast(
+                                      "Could not remove the member. Please try again.",
+                                    );
+                                  },
                                 },
-                                onError: (error) => {
-                                  sendToast(
-                                    "Could not remove the member. Please try again.",
-                                  );
-                                },
-                              },
-                            );
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </TableCell>
-                    )}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                              );
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </TableCell>
+                      )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableWrapper>
       )}
     </div>
   );
@@ -353,72 +357,72 @@ export const SubgraphsTable = ({
   if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} />;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="px-4">Name</TableHead>
-          <TableHead className="w-4/12 px-4">Url</TableHead>
-          <TableHead className="w-4/12 px-4">Labels</TableHead>
-          <TableHead className="w-2/12 px-4 text-right">
-            Last Published
-          </TableHead>
-          {rbac && <TableHead className="w-1/12"></TableHead>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {subgraphs.map(
-          ({ name, routingURL, lastUpdatedAt, labels, creatorUserId }) => {
-            const path = `/${organizationSlug}/subgraph/${name}`;
-            return (
-              <TableRow
-                key={name}
-                className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
-              >
-                <TableCell className="px-4 font-medium">{name}</TableCell>
-                <TableCell className="px-4 text-muted-foreground hover:text-current">
-                  <Link target="_blank" rel="noreferrer" href={routingURL}>
-                    {routingURL}
-                  </Link>
-                </TableCell>
-                <TableCell className="px-4">
-                  <div className="flex space-x-2">
-                    {labels.map(({ key, value }) => {
-                      return (
-                        <Badge variant="secondary" key={key + value}>
-                          {key}={value}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </TableCell>
-                <TableCell className="px-4 text-right text-muted-foreground">
-                  {lastUpdatedAt
-                    ? formatDistanceToNow(new Date(lastUpdatedAt), {
-                        addSuffix: true,
-                      })
-                    : "Never"}
-                </TableCell>
-                <TableCell className="flex justify-end">
-                  {rbac && (
-                    <AddSubgraphUsers
-                      subgraphName={name}
-                      creatorUserId={creatorUserId}
-                    />
-                  )}
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="table-action"
-                  >
-                    <Link href={path}>View</Link>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          },
-        )}
-      </TableBody>
-    </Table>
+    <TableWrapper>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="px-4">Name</TableHead>
+            <TableHead className="w-4/12 px-4">Url</TableHead>
+            <TableHead className="w-4/12 px-4">Labels</TableHead>
+            <TableHead className="w-2/12 px-4">Last Published</TableHead>
+            {rbac && <TableHead className="w-1/12"></TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {subgraphs.map(
+            ({ name, routingURL, lastUpdatedAt, labels, creatorUserId }) => {
+              const path = `/${organizationSlug}/subgraph/${name}`;
+              return (
+                <TableRow
+                  key={name}
+                  className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+                >
+                  <TableCell className="px-4 font-medium">{name}</TableCell>
+                  <TableCell className="px-4 text-muted-foreground hover:text-current">
+                    <Link target="_blank" rel="noreferrer" href={routingURL}>
+                      {routingURL}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <div className="flex space-x-2">
+                      {labels.map(({ key, value }) => {
+                        return (
+                          <Badge variant="secondary" key={key + value}>
+                            {key}={value}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 text-muted-foreground">
+                    {lastUpdatedAt
+                      ? formatDistanceToNow(new Date(lastUpdatedAt), {
+                          addSuffix: true,
+                        })
+                      : "Never"}
+                  </TableCell>
+                  <TableCell className="flex justify-end">
+                    {rbac && (
+                      <AddSubgraphUsers
+                        subgraphName={name}
+                        creatorUserId={creatorUserId}
+                      />
+                    )}
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="table-action"
+                    >
+                      <Link href={path}>View</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            },
+          )}
+        </TableBody>
+      </Table>
+    </TableWrapper>
   );
 };

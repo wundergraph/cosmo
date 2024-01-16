@@ -17,7 +17,7 @@ func TestPoller(t *testing.T) {
 	// msg per connection
 	msgPerConn := 10
 
-	poller, err := NewPoller(0)
+	poller, err := NewPoller(0, time.Second)
 	require.NoError(t, err)
 
 	// start server
@@ -120,7 +120,7 @@ type netPoller struct {
 func TestPoller_growstack(t *testing.T) {
 	var nps []netPoller
 	for i := 0; i < 2; i++ {
-		poller, err := NewPoller(128)
+		poller, err := NewPoller(128, time.Second)
 		if err != nil {
 			t.Fatal(err)
 		}
