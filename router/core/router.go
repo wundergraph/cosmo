@@ -661,6 +661,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					otel.WgRouterVersion.String(Version),
 				),
 			),
+			otelhttp.WithFilter(trace.CommonRequestFilter),
+			otelhttp.WithFilter(trace.PrefixRequestFilter(
+				[]string{r.healthCheckPath, r.readinessCheckPath, r.livenessCheckPath}),
+			),
 			// Disable built-in metricStore through NoopMeterProvider
 			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
