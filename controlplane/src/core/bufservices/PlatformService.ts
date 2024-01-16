@@ -5955,10 +5955,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const billingRepo = new BillingRepository(opts.db);
         const billingService = new BillingService(opts.db, billingRepo);
+        const auditLogRepository = new AuditLogRepository(opts.db);
 
         await billingService.upgradePlan({
           organizationId: authContext.organizationId,
           plan: req.plan,
+        });
+
+        await auditLogRepository.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'subscription.upgraded',
+          action: 'upgraded',
+          auditableType: 'subscription',
+          auditableDisplayName: req.plan,
+          actorDisplayName: 'cosmo-bot',
+          actorType: 'system',
         });
 
         return {

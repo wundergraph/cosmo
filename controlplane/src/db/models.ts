@@ -42,7 +42,8 @@ export type AuditLogAction =
   | 'declined'
   | 'joined'
   | 'canceled'
-  | 'activated';
+  | 'activated'
+  | 'upgraded';
 
 export type AuditLogFullAction =
   | 'organization.created'
@@ -70,6 +71,7 @@ export type AuditLogFullAction =
   | 'subscription.activated'
   | 'subscription.deleted'
   | 'subscription.canceled'
+  | 'subscription.upgraded'
   | 'organization_invitation.created'
   | 'organization_invitation.deleted'
   | 'organization.joined'
