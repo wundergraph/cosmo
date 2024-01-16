@@ -9416,6 +9416,177 @@ export class OrganizationInvite extends Message<OrganizationInvite> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetAuditLogsRequest
+ */
+export class GetAuditLogsRequest extends Message<GetAuditLogsRequest> {
+  /**
+   * @generated from field: int32 limit = 1;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 2;
+   */
+  offset = 0;
+
+  constructor(data?: PartialMessage<GetAuditLogsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetAuditLogsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAuditLogsRequest {
+    return new GetAuditLogsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAuditLogsRequest {
+    return new GetAuditLogsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAuditLogsRequest {
+    return new GetAuditLogsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAuditLogsRequest | PlainMessage<GetAuditLogsRequest> | undefined, b: GetAuditLogsRequest | PlainMessage<GetAuditLogsRequest> | undefined): boolean {
+    return proto3.util.equals(GetAuditLogsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.AuditLog
+ */
+export class AuditLog extends Message<AuditLog> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string actorDisplayName = 2;
+   */
+  actorDisplayName = "";
+
+  /**
+   * @generated from field: string action = 3;
+   */
+  action = "";
+
+  /**
+   * @generated from field: string actorType = 4;
+   */
+  actorType = "";
+
+  /**
+   * @generated from field: string auditAction = 5;
+   */
+  auditAction = "";
+
+  /**
+   * @generated from field: string auditableDisplayName = 6;
+   */
+  auditableDisplayName = "";
+
+  /**
+   * @generated from field: string targetDisplayName = 7;
+   */
+  targetDisplayName = "";
+
+  /**
+   * @generated from field: string targetType = 8;
+   */
+  targetType = "";
+
+  /**
+   * @generated from field: string createdAt = 9;
+   */
+  createdAt = "";
+
+  constructor(data?: PartialMessage<AuditLog>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.AuditLog";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "actorDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "action", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "actorType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "auditAction", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "auditableDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "targetDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "targetType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuditLog {
+    return new AuditLog().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AuditLog {
+    return new AuditLog().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AuditLog {
+    return new AuditLog().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AuditLog | PlainMessage<AuditLog> | undefined, b: AuditLog | PlainMessage<AuditLog> | undefined): boolean {
+    return proto3.util.equals(AuditLog, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetAuditLogsResponse
+ */
+export class GetAuditLogsResponse extends Message<GetAuditLogsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AuditLog logs = 2;
+   */
+  logs: AuditLog[] = [];
+
+  constructor(data?: PartialMessage<GetAuditLogsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetAuditLogsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "logs", kind: "message", T: AuditLog, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAuditLogsResponse {
+    return new GetAuditLogsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAuditLogsResponse {
+    return new GetAuditLogsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAuditLogsResponse {
+    return new GetAuditLogsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAuditLogsResponse | PlainMessage<GetAuditLogsResponse> | undefined, b: GetAuditLogsResponse | PlainMessage<GetAuditLogsResponse> | undefined): boolean {
+    return proto3.util.equals(GetAuditLogsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetInvitationsRequest
  */
 export class GetInvitationsRequest extends Message<GetInvitationsRequest> {

@@ -655,9 +655,17 @@ export class OrganizationRepository {
   }
 
   public async deleteWebhookConfig(input: { id: string; organizationId: string }) {
-    await this.db
+    const result = await this.db
       .delete(organizationWebhooks)
-      .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
+      .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    return result[0];
   }
 
   public deleteOrganization(organizationID: string) {
@@ -866,6 +874,12 @@ export class OrganizationRepository {
     }
 
     return orgIntegrations;
+  }
+
+  public getIntegration(id: string, organizationId: string) {
+    return this.db.query.organizationIntegrations.findFirst({
+      where: and(eq(organizationIntegrations.id, id), eq(organizationIntegrations.organizationId, organizationId)),
+    });
   }
 
   public async updateIntegrationConfig(input: {

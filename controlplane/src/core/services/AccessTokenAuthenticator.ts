@@ -5,7 +5,9 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { checkUserAccess } from '../util.js';
 
 export type AccessTokenAuthContext = {
+  auth: 'access_token';
   userId: string;
+  userDisplayName: string;
   organizationId: string;
   organizationSlug: string;
   hasWriteAccess: boolean;
@@ -47,9 +49,11 @@ export default class AccessTokenAuthenticator {
     });
 
     return {
+      auth: 'access_token',
       organizationId: organization.id,
       organizationSlug: organization.slug,
       userId: userInfoData.sub,
+      userDisplayName: userInfoData.email,
       hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }),
       isAdmin: userRoles.includes('admin'),
     };

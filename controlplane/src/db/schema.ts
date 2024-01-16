@@ -16,6 +16,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { JSONContent } from '@tiptap/core';
 import { FeatureIds } from '../types/index.js';
+import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction } from './models.js';
 
 // JSON/JSONB custom types to workaround insert bug
 // Should not be used with other drivers than postgres-js
@@ -211,7 +212,7 @@ export const subgraphsToFederatedGraph = pgTable(
   },
   (t) => {
     return {
-      pk: primaryKey(t.federatedGraphId, t.subgraphId),
+      pk: primaryKey({ columns: [t.federatedGraphId, t.subgraphId] }),
     };
   },
 );
@@ -709,6 +710,7 @@ export const organizationsMembers = pgTable(
 export const organizationRelations = relations(organizations, ({ many }) => ({
   members: many(organizationsMembers),
   graphApiTokens: many(graphApiTokens),
+  auditLogs: many(auditLogs),
 }));
 
 export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer'] as const);
@@ -806,7 +808,7 @@ export const webhookGraphSchemaUpdate = pgTable(
   },
   (t) => {
     return {
-      pk: primaryKey(t.webhookId, t.federatedGraphId),
+      pk: primaryKey({ columns: [t.webhookId, t.federatedGraphId] }),
     };
   },
 );
@@ -941,6 +943,32 @@ export const oidcProviders = pgTable('oidc_providers', {
   name: text('name').notNull(),
   alias: text('alias').notNull().unique(),
   endpoint: text('endpoint').notNull(),
+});
+
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+
+  // Information about the action
+  action: text('action').$type<AuditLogAction>().notNull(), // e.g. created
+  auditAction: text('audit_action').$type<AuditLogFullAction>().notNull(), // e.g. organization.created
+  auditableType: text('auditable_type').$type<AuditableType>(), // e.g. organization, the resource that was acted upon
+  auditableDisplayName: text('auditable_display_name'), // e.g. name of the resource e.g. organization name to display in UI
+
+  // Information about the target of the action
+  targetId: uuid('target_id'), // e.g. id of the organization when a federated graph is created
+  targetType: text('target_type'), // the type of the target e.g. organization
+  targetDisplayName: text('target_display_name'), // human-readable name of the target e.g. organization name
+
+  actorId: uuid('actor_id'), // e.g. id of the user. Can be null if the actor is a system or api_key
+  actorDisplayName: text('actor_display_name'), // human-readable name of the actor e.g. user name, email
+  actorType: text('actor_type').$type<AuditActorType>(), // user, system, api_key
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const graphCompositions = pgTable('graph_compositions', {
