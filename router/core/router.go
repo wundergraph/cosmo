@@ -319,7 +319,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	for _, source := range r.eventsConfig.Sources {
-		r.logger.Info("event source", zap.String("provider", source.Provider), zap.String("url", source.URL))
+		r.logger.Info("Event source enabled", zap.String("provider", source.Provider), zap.String("url", source.URL))
 	}
 
 	return r, nil
