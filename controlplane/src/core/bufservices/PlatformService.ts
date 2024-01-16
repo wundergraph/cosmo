@@ -2479,6 +2479,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2489,9 +2490,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.deleteWebhookConfig({
+        const config = await orgRepo.deleteWebhookConfig({
           organizationId: authContext.organizationId,
           ...req,
+        });
+
+        if (!config) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Webhook config could not be deleted`,
+            },
+          };
+        }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'webhook_config.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableType: 'webhook_config',
+          auditableDisplayName: config.endpoint || '',
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {

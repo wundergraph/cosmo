@@ -655,9 +655,17 @@ export class OrganizationRepository {
   }
 
   public async deleteWebhookConfig(input: { id: string; organizationId: string }) {
-    await this.db
+    const result = await this.db
       .delete(organizationWebhooks)
-      .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
+      .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    return result[0];
   }
 
   public deleteOrganization(organizationID: string) {
