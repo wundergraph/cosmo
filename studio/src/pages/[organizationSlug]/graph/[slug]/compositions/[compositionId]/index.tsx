@@ -1,10 +1,11 @@
 import { getCheckIcon } from "@/components/check-badge-icon";
-import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { SDLViewerActions } from "@/components/schema/sdl-viewer";
+import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,10 +61,10 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   );
 
   const activeSubgraphName =
-    compositionSubgraph?.name || data?.compositionSubgraphs?.[0].name;
+    compositionSubgraph?.name || data?.compositionSubgraphs?.[0]?.name;
   const activeSubgraphVersionId =
     compositionSubgraph?.schemaVersionId ||
-    data?.compositionSubgraphs?.[0].schemaVersionId;
+    data?.compositionSubgraphs?.[0]?.schemaVersionId;
 
   const { data: sdlData, isLoading: fetchingSdl } = useQuery({
     ...getSdlBySchemaVersion.useQuery({
@@ -287,7 +288,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
               <div className="flex min-h-0 flex-1">
                 <TabsContent value="output" className="w-full">
                   {compositionErrors && compositionErrors.length ? (
-                    <div className="px-4">
+                    <div className="px-6">
                       <Alert variant="destructive">
                         <AlertTitle>Composition Errors</AlertTitle>
                         <AlertDescription>
@@ -304,19 +305,9 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                     sdlData.sdl !== "" && (
                       <div className="relative flex h-full min-h-[60vh] flex-col">
                         <div className="-top-[60px] right-8 w-max px-5 md:absolute md:w-auto md:px-0">
-                          <CodeViewerActions
-                            code={sdlData.sdl}
-                            subgraphName={slug}
-                            size="sm"
-                            variant="outline"
-                          />
+                          <SDLViewerActions sdl={sdlData.sdl} size="icon" />
                         </div>
-                        <div
-                          id="schema-container"
-                          className="scrollbar-custom flex-1 overflow-auto"
-                        >
-                          <CodeViewer className="h-0 w-0" code={sdlData.sdl} />
-                        </div>
+                        <SDLViewerMonaco schema={sdlData.sdl} />
                       </div>
                     )
                   )}
@@ -375,20 +366,10 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                               </SelectContent>
                             </Select>
 
-                            <CodeViewerActions
-                              code={sdlData.sdl}
-                              subgraphName={slug}
-                              size="sm"
-                              variant="outline"
-                            />
+                            <SDLViewerActions sdl={sdlData.sdl} size="icon" />
                           </div>
                         </div>
-                        <div
-                          id="schema-container"
-                          className="scrollbar-custom flex-1 overflow-auto"
-                        >
-                          <CodeViewer className="h-0 w-0" code={sdlData.sdl} />
-                        </div>
+                        <SDLViewerMonaco schema={sdlData.sdl} />
                       </div>
                     )
                   )}
