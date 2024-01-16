@@ -1,4 +1,4 @@
-import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
+import { ThreadSheet } from "@/components/discussions/thread";
 import { EmptyState } from "@/components/empty-state";
 import {
   SubgraphPageLayout,
@@ -9,7 +9,6 @@ import {
   SDLViewerActions,
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
-import { ThreadSheet } from "@/components/discussions/thread";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
@@ -98,20 +97,14 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
           }
         />
       ) : (
-        <div className="flex h-full min-h-[65vh] flex-col-reverse md:flex-col">
-          <div
-            id="schema-container"
-            className="scrollbar-custom flex-1 overflow-auto"
-          >
-            <SDLViewer
-              className="h-0 w-0"
-              sdl={data.sdl ?? ""}
-              targetId={graph?.subgraph.targetId}
-              versionId={data?.versionId ?? ""}
-            />
-          </div>
+        <div className="flex h-full flex-col-reverse md:flex-col">
+          <SDLViewer
+            sdl={data.sdl ?? ""}
+            targetId={graph?.subgraph.targetId}
+            versionId={data?.versionId ?? ""}
+          />
           <ThreadSheet schemaVersionId={data.versionId ?? ""} />
-          <div className="flex w-full flex-col items-center gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
+          <div className="flex w-full flex-col items-center gap-x-8 gap-y-1 border-t bg-card p-2 text-xs lg:flex-row">
             <p className="text-center">
               Displaying the latest published schema of this subgraph
             </p>

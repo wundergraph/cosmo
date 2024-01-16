@@ -17,6 +17,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import useWindowSize from "@/hooks/use-window-size";
 import { formatMetric } from "@/lib/format-metric";
@@ -220,54 +221,56 @@ export const FieldUsage = ({
                 </AccordionTrigger>
                 <AccordionContent className="mt-2">
                   <div className="flex flex-col gap-y-2">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-24">Hash</TableHead>
-                          <TableHead>Operation Name</TableHead>
-                          <TableHead className="w-24 text-center">
-                            Requests
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {client.operations.map((op) => {
-                          return (
-                            <TableRow key={op.hash}>
-                              <TableCell>{op.hash.slice(0, 6)}</TableCell>
-                              <TableCell>
-                                <Link
-                                  href={{
-                                    pathname: `/[organizationSlug]/graph/[slug]/analytics/traces`,
-                                    query: {
-                                      organizationSlug:
-                                        router.query.organizationSlug,
-                                      slug: router.query.slug,
-                                      filterState: createFilterState({
-                                        operationName: op.name,
-                                        operationHash: op.hash,
-                                      }),
-                                      dateRange: range
-                                        ? createDateRange(getRange(range))
-                                        : JSON.stringify({
-                                            start: formatISO(dateRange.start),
-                                            end: formatISO(dateRange.end),
-                                          }),
-                                    },
-                                  }}
-                                  className="text-primary"
-                                >
-                                  {op.name || "-"}
-                                </Link>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {op.count}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                    <TableWrapper>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-24">Hash</TableHead>
+                            <TableHead>Operation Name</TableHead>
+                            <TableHead className="w-24 text-center">
+                              Requests
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {client.operations.map((op) => {
+                            return (
+                              <TableRow key={op.hash}>
+                                <TableCell>{op.hash.slice(0, 6)}</TableCell>
+                                <TableCell>
+                                  <Link
+                                    href={{
+                                      pathname: `/[organizationSlug]/graph/[slug]/analytics/traces`,
+                                      query: {
+                                        organizationSlug:
+                                          router.query.organizationSlug,
+                                        slug: router.query.slug,
+                                        filterState: createFilterState({
+                                          operationName: op.name,
+                                          operationHash: op.hash,
+                                        }),
+                                        dateRange: range
+                                          ? createDateRange(getRange(range))
+                                          : JSON.stringify({
+                                              start: formatISO(dateRange.start),
+                                              end: formatISO(dateRange.end),
+                                            }),
+                                      },
+                                    }}
+                                    className="text-primary"
+                                  >
+                                    {op.name || "-"}
+                                  </Link>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {op.count}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </TableWrapper>
                   </div>
                 </AccordionContent>
               </AccordionItem>

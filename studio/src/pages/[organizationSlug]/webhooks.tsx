@@ -39,6 +39,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
@@ -535,56 +536,60 @@ const WebhooksPage: NextPageWithLayout = () => {
           userRoles: user?.currentOrganization.roles || [],
         }) && <Webhook mode="create" refresh={() => refetch()} />}
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Endpoint</TableHead>
-            <TableHead>Events</TableHead>
-            {checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            }) && <TableHead aria-label="Actions"></TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.configs.map(({ id, endpoint, events }) => {
-            return (
-              <TableRow key={id}>
-                <TableCell className="font-medium">{endpoint}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-2">
-                    {events.map((event) => {
-                      return (
-                        <Badge variant="secondary" key={event}>
-                          {event}
-                        </Badge>
-                      );
-                    })}
-                    {events.length === 0 && <p className="italic">No events</p>}
-                  </div>
-                </TableCell>
-                {checkUserAccess({
-                  rolesToBe: ["admin", "developer"],
-                  userRoles: user?.currentOrganization.roles || [],
-                }) && (
-                  <TableCell className="flex justify-end space-x-2">
-                    <Webhook
-                      mode="update"
-                      refresh={() => refetch()}
-                      existing={{
-                        id,
-                        endpoint,
-                        events,
-                      }}
-                    />
-                    <DeleteWebhook id={id} refresh={() => refetch()} />
+      <TableWrapper>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Endpoint</TableHead>
+              <TableHead>Events</TableHead>
+              {checkUserAccess({
+                rolesToBe: ["admin", "developer"],
+                userRoles: user?.currentOrganization.roles || [],
+              }) && <TableHead aria-label="Actions"></TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.configs.map(({ id, endpoint, events }) => {
+              return (
+                <TableRow key={id}>
+                  <TableCell className="font-medium">{endpoint}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-2">
+                      {events.map((event) => {
+                        return (
+                          <Badge variant="secondary" key={event}>
+                            {event}
+                          </Badge>
+                        );
+                      })}
+                      {events.length === 0 && (
+                        <p className="italic">No events</p>
+                      )}
+                    </div>
                   </TableCell>
-                )}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  {checkUserAccess({
+                    rolesToBe: ["admin", "developer"],
+                    userRoles: user?.currentOrganization.roles || [],
+                  }) && (
+                    <TableCell className="flex justify-end space-x-2">
+                      <Webhook
+                        mode="update"
+                        refresh={() => refetch()}
+                        existing={{
+                          id,
+                          endpoint,
+                          events,
+                        }}
+                      />
+                      <DeleteWebhook id={id} refresh={() => refetch()} />
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableWrapper>
     </div>
   );
 };

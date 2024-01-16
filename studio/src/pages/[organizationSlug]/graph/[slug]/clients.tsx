@@ -54,6 +54,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import {
   Tooltip,
@@ -623,100 +624,104 @@ const ClientsPage: NextPageWithLayout = () => {
             }) && <CreateClient refresh={() => refetch()} />}
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Updated By</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead>Last Push</TableHead>
-                <TableHead>Operations</TableHead>
-                <TableHead className="w-32"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.clients.map(
-                ({
-                  id,
-                  name,
-                  createdAt,
-                  lastUpdatedAt,
-                  createdBy,
-                  lastUpdatedBy,
-                }) => {
-                  return (
-                    <TableRow key={id}>
-                      <TableCell className="font-medium">
-                        <p className="flex w-48 items-center truncate">
-                          {name}
-                        </p>
-                      </TableCell>
-                      <TableCell className="font-medium">{createdBy}</TableCell>
-                      <TableCell className="font-medium">
-                        <p
-                          className={cn({
-                            "flex w-20 items-center justify-center":
-                              lastUpdatedBy === "",
-                          })}
-                        >
-                          {lastUpdatedBy !== "" ? lastUpdatedBy : "-"}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        {formatDistanceToNow(new Date(createdAt))}
-                      </TableCell>
-                      <TableCell>
-                        {lastUpdatedAt
-                          ? formatDistanceToNow(new Date(lastUpdatedAt))
-                          : "Never"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="link"
-                          className="px-0 hover:no-underline"
-                          onClick={() => {
-                            router.replace({
-                              pathname: router.pathname,
-                              query: {
-                                ...router.query,
-                                clientId: id,
-                                clientName: name,
-                              },
-                            });
-                          }}
-                        >
-                          View Operations
-                        </Button>
-                      </TableCell>
-                      <TableCell className="flex items-center gap-x-3 pr-8">
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger>
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link href={constructLink(name, "metrics")}>
-                                <BiAnalyse className="h-5 w-5" />
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Metrics</TooltipContent>
-                        </Tooltip>
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger>
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link href={constructLink(name, "traces")}>
-                                <IoBarcodeSharp className="h-5 w-5" />
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Traces</TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  );
-                },
-              )}
-            </TableBody>
-          </Table>
+          <TableWrapper>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Created By</TableHead>
+                  <TableHead>Updated By</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Last Push</TableHead>
+                  <TableHead>Operations</TableHead>
+                  <TableHead className="w-32"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.clients.map(
+                  ({
+                    id,
+                    name,
+                    createdAt,
+                    lastUpdatedAt,
+                    createdBy,
+                    lastUpdatedBy,
+                  }) => {
+                    return (
+                      <TableRow key={id}>
+                        <TableCell className="font-medium">
+                          <p className="flex w-48 items-center truncate">
+                            {name}
+                          </p>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {createdBy}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <p
+                            className={cn({
+                              "flex w-20 items-center justify-center":
+                                lastUpdatedBy === "",
+                            })}
+                          >
+                            {lastUpdatedBy !== "" ? lastUpdatedBy : "-"}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          {formatDistanceToNow(new Date(createdAt))}
+                        </TableCell>
+                        <TableCell>
+                          {lastUpdatedAt
+                            ? formatDistanceToNow(new Date(lastUpdatedAt))
+                            : "Never"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="link"
+                            className="px-0 hover:no-underline"
+                            onClick={() => {
+                              router.replace({
+                                pathname: router.pathname,
+                                query: {
+                                  ...router.query,
+                                  clientId: id,
+                                  clientName: name,
+                                },
+                              });
+                            }}
+                          >
+                            View Operations
+                          </Button>
+                        </TableCell>
+                        <TableCell className="flex items-center gap-x-3 pr-8">
+                          <Tooltip delayDuration={0}>
+                            <TooltipTrigger>
+                              <Button variant="ghost" size="icon" asChild>
+                                <Link href={constructLink(name, "metrics")}>
+                                  <BiAnalyse className="h-5 w-5" />
+                                </Link>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Metrics</TooltipContent>
+                          </Tooltip>
+                          <Tooltip delayDuration={0}>
+                            <TooltipTrigger>
+                              <Button variant="ghost" size="icon" asChild>
+                                <Link href={constructLink(name, "traces")}>
+                                  <IoBarcodeSharp className="h-5 w-5" />
+                                </Link>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Traces</TooltipContent>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  },
+                )}
+              </TableBody>
+            </Table>
+          </TableWrapper>
         </>
       )}
       <ClientOperations />

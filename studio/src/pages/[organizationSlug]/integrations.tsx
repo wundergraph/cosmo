@@ -37,6 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
@@ -663,62 +664,64 @@ const IntegrationsPage: NextPageWithLayout = () => {
           </>
         )}
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Events</TableHead>
-            {checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            }) && <TableHead aria-label="Actions"></TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.integrations.map(
-            ({ id, name, events, eventsMeta, integrationConfig }) => {
-              return (
-                <TableRow key={id}>
-                  <TableCell className="font-medium">{name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      {events.map((event) => {
-                        return (
-                          <Badge variant="secondary" key={event}>
-                            {event}
-                          </Badge>
-                        );
-                      })}
-                      {events.length === 0 && (
-                        <p className="italic">No events</p>
-                      )}
-                    </div>
-                  </TableCell>
-                  {checkUserAccess({
-                    rolesToBe: ["admin", "developer"],
-                    userRoles: user?.currentOrganization.roles || [],
-                  }) && (
-                    <TableCell className="flex justify-end space-x-2">
-                      <Integration
-                        mode="update"
-                        refresh={() => refetch()}
-                        existing={{
-                          id,
-                          name,
-                          integrationConfig,
-                          events,
-                          meta: eventsMeta,
-                        }}
-                      />
-                      <DeleteIntegration id={id} refresh={() => refetch()} />
+      <TableWrapper>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Events</TableHead>
+              {checkUserAccess({
+                rolesToBe: ["admin", "developer"],
+                userRoles: user?.currentOrganization.roles || [],
+              }) && <TableHead aria-label="Actions"></TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.integrations.map(
+              ({ id, name, events, eventsMeta, integrationConfig }) => {
+                return (
+                  <TableRow key={id}>
+                    <TableCell className="font-medium">{name}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        {events.map((event) => {
+                          return (
+                            <Badge variant="secondary" key={event}>
+                              {event}
+                            </Badge>
+                          );
+                        })}
+                        {events.length === 0 && (
+                          <p className="italic">No events</p>
+                        )}
+                      </div>
                     </TableCell>
-                  )}
-                </TableRow>
-              );
-            },
-          )}
-        </TableBody>
-      </Table>
+                    {checkUserAccess({
+                      rolesToBe: ["admin", "developer"],
+                      userRoles: user?.currentOrganization.roles || [],
+                    }) && (
+                      <TableCell className="flex justify-end space-x-2">
+                        <Integration
+                          mode="update"
+                          refresh={() => refetch()}
+                          existing={{
+                            id,
+                            name,
+                            integrationConfig,
+                            events,
+                            meta: eventsMeta,
+                          }}
+                        />
+                        <DeleteIntegration id={id} refresh={() => refetch()} />
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              },
+            )}
+          </TableBody>
+        </Table>
+      </TableWrapper>
     </div>
   );
 };

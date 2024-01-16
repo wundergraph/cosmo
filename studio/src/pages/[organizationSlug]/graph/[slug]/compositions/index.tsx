@@ -26,6 +26,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import { Toolbar } from "@/components/ui/toolbar";
 import {
@@ -130,85 +131,87 @@ const CompositionsPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-3">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Id</TableHead>
-            <TableHead>Triggered By</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-center">Details</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.compositions.length !== 0 ? (
-            data.compositions.map(
-              ({ id, isComposable, createdAt, createdBy, isLatestValid }) => {
-                const path = `${router.asPath.split("?")[0]}/${id}`;
-                return (
-                  <TableRow
-                    key={id}
-                    className="group cursor-pointer hover:bg-secondary/30"
-                    onClick={() => router.push(path)}
-                  >
-                    <TableCell>
-                      <div className="flex flex-col items-start">
-                        <Link
-                          href={path}
-                          className="font-medium text-foreground"
-                        >
-                          {id}
-                        </Link>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(createdAt), {
-                                addSuffix: true,
-                              })}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            {formatDateTime(new Date(createdAt))}
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
-                    <TableCell>{createdBy || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-x-2">
-                        <Badge variant="outline" className="gap-2 py-1.5">
-                          {getCheckIcon(isComposable)} <span>Composes</span>
-                        </Badge>
-                        {isLatestValid && (
-                          <Badge variant="outline" className="gap-2 py-1.5">
-                            <div className="h-2 w-2 rounded-full bg-success" />
-                            <span>Current</span>
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="table-action"
-                      >
-                        <Link href={path}>View</Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              },
-            )
-          ) : (
+      <TableWrapper>
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
-                No results.
-              </TableCell>
+              <TableHead>Id</TableHead>
+              <TableHead>Triggered By</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-center">Details</TableHead>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {data.compositions.length !== 0 ? (
+              data.compositions.map(
+                ({ id, isComposable, createdAt, createdBy, isLatestValid }) => {
+                  const path = `${router.asPath.split("?")[0]}/${id}`;
+                  return (
+                    <TableRow
+                      key={id}
+                      className="group cursor-pointer hover:bg-secondary/30"
+                      onClick={() => router.push(path)}
+                    >
+                      <TableCell>
+                        <div className="flex flex-col items-start">
+                          <Link
+                            href={path}
+                            className="font-medium text-foreground"
+                          >
+                            {id}
+                          </Link>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(createdAt), {
+                                  addSuffix: true,
+                                })}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              {formatDateTime(new Date(createdAt))}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                      <TableCell>{createdBy || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-x-2">
+                          <Badge variant="outline" className="gap-2 py-1.5">
+                            {getCheckIcon(isComposable)} <span>Composes</span>
+                          </Badge>
+                          {isLatestValid && (
+                            <Badge variant="outline" className="gap-2 py-1.5">
+                              <div className="h-2 w-2 rounded-full bg-success" />
+                              <span>Current</span>
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="table-action"
+                        >
+                          <Link href={path}>View</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                },
+              )
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableWrapper>
       <div className="mr-2 flex justify-end">
         <div className="flex items-center space-x-2">
           <p className="text-sm font-medium">Rows per page</p>

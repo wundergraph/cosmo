@@ -2,17 +2,30 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+const TableWrapper = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "scrollbar-custom w-full overflow-auto rounded-md border",
+      className,
+    )}
+    {...props}
+  ></div>
+));
+TableWrapper.displayName = "TableWrapper";
+
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="scrollbar-custom w-full overflow-auto rounded-md border">
-    <table
-      ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
-      {...props}
-    />
-  </div>
+  <table
+    ref={ref}
+    className={cn("w-full caption-bottom text-sm", className)}
+    {...props}
+  />
 ));
 Table.displayName = "Table";
 
@@ -107,6 +120,7 @@ TableCaption.displayName = "TableCaption";
 
 export {
   Table,
+  TableWrapper,
   TableHeader,
   TableBody,
   TableFooter,

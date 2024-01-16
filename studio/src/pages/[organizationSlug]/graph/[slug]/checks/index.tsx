@@ -31,6 +31,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import { Toolbar } from "@/components/ui/toolbar";
 import {
@@ -171,143 +172,145 @@ const ChecksPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-3">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Check</TableHead>
-            <TableHead>Subgraph</TableHead>
-            <TableHead>Tasks</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.checks.length !== 0 ? (
-            data.checks.map(
-              ({
-                id,
-                isComposable,
-                isBreaking,
-                hasClientTraffic,
-                isForcedSuccess,
-                subgraphName,
-                timestamp,
-                ghDetails,
-              }) => {
-                const isSuccessful = isCheckSuccessful(
+      <TableWrapper>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Check</TableHead>
+              <TableHead>Subgraph</TableHead>
+              <TableHead>Tasks</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.checks.length !== 0 ? (
+              data.checks.map(
+                ({
+                  id,
                   isComposable,
                   isBreaking,
                   hasClientTraffic,
-                );
+                  isForcedSuccess,
+                  subgraphName,
+                  timestamp,
+                  ghDetails,
+                }) => {
+                  const isSuccessful = isCheckSuccessful(
+                    isComposable,
+                    isBreaking,
+                    hasClientTraffic,
+                  );
 
-                const path = `${router.asPath.split("?")[0]}/${id}`;
+                  const path = `${router.asPath.split("?")[0]}/${id}`;
 
-                return (
-                  <TableRow
-                    key={id}
-                    className="group cursor-pointer hover:bg-secondary/30"
-                    onClick={() => router.push(path)}
-                  >
-                    <TableCell>
-                      <div className="flex flex-row items-center gap-1">
-                        <div className="w-20">
-                          {getCheckBadge(isSuccessful, isForcedSuccess)}
+                  return (
+                    <TableRow
+                      key={id}
+                      className="group cursor-pointer hover:bg-secondary/30"
+                      onClick={() => router.push(path)}
+                    >
+                      <TableCell>
+                        <div className="flex flex-row items-center gap-1">
+                          <div className="w-20">
+                            {getCheckBadge(isSuccessful, isForcedSuccess)}
+                          </div>
+
+                          <div className="flex flex-col items-start">
+                            <Link
+                              href={path}
+                              className="font-medium text-foreground"
+                            >
+                              {id}
+                            </Link>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDistanceToNow(new Date(timestamp), {
+                                    addSuffix: true,
+                                  })}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom">
+                                {formatDateTime(new Date(timestamp))}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         </div>
+                      </TableCell>
+                      <TableCell>{subgraphName}</TableCell>
+                      <TableCell>
+                        <div className="flex items-start gap-2">
+                          <Badge variant="outline" className="gap-2 py-1.5">
+                            {getCheckIcon(isComposable)} <span>Composes</span>
+                          </Badge>
 
-                        <div className="flex flex-col items-start">
-                          <Link
-                            href={path}
-                            className="font-medium text-foreground"
-                          >
-                            {id}
-                          </Link>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(timestamp), {
-                                  addSuffix: true,
-                                })}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              {formatDateTime(new Date(timestamp))}
-                            </TooltipContent>
-                          </Tooltip>
+                          <Badge variant="outline" className="gap-2 py-1.5">
+                            {getCheckIcon(!isBreaking)}{" "}
+                            <span>Breaking changes</span>
+                          </Badge>
+                          <Badge variant="outline" className="gap-2 py-1.5">
+                            {getCheckIcon(!hasClientTraffic)}{" "}
+                            <span>Operations</span>
+                          </Badge>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{subgraphName}</TableCell>
-                    <TableCell>
-                      <div className="flex items-start gap-2">
-                        <Badge variant="outline" className="gap-2 py-1.5">
-                          {getCheckIcon(isComposable)} <span>Composes</span>
-                        </Badge>
+                      </TableCell>
 
-                        <Badge variant="outline" className="gap-2 py-1.5">
-                          {getCheckIcon(!isBreaking)}{" "}
-                          <span>Breaking changes</span>
-                        </Badge>
-                        <Badge variant="outline" className="gap-2 py-1.5">
-                          {getCheckIcon(!hasClientTraffic)}{" "}
-                          <span>Operations</span>
-                        </Badge>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {ghDetails ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="table-action"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Link
-                                  href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
-                                  className="inline-flex items-center gap-2 text-xs"
-                                  aria-label="View on GitHub"
-                                  target="_blank"
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {ghDetails ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  asChild
+                                  variant="ghost"
+                                  size="sm"
+                                  className="table-action"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  <GitHubLogoIcon />
-                                </Link>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Commit {ghDetails.commitSha.substring(0, 7)}
-                              <br />
-                              <strong>View on GitHub</strong>
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : null}
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setRouteCache(router.asPath);
-                          }}
-                          className="table-action"
-                        >
-                          <Link href={path}>View</Link>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              },
-            )
-          ) : (
-            <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
-                No results.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+                                  <Link
+                                    href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
+                                    className="inline-flex items-center gap-2 text-xs"
+                                    aria-label="View on GitHub"
+                                    target="_blank"
+                                  >
+                                    <GitHubLogoIcon />
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Commit {ghDetails.commitSha.substring(0, 7)}
+                                <br />
+                                <strong>View on GitHub</strong>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : null}
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setRouteCache(router.asPath);
+                            }}
+                            className="table-action"
+                          >
+                            <Link href={path}>View</Link>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                },
+              )
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableWrapper>
       <div className="mr-2 flex justify-end">
         <div className="flex items-center space-x-2">
           <p className="text-sm font-medium">Rows per page</p>

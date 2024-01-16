@@ -14,6 +14,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import { useSubgraph } from "@/hooks/use-subgraph";
 import { docsBaseURL } from "@/lib/constants";
@@ -81,65 +82,67 @@ export const FederatedGraphsTable = ({
     );
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="px-4">Name</TableHead>
-          <TableHead className="w-4/12 px-4">Url</TableHead>
-          <TableHead className="w-4/12 px-4">Label Matchers</TableHead>
-          <TableHead className="w-2/12 px-4 text-right">
-            Last Published
-          </TableHead>
-          <TableHead className="w-1/12"></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {graphs.map(({ name, routingURL, lastUpdatedAt, labelMatchers }) => {
-          const path = `/${organizationSlug}/graph/${name}`;
-          return (
-            <TableRow
-              key={name}
-              className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
-            >
-              <TableCell className="px-4 font-medium">{name}</TableCell>
-              <TableCell className="px-4 text-muted-foreground hover:text-current">
-                <Link target="_blank" rel="noreferrer" href={routingURL}>
-                  {routingURL}
-                </Link>
-              </TableCell>
-              <TableCell className="px-4">
-                <div className="flex space-x-2">
-                  {labelMatchers.map((l) => {
-                    return (
-                      <Badge variant="secondary" key={l}>
-                        {l}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </TableCell>
-              <TableCell className="px-4 text-right text-muted-foreground">
-                {lastUpdatedAt
-                  ? formatDistanceToNow(new Date(lastUpdatedAt), {
-                      addSuffix: true,
-                    })
-                  : "Never"}
-              </TableCell>
-              <TableCell className="flex">
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="table-action"
-                >
-                  <Link href={path}>View</Link>
-                </Button>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <TableWrapper>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="px-4">Name</TableHead>
+            <TableHead className="w-4/12 px-4">Url</TableHead>
+            <TableHead className="w-4/12 px-4">Label Matchers</TableHead>
+            <TableHead className="w-2/12 px-4 text-right">
+              Last Published
+            </TableHead>
+            <TableHead className="w-1/12"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {graphs.map(({ name, routingURL, lastUpdatedAt, labelMatchers }) => {
+            const path = `/${organizationSlug}/graph/${name}`;
+            return (
+              <TableRow
+                key={name}
+                className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+              >
+                <TableCell className="px-4 font-medium">{name}</TableCell>
+                <TableCell className="px-4 text-muted-foreground hover:text-current">
+                  <Link target="_blank" rel="noreferrer" href={routingURL}>
+                    {routingURL}
+                  </Link>
+                </TableCell>
+                <TableCell className="px-4">
+                  <div className="flex space-x-2">
+                    {labelMatchers.map((l) => {
+                      return (
+                        <Badge variant="secondary" key={l}>
+                          {l}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </TableCell>
+                <TableCell className="px-4 text-right text-muted-foreground">
+                  {lastUpdatedAt
+                    ? formatDistanceToNow(new Date(lastUpdatedAt), {
+                        addSuffix: true,
+                      })
+                    : "Never"}
+                </TableCell>
+                <TableCell className="flex">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    className="table-action"
+                  >
+                    <Link href={path}>View</Link>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableWrapper>
   );
 };
 

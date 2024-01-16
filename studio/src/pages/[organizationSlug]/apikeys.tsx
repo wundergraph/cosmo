@@ -33,6 +33,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
@@ -171,7 +172,10 @@ const CreateAPIKeyDialog = ({
   };
 
   // check if the user has access to create api keys only when rbac is enabled
-  if (rbac && !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)) {
+  if (
+    rbac &&
+    !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
+  ) {
     return (
       <Button disabled>
         <div className="flex items-center gap-x-2">
@@ -715,76 +719,78 @@ const APIKeysPage: NextPageWithLayout = () => {
                 setDeleteApiKeyName={setDeleteApiKeyName}
               />
             )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Expires At</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead>Last Used At</TableHead>
-                {checkUserAccess({
-                  rolesToBe: ["admin", "developer"],
-                  userRoles: user?.currentOrganization.roles || [],
-                }) && (
-                  <TableHead className="flex items-center justify-center" />
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {apiKeys.map(
-                ({ name, createdBy, createdAt, lastUsedAt, expiresAt }) => {
-                  return (
-                    <TableRow key={name}>
-                      <TableCell className="font-medium">{name}</TableCell>
-                      <TableCell>{createdBy}</TableCell>
-                      <TableCell>
-                        {expiresAt
-                          ? formatDateTime(new Date(expiresAt))
-                          : "Never"}
-                      </TableCell>
-                      <TableCell>
-                        {createdAt
-                          ? formatDateTime(new Date(createdAt))
-                          : "Never"}
-                      </TableCell>
-                      <TableCell>
-                        {lastUsedAt
-                          ? formatDateTime(new Date(lastUsedAt))
-                          : "Never"}
-                      </TableCell>
-                      {checkUserAccess({
-                        rolesToBe: ["admin", "developer"],
-                        userRoles: user?.currentOrganization.roles || [],
-                      }) && (
+          <TableWrapper>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Created By</TableHead>
+                  <TableHead>Expires At</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Last Used At</TableHead>
+                  {checkUserAccess({
+                    rolesToBe: ["admin", "developer"],
+                    userRoles: user?.currentOrganization.roles || [],
+                  }) && (
+                    <TableHead className="flex items-center justify-center" />
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {apiKeys.map(
+                  ({ name, createdBy, createdAt, lastUsedAt, expiresAt }) => {
+                    return (
+                      <TableRow key={name}>
+                        <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell>{createdBy}</TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <div className="flex justify-center">
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <EllipsisVerticalIcon className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                            </div>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setDeleteApiKeyName(name);
-                                  setOpenDeleteDialog(true);
-                                }}
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {expiresAt
+                            ? formatDateTime(new Date(expiresAt))
+                            : "Never"}
                         </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                },
-              )}
-            </TableBody>
-          </Table>
+                        <TableCell>
+                          {createdAt
+                            ? formatDateTime(new Date(createdAt))
+                            : "Never"}
+                        </TableCell>
+                        <TableCell>
+                          {lastUsedAt
+                            ? formatDateTime(new Date(lastUsedAt))
+                            : "Never"}
+                        </TableCell>
+                        {checkUserAccess({
+                          rolesToBe: ["admin", "developer"],
+                          userRoles: user?.currentOrganization.roles || [],
+                        }) && (
+                          <TableCell>
+                            <DropdownMenu>
+                              <div className="flex justify-center">
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <EllipsisVerticalIcon className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </div>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setDeleteApiKeyName(name);
+                                    setOpenDeleteDialog(true);
+                                  }}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  },
+                )}
+              </TableBody>
+            </Table>
+          </TableWrapper>
         </>
       )}
     </div>

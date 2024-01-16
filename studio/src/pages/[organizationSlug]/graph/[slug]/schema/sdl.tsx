@@ -1,4 +1,5 @@
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
+import { ThreadSheet } from "@/components/discussions/thread";
 import {
   GraphContext,
   GraphPageLayout,
@@ -10,7 +11,6 @@ import {
   SDLViewerActions,
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
-import { ThreadSheet } from "@/components/discussions/thread";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -35,33 +35,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useState } from "react";
 import { PiGraphLight } from "react-icons/pi";
-
-const useScrollIntoView = (lineNo: string) => {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (!isMounted && lineNo) {
-        const targetLine = document.querySelector(`#id-${lineNo}`);
-        const container = document.getElementById("schema-container");
-
-        if (targetLine && container) {
-          const rect = targetLine.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          const y = rect.top - containerRect.height;
-
-          container.scrollTo({
-            top: y,
-          });
-        }
-        setIsMounted(true);
-      }
-    }, 500);
-    return () => {
-      clearTimeout(t);
-    };
-  }, [isMounted, lineNo]);
-};
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -101,7 +74,7 @@ const SDLPage: NextPageWithLayout = () => {
       };
     }) ?? [];
 
-  useScrollIntoView(hash);
+  // useScrollIntoView(hash);
 
   const activeSubgraphObject = graphData?.subgraphs.find((each) => {
     return each.name === activeSubgraph;
@@ -167,7 +140,10 @@ const SDLPage: NextPageWithLayout = () => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <SDLViewerActions sdl={activeGraphWithSDL.sdl ?? ""} />
+              <SDLViewerActions
+                className="w-auto"
+                sdl={activeGraphWithSDL.sdl ?? ""}
+              />
               <SchemaSettings />
             </div>
           </SchemaToolbar>
@@ -181,19 +157,12 @@ const SDLPage: NextPageWithLayout = () => {
         )}
         {isLoading && <Loader fullscreen />}
         {!isLoading && (
-          <div className="relative flex h-full min-h-[60vh] flex-col-reverse  md:flex-col">
-            <div
-              id="schema-container"
-              className="scrollbar-custom h-full flex-1 overflow-auto"
-            >
-              <SDLViewer
-                className="h-0 w-0"
-                sdl={activeGraphWithSDL.sdl ?? ""}
-                targetId={activeGraphWithSDL?.targetId}
-                versionId={activeGraphWithSDL.versionId ?? ""}
-              />
-            </div>
-            <ThreadSheet schemaVersionId={activeGraphWithSDL.versionId ?? ""} />
+          <div className="flex h-full flex-col-reverse md:flex-col">
+            <SDLViewer
+              sdl={activeGraphWithSDL.sdl ?? ""}
+              targetId={activeGraphWithSDL?.targetId}
+              versionId={activeGraphWithSDL.versionId ?? ""}
+            />
             <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
               <p className="flex items-center gap-x-1">
                 Routing URL :
@@ -217,6 +186,7 @@ const SDLPage: NextPageWithLayout = () => {
             </div>
           </div>
         )}
+        <ThreadSheet schemaVersionId={activeGraphWithSDL.versionId ?? ""} />
       </GraphPageLayout>
     </PageHeader>
   );

@@ -16,6 +16,7 @@ import babelPlugin from "prettier/plugins/babel";
 import estreePlugin from "prettier/plugins/estree";
 import graphQLPlugin from "prettier/plugins/graphql";
 import * as prettier from "prettier/standalone";
+import { useEffect, useState } from "react";
 
 export const graphqlTypeCategories = [
   "objects",
@@ -318,6 +319,30 @@ export const parseSchema = async (schema?: string) => {
   } catch {
     return null;
   }
+};
+
+export const useParseSchema = (schema?: string) => {
+  const [isParsing, setIsParsing] = useState(true);
+  const [ast, setAst] = useState<GraphQLSchema | null>(null);
+
+  useEffect(() => {
+    let t: NodeJS.Timeout;
+    setIsParsing(true);
+
+    parseSchema(schema).then((res) => {
+      setAst(res);
+
+      t = setTimeout(() => {
+        setIsParsing(false);
+      }, 200);
+    });
+
+    return () => {
+      clearTimeout(t);
+    };
+  }, [schema]);
+
+  return { ast, isParsing };
 };
 
 export const getGraphQLTypeAtLineNumber = (
