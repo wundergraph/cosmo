@@ -61,10 +61,10 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   );
 
   const activeSubgraphName =
-    compositionSubgraph?.name || data?.compositionSubgraphs?.[0].name;
+    compositionSubgraph?.name || data?.compositionSubgraphs?.[0]?.name;
   const activeSubgraphVersionId =
     compositionSubgraph?.schemaVersionId ||
-    data?.compositionSubgraphs?.[0].schemaVersionId;
+    data?.compositionSubgraphs?.[0]?.schemaVersionId;
 
   const { data: sdlData, isLoading: fetchingSdl } = useQuery({
     ...getSdlBySchemaVersion.useQuery({
@@ -288,7 +288,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
               <div className="flex min-h-0 flex-1">
                 <TabsContent value="output" className="w-full">
                   {compositionErrors && compositionErrors.length ? (
-                    <div className="px-4">
+                    <div className="px-6">
                       <Alert variant="destructive">
                         <AlertTitle>Composition Errors</AlertTitle>
                         <AlertDescription>
