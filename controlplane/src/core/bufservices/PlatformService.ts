@@ -2088,8 +2088,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'organization_member.deleted',
-          action: 'deleted',
+          auditAction: 'organization_member.removed',
+          action: 'removed',
           actorId: authContext.userId,
           auditableDisplayName: req.email,
           actorDisplayName: authContext.userDisplayName,
@@ -2625,6 +2625,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<LeaveOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -2697,6 +2698,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await orgRepo.removeOrganizationMember({
           userID: authContext.userId || req.userID,
           organizationID: authContext.organizationId,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'organization_member.left',
+          action: 'left',
+          actorId: authContext.userId,
+          auditableType: 'organization',
+          auditableDisplayName: org.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: 'user',
         });
 
         return {
