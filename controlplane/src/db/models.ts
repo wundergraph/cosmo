@@ -38,7 +38,6 @@ export type AuditLogAction =
   | 'created'
   | 'updated'
   | 'deleted'
-  | 'removed'
   | 'accepted'
   | 'declined'
   | 'joined'
@@ -79,5 +78,5 @@ export type AuditLogFullAction =
   | 'organization.joined'
   | 'organization.left'
   | 'organization_invitation.declined'
-  | 'organization_member.removed'
+  | 'organization_member.deleted'
   | 'member_role.updated';

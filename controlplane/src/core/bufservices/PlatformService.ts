@@ -2088,8 +2088,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'organization_member.removed',
-          action: 'removed',
+          auditAction: 'organization_member.deleted',
+          action: 'deleted',
           actorId: authContext.userId,
           auditableDisplayName: req.email,
           actorDisplayName: authContext.userDisplayName,
