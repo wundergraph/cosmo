@@ -1011,7 +1011,7 @@ const LeaveOrganization = () => {
         </div>
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogTrigger asChild>
-            <Button className="md:ml-auto" type="submit" variant="secondary">
+            <Button className="md:ml-auto" type="submit" variant="destructive">
               Leave organization
             </Button>
           </AlertDialogTrigger>
@@ -1193,12 +1193,20 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
   }
 
   if (!isAdmin) {
-    return (
-      <EmptyState
-        title="Unauthorized"
-        description="You are not authorized to manage this organization."
-      />
-    );
+    if (isCreator) {
+      return (
+        <EmptyState
+          title="Unauthorized"
+          description="You are not authorized to manage this organization."
+        />
+      );
+    } else {
+      return (
+        <div className="flex flex-col gap-y-4">
+          <LeaveOrganization />
+        </div>
+      );
+    }
   }
 
   return (
