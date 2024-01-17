@@ -115,14 +115,7 @@ const routerConfig = (storage: BlobStorage) => {
       organizationId !== c.get('authenticatedOrganizationId') ||
       federatedGraphId !== c.get('authenticatedFederatedGraphId')
     ) {
-      return c.json(
-        {
-          error: {
-            message: 'Bad Request. Parameter organization_id or federated_graph_id is invalid.',
-          },
-        },
-        400,
-      );
+      return c.text('Invalid query parameters', 400);
     }
     const key = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
     const body = await c.req.json();
