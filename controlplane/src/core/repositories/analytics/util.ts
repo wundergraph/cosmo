@@ -220,13 +220,10 @@ export function buildCoercedFilterSqlStatement(
     }
   }
 
-  if (dateRange) {
-    // Here we reference to the timestamp column in the database not the alias,
-    // so we can work with the real timestamp (DateTime)
-
-    whereFilterSqlStatement.push(`Timestamp >= toDateTime({startDate:UInt64})`);
-    whereFilterSqlStatement.push(`Timestamp <= toDateTime({endDate:UInt64})`);
-  }
+  // Here we reference to the timestamp column in the database not the alias,
+  // so we can work with the real timestamp (DateTime)
+  whereFilterSqlStatement.push(`Timestamp >= toDateTime({startDate:UInt64})`);
+  whereFilterSqlStatement.push(`Timestamp <= toDateTime({endDate:UInt64})`);
 
   if (whereFilterSqlStatement.length > 0) {
     whereSql = whereFilterSqlStatement.join(' AND ');

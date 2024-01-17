@@ -688,7 +688,7 @@ export class AnalyticsRequestViewRepository {
       coercedQueryParams.endDate = Math.floor(new Date(opts.dateRange.end).getTime() / 1000);
     } else if (opts?.range) {
       const endDate = Math.floor(Date.now() / 1000);
-      coercedQueryParams.startDate = Math.floor(new Date(endDate).getTime() / 1000) - opts?.range * 60 * 60 * 1000;
+      coercedQueryParams.startDate = Math.floor(new Date(endDate).getTime()) - opts?.range * 60 * 60;
       coercedQueryParams.endDate = endDate;
     }
 
