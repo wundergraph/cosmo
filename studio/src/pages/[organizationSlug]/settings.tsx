@@ -1203,7 +1203,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
     } else {
       return (
         <div className="flex flex-col gap-y-4">
-          {!isCreator && <LeaveOrganization />}
+          <LeaveOrganization />
         </div>
       );
     }
