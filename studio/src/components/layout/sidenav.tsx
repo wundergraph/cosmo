@@ -78,6 +78,8 @@ const Organizations = () => {
   const router = useRouter();
   const currentPage = router.asPath.split("/")[2];
 
+  const nonRootPages = ["graph", "invitations", "subgraph"];
+
   if (!user?.currentOrganization) return null;
 
   return (
@@ -100,7 +102,7 @@ const Organizations = () => {
             );
             if (currentOrg) {
               router.replace(
-                currentPage === "graph" || currentPage === "invitations"
+                nonRootPages.includes(currentPage)
                   ? `/${currentOrg.slug}/graphs`
                   : `/${currentOrg.slug}/${currentPage}`,
               );
