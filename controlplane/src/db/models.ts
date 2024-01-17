@@ -28,9 +28,11 @@ export type AuditableType =
   | 'api_key'
   | 'webhook_config'
   | 'integration'
+  | 'member_role'
+  | 'user'
   | 'subscription';
 
-export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph';
+export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'user';
 
 export type AuditActorType = 'user' | 'system' | 'api_key';
 
