@@ -99,9 +99,9 @@ const persistedOperation = (storage: BlobStorage) => {
       }
       throw e;
     }
-    return c.stream(async (stream) => {
+
+    return stream(c, async (stream) => {
       await stream.pipe(operationStream);
-      await stream.close();
     });
   };
 };
@@ -115,23 +115,24 @@ const routerConfig = (storage: BlobStorage) => {
       organizationId !== c.get('authenticatedOrganizationId') ||
       federatedGraphId !== c.get('authenticatedFederatedGraphId')
     ) {
-      return c.text('Bad Request', 400);
+      return c.text('Invalid query parameters', 400);
     }
     const key = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
     const body = await c.req.json();
 
-    if (body?.version === undefined || null) {
-      return c.text('Bad Request', 400);
-    }
+    let isModified = true;
 
-    let isModified: boolean;
-    try {
-      isModified = await storage.headObject({ context: c, key, schemaVersionId: body.version });
-    } catch (e: any) {
-      if (e instanceof BlobNotFoundError) {
-        return c.notFound();
+    // Only check if version is specified otherwise we assume the router
+    // starts for the first time, and we need to return a config anyway.
+    if (body?.version) {
+      try {
+        isModified = await storage.headObject({ context: c, key, schemaVersionId: body.version });
+      } catch (e: any) {
+        if (e instanceof BlobNotFoundError) {
+          return c.notFound();
+        }
+        throw e;
       }
-      throw e;
     }
 
     if (!isModified) {
