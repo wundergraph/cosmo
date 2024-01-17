@@ -272,40 +272,47 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
+	var disabledFeatures []string
+
 	// The user might want to start the server with a static config
 	// Disable all features that requires a valid graph token and inform the user
 	if r.graphApiToken == "" {
 		r.graphqlMetricsConfig.Enabled = false
-		r.logger.Warn("No graph token provided. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
+
+		disabledFeatures = append(disabledFeatures, "Schema Usage Tracking", "Persistent operations")
 
 		if !r.developmentMode {
-			r.logger.Warn("No graph token provided. Advanced Request Tracing disabled and can only be used with a graph token or in dev mode.")
+			disabledFeatures = append(disabledFeatures, "Advanced Request Tracing")
 		}
 
 		if r.traceConfig.Enabled {
 			defaultExporter := trace.GetDefaultExporter(r.traceConfig)
 			if defaultExporter != nil {
-				r.logger.Warn("No graph token provided. Tracing ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
+				disabledFeatures = append(disabledFeatures, "Cosmo Cloud Tracing")
 				defaultExporter.Disabled = true
 			}
 		}
 		if r.metricConfig.OpenTelemetry.Enabled {
 			defaultExporter := metric.GetDefaultExporter(r.metricConfig)
 			if defaultExporter != nil {
-				r.logger.Warn("No graph token provided. Metrics ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
+				disabledFeatures = append(disabledFeatures, "Cosmo Cloud Metrics")
 				defaultExporter.Disabled = true
 			}
 		}
+
+		r.logger.Warn("No graph token provided. The following features are disabled. Not recommended for Production.", zap.Strings("features", disabledFeatures))
 	}
 
-	routerCDN, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
-		CacheSize: r.cdnConfig.CacheSize.Uint64(),
-		Logger:    r.logger,
-	})
-	if err != nil {
-		return nil, err
+	if r.graphApiToken != "" {
+		routerCDN, err := cdn.NewPersistentOperationClient(r.cdnConfig.URL, r.graphApiToken, cdn.PersistentOperationsOptions{
+			CacheSize: r.cdnConfig.CacheSize.Uint64(),
+			Logger:    r.logger,
+		})
+		if err != nil {
+			return nil, err
+		}
+		r.cdnPersistentOpClient = routerCDN
 	}
-	r.cdnPersistentOpClient = routerCDN
 
 	if r.developmentMode {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
@@ -499,7 +506,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		ri, registerErr := r.selfRegister.Register(ctx)
 		if registerErr != nil {
-			r.logger.Warn("Failed to register router on the control plane. If this warning persists, please contact support. During local development or testing, this can be ignored.")
+			r.logger.Warn("Failed to register router on the control plane. If this warning persists, please contact support.")
 		} else {
 			r.registrationInfo = ri
 
@@ -790,7 +797,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
-		r.logger.Warn("Request tracing is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
 	}
 
 	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, r.WebsocketStats)
