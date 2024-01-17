@@ -5,13 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { getAuditLogs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { AuditLogTable, Empty } from "@/components/audit-log-table";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { useUser } from "@/hooks/use-user";
 
 const AuditLogPage: NextPageWithLayout = () => {
-  const { data, isLoading, error } = useQuery(
-    getAuditLogs.useQuery({
+  const user = useUser();
+  const { data, isLoading, error } = useQuery({
+    ...getAuditLogs.useQuery({
       limit: 100,
     }),
-  );
+    queryKey: [user?.currentOrganization.slug || "", "GetAuditLogs", {}],
+  });
 
   if (isLoading) return <Loader fullscreen />;
 
