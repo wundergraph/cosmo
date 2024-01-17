@@ -1603,10 +1603,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetId: graph.id,
           targetDisplayName: graph.name,
           targetType: 'federated_graph',
-          auditableType: 'graph_token',
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           auditableDisplayName: token.name,
+          auditableType: 'graph_token',
         });
 
         return {
@@ -1718,6 +1718,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               action: 'created',
               actorId: authContext.userId,
               auditableDisplayName: req.email,
+              auditableType: 'user',
               actorDisplayName: authContext.userDisplayName,
               actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             });
@@ -1785,6 +1786,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           action: 'created',
           actorId: authContext.userId,
           auditableDisplayName: req.email,
+          auditableType: 'user',
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
@@ -2092,6 +2094,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           action: 'deleted',
           actorId: authContext.userId,
           auditableDisplayName: req.email,
+          auditableType: 'user',
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
@@ -2185,8 +2188,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditAction: 'organization_invitation.deleted',
           action: 'deleted',
           actorId: authContext.userId,
-          auditableDisplayName: org.name,
+          auditableDisplayName: user.email,
+          auditableType: 'user',
           actorDisplayName: authContext.userDisplayName,
+          targetDisplayName: org.name,
+          targetType: 'organization',
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
@@ -3009,6 +3015,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             action: 'updated',
             actorId: authContext.userId,
             auditableDisplayName: 'admin',
+            auditableType: 'member_role',
             actorDisplayName: authContext.userDisplayName,
             targetId: orgMember.userID,
             targetDisplayName: orgMember.email,
@@ -3042,8 +3049,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             action: 'updated',
             actorId: authContext.userId,
             auditableDisplayName: role,
+            auditableType: 'member_role',
             actorDisplayName: authContext.userDisplayName,
             targetId: orgMember.userID,
+            targetType: 'user',
             targetDisplayName: orgMember.email,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
@@ -3117,10 +3126,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetId: federatedGraph.id,
           targetDisplayName: federatedGraph.name,
           targetType: 'federated_graph',
-          auditableType: 'graph_token',
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           auditableDisplayName: currToken.name,
+          auditableType: 'graph_token',
         });
 
         return {
@@ -3688,6 +3697,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             action: 'joined',
             actorId: authContext.userId,
             auditableDisplayName: organization.name,
+            auditableType: 'organization',
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
@@ -3700,6 +3710,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             action: 'deleted',
             actorId: authContext.userId,
             auditableDisplayName: organization.name,
+            auditableType: 'organization',
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           });
