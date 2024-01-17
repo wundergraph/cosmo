@@ -2625,6 +2625,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<LeaveOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -2697,6 +2698,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await orgRepo.removeOrganizationMember({
           userID: authContext.userId || req.userID,
           organizationID: authContext.organizationId,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'organization.left',
+          action: 'left',
+          actorId: authContext.userId,
+          auditableType: 'organization',
+          auditableDisplayName: org.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {
