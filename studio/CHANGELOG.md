@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.52.2](https://github.com/wundergraph/cosmo/compare/studio@0.52.1...studio@0.52.2) (2024-01-17)
+
+### Bug Fixes
+
+* allow the member of the org to leave ([#436](https://github.com/wundergraph/cosmo/issues/436)) ([21bd032](https://github.com/wundergraph/cosmo/commit/21bd032207752205d39a9a9568af704e4a069b89)) (@JivusAyrus)
+* date and range filter for traces ([#437](https://github.com/wundergraph/cosmo/issues/437)) ([2950222](https://github.com/wundergraph/cosmo/commit/2950222c3b45134d9167fb43668ae32a4d2ec156)) (@thisisnithin)
+* navigation from invitations page ([#434](https://github.com/wundergraph/cosmo/issues/434)) ([4e68ddd](https://github.com/wundergraph/cosmo/commit/4e68ddd06ae9349d221d944ac27c485981a291b0)) (@JivusAyrus)
+
 ## [0.52.1](https://github.com/wundergraph/cosmo/compare/studio@0.52.0...studio@0.52.1) (2024-01-16)
 
 ### Bug Fixes
