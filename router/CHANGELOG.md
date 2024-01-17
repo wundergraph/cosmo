@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.2](https://github.com/wundergraph/cosmo/compare/router@0.54.1...router@0.54.2) (2024-01-16)
+
+### Bug Fixes
+
+* allow to start router without graph token but static config ([#433](https://github.com/wundergraph/cosmo/issues/433)) ([46a903c](https://github.com/wundergraph/cosmo/commit/46a903cbb9f37d18b9e59f979357ae6bf0762d5d)) (@StarpTech)
+
 ## [0.54.1](https://github.com/wundergraph/cosmo/compare/router@0.54.0...router@0.54.1) (2024-01-16)
 
 ### Bug Fixes
