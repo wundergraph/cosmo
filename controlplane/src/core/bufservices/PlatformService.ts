@@ -2702,13 +2702,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'organization_member.left',
+          auditAction: 'organization.left',
           action: 'left',
           actorId: authContext.userId,
           auditableType: 'organization',
           auditableDisplayName: org.name,
           actorDisplayName: authContext.userDisplayName,
-          actorType: 'user',
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
         return {

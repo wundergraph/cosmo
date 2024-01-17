@@ -77,7 +77,7 @@ export type AuditLogFullAction =
   | 'organization_invitation.created'
   | 'organization_invitation.deleted'
   | 'organization.joined'
+  | 'organization.left'
   | 'organization_invitation.declined'
   | 'organization_member.removed'
-  | 'organization_member.left'
   | 'member_role.updated';
