@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.54.1...controlplane@0.54.2) (2024-01-17)
+
+### Bug Fixes
+
+* organization_invitation.deleted event and set auditableType ([#439](https://github.com/wundergraph/cosmo/issues/439)) ([be4e38b](https://github.com/wundergraph/cosmo/commit/be4e38b86ded2848eefe89268caf6edd7a3a891d)) (@StarpTech)
+
 ## [0.54.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.54.0...controlplane@0.54.1) (2024-01-17)
 
 ### Bug Fixes
