@@ -201,60 +201,6 @@ const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
   return <AnalyticsFilters filters={filtersList} />;
 };
 
-const AnalyticsPage: NextPageWithLayout = () => {
-  const graphContext = useContext(GraphContext);
-
-  const { filters, range, dateRange, refreshInterval } =
-    useAnalyticsQueryState();
-
-  let { data, isLoading, error, refetch } = useQuery({
-    ...getGraphMetrics.useQuery({
-      federatedGraphName: graphContext?.graph?.name,
-      range,
-      dateRange: range
-        ? undefined
-        : {
-            start: formatISO(dateRange.start),
-            end: formatISO(dateRange.end),
-          },
-      filters,
-    }),
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval,
-  });
-
-  if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
-    return (
-      <div className="my-auto">
-        <EmptyState
-          icon={<ExclamationTriangleIcon />}
-          title="Could not retrieve analytics data"
-          description={
-            data?.response?.details || error?.message || "Please try again"
-          }
-          actions={<Button onClick={() => refetch()}>Retry</Button>}
-        />
-      </div>
-    );
-  } else if (isLoading) {
-    return <Loader fullscreen />;
-  }
-
-  return (
-    <div className="w-full space-y-4">
-      <OverviewToolbar />
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
-        <RequestMetricsCard data={data?.requests} />
-        <LatencyMetricsCard data={data?.latency} />
-        <ErrorMetricsCard data={data?.errors} />
-      </div>
-
-      <ErrorRateOverTimeCard />
-    </div>
-  );
-};
-
 const getDeltaType = (
   value: number,
   { invert, neutral }: { invert?: boolean; neutral?: boolean },
@@ -400,6 +346,95 @@ const TopList: React.FC<{
         rowClassName="bg-muted text-muted-foreground hover:text-foreground"
       />
     </CardContent>
+  );
+};
+
+interface SparklineProps {
+  series: any[];
+  timeRange: number;
+  className?: string;
+  valueFormatter?: (value: any) => any;
+}
+
+const Sparkline: React.FC<SparklineProps> = (props) => {
+  const { timeRange = 24, valueFormatter } = props;
+  const id = useId();
+
+  const { data, ticks, domain, timeFormatter } = useChartData(
+    timeRange,
+    props.series,
+  );
+
+  const strokeColor = "hsl(var(--chart-primary))";
+
+  return (
+    <div className={cn("-mx-6 h-20", props.className)}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={data}
+          margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
+        >
+          <defs>
+            <linearGradient
+              id={`${id}-gradient-previous`}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              <stop
+                offset="5%"
+                stopColor={"hsl(var(--chart-primary-gradient))"}
+              />
+              <stop offset="95%" stopColor={"hsl(var(--background))"} />
+            </linearGradient>
+            <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="0%"
+                stopColor={"hsl(var(--chart-primary-gradient))"}
+              />
+              <stop offset="100%" stopColor={"hsl(var(--background))"} />
+            </linearGradient>
+          </defs>
+          <Area
+            name="Previous"
+            type="monotone"
+            dataKey="previousValue"
+            activeDot={false}
+            animationDuration={300}
+            stroke={strokeColor}
+            fill={`url(#${id}-gradient-previous)`}
+            dot={false}
+            strokeWidth={1.5}
+            opacity="0.4"
+            strokeDasharray="4 2"
+          />
+          <Area
+            name="Current"
+            type="monotone"
+            dataKey="value"
+            animationDuration={300}
+            stroke={strokeColor}
+            fill={`url(#${id}-gradient)`}
+            fillOpacity="1"
+            dot={false}
+            strokeWidth={1.5}
+          />
+
+          <XAxis
+            dataKey="timestamp"
+            domain={domain}
+            ticks={ticks}
+            tickFormatter={timeFormatter}
+            type="number"
+            axisLine={false}
+            hide
+          />
+
+          <ChartTooltip formatter={valueFormatter} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 };
 
@@ -561,95 +596,6 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         }
       />
     </Card>
-  );
-};
-
-interface SparklineProps {
-  series: any[];
-  timeRange: number;
-  className?: string;
-  valueFormatter?: (value: any) => any;
-}
-
-const Sparkline: React.FC<SparklineProps> = (props) => {
-  const { timeRange = 24, valueFormatter } = props;
-  const id = useId();
-
-  const { data, ticks, domain, timeFormatter } = useChartData(
-    timeRange,
-    props.series,
-  );
-
-  const strokeColor = "hsl(var(--chart-primary))";
-
-  return (
-    <div className={cn("-mx-6 h-20", props.className)}>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
-        >
-          <defs>
-            <linearGradient
-              id={`${id}-gradient-previous`}
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
-            >
-              <stop
-                offset="5%"
-                stopColor={"hsl(var(--chart-primary-gradient))"}
-              />
-              <stop offset="95%" stopColor={"hsl(var(--background))"} />
-            </linearGradient>
-            <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor={"hsl(var(--chart-primary-gradient))"}
-              />
-              <stop offset="100%" stopColor={"hsl(var(--background))"} />
-            </linearGradient>
-          </defs>
-          <Area
-            name="Previous"
-            type="monotone"
-            dataKey="previousValue"
-            activeDot={false}
-            animationDuration={300}
-            stroke={strokeColor}
-            fill={`url(#${id}-gradient-previous)`}
-            dot={false}
-            strokeWidth={1.5}
-            opacity="0.4"
-            strokeDasharray="4 2"
-          />
-          <Area
-            name="Current"
-            type="monotone"
-            dataKey="value"
-            animationDuration={300}
-            stroke={strokeColor}
-            fill={`url(#${id}-gradient)`}
-            fillOpacity="1"
-            dot={false}
-            strokeWidth={1.5}
-          />
-
-          <XAxis
-            dataKey="timestamp"
-            domain={domain}
-            ticks={ticks}
-            tickFormatter={timeFormatter}
-            type="number"
-            axisLine={false}
-            hide
-          />
-
-          <ChartTooltip formatter={valueFormatter} />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
   );
 };
 
@@ -878,16 +824,6 @@ const OverviewToolbar = () => {
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
 
-  const metrics = getGraphMetrics.useQuery({
-    federatedGraphName: graphContext?.graph?.name,
-    range,
-  });
-
-  const errorRate = getMetricsErrorRate.useQuery({
-    federatedGraphName: graphContext?.graph?.name,
-    range,
-  });
-
   const isFetching = useIsFetching();
 
   let { data } = useQuery({
@@ -966,10 +902,16 @@ const OverviewToolbar = () => {
           isLoading={!!isFetching}
           onClick={() => {
             client.invalidateQueries({
-              queryKey: metrics.queryKey,
+              queryKey: getGraphMetrics.getQueryKey({
+                federatedGraphName: graphContext?.graph?.name,
+                range,
+              }),
             });
             client.invalidateQueries({
-              queryKey: errorRate.queryKey,
+              queryKey: getMetricsErrorRate.getQueryKey({
+                federatedGraphName: graphContext?.graph?.name,
+                range,
+              }),
             });
           }}
           variant="outline"
@@ -982,6 +924,60 @@ const OverviewToolbar = () => {
           onChange={onRefreshIntervalChange}
         />
       </div>
+    </div>
+  );
+};
+
+const AnalyticsPage: NextPageWithLayout = () => {
+  const graphContext = useContext(GraphContext);
+
+  const { filters, range, dateRange, refreshInterval } =
+    useAnalyticsQueryState();
+
+  let { data, isLoading, error, refetch } = useQuery({
+    ...getGraphMetrics.useQuery({
+      federatedGraphName: graphContext?.graph?.name,
+      range,
+      dateRange: range
+        ? undefined
+        : {
+            start: formatISO(dateRange.start),
+            end: formatISO(dateRange.end),
+          },
+      filters,
+    }),
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
+    refetchInterval: refreshInterval,
+  });
+
+  if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
+    return (
+      <div className="my-auto">
+        <EmptyState
+          icon={<ExclamationTriangleIcon />}
+          title="Could not retrieve analytics data"
+          description={
+            data?.response?.details || error?.message || "Please try again"
+          }
+          actions={<Button onClick={() => refetch()}>Retry</Button>}
+        />
+      </div>
+    );
+  } else if (isLoading) {
+    return <Loader fullscreen />;
+  }
+
+  return (
+    <div className="w-full space-y-4">
+      <OverviewToolbar />
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
+        <RequestMetricsCard data={data?.requests} />
+        <LatencyMetricsCard data={data?.latency} />
+        <ErrorMetricsCard data={data?.errors} />
+      </div>
+
+      <ErrorRateOverTimeCard />
     </div>
   );
 };
