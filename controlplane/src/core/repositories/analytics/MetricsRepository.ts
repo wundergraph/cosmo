@@ -525,7 +525,7 @@ export class MetricsRepository {
 
     const coercedFilters = coerceFilterValues({}, selectedFilters, this.baseFilters);
 
-    const { whereSql } = buildCoercedFilterSqlStatement({}, coercedFilters.result, coercedFilters.filterMapper);
+    const { whereSql } = buildCoercedFilterSqlStatement({}, coercedFilters.result, coercedFilters.filterMapper, false);
 
     return {
       granule,

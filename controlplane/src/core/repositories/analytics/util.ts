@@ -146,7 +146,7 @@ export function buildCoercedFilterSqlStatement(
       dbClause: 'where' | 'having';
     }
   >,
-  dateRange?: DateRange,
+  includeDateFilter = true,
 ): { whereSql: string; havingSql: string } {
   const whereFilterSqlStatement = [];
   const havingFilterSqlStatement = [];
@@ -220,10 +220,9 @@ export function buildCoercedFilterSqlStatement(
     }
   }
 
-  if (dateRange) {
-    // Here we reference to the timestamp column in the database not the alias,
-    // so we can work with the real timestamp (DateTime)
-
+  // Here we reference to the timestamp column in the database not the alias,
+  // so we can work with the real timestamp (DateTime)
+  if (includeDateFilter) {
     whereFilterSqlStatement.push(`Timestamp >= toDateTime({startDate:UInt64})`);
     whereFilterSqlStatement.push(`Timestamp <= toDateTime({endDate:UInt64})`);
   }
