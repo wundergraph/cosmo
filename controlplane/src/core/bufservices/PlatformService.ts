@@ -5766,6 +5766,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetAuditLogsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.isAdmin) {
@@ -5779,8 +5780,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
         const { dateRange } = validateDateRanges({
-          limit: 7,
+          limit: analyticsRetention?.limit ?? 7,
           dateRange: {
             start: req.startDate,
             end: req.endDate,
