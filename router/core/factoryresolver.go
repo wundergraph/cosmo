@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	config2 "github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"net/url"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/pubsub"
@@ -118,9 +118,9 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 }
 
 type RouterEngineConfiguration struct {
-	Execution config.EngineExecutionConfiguration
-	Headers   config.HeaderRules
-	Events    config.EventsConfiguration
+	Execution config2.EngineExecutionConfiguration
+	Headers   config2.HeaderRules
+	Events    config2.EventsConfiguration
 }
 
 func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
@@ -174,19 +174,19 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 		switch in.Kind {
 		case nodev1.DataSourceKind_STATIC:
 			out.Custom = staticdatasource.ConfigJSON(staticdatasource.Configuration{
-				Data: config.LoadStringVariable(in.CustomStatic.Data),
+				Data: config2.LoadStringVariable(in.CustomStatic.Data),
 			})
 		case nodev1.DataSourceKind_GRAPHQL:
 			header := http.Header{}
 			for s, httpHeader := range in.CustomGraphql.Fetch.Header {
 				for _, value := range httpHeader.Values {
-					header.Add(s, config.LoadStringVariable(value))
+					header.Add(s, config2.LoadStringVariable(value))
 				}
 			}
 
-			fetchUrl := config.LoadStringVariable(in.CustomGraphql.Fetch.GetUrl())
+			fetchUrl := config2.LoadStringVariable(in.CustomGraphql.Fetch.GetUrl())
 
-			subscriptionUrl := config.LoadStringVariable(in.CustomGraphql.Subscription.Url)
+			subscriptionUrl := config2.LoadStringVariable(in.CustomGraphql.Subscription.Url)
 			if subscriptionUrl == "" {
 				subscriptionUrl = fetchUrl
 			}

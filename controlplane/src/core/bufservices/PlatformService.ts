@@ -4733,34 +4733,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureId: 'analytics-retention',
         });
 
-        const { dateRange } = validateDateRanges({
+        const { range, dateRange } = validateDateRanges({
           limit: analyticsRetention?.limit ?? 7,
-          range: 0,
-          dateRange: {
-            start: req.startDate,
-            end: req.endDate,
-          },
+          range: req.range,
+          dateRange:
+            req.startDate !== '' && req.endDate !== ''
+              ? {
+                  start: req.startDate,
+                  end: req.endDate,
+                }
+              : undefined,
         });
 
-        if (!dateRange) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'Invalid date range',
-            },
-            mostRequestedOperations: [],
-            requestSeries: [],
-            subgraphMetrics: [],
-          };
-        }
-
-        const timeFilters = parseTimeFilters(
-          {
-            start: dateRange.start,
-            end: dateRange.end,
-          },
-          req.range,
-        );
+        const timeFilters = parseTimeFilters(dateRange, range);
 
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name, { published: true });

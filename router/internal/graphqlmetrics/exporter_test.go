@@ -57,8 +57,6 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 
 	require.Nil(t, e.Validate())
 
-	e.Start()
-
 	for i := 0; i < totalItems; i++ {
 
 		hash := fmt.Sprintf("hash-%d", i%2)
@@ -136,8 +134,6 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 
 	require.Nil(t, e.Validate())
 
-	e.Start()
-
 	for i := 0; i < totalItems; i++ {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
@@ -178,6 +174,79 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 	require.Equal(t, 5, len(c.publishedBatches[0]))
 }
 
+func TestForceFlushSync(t *testing.T) {
+	c := &MyClient{
+		t:                t,
+		publishedBatches: make([][]*graphqlmetricsv1.SchemaUsageInfo, 0),
+	}
+
+	queueSize := 100
+	totalItems := 10
+	batchSize := 5
+
+	e := NewExporter(
+		zap.NewNop(),
+		c,
+		"secret",
+		&ExporterSettings{
+			NumConsumers: 1,
+			BatchSize:    batchSize,
+			QueueSize:    queueSize,
+			// Intentionally set to a high value to make sure that the exporter is forced to flush immediately
+			Interval:      5000 * time.Millisecond,
+			ExportTimeout: 5000 * time.Millisecond,
+			Retry: RetryOptions{
+				Enabled:     false,
+				MaxDuration: 300 * time.Millisecond,
+				Interval:    100 * time.Millisecond,
+				MaxRetry:    3,
+			},
+		},
+	)
+
+	require.Nil(t, e.Validate())
+
+	for i := 0; i < totalItems; i++ {
+		usage := &graphqlmetricsv1.SchemaUsageInfo{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:        []string{"user", "id"},
+					TypeNames:   []string{"User", "ID"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       2,
+				},
+				{
+					Path:        []string{"user", "name"},
+					TypeNames:   []string{"User", "String"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       1,
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: fmt.Sprintf("hash-%d", i),
+				Name: "user",
+			},
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
+			},
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
+			},
+			Attributes: map[string]string{},
+		}
+
+		require.True(t, e.Record(usage))
+	}
+
+	require.Nil(t, e.ForceFlush(context.Background()))
+
+	// Plus the last flush
+	require.Equal(t, totalItems/batchSize+1, len(c.publishedBatches))
+	require.Equal(t, 5, len(c.publishedBatches[0]))
+}
+
 func TestExportBatchInterval(t *testing.T) {
 	c := &MyClient{
 		t:                t,
@@ -208,8 +277,6 @@ func TestExportBatchInterval(t *testing.T) {
 	)
 
 	require.Nil(t, e.Validate())
-
-	e.Start()
 
 	for i := 0; i < totalItems; i++ {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
@@ -282,8 +349,6 @@ func TestExportFullQueue(t *testing.T) {
 	)
 
 	require.Nil(t, e.Validate())
-
-	e.Start()
 
 	var dispatched int
 

@@ -6,6 +6,7 @@ use (
 	./graphqlmetrics
 	./router
 	./router-tests
+	./aws-lambda-router/adapter
 )
 
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../graphql-go-tools/v2

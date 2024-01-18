@@ -3,12 +3,12 @@ package cmd
 import (
 	"context"
 	"flag"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 
 	"go.uber.org/zap"
@@ -83,6 +83,6 @@ func Main() {
 	}
 
 	profile.Finish()
-	logger.Debug("Server exiting")
+	logger.Debug("server exiting")
 	os.Exit(0)
 }

@@ -5,15 +5,15 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
+	authentication2 "github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/automaxprocs/maxprocs"
 
-	"github.com/wundergraph/cosmo/router/authentication"
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/handler/cors"
-	"github.com/wundergraph/cosmo/router/internal/metric"
-	"github.com/wundergraph/cosmo/router/internal/trace"
 	"go.uber.org/zap"
 )
 
@@ -67,21 +67,21 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		)
 	}
 
-	var authenticators []authentication.Authenticator
+	var authenticators []authentication2.Authenticator
 	for i, auth := range cfg.Authentication.Providers {
 		if auth.JWKS != nil {
 			name := auth.Name
 			if name == "" {
 				name = fmt.Sprintf("jwks-#%d", i)
 			}
-			opts := authentication.JWKSAuthenticatorOptions{
+			opts := authentication2.JWKSAuthenticatorOptions{
 				Name:                name,
 				URL:                 auth.JWKS.URL,
 				HeaderNames:         auth.JWKS.HeaderNames,
 				HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
 				RefreshInterval:     auth.JWKS.RefreshInterval,
 			}
-			authenticator, err := authentication.NewJWKSAuthenticator(opts)
+			authenticator, err := authentication2.NewJWKSAuthenticator(opts)
 			if err != nil {
 				logger.Fatal("Could not create JWKS authenticator", zap.Error(err), zap.String("name", name))
 			}
@@ -90,7 +90,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	}
 
 	options := []core.Option{
-		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithLogger(logger),

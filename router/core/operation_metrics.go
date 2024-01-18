@@ -2,18 +2,14 @@ package core
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"strconv"
 	"time"
 
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
-	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
-	"github.com/wundergraph/cosmo/router/internal/metric"
-	"github.com/wundergraph/cosmo/router/internal/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -31,119 +27,24 @@ func (p OperationProtocol) String() string {
 
 type OperationMetrics struct {
 	requestContentLength int64
-	metrics              metric.Store
+	routerMetrics        RouterMetrics
 	operationStartTime   time.Time
 	metricBaseFields     []attribute.KeyValue
 	inflightMetric       func()
-	gqlMetricsExporter   *graphqlmetrics.Exporter
 	routerConfigVersion  string
 	opContext            *operationContext
 	logger               *zap.Logger
 }
 
 func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
-	if m.gqlMetricsExporter == nil {
-		return
-	}
-
-	usageInfo, err := plan.GetSchemaUsageInfo(
-		operationContext.preparedPlan.preparedPlan,
-		operationContext.preparedPlan.operationDocument,
-		operationContext.preparedPlan.schemaDocument,
-		operationContext.Variables(),
-	)
-	if err != nil {
-		m.logger.Error("failed to get schema usage info", zap.Error(err))
-		return
-	}
-
-	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(usageInfo.TypeFields))
-	argumentUsageInfos := make([]*graphqlmetricsv1.ArgumentUsageInfo, len(usageInfo.Arguments))
-	inputUsageInfos := make([]*graphqlmetricsv1.InputUsageInfo, len(usageInfo.InputTypeFields))
-
-	for i := range usageInfo.TypeFields {
-		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
-			Count:       1,
-			Path:        usageInfo.TypeFields[i].Path,
-			TypeNames:   usageInfo.TypeFields[i].EnclosingTypeNames,
-			SubgraphIDs: usageInfo.TypeFields[i].Source.IDs,
-			NamedType:   usageInfo.TypeFields[i].FieldTypeName,
-		}
-	}
-
-	for i := range usageInfo.Arguments {
-		argumentUsageInfos[i] = &graphqlmetricsv1.ArgumentUsageInfo{
-			Count:     1,
-			Path:      []string{usageInfo.Arguments[i].FieldName, usageInfo.Arguments[i].ArgumentName},
-			TypeName:  usageInfo.Arguments[i].EnclosingTypeName,
-			NamedType: usageInfo.Arguments[i].ArgumentTypeName,
-		}
-	}
-
-	for i := range usageInfo.InputTypeFields {
-		// In that case it is a top level input field usage e.g employee(id: 1)
-		if len(usageInfo.InputTypeFields[i].EnclosingTypeNames) == 0 {
-			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
-				Count:     uint64(usageInfo.InputTypeFields[i].Count),
-				NamedType: usageInfo.InputTypeFields[i].FieldTypeName,
-				// Root input fields have no enclosing type name and no path
-			}
-		} else {
-			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
-				Path:      []string{usageInfo.InputTypeFields[i].EnclosingTypeNames[0], usageInfo.InputTypeFields[i].FieldName},
-				Count:     uint64(usageInfo.InputTypeFields[i].Count),
-				TypeName:  usageInfo.InputTypeFields[i].EnclosingTypeNames[0],
-				NamedType: usageInfo.InputTypeFields[i].FieldTypeName,
-			}
-		}
-	}
-
-	var opType graphqlmetricsv1.OperationType
-	switch operationContext.opType {
-	case "query":
-		opType = graphqlmetricsv1.OperationType_QUERY
-	case "mutation":
-		opType = graphqlmetricsv1.OperationType_MUTATION
-	case "subscription":
-		opType = graphqlmetricsv1.OperationType_SUBSCRIPTION
-	}
-
-	// Non-blocking
-	m.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
-		RequestDocument:  operationContext.content,
-		TypeFieldMetrics: fieldUsageInfos,
-		OperationInfo: &graphqlmetricsv1.OperationInfo{
-			Type: opType,
-			Hash: strconv.FormatUint(operationContext.hash, 10),
-			Name: operationContext.name,
-		},
-		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
-			Version: m.routerConfigVersion,
-		},
-		ClientInfo: &graphqlmetricsv1.ClientInfo{
-			Name:    operationContext.clientInfo.Name,
-			Version: operationContext.clientInfo.Version,
-		},
-		ArgumentMetrics: argumentUsageInfos,
-		InputMetrics:    inputUsageInfos,
-		RequestInfo: &graphqlmetricsv1.RequestInfo{
-			Error:      hasError,
-			StatusCode: int32(statusCode),
-		},
-	})
+	m.routerMetrics.ExportSchemaUsageInfo(operationContext, statusCode, hasError)
 }
 
 func (m *OperationMetrics) AddOperationContext(opContext *operationContext) {
-	if m == nil {
-		return
-	}
 	m.opContext = opContext
 }
 
 func (m *OperationMetrics) Finish(hasErrored bool, statusCode int, responseSize int) {
-	if m == nil {
-		return
-	}
 	m.inflightMetric()
 
 	ctx := context.Background()
@@ -153,14 +54,16 @@ func (m *OperationMetrics) Finish(hasErrored bool, statusCode int, responseSize 
 		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(hasErrored))
 	}
 
+	rm := m.routerMetrics.MetricStore()
+
 	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(statusCode))
-	m.metrics.MeasureRequestCount(ctx, m.metricBaseFields...)
-	m.metrics.MeasureRequestSize(ctx, m.requestContentLength, m.metricBaseFields...)
-	m.metrics.MeasureLatency(ctx,
+	rm.MeasureRequestCount(ctx, m.metricBaseFields...)
+	rm.MeasureRequestSize(ctx, m.requestContentLength, m.metricBaseFields...)
+	rm.MeasureLatency(ctx,
 		m.operationStartTime,
 		m.metricBaseFields...,
 	)
-	m.metrics.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
+	rm.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
 
 	if m.opContext != nil {
 		m.exportSchemaUsageInfo(m.opContext, statusCode, hasErrored)
@@ -168,37 +71,29 @@ func (m *OperationMetrics) Finish(hasErrored bool, statusCode int, responseSize 
 }
 
 func (m *OperationMetrics) AddAttributes(kv ...attribute.KeyValue) {
-	if m == nil {
-		return
-	}
 	m.metricBaseFields = append(m.metricBaseFields, kv...)
 }
 
 // AddClientInfo adds the client info to the operation metrics. If OperationMetrics
 // is nil, it's a no-op.
 func (m *OperationMetrics) AddClientInfo(info *ClientInfo) {
-	if m == nil {
-		return
-	}
-
 	// Add client info to metrics base fields
 	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientName.String(info.Name))
 	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientVersion.String(info.Version))
 }
 
 // startOperationMetrics starts the metrics for an operation. This should only be called by
-// RouterMetrics.StartOperation()
-func startOperationMetrics(metricStore metric.Store, logger *zap.Logger, requestContentLength int64, gqlMetricsExporter *graphqlmetrics.Exporter, routerConfigVersion string) *OperationMetrics {
+// routerMetrics.StartOperation()
+func startOperationMetrics(rMetrics RouterMetrics, logger *zap.Logger, requestContentLength int64, routerConfigVersion string) *OperationMetrics {
 	operationStartTime := time.Now()
 
-	inflightMetric := metricStore.MeasureInFlight(context.Background())
+	inflightMetric := rMetrics.MetricStore().MeasureInFlight(context.Background())
 	return &OperationMetrics{
 		requestContentLength: requestContentLength,
-		metrics:              metricStore,
 		operationStartTime:   operationStartTime,
 		inflightMetric:       inflightMetric,
-		gqlMetricsExporter:   gqlMetricsExporter,
 		routerConfigVersion:  routerConfigVersion,
+		routerMetrics:        rMetrics,
 		logger:               logger,
 	}
 }

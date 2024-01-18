@@ -2,9 +2,8 @@ package core
 
 import (
 	"errors"
+	authentication2 "github.com/wundergraph/cosmo/router/pkg/authentication"
 	"net/http"
-
-	"github.com/wundergraph/cosmo/router/authentication"
 )
 
 var (
@@ -17,10 +16,10 @@ var (
 // AccessController handles both authentication and authorization for the Router
 type AccessController struct {
 	authenticationRequired bool
-	authenticators         []authentication.Authenticator
+	authenticators         []authentication2.Authenticator
 }
 
-func NewAccessController(authenticators []authentication.Authenticator, authenticationRequired bool) *AccessController {
+func NewAccessController(authenticators []authentication2.Authenticator, authenticationRequired bool) *AccessController {
 	return &AccessController{
 		authenticationRequired: authenticationRequired,
 		authenticators:         authenticators,
@@ -37,13 +36,13 @@ func DefaultAccessController() *AccessController {
 // should not proceed. If it succeeds, a new http.Request with an updated context.Context
 // is returned.
 func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	auth, err := authentication.AuthenticateHTTPRequest(r.Context(), a.authenticators, r)
+	auth, err := authentication2.AuthenticateHTTPRequest(r.Context(), a.authenticators, r)
 	if err != nil {
 		return nil, ErrUnauthorized
 	}
 	if auth != nil {
 		w.Header().Set("X-Authenticated-By", auth.Authenticator())
-		return r.WithContext(authentication.NewContext(r.Context(), auth)), nil
+		return r.WithContext(authentication2.NewContext(r.Context(), auth)), nil
 	}
 	if a.authenticationRequired {
 		return nil, ErrUnauthorized

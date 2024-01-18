@@ -1,4 +1,4 @@
-package recovery
+package recoveryhandler
 
 import (
 	"net"

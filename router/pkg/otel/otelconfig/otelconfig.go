@@ -8,6 +8,10 @@ const (
 	ExporterDefault  Exporter = "" // Use ExporterOLTPHTTP
 	ExporterOLTPHTTP Exporter = "http"
 	ExporterOLTPGRPC Exporter = "grpc"
+
+	CloudDefaultTelemetryEndpoint = "https://cosmo-otel.wundergraph.com"
+	DefaultMetricsPath            = "/v1/metrics"
+	DefaultTracesPath             = "/v1/traces"
 )
 
 // DefaultEndpoint is the default endpoint used by subsystems that
@@ -17,7 +21,7 @@ func DefaultEndpoint() string {
 	if ep := os.Getenv("DEFAULT_TELEMETRY_ENDPOINT"); ep != "" {
 		return ep
 	}
-	return "https://cosmo-otel.wundergraph.com"
+	return CloudDefaultTelemetryEndpoint
 }
 
 // DefaultEndpointHeaders returns the headers required to talk to the default

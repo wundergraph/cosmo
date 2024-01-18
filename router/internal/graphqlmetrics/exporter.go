@@ -10,18 +10,40 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/zap"
 	"sync"
+	"sync/atomic"
 	"time"
 )
+
+type SchemaUsageInfo struct {
+	item    *graphqlmetricsv12.SchemaUsageInfo
+	flushed chan struct{}
+}
+
+func (e *SchemaUsageInfo) Item() *graphqlmetricsv12.SchemaUsageInfo {
+	return e.item
+}
+
+func (e *SchemaUsageInfo) Flush() chan struct{} {
+	return e.flushed
+}
 
 type Exporter struct {
 	queue          *BatchQueue[*graphqlmetricsv12.SchemaUsageInfo]
 	settings       *ExporterSettings
 	logger         *zap.Logger
-	outQueue       <-chan []*graphqlmetricsv12.SchemaUsageInfo
+	outQueue       <-chan []QueueWork[*graphqlmetricsv12.SchemaUsageInfo]
 	stopWG         sync.WaitGroup
 	client         graphqlmetricsv1connect.GraphQLMetricsServiceClient
 	apiToken       string
 	cancelShutdown context.CancelFunc
+	stopOnce       sync.Once
+	stopped        atomic.Bool
+}
+
+type SchemaUsageExporter interface {
+	Record(item *graphqlmetricsv12.SchemaUsageInfo) bool
+	ForceFlush(ctx context.Context) error
+	Shutdown(ctx context.Context) error
 }
 
 type RetryOptions struct {
@@ -73,7 +95,7 @@ func NewDefaultExporterSettings() *ExporterSettings {
 // NewExporter creates a new GraphQL metrics exporter. The collectorEndpoint is the endpoint to which the metrics
 // are sent. The apiToken is the token used to authenticate with the collector. The collector supports Brotli compression
 // and retries on failure. Underling queue implementation sends batches of metrics at the specified interval and batch size.
-func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetricsServiceClient, apiToken string, settings *ExporterSettings) *Exporter {
+func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetricsServiceClient, apiToken string, settings *ExporterSettings) (SchemaUsageExporter, error) {
 
 	bq := NewBatchQueue[*graphqlmetricsv12.SchemaUsageInfo](&BatchQueueOptions{
 		Interval:      settings.Interval,
@@ -81,17 +103,23 @@ func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetri
 		MaxQueueSize:  settings.QueueSize,
 	})
 
-	return &Exporter{
+	e := &Exporter{
 		queue:    bq,
 		outQueue: bq.OutQueue,
 		logger:   logger.With(zap.String("component", "graphqlmetrics_exporter")),
 		settings: settings,
 		client:   client,
 		apiToken: apiToken,
+		stopOnce: sync.Once{},
+		stopped:  atomic.Bool{},
 	}
+
+	e.start()
+
+	return e, e.validate()
 }
 
-func (e *Exporter) Validate() error {
+func (e *Exporter) validate() error {
 	if e.settings.BatchSize <= 0 {
 		return errors.New("batch size must be positive")
 	}
@@ -129,7 +157,14 @@ func (e *Exporter) Validate() error {
 
 // Record records the items as potential metrics to be exported.
 func (e *Exporter) Record(item *graphqlmetricsv12.SchemaUsageInfo) bool {
-	if !e.queue.Enqueue(item) {
+	// Do not enqueue new items if exporter is already stopped
+	if e.stopped.Load() {
+		return false
+	}
+
+	if !e.queue.Enqueue(&SchemaUsageInfo{
+		item: item,
+	}) {
 		e.logger.Warn("Drop tracking schema usage due to full queue. Please increase the queue size or decrease the batch size.")
 		return false
 	}
@@ -216,8 +251,8 @@ func (e *Exporter) export(ctx context.Context, batch []*graphqlmetricsv12.Schema
 	return lastErr
 }
 
-// Start starts the exporter.
-func (e *Exporter) Start() {
+// start starts the exporter and blocks until the exporter is shutdown.
+func (e *Exporter) start() {
 
 	var startWG sync.WaitGroup
 	e.queue.Start()
@@ -239,8 +274,21 @@ func (e *Exporter) Start() {
 				case <-shutdownCtx.Done():
 					return
 				case batch, more := <-e.outQueue:
+
+					items := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(batch))
+					// The flushed marker is used to signal that the batch has been processed
+					for _, item := range batch {
+						if item.Item() != nil {
+							items = append(items, item.Item())
+						}
+						if ffs := item.Flush(); ffs != nil {
+							close(ffs)
+							continue
+						}
+					}
+
 					if more {
-						_ = e.export(shutdownCtx, Aggregate(batch))
+						_ = e.export(shutdownCtx, Aggregate(items))
 					} else {
 						// Close current exporter when queues was closed from producer side
 						return
@@ -253,21 +301,52 @@ func (e *Exporter) Start() {
 	startWG.Wait()
 }
 
+func (e *Exporter) ForceFlush(ctx context.Context) error {
+	// Interrupt if context is already canceled.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	// Do not wait for queue to be empty if exporter is already stopped
+	if e.stopped.Load() {
+		return nil
+	}
+
+	flushed := make(chan struct{})
+
+	// Enqueue a flush marker item
+	e.queue.Enqueue(&QueueItem[*graphqlmetricsv12.SchemaUsageInfo]{
+		flushed: flushed,
+	})
+
+	select {
+	case <-flushed:
+		// Processed any items in queue prior to ForceFlush being called
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	return nil
+}
+
 // Shutdown the exporter but waits until all export jobs has been finished or timeout.
 // If the context is canceled, the exporter will be shutdown immediately.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 
-	// stop dispatching new items
-	e.queue.Stop()
+	e.stopOnce.Do(func() {
+		e.stopped.Store(true)
+		// stop dispatching new items and close the queue
+		e.queue.Stop()
 
-	go func() {
-		// cancel consumers immediately without waiting for the queue to be empty
-		<-ctx.Done()
-		e.cancelShutdown()
-	}()
+		go func() {
+			// cancel consumers immediately without waiting for the queue to be empty
+			<-ctx.Done()
+			e.cancelShutdown()
+		}()
 
-	// wait for all items to be processed
-	e.stopWG.Wait()
+		// wait for all items to be processed
+		e.stopWG.Wait()
+	})
 
 	return nil
 }

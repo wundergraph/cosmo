@@ -37,7 +37,7 @@ type WebsocketMiddlewareOptions struct {
 	Parser           *OperationParser
 	Planner          *OperationPlanner
 	GraphQLHandler   *GraphQLHandler
-	Metrics          *RouterMetrics
+	Metrics          RouterMetrics
 	AccessController *AccessController
 	Logger           *zap.Logger
 	Stats            WebSocketsStatistics
@@ -142,7 +142,7 @@ type WebsocketHandler struct {
 	parser           *OperationParser
 	planner          *OperationPlanner
 	graphqlHandler   *GraphQLHandler
-	metrics          *RouterMetrics
+	metrics          RouterMetrics
 	accessController *AccessController
 	logger           *zap.Logger
 
@@ -486,7 +486,7 @@ type WebSocketConnectionHandlerOptions struct {
 	Parser         *OperationParser
 	Planner        *OperationPlanner
 	GraphQLHandler *GraphQLHandler
-	Metrics        *RouterMetrics
+	Metrics        RouterMetrics
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
 	Connection     *wsConnectionWrapper
@@ -504,7 +504,7 @@ type WebSocketConnectionHandler struct {
 	parser         *OperationParser
 	planner        *OperationPlanner
 	graphqlHandler *GraphQLHandler
-	metrics        *RouterMetrics
+	metrics        RouterMetrics
 	w              http.ResponseWriter
 	r              *http.Request
 	conn           *wsConnectionWrapper

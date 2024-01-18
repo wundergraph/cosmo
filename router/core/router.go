@@ -5,6 +5,15 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
+	"github.com/wundergraph/cosmo/router/internal/requestlogger"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/health"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net"
 	"net/http"
 	"net/url"
@@ -22,24 +31,14 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	brotli "go.withmatt.com/connect-brotli"
 
-	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
-
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mitchellh/mapstructure"
-	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/health"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"github.com/wundergraph/cosmo/router/internal/handler/cors"
-	"github.com/wundergraph/cosmo/router/internal/handler/recovery"
-	"github.com/wundergraph/cosmo/router/internal/handler/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/metric"
-	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
-	"github.com/wundergraph/cosmo/router/internal/trace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -52,9 +51,8 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		activeRouter *Server
+		activeServer *server
 		modules      []Module
-		mu           sync.Mutex
 
 		WebsocketStats WebSocketsStatistics
 	}
@@ -77,22 +75,23 @@ type (
 	// Config defines the configuration options for the Router.
 	Config struct {
 		logger                   *zap.Logger
-		traceConfig              *trace.Config
-		metricConfig             *metric.Config
+		traceConfig              *rtrace.Config
+		metricConfig             *rmetric.Config
 		tracerProvider           *sdktrace.TracerProvider
 		otlpMeterProvider        *sdkmetric.MeterProvider
 		promMeterProvider        *sdkmetric.MeterProvider
-		gqlMetricsExporter       *graphqlmetrics.Exporter
+		gqlMetricsExporter       graphqlmetrics.SchemaUsageExporter
 		corsOptions              *cors.Config
 		routerConfig             *nodev1.RouterConfig
 		gracePeriod              time.Duration
+		awsLambda                bool
 		shutdown                 bool
 		listenAddr               string
 		baseURL                  string
+		graphqlWebURL            string
 		graphqlPath              string
 		playground               bool
 		introspection            bool
-		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string
 		healthChecks             health.Checker
@@ -128,10 +127,15 @@ type (
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 	}
 
-	// Server is the main router instance.
-	Server struct {
+	Server interface {
+		Server() *http.Server
+		HealthChecks() health.Checker
+	}
+
+	// server is the main router instance.
+	server struct {
 		Config
-		Server *http.Server
+		server *http.Server
 		// rootContext that all services depending on the router should
 		// use as a parent context
 		rootContext       context.Context
@@ -140,12 +144,12 @@ type (
 		healthChecks      health.Checker
 	}
 
-	// Option defines the method to customize Server.
+	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
-// Alternatively, use Router.NewTestServer() to create a new Server instance without starting it for testing purposes.
+// Alternatively, use Router.NewServer() to create a new server instance without starting it.
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{
 		WebsocketStats: NewNoopWebSocketStats(),
@@ -164,14 +168,18 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.graphqlPath = "/graphql"
 	}
 
+	if r.graphqlWebURL == "" {
+		r.graphqlWebURL = r.graphqlPath
+	}
+
 	// Default values for trace and metric config
 
 	if r.traceConfig == nil {
-		r.traceConfig = trace.DefaultConfig(Version)
+		r.traceConfig = rtrace.DefaultConfig(Version)
 	}
 
 	if r.metricConfig == nil {
-		r.metricConfig = metric.DefaultConfig(Version)
+		r.metricConfig = rmetric.DefaultConfig(Version)
 	}
 
 	if r.corsOptions == nil {
@@ -250,7 +258,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
-			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &trace.Exporter{
+			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.Exporter{
 				Endpoint: endpoint,
 				Exporter: otelconfig.ExporterOLTPHTTP,
 				HTTPPath: "/v1/traces",
@@ -263,7 +271,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
-			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
+			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &rmetric.OpenTelemetryExporter{
 				Endpoint: endpoint,
 				Exporter: otelconfig.ExporterOLTPHTTP,
 				HTTPPath: "/v1/metrics",
@@ -286,14 +294,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 
 		if r.traceConfig.Enabled {
-			defaultExporter := trace.GetDefaultExporter(r.traceConfig)
+			defaultExporter := rtrace.GetDefaultExporter(r.traceConfig)
 			if defaultExporter != nil {
 				disabledFeatures = append(disabledFeatures, "Cosmo Cloud Tracing")
 				defaultExporter.Disabled = true
 			}
 		}
 		if r.metricConfig.OpenTelemetry.Enabled {
-			defaultExporter := metric.GetDefaultExporter(r.metricConfig)
+			defaultExporter := rmetric.GetDefaultExporter(r.metricConfig)
 			if defaultExporter != nil {
 				disabledFeatures = append(disabledFeatures, "Cosmo Cloud Metrics")
 				defaultExporter.Disabled = true
@@ -334,7 +342,7 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 			Name: sg.Name,
 		}
 
-		// Validate subgraph url. Note that that it can be empty if the subgraph is virtual
+		// Validate subgraph url. Note that it can be empty if the subgraph is virtual
 		parsedURL, err := url.Parse(sg.RoutingUrl)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)
@@ -370,32 +378,39 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 	return subgraphs, nil
 }
 
-// updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
-// This method is safe for concurrent use. When the router can't be swapped due to an error the old server kept running.
-func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	// Rebuild Server with new router config
-	// In case of an error, we return early and keep the old Server running
-	newRouter, err := r.newServer(ctx, cfg)
+// UpdateServer starts a new server and swaps the active server with the new one. The old server is shutdown gracefully.
+// When the router can't be swapped due to an error the old server kept running. Not safe for concurrent use.
+func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Server, error) {
+	// Rebuild server with new router config
+	// In case of an error, we return early and keep the old server running
+	newServer, err := r.newServer(ctx, cfg)
 	if err != nil {
 		r.logger.Error("Failed to create a new router instance. Keeping old router running", zap.Error(err))
-		return err
+		return nil, err
 	}
 
-	prevRouter := r.activeRouter
+	prevRouter := r.activeServer
 
 	if prevRouter != nil {
 		if err := prevRouter.Shutdown(ctx); err != nil {
 			r.logger.Error("Could not shutdown router", zap.Error(err))
-			return err
+			return nil, err
 		}
 	}
 
-	// Swap active Server
-	r.mu.Lock()
-	r.activeRouter = newRouter
-	r.mu.Unlock()
+	// Swap active server
+	r.activeServer = newServer
 
-	// Start new Server
+	return newServer, nil
+}
+
+func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterConfig) error {
+
+	if _, err := r.UpdateServer(ctx, cfg); err != nil {
+		return err
+	}
+
+	// Start new server
 	go func() {
 		r.logger.Info("Server listening",
 			zap.String("listen_addr", r.listenAddr),
@@ -404,15 +419,15 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			zap.String("config_version", cfg.GetVersion()),
 		)
 
-		r.activeRouter.healthChecks.SetReady(true)
+		r.activeServer.healthChecks.SetReady(true)
 
 		// This is a blocking call
-		if err := r.activeRouter.listenAndServe(); err != nil {
-			r.activeRouter.healthChecks.SetReady(true)
+		if err := r.activeServer.listenAndServe(); err != nil {
+			r.activeServer.healthChecks.SetReady(true)
 			r.logger.Error("Failed to start new server", zap.Error(err))
 		}
 
-		r.logger.Info("Server stopped", zap.String("config_version", newRouter.routerConfig.GetVersion()))
+		r.logger.Info("Server stopped", zap.String("config_version", r.activeServer.routerConfig.GetVersion()))
 	}()
 
 	return nil
@@ -475,28 +490,47 @@ func (r *Router) initModules(ctx context.Context) error {
 	return nil
 }
 
-// NewTestServer prepares a new Server instance but does not start it. The method should be only used for testing purposes.
-// Use core.WithStaticRouterConfig to pass the initial config otherwise the engine will error.
-func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
+// NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
+// the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
+// The server can be shutdown with Router.Shutdown(). Use core.WithStaticRouterConfig to pass the initial config otherwise the Router will
+// try to fetch the config from the control plane. You can swap the router config by using Router.UpdateServer().
+func (r *Router) NewServer(ctx context.Context) (Server, error) {
+	if r.shutdown {
+		return nil, fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
+	}
+
 	if err := r.bootstrap(ctx); err != nil {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
-	newRouter, err := r.newServer(ctx, r.routerConfig)
+	// Start the server with the static config without polling
+	if r.routerConfig != nil {
+		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
+		return r.UpdateServer(ctx, r.routerConfig)
+	}
+
+	// when no static config is provided and no poller is configured, we can't start the server
+	if r.configPoller == nil {
+		return nil, fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
+	}
+
+	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
-		r.logger.Error("Failed to create new server", zap.Error(err))
+		return nil, fmt.Errorf("failed to get initial router config: %w", err)
+	}
+
+	if _, err := r.UpdateServer(ctx, routerConfig); err != nil {
+		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return nil, err
 	}
 
-	r.activeRouter = newRouter
-
-	return newRouter, nil
+	return r.activeServer, nil
 }
 
-// bootstrap initializes the Router. It is called by Start() and NewTestServer().
+// bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
-	cosmoCloudTracingEnabled := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
+	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.GetDefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
 	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
 
@@ -524,7 +558,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.traceConfig.Enabled {
-		tp, err := trace.NewTracerProvider(ctx, r.logger, r.traceConfig)
+		tp, err := rtrace.NewTracerProvider(ctx, r.logger, r.traceConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -534,24 +568,26 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
 		if r.metricConfig.Prometheus.Enabled {
-			mp, registry, err := metric.NewPrometheusMeterProvider(ctx, r.metricConfig)
+			mp, registry, err := rmetric.NewPrometheusMeterProvider(ctx, r.metricConfig)
 			if err != nil {
 				return fmt.Errorf("failed to create Prometheus exporter: %w", err)
 			}
 			r.promMeterProvider = mp
-			r.prometheusServer = metric.ServePrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
+			r.prometheusServer = rmetric.ServePrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
 			go func() {
 				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
 		}
-		mp, err := metric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig)
+		mp, err := rmetric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.otlpMeterProvider = mp
 	}
+
+	r.gqlMetricsExporter = graphqlmetrics.NewNoopExporter()
 
 	if r.graphqlMetricsConfig.Enabled {
 		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
@@ -561,17 +597,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			// Compress requests with Brotli.
 			connect.WithSendCompression(brotli.Name),
 		)
-		r.gqlMetricsExporter = graphqlmetrics.NewExporter(
+		ge, err := graphqlmetrics.NewExporter(
 			r.logger,
 			client,
 			r.graphApiToken,
 			graphqlmetrics.NewDefaultExporterSettings(),
 		)
-		if err := r.gqlMetricsExporter.Validate(); err != nil {
+		if err != nil {
 			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
 		}
-
-		r.gqlMetricsExporter.Start()
+		r.gqlMetricsExporter = ge
 
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
@@ -592,8 +627,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	return nil
 }
 
-// Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched
-// from the control plane. All bootstrapping logic should be done in bootstrap().
+// Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
@@ -606,7 +640,7 @@ func (r *Router) Start(ctx context.Context) error {
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.updateServer(ctx, r.routerConfig)
+		return r.updateServerAndStart(ctx, r.routerConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -619,7 +653,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.updateServer(ctx, routerConfig); err != nil {
+	if err := r.updateServerAndStart(ctx, routerConfig); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return err
 	}
@@ -631,7 +665,7 @@ func (r *Router) Start(ctx context.Context) error {
 			zap.String("old_version", oldVersion),
 			zap.String("new_version", newConfig.GetVersion()),
 		)
-		if err := r.updateServer(ctx, newConfig); err != nil {
+		if err := r.updateServerAndStart(ctx, newConfig); err != nil {
 			r.logger.Error("Failed to start server with new config. Trying again on the next update cycle.", zap.Error(err))
 			return err
 		}
@@ -641,35 +675,34 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
-// newServer creates a new Server instance.
+// newServer creates a new server instance.
 // All stateful data is copied from the Router over to the new server instance.
-func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Server, error) {
+func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
 	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	rootContext, rootContextCancel := context.WithCancel(ctx)
-	ro := &Server{
+	ro := &server{
 		rootContext:       rootContext,
 		rootContextCancel: rootContextCancel,
 		routerConfig:      routerConfig,
 		Config:            r.Config,
 	}
 
-	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
-	var traceHandler *trace.Middleware
+	recoveryHandler := recoveryhandler.New(recoveryhandler.WithLogger(r.logger), recoveryhandler.WithPrintStack())
+	var traceHandler *rtrace.Middleware
 	if r.traceConfig.Enabled {
-		traceHandler = trace.NewMiddleware(otel.RouterServerAttribute,
+		traceHandler = rtrace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
-					otel.WgRouterGraphName.String(r.federatedGraphName),
 					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 					otel.WgRouterVersion.String(Version),
 				),
 			),
-			otelhttp.WithFilter(trace.CommonRequestFilter),
-			otelhttp.WithFilter(trace.PrefixRequestFilter(
+			otelhttp.WithFilter(rtrace.CommonRequestFilter),
+			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
 				[]string{r.healthCheckPath, r.readinessCheckPath, r.livenessCheckPath}),
 			),
 			// Disable built-in metricStore through NoopMeterProvider
@@ -685,7 +718,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			return []zapcore.Field{
 				zap.String("config_version", routerConfig.GetVersion()),
 				zap.String("request_id", middleware.GetReqID(request.Context())),
-				zap.String("federated_graph_name", r.federatedGraphName),
 			}
 		}),
 	)
@@ -738,18 +770,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
-	metricStore := metric.NewNoopMetrics()
+	metricStore := rmetric.NewNoopMetrics()
 
 	// Prometheus metricStore rely on OTLP metricStore
 	if r.metricConfig.IsEnabled() {
-		m, err := metric.NewMetrics(
+		m, err := rmetric.NewMetrics(
 			r.metricConfig.Name,
 			Version,
-			metric.WithPromMeterProvider(r.promMeterProvider),
-			metric.WithOtlpMeterProvider(r.otlpMeterProvider),
-			metric.WithLogger(r.logger),
-			metric.WithAttributes(
-				otel.WgRouterGraphName.String(r.federatedGraphName),
+			rmetric.WithPromMeterProvider(r.promMeterProvider),
+			rmetric.WithOtlpMeterProvider(r.otlpMeterProvider),
+			rmetric.WithLogger(r.logger),
+			rmetric.WithAttributes(
 				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 				otel.WgRouterVersion.String(Version),
 			),
@@ -761,7 +792,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		metricStore = m
 	}
 
-	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion(), r.logger)
+	routerMetrics := NewRouterMetrics(&routerMetricsConfig{
+		metrics:             metricStore,
+		gqlMetricsExporter:  r.gqlMetricsExporter,
+		exportEnabled:       r.graphqlMetricsConfig.Enabled,
+		routerConfigVersion: routerConfig.GetVersion(),
+		logger:              r.logger,
+	})
 
 	transport := newHTTPTransport(r.subgraphTransportOptions)
 
@@ -831,7 +868,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Log:        r.logger,
 			Html:       graphiql.PlaygroundHTML(),
-			GraphqlURL: r.graphqlPath,
+			GraphqlURL: r.graphqlWebURL,
 		})
 	}
 
@@ -852,15 +889,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:               r.logger,
-		Executor:             executor,
-		Metrics:              routerMetrics,
-		Parser:               operationParser,
-		Planner:              operationPlanner,
-		AccessController:     r.accessController,
-		RouterPublicKey:      publicKey,
-		EnableRequestTracing: r.engineExecutionConfiguration.EnableRequestTracing,
-		DevelopmentMode:      r.developmentMode,
+		Logger:                      r.logger,
+		Executor:                    executor,
+		Metrics:                     routerMetrics,
+		Parser:                      operationParser,
+		Planner:                     operationPlanner,
+		AccessController:            r.accessController,
+		RouterPublicKey:             publicKey,
+		EnableRequestTracing:        r.engineExecutionConfiguration.EnableRequestTracing,
+		DevelopmentMode:             r.developmentMode,
+		TracerProvider:              r.tracerProvider,
+		FlushTelemetryAfterResponse: r.awsLambda,
 	})
 
 	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
@@ -903,7 +942,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		zap.String("url", r.baseURL+r.graphqlPath),
 	)
 
-	ro.Server = &http.Server{
+	ro.server = &http.Server{
 		Addr: r.listenAddr,
 		// https://ieftimov.com/posts/make-resilient-golang-net-http-servers-using-timeouts-deadlines-context-cancellation/
 		ReadTimeout:       1 * time.Minute,
@@ -916,9 +955,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	return ro, nil
 }
 
-// listenAndServe starts the Server and blocks until the Server is shutdown.
-func (r *Server) listenAndServe() error {
-	if err := r.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+// listenAndServe starts the server and blocks until the server is shutdown.
+func (r *server) listenAndServe() error {
+	if err := r.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
@@ -941,8 +980,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		}
 	}
 
-	if r.activeRouter != nil {
-		if subErr := r.activeRouter.Shutdown(ctx); subErr != nil {
+	if r.activeServer != nil {
+		if subErr := r.activeServer.Shutdown(ctx); subErr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", subErr))
 		}
 	}
@@ -1001,8 +1040,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	return err
 }
 
-// Shutdown gracefully shutdown the Server.
-func (r *Server) Shutdown(ctx context.Context) (err error) {
+// Shutdown gracefully shutdown the server.
+func (r *server) Shutdown(ctx context.Context) (err error) {
 	r.logger.Info("Gracefully shutting down the router ...",
 		zap.String("config_version", r.routerConfig.GetVersion()),
 		zap.String("grace_period", r.gracePeriod.String()),
@@ -1018,13 +1057,22 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 
 	r.healthChecks.SetReady(false)
 
-	if r.Server != nil {
-		if err := r.Server.Shutdown(ctx); err != nil {
+	if r.server != nil {
+		// HTTP server shutdown
+		if err := r.server.Shutdown(ctx); err != nil {
 			return err
 		}
 	}
 
 	return err
+}
+
+func (r *server) HealthChecks() health.Checker {
+	return r.healthChecks
+}
+
+func (r *server) Server() *http.Server {
+	return r.server
 }
 
 func WithListenerAddr(addr string) Option {
@@ -1051,7 +1099,7 @@ func WithIntrospection(enable bool) Option {
 	}
 }
 
-func WithTracing(cfg *trace.Config) Option {
+func WithTracing(cfg *rtrace.Config) Option {
 	return func(r *Router) {
 		r.traceConfig = cfg
 	}
@@ -1063,9 +1111,19 @@ func WithCors(corsOpts *cors.Config) Option {
 	}
 }
 
-func WithGraphQLPath(path string) Option {
+// WithGraphQLPath sets the path to the GraphQL endpoint.
+func WithGraphQLPath(p string) Option {
 	return func(r *Router) {
-		r.graphqlPath = path
+		r.graphqlPath = p
+	}
+}
+
+// WithGraphQLWebURL sets the URL to the GraphQL endpoint used by the GraphQL Playground.
+// The path might be different from the actual GraphQL endpoint when the router is behind a reverse proxy.
+// By default, the GraphQL Playground uses the same URL as the GraphQL endpoint.
+func WithGraphQLWebURL(p string) Option {
+	return func(r *Router) {
+		r.graphqlWebURL = p
 	}
 }
 
@@ -1087,15 +1145,9 @@ func WithGracePeriod(timeout time.Duration) Option {
 	}
 }
 
-func WithMetrics(cfg *metric.Config) Option {
+func WithMetrics(cfg *rmetric.Config) Option {
 	return func(r *Router) {
 		r.metricConfig = cfg
-	}
-}
-
-func WithFederatedGraphName(name string) Option {
-	return func(r *Router) {
-		r.federatedGraphName = name
 	}
 }
 
@@ -1128,6 +1180,12 @@ func WithModulesConfig(config map[string]interface{}) Option {
 func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 	return func(r *Router) {
 		r.routerConfig = cfg
+	}
+}
+
+func WithAwsLambda() Option {
+	return func(r *Router) {
+		r.awsLambda = true
 	}
 }
 
