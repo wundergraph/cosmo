@@ -62,7 +62,7 @@ const AuditLogPage: NextPageWithLayout = () => {
   const user = useUser();
   const { data, isLoading, error } = useQuery({
     ...getAuditLogs.useQuery({
-      limit: limit,
+      limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startOfDay(startDate)),
       endDate: formatISO(endOfDay(endDate)),
