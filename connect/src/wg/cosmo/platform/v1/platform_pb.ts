@@ -9429,6 +9429,16 @@ export class GetAuditLogsRequest extends Message<GetAuditLogsRequest> {
    */
   offset = 0;
 
+  /**
+   * @generated from field: string startDate = 3;
+   */
+  startDate = "";
+
+  /**
+   * @generated from field: string endDate = 4;
+   */
+  endDate = "";
+
   constructor(data?: PartialMessage<GetAuditLogsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9439,6 +9449,8 @@ export class GetAuditLogsRequest extends Message<GetAuditLogsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAuditLogsRequest {
@@ -9557,6 +9569,11 @@ export class GetAuditLogsResponse extends Message<GetAuditLogsResponse> {
    */
   logs: AuditLog[] = [];
 
+  /**
+   * @generated from field: string count = 3;
+   */
+  count = "";
+
   constructor(data?: PartialMessage<GetAuditLogsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9567,6 +9584,7 @@ export class GetAuditLogsResponse extends Message<GetAuditLogsResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "logs", kind: "message", T: AuditLog, repeated: true },
+    { no: 3, name: "count", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAuditLogsResponse {

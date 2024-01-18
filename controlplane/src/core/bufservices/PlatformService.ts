@@ -5790,6 +5790,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
             logs: [],
+            count: '',
+          };
+        }
+
+        const { dateRange } = validateDateRanges({
+          limit: 7,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          },
+        });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            logs: [],
+            count: '',
           };
         }
 
@@ -5797,6 +5817,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
           limit: req.limit,
           offset: req.offset,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
+        });
+        const auditLogsCount = await auditLogRepo.getAuditLogsCount({
+          organizationId: authContext.organizationId,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
         });
 
         const logs: PlainMessage<AuditLog>[] = auditLogs.map((log) => ({
@@ -5816,6 +5843,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           logs,
+          count: auditLogsCount.toString(),
         };
       });
     },

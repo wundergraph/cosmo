@@ -1,5 +1,5 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, gt, lt, and, sql } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction, AuditTargetType } from '../../db/models.js';
 
@@ -49,7 +49,13 @@ export class AuditLogRepository {
       .execute();
   }
 
-  public getAuditLogs(input: { organizationId: string; limit: number; offset: number }) {
+  public getAuditLogs(input: {
+    organizationId: string;
+    limit: number;
+    offset: number;
+    startDate: string;
+    endDate: string;
+  }) {
     return this.db
       .select({
         id: schema.auditLogs.id,
@@ -69,10 +75,35 @@ export class AuditLogRepository {
         createdAt: schema.auditLogs.createdAt,
       })
       .from(schema.auditLogs)
-      .where(eq(schema.auditLogs.organizationId, input.organizationId))
+      .where(
+        and(
+          eq(schema.auditLogs.organizationId, input.organizationId),
+          gt(schema.auditLogs.createdAt, new Date(input.startDate)),
+          lt(schema.auditLogs.createdAt, new Date(input.endDate)),
+        ),
+      )
       .orderBy(desc(schema.auditLogs.createdAt))
       .limit(input.limit)
       .offset(input.offset)
       .execute();
+  }
+
+  public async getAuditLogsCount(input: { organizationId: string; startDate: string; endDate: string }) {
+    const auditLogsCount = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.auditLogs)
+      .where(
+        and(
+          eq(schema.auditLogs.organizationId, input.organizationId),
+          gt(schema.auditLogs.createdAt, new Date(input.startDate)),
+          lt(schema.auditLogs.createdAt, new Date(input.endDate)),
+        ),
+      )
+      .execute();
+
+      if (auditLogsCount.length === 0) {
+        return 0;
+      }
+      return auditLogsCount[0].count;
   }
 }
