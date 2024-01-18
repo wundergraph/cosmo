@@ -5804,9 +5804,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let limit = req.limit;
+        // check that the limit is less than the max option provided in the ui
+        if (limit > 50) {
+          limit = 50;
+        }
+
         const auditLogs = await auditLogRepo.getAuditLogs({
           organizationId: authContext.organizationId,
-          limit: req.limit,
+          limit,
           offset: req.offset,
           startDate: dateRange.start,
           endDate: dateRange.end,
