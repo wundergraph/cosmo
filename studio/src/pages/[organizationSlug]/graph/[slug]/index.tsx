@@ -47,12 +47,10 @@ import {
 } from "@tanstack/react-query";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
-import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
 
 const GraphOverviewPage: NextPageWithLayout = () => {
-  const router = useRouter();
   const graphData = useContext(GraphContext);
   const [open, setOpen] = useState(false);
   const applyParams = useApplyParams();
@@ -62,9 +60,9 @@ const GraphOverviewPage: NextPageWithLayout = () => {
 
   const getView = getDashboardAnalyticsView.useQuery({
     federatedGraphName: graphData?.graph?.name,
-    startDate: formatISO(dateRange.start),
-    endDate: formatISO(dateRange.end),
     range,
+    startDate: range ? undefined : formatISO(dateRange.start),
+    endDate: range ? undefined : formatISO(dateRange.end),
   });
   const {
     data: dashboardView,
