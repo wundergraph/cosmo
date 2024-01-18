@@ -101,9 +101,9 @@ export class AuditLogRepository {
       )
       .execute();
 
-      if (auditLogsCount.length === 0) {
-        return 0;
-      }
-      return auditLogsCount[0].count;
+    if (auditLogsCount.length === 0) {
+      return 0;
+    }
+    return auditLogsCount[0].count;
   }
 }
