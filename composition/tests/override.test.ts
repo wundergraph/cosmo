@@ -276,13 +276,13 @@ describe('@override directive Tests', () => {
   });
 
   test('that @override produces the correct engine configuration', () => {
-    const { errors, internalSubgraphsBySubgraphName } = batchNormalize([subgraphA, subgraphE, subgraphF]);
+    const { errors, internalSubgraphBySubgraphName } = batchNormalize([subgraphA, subgraphE, subgraphF]);
     expect(errors).toBeUndefined();
-    const a = internalSubgraphsBySubgraphName.get('subgraph-a');
+    const a = internalSubgraphBySubgraphName.get('subgraph-a');
     expect(a).toBeDefined();
-    const e = internalSubgraphsBySubgraphName.get('subgraph-e');
+    const e = internalSubgraphBySubgraphName.get('subgraph-e');
     expect(e).toBeDefined();
-    const g = internalSubgraphsBySubgraphName.get('subgraph-f');
+    const g = internalSubgraphBySubgraphName.get('subgraph-f');
     expect(g).toBeDefined();
     expect(a!.configurationDataMap).toStrictEqual(
       new Map<string, ConfigurationData>([

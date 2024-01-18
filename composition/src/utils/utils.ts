@@ -1,7 +1,28 @@
 import { Kind } from 'graphql';
 import { FIELD, UNION } from './string-constants';
 import { MultiGraph } from 'graphology';
-import { invalidKeyFatalError } from '../errors/errors';
+import {
+  abstractTypeInKeyFieldSetErrorMessage,
+  argumentsInKeyFieldSetErrorMessage,
+  duplicateFieldInFieldSetErrorMessage,
+  inlineFragmentInFieldSetErrorMessage,
+  invalidKeyDirectivesError,
+  invalidKeyFatalError,
+  invalidSelectionSetDefinitionErrorMessage,
+  invalidSelectionSetErrorMessage,
+  undefinedFieldInFieldSetErrorMessage,
+  unexpectedArgumentErrorMessage,
+  unknownTypeInFieldSetErrorMessage,
+  unparsableFieldSetErrorMessage,
+  unparsableFieldSetSelectionErrorMessage,
+} from '../errors/errors';
+import { NormalizationFactory } from '../normalization/normalization-factory';
+import { ConfigurationData, RequiredFieldConfiguration } from '../subgraph/router-configuration';
+import { isKindAbstract, safeParse } from '../ast/utils';
+import { BREAK, visit } from 'graphql/index';
+import { getNamedTypeForChild } from '../type-merging/type-merging';
+import { BASE_SCALARS } from './constants';
+import { getNormalizedFieldSet, ObjectLikeContainer } from '../normalization/utils';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {
@@ -313,4 +334,59 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
   const value = constructor();
   map.set(key, value);
   return value;
+}
+
+export type EntityContainer = {
+  fieldNames: Set<string>;
+  keyFieldSets: Set<string>;
+  subgraphNames: Set<string>;
+  typeName: string;
+};
+
+export type EntityContainerByTypeName = Map<string, EntityContainer>;
+
+export type EntityContainerParams = {
+  typeName: string;
+  fieldNames?: Iterable<string>;
+  keyFieldSets?: Iterable<string>;
+  subgraphNames?: Iterable<string>;
+};
+
+export function newEntityContainer(params: EntityContainerParams): EntityContainer {
+  return {
+    fieldNames: new Set<string>(params.fieldNames),
+    keyFieldSets: new Set<string>(params.keyFieldSets),
+    subgraphNames: new Set<string>(params.subgraphNames),
+    typeName: params.typeName,
+  };
+}
+
+function addEntityContainerProperties(source: EntityContainer  | EntityContainerParams, target: EntityContainer) {
+  addIterableValuesToSet(source.fieldNames || [], target.fieldNames);
+  addIterableValuesToSet(source.keyFieldSets || [], target.keyFieldSets);
+  addIterableValuesToSet(source.subgraphNames || [], target.subgraphNames);
+}
+
+export function upsertEntityContainerProperties(
+  entityContainersByTypeName: EntityContainerByTypeName,
+  params: EntityContainerParams
+) {
+  const existingEntityContainer = entityContainersByTypeName.get(params.typeName);
+  if (existingEntityContainer) {
+    addEntityContainerProperties(params, existingEntityContainer);
+    return;
+  }
+  entityContainersByTypeName.set(params.typeName, newEntityContainer(params));
+}
+
+export function upsertEntityContainer(
+  entityContainersByTypeName: EntityContainerByTypeName,
+  entityContainer: EntityContainer,
+) {
+  const existingEntityContainer = entityContainersByTypeName.get(entityContainer.typeName);
+  if (!existingEntityContainer) {
+    entityContainersByTypeName.set(entityContainer.typeName, entityContainer);
+    return;
+  }
+  addEntityContainerProperties(entityContainer, existingEntityContainer);
 }
