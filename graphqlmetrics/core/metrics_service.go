@@ -35,7 +35,7 @@ type MetricsService struct {
 }
 
 // NewMetricsService creates a new metrics service
-func NewMetricsService(ctx context.Context, logger *zap.Logger, chConn clickhouse.Conn) *MetricsService {
+func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsService {
 	c, err := lru.New[string, struct{}](25000)
 	if err != nil {
 		panic(err)
@@ -44,7 +44,7 @@ func NewMetricsService(ctx context.Context, logger *zap.Logger, chConn clickhous
 		logger:       logger,
 		conn:         chConn,
 		opGuardCache: c,
-		pool:         pond.New(100, 1000, pond.MinWorkers(5), pond.Context(ctx)),
+		pool:         pond.New(100, 1000, pond.MinWorkers(5)),
 	}
 }
 
@@ -266,8 +266,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	return res, nil
 }
 
-func (s *MetricsService) Shutdown() {
-	s.pool.StopAndWait()
+func (s *MetricsService) Shutdown(deadline time.Duration) {
+	s.pool.StopAndWaitFor(deadline)
 }
 
 func retryOnError(ctx context.Context, logger *zap.Logger, f func(ctx context.Context) error) error {

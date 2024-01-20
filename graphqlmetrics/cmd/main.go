@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
@@ -108,7 +109,7 @@ func main() {
 		logger.Info("Migration is up to date")
 	}
 
-	ms := core.NewMetricsService(ctx, logger, conn)
+	ms := core.NewMetricsService(logger, conn)
 
 	svr := core.NewServer(
 		ms,
@@ -130,16 +131,24 @@ func main() {
 
 	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", cfg.ShutdownDelay.String()))
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ms.Shutdown(cfg.ShutdownDelay)
+	}()
+
 	// enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
 	defer cancel()
 
-	// Wait for all background tasks to finish
-	ms.Shutdown()
-
 	if err := svr.Shutdown(ctx); err != nil {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
+
+	// Wait for all background tasks to finish (not coupled to the server)
+	wg.Wait()
 
 	logger.Debug("Server exiting")
 	os.Exit(0)
