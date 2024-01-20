@@ -14,6 +14,10 @@ import (
 	"time"
 )
 
+const (
+	telemetryServiceName = "aws-lambda-router"
+)
+
 func newRouter(logger *zap.Logger) (*core.Router, error) {
 	routerConfig, err := core.SerializeConfigFromFile("./router.json")
 	if err != nil {
@@ -30,16 +34,16 @@ func newRouter(logger *zap.Logger) (*core.Router, error) {
 			CollectorEndpoint: "https://cosmo-metrics.wundergraph.com",
 		}),
 		core.WithMetrics(&metric.Config{
-			Name:    trace.ServerName,
-			Version: core.Version,
+			Name:    telemetryServiceName,
+			Version: Version,
 			OpenTelemetry: metric.OpenTelemetry{
 				Enabled: true,
 			},
 		}),
 		core.WithTracing(&trace.Config{
 			Enabled: true,
-			Name:    trace.ServerName,
-			Version: core.Version,
+			Name:    telemetryServiceName,
+			Version: Version,
 			Sampler: 1,
 			Propagators: []trace.Propagator{
 				trace.PropagatorTraceContext,

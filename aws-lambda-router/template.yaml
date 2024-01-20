@@ -39,7 +39,7 @@ Resources:
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           GRAPH_API_TOKEN: "" # Add your Graph API token here
-          STAGE: "Prod" # Add the stage e.g. "Prod" if you use the Lambda default endpoint
+          STAGE: "" # Add the stage e.g. "Prod" if you use the Lambda default endpoint
 
 Outputs:
   Endpoint:
