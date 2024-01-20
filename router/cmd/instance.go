@@ -5,7 +5,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
-	authentication2 "github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -67,21 +67,21 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		)
 	}
 
-	var authenticators []authentication2.Authenticator
+	var authenticators []authentication.Authenticator
 	for i, auth := range cfg.Authentication.Providers {
 		if auth.JWKS != nil {
 			name := auth.Name
 			if name == "" {
 				name = fmt.Sprintf("jwks-#%d", i)
 			}
-			opts := authentication2.JWKSAuthenticatorOptions{
+			opts := authentication.JWKSAuthenticatorOptions{
 				Name:                name,
 				URL:                 auth.JWKS.URL,
 				HeaderNames:         auth.JWKS.HeaderNames,
 				HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
 				RefreshInterval:     auth.JWKS.RefreshInterval,
 			}
-			authenticator, err := authentication2.NewJWKSAuthenticator(opts)
+			authenticator, err := authentication.NewJWKSAuthenticator(opts)
 			if err != nil {
 				logger.Fatal("Could not create JWKS authenticator", zap.Error(err), zap.String("name", name))
 			}
