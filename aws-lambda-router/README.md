@@ -71,3 +71,15 @@ make deploy
 
 The command will package and deploy your application to AWS.
 You can find your API Gateway Endpoint URL in the output values displayed after deployment.
+
+# User Guide
+
+1. Download the Lambda Router binary from the official [Router Releases](https://github.com/wundergraph/cosmo/releases?q=aws-lambda-router&expanded=true) page.
+2. Create a .zip archive with the binary and the `router.json` file. You can download the latest `router.json` with [`wgc federated-graph fetch`](https://cosmo-docs.wundergraph.com/cli/federated-graph/fetch).
+```
+.
+└── myFunction.zip/
+    ├── bootstrap
+    └── config.json
+```
+3. Deploy the .zip archive to AWS Lambda. You can use AWS cli or the AWS console. Alternatively, you can use your IaC tool of choice.
