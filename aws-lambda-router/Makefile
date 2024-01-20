@@ -14,3 +14,6 @@ test:
 
 fetch-router-config:
 	wgc router fetch production -o adapter/router.json
+
+sync:
+	sam sync --watch

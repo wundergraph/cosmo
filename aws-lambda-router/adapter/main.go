@@ -77,7 +77,7 @@ func main() {
 
 	svr.HealthChecks().SetReady(true)
 
-	// Comment out to debug locally ddd
+	// Comment out to debug locally
 	// svr.Server().ListenAndServe()
 
 	lambdaHandler := algnhsa.New(svr.Server().Handler, nil)

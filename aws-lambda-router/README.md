@@ -51,6 +51,14 @@ Start the API Gateway locally
 make dev
 ```
 
+### Deploy on code change
+
+This will upload the code to AWS without performing a CloudFormation deployment. This is useful for development.
+
+```bash
+make sync
+```
+
 ### Deploying application
 
 Ensure that the environment variables `STAGE` and `GRAPH_API_TOKEN` are set.
