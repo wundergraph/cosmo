@@ -89,4 +89,4 @@ The .zip archive should look like this:
     ├── bootstrap # Extracted from the Router release archive
     └── router.json # Downloaded with `wgc federated-graph fetch`
 ```
-3. Deploy the .zip archive to AWS Lambda. You can use AWS cli or the AWS console. Alternatively, you can use your IaC tool of choice.
+3. Deploy the .zip archive to AWS Lambda. You can use Sam or the AWS console. Alternatively, you can use your IaC tool of choice.
