@@ -4,6 +4,25 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.54.1...controlplane@0.54.2) (2024-01-17)
+
+### Bug Fixes
+
+* organization_invitation.deleted event and set auditableType ([#439](https://github.com/wundergraph/cosmo/issues/439)) ([be4e38b](https://github.com/wundergraph/cosmo/commit/be4e38b86ded2848eefe89268caf6edd7a3a891d)) (@StarpTech)
+
+## [0.54.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.54.0...controlplane@0.54.1) (2024-01-17)
+
+### Bug Fixes
+
+* allow the member of the org to leave ([#436](https://github.com/wundergraph/cosmo/issues/436)) ([21bd032](https://github.com/wundergraph/cosmo/commit/21bd032207752205d39a9a9568af704e4a069b89)) (@JivusAyrus)
+* date and range filter for traces ([#437](https://github.com/wundergraph/cosmo/issues/437)) ([2950222](https://github.com/wundergraph/cosmo/commit/2950222c3b45134d9167fb43668ae32a4d2ec156)) (@thisisnithin)
+
+# [0.54.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.53.2...controlplane@0.54.0) (2024-01-16)
+
+### Features
+
+* audit logs ([#424](https://github.com/wundergraph/cosmo/issues/424)) ([bb3aa46](https://github.com/wundergraph/cosmo/commit/bb3aa4632e28ed45c4fe1f8a0cc3e04acf0c194a)) (@StarpTech)
+
 ## [0.53.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.53.1...controlplane@0.53.2) (2024-01-12)
 
 ### Bug Fixes

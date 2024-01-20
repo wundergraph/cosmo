@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.52.2](https://github.com/wundergraph/cosmo/compare/studio@0.52.1...studio@0.52.2) (2024-01-17)
+
+### Bug Fixes
+
+* allow the member of the org to leave ([#436](https://github.com/wundergraph/cosmo/issues/436)) ([21bd032](https://github.com/wundergraph/cosmo/commit/21bd032207752205d39a9a9568af704e4a069b89)) (@JivusAyrus)
+* date and range filter for traces ([#437](https://github.com/wundergraph/cosmo/issues/437)) ([2950222](https://github.com/wundergraph/cosmo/commit/2950222c3b45134d9167fb43668ae32a4d2ec156)) (@thisisnithin)
+* navigation from invitations page ([#434](https://github.com/wundergraph/cosmo/issues/434)) ([4e68ddd](https://github.com/wundergraph/cosmo/commit/4e68ddd06ae9349d221d944ac27c485981a291b0)) (@JivusAyrus)
+
+## [0.52.1](https://github.com/wundergraph/cosmo/compare/studio@0.52.0...studio@0.52.1) (2024-01-16)
+
+### Bug Fixes
+
+* empty screen audit logs ([#430](https://github.com/wundergraph/cosmo/issues/430)) ([9a2aed9](https://github.com/wundergraph/cosmo/commit/9a2aed9c08c68fea4c15fbca4d4a44eef9ae0883)) (@StarpTech)
+
+# [0.52.0](https://github.com/wundergraph/cosmo/compare/studio@0.51.1...studio@0.52.0) (2024-01-16)
+
+### Features
+
+* audit logs ([#424](https://github.com/wundergraph/cosmo/issues/424)) ([bb3aa46](https://github.com/wundergraph/cosmo/commit/bb3aa4632e28ed45c4fe1f8a0cc3e04acf0c194a)) (@StarpTech)
+
+## [0.51.1](https://github.com/wundergraph/cosmo/compare/studio@0.51.0...studio@0.51.1) (2024-01-16)
+
+### Bug Fixes
+
+* revert start of day on date picker ([#423](https://github.com/wundergraph/cosmo/issues/423)) ([a4ab626](https://github.com/wundergraph/cosmo/commit/a4ab626009861c86613584b57229c043d11421a8)) (@thisisnithin)
+* schema performance, composition crash and minor ui ([#426](https://github.com/wundergraph/cosmo/issues/426)) ([825b647](https://github.com/wundergraph/cosmo/commit/825b6475224624de7215d4395d9d548d47ebf39c)) (@thisisnithin)
+
 # [0.51.0](https://github.com/wundergraph/cosmo/compare/studio@0.50.0...studio@0.51.0) (2024-01-13)
 
 ### Features

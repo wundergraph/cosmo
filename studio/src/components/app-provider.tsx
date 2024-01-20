@@ -107,7 +107,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (currentOrgSlug && currentOrgSlug !== cookies.cosmo_org) {
+    if (
+      currentOrgSlug &&
+      currentOrgSlug !== "undefined" &&
+      currentOrgSlug !== cookies.cosmo_org
+    ) {
       setCookie("cosmo_org", currentOrgSlug, {
         path: "/",
         maxAge: 3600 * 24 * 365, // 1 year
@@ -158,7 +162,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         organizations: data.organizations,
         invitations: data.invitations,
       });
-      const organizationSlug = currentOrg?.slug || data.organizations[0].slug;
+
+      const organizationSlug = organization.slug;
 
       setTransport(
         createConnectTransport({

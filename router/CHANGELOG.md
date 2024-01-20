@@ -4,6 +4,25 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.2](https://github.com/wundergraph/cosmo/compare/router@0.54.1...router@0.54.2) (2024-01-16)
+
+### Bug Fixes
+
+* allow to start router without graph token but static config ([#433](https://github.com/wundergraph/cosmo/issues/433)) ([46a903c](https://github.com/wundergraph/cosmo/commit/46a903cbb9f37d18b9e59f979357ae6bf0762d5d)) (@StarpTech)
+
+## [0.54.1](https://github.com/wundergraph/cosmo/compare/router@0.54.0...router@0.54.1) (2024-01-16)
+
+### Bug Fixes
+
+* poller interface for Windows ([8acf426](https://github.com/wundergraph/cosmo/commit/8acf4268a0447e64dce8892dd318f93c3e50aa2f)) (@StarpTech)
+* skip healthchecks requests for tracing ([#431](https://github.com/wundergraph/cosmo/issues/431)) ([7871888](https://github.com/wundergraph/cosmo/commit/787188800cc0ac84c3f3c4ed80e2fef2fd2c9260)) (@StarpTech)
+
+# [0.54.0](https://github.com/wundergraph/cosmo/compare/router@0.53.1...router@0.54.0) (2024-01-16)
+
+### Features
+
+* improve subscriptions ([#425](https://github.com/wundergraph/cosmo/issues/425)) ([2b60b72](https://github.com/wundergraph/cosmo/commit/2b60b727c044fa3095a4be312eaac256ef51af42)) (@jensneuse)
+
 ## [0.53.1](https://github.com/wundergraph/cosmo/compare/router@0.53.0...router@0.53.1) (2024-01-14)
 
 ### Bug Fixes

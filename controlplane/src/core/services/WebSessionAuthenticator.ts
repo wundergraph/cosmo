@@ -1,16 +1,22 @@
 import cookie from 'cookie';
 import { UserSession } from '../../types/index.js';
 import { decrypt, userSessionCookieName } from '../crypto/jwt.js';
+import { UserRepository } from '../repositories/UserRepository.js';
 
 export const OrganizationSlugHeader = 'cosmo-org-slug';
 
 export type WebAuthAuthContext = {
+  auth: 'cookie';
   userId: string;
   organizationSlug: string;
+  userDisplayName: string;
 };
 
 export default class WebSessionAuthenticator {
-  constructor(private jwtSecret: string) {}
+  constructor(
+    private jwtSecret: string,
+    private userRepository: UserRepository,
+  ) {}
 
   /**
    * authenticate authenticates a user based on the presence of a JWT in a cookie.
@@ -39,9 +45,16 @@ export default class WebSessionAuthenticator {
           throw new Error('Missing organization slug header');
         }
 
+        const user = await this.userRepository.byId(decryptedJwt.iss);
+        if (!user) {
+          throw new Error('User not found');
+        }
+
         return {
+          auth: 'cookie',
           userId: decryptedJwt.iss,
           organizationSlug,
+          userDisplayName: user.email,
         };
       }
     }

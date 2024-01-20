@@ -1200,6 +1200,28 @@ message OrganizationInvite{
   optional string invitedBy = 6;
 }
 
+message GetAuditLogsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message AuditLog {
+   string id = 1;
+   string actorDisplayName = 2;
+   string action = 3;
+   string actorType = 4;
+   string auditAction = 5;
+   string auditableDisplayName = 6;
+   string targetDisplayName = 7;
+   string targetType = 8;
+   string createdAt = 9;
+}
+
+message GetAuditLogsResponse {
+  Response response = 1;
+  repeated AuditLog logs = 2;
+}
+
 message GetInvitationsRequest {}
 
 message GetInvitationsResponse {
@@ -1529,6 +1551,8 @@ service PlatformService {
   rpc PublishPersistedOperations(PublishPersistedOperationsRequest) returns (PublishPersistedOperationsResponse) {}
   // GetPersistedOperations returns operations for the registered client id
   rpc GetPersistedOperations(GetPersistedOperationsRequest) returns (GetPersistedOperationsResponse) {}
+  // GetAuditLogs returns the audit logs of the organization
+  rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse) {}
 
   // For Studio and CLI
 

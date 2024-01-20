@@ -70,10 +70,12 @@ const TracesPage: NextPageWithLayout = () => {
     config: {
       filters,
       range,
-      dateRange: {
-        start: formatISO(dateRange.start),
-        end: formatISO(dateRange.end),
-      },
+      dateRange: range
+        ? undefined
+        : {
+            start: formatISO(dateRange.start),
+            end: formatISO(dateRange.end),
+          },
       pagination,
       sort,
     },
@@ -136,7 +138,7 @@ const sizes = {
   full: "max-w-full",
 };
 
-export const TraceSheet: React.FC<any> = (props) => {
+const TraceSheet: React.FC<any> = (props) => {
   const router = useRouter();
 
   const traceId = router.query.traceID as string;

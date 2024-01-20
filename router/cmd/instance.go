@@ -45,7 +45,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
-	} else {
+	} else if cfg.Graph.Token != "" {
 		routerCDN, err := cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.PersistentOperationsOptions{
 			CacheSize: cfg.CDN.CacheSize.Uint64(),
 			Logger:    logger,
@@ -61,7 +61,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		)
 	}
 
-	if cfg.RouterRegistration {
+	if cfg.RouterRegistration && cfg.Graph.Token != "" {
 		selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
 			selfregister.WithLogger(logger),
 		)
