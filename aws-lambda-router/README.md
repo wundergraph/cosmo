@@ -10,6 +10,8 @@ Why AWS lambda? Because it's cheap and scales automatically. You only pay for wh
 
 Status: **Beta**
 
+Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/)
+
 - [X] GraphQL Queries
 - [X] GraphQL Mutations
 - [X] Telemetry Flushing after each request
