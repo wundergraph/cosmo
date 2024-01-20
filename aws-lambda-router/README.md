@@ -63,7 +63,12 @@ make sync
 
 ### Deploying application
 
-Ensure that the environment variables `STAGE` and `GRAPH_API_TOKEN` are set in the [template.yaml](template.yaml) before deploying. For production use cases, we recommend to use [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) to store the `GRAPH_API_TOKEN`.
+Ensure that the following environment variables are set in [template.yaml](template.yaml):
+
+- `STAGE` - The prefix where your application will be deployed e.g. `Prod` for `/Prod`.
+- `GRAPH_API_TOKEN` - The API token for your graph. You can find this in the Cosmo Cloud dashboard.
+
+*For production use cases, we recommend to use [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) to store the `GRAPH_API_TOKEN`.*
 
 ```bash
 make deploy
