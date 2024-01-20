@@ -242,8 +242,7 @@ func TestForceFlushSync(t *testing.T) {
 
 	require.Nil(t, e.ForceFlush(context.Background()))
 
-	// Plus the last flush
-	require.Equal(t, totalItems/batchSize+1, len(c.publishedBatches))
+	require.Equal(t, totalItems/batchSize, len(c.publishedBatches))
 	require.Equal(t, 5, len(c.publishedBatches[0]))
 }
 
