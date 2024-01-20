@@ -10,7 +10,7 @@ Why AWS lambda? Because it's cheap and scales automatically. You only pay for wh
 
 Status: **Beta**
 
-Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/)
+Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/) (Subgraphs are deployed on Fly.io with scale to zero. The first request might take a second.)
 
 - [X] GraphQL Queries
 - [X] GraphQL Mutations
@@ -67,7 +67,7 @@ make sync
 
 Ensure that the following environment variables are set in [template.yaml](template.yaml):
 
-- `STAGE` - The prefix where your application will be deployed e.g. `Prod` for `/Prod`.
+- `STAGE` - The name of the stage, which API Gateway uses as the first path segment in the invoke Uniform Resource Identifier (URI) e.g. `Prod` for `/Prod`.
 - `GRAPH_API_TOKEN` - The API token for your graph. You can find this in the Cosmo Cloud dashboard.
 
 *For production use cases, we recommend to use [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) to store the `GRAPH_API_TOKEN`.*
