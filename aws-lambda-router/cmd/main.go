@@ -15,6 +15,9 @@ func main() {
 	ctx := context.Background()
 
 	logger := logging.New(false, false, zapcore.InfoLevel)
+	logger = logger.With(
+		zap.String("service_version", internal.Version),
+	)
 	defer logger.Sync()
 
 	r, err := internal.NewRouter(logger, "./router.json")
@@ -27,6 +30,7 @@ func main() {
 		logger.Fatal("Could not create server", zap.Error(err))
 	}
 
+	// Set the server to ready
 	svr.HealthChecks().SetReady(true)
 
 	// Comment out to debug locally

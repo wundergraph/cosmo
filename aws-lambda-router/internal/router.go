@@ -45,7 +45,7 @@ func NewRouter(logger *zap.Logger, routerConfigPath string) (*core.Router, error
 			},
 		}),
 		core.WithAwsLambdaRuntime(),
-		core.WithListenerAddr(":8089"), // for local debugging
+		core.WithListenerAddr(":8089"), // port only specified for local debugging
 		core.WithGraphApiToken(os.Getenv("GRAPH_API_TOKEN")),
 	}
 
