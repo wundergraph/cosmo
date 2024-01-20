@@ -12,7 +12,6 @@ concurrency:
 
 env:
   CI: true
-  ROUTER_REGISTRATION: false
 
 jobs:
   build_test:
