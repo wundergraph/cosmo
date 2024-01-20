@@ -287,7 +287,9 @@ func (e *Exporter) start() {
 								continue
 							}
 						}
-						_ = e.export(shutdownCtx, Aggregate(items))
+						if len(items) > 0 {
+							_ = e.export(shutdownCtx, Aggregate(items))
+						}
 					} else {
 						// Close current exporter when queues was closed from producer side
 						return
