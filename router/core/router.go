@@ -714,6 +714,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	requestLogger := requestlogger.New(
 		r.logger,
 		requestlogger.WithDefaultOptions(),
+		requestlogger.WithNoTimeField(),
 		requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
 			return []zapcore.Field{
 				zap.String("config_version", routerConfig.GetVersion()),

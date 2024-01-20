@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/logging"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net"
 	"net/http"
 	"sync"

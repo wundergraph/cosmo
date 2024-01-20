@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"log"
 	"os"
 	"os/signal"
@@ -13,7 +14,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/profile"
 )
 

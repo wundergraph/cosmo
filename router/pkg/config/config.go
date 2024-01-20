@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"os"
 	"time"
@@ -11,8 +12,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/internal/logging"
 )
 
 const (

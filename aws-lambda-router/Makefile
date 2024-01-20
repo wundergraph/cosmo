@@ -1,10 +1,10 @@
 .PHONY: build
 
 build:
-	sam build && cp adapter/router.json .aws-sam/build/Api/router.json
+	rm -rf .aws-sam && sam build && cp adapter/router.json .aws-sam/build/Api/router.json
 
 dev: build
-	sam local start-api --shutdown
+	sam local start-api -p 3003 --shutdown
 
 deploy: build
 	sam deploy

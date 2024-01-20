@@ -7,9 +7,11 @@ import (
 	"github.com/akrylysov/algnhsa"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"time"
 )
@@ -64,19 +66,17 @@ func newRouter(logger *zap.Logger) (*core.Router, error) {
 func main() {
 	ctx := context.Background()
 
-	zapLogger, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
+	logger := logging.New(false, false, zapcore.InfoLevel)
+	defer logger.Sync()
 
-	router, err := newRouter(zapLogger)
+	router, err := newRouter(logger)
 	if err != nil {
-		zapLogger.Fatal("Could not create router", zap.Error(err))
+		logger.Fatal("Could not create router", zap.Error(err))
 	}
 
 	svr, err := router.NewServer(ctx)
 	if err != nil {
-		zapLogger.Fatal("Could not create server", zap.Error(err))
+		logger.Fatal("Could not create server", zap.Error(err))
 	}
 
 	svr.HealthChecks().SetReady(true)
@@ -91,13 +91,13 @@ func main() {
 		// This mechanism does not replace flushing after a request
 		// https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html#runtimes-lifecycle-extensions-shutdown
 		lambda.WithEnableSIGTERM(func() {
-			zapLogger.Info("Server shutting down")
+			logger.Info("Server shutting down")
 			sCtx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
 			defer cancel()
 			if err := router.Shutdown(sCtx); err != nil {
 				panic(err)
 			}
-			zapLogger.Info("Server shutdown")
+			logger.Info("Server shutdown")
 		}),
 	)
 }

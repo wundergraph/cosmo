@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"net/http"
 	"sync"
@@ -15,7 +16,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"

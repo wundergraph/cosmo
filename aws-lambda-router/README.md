@@ -51,6 +51,8 @@ Start the API Gateway locally
 make dev
 ```
 
+Open [http://127.0.0.1:3003/](http://127.0.0.1:3003/) in your browser and you should see the GraphQL Playground.
+
 ### Deploy on code change
 
 This will upload the code to AWS without performing a CloudFormation deployment. This is useful for development.
