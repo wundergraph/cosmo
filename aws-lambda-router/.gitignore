@@ -1,2 +1,3 @@
 .aws-sam
-aws-lambda-router
+bootstrap
+lambda.zip

@@ -2,7 +2,7 @@
 
 VERSION?=dev
 build:
-	CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=$(VERSION)" -a -o aws-lambda-router cmd/main.go
+	CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=$(VERSION)" -a -o bootstrap cmd/main.go
 
 build-sam:
 	rm -rf .aws-sam && sam build && cp router.json .aws-sam/build/Api/router.json
@@ -25,3 +25,6 @@ fetch-router-config:
 
 sync:
 	sam sync --watch
+
+create-lambda-zip: build fetch-router-config
+	zip -r lambda.zip bootstrap router.json

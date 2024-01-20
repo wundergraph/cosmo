@@ -82,6 +82,6 @@ The .zip archive should look like this:
 .
 └── myFunction.zip/
     ├── bootstrap
-    └── config.json
+    └── router.json
 ```
 3. Deploy the .zip archive to AWS Lambda. You can use AWS cli or the AWS console. Alternatively, you can use your IaC tool of choice.
