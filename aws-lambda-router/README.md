@@ -1,6 +1,12 @@
 # aws-lambda-router
 
+<p align="center">
+<img width="550" src="./cover.png"/>
+</p>
+
 This is the [AWS Lambda](https://aws.amazon.com/lambda/) version of the WunderGraph Cosmo [Router](https://wundergraph.com/cosmo/features/router). Please [contact](https://wundergraph.com/contact/sales) us if you have any questions or production use case.
+
+Why AWS lambda? Because it's cheap and scales automatically. You only pay for what you use. No need to manage servers or containers. Itr also integrates well with the rest of the AWS ecosystem.
 
 Status: **Beta**
 
