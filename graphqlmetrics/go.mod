@@ -5,6 +5,7 @@ go 1.21
 require (
 	connectrpc.com/connect v1.11.1
 	github.com/ClickHouse/clickhouse-go/v2 v2.15.0
+	github.com/alitto/pond v1.8.3
 	github.com/amacneil/dbmate/v2 v2.6.0
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/go-playground/validator/v10 v10.15.5
@@ -22,7 +23,6 @@ require (
 
 require (
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
-	github.com/alitto/pond v1.8.3 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
