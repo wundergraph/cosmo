@@ -1,7 +1,7 @@
 # aws-lambda-router
 
 <p align="center">
-<img width="550" src="./cover.png"/>
+<img width="550" src="./cover-1.png"/>
 </p>
 
 This is the [AWS Lambda](https://aws.amazon.com/lambda/) version of the WunderGraph Cosmo [Router](https://wundergraph.com/cosmo/features/router). Please [contact](https://wundergraph.com/contact/sales) us if you have any questions or production use case.
