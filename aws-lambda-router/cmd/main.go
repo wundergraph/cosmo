@@ -17,7 +17,7 @@ func main() {
 	logger := logging.New(false, false, zapcore.InfoLevel)
 	defer logger.Sync()
 
-	r, err := internal.NewRouter(logger)
+	r, err := internal.NewRouter(logger, "./router.json")
 	if err != nil {
 		logger.Fatal("Could not create router", zap.Error(err))
 	}

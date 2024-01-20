@@ -275,19 +275,18 @@ func (e *Exporter) start() {
 					return
 				case batch, more := <-e.outQueue:
 
-					items := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(batch))
-					// The flushed marker is used to signal that the batch has been processed
-					for _, item := range batch {
-						if item.Item() != nil {
-							items = append(items, item.Item())
-						}
-						if ffs := item.Flush(); ffs != nil {
-							close(ffs)
-							continue
-						}
-					}
-
 					if more {
+						items := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(batch))
+						// The flushed marker is used to signal that the batch has been processed
+						for _, item := range batch {
+							if item.Item() != nil {
+								items = append(items, item.Item())
+							}
+							if ffs := item.Flush(); ffs != nil {
+								close(ffs)
+								continue
+							}
+						}
 						_ = e.export(shutdownCtx, Aggregate(items))
 					} else {
 						// Close current exporter when queues was closed from producer side

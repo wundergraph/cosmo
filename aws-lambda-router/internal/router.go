@@ -13,8 +13,8 @@ const (
 	telemetryServiceName = "aws-lambda-router"
 )
 
-func NewRouter(logger *zap.Logger) (*core.Router, error) {
-	routerConfig, err := core.SerializeConfigFromFile("./router.json")
+func NewRouter(logger *zap.Logger, routerConfigPath string) (*core.Router, error) {
+	routerConfig, err := core.SerializeConfigFromFile(routerConfigPath)
 	if err != nil {
 		logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", "./router.json"))
 	}
