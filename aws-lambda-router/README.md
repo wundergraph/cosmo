@@ -63,7 +63,7 @@ make sync
 
 ### Deploying application
 
-Ensure that the environment variables `STAGE` and `GRAPH_API_TOKEN` are set in the [template.yaml](template.yaml) before deploying.
+Ensure that the environment variables `STAGE` and `GRAPH_API_TOKEN` are set in the [template.yaml](template.yaml) before deploying. For production use cases, we recommend to use [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) to store the `GRAPH_API_TOKEN`.
 
 ```bash
 make deploy
