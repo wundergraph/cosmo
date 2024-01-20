@@ -17,3 +17,5 @@ controlplane:
   - "controlplane/**/*"
 graphqlmetrics:
   - "graphqlmetrics/**/*"
+aws-lambda-router:
+  - "aws-lambda-router/**/*"
