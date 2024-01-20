@@ -76,6 +76,8 @@ You can find your API Gateway Endpoint URL in the output values displayed after 
 
 1. Download the Lambda Router binary from the official [Router Releases](https://github.com/wundergraph/cosmo/releases?q=aws-lambda-router&expanded=true) page.
 2. Create a .zip archive with the binary and the `router.json` file. You can download the latest `router.json` with [`wgc federated-graph fetch`](https://cosmo-docs.wundergraph.com/cli/federated-graph/fetch).
+
+The .zip archive should look like this:
 ```
 .
 └── myFunction.zip/
