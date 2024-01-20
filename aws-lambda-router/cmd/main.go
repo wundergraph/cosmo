@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	defaultSampleRate = 0.2
+	defaultSampleRate = 0.2 // 20% of requests will be sampled
 	enableTelemetry   = os.Getenv("DISABLE_TELEMETRY") != "true"
 	stage             = os.Getenv("STAGE")
 )
@@ -106,7 +106,7 @@ func main() {
 	// Set the server to ready
 	svr.HealthChecks().SetReady(true)
 
-	// If no HTTP_PORT is set, we assume we are running in AWS Lambda
+	// If HTTP_PORT is set, we assume we are running the router without lambda
 	if httpPort != "" {
 		if err := svr.Server().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal("Could not start server", zap.Error(err))
