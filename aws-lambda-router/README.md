@@ -14,7 +14,7 @@ Status: **Beta**
 - [X] GraphQL Mutations
 - [X] Telemetry Flushing after each request
 - [X] Schema Usage Tracking after each request
-- [ ] No support for subscriptions. Please [talk to us](https://wundergraph.com/contact/sales) if you need this.
+- [ ] Subscription: Not implemented. Please [talk to us](https://wundergraph.com/contact/sales) if you need this.
 
 ## Requirements
 
@@ -63,7 +63,7 @@ make sync
 
 ### Deploying application
 
-Ensure that the environment variables `STAGE` and `GRAPH_API_TOKEN` are set.
+Ensure that the environment variables `STAGE` and `GRAPH_API_TOKEN` are set in the [template.yaml](template.yaml) before deploying.
 
 ```bash
 make deploy

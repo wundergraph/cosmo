@@ -108,8 +108,10 @@ func main() {
 		logger.Info("Migration is up to date")
 	}
 
+	ms := core.NewMetricsService(ctx, logger, conn)
+
 	svr := core.NewServer(
-		core.NewMetricsService(logger, conn),
+		ms,
 		core.WithJwtSecret([]byte(cfg.IngestJWTSecret)),
 		core.WithListenAddr(cfg.ListenAddr),
 		core.WithLogger(logger),
@@ -131,6 +133,9 @@ func main() {
 	// enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
 	defer cancel()
+
+	// Wait for all background tasks to finish
+	ms.Shutdown()
 
 	if err := svr.Shutdown(ctx); err != nil {
 		logger.Error("Could not shutdown server", zap.Error(err))

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/alitto/pond"
 	"github.com/avast/retry-go"
 	lru "github.com/hashicorp/golang-lru/v2"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -18,7 +19,7 @@ import (
 
 var (
 	errNotAuthenticated = errors.New("authentication didn't succeed")
-	errPublishFailed    = errors.New("failed to publish metrics")
+	errPublishFailed    = errors.New("failed to publish metrics. Please retry")
 )
 
 type MetricsService struct {
@@ -29,10 +30,12 @@ type MetricsService struct {
 
 	// opGuardCache is used to prevent duplicate writes of the same operation
 	opGuardCache *lru.Cache[string, struct{}]
+
+	pool *pond.WorkerPool
 }
 
 // NewMetricsService creates a new metrics service
-func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsService {
+func NewMetricsService(ctx context.Context, logger *zap.Logger, chConn clickhouse.Conn) *MetricsService {
 	c, err := lru.New[string, struct{}](25000)
 	if err != nil {
 		panic(err)
@@ -41,6 +44,7 @@ func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsServi
 		logger:       logger,
 		conn:         chConn,
 		opGuardCache: c,
+		pool:         pond.New(100, 1000, pond.MinWorkers(5), pond.Context(ctx)),
 	}
 }
 
@@ -213,46 +217,57 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		return nil, errNotAuthenticated
 	}
 
-	var sentMetrics, sentOps = 0, 0
-	insertTime := time.Now()
+	dispatched := s.pool.TrySubmit(func() {
+		var sentOps, sentMetrics = 0, 0
+		insertTime := time.Now()
 
-	defer func() {
-		requestLogger.Debug("metric write finished",
-			zap.Duration("duration", time.Since(insertTime)),
-			zap.Int("metrics", sentMetrics),
-			zap.Int("operations", sentOps),
-		)
-	}()
+		defer func() {
+			requestLogger.Debug("operations write finished",
+				zap.Duration("duration", time.Since(insertTime)),
+				zap.Int("metrics", sentMetrics),
+				zap.Int("operations", sentOps),
+			)
+		}()
 
-	err = retryOnError(ctx, requestLogger.With(zap.String("component", "operations")), func(ctx context.Context) error {
-		writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
+		err = retryOnError(ctx, requestLogger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+			writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
+			if err != nil {
+				return err
+			}
+			sentOps += writtenOps
+			return nil
+		})
+
 		if err != nil {
-			return err
+			requestLogger.Error("Failed to write operations", zap.Error(err))
 		}
-		sentOps += writtenOps
-		return nil
+
+		err = retryOnError(ctx, requestLogger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+			writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
+			if err != nil {
+				return err
+			}
+			sentMetrics += writtenMetrics
+			return nil
+		})
+
+		if err != nil {
+			requestLogger.Error("Failed to write metrics", zap.Error(err))
+		}
 	})
 
-	if err != nil {
-		requestLogger.Error("Failed to write operations", zap.Error(err))
-		return nil, errPublishFailed
-	}
+	if !dispatched {
+		requestLogger.Error("Failed to dispatch request to worker pool")
 
-	err = retryOnError(ctx, requestLogger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
-		writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
-		if err != nil {
-			return err
-		}
-		sentMetrics += writtenMetrics
-		return nil
-	})
-
-	if err != nil {
-		requestLogger.Error("Failed to write metrics", zap.Error(err))
+		// Will force the router to retry the request
 		return nil, errPublishFailed
 	}
 
 	return res, nil
+}
+
+func (s *MetricsService) Shutdown() {
+	s.pool.StopAndWait()
 }
 
 func retryOnError(ctx context.Context, logger *zap.Logger, f func(ctx context.Context) error) error {

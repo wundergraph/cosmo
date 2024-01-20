@@ -46,7 +46,7 @@ func newRouter(logger *zap.Logger) (*core.Router, error) {
 			Enabled: true,
 			Name:    telemetryServiceName,
 			Version: Version,
-			Sampler: 1,
+			Sampler: 0.2,
 			Propagators: []trace.Propagator{
 				trace.PropagatorTraceContext,
 			},

@@ -22,6 +22,7 @@ require (
 
 require (
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
+	github.com/alitto/pond v1.8.3 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect

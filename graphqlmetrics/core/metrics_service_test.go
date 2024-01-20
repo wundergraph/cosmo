@@ -20,7 +20,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
@@ -69,6 +69,9 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		pReq,
 	)
 	require.NoError(t, err)
+
+	// Wait for batch to be processed
+	msvc.Shutdown()
 
 	// Validate insert
 
@@ -130,7 +133,7 @@ func TestAuthentication(t *testing.T) {
 
 	db := test.GetTestDatabase(t)
 
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := NewMetricsService(context.Background(), zap.NewNop(), db)
 
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: nil,
