@@ -1,3 +1,2 @@
 .aws-sam
-router.json
 aws-lambda-router
