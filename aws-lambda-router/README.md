@@ -10,7 +10,9 @@ Why AWS lambda? Because it's cheap and scales automatically. You only pay for wh
 
 Status: **Beta**
 
-Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/) (Subgraphs are deployed on Fly.io with scale to zero. The first request might take a second.)
+Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/) (Playground)
+
+**Note**: The demo subgraphs are running on a free tier. It might take a few seconds until the subgraphs are running.
 
 - [X] GraphQL Queries
 - [X] GraphQL Mutations
