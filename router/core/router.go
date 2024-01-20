@@ -1183,7 +1183,8 @@ func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 	}
 }
 
-func WithAwsLambda() Option {
+// WithAwsLambdaRuntime enables the AWS Lambda runtime. This flushes all telemetry after the response is sent.
+func WithAwsLambdaRuntime() Option {
 	return func(r *Router) {
 		r.awsLambda = true
 	}

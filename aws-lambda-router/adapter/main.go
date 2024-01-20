@@ -11,6 +11,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/zap"
 	"os"
+	"time"
 )
 
 func newRouter(logger *zap.Logger) (*core.Router, error) {
@@ -44,7 +45,7 @@ func newRouter(logger *zap.Logger) (*core.Router, error) {
 				trace.PropagatorTraceContext,
 			},
 		}),
-		core.WithAwsLambda(),
+		core.WithAwsLambdaRuntime(),
 		core.WithListenerAddr(":8089"), // for local debugging
 		core.WithGraphApiToken(os.Getenv("GRAPH_API_TOKEN")),
 	}
@@ -87,7 +88,9 @@ func main() {
 		// https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html#runtimes-lifecycle-extensions-shutdown
 		lambda.WithEnableSIGTERM(func() {
 			zapLogger.Info("Server shutting down")
-			if err := router.Shutdown(context.Background()); err != nil {
+			sCtx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
+			defer cancel()
+			if err := router.Shutdown(sCtx); err != nil {
 				panic(err)
 			}
 			zapLogger.Info("Server shutdown")
