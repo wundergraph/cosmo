@@ -22,7 +22,7 @@ Resources:
     Metadata:
       BuildMethod: go1.x
     Properties:
-      CodeUri: adapter/
+      CodeUri: cmd
       Handler: bootstrap
       Runtime: provided.al2023
       Architectures:

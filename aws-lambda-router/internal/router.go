@@ -1,26 +1,19 @@
-package main
+package internal
 
 import (
-	"context"
-	_ "embed"
 	"fmt"
-	"github.com/akrylysov/algnhsa"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"os"
-	"time"
 )
 
 const (
 	telemetryServiceName = "aws-lambda-router"
 )
 
-func newRouter(logger *zap.Logger) (*core.Router, error) {
+func NewRouter(logger *zap.Logger) (*core.Router, error) {
 	routerConfig, err := core.SerializeConfigFromFile("./router.json")
 	if err != nil {
 		logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", "./router.json"))
@@ -61,43 +54,4 @@ func newRouter(logger *zap.Logger) (*core.Router, error) {
 	}
 
 	return core.NewRouter(routerOpts...)
-}
-
-func main() {
-	ctx := context.Background()
-
-	logger := logging.New(false, false, zapcore.InfoLevel)
-	defer logger.Sync()
-
-	router, err := newRouter(logger)
-	if err != nil {
-		logger.Fatal("Could not create router", zap.Error(err))
-	}
-
-	svr, err := router.NewServer(ctx)
-	if err != nil {
-		logger.Fatal("Could not create server", zap.Error(err))
-	}
-
-	svr.HealthChecks().SetReady(true)
-
-	// Comment out to debug locally
-	// svr.Server().ListenAndServe()
-
-	lambdaHandler := algnhsa.New(svr.Server().Handler, nil)
-	lambda.StartWithOptions(lambdaHandler,
-		lambda.WithContext(ctx),
-		// Registered an internal extensions which gives us 500ms to shutdown
-		// This mechanism does not replace flushing after a request
-		// https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html#runtimes-lifecycle-extensions-shutdown
-		lambda.WithEnableSIGTERM(func() {
-			logger.Info("Server shutting down")
-			sCtx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
-			defer cancel()
-			if err := router.Shutdown(sCtx); err != nil {
-				panic(err)
-			}
-			logger.Info("Server shutdown")
-		}),
-	)
 }

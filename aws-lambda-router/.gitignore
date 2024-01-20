@@ -1,2 +1,3 @@
 .aws-sam
-adapter/router.json
+router.json
+aws-lambda-router

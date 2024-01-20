@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"context"
@@ -15,7 +15,7 @@ func TestHandler(t *testing.T) {
 	zapLogger, err := zap.NewProduction()
 	require.NoError(t, err)
 
-	r, err := newRouter(zapLogger)
+	r, err := NewRouter(zapLogger)
 	require.NoError(t, err)
 
 	svr, err := r.NewServer(context.Background())

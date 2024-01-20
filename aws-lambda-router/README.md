@@ -30,7 +30,7 @@ Status: **Beta**
 Signup For Cosmo Cloud and follow the [onboarding](https://cosmo-docs.wundergraph.com/tutorial/cosmo-cloud-onboarding) process.
 
 Run `make fetch-router-config` to fetch the latest router configuration from Cosmo Cloud. We assume that you have named your graph `production`.
-The file is stored in `./adapter/router.json` and copied to the Lambda build directory on each build.
+The file is stored in `router.json` and copied to the Lambda build directory on each build.
 
 ### Installing dependencies & building the target 
 
