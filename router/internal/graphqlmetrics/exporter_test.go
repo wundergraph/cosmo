@@ -243,6 +243,52 @@ func TestForceFlushSync(t *testing.T) {
 	require.Nil(t, e.ForceFlush(context.Background()))
 
 	require.Equal(t, totalItems/batchSize, len(c.publishedBatches))
+	require.Equal(t, 2, len(c.publishedBatches))
+	require.Equal(t, 5, len(c.publishedBatches[0]))
+
+	// Make sure that the exporter is still working after a forced flush
+
+	// Reset the published batches
+	c.publishedBatches = c.publishedBatches[:0]
+
+	for i := 0; i < totalItems; i++ {
+		usage := &graphqlmetricsv1.SchemaUsageInfo{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:        []string{"user", "id"},
+					TypeNames:   []string{"User", "ID"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       2,
+				},
+				{
+					Path:        []string{"user", "name"},
+					TypeNames:   []string{"User", "String"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       1,
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: fmt.Sprintf("hash-%d", i),
+				Name: "user",
+			},
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
+			},
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
+			},
+			Attributes: map[string]string{},
+		}
+
+		require.True(t, e.Record(usage))
+	}
+
+	require.Nil(t, e.ForceFlush(context.Background()))
+
+	require.Equal(t, totalItems/batchSize, len(c.publishedBatches))
+	require.Equal(t, 2, len(c.publishedBatches))
 	require.Equal(t, 5, len(c.publishedBatches[0]))
 }
 
