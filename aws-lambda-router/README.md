@@ -78,10 +78,10 @@ You can find your API Gateway Endpoint URL in the output values displayed after 
 2. Create a .zip archive with the binary and the `router.json` file. You can download the latest `router.json` with [`wgc federated-graph fetch`](https://cosmo-docs.wundergraph.com/cli/federated-graph/fetch).
 
 The .zip archive should look like this:
-```
+```bash
 .
 └── myFunction.zip/
-    ├── bootstrap
-    └── router.json
+    ├── bootstrap # Extracted from the Router release archive
+    └── router.json # Downloaded with `wgc federated-graph fetch`
 ```
 3. Deploy the .zip archive to AWS Lambda. You can use AWS cli or the AWS console. Alternatively, you can use your IaC tool of choice.
