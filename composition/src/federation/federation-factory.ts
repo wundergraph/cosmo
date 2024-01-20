@@ -1397,24 +1397,31 @@ export class FederationFactory {
 
   validateKeyFieldSetsForImplicitEntity(entityContainer: EntityContainer) {
     const internalSubgraph = getOrThrowError(
-      this.internalSubgraphBySubgraphName, this.currentSubgraphName, 'internalSubgraphBySubgraphName',
+      this.internalSubgraphBySubgraphName,
+      this.currentSubgraphName,
+      'internalSubgraphBySubgraphName',
     );
     const parentContainerByTypeName = internalSubgraph.parentContainerByTypeName;
     const extensionContainerByTypeName = internalSubgraph.extensionContainerByTypeName;
-    const implicitEntityContainer = parentContainerByTypeName.get(entityContainer.typeName) ||
+    const implicitEntityContainer =
+      parentContainerByTypeName.get(entityContainer.typeName) ||
       extensionContainerByTypeName.get(entityContainer.typeName);
-    if (!implicitEntityContainer || (
-      implicitEntityContainer.kind !== Kind.OBJECT_TYPE_DEFINITION
-      && implicitEntityContainer.kind !== Kind.OBJECT_TYPE_EXTENSION
-    )) {
-      // TODO possible error
-      return;
+    if (
+      !implicitEntityContainer ||
+      (implicitEntityContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+        implicitEntityContainer.kind !== Kind.OBJECT_TYPE_EXTENSION)
+    ) {
+      throw incompatibleParentKindFatalError(
+        entityContainer.typeName,
+        Kind.OBJECT_TYPE_DEFINITION,
+        implicitEntityContainer?.kind || Kind.NULL,
+      );
     }
-    const configurationData = internalSubgraph.configurationDataMap.get(entityContainer.typeName);
-    if (!configurationData) {
-      // TODO possible error
-      return;
-    }
+    const configurationData = getOrThrowError(
+      internalSubgraph.configurationDataMap,
+      entityContainer.typeName,
+      'internalSubgraph.configurationDataMap',
+    );
     const keyFieldNames = new Set<string>();
     const keys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
@@ -1468,8 +1475,8 @@ export class FederationFactory {
               return;
             }
             // The child could itself be a parent and could exist as an object extension
-            const childContainer = parentContainerByTypeName.get(namedTypeName) ||
-              extensionContainerByTypeName.get(namedTypeName);
+            const childContainer =
+              parentContainerByTypeName.get(namedTypeName) || extensionContainerByTypeName.get(namedTypeName);
             if (!childContainer) {
               shouldAddKeyFieldSet = false;
               return BREAK;
@@ -1823,8 +1830,7 @@ export class FederationFactory {
               rootTypeFieldData,
               fieldPath,
               new Set<string>(),
-              this.entityContainersByTypeName.has(rootTypeFieldNamedTypeName) ?
-                [rootTypeFieldNamedTypeName] : [],
+              this.entityContainersByTypeName.has(rootTypeFieldNamedTypeName) ? [rootTypeFieldNamedTypeName] : [],
             );
             continue;
           case Kind.INTERFACE_TYPE_DEFINITION:
@@ -1836,8 +1842,7 @@ export class FederationFactory {
               rootTypeFieldData,
               fieldPath,
               new Set<string>(),
-              this.entityContainersByTypeName.has(rootTypeFieldNamedTypeName) ?
-                [rootTypeFieldNamedTypeName] : [],
+              this.entityContainersByTypeName.has(rootTypeFieldNamedTypeName) ? [rootTypeFieldNamedTypeName] : [],
             );
             continue;
           default:
@@ -1876,12 +1881,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError] };
   }
-  const {
-    entityContainerByTypeName,
-    errors,
-    internalSubgraphBySubgraphName,
-    warnings,
-  } = batchNormalize(subgraphs);
+  const { entityContainerByTypeName, errors, internalSubgraphBySubgraphName, warnings } = batchNormalize(subgraphs);
   if (errors) {
     return { errors };
   }

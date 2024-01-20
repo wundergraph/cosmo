@@ -82,7 +82,9 @@ import {
 } from '../utils/constants';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import {
-  addIterableValuesToSet, EntityContainer, EntityContainerByTypeName,
+  addIterableValuesToSet,
+  EntityContainer,
+  EntityContainerByTypeName,
   EntityInterfaceSubgraphData,
   getEntriesNotInHashSet,
   getOrThrowError,
@@ -91,7 +93,9 @@ import {
   InvalidArgument,
   InvalidFieldImplementation,
   kindToTypeString,
-  subtractSourceSetFromTargetSet, upsertEntityContainer, upsertEntityContainerProperties,
+  subtractSourceSetFromTargetSet,
+  upsertEntityContainer,
+  upsertEntityContainerProperties,
 } from '../utils/utils';
 import {
   duplicateArgumentsError,
@@ -541,16 +545,17 @@ export class NormalizationFactory {
     if (node.kind === Kind.INTERFACE_TYPE_DEFINITION || node.kind === Kind.INTERFACE_TYPE_EXTENSION || !isEntity) {
       return;
     }
-    const fieldSetContainer = getValueOrDefault(this.fieldSetContainerByTypeName, this.parentTypeName, newFieldSetContainer);
-    this.extractKeyFieldSets(node, fieldSetContainer);
-    upsertEntityContainerProperties(
-      this.entityContainerByTypeName,
-      {
-        typeName: this.parentTypeName,
-        keyFieldSets: fieldSetContainer.keys,
-        ...this.subgraphName ? { subgraphNames: [this.subgraphName] } : {},
-      },
+    const fieldSetContainer = getValueOrDefault(
+      this.fieldSetContainerByTypeName,
+      this.parentTypeName,
+      newFieldSetContainer,
     );
+    this.extractKeyFieldSets(node, fieldSetContainer);
+    upsertEntityContainerProperties(this.entityContainerByTypeName, {
+      typeName: this.parentTypeName,
+      keyFieldSets: fieldSetContainer.keys,
+      ...(this.subgraphName ? { subgraphNames: [this.subgraphName] } : {}),
+    });
   }
 
   validateChildDirectives(child: ChildContainer, hostPath: string) {
@@ -1301,13 +1306,10 @@ export class NormalizationFactory {
             isInterfaceObject: false,
             typeName: name,
           });
-          upsertEntityContainerProperties(
-            factory.entityContainerByTypeName,
-            {
-              typeName: factory.parentTypeName,
-              ...factory.subgraphName ? { subgraphNames: [factory.subgraphName] } : {},
-            },
-          );
+          upsertEntityContainerProperties(factory.entityContainerByTypeName, {
+            typeName: factory.parentTypeName,
+            ...(factory.subgraphName ? { subgraphNames: [factory.subgraphName] } : {}),
+          });
           const fieldSetContainer = getValueOrDefault(factory.fieldSetContainerByTypeName, name, newFieldSetContainer);
           factory.extractKeyFieldSets(node, fieldSetContainer);
         },
@@ -1361,16 +1363,17 @@ export class NormalizationFactory {
           if (!isEntity) {
             return;
           }
-          const fieldSetContainer = getValueOrDefault(factory.fieldSetContainerByTypeName, typeName, newFieldSetContainer);
-          factory.extractKeyFieldSets(node, fieldSetContainer);
-          upsertEntityContainerProperties(
-            factory.entityContainerByTypeName,
-            {
-              typeName: factory.parentTypeName,
-              keyFieldSets: fieldSetContainer.keys,
-              ...factory.subgraphName ? { subgraphNames: [factory.subgraphName] } : {},
-            },
+          const fieldSetContainer = getValueOrDefault(
+            factory.fieldSetContainerByTypeName,
+            typeName,
+            newFieldSetContainer,
           );
+          factory.extractKeyFieldSets(node, fieldSetContainer);
+          upsertEntityContainerProperties(factory.entityContainerByTypeName, {
+            typeName: factory.parentTypeName,
+            keyFieldSets: fieldSetContainer.keys,
+            ...(factory.subgraphName ? { subgraphNames: [factory.subgraphName] } : {}),
+          });
         },
         leave() {
           factory.isCurrentParentRootType = false;
@@ -1763,7 +1766,10 @@ export class NormalizationFactory {
       }
     }
     for (const referencedTypeName of this.referencedTypeNames) {
-      if (this.parentContainerByTypeName.has(referencedTypeName) || this.entityContainerByTypeName.has(referencedTypeName)) {
+      if (
+        this.parentContainerByTypeName.has(referencedTypeName) ||
+        this.entityContainerByTypeName.has(referencedTypeName)
+      ) {
         continue;
       }
       const extension = this.extensionContainerByTypeName.get(referencedTypeName);
@@ -1772,7 +1778,8 @@ export class NormalizationFactory {
       }
     }
     for (const [parentTypeName, fieldSetContainers] of this.fieldSetContainerByTypeName) {
-      const parentContainer = this.parentContainerByTypeName.get(parentTypeName) || this.extensionContainerByTypeName.get(parentTypeName);
+      const parentContainer =
+        this.parentContainerByTypeName.get(parentTypeName) || this.extensionContainerByTypeName.get(parentTypeName);
       if (
         !parentContainer ||
         (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
@@ -1925,7 +1932,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       entityContainerByTypeName: entityContainersByTypeName,
       errors: allErrors,
       internalSubgraphBySubgraphName: internalSubgraphsBySubgraphName,
-      ...warnings.length > 0 ? { warnings } : {},
+      ...(warnings.length > 0 ? { warnings } : {}),
     };
   }
   for (const [targetSubgraphName, overridesData] of allOverridesByTargetSubgraphName) {
@@ -1949,6 +1956,6 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   return {
     entityContainerByTypeName: entityContainersByTypeName,
     internalSubgraphBySubgraphName: internalSubgraphsBySubgraphName,
-    ...warnings.length > 0 ? { warnings } : {},
+    ...(warnings.length > 0 ? { warnings } : {}),
   };
 }

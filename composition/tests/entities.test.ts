@@ -1,6 +1,8 @@
 import {
   ConfigurationData,
-  federateSubgraphs, FieldContainer, ObjectContainer,
+  federateSubgraphs,
+  FieldContainer,
+  ObjectContainer,
   RootTypeFieldData,
   shareableFieldDefinitionsError,
   Subgraph,
@@ -19,7 +21,7 @@ describe('Entity Tests', () => {
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
           versionOnePersistedBaseSchema +
-          `
+            `
       type Query {
         dummy: String!
       }
@@ -51,7 +53,7 @@ describe('Entity Tests', () => {
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
           versionOnePersistedBaseSchema +
-          `
+            `
       type Query {
         dummy: String!
         trainer: Trainer!
@@ -89,7 +91,13 @@ describe('Entity Tests', () => {
       expect(result.errors).toBeDefined();
       expect(result.errors).toHaveLength(1);
       expect(result.errors![0]).toStrictEqual(
-        unresolvableFieldError(rootTypeFieldData, 'details', ['subgraph-d'], 'Query.trainer.details { ... }', 'Trainer'),
+        unresolvableFieldError(
+          rootTypeFieldData,
+          'details',
+          ['subgraph-d'],
+          'Query.trainer.details { ... }',
+          'Trainer',
+        ),
       );
     });
 
@@ -100,7 +108,7 @@ describe('Entity Tests', () => {
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
           versionOnePersistedBaseSchema +
-          `
+            `
       type Query {
         trainer: Trainer!
       }
@@ -136,7 +144,7 @@ describe('Entity Tests', () => {
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
           versionOnePersistedBaseSchema +
-          `
+            `
       type Query {
         trainer: Trainer!
       }
@@ -172,7 +180,7 @@ describe('Entity Tests', () => {
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
           versionOnePersistedBaseSchema +
-          `
+            `
       type Trainer {
         id: Int!
         pokemon: [Pokemon!]!
@@ -204,7 +212,7 @@ describe('Entity Tests', () => {
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
           versionOnePersistedBaseSchema +
-          `
+            `
       interface Interface {
         id: ID!
         name: String!
@@ -223,84 +231,88 @@ describe('Entity Tests', () => {
       const { errors } = federateSubgraphs([subgraphL, subgraphM]);
       expect(errors).toBeDefined();
       expect(errors!.length).toBe(2);
-      expect(errors![0]).toStrictEqual(shareableFieldDefinitionsError(
-        {
-          node: { name: { value: 'Entity' } },
-          fields: new Map<string, FieldContainer>([
-            [
-              'id',
-              {
-                node: { name: { value: 'id' } },
-                subgraphsByShareable: new Map<string, boolean>([
-                  ['subgraph-l', true],
-                  ['subgraph-m', false],
-                ]),
-              } as FieldContainer,
-            ],
-            [
-              'object',
-              {
-                node: { name: { value: 'object' } },
-                subgraphsByShareable: new Map<string, boolean>([
-                  ['subgraph-l', true],
-                  ['subgraph-m', false],
-                ]),
-              } as FieldContainer,
-            ],
-            [
-              'age',
-              {
-                node: { name: { value: 'age' } },
-                subgraphsByShareable: new Map<string, boolean>([
-                  ['subgraph-l', true],
-                  ['subgraph-m', false],
-                ]),
-              } as FieldContainer,
-            ],
-          ]),
-        } as ObjectContainer,
-        new Set<string>(['id', 'object', 'age']),
-      ));
-      expect(errors![1]).toStrictEqual(shareableFieldDefinitionsError(
-        {
-          node: { name: { value: 'Object' } },
-          fields: new Map<string, FieldContainer>([
-            [
-              'id',
-              {
-                node: { name: { value: 'id' } },
-                subgraphsByShareable: new Map<string, boolean>([
-                  ['subgraph-l', true],
-                  ['subgraph-m', false],
-                ]),
-              } as FieldContainer,
-            ],
-            [
-              'name',
-              {
-                node: { name: { value: 'name' } },
-                subgraphsByShareable: new Map<string, boolean>([
-                  ['subgraph-l', true],
-                  ['subgraph-m', false],
-                ]),
-              } as FieldContainer,
-            ],
-          ]),
-        } as ObjectContainer,
-        new Set<string>(['id', 'name']),
-      ));
+      expect(errors![0]).toStrictEqual(
+        shareableFieldDefinitionsError(
+          {
+            node: { name: { value: 'Entity' } },
+            fields: new Map<string, FieldContainer>([
+              [
+                'id',
+                {
+                  node: { name: { value: 'id' } },
+                  subgraphsByShareable: new Map<string, boolean>([
+                    ['subgraph-l', true],
+                    ['subgraph-m', false],
+                  ]),
+                } as FieldContainer,
+              ],
+              [
+                'object',
+                {
+                  node: { name: { value: 'object' } },
+                  subgraphsByShareable: new Map<string, boolean>([
+                    ['subgraph-l', true],
+                    ['subgraph-m', false],
+                  ]),
+                } as FieldContainer,
+              ],
+              [
+                'age',
+                {
+                  node: { name: { value: 'age' } },
+                  subgraphsByShareable: new Map<string, boolean>([
+                    ['subgraph-l', true],
+                    ['subgraph-m', false],
+                  ]),
+                } as FieldContainer,
+              ],
+            ]),
+          } as ObjectContainer,
+          new Set<string>(['id', 'object', 'age']),
+        ),
+      );
+      expect(errors![1]).toStrictEqual(
+        shareableFieldDefinitionsError(
+          {
+            node: { name: { value: 'Object' } },
+            fields: new Map<string, FieldContainer>([
+              [
+                'id',
+                {
+                  node: { name: { value: 'id' } },
+                  subgraphsByShareable: new Map<string, boolean>([
+                    ['subgraph-l', true],
+                    ['subgraph-m', false],
+                  ]),
+                } as FieldContainer,
+              ],
+              [
+                'name',
+                {
+                  node: { name: { value: 'name' } },
+                  subgraphsByShareable: new Map<string, boolean>([
+                    ['subgraph-l', true],
+                    ['subgraph-m', false],
+                  ]),
+                } as FieldContainer,
+              ],
+            ]),
+          } as ObjectContainer,
+          new Set<string>(['id', 'name']),
+        ),
+      );
     });
   });
 
   describe('Entity Configuration Tests', () => {
     test('that the correct configuration is returned when a resolvable in a key directive is set to false', () => {
-      const { errors, federationResult} = federateSubgraphs([subgraphI, subgraphJ]);
+      const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ]);
       expect(errors).toBeUndefined();
       const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
       const i = subgraphConfigBySubgraphName?.get('subgraph-i');
       expect(i).toBeDefined();
       const j = subgraphConfigBySubgraphName?.get('subgraph-j');
-      expect(j).toBeDefined()
+      expect(j).toBeDefined();
       expect(i!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -338,13 +350,13 @@ describe('Entity Tests', () => {
     });
 
     test('that the correct configuration is returned for implicit entities #1', () => {
-      const { errors, federationResult } = federateSubgraphs([subgraphJ,  subgraphK]);
+      const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphK]);
       expect(errors).toBeUndefined();
       const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
       const j = subgraphConfigBySubgraphName?.get('subgraph-j');
       expect(j).toBeDefined();
       const k = subgraphConfigBySubgraphName?.get('subgraph-k');
-      expect(k).toBeDefined()
+      expect(k).toBeDefined();
       expect(j!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -386,7 +398,7 @@ describe('Entity Tests', () => {
       expect(errors).toBeUndefined();
       const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
       const k = subgraphConfigBySubgraphName?.get('subgraph-k');
-      expect(k).toBeDefined()
+      expect(k).toBeDefined();
       const l = subgraphConfigBySubgraphName?.get('subgraph-l');
       expect(l).toBeDefined();
       expect(k!.configurationDataMap).toStrictEqual(
@@ -417,7 +429,10 @@ describe('Entity Tests', () => {
             {
               fieldNames: new Set<string>(['id', 'object', 'age']),
               isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }, { fieldName: '', selectionSet: 'object { id }' }],
+              keys: [
+                { fieldName: '', selectionSet: 'id' },
+                { fieldName: '', selectionSet: 'object { id }' },
+              ],
               typeName: 'Entity',
             },
           ],
@@ -434,17 +449,15 @@ describe('Entity Tests', () => {
     });
 
     test('that the correct configuration is returned for implicit entities with multiple valid and invalid keys across several graphs', () => {
-      const { errors, federationResult } = federateSubgraphs(
-        [subgraphO, subgraphP, subgraphQ, subgraphR],
-      );
+      const { errors, federationResult } = federateSubgraphs([subgraphO, subgraphP, subgraphQ, subgraphR]);
       expect(errors).toBeUndefined();
       const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
       const o = subgraphConfigBySubgraphName?.get('subgraph-o');
-      expect(o).toBeDefined()
+      expect(o).toBeDefined();
       const p = subgraphConfigBySubgraphName?.get('subgraph-p');
       expect(p).toBeDefined();
       const q = subgraphConfigBySubgraphName?.get('subgraph-q');
-      expect(q).toBeDefined()
+      expect(q).toBeDefined();
       const r = subgraphConfigBySubgraphName?.get('subgraph-r');
       expect(r).toBeDefined();
       expect(o!.configurationDataMap).toStrictEqual(
@@ -494,7 +507,10 @@ describe('Entity Tests', () => {
             {
               fieldNames: new Set<string>(['id', 'name', 'age']),
               isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }, { fieldName: '', selectionSet: 'name' }],
+              keys: [
+                { fieldName: '', selectionSet: 'id' },
+                { fieldName: '', selectionSet: 'name' },
+              ],
               typeName: 'Entity',
             },
           ],
@@ -552,7 +568,7 @@ describe('Entity Tests', () => {
       expect(errors).toBeUndefined();
       const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
       const j = subgraphConfigBySubgraphName?.get('subgraph-j');
-      expect(j).toBeDefined()
+      expect(j).toBeDefined();
       const n = subgraphConfigBySubgraphName?.get('subgraph-n');
       expect(n).toBeDefined();
       expect(j!.configurationDataMap).toStrictEqual(
@@ -896,5 +912,3 @@ const subgraphR: Subgraph = {
     }
   `),
 };
-
-

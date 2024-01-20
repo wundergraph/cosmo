@@ -76,12 +76,15 @@ describe('Objects Tests', () => {
       expect(errors).toBeUndefined();
       expect(normalizationResult!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
-          ['Object', {
-            fieldNames: new Set<string>(['age', 'name']),
-            isRootNode: false,
-            typeName: 'Object',
-          }],
-        ])
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['age', 'name']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
       );
     });
   });

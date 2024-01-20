@@ -602,7 +602,9 @@ function validateNonRepeatableFieldSet(
           return;
         }
         // The child could itself be a parent and could exist as an object extension
-        const childContainer = factory.parentContainerByTypeName.get(namedTypeName) || factory.extensionContainerByTypeName.get(namedTypeName);
+        const childContainer =
+          factory.parentContainerByTypeName.get(namedTypeName) ||
+          factory.extensionContainerByTypeName.get(namedTypeName);
         if (!childContainer) {
           // Should not be possible to receive this error
           errorMessage = unknownTypeInFieldSetErrorMessage(fieldSet, fieldPath, namedTypeName);
@@ -640,7 +642,8 @@ function validateNonRepeatableFieldSet(
           return BREAK;
         }
         const fragmentTypeContainer =
-          factory.parentContainerByTypeName.get(typeConditionName) || factory.extensionContainerByTypeName.get(typeConditionName);
+          factory.parentContainerByTypeName.get(typeConditionName) ||
+          factory.extensionContainerByTypeName.get(typeConditionName);
         if (!fragmentTypeContainer) {
           errorMessage = unknownInlineFragmentTypeConditionErrorMessage(fieldSet, fieldPath, typeConditionName);
           return BREAK;
@@ -823,7 +826,9 @@ function validateKeyFieldSets(
             return;
           }
           // The child could itself be a parent and could exist as an object extension
-          const childContainer = factory.parentContainerByTypeName.get(namedTypeName) || factory.extensionContainerByTypeName.get(namedTypeName);
+          const childContainer =
+            factory.parentContainerByTypeName.get(namedTypeName) ||
+            factory.extensionContainerByTypeName.get(namedTypeName);
           if (!childContainer) {
             // Should not be possible to receive this error
             errorMessages.push(unknownTypeInFieldSetErrorMessage(fieldSet, fieldPath, namedTypeName));
@@ -918,7 +923,7 @@ function validateKeyFieldSets(
       configurations.push({
         fieldName: '',
         selectionSet: getNormalizedFieldSet(documentNode),
-        ...disableEntityResolver ? { disableEntityResolver: true } : {},
+        ...(disableEntityResolver ? { disableEntityResolver: true } : {}),
       });
     }
   }
@@ -949,8 +954,7 @@ function getFieldSetParent(
   parentTypeName: string,
 ): FieldSetParentResult {
   if (fieldSetDirective !== FieldSetDirective.PROVIDES) {
-    return factory.entityContainerByTypeName.has(parentTypeName) ?
-      { fieldSetParentContainer: parentContainer } : {};
+    return factory.entityContainerByTypeName.has(parentTypeName) ? { fieldSetParentContainer: parentContainer } : {};
   }
   const fieldContainer = getOrThrowError(parentContainer.fields, fieldName, `${parentTypeName}.fields`);
   const fieldNamedTypeName = getNamedTypeForChild(`${parentTypeName}.${fieldName}`, fieldContainer.node.type);
@@ -958,7 +962,9 @@ function getFieldSetParent(
   if (!factory.entityContainerByTypeName.has(fieldNamedTypeName)) {
     return {};
   }
-  const childContainer = factory.parentContainerByTypeName.get(fieldNamedTypeName) || factory.extensionContainerByTypeName.get(fieldNamedTypeName);
+  const childContainer =
+    factory.parentContainerByTypeName.get(fieldNamedTypeName) ||
+    factory.extensionContainerByTypeName.get(fieldNamedTypeName);
   if (
     !childContainer ||
     (childContainer.kind !== Kind.OBJECT_TYPE_DEFINITION && childContainer.kind !== Kind.OBJECT_TYPE_EXTENSION)

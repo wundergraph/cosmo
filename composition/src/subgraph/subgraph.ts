@@ -91,8 +91,7 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
           return false;
         }
         const entityContainer = factory.entityContainersByTypeName.get(typeName);
-        if (entityContainer && !isObjectLikeNodeEntity(node))
-        {
+        if (entityContainer && !isObjectLikeNodeEntity(node)) {
           factory.validateKeyFieldSetsForImplicitEntity(entityContainer);
         }
         addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);

@@ -361,7 +361,7 @@ export function newEntityContainer(params: EntityContainerParams): EntityContain
   };
 }
 
-function addEntityContainerProperties(source: EntityContainer  | EntityContainerParams, target: EntityContainer) {
+function addEntityContainerProperties(source: EntityContainer | EntityContainerParams, target: EntityContainer) {
   addIterableValuesToSet(source.fieldNames || [], target.fieldNames);
   addIterableValuesToSet(source.keyFieldSets || [], target.keyFieldSets);
   addIterableValuesToSet(source.subgraphNames || [], target.subgraphNames);
@@ -369,7 +369,7 @@ function addEntityContainerProperties(source: EntityContainer  | EntityContainer
 
 export function upsertEntityContainerProperties(
   entityContainersByTypeName: EntityContainerByTypeName,
-  params: EntityContainerParams
+  params: EntityContainerParams,
 ) {
   const existingEntityContainer = entityContainersByTypeName.get(params.typeName);
   if (existingEntityContainer) {

@@ -41,7 +41,7 @@ function addRequiredFields(
         typeName,
         fieldName: requiredField.fieldName,
         selectionSet: requiredField.selectionSet,
-        ...requiredField.disableEntityResolver ? { disableEntityResolver: true } : {},
+        ...(requiredField.disableEntityResolver ? { disableEntityResolver: true } : {}),
       }),
     );
   }
