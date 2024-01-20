@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	_ "embed"
 	"github.com/akrylysov/algnhsa"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/wundergraph/cosmo/aws-lambda-router/internal"

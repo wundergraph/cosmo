@@ -36,7 +36,7 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 	totalItems := 100
 	batchSize := 100
 
-	e := NewExporter(
+	e, err := NewExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -55,7 +55,7 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 		},
 	)
 
-	require.Nil(t, e.Validate())
+	require.Nil(t, err)
 
 	for i := 0; i < totalItems; i++ {
 
@@ -113,7 +113,7 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 	totalItems := 100
 	batchSize := 5
 
-	e := NewExporter(
+	e, err := NewExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -132,7 +132,7 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 		},
 	)
 
-	require.Nil(t, e.Validate())
+	require.Nil(t, err)
 
 	for i := 0; i < totalItems; i++ {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
@@ -184,7 +184,7 @@ func TestForceFlushSync(t *testing.T) {
 	totalItems := 10
 	batchSize := 5
 
-	e := NewExporter(
+	e, err := NewExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -204,7 +204,7 @@ func TestForceFlushSync(t *testing.T) {
 		},
 	)
 
-	require.Nil(t, e.Validate())
+	require.Nil(t, err)
 
 	for i := 0; i < totalItems; i++ {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
@@ -257,7 +257,7 @@ func TestExportBatchInterval(t *testing.T) {
 	totalItems := 5
 	batchSize := 10
 
-	e := NewExporter(
+	e, err := NewExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -276,7 +276,7 @@ func TestExportBatchInterval(t *testing.T) {
 		},
 	)
 
-	require.Nil(t, e.Validate())
+	require.Nil(t, err)
 
 	for i := 0; i < totalItems; i++ {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
@@ -329,7 +329,7 @@ func TestExportFullQueue(t *testing.T) {
 	totalItems := 100
 	batchSize := 1
 
-	e := NewExporter(
+	e, err := NewExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -348,7 +348,7 @@ func TestExportFullQueue(t *testing.T) {
 		},
 	)
 
-	require.Nil(t, e.Validate())
+	require.Nil(t, err)
 
 	var dispatched int
 
