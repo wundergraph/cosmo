@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	authentication2 "github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net/http"
 	"net/url"
@@ -114,7 +114,7 @@ type RequestContext interface {
 	ActiveSubgraph(subgraphRequest *http.Request) *Subgraph
 
 	// Authentication returns the authentication information for the request, if any
-	Authentication() authentication2.Authentication
+	Authentication() authentication.Authentication
 }
 
 // requestContext is the default implementation of RequestContext
@@ -316,8 +316,8 @@ func (c *requestContext) ActiveSubgraph(subgraphRequest *http.Request) *Subgraph
 	return nil
 }
 
-func (c *requestContext) Authentication() authentication2.Authentication {
-	return authentication2.FromContext(c.request.Context())
+func (c *requestContext) Authentication() authentication.Authentication {
+	return authentication.FromContext(c.request.Context())
 }
 
 const operationContextKey = key("graphql")
