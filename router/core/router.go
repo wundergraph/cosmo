@@ -128,7 +128,7 @@ type (
 	}
 
 	Server interface {
-		Server() *http.Server
+		HttpServer() *http.Server
 		HealthChecks() health.Checker
 	}
 
@@ -1072,7 +1072,7 @@ func (r *server) HealthChecks() health.Checker {
 	return r.healthChecks
 }
 
-func (r *server) Server() *http.Server {
+func (r *server) HttpServer() *http.Server {
 	return r.server
 }
 

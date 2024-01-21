@@ -62,13 +62,13 @@ func main() {
 
 	// If HTTP_PORT is set, we assume we are running the router without lambda
 	if httpPort != "" {
-		if err := svr.Server().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := svr.HttpServer().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal("Could not start server", zap.Error(err))
 		}
 		return
 	}
 
-	lambdaHandler := algnhsa.New(svr.Server().Handler, nil)
+	lambdaHandler := algnhsa.New(svr.HttpServer().Handler, nil)
 	lambda.StartWithOptions(lambdaHandler,
 		lambda.WithContext(ctx),
 		// Registered an internal extensions which gives us 500ms to shutdown

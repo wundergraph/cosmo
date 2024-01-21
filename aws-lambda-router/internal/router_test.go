@@ -24,7 +24,7 @@ func TestHandler(t *testing.T) {
 	svr, err := r.NewServer(context.Background())
 	require.NoError(t, err)
 
-	handler := algnhsa.New(svr.Server().Handler, &algnhsa.Options{
+	handler := algnhsa.New(svr.HttpServer().Handler, &algnhsa.Options{
 		RequestType: algnhsa.RequestTypeAPIGatewayV2,
 	})
 	j, err := json.Marshal(events.APIGatewayV2HTTPRequest{

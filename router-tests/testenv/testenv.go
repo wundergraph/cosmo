@@ -264,7 +264,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	require.NoError(t, err)
 
 	go func() {
-		if err := svr.Server().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := svr.HttpServer().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Errorf("could not start router: %s", err)
 		}
 	}()
