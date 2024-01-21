@@ -13,7 +13,8 @@ import {
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import { EntityInterfaceSubgraphData, getOrThrowError } from '../utils/utils';
 import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
-import { ConfigurationDataMap } from './field-configuration';
+import { ConfigurationDataMap } from '././router-configuration';
+import { ExtensionContainerByTypeName, ParentContainerByTypeName } from '../normalization/utils';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -25,11 +26,13 @@ export type InternalSubgraph = {
   configurationDataMap: ConfigurationDataMap;
   definitions: DocumentNode;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
+  extensionContainerByTypeName: ExtensionContainerByTypeName;
   isVersionTwo: boolean;
   keyFieldNamesByParentTypeName: Map<string, Set<string>>;
   name: string;
   operationTypes: Map<string, OperationTypeNode>;
   overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
+  parentContainerByTypeName: ParentContainerByTypeName;
   schema: GraphQLSchema;
   url: string;
 };
@@ -69,7 +72,6 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
         if (!isObjectLikeNodeEntity(node)) {
           return false;
         }
-        factory.upsertEntity(node);
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
         }
@@ -77,22 +79,23 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
     },
     ObjectTypeDefinition: {
       enter(node) {
-        const name = node.name.value;
-        const operationType = subgraph.operationTypes.get(name);
+        const typeName = node.name.value;
+        const operationType = subgraph.operationTypes.get(typeName);
         const parentTypeName = operationType
           ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
-          : name;
+          : typeName;
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
-        }
-        if (isObjectLikeNodeEntity(node)) {
-          factory.upsertEntity(node);
         }
         if (isNodeInterfaceObject(node)) {
           return false;
         }
+        const entityContainer = factory.entityContainersByTypeName.get(typeName);
+        if (entityContainer && !isObjectLikeNodeEntity(node)) {
+          factory.validateKeyFieldSetsForImplicitEntity(entityContainer);
+        }
         addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
-        if (name !== parentTypeName) {
+        if (typeName !== parentTypeName) {
           return {
             ...node,
             name: stringToNameNode(parentTypeName),
@@ -117,9 +120,6 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
             ...node,
             name: stringToNameNode(parentTypeName),
           };
-        }
-        if (isObjectLikeNodeEntity(node)) {
-          factory.upsertEntity(node);
         }
         return false;
       },
@@ -128,65 +128,6 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
       enter(node) {
         factory.upsertParentNode(node);
         addConcreteTypesForUnion(node, factory.abstractToConcreteTypeNames);
-      },
-    },
-  });
-}
-
-export function walkSubgraphToCollectFields(factory: FederationFactory, subgraph: InternalSubgraph) {
-  let isCurrentParentRootType = false;
-  let overriddenFieldNames: Set<string> | undefined;
-  visit(subgraph.definitions, {
-    ObjectTypeDefinition: {
-      enter(node) {
-        isCurrentParentRootType = factory.isObjectRootType(node);
-        factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
-        factory.parentTypeName = node.name.value;
-        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(factory.parentTypeName);
-      },
-      leave() {
-        isCurrentParentRootType = false;
-        overriddenFieldNames = undefined;
-        factory.parentTypeName = '';
-        factory.isCurrentParentEntity = false;
-      },
-    },
-    ObjectTypeExtension: {
-      enter(node) {
-        factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
-        factory.parentTypeName = node.name.value;
-        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(factory.parentTypeName);
-      },
-      leave() {
-        overriddenFieldNames = undefined;
-        factory.isCurrentParentEntity = false;
-        factory.parentTypeName = '';
-      },
-    },
-    FieldDefinition: {
-      enter(node) {
-        const fieldName = node.name.value;
-        if (overriddenFieldNames?.has(fieldName)) {
-          return false;
-        }
-        if (factory.isCurrentParentEntity) {
-          const entity = getOrThrowError(factory.entities, factory.parentTypeName, ENTITIES);
-          entity.fields.add(fieldName);
-        }
-        return false;
-      },
-    },
-    InterfaceTypeDefinition: {
-      enter(node) {
-        factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
-        if (!factory.isCurrentParentEntity) {
-          return false;
-        }
-        factory.parentTypeName = node.name.value;
-      },
-      leave() {
-        factory.isCurrentParentEntity = false;
-        factory.parentTypeName = '';
       },
     },
   });
@@ -241,8 +182,9 @@ export function walkSubgraphToFederate(
         factory.graphEdges.add(fieldPath);
         // If the parent node is never an entity, add the child edge
         // Otherwise, only add the child edge if the child is a field on a subgraph where the object is an entity
-        const entity = factory.entities.get(factory.parentTypeName);
-        if (entity && !entity.fields.has(fieldName)) {
+        // TODO resolvable false
+        const entity = factory.entityContainersByTypeName.get(factory.parentTypeName);
+        if (entity && !entity.fieldNames.has(fieldName)) {
           return;
         }
         const concreteTypeNames = factory.abstractToConcreteTypeNames.get(fieldNamedTypeName);

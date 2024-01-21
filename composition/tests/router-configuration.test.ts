@@ -2,9 +2,9 @@ import { describe, expect, test } from 'vitest';
 import { batchNormalize, ConfigurationData, federateSubgraphs, normalizeSubgraphFromString } from '../src';
 import { createSubgraph } from './utils/utils';
 
-describe('Field Configuration tests', () => {
+describe('Router Configuration tests', () => {
   describe('Normalization tests', () => {
-    test('that field configuration for employees.graphql is correctly generated', () => {
+    test('that the router configuration for employees.graphql is correctly generated', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(employees);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
@@ -80,7 +80,7 @@ describe('Field Configuration tests', () => {
       );
     });
 
-    test('that field configuration for family.graphql is correctly generated', () => {
+    test('that the router configuration for family.graphql is correctly generated', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(family);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
@@ -164,7 +164,7 @@ describe('Field Configuration tests', () => {
       );
     });
 
-    test('that field configuration for hobbies.graphql is correctly generated', () => {
+    test('that the router configuration for hobbies.graphql is correctly generated', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(hobbies);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
@@ -240,7 +240,7 @@ describe('Field Configuration tests', () => {
       );
     });
 
-    test('that field configuration for products.graphql is correctly generated', () => {
+    test('that the router configuration for products.graphql is correctly generated', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(products);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
@@ -482,13 +482,13 @@ describe('Field Configuration tests', () => {
     });
 
     test('that argument configurations are correctly generated', () => {
-      const { errors, internalSubgraphsBySubgraphName } = batchNormalize([
+      const { errors, internalSubgraphBySubgraphName } = batchNormalize([
         createSubgraph('monolith', monolith),
         createSubgraph('reviews', reviews),
         createSubgraph('users', users),
       ]);
       expect(errors).toBeUndefined();
-      expect(internalSubgraphsBySubgraphName.get('monolith')!.configurationDataMap).toStrictEqual(
+      expect(internalSubgraphBySubgraphName.get('monolith')!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -500,7 +500,7 @@ describe('Field Configuration tests', () => {
           ],
         ]),
       );
-      expect(internalSubgraphsBySubgraphName.get('reviews')!.configurationDataMap).toStrictEqual(
+      expect(internalSubgraphBySubgraphName.get('reviews')!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -528,7 +528,7 @@ describe('Field Configuration tests', () => {
           ],
         ]),
       );
-      expect(internalSubgraphsBySubgraphName.get('users')!.configurationDataMap).toStrictEqual(
+      expect(internalSubgraphBySubgraphName.get('users')!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
