@@ -137,6 +137,7 @@ message RequiredField {
   string type_name = 1;
   string field_name = 2;
   string selection_set = 3;
+  bool disable_entity_resolver = 4;
 }
 
 message EntityInterfaceConfiguration {
