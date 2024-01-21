@@ -7,10 +7,7 @@ import (
 	"github.com/akrylysov/algnhsa"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/wundergraph/cosmo/aws-lambda-router/internal"
-	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"net/http"
@@ -27,6 +24,8 @@ var (
 	defaultSampleRate = 0.2 // 20% of requests will be sampled
 	enableTelemetry   = os.Getenv("DISABLE_TELEMETRY") != "true"
 	stage             = os.Getenv("STAGE")
+	graphApiToken     = os.Getenv("GRAPH_API_TOKEN")
+	httpPort          = os.Getenv("HTTP_PORT")
 )
 
 func main() {
@@ -42,61 +41,16 @@ func main() {
 		}
 	}()
 
-	httpPort := os.Getenv("HTTP_PORT")
-
-	routerConfig, err := core.SerializeConfigFromFile(routerConfigPath)
-	if err != nil {
-		logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", routerConfigPath))
-	}
-
-	routerOpts := []core.Option{
-		core.WithLogger(logger),
-		core.WithPlayground(true),
-		core.WithIntrospection(true),
-		core.WithStaticRouterConfig(routerConfig),
-		core.WithAwsLambdaRuntime(),
-		core.WithGraphApiToken(os.Getenv("GRAPH_API_TOKEN")),
-	}
-
-	if httpPort != "" {
-		routerOpts = append(routerOpts, core.WithListenerAddr(":"+httpPort))
-	}
-
-	if enableTelemetry {
-		routerOpts = append(routerOpts,
-			core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
-				Enabled:           true,
-				CollectorEndpoint: "https://cosmo-metrics.wundergraph.com",
-			}),
-			core.WithMetrics(&metric.Config{
-				Name:    telemetryServiceName,
-				Version: internal.Version,
-				OpenTelemetry: metric.OpenTelemetry{
-					Enabled: true,
-				},
-			}),
-			core.WithTracing(&trace.Config{
-				Enabled: true,
-				Name:    telemetryServiceName,
-				Version: internal.Version,
-				Sampler: defaultSampleRate,
-				Propagators: []trace.Propagator{
-					trace.PropagatorTraceContext,
-				},
-			}),
-		)
-	}
-
-	if stage != "" {
-		routerOpts = append(routerOpts,
-			core.WithGraphQLWebURL(fmt.Sprintf("/%s%s", os.Getenv("STAGE"), "/graphql")),
-		)
-	}
-
-	r, err := core.NewRouter(routerOpts...)
-	if err != nil {
-		logger.Fatal("Could not create router", zap.Error(err))
-	}
+	r := internal.NewRouter(
+		internal.WithGraphApiToken(graphApiToken),
+		internal.WithLogger(logger),
+		internal.WithRouterConfigPath(routerConfigPath),
+		internal.WithTelemetryServiceName(telemetryServiceName),
+		internal.WithStage(stage),
+		internal.WithTraceSampleRate(defaultSampleRate),
+		internal.WithEnableTelemetry(enableTelemetry),
+		internal.WithHttpPort(httpPort),
+	)
 
 	svr, err := r.NewServer(ctx)
 	if err != nil {

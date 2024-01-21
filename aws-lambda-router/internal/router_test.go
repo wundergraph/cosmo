@@ -12,10 +12,13 @@ import (
 )
 
 func TestHandler(t *testing.T) {
-	zapLogger, err := zap.NewProduction()
+	logger, err := zap.NewProduction()
 	require.NoError(t, err)
 
-	r, err := NewRouter(zapLogger, "../router.json")
+	r := NewRouter(
+		WithLogger(logger),
+		WithRouterConfigPath("../router.json"),
+	)
 	require.NoError(t, err)
 
 	svr, err := r.NewServer(context.Background())
