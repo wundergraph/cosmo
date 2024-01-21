@@ -85,7 +85,7 @@ func NewRouter(opts ...Option) *core.Router {
 		)
 	}
 
-	r, err := core.NewRouter(routerOpts...)
+	r, err := core.NewRouter(append(rc.RouterOpts, routerOpts...)...)
 	if err != nil {
 		logger.Fatal("Could not create router", zap.Error(err))
 	}

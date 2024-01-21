@@ -7,6 +7,8 @@ import (
 	"github.com/akrylysov/algnhsa"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/wundergraph/cosmo/aws-lambda-router/internal"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -23,6 +25,7 @@ const (
 var (
 	defaultSampleRate = 0.2 // 20% of requests will be sampled
 	enableTelemetry   = os.Getenv("DISABLE_TELEMETRY") != "true"
+	devMode           = os.Getenv("DEV_MODE") == "true"
 	stage             = os.Getenv("STAGE")
 	graphApiToken     = os.Getenv("GRAPH_API_TOKEN")
 	httpPort          = os.Getenv("HTTP_PORT")
@@ -50,6 +53,15 @@ func main() {
 		internal.WithTraceSampleRate(defaultSampleRate),
 		internal.WithEnableTelemetry(enableTelemetry),
 		internal.WithHttpPort(httpPort),
+		internal.WithRouterOpts(core.WithDevelopmentMode(devMode)),
+		internal.WithRouterOpts(
+			core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+				EnableSingleFlight:                     true,
+				EnableRequestTracing:                   devMode,
+				EnableExecutionPlanCacheResponseHeader: devMode,
+				MaxConcurrentResolvers:                 1024,
+			}),
+		),
 	)
 
 	svr, err := r.NewServer(ctx)

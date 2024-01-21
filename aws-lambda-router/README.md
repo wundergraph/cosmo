@@ -11,9 +11,6 @@ Status: **Beta**
 
 Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/) (Playground)
 
-> [!NOTE]  
-> The demo subgraphs are running on a free tier. It might take a few seconds until the subgraphs are running.
-
 ## Features
 
 - [X] GraphQL Queries
