@@ -87,13 +87,13 @@ func main() {
 		// This mechanism does not replace telemetry flushing after a request
 		// https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html#runtimes-lifecycle-extensions-shutdown
 		lambda.WithEnableSIGTERM(func() {
-			logger.Info("Server shutting down")
+			logger.Debug("Server shutting down")
 			sCtx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
 			defer cancel()
 			if err := r.Shutdown(sCtx); err != nil {
 				panic(err)
 			}
-			logger.Info("Server shutdown")
+			logger.Debug("Server shutdown")
 		}),
 	)
 }
