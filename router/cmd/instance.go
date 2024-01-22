@@ -90,6 +90,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	}
 
 	options := []core.Option{
+		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithLogger(logger),

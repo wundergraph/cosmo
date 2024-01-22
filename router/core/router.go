@@ -92,6 +92,7 @@ type (
 		graphqlPath              string
 		playground               bool
 		introspection            bool
+		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string
 		healthChecks             health.Checker
@@ -697,6 +698,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		traceHandler = rtrace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
+					otel.WgRouterGraphName.String(r.federatedGraphName),
 					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 					otel.WgRouterVersion.String(Version),
 				),
@@ -719,6 +721,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			return []zapcore.Field{
 				zap.String("config_version", routerConfig.GetVersion()),
 				zap.String("request_id", middleware.GetReqID(request.Context())),
+				zap.String("federated_graph_name", r.federatedGraphName),
 			}
 		}),
 	)
@@ -782,6 +785,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			rmetric.WithOtlpMeterProvider(r.otlpMeterProvider),
 			rmetric.WithLogger(r.logger),
 			rmetric.WithAttributes(
+				otel.WgRouterGraphName.String(r.federatedGraphName),
 				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 				otel.WgRouterVersion.String(Version),
 			),
@@ -1149,6 +1153,13 @@ func WithGracePeriod(timeout time.Duration) Option {
 func WithMetrics(cfg *rmetric.Config) Option {
 	return func(r *Router) {
 		r.metricConfig = cfg
+	}
+}
+
+// WithFederatedGraphName sets the federated graph name. It is used to get the latest config from the control plane.
+func WithFederatedGraphName(name string) Option {
+	return func(r *Router) {
+		r.federatedGraphName = name
 	}
 }
 

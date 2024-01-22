@@ -372,6 +372,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	routerOpts := []core.Option{
+		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
 		core.WithGraphApiToken(graphApiToken),
