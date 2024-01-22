@@ -44,7 +44,7 @@ func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsServi
 		logger:       logger,
 		conn:         chConn,
 		opGuardCache: c,
-		pool:         pond.New(100, 1000, pond.MinWorkers(5)),
+		pool:         pond.New(100, 500, pond.MinWorkers(10)),
 	}
 }
 
