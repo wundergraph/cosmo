@@ -1,5 +1,5 @@
 import { ConstDirectiveNode, DocumentNode, GraphQLSchema, Kind } from 'graphql';
-import { ArgumentConfigurationData } from '../subgraph/field-configuration';
+import { ArgumentConfigurationData } from '../subgraph/./router-configuration';
 import {
   MutableDirectiveDefinitionNode,
   MutableEnumTypeDefinitionNode,
@@ -95,15 +95,10 @@ export type DirectiveContainer = {
   arguments: ArgumentMap;
   executableLocations: Set<string>;
   node: MutableDirectiveDefinitionNode;
-  subgraphs: Set<string>;
+  subgraphNames: Set<string>;
 };
 
 export type DirectiveMap = Map<string, DirectiveContainer>;
-
-export type EntityContainer = {
-  fields: Set<string>;
-  subgraphs: Set<string>;
-};
 
 export type EnumContainer = {
   appearances: number;
@@ -128,7 +123,7 @@ export type FieldContainer = {
   node: MutableFieldDefinitionNode;
   overrideTargetSubgraphName: string;
   namedTypeName: string;
-  subgraphs: Set<string>;
+  subgraphNames: Set<string>;
   subgraphsByExternal: Map<String, boolean>;
   subgraphsByShareable: Map<string, boolean>;
 };
@@ -158,7 +153,7 @@ export type InterfaceContainer = {
   interfaces: Set<string>;
   kind: Kind.INTERFACE_TYPE_DEFINITION;
   node: MutableInterfaceTypeDefinitionNode;
-  subgraphs: Set<string>;
+  subgraphNames: Set<string>;
 };
 
 export type ObjectContainer = {
@@ -168,7 +163,7 @@ export type ObjectContainer = {
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_DEFINITION;
   node: MutableObjectTypeDefinitionNode;
-  subgraphs: Set<string>;
+  subgraphNames: Set<string>;
 };
 
 export type ObjectExtensionContainer = {
@@ -178,7 +173,7 @@ export type ObjectExtensionContainer = {
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_EXTENSION;
   node: MutableObjectTypeExtensionNode;
-  subgraphs: Set<string>;
+  subgraphNames: Set<string>;
 };
 
 export type ScalarContainer = {

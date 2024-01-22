@@ -7,6 +7,7 @@ export type ArgumentConfigurationData = {
 export type RequiredFieldConfiguration = {
   fieldName: string;
   selectionSet: string;
+  disableEntityResolver?: boolean;
 };
 
 export type EventType = 'subscribe' | 'publish' | 'request';
@@ -23,8 +24,8 @@ export type ConfigurationData = {
   isRootNode: boolean;
   typeName: string;
   entityInterfaceConcreteTypeNames?: Set<string>;
-  isInterfaceObject?: boolean;
   events?: EventConfiguration[];
+  isInterfaceObject?: boolean;
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];
   requires?: RequiredFieldConfiguration[];
