@@ -2,7 +2,7 @@ name: Build and Release AWS Router Binaries
 on:
   release:
     types: [published]
-  workflow_dispatch:
+  #workflow_dispatch:
 
 permissions:
   contents: write
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   releases-matrix:
-    #if: startsWith(github.event.release.tag_name, 'aws-lambda-router@')
+    if: startsWith(github.event.release.tag_name, 'aws-lambda-router@')
     name: Build and Release AWS Router Binaries
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -32,6 +32,12 @@ jobs:
         with:
           cache-dependency-path: router/go.sum
 
+      - uses: winterjung/split@v2
+        id: split
+        with:
+          separator: "@"
+          msg: "${{ github.event.release.tag_name }}"
+
       - uses: wangyoucao577/go-release-action@v1
         name: Build and attach binaries to GitHub Release
         with:
@@ -45,7 +51,7 @@ jobs:
           pre_command: export CGO_ENABLED=0
           build_flags: -trimpath
           # -w = omits the DWARF symbol table, effectively removing debugging information. Reduces binary size by ~30%.
-          ldflags: -w -extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=0.1.0
+          ldflags: -w -extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=${{ steps.split.outputs._1 }}
           overwrite: true
           extra_files: LICENSE
-          release_tag: aws-lambda-router@0.1.0
+          #release_tag: aws-lambda-router@0.1.0
