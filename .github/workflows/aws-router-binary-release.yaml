@@ -32,12 +32,6 @@ jobs:
         with:
           cache-dependency-path: router/go.sum
 
-      - uses: winterjung/split@v2
-        id: split
-        with:
-          separator: "@"
-          msg: "${{ github.event.release.tag_name }}"
-
       - uses: wangyoucao577/go-release-action@v1
         name: Build and attach binaries to GitHub Release
         with:
@@ -51,7 +45,7 @@ jobs:
           pre_command: export CGO_ENABLED=0
           build_flags: -trimpath
           # -w = omits the DWARF symbol table, effectively removing debugging information. Reduces binary size by ~30%.
-          ldflags: -w -extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=${{ steps.split.outputs._1 }}
+          ldflags: -w -extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=0.1.0
           overwrite: true
           extra_files: LICENSE
           release_tag: router@0.1.0
