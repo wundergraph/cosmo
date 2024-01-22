@@ -48,4 +48,4 @@ jobs:
           ldflags: -w -extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=0.1.0
           overwrite: true
           extra_files: LICENSE
-          release_tag: router@0.1.0
+          release_tag: aws-lambda-router@0.1.0
