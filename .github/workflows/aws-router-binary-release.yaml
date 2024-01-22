@@ -2,7 +2,7 @@ name: Build and Release AWS Router Binaries
 on:
   release:
     types: [published]
-  #workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -54,4 +54,4 @@ jobs:
           ldflags: -w -extldflags -static -X module github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=${{ steps.split.outputs._1 }}
           overwrite: true
           extra_files: LICENSE
-          #release_tag: router@0.14.0
+          release_tag: router@0.1.0
