@@ -31,14 +31,37 @@ func (o *BatchQueueOptions) ensureDefaults() {
 	}
 }
 
+// QueueWork The interface that any item in the queue must implement.
+type QueueWork[T any] interface {
+	Item() T
+	Flush() chan struct{}
+}
+
+// QueueItem is the base type for queue items. It implements the QueueWork interface.
+type QueueItem[T any] struct {
+	item    T
+	flushed chan struct{}
+}
+
+func (e *QueueItem[T]) Item() T {
+	return e.item
+}
+
+// Flush returns a channel that marks a batch as ready to be dispatched once the item is received.
+// On the consumer side this channel can be closed and used as a signal that all prior items were dispatched.
+// We use it in the graphqlmetrics exporter to implement flushing.
+func (e *QueueItem[T]) Flush() chan struct{} {
+	return e.flushed
+}
+
 // BatchQueue coordinates dispatching of queue items by time intervals
 // or immediately after the batching limit is met. Items are enqueued without blocking
 // and all items are buffered unless the queue is stopped forcefully with the stop() context.
 type BatchQueue[T any] struct {
 	config   *BatchQueueOptions
 	timer    *time.Timer
-	inQueue  chan T
-	OutQueue chan []T
+	inQueue  chan QueueWork[T]
+	OutQueue chan []QueueWork[T]
 }
 
 // NewBatchQueue returns an initialized instance of BatchQueue.
@@ -53,15 +76,15 @@ func NewBatchQueue[T any](config *BatchQueueOptions) *BatchQueue[T] {
 
 	bq := &BatchQueue[T]{
 		config:   config,
-		inQueue:  make(chan T, config.MaxQueueSize),
-		OutQueue: make(chan []T, config.MaxQueueSize/config.MaxBatchItems),
+		inQueue:  make(chan QueueWork[T], config.MaxQueueSize),
+		OutQueue: make(chan []QueueWork[T], config.MaxQueueSize/config.MaxBatchItems),
 	}
 
 	return bq
 }
 
 // Enqueue adds an item to the queue. Returns false if the queue is stopped or not ready to accept items
-func (b *BatchQueue[T]) Enqueue(item T) bool {
+func (b *BatchQueue[T]) Enqueue(item QueueWork[T]) bool {
 	select {
 	case b.inQueue <- item:
 		return true
@@ -78,11 +101,12 @@ func (b *BatchQueue[T]) tick() {
 func (b *BatchQueue[T]) dispatch() {
 
 	for {
-		var items []T
+		var items []QueueWork[T]
 		var stopped bool
 
 		for {
 			select {
+			// Dispatch after interval
 			case <-b.timer.C:
 				goto done
 			case item, ok := <-b.inQueue:
@@ -93,6 +117,11 @@ func (b *BatchQueue[T]) dispatch() {
 				}
 
 				items = append(items, item)
+
+				// process batch immediately after flush marker was received
+				if item.Flush() != nil {
+					goto done
+				}
 
 				// batch limit reached, dispatch
 				if len(items) == b.config.MaxBatchItems {

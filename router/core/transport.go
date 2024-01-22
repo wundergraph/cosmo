@@ -3,7 +3,9 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/metric"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"io"
 	"net/http"
@@ -13,9 +15,7 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-	"github.com/wundergraph/cosmo/router/internal/trace"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/pool"

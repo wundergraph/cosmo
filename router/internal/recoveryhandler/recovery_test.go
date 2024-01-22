@@ -1,4 +1,4 @@
-package recovery
+package recoveryhandler
 
 import (
 	"github.com/wundergraph/cosmo/router/internal/test"

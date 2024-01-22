@@ -1,7 +1,7 @@
 package metric
 
 import (
-	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"net/url"
 	"regexp"
 )
@@ -87,7 +87,7 @@ func DefaultConfig(serviceVersion string) *Config {
 					Disabled: false,
 					Endpoint: "http://localhost:4318",
 					Exporter: otelconfig.ExporterOLTPHTTP,
-					HTTPPath: "/v1/metrics",
+					HTTPPath: otelconfig.DefaultMetricsPath,
 				},
 			},
 		},

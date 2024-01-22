@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/config"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/nats-io/nats.go"

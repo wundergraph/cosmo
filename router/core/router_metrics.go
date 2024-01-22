@@ -1,50 +1,69 @@
 package core
 
 import (
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
-	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 )
 
-// RouterMetrics encapsulates all data and configuration that the router
+type RouterMetrics interface {
+	StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64) *OperationMetrics
+	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool)
+	GqlMetricsExporter() graphqlmetrics.SchemaUsageExporter
+	MetricStore() metric.Store
+}
+
+// routerMetrics encapsulates all data and configuration that the router
 // uses to collect and its metrics
-type RouterMetrics struct {
+type routerMetrics struct {
 	metrics             metric.Store
-	gqlMetricsExporter  *graphqlmetrics.Exporter
+	gqlMetricsExporter  graphqlmetrics.SchemaUsageExporter
 	routerConfigVersion string
 	logger              *zap.Logger
+	exportEnabled       bool
+}
+
+type routerMetricsConfig struct {
+	metrics             metric.Store
+	gqlMetricsExporter  graphqlmetrics.SchemaUsageExporter
+	routerConfigVersion string
+	logger              *zap.Logger
+	exportEnabled       bool
+}
+
+func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
+	return &routerMetrics{
+		metrics:             cfg.metrics,
+		gqlMetricsExporter:  cfg.gqlMetricsExporter,
+		routerConfigVersion: cfg.routerConfigVersion,
+		logger:              cfg.logger,
+		exportEnabled:       cfg.exportEnabled,
+	}
 }
 
 // StartOperation starts the metrics for a new GraphQL operation. The returned value is a OperationMetrics
 // where the caller must always call Finish() (usually via defer()). If the metrics are disabled, this
 // returns nil, but OperationMetrics is safe to call with a nil receiver.
-func (m *RouterMetrics) StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64) *OperationMetrics {
-	if m == nil || m.metrics == nil {
-		// Return a nil OperationMetrics, which will be a no-op, to simplify callers
-		return nil
-	}
-	metrics := startOperationMetrics(m.metrics, logger, requestContentLength, m.gqlMetricsExporter, m.routerConfigVersion)
-	if clientInfo != nil {
-		metrics.AddClientInfo(clientInfo)
-	}
+func (m *routerMetrics) StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64) *OperationMetrics {
+	metrics := startOperationMetrics(m, logger, requestContentLength, m.routerConfigVersion)
+	metrics.AddClientInfo(clientInfo)
 	return metrics
 }
 
-func NewRouterMetrics(metrics metric.Store, gqlMetrics *graphqlmetrics.Exporter, configVersion string, logger *zap.Logger) *RouterMetrics {
-	return &RouterMetrics{
-		metrics:             metrics,
-		gqlMetricsExporter:  gqlMetrics,
-		routerConfigVersion: configVersion,
-		logger:              logger,
-	}
+func (m *routerMetrics) MetricStore() metric.Store {
+	return m.metrics
 }
 
-func (m *RouterMetrics) ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
-	if m.gqlMetricsExporter == nil {
+func (m *routerMetrics) GqlMetricsExporter() graphqlmetrics.SchemaUsageExporter {
+	return m.gqlMetricsExporter
+}
+
+func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
+	if !m.exportEnabled {
 		return
 	}
 

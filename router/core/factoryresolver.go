@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"net/url"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/pubsub"

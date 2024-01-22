@@ -29,9 +29,9 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -260,11 +260,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		return nil, err
 	}
 
-	svr, err := rr.NewTestServer(ctx)
+	svr, err := rr.NewServer(ctx)
 	require.NoError(t, err)
 
 	go func() {
-		if err := svr.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := svr.HttpServer().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Errorf("could not start router: %s", err)
 		}
 	}()

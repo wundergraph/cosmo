@@ -3,10 +3,7 @@ package trace
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"time"
-
-	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -14,13 +11,9 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.uber.org/zap"
+	"net/url"
 
 	_ "google.golang.org/grpc/encoding/gzip" // Required for gzip support over grpc
-)
-
-const (
-	defaultBatchTimeout  = 10 * time.Second
-	defaultExportTimeout = 30 * time.Second
 )
 
 var (
@@ -146,12 +139,12 @@ func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdktra
 
 			batchTimeout := exp.BatchTimeout
 			if batchTimeout == 0 {
-				batchTimeout = defaultBatchTimeout
+				batchTimeout = DefaultBatchTimeout
 			}
 
 			exportTimeout := exp.ExportTimeout
 			if exportTimeout == 0 {
-				exportTimeout = defaultExportTimeout
+				exportTimeout = DefaultExportTimeout
 			}
 
 			// Always be sure to batch in production.

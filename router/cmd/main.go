@@ -3,17 +3,17 @@ package cmd
 import (
 	"context"
 	"flag"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/profile"
 )
 

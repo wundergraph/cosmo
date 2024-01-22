@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"errors"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"net"
 	"net/http"
 	"strings"
@@ -13,8 +15,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/cosmo/router/internal/logging"
-	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"

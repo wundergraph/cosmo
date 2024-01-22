@@ -2,10 +2,10 @@ package core
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"regexp"
 
-	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
