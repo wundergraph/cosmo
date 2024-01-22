@@ -1,4 +1,5 @@
 import { PlainMessage } from '@bufbuild/protobuf';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
@@ -25,13 +26,14 @@ import {
   SubgraphDTO,
   SubgraphMemberDTO,
 } from '../../types/index.js';
-import { Composer } from '../composition/composer.js';
-import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { Composer } from '../composition/composer.js';
+import { PublicError } from '../errors/errors.js';
+import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
-import { TargetRepository } from './TargetRepository.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
+import { TargetRepository } from './TargetRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -65,7 +67,7 @@ export class SubgraphRepository {
       const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
       const ns = await namespaceRepo.byName(data.namespace);
       if (!ns) {
-        throw new Error(`Namespace ${data.namespace} not found`);
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${data.namespace} not found`);
       }
 
       /**
@@ -166,7 +168,7 @@ export class SubgraphRepository {
       const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
       const ns = await namespaceRepo.byTargetId(data.targetId);
       if (!ns) {
-        throw new Error(`Namespace not found`);
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace not found`);
       }
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
@@ -389,7 +391,7 @@ export class SubgraphRepository {
     const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
     const ns = await namespaceRepo.byName(opts.namespace);
     if (!ns) {
-      throw new Error(`Namespace ${opts.namespace} not found`);
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${opts.namespace} not found`);
     }
 
     const targets = await this.db
@@ -834,7 +836,7 @@ export class SubgraphRepository {
     const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
     const ns = await namespaceRepo.byName(namespace);
     if (!ns) {
-      throw new Error(`Namespace ${namespace} not found`);
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
     }
 
     const subgraphs = await this.db

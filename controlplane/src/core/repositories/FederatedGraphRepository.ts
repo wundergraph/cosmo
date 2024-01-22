@@ -5,6 +5,7 @@ import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SignJWT, generateKeyPair, importPKCS8 } from 'jose';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Target } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -31,6 +32,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { PublicError } from '../errors/errors.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -66,7 +68,7 @@ export class FederatedGraphRepository {
 
       const ns = await namespaceRepo.byName(data.namespace);
       if (!ns) {
-        throw new Error(`Namespace ${data.namespace} not found`);
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${data.namespace} not found`);
       }
 
       const insertedTarget = await tx
@@ -149,7 +151,7 @@ export class FederatedGraphRepository {
 
       const ns = await namespaceRepo.byTargetId(data.targetId);
       if (!ns) {
-        throw new Error(`Namespace not found`);
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace not found`);
       }
 
       const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
@@ -255,7 +257,7 @@ export class FederatedGraphRepository {
     const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
     const ns = await namespaceRepo.byName(opts.namespace);
     if (!ns) {
-      throw new Error(`Namespace ${opts.namespace} not found`);
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${opts.namespace} not found`);
     }
 
     const targets = await this.db.query.targets.findMany({
@@ -364,7 +366,7 @@ export class FederatedGraphRepository {
     const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
     const ns = await namespaceRepo.byName(namespace);
     if (!ns) {
-      throw new Error(`Namespace ${namespace} not found`);
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
     }
 
     const resp = await this.db.query.targets.findFirst({
@@ -432,7 +434,7 @@ export class FederatedGraphRepository {
     const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
     const ns = await namespaceRepo.byName(namespace);
     if (!ns) {
-      throw new Error(`Namespace ${namespace} not found`);
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
     }
 
     const graphs = await this.db
