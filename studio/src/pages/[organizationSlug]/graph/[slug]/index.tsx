@@ -203,6 +203,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               <RunRouterCommand
                 open={open}
                 setOpen={setOpen}
+                graphName={name}
                 token={graphData.graphToken}
                 triggerLabel="Run router locally"
                 triggerClassName="mt-3 w-full"

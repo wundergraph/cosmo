@@ -261,6 +261,7 @@ const MigrationSuccess = () => {
 export const RunRouterCommand = ({
   open,
   setOpen,
+  graphName,
   token,
   triggerLabel,
   triggerClassName,
@@ -268,6 +269,7 @@ export const RunRouterCommand = ({
 }: {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
+  graphName: string;
   token: string;
   triggerLabel?: string;
   triggerClassName?: string;
@@ -279,6 +281,7 @@ export const RunRouterCommand = ({
   -p 3002:3002 \\
   --add-host=host.docker.internal:host-gateway \\
   --platform=linux/amd64 \\
+   -e FEDERATED_GRAPH_NAME="${graphName}" \\\\
   -e DEV_MODE=true \\
   -e LISTEN_ADDR=0.0.0.0:3002 \\
   -e GRAPH_API_TOKEN=${token} \\
@@ -550,6 +553,7 @@ export const FederatedGraphsCards = ({
           <RunRouterCommand
             open={isMigrationSuccess}
             setOpen={setIsMigrationSuccess}
+            graphName={graphs[graphs.length - 1].name}
             token={token}
             hint="The Graph API Token which is scoped to the migrated
                 federated graph is generated. Please store it safely for future
