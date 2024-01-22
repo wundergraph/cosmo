@@ -1,10 +1,9 @@
 package trace
 
 import (
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"net/url"
 	"time"
-
-	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 )
 
 // ServerName Default resource name.
@@ -17,6 +16,9 @@ const (
 	PropagatorB3           Propagator = "b3"
 	PropagatorJaeger       Propagator = "jaeger"
 	PropagatorBaggage      Propagator = "baggage"
+
+	DefaultBatchTimeout  = 10 * time.Second
+	DefaultExportTimeout = 30 * time.Second
 )
 
 type Exporter struct {
@@ -81,9 +83,9 @@ func DefaultConfig(serviceVersion string) *Config {
 				Disabled:      false,
 				Endpoint:      "http://localhost:4318",
 				Exporter:      otelconfig.ExporterOLTPHTTP,
-				HTTPPath:      "/v1/traces",
-				BatchTimeout:  defaultBatchTimeout,
-				ExportTimeout: defaultExportTimeout,
+				HTTPPath:      otelconfig.DefaultTracesPath,
+				BatchTimeout:  DefaultBatchTimeout,
+				ExportTimeout: DefaultExportTimeout,
 			},
 		},
 	}

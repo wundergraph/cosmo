@@ -42,6 +42,13 @@ func WithContext(fn Fn) Option {
 	}
 }
 
+func WithNoTimeField() Option {
+	return func(r *handler) {
+		r.timeFormat = ""
+		r.utc = false
+	}
+}
+
 func WithDefaultOptions() Option {
 	return func(r *handler) {
 		r.timeFormat = time.RFC3339

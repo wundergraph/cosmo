@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"os"
 	"time"
 
@@ -10,12 +12,11 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/internal/logging"
-	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 )
 
-const defaultConfigPath = "config.yaml"
+const (
+	defaultConfigPath = "config.yaml"
+)
 
 type Graph struct {
 	// Name is required if no router config path is provided

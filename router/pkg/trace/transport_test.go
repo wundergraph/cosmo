@@ -3,7 +3,8 @@ package trace
 import (
 	"bytes"
 	"context"
-	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,8 +16,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/wundergraph/cosmo/router/internal/trace/tracetest"
 )
 
 func TestTransport(t *testing.T) {

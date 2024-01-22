@@ -2,7 +2,8 @@ package trace
 
 import (
 	"github.com/go-chi/chi"
-	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,8 +14,6 @@ import (
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv17 "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/wundergraph/cosmo/router/internal/trace/tracetest"
 )
 
 func TestWrapHttpHandler(t *testing.T) {

@@ -82,6 +82,7 @@ type (
 		MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue)
 		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
 		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
+		ForceFlush(ctx context.Context) error
 	}
 )
 
@@ -334,6 +335,10 @@ func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time
 	if c, ok := h.promHistograms[ServerLatencyHistogram]; ok {
 		c.Record(ctx, elapsedTime, baseAttributes)
 	}
+}
+
+func (h *Metrics) ForceFlush(ctx context.Context) error {
+	return h.otelMeterProvider.ForceFlush(ctx)
 }
 
 // WithAttributes adds attributes to the base attributes

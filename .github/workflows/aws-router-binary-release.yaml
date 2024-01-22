@@ -1,0 +1,57 @@
+name: Build and Release AWS Router Binaries
+on:
+  release:
+    types: [published]
+  #workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  releases-matrix:
+    if: startsWith(github.event.release.tag_name, 'aws-lambda-router@')
+    name: Build and Release AWS Router Binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        # build and publish in parallel: linux/386, linux/amd64, linux/arm64, darwin/amd64, darwin/arm64
+        goos: [linux, darwin]
+        goarch: ["386", amd64, arm64]
+        exclude:
+          - goarch: "386"
+            goos: darwin
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - uses: ./.github/actions/go
+        with:
+          cache-dependency-path: router/go.sum
+
+      - uses: winterjung/split@v2
+        id: split
+        with:
+          separator: "@"
+          msg: "${{ github.event.release.tag_name }}"
+
+      - uses: wangyoucao577/go-release-action@v1
+        name: Build and attach binaries to GitHub Release
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          # Where to run `go build .`
+          project_path: "aws-lambda-router/cmd"
+          # Convention from AWS Lambda
+          binary_name: "bootstrap"
+          pre_command: export CGO_ENABLED=0
+          build_flags: -trimpath
+          # -w = omits the DWARF symbol table, effectively removing debugging information. Reduces binary size by ~30%.
+          ldflags: -w -extldflags -static -X module github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=${{ steps.split.outputs._1 }}
+          overwrite: true
+          extra_files: LICENSE
+          #release_tag: router@0.14.0
