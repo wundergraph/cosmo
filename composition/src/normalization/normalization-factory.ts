@@ -75,7 +75,7 @@ import {
 import {
   BASE_DIRECTIVE_DEFINITIONS,
   BASE_SCALARS,
-  FIELD_SET_DEFINITION,
+  FIELD_SET_SCALAR_DEFINITION, SCOPE_SCALAR_DEFINITION,
   VERSION_ONE_DIRECTIVES,
   VERSION_TWO_DIRECTIVE_DEFINITIONS,
   VERSION_TWO_DIRECTIVES,
@@ -1524,12 +1524,13 @@ export class NormalizationFactory {
     for (const directiveDefinition of BASE_DIRECTIVE_DEFINITIONS) {
       definitions.push(directiveDefinition);
     }
-    definitions.push(FIELD_SET_DEFINITION);
+    definitions.push(FIELD_SET_SCALAR_DEFINITION);
     if (factory.isSubgraphVersionTwo) {
       for (const directiveDefinition of VERSION_TWO_DIRECTIVE_DEFINITIONS) {
         definitions.push(directiveDefinition);
         this.allDirectiveDefinitions.set(directiveDefinition.name.value, directiveDefinition);
       }
+      definitions.push(SCOPE_SCALAR_DEFINITION);
     }
     for (const directiveDefinition of this.customDirectiveDefinitions.values()) {
       definitions.push(directiveDefinition);

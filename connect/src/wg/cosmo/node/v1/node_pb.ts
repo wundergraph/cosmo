@@ -795,55 +795,6 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.FieldConfiguration
- */
-export class FieldConfiguration extends Message<FieldConfiguration> {
-  /**
-   * @generated from field: string type_name = 1;
-   */
-  typeName = "";
-
-  /**
-   * @generated from field: string field_name = 2;
-   */
-  fieldName = "";
-
-  /**
-   * @generated from field: repeated wg.cosmo.node.v1.ArgumentConfiguration arguments_configuration = 3;
-   */
-  argumentsConfiguration: ArgumentConfiguration[] = [];
-
-  constructor(data?: PartialMessage<FieldConfiguration>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.FieldConfiguration";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "arguments_configuration", kind: "message", T: ArgumentConfiguration, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldConfiguration {
-    return new FieldConfiguration().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldConfiguration {
-    return new FieldConfiguration().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldConfiguration {
-    return new FieldConfiguration().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: FieldConfiguration | PlainMessage<FieldConfiguration> | undefined, b: FieldConfiguration | PlainMessage<FieldConfiguration> | undefined): boolean {
-    return proto3.util.equals(FieldConfiguration, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.node.v1.ArgumentConfiguration
  */
 export class ArgumentConfiguration extends Message<ArgumentConfiguration> {
@@ -883,6 +834,141 @@ export class ArgumentConfiguration extends Message<ArgumentConfiguration> {
 
   static equals(a: ArgumentConfiguration | PlainMessage<ArgumentConfiguration> | undefined, b: ArgumentConfiguration | PlainMessage<ArgumentConfiguration> | undefined): boolean {
     return proto3.util.equals(ArgumentConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.Scopes
+ */
+export class Scopes extends Message<Scopes> {
+  /**
+   * @generated from field: repeated string required_and_scopes = 1;
+   */
+  requiredAndScopes: string[] = [];
+
+  constructor(data?: PartialMessage<Scopes>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.Scopes";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "required_and_scopes", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Scopes {
+    return new Scopes().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Scopes {
+    return new Scopes().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Scopes {
+    return new Scopes().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Scopes | PlainMessage<Scopes> | undefined, b: Scopes | PlainMessage<Scopes> | undefined): boolean {
+    return proto3.util.equals(Scopes, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.AuthorizationConfiguration
+ */
+export class AuthorizationConfiguration extends Message<AuthorizationConfiguration> {
+  /**
+   * @generated from field: bool requires_authentication = 1;
+   */
+  requiresAuthentication = false;
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.Scopes required_or_scopes = 2;
+   */
+  requiredOrScopes: Scopes[] = [];
+
+  constructor(data?: PartialMessage<AuthorizationConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.AuthorizationConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "requires_authentication", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "required_or_scopes", kind: "message", T: Scopes, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuthorizationConfiguration {
+    return new AuthorizationConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AuthorizationConfiguration {
+    return new AuthorizationConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AuthorizationConfiguration {
+    return new AuthorizationConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AuthorizationConfiguration | PlainMessage<AuthorizationConfiguration> | undefined, b: AuthorizationConfiguration | PlainMessage<AuthorizationConfiguration> | undefined): boolean {
+    return proto3.util.equals(AuthorizationConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.FieldConfiguration
+ */
+export class FieldConfiguration extends Message<FieldConfiguration> {
+  /**
+   * @generated from field: string type_name = 1;
+   */
+  typeName = "";
+
+  /**
+   * @generated from field: string field_name = 2;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.ArgumentConfiguration arguments_configuration = 3;
+   */
+  argumentsConfiguration: ArgumentConfiguration[] = [];
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.AuthorizationConfiguration authorization_configuration = 4;
+   */
+  authorizationConfiguration?: AuthorizationConfiguration;
+
+  constructor(data?: PartialMessage<FieldConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FieldConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "arguments_configuration", kind: "message", T: ArgumentConfiguration, repeated: true },
+    { no: 4, name: "authorization_configuration", kind: "message", T: AuthorizationConfiguration },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldConfiguration {
+    return new FieldConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldConfiguration {
+    return new FieldConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldConfiguration {
+    return new FieldConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FieldConfiguration | PlainMessage<FieldConfiguration> | undefined, b: FieldConfiguration | PlainMessage<FieldConfiguration> | undefined): boolean {
+    return proto3.util.equals(FieldConfiguration, a, b);
   }
 }
 

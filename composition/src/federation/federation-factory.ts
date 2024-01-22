@@ -25,7 +25,7 @@ import {
   inputValueDefinitionNodeToMutable,
   interfaceTypeDefinitionNodeToMutable,
   MutableEnumValueDefinitionNode,
-  MutableInputValueDefinitionNode,
+  MutableInputValueDefinitionNode, MutableScalarTypeDefinitionNode,
   MutableTypeDefinitionNode,
   objectTypeDefinitionNodeToMutable,
   objectTypeExtensionNodeToMutable,
@@ -112,6 +112,7 @@ import {
   walkSubgraphToFederate,
 } from '../subgraph/subgraph';
 import {
+  AUTHENTICATED,
   DEFAULT_MUTATION,
   DEFAULT_QUERY,
   DEFAULT_SUBSCRIPTION,
@@ -123,8 +124,8 @@ import {
   INACCESSIBLE,
   OVERRIDE,
   PARENTS,
-  QUERY,
-  ROOT_TYPES,
+  QUERY, REQUIRES_SCOPES,
+  ROOT_TYPES, SCOPE_SCALAR,
   SELECTION_REPRESENTATION,
   TAG,
 } from '../utils/string-constants';
@@ -154,13 +155,12 @@ import {
   ConfigurationData,
   RequiredFieldConfiguration,
 } from '../subgraph/router-configuration';
-import { BASE_SCALARS } from '../utils/constants';
+import { BASE_SCALARS, SCOPE_SCALAR_DEFINITION } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
 import {
   getNormalizedFieldSet,
   isNodeQuery,
   ObjectLikeContainer as NormalizationObjectLikeContainer,
-  ParentContainerByTypeName,
 } from '../normalization/utils';
 import { BREAK, visit } from 'graphql/index';
 
@@ -173,7 +173,7 @@ export class FederationFactory {
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   executableDirectives = new Set<string>();
   parentTypeName = '';
-  persistedDirectives = new Set<string>([DEPRECATED, INACCESSIBLE, TAG]);
+  persistedDirectives = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, REQUIRES_SCOPES, TAG]);
   currentSubgraphName = '';
   childName = '';
   directiveDefinitions: DirectiveMap = new Map<string, DirectiveContainer>();
@@ -1626,8 +1626,11 @@ export class FederationFactory {
         definitions.push(directiveContainer.node);
         continue;
       }
-      // The definitions must be present in all subgraphs to kept in the federated graph
+      // The definitions must be present in all subgraphs to be kept in the federated graph
       this.addValidExecutableDirectiveDefinition(directiveName, directiveContainer, definitions);
+    }
+    if (this.directiveDefinitions.has(REQUIRES_SCOPES)) {
+      definitions.push(SCOPE_SCALAR_DEFINITION as MutableScalarTypeDefinitionNode);
     }
     for (const [typeName, extension] of this.extensions) {
       this.parentTypeName = typeName;
