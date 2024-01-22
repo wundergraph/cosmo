@@ -229,7 +229,9 @@ func (s *MetricsService) PublishGraphQLMetrics(
 			)
 		}()
 
-		err = retryOnError(ctx, requestLogger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+		insertCtx := context.Background()
+
+		err = retryOnError(insertCtx, requestLogger.With(zap.String("component", "operations")), func(ctx context.Context) error {
 			writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
 			if err != nil {
 				return err
@@ -242,7 +244,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 			requestLogger.Error("Failed to write operations", zap.Error(err))
 		}
 
-		err = retryOnError(ctx, requestLogger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+		err = retryOnError(insertCtx, requestLogger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
 			writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
 			if err != nil {
 				return err
