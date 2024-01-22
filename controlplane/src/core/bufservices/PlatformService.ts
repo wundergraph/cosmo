@@ -38,7 +38,6 @@ import {
   GetAnalyticsViewResponse,
   GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
-  GetCheckDetailsResponse,
   GetCheckOperationsResponse,
   GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
@@ -197,7 +196,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (await fedGraphRepo.exists(req.name)) {
+        if (await fedGraphRepo.byName(req.name, req.namespace)) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -242,6 +241,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
           readme: req.readme,
+          namespace: req.namespace,
         });
 
         await fedGraphRepo.createGraphCryptoKeyPairs({
@@ -260,7 +260,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
-        const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: federatedGraph.targetId,
           published: true,
         });
 
@@ -350,7 +351,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const exists = await subgraphRepo.exists(req.name);
+        const exists = await subgraphRepo.byName(req.name, req.namespace);
 
         if (!isValidLabels(req.labels)) {
           return {
@@ -365,6 +366,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!exists) {
           const subgraph = await subgraphRepo.create({
             name: req.name,
+            namespace: req.namespace,
             createdBy: authContext.userId,
             labels: req.labels,
             routingUrl: req.routingUrl,
@@ -443,7 +445,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
 
         if (!subgraph) {
           return {
@@ -495,8 +497,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
 
         const result = req.delete
-          ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name)
-          : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
+          ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, req.namespace)
+          : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, req.namespace, newSchemaSDL);
 
         await schemaCheckRepo.createSchemaCheckCompositions({
           schemaCheckID,
@@ -614,9 +616,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
         const compositionRepo = new GraphCompositionRepository(opts.db);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -676,7 +679,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const result = await compChecker.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
+        const result = await compChecker.composeWithProposedSDL(
+          subgraph.labels,
+          subgraph.name,
+          req.namespace,
+          newSchemaSDL,
+        );
 
         const compositionErrors: PlainMessage<CompositionError>[] = [];
         for (const composition of result.compositions) {
@@ -784,7 +792,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        let subgraph = await subgraphRepo.byName(req.name);
+        let subgraph = await subgraphRepo.byName(req.name, req.namespace);
 
         // Check if the subgraph already exists and if it doesn't, validate input and create it
         if (subgraph) {
@@ -843,6 +851,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // Create the subgraph if it doesn't exist
           subgraph = await subgraphRepo.create({
             name: req.name,
+            namespace: req.namespace,
             createdBy: authContext.userId,
             labels: req.labels,
             routingUrl: req.routingUrl!,
@@ -859,7 +868,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
           {
-            name: req.name,
+            targetId: subgraph.targetId,
             labels: req.labels,
             routingUrl: req.routingUrl,
             subscriptionUrl: req.subscriptionUrl,
@@ -927,7 +936,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const graph = await fedGraphRepo.byName(req.graphName);
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
         if (!graph) {
           return {
@@ -940,7 +949,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
 
         if (!check) {
           return {
@@ -991,7 +1000,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraph = await fedGraphRepo.byName(req.name);
+        const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace);
         if (!federatedGraph) {
           return {
             response: {
@@ -1016,13 +1025,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
         await opts.blobStorage.removeDirectory(blobStorageDirectory);
 
-        const subgraphsTargetIDs: string[] = [];
-        const subgraphs = await subgraphRepo.listByFederatedGraph(req.name);
-        for (const subgraph of subgraphs) {
-          subgraphsTargetIDs.push(subgraph.targetId);
-        }
-
-        await fedGraphRepo.delete(federatedGraph.targetId, subgraphsTargetIDs);
+        await fedGraphRepo.delete(federatedGraph.targetId);
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
@@ -1069,7 +1072,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
         if (!subgraph) {
           return {
             response: {
@@ -1103,7 +1106,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const auditLogRepo = new AuditLogRepository(tx);
 
           // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
-          const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
+          const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels, req.namespace);
 
           // Delete the subgraph
           await subgraphRepo.delete(subgraph.targetId);
@@ -1120,7 +1123,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
 
           // Collect all federated graphs that use this subgraph after deleting the subgraph
-          const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
+          const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels, req.namespace);
 
           // Remove duplicates
           for (const federatedGraph of currentFederatedGraphs) {
@@ -1214,7 +1217,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraph = await fedGraphRepo.byName(req.name);
+        const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace);
         if (!federatedGraph) {
           return {
             response: {
@@ -1250,7 +1253,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         let compositionErrors: PlainMessage<CompositionError>[] = [];
 
         const errors = await fedGraphRepo.update({
-          name: req.name,
+          targetId: federatedGraph.targetId,
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
           updatedBy: authContext.userId,
@@ -1334,7 +1337,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraph = await subgraphRepo.byName(req.name);
+        const subgraph = await subgraphRepo.byName(req.name, req.namespace);
         if (!subgraph) {
           return {
             response: {
@@ -1379,7 +1382,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
           {
-            name: req.name,
+            targetId: subgraph.targetId,
             labels: req.labels,
             subscriptionUrl: req.subscriptionUrl,
             routingUrl: req.routingUrl,
@@ -1458,8 +1461,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const exists = await fedGraphRepo.exists(req.name);
-        if (!exists) {
+        const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace);
+        if (!federatedGraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -1481,7 +1484,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraphs = await subgraphRepo.byGraphLabelMatchers(req.labelMatchers);
+        const subgraphs = await subgraphRepo.byGraphLabelMatchers(req.labelMatchers, req.namespace);
 
         const subgraphsDetails = subgraphs.map((s) => ({
           id: s.id,
@@ -1553,7 +1556,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const graph = await fedGraphRepo.byName(req.graphName);
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
         if (!graph) {
           return {
             response: {
@@ -2282,7 +2285,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (await fedGraphRepo.exists(graph.name)) {
+        if (await fedGraphRepo.byName(graph.name, req.namespace)) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -2293,7 +2296,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         for await (const subgraph of graphDetails.subgraphs) {
-          if (await subgraphRepo.exists(subgraph.name)) {
+          if (await subgraphRepo.byName(subgraph.name, req.namespace)) {
             return {
               response: {
                 code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -2319,6 +2322,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             organizationID: authContext.organizationId,
             db: tx,
             creatorUserId: authContext.userId,
+            namespace: req.namespace,
           });
 
           const composition = await composer.composeFederatedGraph(federatedGraph);
@@ -2331,7 +2335,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         });
 
-        const migratedGraph = await fedGraphRepo.byName(graph.name);
+        const migratedGraph = await fedGraphRepo.byName(graph.name, req.namespace);
         if (!migratedGraph) {
           return {
             response: {
@@ -3086,7 +3090,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraph = await fedGraphRepo.byName(req.fedGraphName);
+        const federatedGraph = await fedGraphRepo.byName(req.fedGraphName, req.namespace);
         if (!federatedGraph) {
           return {
             response: {
@@ -3482,8 +3486,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const federatedGraphRepo = new FederatedGraphRepository(opts.db, organizationId);
 
         // Validate everything before we update any data
-        const schema = await federatedGraphRepo.getLatestValidSchemaVersion(req.fedGraphName);
-        const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName);
+        const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName, req.namespace);
+        const schema = await federatedGraphRepo.getLatestValidSchemaVersion({
+          targetId: federatedGraph?.targetId ?? '',
+        });
         if (!schema?.schema || federatedGraph === undefined) {
           return {
             response: {
@@ -3791,7 +3797,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         // check if the subgraph exists
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
         if (!subgraph) {
           return {
             response: {
@@ -3849,7 +3855,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         // check if the subgraph exists
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
         if (!subgraph) {
           return {
             response: {
@@ -3905,7 +3911,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const targetRepo = new TargetRepository(opts.db, authContext.organizationId);
 
-        const target = await targetRepo.byName(req.targetName);
+        const target = await targetRepo.byName(req.targetName, req.namespace);
         if (!target) {
           return {
             response: {
@@ -3915,7 +3921,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await targetRepo.updateReadmeOfTarget({ name: req.targetName, readme: req.readme });
+        await targetRepo.updateReadmeOfTarget({ id: target.id, readme: req.readme });
 
         return {
           response: {
@@ -3941,6 +3947,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const list = await repo.list({
           limit: req.limit,
           offset: req.offset,
+          namespace: req.namespace,
         });
 
         return {
@@ -3971,7 +3978,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
-        const subgraph = await subgraphRepo.byName(req.name);
+        const subgraph = await subgraphRepo.byName(req.name, req.namespace);
 
         if (!subgraph) {
           return {
@@ -4015,6 +4022,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const list = await fedGraphRepo.list({
           limit: req.limit,
           offset: req.offset,
+          namespace: req.namespace,
         });
 
         let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
@@ -4055,7 +4063,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
 
         if (!subgraph) {
           return {
@@ -4067,7 +4075,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
+        const federatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels, req.namespace);
 
         return {
           graphs: federatedGraphs.map((g) => ({
@@ -4097,7 +4105,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const schemaVersion = await fedRepo.getLatestValidSchemaVersion(req.name);
+
+        const federatedGraph = await fedRepo.byName(req.name, req.namespace);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'The requested federated graph was not found',
+            },
+          };
+        }
+        const schemaVersion = await fedRepo.getLatestValidSchemaVersion({ targetId: federatedGraph.targetId });
 
         if (!schemaVersion || !schemaVersion.schema) {
           return {
@@ -4125,8 +4143,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const subgraph = await subgraphRepo.byName(req.name);
-        if (!subgraph) {
+        const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const subgraph = await subgraphRepo.byName(req.name, req.namespace);
+        const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName, req.namespace);
+        if (!subgraph || !federatedGraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -4134,7 +4155,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion(req.name, req.fedGraphName);
+        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion({
+          subgraphTargetId: subgraph.targetId,
+          federatedGraphTargetId: federatedGraph.targetId,
+        });
         if (!schemaVersion) {
           return {
             response: {
@@ -4161,7 +4185,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetLatestSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const subgraph = await subgraphRepo.byName(req.name);
+        const subgraph = await subgraphRepo.byName(req.name, req.namespace);
         if (!subgraph) {
           return {
             response: {
@@ -4192,7 +4216,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
-        const federatedGraph = await fedRepo.byName(req.name);
+        const federatedGraph = await fedRepo.byName(req.name, req.namespace);
 
         if (!federatedGraph) {
           return {
@@ -4212,7 +4236,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           requestSeries = await analyticsDashRepo.getWeeklyRequestSeries(federatedGraph.id, authContext.organizationId);
         }
 
-        const list = await subgraphRepo.listByFederatedGraph(req.name, { published: true });
+        const list = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: federatedGraph.targetId,
+          published: true,
+        });
 
         const routerRequestToken = await fedRepo.getGraphSignedToken({
           federatedGraphId: federatedGraph.id,
@@ -4315,7 +4342,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const federatedGraph = await fedgraphRepo.byName(req.name);
+        const federatedGraph = await fedgraphRepo.byName(req.name, req.namespace);
         if (!federatedGraph) {
           return {
             response: {
@@ -4396,7 +4423,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const federatedGraph = await fedgraphRepo.byName(req.name);
+        const federatedGraph = await fedgraphRepo.byName(req.name, req.namespace);
         if (!federatedGraph) {
           return {
             response: {
@@ -4434,13 +4461,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const checksData = await subgraphRepo.checks({
-          federatedGraphName: req.name,
+          federatedGraphTargetId: federatedGraph.targetId,
           limit: req.limit,
           offset: req.offset,
           startDate: dateRange.start,
           endDate: dateRange.end,
         });
-        const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
+        const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphTargetId: federatedGraph.targetId });
 
         return {
           response: {
@@ -4465,7 +4492,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
-        const graph = await fedGraphRepo.byName(req.graphName);
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
         if (!graph) {
           return {
@@ -4480,7 +4507,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
         const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
         if (!check || !checkDetails) {
@@ -4524,7 +4551,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
-        const graph = await fedGraphRepo.byName(req.graphName);
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
         if (!graph) {
           return {
@@ -4538,7 +4565,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
         const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
         if (!check || !checkDetails) {
@@ -4573,62 +4600,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getCheckDetails: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetCheckDetailsResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-
-        const graph = await fedGraphRepo.byName(req.graphName);
-
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested graph does not exist',
-            },
-            changes: [],
-            compositionErrors: [],
-            trafficCheckDays: 0,
-            createdAt: '',
-          };
-        }
-
-        const check = await subgraphRepo.checkById(req.checkId, graph.name);
-        const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
-
-        if (!check || !details) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested check not found',
-            },
-            changes: [],
-            compositionErrors: [],
-            trafficCheckDays: 0,
-            createdAt: '',
-          };
-        }
-
-        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          ...details,
-          trafficCheckDays,
-          createdAt: check?.timestamp,
-        };
-      });
-    },
-
     getAnalyticsView: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -4648,7 +4619,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
         if (!graph) {
           return {
             response: {
@@ -4713,7 +4684,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
         if (!graph) {
           return {
             response: {
@@ -4748,7 +4719,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const timeFilters = parseTimeFilters(dateRange, range);
 
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name, { published: true });
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: graph.targetId,
+          published: true,
+        });
         const view = await analyticsDashRepo.getView(graph.id, authContext.organizationId, timeFilters, subgraphs);
 
         return {
@@ -4783,7 +4757,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
         if (!graph) {
           return {
             response: {
@@ -4842,7 +4816,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
         if (!graph) {
           return {
             response: {
@@ -4947,7 +4921,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const federatedGraph = await fedGraphRepo.byName(req.graphName);
+        const federatedGraph = await fedGraphRepo.byName(req.graphName, req.namespace);
         if (!federatedGraph) {
           return {
             response: {
@@ -5084,7 +5058,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const federatedGraph = await fedRepo.byName(req.fedGraphName);
+        const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
         if (!federatedGraph) {
           return {
             response: {
@@ -5209,7 +5183,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const usageRepo = new UsageRepository(opts.chClient);
 
-        const graph = await federatedGraphRepo.byName(req.graphName);
+        const graph = await federatedGraphRepo.byName(req.graphName, req.namespace);
         if (!graph) {
           return {
             response: {
@@ -5345,7 +5319,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetPersistedOperationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const federatedGraph = await fedRepo.byName(req.federatedGraphName);
+        const federatedGraph = await fedRepo.byName(req.federatedGraphName, req.namespace);
 
         if (!federatedGraph) {
           return {
@@ -5381,7 +5355,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetClientsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const federatedGraph = await fedRepo.byName(req.fedGraphName);
+        const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
         if (!federatedGraph) {
           return {
             response: {
@@ -5464,7 +5438,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const graphCompositionRepository = new GraphCompositionRepository(opts.db);
 
-        const federatedGraph = await fedRepo.byName(req.fedGraphName);
+        const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
 
         if (!federatedGraph) {
           return {
@@ -5590,8 +5564,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
+        const graph = await fedRepo.byName(req.graphName, req.namespace);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `The federated graph was not found`,
+            },
+            sdl: '',
+          };
+        }
+
         const sdl = await fedRepo.getSdlBasedOnSchemaVersion({
-          graphName: req.graphName,
+          targetId: graph.targetId,
           schemaVersionId: req.schemaVersionId,
         });
 
@@ -5643,12 +5628,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
         if (authContext.isAdmin) {
-          const federatedGraphs = await fedRepo.list({
+          const federatedGraphs = await fedRepo.listAll({
             limit: 0,
             offset: 0,
           });
 
-          const subgraphs = await subgraphRepo.list({
+          const subgraphs = await subgraphRepo.listAll({
             limit: 0,
             offset: 0,
           });
@@ -5699,7 +5684,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
         // check if the subgraph exists
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
         if (!subgraph) {
           return {
             response: {

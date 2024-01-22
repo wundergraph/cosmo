@@ -10,39 +10,40 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schemaPush = new Command('publish');
-  schemaPush.description(
+  const command = new Command('publish');
+  command.description(
     "Publishes a subgraph on the control plane. If the subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
-  schemaPush.argument(
+  command.argument(
     '<name>',
     'The name of the subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your subgraph.',
   );
-  schemaPush.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
-  schemaPush.option(
+  command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
+  command.option('-ns, --namespace', 'The namespace of the subgraph. Fallback to "default"', 'default');
+  command.option(
     '-r, --routing-url <url>',
     'The routing url of your subgraph. This is the url that the subgraph will be accessible at (Only required to create the subgraph).',
   );
-  schemaPush.option(
+  command.option(
     '--label [labels...]',
     'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. Required to create the subgraph.',
     [],
   );
-  schemaPush.option(
+  command.option(
     '--header [headers...]',
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
     [],
   );
-  schemaPush.option(
+  command.option(
     '--subscription-url [url]',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.',
   );
-  schemaPush.option(
+  command.option(
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
   );
 
-  schemaPush.action(async (name, options) => {
+  command.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
       console.log(
@@ -56,6 +57,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
         name,
+        namespace: options.namespace,
         // Publish schema only
         schema: await readFile(schemaFile),
         // Optional when subgraph does not exist yet
@@ -102,5 +104,5 @@ export default (opts: BaseCommandOptions) => {
     }
   });
 
-  return schemaPush;
+  return command;
 };

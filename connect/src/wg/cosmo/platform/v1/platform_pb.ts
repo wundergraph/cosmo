@@ -440,6 +440,11 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
    */
   subscriptionUrl?: string;
 
+  /**
+   * @generated from field: string namespace = 8;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -455,6 +460,7 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
     { no: 5, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 6, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 7, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphRequest {
@@ -602,6 +608,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   delete?: boolean;
 
+  /**
+   * @generated from field: string namespace = 5;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -614,6 +625,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 2, name: "schema", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 3, name: "gitInfo", kind: "message", T: GitInfo },
     { no: 4, name: "delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
@@ -651,6 +663,11 @@ export class FixSubgraphSchemaRequest extends Message<FixSubgraphSchemaRequest> 
    */
   schema = new Uint8Array(0);
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<FixSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -661,6 +678,7 @@ export class FixSubgraphSchemaRequest extends Message<FixSubgraphSchemaRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schema", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FixSubgraphSchemaRequest {
@@ -712,6 +730,11 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
    */
   readme?: string;
 
+  /**
+   * @generated from field: string namespace = 5;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<CreateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -724,6 +747,7 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphRequest {
@@ -796,6 +820,11 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
    */
   readme?: string;
 
+  /**
+   * @generated from field: string namespace = 8;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<CreateFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -811,6 +840,7 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedSubgraphRequest {
@@ -839,6 +869,11 @@ export class DeleteFederatedGraphRequest extends Message<DeleteFederatedGraphReq
    */
   name = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<DeleteFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -848,6 +883,7 @@ export class DeleteFederatedGraphRequest extends Message<DeleteFederatedGraphReq
   static readonly typeName = "wg.cosmo.platform.v1.DeleteFederatedGraphRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedGraphRequest {
@@ -878,6 +914,11 @@ export class DeleteFederatedSubgraphRequest extends Message<DeleteFederatedSubgr
    */
   subgraphName = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<DeleteFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -887,6 +928,7 @@ export class DeleteFederatedSubgraphRequest extends Message<DeleteFederatedSubgr
   static readonly typeName = "wg.cosmo.platform.v1.DeleteFederatedSubgraphRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphRequest {
@@ -1345,6 +1387,11 @@ export class GetFederatedGraphsRequest extends Message<GetFederatedGraphsRequest
    */
   includeMetrics = false;
 
+  /**
+   * @generated from field: string namespace = 4;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetFederatedGraphsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1356,6 +1403,7 @@ export class GetFederatedGraphsRequest extends Message<GetFederatedGraphsRequest
     { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "includeMetrics", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphsRequest {
@@ -1524,6 +1572,11 @@ export class GetFederatedGraphsBySubgraphLabelsRequest extends Message<GetFedera
    */
   subgraphName = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetFederatedGraphsBySubgraphLabelsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1533,6 +1586,7 @@ export class GetFederatedGraphsBySubgraphLabelsRequest extends Message<GetFedera
   static readonly typeName = "wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphsBySubgraphLabelsRequest {
@@ -1609,6 +1663,11 @@ export class GetSubgraphsRequest extends Message<GetSubgraphsRequest> {
    */
   offset = 0;
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetSubgraphsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1619,6 +1678,7 @@ export class GetSubgraphsRequest extends Message<GetSubgraphsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphsRequest {
@@ -1780,6 +1840,11 @@ export class GetFederatedGraphByNameRequest extends Message<GetFederatedGraphByN
    */
   includeMetrics = false;
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetFederatedGraphByNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1790,6 +1855,7 @@ export class GetFederatedGraphByNameRequest extends Message<GetFederatedGraphByN
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "includeMetrics", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphByNameRequest {
@@ -1879,6 +1945,11 @@ export class GetFederatedGraphSDLByNameRequest extends Message<GetFederatedGraph
    */
   name = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetFederatedGraphSDLByNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1888,6 +1959,7 @@ export class GetFederatedGraphSDLByNameRequest extends Message<GetFederatedGraph
   static readonly typeName = "wg.cosmo.platform.v1.GetFederatedGraphSDLByNameRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphSDLByNameRequest {
@@ -1965,6 +2037,11 @@ export class GetSubgraphByNameRequest extends Message<GetSubgraphByNameRequest> 
    */
   name = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetSubgraphByNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1974,6 +2051,7 @@ export class GetSubgraphByNameRequest extends Message<GetSubgraphByNameRequest> 
   static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphByNameRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphByNameRequest {
@@ -2056,6 +2134,11 @@ export class GetLatestValidSubgraphSDLByNameRequest extends Message<GetLatestVal
    */
   fedGraphName = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetLatestValidSubgraphSDLByNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2066,6 +2149,7 @@ export class GetLatestValidSubgraphSDLByNameRequest extends Message<GetLatestVal
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestValidSubgraphSDLByNameRequest {
@@ -2143,6 +2227,11 @@ export class GetLatestSubgraphSDLByNameRequest extends Message<GetLatestSubgraph
    */
   name = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetLatestSubgraphSDLByNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2152,6 +2241,7 @@ export class GetLatestSubgraphSDLByNameRequest extends Message<GetLatestSubgraph
   static readonly typeName = "wg.cosmo.platform.v1.GetLatestSubgraphSDLByNameRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestSubgraphSDLByNameRequest {
@@ -2249,6 +2339,11 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
    */
   endDate = "";
 
+  /**
+   * @generated from field: string namespace = 6;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2262,6 +2357,7 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
     { no: 3, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameRequest {
@@ -2496,6 +2592,11 @@ export class GetCheckSummaryRequest extends Message<GetCheckSummaryRequest> {
    */
   graphName = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetCheckSummaryRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2506,6 +2607,7 @@ export class GetCheckSummaryRequest extends Message<GetCheckSummaryRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryRequest {
@@ -2685,110 +2787,6 @@ export class GetCheckSummaryResponse_AffectedGraph extends Message<GetCheckSumma
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetCheckDetailsRequest
- */
-export class GetCheckDetailsRequest extends Message<GetCheckDetailsRequest> {
-  /**
-   * @generated from field: string check_id = 1;
-   */
-  checkId = "";
-
-  /**
-   * @generated from field: string graph_name = 2;
-   */
-  graphName = "";
-
-  constructor(data?: PartialMessage<GetCheckDetailsRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetCheckDetailsRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckDetailsRequest {
-    return new GetCheckDetailsRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCheckDetailsRequest {
-    return new GetCheckDetailsRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCheckDetailsRequest {
-    return new GetCheckDetailsRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetCheckDetailsRequest | PlainMessage<GetCheckDetailsRequest> | undefined, b: GetCheckDetailsRequest | PlainMessage<GetCheckDetailsRequest> | undefined): boolean {
-    return proto3.util.equals(GetCheckDetailsRequest, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.GetCheckDetailsResponse
- */
-export class GetCheckDetailsResponse extends Message<GetCheckDetailsResponse> {
-  /**
-   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
-   */
-  response?: Response;
-
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.SchemaChange changes = 2;
-   */
-  changes: SchemaChange[] = [];
-
-  /**
-   * @generated from field: repeated string compositionErrors = 3;
-   */
-  compositionErrors: string[] = [];
-
-  /**
-   * @generated from field: int32 traffic_check_days = 4;
-   */
-  trafficCheckDays = 0;
-
-  /**
-   * @generated from field: string created_at = 5;
-   */
-  createdAt = "";
-
-  constructor(data?: PartialMessage<GetCheckDetailsResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetCheckDetailsResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "changes", kind: "message", T: SchemaChange, repeated: true },
-    { no: 3, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckDetailsResponse {
-    return new GetCheckDetailsResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCheckDetailsResponse {
-    return new GetCheckDetailsResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCheckDetailsResponse {
-    return new GetCheckDetailsResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetCheckDetailsResponse | PlainMessage<GetCheckDetailsResponse> | undefined, b: GetCheckDetailsResponse | PlainMessage<GetCheckDetailsResponse> | undefined): boolean {
-    return proto3.util.equals(GetCheckDetailsResponse, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.platform.v1.GetCheckOperationsRequest
  */
 export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest> {
@@ -2802,6 +2800,11 @@ export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest
    */
   graphName = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetCheckOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2812,6 +2815,7 @@ export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsRequest {
@@ -3052,6 +3056,11 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
    */
   dateRange?: DateRange;
 
+  /**
+   * @generated from field: string namespace = 4;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetFederatedGraphChangelogRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3063,6 +3072,7 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "pagination", kind: "message", T: Pagination },
     { no: 3, name: "dateRange", kind: "message", T: DateRange },
+    { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphChangelogRequest {
@@ -3327,6 +3337,11 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   readme?: string;
 
+  /**
+   * @generated from field: string namespace = 8;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3342,6 +3357,7 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {
@@ -3428,6 +3444,11 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
    */
   readme?: string;
 
+  /**
+   * @generated from field: string namespace = 5;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<UpdateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3440,6 +3461,7 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphRequest {
@@ -3516,6 +3538,11 @@ export class CheckFederatedGraphRequest extends Message<CheckFederatedGraphReque
    */
   labelMatchers: string[] = [];
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<CheckFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3526,6 +3553,7 @@ export class CheckFederatedGraphRequest extends Message<CheckFederatedGraphReque
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckFederatedGraphRequest {
@@ -3862,6 +3890,11 @@ export class GetAnalyticsViewRequest extends Message<GetAnalyticsViewRequest> {
    */
   config?: AnalyticsConfig;
 
+  /**
+   * @generated from field: string namespace = 4;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetAnalyticsViewRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3873,6 +3906,7 @@ export class GetAnalyticsViewRequest extends Message<GetAnalyticsViewRequest> {
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "enum", T: proto3.getEnumType(AnalyticsViewGroupName) },
     { no: 3, name: "config", kind: "message", T: AnalyticsConfig },
+    { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalyticsViewRequest {
@@ -4287,6 +4321,11 @@ export class GetDashboardAnalyticsViewRequest extends Message<GetDashboardAnalyt
    */
   range = 0;
 
+  /**
+   * @generated from field: string namespace = 5;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetDashboardAnalyticsViewRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4299,6 +4338,7 @@ export class GetDashboardAnalyticsViewRequest extends Message<GetDashboardAnalyt
     { no: 2, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDashboardAnalyticsViewRequest {
@@ -4601,6 +4641,11 @@ export class CreateFederatedGraphTokenRequest extends Message<CreateFederatedGra
    */
   tokenName = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<CreateFederatedGraphTokenRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4611,6 +4656,7 @@ export class CreateFederatedGraphTokenRequest extends Message<CreateFederatedGra
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "graphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "tokenName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphTokenRequest {
@@ -5406,6 +5452,11 @@ export class MigrateFromApolloRequest extends Message<MigrateFromApolloRequest> 
    */
   variantName = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<MigrateFromApolloRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5416,6 +5467,7 @@ export class MigrateFromApolloRequest extends Message<MigrateFromApolloRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "apiKey", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "variantName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MigrateFromApolloRequest {
@@ -5896,6 +5948,11 @@ export class GetRouterTokensRequest extends Message<GetRouterTokensRequest> {
    */
   fedGraphName = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetRouterTokensRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5905,6 +5962,7 @@ export class GetRouterTokensRequest extends Message<GetRouterTokensRequest> {
   static readonly typeName = "wg.cosmo.platform.v1.GetRouterTokensRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRouterTokensRequest {
@@ -5981,6 +6039,11 @@ export class DeleteRouterTokenRequest extends Message<DeleteRouterTokenRequest> 
    */
   fedGraphName = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<DeleteRouterTokenRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5991,6 +6054,7 @@ export class DeleteRouterTokenRequest extends Message<DeleteRouterTokenRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "tokenName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteRouterTokenRequest {
@@ -6109,6 +6173,11 @@ export class PublishPersistedOperationsRequest extends Message<PublishPersistedO
    */
   operations: PersistedOperation[] = [];
 
+  /**
+   * @generated from field: string namespace = 4;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<PublishPersistedOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6120,6 +6189,7 @@ export class PublishPersistedOperationsRequest extends Message<PublishPersistedO
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "operations", kind: "message", T: PersistedOperation, repeated: true },
+    { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishPersistedOperationsRequest {
@@ -6251,6 +6321,11 @@ export class GetPersistedOperationsRequest extends Message<GetPersistedOperation
    */
   clientId = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetPersistedOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6261,6 +6336,7 @@ export class GetPersistedOperationsRequest extends Message<GetPersistedOperation
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federated_graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "client_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPersistedOperationsRequest {
@@ -8312,6 +8388,11 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
    */
   filters: AnalyticsFilter[] = [];
 
+  /**
+   * @generated from field: string namespace = 5;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetGraphMetricsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8324,6 +8405,7 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "dateRange", kind: "message", T: DateRange },
     { no: 4, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsRequest {
@@ -8660,6 +8742,11 @@ export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateReque
    */
   filters: AnalyticsFilter[] = [];
 
+  /**
+   * @generated from field: string namespace = 5;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetMetricsErrorRateRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8672,6 +8759,7 @@ export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateReque
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "dateRange", kind: "message", T: DateRange },
     { no: 4, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsErrorRateRequest {
@@ -8803,6 +8891,11 @@ export class ForceCheckSuccessRequest extends Message<ForceCheckSuccessRequest> 
    */
   graphName = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<ForceCheckSuccessRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8813,6 +8906,7 @@ export class ForceCheckSuccessRequest extends Message<ForceCheckSuccessRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ForceCheckSuccessRequest {
@@ -9891,6 +9985,11 @@ export class GetCompositionsRequest extends Message<GetCompositionsRequest> {
    */
   endDate = "";
 
+  /**
+   * @generated from field: string namespace = 6;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetCompositionsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9904,6 +10003,7 @@ export class GetCompositionsRequest extends Message<GetCompositionsRequest> {
     { no: 3, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionsRequest {
@@ -10072,6 +10172,11 @@ export class GetSdlBySchemaVersionRequest extends Message<GetSdlBySchemaVersionR
    */
   graphName = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetSdlBySchemaVersionRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10082,6 +10187,7 @@ export class GetSdlBySchemaVersionRequest extends Message<GetSdlBySchemaVersionR
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "schemaVersionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "graphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSdlBySchemaVersionRequest {
@@ -10509,6 +10615,11 @@ export class AddSubgraphMemberRequest extends Message<AddSubgraphMemberRequest> 
    */
   userEmail = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<AddSubgraphMemberRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10519,6 +10630,7 @@ export class AddSubgraphMemberRequest extends Message<AddSubgraphMemberRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "userEmail", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddSubgraphMemberRequest {
@@ -10589,6 +10701,11 @@ export class RemoveSubgraphMemberRequest extends Message<RemoveSubgraphMemberReq
    */
   subgraphMemberId = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<RemoveSubgraphMemberRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10599,6 +10716,7 @@ export class RemoveSubgraphMemberRequest extends Message<RemoveSubgraphMemberReq
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "subgraphMemberId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveSubgraphMemberRequest {
@@ -10664,6 +10782,11 @@ export class GetSubgraphMembersRequest extends Message<GetSubgraphMembersRequest
    */
   subgraphName = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetSubgraphMembersRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10673,6 +10796,7 @@ export class GetSubgraphMembersRequest extends Message<GetSubgraphMembersRequest
   static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphMembersRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphMembersRequest {
@@ -10798,6 +10922,11 @@ export class AddReadmeRequest extends Message<AddReadmeRequest> {
    */
   readme = "";
 
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<AddReadmeRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10808,6 +10937,7 @@ export class AddReadmeRequest extends Message<AddReadmeRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "targetName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddReadmeRequest {
@@ -10940,6 +11070,11 @@ export class GetClientsRequest extends Message<GetClientsRequest> {
    */
   fedGraphName = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetClientsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10949,6 +11084,7 @@ export class GetClientsRequest extends Message<GetClientsRequest> {
   static readonly typeName = "wg.cosmo.platform.v1.GetClientsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetClientsRequest {
@@ -11045,6 +11181,11 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
    */
   dateRange?: DateRange;
 
+  /**
+   * @generated from field: string namespace = 7;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetFieldUsageRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -11059,6 +11200,7 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
     { no: 4, name: "field", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 6, name: "dateRange", kind: "message", T: DateRange },
+    { no: 7, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFieldUsageRequest {
@@ -12142,6 +12284,49 @@ export class SetDiscussionResolutionResponse extends Message<SetDiscussionResolu
 
   static equals(a: SetDiscussionResolutionResponse | PlainMessage<SetDiscussionResolutionResponse> | undefined, b: SetDiscussionResolutionResponse | PlainMessage<SetDiscussionResolutionResponse> | undefined): boolean {
     return proto3.util.equals(SetDiscussionResolutionResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetConfigRequest
+ */
+export class GetConfigRequest extends Message<GetConfigRequest> {
+  /**
+   * @generated from field: string graph_name = 1;
+   */
+  graphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigRequest {
+    return new GetConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetConfigRequest {
+    return new GetConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetConfigRequest {
+    return new GetConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined, b: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined): boolean {
+    return proto3.util.equals(GetConfigRequest, a, b);
   }
 }
 

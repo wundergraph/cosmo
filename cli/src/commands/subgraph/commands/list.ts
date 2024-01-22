@@ -18,12 +18,14 @@ type OutputFile = {
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
-  command.description('Lists subgraphs.');
+  command.description('Lists subgraphs from a given namespace.');
+  command.option('-ns, --namespace', 'The namespace of the subgraphs. Fallback to "default"', 'default');
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.action(async (options) => {
     const resp = await opts.client.platform.getSubgraphs(
       {
+        namespace: options.namespace,
         // limit 0 fetches all
         limit: 0,
         offset: 0,

@@ -199,12 +199,14 @@ export default class ApolloMigrator {
   }
 
   public migrateGraphFromApollo({
+    namespace,
     fedGraph,
     subgraphs,
     organizationID,
     db,
     creatorUserId,
   }: {
+    namespace: string;
     fedGraph: {
       name: string;
       routingURL: string;
@@ -220,14 +222,16 @@ export default class ApolloMigrator {
       const sanitizedGraphName = sanitizeMigratedGraphName(fedGraph.name);
       const federatedGraph = await fedGraphRepo.create({
         name: fedGraph.name,
+        namespace,
         labelMatchers: ['env=main', `name=${sanitizedGraphName}`],
         routingUrl: fedGraph.routingURL,
         createdBy: creatorUserId,
       });
 
       for (const subgraph of subgraphs) {
-        await subgraphRepo.create({
+        const createdSubgraph = await subgraphRepo.create({
           name: subgraph.name,
+          namespace,
           createdBy: creatorUserId,
           labels: [
             { key: 'env', value: 'main' },
@@ -237,7 +241,11 @@ export default class ApolloMigrator {
           subscriptionProtocol: 'ws',
         });
 
-        await subgraphRepo.addSchemaVersion(subgraph.name, subgraph.schema);
+        if (!createdSubgraph) {
+          throw new Error(`Could not create subgraph ${subgraph.name}`);
+        }
+
+        await subgraphRepo.addSchemaVersion({ targetId: createdSubgraph.targetId, subgraphSchema: subgraph.schema });
       }
 
       await fedGraphRepo.createGraphCryptoKeyPairs({

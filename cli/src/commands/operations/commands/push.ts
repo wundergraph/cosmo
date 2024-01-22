@@ -136,6 +136,7 @@ export default (opts: BaseCommandOptions) => {
     collect,
     [],
   );
+  command.option('-ns, --namespace', 'The namespace of the federated graph. Fallback to "default"', 'default');
   command.option('-q, --quiet', 'Do not print any output', false);
   command.option('--allow-conflicts', 'Exit with success even if there are conflicts', false);
   command.option('--format <output-format>', 'Output format: supported ones are text and json', 'text');
@@ -156,6 +157,7 @@ export default (opts: BaseCommandOptions) => {
     const result = await opts.client.platform.publishPersistedOperations(
       {
         fedGraphName: name,
+        namespace: options.namespace,
         clientName: options.client,
         operations,
       },

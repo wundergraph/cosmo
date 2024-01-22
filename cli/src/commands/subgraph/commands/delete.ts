@@ -7,11 +7,12 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const deleteSubgraph = new Command('delete');
-  deleteSubgraph.description('Deletes a subgraph on the control plane.');
-  deleteSubgraph.argument('<name>', 'The name of the subgraph to delete.');
-  deleteSubgraph.option('-f --force', 'Option to force delete');
-  deleteSubgraph.action(async (name, options) => {
+  const command = new Command('delete');
+  command.description('Deletes a subgraph on the control plane.');
+  command.argument('<name>', 'The name of the subgraph to delete.');
+  command.option('-ns, --namespace', 'The namespace of the subgraph. Fallback to "default"', 'default');
+  command.option('-f --force', 'Option to force delete');
+  command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
@@ -26,6 +27,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.deleteFederatedSubgraph(
       {
         subgraphName: name,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,
@@ -62,5 +64,5 @@ export default (opts: BaseCommandOptions) => {
     }
   });
 
-  return deleteSubgraph;
+  return command;
 };

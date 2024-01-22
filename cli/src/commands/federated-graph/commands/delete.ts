@@ -6,11 +6,12 @@ import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
-  const deleteFederatedGraph = new Command('delete');
-  deleteFederatedGraph.description('Deletes a federated graph on the control plane.');
-  deleteFederatedGraph.argument('<name>', 'The name of the federated graph to delete.');
-  deleteFederatedGraph.option('-f --force', 'Option to force delete');
-  deleteFederatedGraph.action(async (name, options) => {
+  const command = new Command('delete');
+  command.description('Deletes a federated graph on the control plane.');
+  command.argument('<name>', 'The name of the federated graph to delete.');
+  command.option('-ns, --namespace', 'The namespace of the federated graph. Fallback to "default"', 'default');
+  command.option('-f --force', 'Option to force delete');
+  command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
@@ -24,6 +25,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.deleteFederatedGraph(
       {
         name,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,
@@ -41,5 +43,5 @@ export default (opts: BaseCommandOptions) => {
     }
   });
 
-  return deleteFederatedGraph;
+  return command;
 };

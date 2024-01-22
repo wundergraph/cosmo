@@ -228,6 +228,27 @@ export const federatedGraphToSubgraphsRelations = relations(subgraphsToFederated
   }),
 }));
 
+export const namespaces = pgTable(
+  'namespaces',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      uniqueName: unique('unique_name').on(t.name, t.organizationId),
+    };
+  },
+);
+
 export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph'] as const);
 
 export const targets = pgTable(
@@ -247,6 +268,11 @@ export const targets = pgTable(
       onDelete: 'set null',
     }),
     readme: text('readme'),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
   },
   (t) => {
     return {
@@ -300,6 +326,14 @@ export const targetsRelations = relations(targets, ({ one, many }) => ({
     references: [federatedGraphs.targetId],
   }),
   labelMatchers: many(targetLabelMatchers),
+  namespace: one(namespaces, {
+    fields: [targets.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
+
+export const namespacesRelations = relations(namespaces, ({ many }) => ({
+  targets: many(targets),
 }));
 
 export const schemaVersion = pgTable('schema_versions', {

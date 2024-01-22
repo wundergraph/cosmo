@@ -9,22 +9,23 @@ import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
-  const createFederatedGraph = new Command('create');
-  createFederatedGraph.description('Creates a federated graph on the control plane.');
-  createFederatedGraph.argument(
+  const command = new Command('create');
+  command.description('Creates a federated graph on the control plane.');
+  command.argument(
     '<name>',
     'The name of the federated graph to create. It is usually in the format of <org>.<env> and is used to uniquely identify your federated graph.',
   );
-  createFederatedGraph.requiredOption(
+  command.option('-ns, --namespace', 'The namespace of the federated graph. Fallback to "default"', 'default');
+  command.requiredOption(
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',
   );
-  createFederatedGraph.requiredOption(
+  command.requiredOption(
     '--label-matcher [labels...]',
     'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
   );
-  createFederatedGraph.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
-  createFederatedGraph.action(async (name, options) => {
+  command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
+  command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
       readmeFile = resolve(process.cwd(), options.readme);
@@ -44,6 +45,7 @@ export default (opts: BaseCommandOptions) => {
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,
@@ -80,5 +82,5 @@ export default (opts: BaseCommandOptions) => {
     }
   });
 
-  return createFederatedGraph;
+  return command;
 };

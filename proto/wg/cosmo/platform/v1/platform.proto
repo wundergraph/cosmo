@@ -39,7 +39,7 @@ message PublishFederatedSubgraphRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
   // url used for subscriptions
   optional string subscription_url = 7;
-
+  string namespace = 8;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -62,6 +62,7 @@ message CheckSubgraphSchemaRequest {
   GitInfo gitInfo = 3;
   // Check breaking changes and composition when this subgraph is deleted
   optional bool delete = 4;
+  string namespace = 5;
 }
 
 message FixSubgraphSchemaRequest {
@@ -69,6 +70,7 @@ message FixSubgraphSchemaRequest {
   string subgraph_name = 1;
   // The binary representation of the schema, the content of the file
   bytes schema = 2;
+  string namespace = 3;
 }
 
 message CreateFederatedGraphRequest {
@@ -80,6 +82,7 @@ message CreateFederatedGraphRequest {
   repeated string label_matchers = 3;
   // readme of the fed graph
   optional string readme = 4;
+  string namespace = 5;
 }
 
 message CreateFederatedSubgraphRequest {
@@ -97,15 +100,18 @@ message CreateFederatedSubgraphRequest {
   optional string subscription_url = 6;
   // readme of the subgraph
   optional string readme = 7;
+  string namespace = 8;
 }
 
 message DeleteFederatedGraphRequest {
   string name = 1;
+  string namespace = 2;
 }
 
 message DeleteFederatedSubgraphRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
+  string namespace = 2;
 }
 
 message SchemaChange{
@@ -164,6 +170,7 @@ message GetFederatedGraphsRequest {
   int32 limit = 1;
   int32 offset = 2;
   bool includeMetrics = 3;
+  string namespace = 4;
 }
 
 message FederatedGraph {
@@ -187,6 +194,7 @@ message GetFederatedGraphsResponse {
 
 message GetFederatedGraphsBySubgraphLabelsRequest {
   string subgraphName = 1;
+  string namespace = 2;
 }
 
 message GetFederatedGraphsBySubgraphLabelsResponse {
@@ -197,6 +205,7 @@ message GetFederatedGraphsBySubgraphLabelsResponse {
 message GetSubgraphsRequest {
   int32 limit = 1;
   int32 offset = 2;
+  string namespace = 3;
 }
 
 message Subgraph {
@@ -219,6 +228,7 @@ message GetSubgraphsResponse {
 message GetFederatedGraphByNameRequest {
   string name = 1;
   bool includeMetrics = 2;
+  string namespace = 3;
 }
 
 message GetFederatedGraphByNameResponse {
@@ -231,6 +241,7 @@ message GetFederatedGraphByNameResponse {
 
 message GetFederatedGraphSDLByNameRequest {
   string name = 1;
+  string namespace = 2;
 }
 
 message GetFederatedGraphSDLByNameResponse {
@@ -241,6 +252,7 @@ message GetFederatedGraphSDLByNameResponse {
 
 message GetSubgraphByNameRequest {
   string name = 1;
+  string namespace = 2;
 }
 
 message GetSubgraphByNameResponse {
@@ -252,6 +264,7 @@ message GetSubgraphByNameResponse {
 message GetLatestValidSubgraphSDLByNameRequest {
   string name = 1;
   string fedGraphName = 2;
+  string namespace = 3;
 }
 
 message GetLatestValidSubgraphSDLByNameResponse {
@@ -262,6 +275,7 @@ message GetLatestValidSubgraphSDLByNameResponse {
 
 message GetLatestSubgraphSDLByNameRequest {
   string name = 1;
+  string namespace = 2;
 }
 
 message GetLatestSubgraphSDLByNameResponse {
@@ -276,6 +290,7 @@ message GetChecksByFederatedGraphNameRequest {
   int32 offset = 3;
   string startDate = 4;
   string endDate = 5;
+  string namespace = 6;
 }
 
 message SchemaCheck {
@@ -308,6 +323,7 @@ message GetChecksByFederatedGraphNameResponse {
 message GetCheckSummaryRequest {
   string check_id = 1;
   string graph_name = 2;
+  string namespace = 3;
 }
 
 message ChangeCounts {
@@ -330,22 +346,10 @@ message GetCheckSummaryResponse {
   int32 traffic_check_days = 8;
 }
 
-message GetCheckDetailsRequest {
-  string check_id = 1;
-  string graph_name = 2;
-}
-
-message GetCheckDetailsResponse {
-  Response response = 1;
-  repeated SchemaChange changes = 2;
-  repeated string compositionErrors = 3;
-  int32 traffic_check_days = 4;
-  string created_at = 5;
-}
-
 message GetCheckOperationsRequest {
   string check_id = 1;
   string graph_name = 2;
+  string namespace = 3;
 }
 
 message GetCheckOperationsResponse {
@@ -377,6 +381,7 @@ message GetFederatedGraphChangelogRequest {
   string name = 1;
   Pagination pagination = 2;
   DateRange dateRange = 3;
+  string namespace = 4;
 }
 
 message FederatedGraphChangelog{
@@ -414,6 +419,7 @@ message UpdateSubgraphRequest {
   // url used for subscriptions
   optional string subscription_url = 6;
   optional string readme = 7;
+  string namespace = 8;
 }
 
 message UpdateSubgraphResponse {
@@ -426,6 +432,7 @@ message UpdateFederatedGraphRequest {
   string routing_url = 2;
   repeated string label_matchers = 3;
   optional string readme = 4;
+  string namespace = 5;
 }
 
 message UpdateFederatedGraphResponse {
@@ -436,6 +443,7 @@ message UpdateFederatedGraphResponse {
 message CheckFederatedGraphRequest {
   string name = 1;
   repeated string label_matchers = 2;
+  string namespace = 3;
 }
 
 message CheckFederatedGraphResponse {
@@ -490,6 +498,7 @@ message GetAnalyticsViewRequest {
   string federatedGraphName  = 1;
   AnalyticsViewGroupName name = 2;
   AnalyticsConfig config = 3;
+  string namespace = 4;
 }
 
 message AnalyticsViewResult {
@@ -574,6 +583,7 @@ message GetDashboardAnalyticsViewRequest {
   string startDate = 2;
   string endDate = 3;
   int32 range = 4;
+  string namespace = 5;
 }
 
 message RequestSeriesItem {
@@ -613,6 +623,7 @@ message GetDashboardAnalyticsViewResponse {
 message CreateFederatedGraphTokenRequest {
   string graphName = 1;
   string tokenName = 2;
+  string namespace = 3;
 }
 
 message CreateFederatedGraphTokenResponse {
@@ -711,6 +722,7 @@ message RemoveInvitationResponse {
 message MigrateFromApolloRequest {
   string apiKey = 1;
   string variantName = 2;
+  string namespace = 3;
 }
 
 message MigrateFromApolloResponse {
@@ -772,6 +784,7 @@ message RouterToken {
 
 message GetRouterTokensRequest {
   string fedGraphName = 1;
+  string namespace = 2;
 }
 
 message GetRouterTokensResponse {
@@ -782,6 +795,7 @@ message GetRouterTokensResponse {
 message DeleteRouterTokenRequest {
   string tokenName = 1;
   string fedGraphName = 2;
+  string namespace = 3;
 }
 
 message DeleteRouterTokenResponse {
@@ -797,6 +811,7 @@ message PublishPersistedOperationsRequest {
   string fedGraphName = 1;
   string clientName = 2;
   repeated PersistedOperation operations = 3;
+  string namespace = 4;
 }
 
 enum PublishedOperationStatus {
@@ -820,6 +835,7 @@ message PublishPersistedOperationsResponse {
 message GetPersistedOperationsRequest {
   string federated_graph_name = 1;
   string client_id = 2;
+  string namespace = 3;
 }
 
 message GetPersistedOperationsResponse {
@@ -1070,6 +1086,7 @@ message UpgradePlanResponse {
   int32 range = 2;
   DateRange dateRange = 3;
   repeated AnalyticsFilter filters = 4;
+  string namespace = 5;
 }
 
 message GetGraphMetricsResponse {
@@ -1115,6 +1132,7 @@ message GetMetricsErrorRateRequest {
   int32 range = 2;
   DateRange dateRange = 3;
   repeated AnalyticsFilter filters = 4;
+  string namespace = 5;
 }
 
 message GetMetricsErrorRateResponse {
@@ -1132,6 +1150,7 @@ message MetricsErrorRateSeriesItem {
 message ForceCheckSuccessRequest {
   string check_id = 1;
   string graph_name = 2;
+  string namespace = 3;
 }
 
 message ForceCheckSuccessResponse {
@@ -1260,6 +1279,7 @@ message GetCompositionsRequest {
   int32 offset = 3;
   string startDate = 4;
   string endDate = 5;
+  string namespace = 6;
 }
 
 message GetCompositionsResponse {
@@ -1281,6 +1301,7 @@ message GetCompositionDetailsResponse {
 message GetSdlBySchemaVersionRequest {
   string schemaVersionId = 1;
   string graphName = 2;
+  string namespace = 3;
 }
 
 message GetSdlBySchemaVersionResponse {
@@ -1327,6 +1348,7 @@ message IsRBACEnabledResponse {
 message AddSubgraphMemberRequest {
   string subgraphName = 1;
   string userEmail = 2;
+  string namespace = 3;
 }
 
 message AddSubgraphMemberResponse {
@@ -1336,6 +1358,7 @@ message AddSubgraphMemberResponse {
 message RemoveSubgraphMemberRequest {
   string subgraphName = 1;
   string subgraphMemberId = 2;
+  string namespace = 3;
 }
 
 message RemoveSubgraphMemberResponse {
@@ -1344,6 +1367,7 @@ message RemoveSubgraphMemberResponse {
 
 message GetSubgraphMembersRequest {
   string subgraphName = 1;
+  string namespace = 2;
 }
 
 message SubgraphMember{
@@ -1360,6 +1384,7 @@ message GetSubgraphMembersResponse {
 message AddReadmeRequest {
   string targetName = 1;
   string readme = 2;
+  string namespace = 3;
 }
 
 message AddReadmeResponse {
@@ -1377,6 +1402,7 @@ message ClientInfo{
 
 message GetClientsRequest {
   string fedGraphName = 1;
+  string namespace = 2;
 }
 
 message GetClientsResponse {
@@ -1391,6 +1417,7 @@ message GetFieldUsageRequest {
   optional string field = 4; 
   optional int32 range = 5;
   DateRange dateRange = 6;
+  string namespace = 7;
 }
 
 message ClientWithOperations {
@@ -1521,6 +1548,11 @@ message SetDiscussionResolutionResponse {
   Response response = 1;
 }
 
+message GetConfigRequest {
+  string graph_name = 1;
+  string namespace = 2;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -1577,8 +1609,6 @@ service PlatformService {
   rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
   // GetCheckSummary returns top level information about a schema check
   rpc GetCheckSummary(GetCheckSummaryRequest) returns (GetCheckSummaryResponse) {}
-  // GetCheckDetails returns changes and composition errors recorded for a check
-  rpc GetCheckDetails(GetCheckDetailsRequest) returns (GetCheckDetailsResponse) {}
   // GetCheckOperations returns affected operations for a check
   rpc GetCheckOperations(GetCheckOperationsRequest) returns (GetCheckOperationsResponse) {}
   // ForceCheckSuccess forces a failed check to be marked as successful
@@ -1606,7 +1636,7 @@ service PlatformService {
   // RemoveInvitation removes the org invitation of the user
   rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
   // GetLatestValidRouterConfig returns the router config for the federated graph
-  rpc GetLatestValidRouterConfig(wg.cosmo.node.v1.GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
+  rpc GetLatestValidRouterConfig(GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
   
@@ -1648,7 +1678,7 @@ service PlatformService {
   rpc GetOIDCProvider(GetOIDCProviderRequest) returns (GetOIDCProviderResponse) {}
   // DeleteOIDCProvider deletes the oidc provider connected the organization
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
-  // GetClients returns all the clients of the organization
+  // GetClients returns all the clients of the federated graph
   rpc GetClients(GetClientsRequest) returns (GetClientsResponse) {}
   // GetInvitations returns all the invitations a user has recieved
   rpc GetInvitations(GetInvitationsRequest) returns (GetInvitationsResponse) {}

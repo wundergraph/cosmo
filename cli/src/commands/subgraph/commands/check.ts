@@ -16,6 +16,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
   command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
   command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
+  command.option('-ns, --namespace', 'The namespace of the subgraph. Fallback to "default"', 'default');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--delete', 'Run checks in case the subgraph is deleted.');
 
@@ -69,6 +70,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.checkSubgraphSchema(
       {
         subgraphName: name,
+        namespace: options.namespace,
         schema,
         gitInfo,
         delete: options.delete,

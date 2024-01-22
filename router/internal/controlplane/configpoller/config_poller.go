@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -126,9 +127,25 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *string) (*nodev1.RouterConfig, error) {
 	start := time.Now()
 
+	jwtParser := new(jwt.Parser)
+	claims := make(jwt.MapClaims)
+	_, _, err := jwtParser.ParseUnverified(c.graphApiToken, claims)
+	if err != nil {
+		return nil, fmt.Errorf("invalid graph api token %w", err)
+	}
+	federatedGraphIDValue := claims["federated_graph_id"]
+	if federatedGraphIDValue == nil {
+		return nil, fmt.Errorf("invalid graph api token claims, missing federated_graph_id")
+	}
+	var ok bool
+	federatedGraphID, ok := federatedGraphIDValue.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid graph api token claims, federated_graph_id is not a string, it's %T", federatedGraphIDValue)
+	}
+
 	req := connect.NewRequest(&nodev1.GetConfigRequest{
-		GraphName: c.federatedGraphName,
-		Version:   version,
+		GraphId: federatedGraphID,
+		Version: version,
 	})
 
 	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", c.graphApiToken))

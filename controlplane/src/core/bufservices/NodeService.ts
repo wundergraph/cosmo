@@ -82,7 +82,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const target = await fedGraphRepo.targetByName(req.graphName);
+        const target = await fedGraphRepo.byId(req.graphId);
         if (!target) {
           return {
             response: {

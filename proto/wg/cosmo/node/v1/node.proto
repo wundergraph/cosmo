@@ -29,7 +29,7 @@ message ResponseStatus {
 
 message GetConfigRequest {
   // The FQDN of the graph to get the config for e.g. "wg.production"
-  string graph_name = 1;
+  string graph_id = 1;
   // The version to check for. If the version is not specified, the latest router config version will be returned.
   // Otherwise, the version will be used to check if a newer version of the router config is available.
   // That allow us to not send the router config if the version is the same.

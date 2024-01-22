@@ -9,17 +9,18 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schemaFix = new Command('fix');
-  schemaFix.description(
+  const command = new Command('fix');
+  command.description(
     'Checks for composition errors with all connected federated graphs and tries to fix them.\n\n' +
       'If you do not want to override the original schema file,\n' +
       'you can specify the --out-schema option.',
   );
-  schemaFix.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
-  schemaFix.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
-  schemaFix.option('--out-schema <path-to-out-schema>', 'The path where the fixed schema file should be written.');
+  command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
+  command.option('-ns, --namespace', 'The namespace of the subgraph. Fallback to "default"', 'default');
+  command.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
+  command.option('--out-schema <path-to-out-schema>', 'The path where the fixed schema file should be written.');
 
-  schemaFix.action(async (name, options) => {
+  command.action(async (name, options) => {
     const schemaFile = join(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
       console.log(
@@ -33,6 +34,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.fixSubgraphSchema(
       {
         subgraphName: name,
+        namespace: options.namespace,
         schema: await readFile(schemaFile),
       },
       {
@@ -65,5 +67,5 @@ export default (opts: BaseCommandOptions) => {
     console.log(logSymbols.success + pc.green(` Fixed schema written to ${options.schema}.`));
   });
 
-  return schemaFix;
+  return command;
 };

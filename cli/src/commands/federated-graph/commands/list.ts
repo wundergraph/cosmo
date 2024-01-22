@@ -19,7 +19,8 @@ type OutputFile = {
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
-  command.description('Lists federated graphs.');
+  command.description('Lists federated graphs in the given namespace.');
+  command.option('-ns, --namespace', 'The namespace of the federated graph. Fallback to "default"', 'default');
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.action(async (options) => {
@@ -29,6 +30,7 @@ export default (opts: BaseCommandOptions) => {
         // limit 0 fetches all
         limit: 0,
         offset: 0,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,

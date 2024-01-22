@@ -12,6 +12,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
   command.description('Updates a federated graph on the control plane.');
   command.argument('<name>', 'The name of the federated graph to update.');
+  command.option('-ns, --namespace', 'The namespace of the federated graph. Fallback to "default"', 'default');
   command.option(
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',
@@ -38,6 +39,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.updateFederatedGraph(
       {
         name,
+        namespace: options.namespace,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
