@@ -50,9 +50,7 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 // returns nil, but OperationMetrics is safe to call with a nil receiver.
 func (m *routerMetrics) StartOperation(clientInfo *ClientInfo, logger *zap.Logger, requestContentLength int64) *OperationMetrics {
 	metrics := startOperationMetrics(m, logger, requestContentLength, m.routerConfigVersion)
-	if clientInfo != nil {
-		metrics.AddClientInfo(clientInfo)
-	}
+	metrics.AddClientInfo(clientInfo)
 	return metrics
 }
 

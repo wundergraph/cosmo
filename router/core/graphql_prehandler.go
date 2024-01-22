@@ -210,7 +210,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 }
 
 func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger) {
-	h.log.Debug("Flushing metrics ...")
+	requestLogger.Debug("Flushing metrics ...")
 
 	now := time.Now()
 
@@ -243,7 +243,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 
 	wg.Wait()
 
-	h.log.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
+	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
 }
 
 func (h *PreHandler) writeOperationError(w http.ResponseWriter, r *http.Request, requestLogger *zap.Logger, err error) {

@@ -1120,8 +1120,8 @@ func WithGraphQLPath(p string) Option {
 }
 
 // WithGraphQLWebURL sets the URL to the GraphQL endpoint used by the GraphQL Playground.
-// The path might be different from the actual GraphQL endpoint when the router is behind a reverse proxy.
-// By default, the GraphQL Playground uses the same URL as the GraphQL endpoint.
+// This is useful when the path differs from the actual GraphQL endpoint e.g. when the router is behind a reverse proxy.
+// If not set, the GraphQL Playground uses the same URL as the GraphQL endpoint.
 func WithGraphQLWebURL(p string) Option {
 	return func(r *Router) {
 		r.graphqlWebURL = p
@@ -1184,7 +1184,8 @@ func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 	}
 }
 
-// WithAwsLambdaRuntime enables the AWS Lambda runtime. This flushes all telemetry after the response is sent.
+// WithAwsLambdaRuntime enables the AWS Lambda behaviour.
+// This flushes all telemetry data synchronously after the request is handled.
 func WithAwsLambdaRuntime() Option {
 	return func(r *Router) {
 		r.awsLambda = true

@@ -83,6 +83,6 @@ func Main() {
 	}
 
 	profile.Finish()
-	logger.Debug("server exiting")
+	logger.Debug("Server exiting")
 	os.Exit(0)
 }
