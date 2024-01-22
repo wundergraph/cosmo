@@ -390,10 +390,8 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 		return nil, err
 	}
 
-	prevRouter := r.activeServer
-
-	if prevRouter != nil {
-		if err := prevRouter.Shutdown(ctx); err != nil {
+	if r.activeServer != nil {
+		if err := r.activeServer.Shutdown(ctx); err != nil {
 			r.logger.Error("Could not shutdown router", zap.Error(err))
 			return nil, err
 		}
@@ -410,6 +408,9 @@ func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterCon
 	if _, err := r.UpdateServer(ctx, cfg); err != nil {
 		return err
 	}
+
+	// read here to avoid race condition
+	version := r.activeServer.routerConfig.GetVersion()
 
 	// Start new server
 	go func() {
@@ -428,7 +429,7 @@ func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterCon
 			r.logger.Error("Failed to start new server", zap.Error(err))
 		}
 
-		r.logger.Info("Server stopped", zap.String("config_version", r.activeServer.routerConfig.GetVersion()))
+		r.logger.Info("Server stopped", zap.String("config_version", version))
 	}()
 
 	return nil
