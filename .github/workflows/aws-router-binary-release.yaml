@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   releases-matrix:
-    if: startsWith(github.event.release.tag_name, 'aws-lambda-router@')
+    #if: startsWith(github.event.release.tag_name, 'aws-lambda-router@')
     name: Build and Release AWS Router Binaries
     runs-on: ubuntu-latest
     timeout-minutes: 30
