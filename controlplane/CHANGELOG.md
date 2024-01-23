@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.55.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.54.3...controlplane@0.55.0) (2024-01-23)
+
+### Features
+
+* implement pagination and date filter for audit logs ([#444](https://github.com/wundergraph/cosmo/issues/444)) ([e014c08](https://github.com/wundergraph/cosmo/commit/e014c0896dd017cf4db6a2c5f2c2d83b1fc86017)) (@JivusAyrus)
+
 ## [0.54.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.54.2...controlplane@0.54.3) (2024-01-21)
 
 ### Bug Fixes
