@@ -24,15 +24,16 @@ import { useRouter } from "next/router";
 import { Fragment, ReactNode, createContext, useMemo } from "react";
 import { PiChat, PiCubeFocus, PiDevices, PiGitBranch } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectLabel,
   SelectTrigger,
-  SelectGroup,
   SelectValue,
 } from "../ui/select";
 import { PageHeader } from "./head";
@@ -234,7 +235,10 @@ export const GraphSelect = () => {
         value={selected?.id}
         className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
       >
-        <SelectValue aria-label={slug}>{selected?.name}</SelectValue>
+        <SelectValue aria-label={selected?.name}>
+          {selected?.name}{" "}
+          <Badge variant="secondary">{selected?.namespace}</Badge>
+        </SelectValue>
       </SelectTrigger>
       <SelectContent className="min-w-[200px]">
         {Object.entries(groupedGraphs ?? {}).map(([namespace, graphs]) => {

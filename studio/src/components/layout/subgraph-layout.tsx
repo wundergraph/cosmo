@@ -33,6 +33,7 @@ import { TitleLayoutProps } from "./graph-layout";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
+import { Badge } from "../ui/badge";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -174,7 +175,10 @@ export const SubgraphSelect = () => {
         value={slug}
         className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
       >
-        <SelectValue aria-label={slug}>{slug}</SelectValue>
+        <SelectValue aria-label={selected?.name}>
+          {selected?.name}{" "}
+          <Badge variant="secondary">{selected?.namespace}</Badge>
+        </SelectValue>
       </SelectTrigger>
       <SelectContent className="min-w-[200px]">
         {Object.entries(groupedGraphs ?? {}).map(([namespace, graphs]) => {
