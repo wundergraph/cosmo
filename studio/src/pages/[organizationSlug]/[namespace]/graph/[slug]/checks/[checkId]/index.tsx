@@ -1,15 +1,20 @@
+import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import {
   getCheckBadge,
   getCheckIcon,
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
+import { ChangesTable } from "@/components/checks/changes-table";
+import { CheckOperations } from "@/components/checks/operations";
+import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
+import { InfoTooltip } from "@/components/info-tooltip";
 import {
   GraphContext,
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +26,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/components/ui/link";
 import { Loader } from "@/components/ui/loader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
@@ -42,25 +56,11 @@ import {
   getCheckSummary,
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { GetCheckSummaryResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, subDays } from "date-fns";
-import { Link } from "@/components/ui/link";
 import { useRouter } from "next/router";
 import React, { useContext, useMemo } from "react";
 import { PiBracketsCurlyBold, PiGraphLight } from "react-icons/pi";
-import { InfoTooltip } from "@/components/info-tooltip";
-import { Badge } from "@/components/ui/badge";
-import { useSessionStorage } from "@/hooks/use-session-storage";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ChangesTable } from "@/components/checks/changes-table";
-import { FieldUsageSheet } from "@/components/analytics/field-usage";
-import { CheckOperations } from "@/components/checks/operations";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { GetCheckSummaryResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -98,6 +98,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   const router = useRouter();
 
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
 
@@ -105,6 +106,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
     ...getCheckSummary.useQuery({
       checkId: id,
       graphName: graphContext?.graph?.name,
+      namespace,
     }),
     enabled: !!graphContext?.graph?.name,
     refetchOnWindowFocus: false,
@@ -131,7 +133,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
           <div className="flex items-center space-x-2">
             <Button variant="outline">
               <Link
-                href={`/${organizationSlug}/graph/${slug}/checks`}
+                href={`/${organizationSlug}/${namespace}/graph/${slug}/checks`}
                 className="flex items-center"
               >
                 <ArrowLeftIcon className="mr-2 h-4 w-4" />
@@ -156,7 +158,10 @@ const CheckOverviewPage: NextPageWithLayout = () => {
       breadcrumbs={[
         <Link
           key="checks"
-          href={checksRoute || `/${organizationSlug}/graph/${slug}/checks`}
+          href={
+            checksRoute ||
+            `/${organizationSlug}/${namespace}/graph/${slug}/checks`
+          }
         >
           Checks
         </Link>,
@@ -180,6 +185,7 @@ const CheckDetails = ({
   const { toast } = useToast();
 
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;
@@ -295,7 +301,7 @@ const CheckDetails = ({
             <dd>
               <Link
                 key={id}
-                href={`/${organizationSlug}/graph/${slug}/schema/sdl?subgraph=${data.check.subgraphName}`}
+                href={`/${organizationSlug}/${namespace}/graph/${slug}/schema/sdl?subgraph=${data.check.subgraphName}`}
               >
                 <div className="flex items-center gap-x-1">
                   <CubeIcon />
@@ -379,7 +385,7 @@ const CheckDetails = ({
                   return (
                     <Link
                       key={ag.id}
-                      href={`/${organizationSlug}/graph/${graph.name}`}
+                      href={`/${organizationSlug}/${graph.namespace}/graph/${graph.name}`}
                       className="flex items-center gap-x-1 text-sm"
                     >
                       <PiGraphLight />

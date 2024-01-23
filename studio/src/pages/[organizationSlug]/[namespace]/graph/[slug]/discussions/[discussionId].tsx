@@ -25,6 +25,7 @@ import { PiGitBranch } from "react-icons/pi";
 const DiscussionPage: NextPageWithLayout = () => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.discussionId as string;
 
@@ -46,7 +47,10 @@ const DiscussionPage: NextPageWithLayout = () => {
       title={id}
       subtitle=""
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/graph/${slug}/discussions`}>
+        <Link
+          key={0}
+          href={`/${organizationSlug}/${namespace}/graph/${slug}/discussions`}
+        >
           Discussions
         </Link>,
       ]}

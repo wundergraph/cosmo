@@ -1,3 +1,5 @@
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import {
   getCheckBadge,
   getCheckIcon,
@@ -44,6 +46,7 @@ import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
+import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   CommandLineIcon,
@@ -70,24 +73,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";
 
-const useDateRange = () => {
-  const router = useRouter();
-
-  const dateRange = router.query.dateRange
-    ? JSON.parse(router.query.dateRange as string)
-    : {
-        start: subDays(new Date(), 7),
-        end: new Date(),
-      };
-  const startDate = new Date(dateRange.start);
-  const endDate = new Date(dateRange.end);
-
-  return {
-    startDate,
-    endDate,
-  };
-};
-
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
   const pageNumber = router.query.page
@@ -96,7 +81,12 @@ const ChecksPage: NextPageWithLayout = () => {
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
 
-  const { startDate, endDate } = useDateRange();
+  const {
+    dateRange: { start, end },
+    range,
+  } = useDateRangeQueryState();
+  const startDate = range ? createDateRange(range).start : start;
+  const endDate = range ? createDateRange(range).end : end;
 
   const graphContext = useContext(GraphContext);
 
@@ -105,10 +95,11 @@ const ChecksPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(
     getChecksByFederatedGraphName.useQuery({
       name: router.query.slug as string,
+      namespace: router.query.namespace as string,
       limit: limit,
       offset: (pageNumber - 1) * limit,
-      startDate: formatISO(startOfDay(startDate)),
-      endDate: formatISO(endOfDay(endDate)),
+      startDate: formatISO(startDate),
+      endDate: formatISO(endDate),
     }),
   );
 
@@ -387,23 +378,29 @@ const ChecksPage: NextPageWithLayout = () => {
 };
 
 const ChecksToolbar = () => {
-  const router = useRouter();
-  const user = useUser();
+  const applyParams = useApplyParams();
+  const { dateRange, range } = useDateRangeQueryState();
 
-  const { startDate, endDate } = useDateRange();
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    dateRange,
+    range,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange }) => {
-    const stringifiedDateRange = JSON.stringify({
-      start: dateRange?.start as Date,
-      end: (dateRange?.end as Date) ?? (dateRange?.end as Date),
-    });
-
-    router.push({
-      query: {
-        ...router.query,
+      applyParams({
+        range: null,
         dateRange: stringifiedDateRange,
-      },
-    });
+      });
+    }
   };
 
   const breakingChangeRetention = useFeatureLimit(
@@ -414,7 +411,8 @@ const ChecksToolbar = () => {
   return (
     <Toolbar>
       <DatePickerWithRange
-        dateRange={{ start: startDate, end: endDate }}
+        range={range}
+        dateRange={dateRange}
         onChange={onDateRangeChange}
         calendarDaysLimit={breakingChangeRetention}
       />

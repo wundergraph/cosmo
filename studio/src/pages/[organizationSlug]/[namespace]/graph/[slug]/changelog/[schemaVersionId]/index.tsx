@@ -1,25 +1,14 @@
-import { UserContext } from "@/components/app-provider";
-import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-} from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import {
-  getGraphLayout,
-  GraphContext,
   GraphPageLayout,
+  getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
-import { Toolbar } from "@/components/ui/toolbar";
-import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
 import {
   DotFilledIcon,
   ExclamationTriangleIcon,
@@ -30,19 +19,11 @@ import {
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import {
-  getChangelogBySchemaVersion,
-  getFederatedGraphChangelog,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  FederatedGraphChangelog,
-  FederatedGraphChangelogOutput,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { getChangelogBySchemaVersion } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { FederatedGraphChangelog } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { noCase } from "change-case";
-import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useCallback, useContext, useEffect, useState } from "react";
 
 interface StructuredChangelog {
   changeType: string;
@@ -163,6 +144,7 @@ const Changes = ({ changes }: { changes: FederatedGraphChangelog[] }) => {
 const SchemaVersionChangelogPage: NextPageWithLayout = () => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.schemaVersionId as string;
 
@@ -179,7 +161,10 @@ const SchemaVersionChangelogPage: NextPageWithLayout = () => {
       title={id}
       subtitle=""
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/graph/${slug}/changelog`}>
+        <Link
+          key={0}
+          href={`/${organizationSlug}/${namespace}/graph/${slug}/changelog`}
+        >
           Changelog
         </Link>,
       ]}

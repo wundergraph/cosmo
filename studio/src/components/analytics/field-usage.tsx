@@ -21,7 +21,10 @@ import {
 } from "@/components/ui/table";
 import useWindowSize from "@/hooks/use-window-size";
 import { formatMetric } from "@/lib/format-metric";
-import { createDateRange, useChartData } from "@/lib/insights-helpers";
+import {
+  createStringifiedDateRange,
+  useChartData,
+} from "@/lib/insights-helpers";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { CubeIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -249,7 +252,9 @@ export const FieldUsage = ({
                                           operationHash: op.hash,
                                         }),
                                         dateRange: range
-                                          ? createDateRange(getRange(range))
+                                          ? createStringifiedDateRange(
+                                              getRange(range),
+                                            )
                                           : JSON.stringify({
                                               start: formatISO(dateRange.start),
                                               end: formatISO(dateRange.end),

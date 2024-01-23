@@ -170,7 +170,7 @@ export const GraphDiscussions = ({
         <Discussions
           discussions={discussionsBySchema}
           refetch={() => refetch()}
-          graphLink={linkToSchema.split("/").slice(0, 4).join("/")}
+          graphLink={linkToSchema.split("/").slice(0, 5).join("/")}
         />
       )}
       {Object.keys(discussionsBySchema ?? {}).length === 0 && !isLoading && (

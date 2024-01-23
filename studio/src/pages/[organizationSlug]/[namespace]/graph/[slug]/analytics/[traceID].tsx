@@ -29,6 +29,7 @@ import {
 export const TracePage: NextPageWithLayout = () => {
   const { query } = useRouter();
   const organizationSlug = query.organizationSlug as string;
+  const namespace = query.namespace as string;
   const slug = query.slug as string;
   const [content, setContent] = useState("");
 
@@ -80,7 +81,7 @@ export const TracePage: NextPageWithLayout = () => {
             <TooltipTrigger asChild>
               <Button variant="outline" size="icon" asChild>
                 <Link
-                  href={`/${organizationSlug}/graph/${slug}/playground?operation=${btoa(
+                  href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${btoa(
                     content || "",
                   )}`}
                 >

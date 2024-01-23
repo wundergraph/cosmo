@@ -39,6 +39,10 @@ import {
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
+import {
+  createDateRange,
+  createStringifiedDateRange,
+} from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
@@ -70,8 +74,12 @@ const CompositionsPage: NextPageWithLayout = () => {
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
 
   const {
-    dateRange: { start: startDate, end: endDate },
+    dateRange: { start, end },
+    range,
   } = useDateRangeQueryState();
+
+  const startDate = range ? createDateRange(range).start : start;
+  const endDate = range ? createDateRange(range).end : end;
 
   const graphContext = useContext(GraphContext);
 
@@ -81,8 +89,8 @@ const CompositionsPage: NextPageWithLayout = () => {
       namespace: router.query.namespace as string,
       limit: limit,
       offset: (pageNumber - 1) * limit,
-      startDate: formatISO(startOfDay(startDate)),
-      endDate: formatISO(endOfDay(endDate)),
+      startDate: formatISO(startDate),
+      endDate: formatISO(endDate),
     }),
   );
 

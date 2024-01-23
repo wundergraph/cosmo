@@ -1,4 +1,5 @@
-import { UserContext } from "@/components/app-provider";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import {
   DatePickerWithRange,
@@ -6,9 +7,9 @@ import {
 } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import {
-  getGraphLayout,
   GraphContext,
   GraphPageLayout,
+  getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,12 +19,15 @@ import { Toolbar } from "@/components/ui/toolbar";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
+import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
+import {
+  CommandLineIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import {
   DotFilledIcon,
-  ExclamationTriangleIcon,
   MinusIcon,
   PlusIcon,
   UpdateIcon,
@@ -36,52 +40,43 @@ import {
   FederatedGraphChangelogOutput,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { noCase } from "change-case";
-import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
+import { endOfDay, formatISO, startOfDay } from "date-fns";
 import { useRouter } from "next/router";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 
 const ChangelogToolbar = () => {
-  const router = useRouter();
-  const user = useContext(UserContext);
+  const applyParams = useApplyParams();
+  const { dateRange, range } = useDateRangeQueryState();
 
-  const dateRange = router.query.dateRange
-    ? JSON.parse(router.query.dateRange as string)
-    : {
-        from: subDays(new Date(), 7),
-        to: new Date(),
-      };
-  const startDate = new Date(dateRange.from);
-  const endDate = new Date(dateRange.to);
-
-  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange }) => {
-    const stringifiedDateRange = JSON.stringify({
-      from: dateRange?.start as Date,
-      to: (dateRange?.end as Date) ?? (dateRange?.start as Date),
-    });
-
-    applyNewParams({
-      dateRange: stringifiedDateRange,
-    });
-  };
-
-  const applyNewParams = useCallback(
-    (newParams: Record<string, string>) => {
-      router.push({
-        query: {
-          ...router.query,
-          ...newParams,
-        },
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    dateRange,
+    range,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
       });
-    },
-    [router],
-  );
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
+
+      applyParams({
+        range: null,
+        dateRange: stringifiedDateRange,
+      });
+    }
+  };
 
   const changelogRetention = useFeatureLimit("changelog-retention", 7);
 
   return (
     <Toolbar>
       <DatePickerWithRange
-        dateRange={{ start: startDate, end: endDate }}
+        range={range}
+        dateRange={dateRange}
         onChange={onDateRangeChange}
         align="start"
         calendarDaysLimit={changelogRetention}
@@ -217,21 +212,19 @@ const ChangelogPage: NextPageWithLayout = () => {
 
   const validGraph =
     graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
-  const emptyGraph =
-    !graphData?.graph?.lastUpdatedAt && !graphData?.graph?.isComposable;
 
-  const dateRange = router.query.dateRange
-    ? JSON.parse(router.query.dateRange as string)
-    : {
-        from: subDays(new Date(), 3),
-        to: new Date(),
-      };
-  const startDate = new Date(dateRange.from);
-  const endDate = new Date(dateRange.to);
+  const {
+    dateRange: { start, end },
+    range,
+  } = useDateRangeQueryState();
+
+  const startDate = range ? createDateRange(range).start : start;
+  const endDate = range ? createDateRange(range).end : end;
 
   const { data, isLoading, isSuccess, error, refetch } = useQuery({
     ...getFederatedGraphChangelog.useQuery({
       name: router.query.slug as string,
+      namespace: router.query.namespace as string,
       pagination: {
         limit,
         offset,
@@ -254,7 +247,7 @@ const ChangelogPage: NextPageWithLayout = () => {
     // We need to fetch from scratch on date change
     setItems([]);
     setOffset(0);
-  }, [router.query.dateRange]);
+  }, [router.query.dateRange, router.query.range]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -270,11 +263,11 @@ const ChangelogPage: NextPageWithLayout = () => {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [isLoading, refetch, data?.hasNextPage]);
+  }, [isLoading, data?.hasNextPage]);
 
   useEffect(() => {
     refetch();
-  }, [refetch, offset, router.query.dateRange]);
+  }, [refetch, offset, router.query.dateRange, router.query.range]);
 
   if (items.length === 0 && isLoading) return <Loader fullscreen />;
 

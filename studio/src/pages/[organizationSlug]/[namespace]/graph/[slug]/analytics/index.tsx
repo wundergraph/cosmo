@@ -77,12 +77,6 @@ import {
   YAxis,
 } from "recharts";
 
-export type OperationAnalytics = {
-  name: string;
-  content: string;
-  operationType: number;
-};
-
 const getInfoTip = (range?: number) => {
   switch (range) {
     case 72:
@@ -270,8 +264,6 @@ const TopList: React.FC<{
   const range = router.query.range;
   const dateRange = router.query.dateRange;
 
-  const hasPersisted = items.some((i) => i.isPersisted);
-
   return (
     <CardContent className="pt-6">
       <div className="mb-2 flex space-x-2 text-sm">
@@ -282,6 +274,7 @@ const TopList: React.FC<{
                 href={{
                   pathname: `${router.pathname}/traces`,
                   query: {
+                    namespace: router.query.namespace,
                     organizationSlug: router.query.organizationSlug,
                     slug: router.query.slug,
                     filterState: router.query.filterState || "[]",
@@ -330,6 +323,7 @@ const TopList: React.FC<{
           href: {
             pathname: `${router.pathname}/traces`,
             query: {
+              namespace: router.query.namespace,
               organizationSlug: router.query.organizationSlug,
               slug: router.query.slug,
               filterState: createFilterState({
@@ -697,6 +691,7 @@ const ErrorRateOverTimeCard = () => {
     refetch,
   } = useQuery({
     ...getMetricsErrorRate.useQuery({
+      namespace: graphContext?.graph?.namespace,
       federatedGraphName: graphContext?.graph?.name,
       range,
       dateRange: range
@@ -828,6 +823,7 @@ const OverviewToolbar = () => {
 
   let { data } = useQuery({
     ...getGraphMetrics.useQuery({
+      namespace: graphContext?.graph?.namespace,
       federatedGraphName: graphContext?.graph?.name,
       dateRange: range
         ? undefined
@@ -903,12 +899,14 @@ const OverviewToolbar = () => {
           onClick={() => {
             client.invalidateQueries({
               queryKey: getGraphMetrics.getQueryKey({
+                namespace: graphContext?.graph?.namespace,
                 federatedGraphName: graphContext?.graph?.name,
                 range,
               }),
             });
             client.invalidateQueries({
               queryKey: getMetricsErrorRate.getQueryKey({
+                namespace: graphContext?.graph?.namespace,
                 federatedGraphName: graphContext?.graph?.name,
                 range,
               }),
@@ -936,6 +934,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
   let { data, isLoading, error, refetch } = useQuery({
     ...getGraphMetrics.useQuery({
+      namespace: graphContext?.graph?.namespace,
       federatedGraphName: graphContext?.graph?.name,
       range,
       dateRange: range

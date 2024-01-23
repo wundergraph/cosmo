@@ -65,6 +65,7 @@ const TracesPage: NextPageWithLayout = () => {
   } = useAnalyticsQueryState();
 
   const viewQuery = getAnalyticsView.useQuery({
+    namespace: graphContext?.graph?.namespace,
     federatedGraphName: graphContext?.graph?.name,
     name,
     config: {

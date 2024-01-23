@@ -146,6 +146,7 @@ fetch(url, {
 const ClientOperations = () => {
   const router = useRouter();
   const slug = router.query.slug as string;
+  const namespace = router.query.namespace as string;
   const organizationSlug = router.query.organizationSlug as string;
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -171,6 +172,7 @@ const ClientOperations = () => {
     ...getPersistedOperations.useQuery({
       clientId: clientId ?? "",
       federatedGraphName: slug,
+      namespace,
     }),
     enabled: !!clientId,
   });
@@ -310,10 +312,11 @@ const ClientOperations = () => {
                             <Button variant="outline" size="icon" asChild>
                               <Link
                                 href={{
-                                  pathname: `/[organizationSlug]/graph/[slug]/analytics`,
+                                  pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics`,
                                   query: {
                                     organizationSlug:
                                       router.query.organizationSlug,
+                                    namespace: router.query.namespace,
                                     slug: router.query.slug,
                                     filterState: createFilterState({
                                       operationPersistedId: op.id,
@@ -331,7 +334,7 @@ const ClientOperations = () => {
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
                               <Link
-                                href={`/${organizationSlug}/graph/${slug}/playground?operation=${btoa(
+                                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${btoa(
                                   op.contents || "",
                                 )}`}
                               >
@@ -444,6 +447,7 @@ type Input = z.infer<typeof FormSchema>;
 
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
   const router = useRouter();
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const [isOpen, setIsOpen] = useState(false);
 
@@ -477,6 +481,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
 
   const onSubmit: SubmitHandler<Input> = (formData) => {
     mutate({
+      namespace,
       fedGraphName: slug,
       clientName: formData.clientName,
       operations: [],
@@ -534,6 +539,7 @@ const ClientsPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
 
   const constructLink = (name: string, mode: "metrics" | "traces") => {
@@ -551,11 +557,11 @@ const ClientsPage: NextPageWithLayout = () => {
     filters.push(filter);
 
     if (mode === "metrics") {
-      return `/${organizationSlug}/graph/${slug}/analytics?filterState=${JSON.stringify(
+      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${JSON.stringify(
         filters,
       )}`;
     } else {
-      return `/${organizationSlug}/graph/${slug}/analytics/traces?filterState=${JSON.stringify(
+      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics/traces?filterState=${JSON.stringify(
         filters,
       )}`;
     }
@@ -564,6 +570,7 @@ const ClientsPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(
     getClients.useQuery({
       fedGraphName: slug,
+      namespace,
     }),
   );
 

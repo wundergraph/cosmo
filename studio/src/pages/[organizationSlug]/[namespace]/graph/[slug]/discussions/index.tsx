@@ -28,6 +28,7 @@ const DiscussionsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const graphName = router.query.slug as string;
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const subgraphName = router.query.subgraph as string;
 
   const graphData = useContext(GraphContext);
@@ -95,7 +96,7 @@ const DiscussionsPage: NextPageWithLayout = () => {
       >
         <GraphDiscussions
           targetId={selectedGraph?.targetId}
-          linkToSchema={`/${organizationSlug}/graph/${graphName}/schema`}
+          linkToSchema={`/${organizationSlug}/${namespace}/graph/${graphName}/schema`}
         />
       </GraphPageLayout>
     </PageHeader>
