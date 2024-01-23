@@ -110,6 +110,7 @@ type Input = z.infer<typeof FormSchema>;
 const PersistOperation = () => {
   const router = useRouter();
   const slug = router.query.slug as string;
+  const namespace = router.query.namespace as string;
 
   const { query } = useContext(TraceContext);
 
@@ -154,6 +155,7 @@ const PersistOperation = () => {
   const { data, refetch } = useQuery(
     getClients.useQuery({
       fedGraphName: slug,
+      namespace,
     }),
   );
 
@@ -197,6 +199,7 @@ const PersistOperation = () => {
       fedGraphName: slug,
       clientName,
       operations,
+      namespace,
     });
   };
 

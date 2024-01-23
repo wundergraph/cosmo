@@ -56,6 +56,7 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
+import { cn } from "@/lib/utils";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   let label = "team=A";
@@ -158,15 +159,22 @@ export const AddSubgraphUsersContent = ({
         </Alert>
       ) : (
         inviteOptions.length === 0 && (
-          <div className="mt-4 flex items-center gap-x-2 rounded-lg border !border-primary-foreground px-4 py-2 text-sm text-primary-foreground">
-            <InfoCircledIcon className="h-[20px] w-[20px]" />
-            <span>
+          <Alert>
+            <InfoCircledIcon className="h-4 w-4" />
+            <AlertTitle>Heads up!</AlertTitle>
+            <AlertDescription>
               All organization members are already a part of this subgraph.
-            </span>
-          </div>
+            </AlertDescription>
+          </Alert>
         )
       )}
-      <form className="flex gap-x-4" onSubmit={onSubmit}>
+      <form
+        className={cn(
+          "flex gap-x-4",
+          rbac?.enabled && inviteOptions.length === 0 && "hidden",
+        )}
+        onSubmit={onSubmit}
+      >
         <div className="flex-1">
           <Select
             value={inviteeEmail}
@@ -264,9 +272,11 @@ export const AddSubgraphUsersContent = ({
 
 const AddSubgraphUsers = ({
   subgraphName,
+  namespace,
   creatorUserId,
 }: {
   subgraphName: string;
+  namespace: string;
   creatorUserId?: string;
 }) => {
   const [open, setOpen] = useState(false);
@@ -277,6 +287,7 @@ const AddSubgraphUsers = ({
   const { data: subgraphMembersData, refetch } = useQuery(
     getSubgraphMembers.useQuery({
       subgraphName,
+      namespace,
     }),
   );
 
@@ -370,8 +381,15 @@ export const SubgraphsTable = ({
         </TableHeader>
         <TableBody>
           {subgraphs.map(
-            ({ name, routingURL, lastUpdatedAt, labels, creatorUserId }) => {
-              const path = `/${organizationSlug}/subgraph/${name}`;
+            ({
+              name,
+              routingURL,
+              lastUpdatedAt,
+              labels,
+              creatorUserId,
+              namespace,
+            }) => {
+              const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
               return (
                 <TableRow
                   key={name}
@@ -405,6 +423,7 @@ export const SubgraphsTable = ({
                     {rbac && (
                       <AddSubgraphUsers
                         subgraphName={name}
+                        namespace={namespace}
                         creatorUserId={creatorUserId}
                       />
                     )}

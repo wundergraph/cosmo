@@ -164,6 +164,7 @@ const FieldUsageColumn = ({
       field: fieldName,
       typename,
       graphName: graph?.graph?.name,
+      namespace: graph?.graph?.namespace,
       range: range,
       dateRange: {
         start: formatISO(dateRange.start),
@@ -625,9 +626,10 @@ const Type = (props: {
             <Badge className="w-max">
               <Link
                 href={{
-                  pathname: `/[organizationSlug]/graph/[slug]/schema`,
+                  pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
                   query: {
                     organizationSlug: router.query.organizationSlug,
+                    namespace: router.query.namespace,
                     slug: router.query.slug,
                     category: props.category,
                   },
@@ -1093,6 +1095,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const router = useRouter();
 
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const graphName = router.query.slug as string;
   const selectedCategory = (router.query.category as string) ?? "query";
   const typename = router.query.typename as string;
@@ -1100,6 +1103,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphSDLByName.useQuery({
       name: graphName,
+      namespace,
     }),
   );
 
@@ -1114,7 +1118,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   if (selectedCategory) {
     title = sentenceCase(selectedCategory);
     breadcrumbs.push(
-      <Link href={`/${organizationSlug}/graph/${graphName}/schema`}>
+      <Link
+        href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema`}
+      >
         Schema
       </Link>,
     );
@@ -1125,7 +1131,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     if (selectedCategory) {
       breadcrumbs.push(
         <Link
-          href={`/${organizationSlug}/graph/${graphName}/schema?category=${selectedCategory}`}
+          href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${selectedCategory}`}
         >
           {sentenceCase(selectedCategory)}
         </Link>,
@@ -1156,7 +1162,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               >
                 <Link
                   className="gap-x-4"
-                  href={`/${organizationSlug}/graph/${graphName}/schema?category=${category}&typename=${sentenceCase(
+                  href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${category}&typename=${sentenceCase(
                     category,
                   )}`}
                 >
@@ -1187,7 +1193,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                   })}
                 >
                   <Link
-                    href={`/${organizationSlug}/graph/${graphName}/schema?category=${gType}`}
+                    href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${gType}`}
                   >
                     <span>{sentenceCase(gType)}</span>
                     {typeCounts && (
@@ -1214,7 +1220,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               })}
             >
               <Link
-                href={`/${organizationSlug}/graph/${graphName}/schema?category=deprecated`}
+                href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=deprecated`}
               >
                 <span>Deprecated</span>
                 {typeCounts && ast && (

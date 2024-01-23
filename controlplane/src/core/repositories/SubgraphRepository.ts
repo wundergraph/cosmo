@@ -428,6 +428,7 @@ export class SubgraphRepository {
         lastUpdatedAt: insertedVersion[0].createdAt.toISOString() ?? '',
         name: subgraph.name,
         labels: subgraph.labels,
+        namespace: subgraph.namespace,
       };
     });
   }
@@ -575,6 +576,7 @@ export class SubgraphRepository {
             schemaVersion: true,
           },
         },
+        namespace: true,
       },
     });
 
@@ -606,6 +608,7 @@ export class SubgraphRepository {
       lastUpdatedAt,
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
       creatorUserId: resp.createdBy || undefined,
+      namespace: resp.namespace.name,
     };
   }
 
@@ -622,6 +625,7 @@ export class SubgraphRepository {
             schemaVersion: true,
           },
         },
+        namespace: true,
       },
     });
 
@@ -653,6 +657,7 @@ export class SubgraphRepository {
       lastUpdatedAt,
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
       creatorUserId: resp.createdBy || undefined,
+      namespace: resp.namespace.name,
     };
   }
 

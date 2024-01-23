@@ -33,23 +33,23 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
   const activeSubgraph = router.query.subgraph as string;
+  const namespace = router.query.namespace as string;
   const graphName = router.query.slug as string;
-  const discussionId = router.query.discussionId as string;
 
   const fullPath = router.asPath;
   const pathWithHash = fullPath.split("?")[0];
   const pathname = pathWithHash.split("#")[0];
-  const hash = pathWithHash.split("#")?.[1];
 
   const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(
     getFederatedGraphSDLByName.useQuery({
       name: graphName,
+      namespace,
     }),
   );
 
@@ -62,6 +62,7 @@ const SDLPage: NextPageWithLayout = () => {
     ...getLatestValidSubgraphSDLByName.useQuery({
       name: activeSubgraph,
       fedGraphName: graphName,
+      namespace,
     }),
     enabled: !!graphData?.subgraphs && !!activeSubgraph,
   });

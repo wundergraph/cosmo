@@ -219,6 +219,7 @@ message Subgraph {
   optional string readme = 7;
   string subscriptionUrl = 8;
   string target_id = 9;
+  string namespace = 10;
 }
 
 message GetSubgraphsResponse {

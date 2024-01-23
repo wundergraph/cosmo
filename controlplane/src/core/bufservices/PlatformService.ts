@@ -1778,6 +1778,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           lastUpdatedAt: s.lastUpdatedAt,
           targetId: s.targetId,
           subscriptionUrl: s.subscriptionUrl,
+          namespace: s.namespace,
         }));
 
         const result = composeSubgraphs(
@@ -4245,6 +4246,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             createdUserId: g.creatorUserId,
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
+            namespace: g.namespace,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -4285,6 +4287,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: subgraph.targetId,
             readme: subgraph.readme,
             subscriptionUrl: subgraph.subscriptionUrl,
+            namespace: subgraph.namespace,
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
           response: {
@@ -4621,6 +4624,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             labels: g.labels,
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
+            namespace: g.namespace,
           })),
           graphToken: graphToken.token,
           graphRequestToken: routerRequestToken,

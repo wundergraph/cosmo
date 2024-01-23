@@ -59,6 +59,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
   const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
   const getView = getDashboardAnalyticsView.useQuery({
+    namespace: graphData?.graph?.namespace,
     federatedGraphName: graphData?.graph?.name,
     range,
     startDate: range ? undefined : formatISO(dateRange.start),

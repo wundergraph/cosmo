@@ -79,6 +79,7 @@ export interface SubgraphDTO {
   labels: Label[];
   creatorUserId?: string;
   readme?: string;
+  namespace: string;
 }
 
 export interface MigrationSubgraph {
