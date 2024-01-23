@@ -10,7 +10,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Moves the subgraph from one namespace to another.');
   command.argument('<name>', 'The name of the subgraph to move.');
   command.option('-ns, --namespace', 'The namespace of the subgraph. Fallback to "default"', 'default');
-  command.requiredOption('-t, --to', 'The new namespace of the subgraph.');
+  command.requiredOption('-t, --to [string]', 'The new namespace of the subgraph.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.moveSubgraph(
       {
@@ -45,7 +45,7 @@ export default (opts: BaseCommandOptions) => {
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());
     } else {
-      program.error(pc.red(`Could not delete namespace. ${resp.response?.details ?? ''}`));
+      program.error(pc.red(`Could not move subgraph. ${resp.response?.details ?? ''}`));
     }
   });
 

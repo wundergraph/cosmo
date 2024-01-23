@@ -254,6 +254,8 @@ export class FederatedGraphRepository {
         throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Federated graph not found`);
       }
 
+      await tx.update(targets).set({ namespaceId: newNS.id }).where(eq(targets.id, data.targetId));
+
       // Delete all mappings because we will deal with new subgraphs in new namespace
       await tx
         .delete(schema.subgraphsToFederatedGraph)
@@ -262,16 +264,18 @@ export class FederatedGraphRepository {
       const newNamespaceSubgraphs = await subgraphRepo.byGraphLabelMatchers(federatedGraph.labelMatchers, newNS.name);
 
       // insert new mappings
-      await tx
-        .insert(schema.subgraphsToFederatedGraph)
-        .values(
-          newNamespaceSubgraphs.map((sg) => ({
-            subgraphId: sg.id,
-            federatedGraphId: federatedGraph.id,
-          })),
-        )
-        .onConflictDoNothing()
-        .execute();
+      if (newNamespaceSubgraphs.length > 0) {
+        await tx
+          .insert(schema.subgraphsToFederatedGraph)
+          .values(
+            newNamespaceSubgraphs.map((sg) => ({
+              subgraphId: sg.id,
+              federatedGraphId: federatedGraph.id,
+            })),
+          )
+          .onConflictDoNothing()
+          .execute();
+      }
 
       const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
       const composedGraph = await composer.composeFederatedGraph(federatedGraph);

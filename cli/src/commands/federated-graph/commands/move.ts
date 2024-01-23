@@ -10,7 +10,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Moves the federated graph from one namespace to another.');
   command.argument('<name>', 'The name of the federated graph to move.');
   command.option('-ns, --namespace', 'The namespace of the federated graph. Fallback to "default"', 'default');
-  command.requiredOption('-t, --to', 'The new namespace of the federated graph.');
+  command.requiredOption('-t, --to [string]', 'The new namespace of the federated graph.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.moveFederatedGraph(
       {
@@ -45,7 +45,7 @@ export default (opts: BaseCommandOptions) => {
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());
     } else {
-      program.error(pc.red(`Could not delete namespace. ${resp.response?.details ?? ''}`));
+      program.error(pc.red(`Could not move federated graph. ${resp.response?.details ?? ''}`));
     }
   });
 
