@@ -613,11 +613,18 @@ export class SubgraphRepository {
   }
 
   public async byName(name: string, namespace: string): Promise<SubgraphDTO | undefined> {
+    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
+    const ns = await namespaceRepo.byName(namespace);
+    if (!ns) {
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
+    }
+
     const resp = await this.db.query.targets.findFirst({
       where: and(
         eq(schema.targets.name, name),
         eq(schema.targets.organizationId, this.organizationId),
         eq(schema.targets.type, 'subgraph'),
+        eq(schema.targets.namespaceId, ns.id),
       ),
       with: {
         subgraph: {

@@ -13,6 +13,7 @@ import { useRouter } from "next/router";
 const SubgraphDiscussionsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const subgraphName = router.query.subgraphSlug as string;
 
   const subgraph = useSubgraph();
@@ -30,7 +31,7 @@ const SubgraphDiscussionsPage: NextPageWithLayout = () => {
       >
         <GraphDiscussions
           targetId={subgraph?.subgraph?.targetId}
-          linkToSchema={`/${organizationSlug}/subgraph/${subgraphName}/schema`}
+          linkToSchema={`/${organizationSlug}/${namespace}/subgraph/${subgraphName}/schema`}
         />
       </SubgraphPageLayout>
     </PageHeader>

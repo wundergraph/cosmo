@@ -96,50 +96,52 @@ export const FederatedGraphsTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {graphs.map(({ name, routingURL, lastUpdatedAt, labelMatchers }) => {
-            const path = `/${organizationSlug}/graph/${name}`;
-            return (
-              <TableRow
-                key={name}
-                className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
-              >
-                <TableCell className="px-4 font-medium">{name}</TableCell>
-                <TableCell className="px-4 text-muted-foreground hover:text-current">
-                  <Link target="_blank" rel="noreferrer" href={routingURL}>
-                    {routingURL}
-                  </Link>
-                </TableCell>
-                <TableCell className="px-4">
-                  <div className="flex space-x-2">
-                    {labelMatchers.map((l) => {
-                      return (
-                        <Badge variant="secondary" key={l}>
-                          {l}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </TableCell>
-                <TableCell className="px-4 text-right text-muted-foreground">
-                  {lastUpdatedAt
-                    ? formatDistanceToNow(new Date(lastUpdatedAt), {
-                        addSuffix: true,
-                      })
-                    : "Never"}
-                </TableCell>
-                <TableCell className="flex">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="table-action"
-                  >
-                    <Link href={path}>View</Link>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+          {graphs.map(
+            ({ name, routingURL, lastUpdatedAt, labelMatchers, namespace }) => {
+              const path = `/${organizationSlug}/${namespace}/graph/${name}`;
+              return (
+                <TableRow
+                  key={name}
+                  className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+                >
+                  <TableCell className="px-4 font-medium">{name}</TableCell>
+                  <TableCell className="px-4 text-muted-foreground hover:text-current">
+                    <Link target="_blank" rel="noreferrer" href={routingURL}>
+                      {routingURL}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <div className="flex space-x-2">
+                      {labelMatchers.map((l) => {
+                        return (
+                          <Badge variant="secondary" key={l}>
+                            {l}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 text-right text-muted-foreground">
+                    {lastUpdatedAt
+                      ? formatDistanceToNow(new Date(lastUpdatedAt), {
+                          addSuffix: true,
+                        })
+                      : "Never"}
+                  </TableCell>
+                  <TableCell className="flex">
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="table-action"
+                    >
+                      <Link href={path}>View</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            },
+          )}
         </TableBody>
       </Table>
     </TableWrapper>
@@ -149,10 +151,12 @@ export const FederatedGraphsTable = ({
 const FederatedGraphsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const subgraphSlug = router.query.subgraphSlug as string;
+  const namespace = router.query.namespace as string;
 
   const { data, error, refetch, isLoading } = useQuery({
     ...getFederatedGraphsBySubgraphLabels.useQuery({
       subgraphName: subgraphSlug,
+      namespace,
     }),
     enabled: !!subgraphSlug,
   });

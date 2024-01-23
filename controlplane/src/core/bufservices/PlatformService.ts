@@ -115,6 +115,7 @@ import {
   GraphApiKeyDTO,
   GraphApiKeyJwtPayload,
   PublishedOperationData,
+  SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
@@ -4230,11 +4231,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new SubgraphRepository(opts.db, authContext.organizationId);
 
-        const list = await repo.list({
-          limit: req.limit,
-          offset: req.offset,
-          namespace: req.namespace,
-        });
+        const list: SubgraphDTO[] = [];
+        if (req.namespace) {
+          list.push(
+            ...(await repo.list({
+              limit: req.limit,
+              offset: req.offset,
+              namespace: req.namespace,
+            })),
+          );
+        } else {
+          list.push(
+            ...(await repo.listAll({
+              limit: req.limit,
+              offset: req.offset,
+            })),
+          );
+        }
 
         return {
           graphs: list.map((g) => ({

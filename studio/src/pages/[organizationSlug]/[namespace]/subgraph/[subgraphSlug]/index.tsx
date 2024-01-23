@@ -61,6 +61,7 @@ const SubgraphOverviewPage = () => {
   const { data: subgraphMembersData, refetch } = useQuery({
     ...getSubgraphMembers.useQuery({
       subgraphName: graph?.subgraph?.name,
+      namespace: graph?.subgraph?.namespace,
     }),
     enabled: !!graph,
   });

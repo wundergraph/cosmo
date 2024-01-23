@@ -26,6 +26,7 @@ import { PiGitBranch } from "react-icons/pi";
 const SubgraphDiscussionPage: NextPageWithLayout = () => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.subgraphSlug as string;
   const id = router.query.discussionId as string;
 
@@ -48,7 +49,10 @@ const SubgraphDiscussionPage: NextPageWithLayout = () => {
         title={id}
         subtitle=""
         breadcrumbs={[
-          <Link key={0} href={`/${organizationSlug}/graph/${slug}/discussions`}>
+          <Link
+            key={0}
+            href={`/${organizationSlug}/${namespace}/graph/${slug}/discussions`}
+          >
             Discussions
           </Link>,
         ]}

@@ -29,6 +29,7 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
   const { data, error, refetch, isLoading } = useQuery({
     ...getLatestSubgraphSDLByName.useQuery({
       name: graph?.subgraph?.name,
+      namespace: graph?.subgraph?.namespace,
     }),
     enabled: !!graph && !!graph.subgraph,
   });
