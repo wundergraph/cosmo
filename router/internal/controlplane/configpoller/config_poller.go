@@ -144,8 +144,9 @@ func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *strin
 	}
 
 	req := connect.NewRequest(&nodev1.GetConfigRequest{
-		GraphId: federatedGraphID,
-		Version: version,
+		GraphName: c.federatedGraphName,
+		GraphId:   federatedGraphID,
+		Version:   version,
 	})
 
 	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", c.graphApiToken))

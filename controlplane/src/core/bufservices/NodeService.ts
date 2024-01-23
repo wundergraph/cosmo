@@ -1,17 +1,19 @@
-import { ServiceImpl } from '@connectrpc/connect';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlainMessage } from '@bufbuild/protobuf';
-import { lru } from 'tiny-lru';
+import { ServiceImpl } from '@connectrpc/connect';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import {
   GetConfigResponse,
   RegistrationInfo,
   SelfRegisterResponse,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { handleError } from '../util.js';
-import type { RouterOptions } from '../routes.js';
+import { FederatedGraphDTO } from 'src/types/index.js';
+import { lru } from 'tiny-lru';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { DefaultNamespace } from '../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import type { RouterOptions } from '../routes.js';
+import { handleError } from '../util.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeService>> {
   const registrationInfoCache = lru<PlainMessage<RegistrationInfo>>(1000, 300_000);
@@ -72,6 +74,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         };
       });
     },
+
     getLatestValidRouterConfig: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -82,7 +85,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const target = await fedGraphRepo.byId(req.graphId);
+        let target: FederatedGraphDTO | undefined;
+
+        if (req.graphId) {
+          target = await fedGraphRepo.byId(req.graphId);
+        } else if (req.graphName) {
+          // TODO: deprecate graph name. Assume default namespace for backwards compatibility
+          target = await fedGraphRepo.byName(req.graphName, DefaultNamespace);
+        }
+
         if (!target) {
           return {
             response: {

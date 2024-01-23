@@ -360,11 +360,13 @@ export class ResponseStatus extends Message<ResponseStatus> {
  */
 export class GetConfigRequest extends Message<GetConfigRequest> {
   /**
+   * With the introduction of namespaces, we no longer need the graph name. We keep it for backwards compatibility.
    * The FQDN of the graph to get the config for e.g. "wg.production"
    *
-   * @generated from field: string graph_id = 1;
+   * @generated from field: string graph_name = 1 [deprecated = true];
+   * @deprecated
    */
-  graphId = "";
+  graphName = "";
 
   /**
    * The version to check for. If the version is not specified, the latest router config version will be returned.
@@ -375,6 +377,11 @@ export class GetConfigRequest extends Message<GetConfigRequest> {
    */
   version?: string;
 
+  /**
+   * @generated from field: string graph_id = 3;
+   */
+  graphId = "";
+
   constructor(data?: PartialMessage<GetConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -383,8 +390,9 @@ export class GetConfigRequest extends Message<GetConfigRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.node.v1.GetConfigRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "graph_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigRequest {
