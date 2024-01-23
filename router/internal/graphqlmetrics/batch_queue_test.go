@@ -13,7 +13,7 @@ func printf(s string, a ...interface{}) {
 	}
 }
 
-func produce(q chan string, numItems, numGoroutines int, out chan []string) {
+func produce(q chan QueueWork[string], numItems, numGoroutines int, out chan []string) {
 	printf("=== Producing %d items.\n", numItems*numGoroutines)
 	done := make(chan bool, 1)
 	msgs := make(chan string)
@@ -24,7 +24,7 @@ func produce(q chan string, numItems, numGoroutines int, out chan []string) {
 			go func(routineIdx int) {
 				for j := 0; j < numItems; j++ {
 					m := fmt.Sprintf("producer#%d, item#%d", routineIdx, j)
-					q <- m
+					q <- &QueueItem[string]{item: m}
 					msgs <- m
 				}
 				wg.Done()
@@ -68,7 +68,7 @@ func TestDispatchOrder(t *testing.T) {
 	produced := make(chan []string, 1)
 	go produce(b.inQueue, numItems, numGoroutines, produced)
 
-	var dispatched []string
+	var dispatched []QueueWork[string]
 	breakout := make(chan bool)
 	time.AfterFunc(time.Duration(30)*time.Millisecond, func() {
 		breakout <- true
@@ -96,7 +96,7 @@ L:
 			msgExists[msgs[i]] = false
 		}
 		for i := 0; i < len(dispatched); i++ {
-			if _, ok := msgExists[dispatched[i]]; !ok {
+			if _, ok := msgExists[dispatched[i].Item()]; !ok {
 				t.Errorf("item was not dispatched: %s", dispatched[i])
 			}
 		}

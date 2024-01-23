@@ -189,8 +189,9 @@ export function shareableFieldDefinitionsError(parent: ObjectContainer, children
     }
     if (shareableSubgraphs.length < 1) {
       errorMessages.push(
-        `\n The field "${fieldName}" is defined in the following subgraphs: "${[...field.subgraphs].join('", "')}".` +
-          `\n However, it is not declared "@shareable" in any of them.`,
+        `\n The field "${fieldName}" is defined in the following subgraphs: "${[...field.subgraphNames].join(
+          '", "',
+        )}".` + `\n However, it is not declared "@shareable" in any of them.`,
       );
     } else {
       errorMessages.push(

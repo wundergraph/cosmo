@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/wundergraph/cosmo/router/cmd/custom/module"
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestModuleSetCustomHeader(t *testing.T) {
