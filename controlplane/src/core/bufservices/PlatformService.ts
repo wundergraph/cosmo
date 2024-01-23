@@ -218,7 +218,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        if (req.name === 'default') {
+        if (req.name === DefaultNamespace) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -257,7 +257,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        if (req.name === 'default') {
+        if (req.name === DefaultNamespace) {
           return {
             response: {
               code: EnumStatusCode.ERR,
