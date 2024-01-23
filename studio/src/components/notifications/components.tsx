@@ -19,6 +19,8 @@ import { PartialMessage } from "@bufbuild/protobuf";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { FaSlack } from "react-icons/fa";
 import { Toolbar } from "../ui/toolbar";
+import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { SelectGroup, SelectLabel } from "../ui/select";
 
 export type EventsMeta = Array<PartialMessage<EventMeta>>;
 
@@ -87,6 +89,21 @@ export const SelectFederatedGraphs = ({
     setMeta(tempMeta);
   };
 
+  const groupedGraphs = data?.graphs.reduce(
+    (result, graph) => {
+      const { namespace, name } = graph;
+
+      if (!result[namespace]) {
+        result[namespace] = [];
+      }
+
+      result[namespace].push(graph);
+
+      return result;
+    },
+    {} as Record<string, FederatedGraph[]>,
+  );
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -97,16 +114,23 @@ export const SelectFederatedGraphs = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="">
-        {data?.graphs?.map((graph) => {
+        {Object.entries(groupedGraphs ?? {}).map(([namespace, graphs]) => {
           return (
-            <DropdownMenuCheckboxItem
-              key={graph.id}
-              checked={graphIds.includes(graph.id)}
-              onCheckedChange={(val) => onCheckedChange(val, graph.id)}
-              onSelect={(e) => e.preventDefault()}
-            >
-              {graph.name}
-            </DropdownMenuCheckboxItem>
+            <SelectGroup key={namespace}>
+              <SelectLabel>{namespace}</SelectLabel>
+              {graphs.map((graph) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={graph.id}
+                    checked={graphIds.includes(graph.id)}
+                    onCheckedChange={(val) => onCheckedChange(val, graph.id)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {graph.name}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+            </SelectGroup>
           );
         })}
       </DropdownMenuContent>
