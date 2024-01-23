@@ -1326,6 +1326,7 @@ message GetUserAccessibleResourcesResponse {
   message Graph {
     string targetId = 1;
     string name = 2;
+    string namespace = 3;
   }
   Response response = 1;
   repeated Graph federatedGraphs = 2;

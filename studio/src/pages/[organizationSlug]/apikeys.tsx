@@ -22,7 +22,9 @@ import { Loader } from "@/components/ui/loader";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -57,7 +59,10 @@ import {
   getAPIKeys,
   getUserAccessibleResources,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  ExpiresAt,
+  GetUserAccessibleResourcesResponse_Graph,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import copy from "copy-to-clipboard";
 import Link from "next/link";
 import {
@@ -171,6 +176,36 @@ const CreateAPIKeyDialog = ({
     setSelectedSubgraphs([]);
   };
 
+  const groupedSubgraphs = subgraphs.reduce(
+    (result, graph) => {
+      const { namespace, name } = graph;
+
+      if (!result[namespace]) {
+        result[namespace] = [];
+      }
+
+      result[namespace].push(graph);
+
+      return result;
+    },
+    {} as Record<string, GetUserAccessibleResourcesResponse_Graph[]>,
+  );
+
+  const groupedFederatedGraphs = federatedGraphs.reduce(
+    (result, graph) => {
+      const { namespace, name } = graph;
+
+      if (!result[namespace]) {
+        result[namespace] = [];
+      }
+
+      result[namespace].push(graph);
+
+      return result;
+    },
+    {} as Record<string, GetUserAccessibleResourcesResponse_Graph[]>,
+  );
+
   // check if the user has access to create api keys only when rbac is enabled
   if (
     rbac &&
@@ -234,7 +269,7 @@ const CreateAPIKeyDialog = ({
             </Select>
           </div>
           {rbac && (
-            <div className="flex flex-col gap-y-3">
+            <div className="mt-4 flex flex-col gap-y-3">
               <div className="flex flex-col gap-y-1">
                 <span className="text-base font-semibold">
                   Select Resources
@@ -249,6 +284,7 @@ const CreateAPIKeyDialog = ({
                 {isAdmin && (
                   <div className="flex items-center gap-x-2">
                     <Checkbox
+                      id="all-resources"
                       checked={selectedAllResources}
                       onCheckedChange={(checked) => {
                         if (checked) {
@@ -259,12 +295,16 @@ const CreateAPIKeyDialog = ({
                         }
                       }}
                     />
-                    <span>All Resources</span>
+                    <label
+                      htmlFor="all-resources"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      All Resources
+                    </label>
                   </div>
                 )}
                 {federatedGraphs.length > 0 && (
                   <div className="flex flex-col gap-y-1">
-                    <span>Federated Graphs</span>
                     <div>
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -273,43 +313,52 @@ const CreateAPIKeyDialog = ({
                         >
                           <Button size="sm" variant="outline">
                             {selectedFedGraphs.length > 0
-                              ? `${selectedFedGraphs.length} selected`
+                              ? `${selectedFedGraphs.length} federated graphs selected`
                               : "Select federated graphs"}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="">
-                          {federatedGraphs.map((graph) => {
-                            return (
-                              <DropdownMenuCheckboxItem
-                                key={graph.targetId}
-                                checked={selectedFedGraphs.includes(
-                                  graph.targetId,
-                                )}
-                                onCheckedChange={(val) => {
-                                  if (val) {
-                                    setSelectedFedGraphs([
-                                      ...Array.from(
-                                        new Set([
-                                          ...selectedFedGraphs,
+                          {Object.entries(groupedFederatedGraphs ?? {}).map(
+                            ([namespace, graphs]) => {
+                              return (
+                                <SelectGroup key={namespace}>
+                                  <SelectLabel>{namespace}</SelectLabel>
+                                  {graphs.map((graph) => {
+                                    return (
+                                      <DropdownMenuCheckboxItem
+                                        key={graph.targetId}
+                                        checked={selectedFedGraphs.includes(
                                           graph.targetId,
-                                        ]),
-                                      ),
-                                    ]);
-                                    setErrorMsg(undefined);
-                                  } else {
-                                    setSelectedFedGraphs([
-                                      ...selectedFedGraphs.filter(
-                                        (g) => g !== graph.targetId,
-                                      ),
-                                    ]);
-                                  }
-                                }}
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                {graph.name}
-                              </DropdownMenuCheckboxItem>
-                            );
-                          })}
+                                        )}
+                                        onCheckedChange={(val) => {
+                                          if (val) {
+                                            setSelectedFedGraphs([
+                                              ...Array.from(
+                                                new Set([
+                                                  ...selectedFedGraphs,
+                                                  graph.targetId,
+                                                ]),
+                                              ),
+                                            ]);
+                                            setErrorMsg(undefined);
+                                          } else {
+                                            setSelectedFedGraphs([
+                                              ...selectedFedGraphs.filter(
+                                                (g) => g !== graph.targetId,
+                                              ),
+                                            ]);
+                                          }
+                                        }}
+                                        onSelect={(e) => e.preventDefault()}
+                                      >
+                                        {graph.name}
+                                      </DropdownMenuCheckboxItem>
+                                    );
+                                  })}
+                                </SelectGroup>
+                              );
+                            },
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -317,7 +366,6 @@ const CreateAPIKeyDialog = ({
                 )}
                 {subgraphs.length > 0 && (
                   <div className="flex flex-col gap-y-1">
-                    <span>Subgraphs</span>
                     <div>
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -326,43 +374,52 @@ const CreateAPIKeyDialog = ({
                         >
                           <Button size="sm" variant="outline">
                             {selectedSubgraphs.length > 0
-                              ? `${selectedSubgraphs.length} selected`
+                              ? `${selectedSubgraphs.length} subgraphs selected`
                               : "Select subgraphs"}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="">
-                          {subgraphs.map((graph) => {
-                            return (
-                              <DropdownMenuCheckboxItem
-                                key={graph.targetId}
-                                checked={selectedSubgraphs.includes(
-                                  graph.targetId,
-                                )}
-                                onCheckedChange={(val) => {
-                                  if (val) {
-                                    setSelectedSubgraphs([
-                                      ...Array.from(
-                                        new Set([
-                                          ...selectedSubgraphs,
+                          {Object.entries(groupedSubgraphs ?? {}).map(
+                            ([namespace, graphs]) => {
+                              return (
+                                <SelectGroup key={namespace}>
+                                  <SelectLabel>{namespace}</SelectLabel>
+                                  {graphs.map((graph) => {
+                                    return (
+                                      <DropdownMenuCheckboxItem
+                                        key={graph.targetId}
+                                        checked={selectedSubgraphs.includes(
                                           graph.targetId,
-                                        ]),
-                                      ),
-                                    ]);
-                                    setErrorMsg(undefined);
-                                  } else {
-                                    setSelectedSubgraphs([
-                                      ...selectedSubgraphs.filter(
-                                        (g) => g !== graph.targetId,
-                                      ),
-                                    ]);
-                                  }
-                                }}
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                {graph.name}
-                              </DropdownMenuCheckboxItem>
-                            );
-                          })}
+                                        )}
+                                        onCheckedChange={(val) => {
+                                          if (val) {
+                                            setSelectedSubgraphs([
+                                              ...Array.from(
+                                                new Set([
+                                                  ...selectedSubgraphs,
+                                                  graph.targetId,
+                                                ]),
+                                              ),
+                                            ]);
+                                            setErrorMsg(undefined);
+                                          } else {
+                                            setSelectedSubgraphs([
+                                              ...selectedSubgraphs.filter(
+                                                (g) => g !== graph.targetId,
+                                              ),
+                                            ]);
+                                          }
+                                        }}
+                                        onSelect={(e) => e.preventDefault()}
+                                      >
+                                        {graph.name}
+                                      </DropdownMenuCheckboxItem>
+                                    );
+                                  })}
+                                </SelectGroup>
+                              );
+                            },
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

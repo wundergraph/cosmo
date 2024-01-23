@@ -5951,10 +5951,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             federatedGraphs: federatedGraphs.map((g) => ({
               targetId: g.targetId,
               name: g.name,
+              namespace: g.namespace,
             })),
             subgraphs: subgraphs.map((g) => ({
               targetId: g.targetId,
               name: g.name,
+              namespace: g.namespace,
             })),
           };
         }
@@ -5970,10 +5972,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           federatedGraphs: federatedGraphs.map((g) => ({
             targetId: g.targetId,
             name: g.name,
+            namespace: g.namespace,
           })),
           subgraphs: subgraphs.map((g) => ({
             targetId: g.targetId,
             name: g.name,
+            namespace: g.namespace,
           })),
         };
       });
