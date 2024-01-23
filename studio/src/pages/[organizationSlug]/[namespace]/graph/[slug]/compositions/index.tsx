@@ -1,3 +1,5 @@
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { getCheckIcon } from "@/components/check-badge-icon";
 import {
   DatePickerWithRange,
@@ -59,24 +61,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";
 
-const useDateRange = () => {
-  const router = useRouter();
-
-  const dateRange = router.query.dateRange
-    ? JSON.parse(router.query.dateRange as string)
-    : {
-        start: subDays(new Date(), 7),
-        end: new Date(),
-      };
-  const startDate = new Date(dateRange.start);
-  const endDate = new Date(dateRange.end);
-
-  return {
-    startDate,
-    endDate,
-  };
-};
-
 const CompositionsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const pageNumber = router.query.page
@@ -85,13 +69,16 @@ const CompositionsPage: NextPageWithLayout = () => {
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
 
-  const { startDate, endDate } = useDateRange();
+  const {
+    dateRange: { start: startDate, end: endDate },
+  } = useDateRangeQueryState();
 
   const graphContext = useContext(GraphContext);
 
   const { data, isLoading, error, refetch } = useQuery(
     getCompositions.useQuery({
       fedGraphName: router.query.slug as string,
+      namespace: router.query.namespace as string,
       limit: limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startOfDay(startDate)),
@@ -288,23 +275,33 @@ const CompositionsPage: NextPageWithLayout = () => {
 };
 
 const CompositionToolbar = () => {
-  const router = useRouter();
-  const user = useUser();
+  const applyParams = useApplyParams();
 
-  const { startDate, endDate } = useDateRange();
+  const {
+    dateRange: { start: startDate, end: endDate },
+    range,
+  } = useDateRangeQueryState();
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange }) => {
-    const stringifiedDateRange = JSON.stringify({
-      start: dateRange?.start as Date,
-      end: (dateRange?.end as Date) ?? (dateRange?.end as Date),
-    });
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    dateRange,
+    range,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
 
-    router.push({
-      query: {
-        ...router.query,
+      applyParams({
+        range: null,
         dateRange: stringifiedDateRange,
-      },
-    });
+      });
+    }
   };
 
   const breakingChangeRetention = useFeatureLimit(
@@ -315,6 +312,7 @@ const CompositionToolbar = () => {
   return (
     <Toolbar>
       <DatePickerWithRange
+        range={range}
         dateRange={{ start: startDate, end: endDate }}
         onChange={onDateRangeChange}
         calendarDaysLimit={breakingChangeRetention}

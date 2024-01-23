@@ -1273,6 +1273,7 @@ message GraphCompositionSubgraph {
   string id = 1;
   string schemaVersionId = 2;
   string name = 3;
+  string target_id = 4;
 }
 
 message GetCompositionsRequest {
@@ -1302,8 +1303,7 @@ message GetCompositionDetailsResponse {
 
 message GetSdlBySchemaVersionRequest {
   string schemaVersionId = 1;
-  string graphName = 2;
-  string namespace = 3;
+  string target_id = 2;
 }
 
 message GetSdlBySchemaVersionResponse {

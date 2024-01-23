@@ -1,6 +1,7 @@
 import { getCheckIcon } from "@/components/check-badge-icon";
 import { EmptyState } from "@/components/empty-state";
 import {
+  GraphContext,
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
@@ -39,16 +40,20 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useContext } from "react";
 import { PiGitBranch } from "react-icons/pi";
 
 const CompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
 
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
   const tab = router.query.tab as string;
   const subgraph = router.query.subgraph as string;
+
+  const graphData = useContext(GraphContext);
 
   const { data, isLoading, error, refetch } = useQuery(
     getCompositionDetails.useQuery({
@@ -60,15 +65,14 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
     (s) => s.name === subgraph,
   );
 
-  const activeSubgraphName =
-    compositionSubgraph?.name || data?.compositionSubgraphs?.[0]?.name;
-  const activeSubgraphVersionId =
-    compositionSubgraph?.schemaVersionId ||
-    data?.compositionSubgraphs?.[0]?.schemaVersionId;
+  const activeSubgraph = compositionSubgraph || data?.compositionSubgraphs?.[0];
+  const activeSubgraphName = activeSubgraph?.name;
+  const activeSubgraphVersionId = activeSubgraph?.schemaVersionId;
 
   const { data: sdlData, isLoading: fetchingSdl } = useQuery({
     ...getSdlBySchemaVersion.useQuery({
-      graphName: tab === "input" ? activeSubgraphName : slug,
+      targetId:
+        tab === "input" ? activeSubgraph?.targetId : graphData?.graph?.targetId,
       schemaVersionId:
         tab === "input"
           ? activeSubgraphVersionId
@@ -97,7 +101,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
         breadcrumbs={[
           <Link
             key={0}
-            href={`/${organizationSlug}/graph/${slug}/compositions`}
+            href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions`}
           >
             Compositions
           </Link>,
@@ -138,7 +142,10 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
       title={id}
       subtitle="A quick glance of the details for this composition"
       breadcrumbs={[
-        <Link key={0} href={`/${organizationSlug}/graph/${slug}/compositions`}>
+        <Link
+          key={0}
+          href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions`}
+        >
           Compositions
         </Link>,
       ]}
@@ -203,7 +210,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                 ) : (
                   <Link
                     key={id}
-                    href={`/${organizationSlug}/graph/${slug}/changelog/${schemaVersionId}`}
+                    href={`/${organizationSlug}/${namespace}/graph/${slug}/changelog/${schemaVersionId}`}
                   >
                     <div className="flex items-center gap-x-1">
                       <PiGitBranch />
@@ -326,6 +333,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                         <div className="-top-[60px] right-8 px-5 md:absolute md:px-0">
                           <div className="flex gap-x-2">
                             <Select
+                              value={activeSubgraphName}
                               onValueChange={(subgraph) =>
                                 router.push({
                                   pathname: router.pathname,

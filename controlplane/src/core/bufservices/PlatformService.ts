@@ -5868,19 +5868,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const graph = await fedRepo.byName(req.graphName, req.namespace);
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `The federated graph was not found`,
-            },
-            sdl: '',
-          };
-        }
-
         const sdl = await fedRepo.getSdlBasedOnSchemaVersion({
-          targetId: graph.targetId,
+          targetId: req.targetId,
           schemaVersionId: req.schemaVersionId,
         });
 
