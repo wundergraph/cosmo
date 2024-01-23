@@ -111,6 +111,7 @@ import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
 import {
   DateRange,
+  FederatedGraphDTO,
   GraphApiKeyDTO,
   GraphApiKeyJwtPayload,
   PublishedOperationData,
@@ -4303,11 +4304,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const list = await fedGraphRepo.list({
-          limit: req.limit,
-          offset: req.offset,
-          namespace: req.namespace,
-        });
+        const list: FederatedGraphDTO[] = [];
+        if (req.namespace) {
+          list.push(
+            ...(await fedGraphRepo.list({
+              limit: req.limit,
+              offset: req.offset,
+              namespace: req.namespace,
+            })),
+          );
+        } else {
+          list.push(
+            ...(await fedGraphRepo.listAll({
+              limit: req.limit,
+              offset: req.offset,
+            })),
+          );
+        }
 
         let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
 
@@ -4321,6 +4334,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: g.id,
             targetId: g.targetId,
             name: g.name,
+            namespace: g.namespace,
             labelMatchers: g.labelMatchers,
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
@@ -4365,6 +4379,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           graphs: federatedGraphs.map((g) => ({
             id: g.id,
             name: g.name,
+            namespace: g.namespace,
             labelMatchers: g.labelMatchers,
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
@@ -4588,6 +4603,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: federatedGraph.id,
             targetId: federatedGraph.targetId,
             name: federatedGraph.name,
+            namespace: federatedGraph.namespace,
             routingURL: federatedGraph.routingUrl,
             labelMatchers: federatedGraph.labelMatchers,
             lastUpdatedAt: federatedGraph.lastUpdatedAt,

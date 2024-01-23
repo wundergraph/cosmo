@@ -1482,6 +1482,11 @@ export class FederatedGraph extends Message<FederatedGraph> {
    */
   targetId = "";
 
+  /**
+   * @generated from field: string namespace = 12;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<FederatedGraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1501,6 +1506,7 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 9, name: "requestSeries", kind: "message", T: RequestSeriesItem, repeated: true },
     { no: 10, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {

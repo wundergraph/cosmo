@@ -16,7 +16,10 @@ import {
   getFederatedGraphByName,
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  FederatedGraph,
+  GetFederatedGraphByNameResponse,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import { Fragment, ReactNode, createContext, useMemo } from "react";
 import { PiChat, PiCubeFocus, PiDevices, PiGitBranch } from "react-icons/pi";
@@ -27,7 +30,9 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
+  SelectGroup,
   SelectValue,
 } from "../ui/select";
 import { PageHeader } from "./head";
@@ -61,11 +66,13 @@ export const GraphContext = createContext<GraphContextProps | undefined>(
 export const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
       name: slug,
+      namespace,
     }),
   );
 
@@ -82,7 +89,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   }, [data]);
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${organizationSlug}/graph/${slug}`;
+    const basePath = `/${organizationSlug}/${namespace}/graph/${slug}`;
 
     return [
       {
@@ -141,7 +148,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <PiChat className="h-4 w-4" />,
       },
     ];
-  }, [slug, organizationSlug]);
+  }, [organizationSlug, namespace, slug]);
 
   let render: React.ReactNode;
 
@@ -183,33 +190,65 @@ export const GraphSelect = () => {
 
   const router = useRouter();
   const slug = router.query.slug as string;
-  if (router.pathname.split("/")[2] !== "graph") return null;
+  const namespace = router.query.namespace as string;
+
+  const selected = data?.graphs.find(
+    (g) => g.name === slug && g.namespace === namespace,
+  );
+
+  const groupedGraphs = data?.graphs.reduce(
+    (result, graph) => {
+      const { namespace, name } = graph;
+
+      if (!result[namespace]) {
+        result[namespace] = [];
+      }
+
+      result[namespace].push(graph);
+
+      return result;
+    },
+    {} as Record<string, FederatedGraph[]>,
+  );
+
+  if (router.pathname.split("/")[3] !== "graph") {
+    return null;
+  }
 
   return (
     <Select
-      value={slug}
-      onValueChange={(gID) =>
+      value={selected?.id}
+      onValueChange={(gID) => {
+        const graph = data?.graphs.find((g) => g.id === gID);
         router.push({
           pathname: router.pathname,
           query: {
             ...router.query,
-            slug: gID,
+            namespace: graph?.namespace,
+            slug: graph?.name,
           },
-        })
-      }
+        });
+      }}
     >
       <SelectTrigger
-        value={slug}
+        value={selected?.id}
         className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
       >
-        <SelectValue aria-label={slug}>{slug}</SelectValue>
+        <SelectValue aria-label={slug}>{selected?.name}</SelectValue>
       </SelectTrigger>
       <SelectContent className="min-w-[200px]">
-        {data?.graphs?.map(({ name }) => {
+        {Object.entries(groupedGraphs ?? {}).map(([namespace, graphs]) => {
           return (
-            <SelectItem key={name} value={name}>
-              {name}
-            </SelectItem>
+            <SelectGroup key={namespace}>
+              <SelectLabel>{namespace}</SelectLabel>
+              {graphs.map(({ id, name }) => {
+                return (
+                  <SelectItem key={id} value={id}>
+                    {name}
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
           );
         })}
       </SelectContent>

@@ -185,6 +185,7 @@ message FederatedGraph {
   repeated RequestSeriesItem requestSeries = 9;
   optional string readme = 10;
   string target_id = 11;
+  string namespace = 12;
 }
 
 message GetFederatedGraphsResponse {

@@ -442,7 +442,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
 
   return (
     <Link
-      href={`/${user?.currentOrganization?.slug}/graph/${graph.name}`}
+      href={`/${user?.currentOrganization?.slug}/${graph.namespace}/graph/${graph.name}`}
       className="project-list-item group"
     >
       <Card className="flex h-full flex-col py-4 transition-all group-hover:border-input-active">

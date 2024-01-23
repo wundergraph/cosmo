@@ -11,6 +11,7 @@ import program from '../../index.js';
 
 type OutputFile = {
   name: string;
+  namespace: string;
   labelMatchers: string[];
   routingURL: string;
   isComposable: boolean;
@@ -19,8 +20,8 @@ type OutputFile = {
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
-  command.description('Lists federated graphs in the given namespace.');
-  command.option('-ns, --namespace', 'The namespace of the federated graph. Fallback to "default"', 'default');
+  command.description('Lists all federated graphs in the organization.');
+  command.option('-ns, --namespace [string]', 'Filter to get graphs in this namespace only.');
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.action(async (options) => {
@@ -52,6 +53,7 @@ export default (opts: BaseCommandOptions) => {
         (g) =>
           ({
             name: g.name,
+            namespace: g.namespace,
             labelMatchers: g.labelMatchers,
             routingURL: g.routingURL,
             isComposable: g.isComposable,
@@ -70,19 +72,21 @@ export default (opts: BaseCommandOptions) => {
     const graphsTable = new Table({
       head: [
         pc.bold(pc.white('NAME')),
+        pc.bold(pc.white('NAMESPACE')),
         pc.bold(pc.white('LABEL_MATCHERS')),
         pc.bold(pc.white('ROUTING_URL')),
         pc.bold(pc.white('IS_COMPOSABLE')),
         pc.bold(pc.white('UPDATED_AT')),
       ],
       colAligns: ['left', 'left', 'left', 'center'],
-      colWidths: [25, 40, 70, 15, 30],
+      colWidths: [25, 25, 40, 70, 15, 30],
       wordWrap: true,
     });
 
     for (const graph of resp.graphs) {
       graphsTable.push([
         graph.name,
+        graph.namespace,
         graph.labelMatchers.map((l) => `(${l})`).join(','),
         graph.routingURL,
         graph.isComposable ? logSymbols.success : logSymbols.error,

@@ -296,6 +296,7 @@ export class FederatedGraphRepository {
       where: and(eq(schema.targets.type, 'federated'), eq(schema.targets.organizationId, this.organizationId)),
       limit: opts.limit,
       offset: opts.offset,
+      orderBy: asc(schema.targets.namespaceId),
     });
 
     const federatedGraphs: FederatedGraphDTO[] = [];
