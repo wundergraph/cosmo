@@ -127,6 +127,7 @@ export class FederatedGraphRepository {
         lastUpdatedAt: '',
         labelMatchers: data.labelMatchers,
         subgraphsCount: subgraphs.length,
+        namespace: data.namespace,
       };
     });
   }
@@ -233,6 +234,59 @@ export class FederatedGraphRepository {
     });
   }
 
+  public move(data: { targetId: string; newNamespace: string; updatedBy: string }, blobStorage: BlobStorage) {
+    return this.db.transaction(async (tx) => {
+      const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const compositionRepo = new GraphCompositionRepository(tx);
+
+      const newNS = await namespaceRepo.byName(data.newNamespace);
+      if (!newNS) {
+        throw new PublicError(
+          EnumStatusCode.ERR_NOT_FOUND,
+          `Namespace ${data.newNamespace} not found. Please create it before moving.`,
+        );
+      }
+
+      const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
+      if (!federatedGraph) {
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Federated graph not found`);
+      }
+
+      // Delete all mappings because we will deal with new subgraphs in new namespace
+      await tx
+        .delete(schema.subgraphsToFederatedGraph)
+        .where(eq(schema.subgraphsToFederatedGraph.federatedGraphId, federatedGraph.id));
+
+      const newNamespaceSubgraphs = await subgraphRepo.byGraphLabelMatchers(federatedGraph.labelMatchers, newNS.name);
+
+      // insert new mappings
+      await tx
+        .insert(schema.subgraphsToFederatedGraph)
+        .values(
+          newNamespaceSubgraphs.map((sg) => ({
+            subgraphId: sg.id,
+            federatedGraphId: federatedGraph.id,
+          })),
+        )
+        .onConflictDoNothing()
+        .execute();
+
+      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+      const composedGraph = await composer.composeFederatedGraph(federatedGraph);
+
+      await composer.deployComposition({
+        composedGraph,
+        composedBy: data.updatedBy,
+        blobStorage,
+        organizationId: this.organizationId,
+      });
+
+      return composedGraph.errors;
+    });
+  }
+
   public async listAll(opts: Omit<ListFilterOptions, 'namespace'>): Promise<FederatedGraphDTO[]> {
     const targets = await this.db.query.targets.findMany({
       where: and(eq(schema.targets.type, 'federated'), eq(schema.targets.organizationId, this.organizationId)),
@@ -311,6 +365,7 @@ export class FederatedGraphRepository {
             },
           },
         },
+        namespace: true,
         labelMatchers: true,
       },
     });
@@ -347,6 +402,7 @@ export class FederatedGraphRepository {
       labelMatchers: resp.labelMatchers.map((s) => s.labelMatcher.join(',')),
       creatorUserId: resp.createdBy || undefined,
       readme: resp.readme || undefined,
+      namespace: resp.namespace.name,
     };
   }
 
@@ -387,6 +443,7 @@ export class FederatedGraphRepository {
           },
         },
         labelMatchers: true,
+        namespace: true,
       },
     });
 
@@ -422,6 +479,7 @@ export class FederatedGraphRepository {
       labelMatchers: resp.labelMatchers.map((s) => s.labelMatcher.join(',')),
       creatorUserId: resp.createdBy || undefined,
       readme: resp.readme || undefined,
+      namespace: resp.namespace.name,
     };
   }
 
@@ -571,6 +629,7 @@ export class FederatedGraphRepository {
         routingUrl: fedGraph.routingUrl,
         subgraphsCount: fedGraph.subgraphsCount,
         composedSchemaVersionId: insertedVersion[0].insertedId,
+        namespace: fedGraph.namespace,
       };
     });
   }

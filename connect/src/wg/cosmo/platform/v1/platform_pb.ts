@@ -12330,3 +12330,440 @@ export class GetConfigRequest extends Message<GetConfigRequest> {
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateNamespaceRequest
+ */
+export class CreateNamespaceRequest extends Message<CreateNamespaceRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<CreateNamespaceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateNamespaceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNamespaceRequest {
+    return new CreateNamespaceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateNamespaceRequest {
+    return new CreateNamespaceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateNamespaceRequest {
+    return new CreateNamespaceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateNamespaceRequest | PlainMessage<CreateNamespaceRequest> | undefined, b: CreateNamespaceRequest | PlainMessage<CreateNamespaceRequest> | undefined): boolean {
+    return proto3.util.equals(CreateNamespaceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateNamespaceResponse
+ */
+export class CreateNamespaceResponse extends Message<CreateNamespaceResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<CreateNamespaceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateNamespaceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateNamespaceResponse {
+    return new CreateNamespaceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateNamespaceResponse {
+    return new CreateNamespaceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateNamespaceResponse {
+    return new CreateNamespaceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateNamespaceResponse | PlainMessage<CreateNamespaceResponse> | undefined, b: CreateNamespaceResponse | PlainMessage<CreateNamespaceResponse> | undefined): boolean {
+    return proto3.util.equals(CreateNamespaceResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteNamespaceRequest
+ */
+export class DeleteNamespaceRequest extends Message<DeleteNamespaceRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteNamespaceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteNamespaceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteNamespaceRequest {
+    return new DeleteNamespaceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteNamespaceRequest {
+    return new DeleteNamespaceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteNamespaceRequest {
+    return new DeleteNamespaceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteNamespaceRequest | PlainMessage<DeleteNamespaceRequest> | undefined, b: DeleteNamespaceRequest | PlainMessage<DeleteNamespaceRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteNamespaceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteNamespaceResponse
+ */
+export class DeleteNamespaceResponse extends Message<DeleteNamespaceResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteNamespaceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteNamespaceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteNamespaceResponse {
+    return new DeleteNamespaceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteNamespaceResponse {
+    return new DeleteNamespaceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteNamespaceResponse {
+    return new DeleteNamespaceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteNamespaceResponse | PlainMessage<DeleteNamespaceResponse> | undefined, b: DeleteNamespaceResponse | PlainMessage<DeleteNamespaceResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteNamespaceResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RenameNamespaceRequest
+ */
+export class RenameNamespaceRequest extends Message<RenameNamespaceRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string new_name = 2;
+   */
+  newName = "";
+
+  constructor(data?: PartialMessage<RenameNamespaceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RenameNamespaceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "new_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RenameNamespaceRequest {
+    return new RenameNamespaceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RenameNamespaceRequest {
+    return new RenameNamespaceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RenameNamespaceRequest {
+    return new RenameNamespaceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RenameNamespaceRequest | PlainMessage<RenameNamespaceRequest> | undefined, b: RenameNamespaceRequest | PlainMessage<RenameNamespaceRequest> | undefined): boolean {
+    return proto3.util.equals(RenameNamespaceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RenameNamespaceResponse
+ */
+export class RenameNamespaceResponse extends Message<RenameNamespaceResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<RenameNamespaceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RenameNamespaceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RenameNamespaceResponse {
+    return new RenameNamespaceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RenameNamespaceResponse {
+    return new RenameNamespaceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RenameNamespaceResponse {
+    return new RenameNamespaceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RenameNamespaceResponse | PlainMessage<RenameNamespaceResponse> | undefined, b: RenameNamespaceResponse | PlainMessage<RenameNamespaceResponse> | undefined): boolean {
+    return proto3.util.equals(RenameNamespaceResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.Namespace
+ */
+export class Namespace extends Message<Namespace> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<Namespace>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Namespace";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Namespace {
+    return new Namespace().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Namespace {
+    return new Namespace().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Namespace {
+    return new Namespace().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Namespace | PlainMessage<Namespace> | undefined, b: Namespace | PlainMessage<Namespace> | undefined): boolean {
+    return proto3.util.equals(Namespace, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetNamespacesRequest
+ */
+export class GetNamespacesRequest extends Message<GetNamespacesRequest> {
+  constructor(data?: PartialMessage<GetNamespacesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetNamespacesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespacesRequest {
+    return new GetNamespacesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespacesRequest {
+    return new GetNamespacesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespacesRequest {
+    return new GetNamespacesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNamespacesRequest | PlainMessage<GetNamespacesRequest> | undefined, b: GetNamespacesRequest | PlainMessage<GetNamespacesRequest> | undefined): boolean {
+    return proto3.util.equals(GetNamespacesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetNamespacesResponse
+ */
+export class GetNamespacesResponse extends Message<GetNamespacesResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Namespace namespaces = 2;
+   */
+  namespaces: Namespace[] = [];
+
+  constructor(data?: PartialMessage<GetNamespacesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetNamespacesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "namespaces", kind: "message", T: Namespace, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespacesResponse {
+    return new GetNamespacesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespacesResponse {
+    return new GetNamespacesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespacesResponse {
+    return new GetNamespacesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNamespacesResponse | PlainMessage<GetNamespacesResponse> | undefined, b: GetNamespacesResponse | PlainMessage<GetNamespacesResponse> | undefined): boolean {
+    return proto3.util.equals(GetNamespacesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.MoveGraphRequest
+ */
+export class MoveGraphRequest extends Message<MoveGraphRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string new_namespace = 3;
+   */
+  newNamespace = "";
+
+  constructor(data?: PartialMessage<MoveGraphRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.MoveGraphRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "new_namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveGraphRequest {
+    return new MoveGraphRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MoveGraphRequest {
+    return new MoveGraphRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MoveGraphRequest {
+    return new MoveGraphRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MoveGraphRequest | PlainMessage<MoveGraphRequest> | undefined, b: MoveGraphRequest | PlainMessage<MoveGraphRequest> | undefined): boolean {
+    return proto3.util.equals(MoveGraphRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.MoveGraphResponse
+ */
+export class MoveGraphResponse extends Message<MoveGraphResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  constructor(data?: PartialMessage<MoveGraphResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.MoveGraphResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveGraphResponse {
+    return new MoveGraphResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MoveGraphResponse {
+    return new MoveGraphResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MoveGraphResponse {
+    return new MoveGraphResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MoveGraphResponse | PlainMessage<MoveGraphResponse> | undefined, b: MoveGraphResponse | PlainMessage<MoveGraphResponse> | undefined): boolean {
+    return proto3.util.equals(MoveGraphResponse, a, b);
+  }
+}
+

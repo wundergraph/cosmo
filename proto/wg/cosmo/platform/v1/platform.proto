@@ -1553,7 +1553,64 @@ message GetConfigRequest {
   string namespace = 2;
 }
 
+message CreateNamespaceRequest {
+  string name = 1;
+}
+
+message CreateNamespaceResponse {
+  Response response = 1;
+}
+
+message DeleteNamespaceRequest {
+  string name = 1;
+}
+
+message DeleteNamespaceResponse {
+  Response response = 1;
+}
+
+message RenameNamespaceRequest {
+  string name = 1;
+  string new_name = 2;
+}
+
+message RenameNamespaceResponse {
+  Response response = 1;
+}
+
+message Namespace {
+  string id = 1;
+  string name = 2;
+}
+
+message GetNamespacesRequest {}
+
+message GetNamespacesResponse {
+  Response response = 1;
+  repeated Namespace namespaces = 2;
+}
+
+message MoveGraphRequest {
+  string name = 1;
+  string namespace = 2;
+  string new_namespace = 3;
+}
+
+message MoveGraphResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+}
+
 service PlatformService {
+  // Namespaces
+  rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
+  rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse) {}
+  rpc RenameNamespace(RenameNamespaceRequest) returns (RenameNamespaceResponse) {}
+  rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
+
+  rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
+  rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}
+
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
   // CreateFederatedSubgraph creates a federated subgraph on the control plane.

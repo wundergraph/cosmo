@@ -317,6 +317,75 @@ export class SubgraphRepository {
     return { compositionErrors, updatedFederatedGraphs };
   }
 
+  public async move(
+    data: { targetId: string; newNamespace: string; updatedBy: string },
+    blobStorage: BlobStorage,
+  ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
+    const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const updatedFederatedGraphs: FederatedGraphDTO[] = [];
+
+    await this.db.transaction(async (tx) => {
+      const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const compositionRepo = new GraphCompositionRepository(tx);
+
+      const newNS = await namespaceRepo.byName(data.newNamespace);
+      if (!newNS) {
+        throw new PublicError(
+          EnumStatusCode.ERR_NOT_FOUND,
+          `Namespace ${data.newNamespace} not found. Please create it before moving.`,
+        );
+      }
+
+      const subgraph = await subgraphRepo.byTargetId(data.targetId);
+      if (!subgraph) {
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Subgraph not found`);
+      }
+
+      // Delete all mappings with this subgraph. We will create new mappings with federated graphs in new namespace
+      await tx
+        .delete(schema.subgraphsToFederatedGraph)
+        .where(eq(schema.subgraphsToFederatedGraph.subgraphId, subgraph.id));
+
+      updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(subgraph.labels, newNS.name)));
+
+      // insert new mappings
+      await tx
+        .insert(schema.subgraphsToFederatedGraph)
+        .values(
+          updatedFederatedGraphs.map((fg) => ({
+            federatedGraphId: fg.id,
+            subgraphId: subgraph.id,
+          })),
+        )
+        .onConflictDoNothing()
+        .execute();
+
+      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+      for (const federatedGraph of updatedFederatedGraphs) {
+        const composition = await composer.composeFederatedGraph(federatedGraph);
+
+        await composer.deployComposition({
+          composedGraph: composition,
+          composedBy: data.updatedBy,
+          blobStorage,
+          organizationId: this.organizationId,
+        });
+
+        // Collect all composition errors
+        compositionErrors.push(
+          ...composition.errors.map((e) => ({
+            federatedGraphName: composition.name,
+            message: e.message,
+          })),
+        );
+      }
+    });
+
+    return { compositionErrors, updatedFederatedGraphs };
+  }
+
   public addSchemaVersion(data: { targetId: string; subgraphSchema: string }): Promise<SubgraphDTO | undefined> {
     return this.db.transaction(async (db) => {
       const subgraph = await this.byTargetId(data.targetId);

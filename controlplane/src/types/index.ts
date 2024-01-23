@@ -51,6 +51,7 @@ export interface FederatedGraphDTO {
   composedSchemaVersionId?: string;
   creatorUserId?: string;
   readme?: string;
+  namespace: string;
 }
 
 export interface FederatedGraphChangelogDTO {
