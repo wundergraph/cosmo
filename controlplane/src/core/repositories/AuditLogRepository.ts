@@ -1,5 +1,5 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { desc, eq, gt, lt, and, sql } from 'drizzle-orm';
+import { desc, eq, gt, lt, and, sql, count } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction, AuditTargetType } from '../../db/models.js';
 
@@ -94,7 +94,7 @@ export class AuditLogRepository {
     endDate: string;
   }): Promise<number> {
     const auditLogsCount = await this.db
-      .select({ count: sql`count(*)`.mapWith(Number) })
+      .select({ count: count() })
       .from(schema.auditLogs)
       .where(
         and(
