@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net/http"
 	"net/url"
 	"sync"
@@ -9,9 +11,6 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/authentication"
-	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 )
 
 type key string

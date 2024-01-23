@@ -6061,6 +6061,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetAuditLogsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.isAdmin) {
@@ -6070,6 +6071,43 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
             logs: [],
+            count: 0,
+          };
+        }
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          },
+        });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            logs: [],
+            count: 0,
+          };
+        }
+
+        // check that the limit is less than the max option provided in the ui
+        if (req.limit > 50) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid limit',
+            },
+            logs: [],
+            count: 0,
           };
         }
 
@@ -6077,6 +6115,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
           limit: req.limit,
           offset: req.offset,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
+        });
+        const auditLogsCount = await auditLogRepo.getAuditLogsCount({
+          organizationId: authContext.organizationId,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
         });
 
         const logs: PlainMessage<AuditLog>[] = auditLogs.map((log) => ({
@@ -6096,6 +6141,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           logs,
+          count: auditLogsCount,
         };
       });
     },

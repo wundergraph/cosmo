@@ -1224,6 +1224,8 @@ message OrganizationInvite{
 message GetAuditLogsRequest {
   int32 limit = 1;
   int32 offset = 2;
+  string startDate = 3;
+  string endDate = 4;
 }
 
 message AuditLog {
@@ -1241,6 +1243,7 @@ message AuditLog {
 message GetAuditLogsResponse {
   Response response = 1;
   repeated AuditLog logs = 2;
+  int32 count = 3;
 }
 
 message GetInvitationsRequest {}

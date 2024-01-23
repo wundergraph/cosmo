@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.53.0](https://github.com/wundergraph/cosmo/compare/studio@0.52.3...studio@0.53.0) (2024-01-23)
+
+### Features
+
+* implement pagination and date filter for audit logs ([#444](https://github.com/wundergraph/cosmo/issues/444)) ([e014c08](https://github.com/wundergraph/cosmo/commit/e014c0896dd017cf4db6a2c5f2c2d83b1fc86017)) (@JivusAyrus)
+
+## [0.52.3](https://github.com/wundergraph/cosmo/compare/studio@0.52.2...studio@0.52.3) (2024-01-21)
+
+### Bug Fixes
+
+* refresh button in the overview page ([#441](https://github.com/wundergraph/cosmo/issues/441)) ([d4988d9](https://github.com/wundergraph/cosmo/commit/d4988d9d3aecd377fc56af5cb2d33a69ba8414c5)) (@JivusAyrus)
+
 ## [0.52.2](https://github.com/wundergraph/cosmo/compare/studio@0.52.1...studio@0.52.2) (2024-01-17)
 
 ### Bug Fixes

@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestPublishGraphQLMetrics(t *testing.T) {
@@ -69,6 +70,9 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		pReq,
 	)
 	require.NoError(t, err)
+
+	// Wait for batch to be processed
+	msvc.Shutdown(time.Second * 5)
 
 	// Validate insert
 
