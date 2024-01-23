@@ -13,7 +13,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
   command.description('Updates a subgraph on the control plane.');
   command.argument('<name>', 'The name of the subgraph to update.');
-  command.option('-ns, --namespace', 'The namespace of the subgraph. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the subgraph. Fallback to "default"', 'default');
   command.option(
     '-r, --routing-url <url>',
     'The routing url of your subgraph. This is the url that the subgraph will be accessible at.',

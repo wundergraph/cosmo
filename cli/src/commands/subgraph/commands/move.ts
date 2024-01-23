@@ -9,7 +9,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('move');
   command.description('Moves the subgraph from one namespace to another.');
   command.argument('<name>', 'The name of the subgraph to move.');
-  command.option('-ns, --namespace', 'The namespace of the subgraph. Fallback to "default"', 'default');
+  command.requiredOption('-ns, --namespace [string]', 'The namespace of the subgraph"');
   command.requiredOption('-t, --to [string]', 'The new namespace of the subgraph.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.moveSubgraph(

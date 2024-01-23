@@ -9,7 +9,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('move');
   command.description('Moves the federated graph from one namespace to another.');
   command.argument('<name>', 'The name of the federated graph to move.');
-  command.option('-ns, --namespace', 'The namespace of the federated graph. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the federated graph.');
   command.requiredOption('-t, --to [string]', 'The new namespace of the federated graph.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.moveFederatedGraph(
