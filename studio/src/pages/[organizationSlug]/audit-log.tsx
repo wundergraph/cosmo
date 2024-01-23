@@ -1,3 +1,5 @@
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { AuditLogTable, Empty } from "@/components/audit-log-table";
 import {
   DatePickerWithRange,
@@ -16,38 +18,21 @@ import {
 } from "@/components/ui/select";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
-  ExclamationTriangleIcon,
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getAuditLogs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
+import { formatISO } from "date-fns";
 import { useRouter } from "next/router";
 import { useCallback } from "react";
-
-const useDateRange = () => {
-  const router = useRouter();
-
-  const dateRange = router.query.dateRange
-    ? JSON.parse(router.query.dateRange as string)
-    : {
-        start: subDays(new Date(), 7),
-        end: new Date(),
-      };
-  const startDate = new Date(dateRange.start);
-  const endDate = new Date(dateRange.end);
-
-  return {
-    startDate,
-    endDate,
-  };
-};
 
 const AuditLogPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -57,14 +42,20 @@ const AuditLogPage: NextPageWithLayout = () => {
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
 
-  const { startDate, endDate } = useDateRange();
+  const {
+    dateRange: { start, end },
+    range,
+  } = useDateRangeQueryState();
+
+  const startDate = range ? createDateRange(range).start : start;
+  const endDate = range ? createDateRange(range).end : end;
 
   const { data, isLoading, error, refetch } = useQuery({
     ...getAuditLogs.useQuery({
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
-      startDate: formatISO(startOfDay(startDate)),
-      endDate: formatISO(endOfDay(endDate)),
+      startDate: formatISO(startDate),
+      endDate: formatISO(endDate),
     }),
     queryKey: [router.asPath, "GetAuditLogs", {}],
   });
@@ -90,7 +81,7 @@ const AuditLogPage: NextPageWithLayout = () => {
   if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
-        icon={<ExclamationTriangleIcon className="w-10 h-10" />}
+        icon={<ExclamationTriangleIcon />}
         title="Could not retrieve the members of this organization."
         description={
           data?.response?.details || error?.message || "Please try again"
@@ -182,22 +173,33 @@ const AuditLogPage: NextPageWithLayout = () => {
 };
 
 const AuditLogToolbar = () => {
-  const router = useRouter();
+  const applyParams = useApplyParams();
 
-  const { startDate, endDate } = useDateRange();
+  const {
+    dateRange: { start: startDate, end: endDate },
+    range,
+  } = useDateRangeQueryState();
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange }) => {
-    const stringifiedDateRange = JSON.stringify({
-      start: dateRange?.start as Date,
-      end: (dateRange?.end as Date) ?? (dateRange?.end as Date),
-    });
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    dateRange,
+    range,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
 
-    router.push({
-      query: {
-        ...router.query,
+      applyParams({
+        range: null,
         dateRange: stringifiedDateRange,
-      },
-    });
+      });
+    }
   };
 
   const auditLogRetention = useFeatureLimit("analytics-retention", 7);
@@ -205,6 +207,7 @@ const AuditLogToolbar = () => {
   return (
     <Toolbar>
       <DatePickerWithRange
+        range={range}
         dateRange={{ start: startDate, end: endDate }}
         onChange={onDateRangeChange}
         calendarDaysLimit={auditLogRetention}
