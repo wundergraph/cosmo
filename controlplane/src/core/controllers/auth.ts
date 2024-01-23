@@ -17,6 +17,7 @@ import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { MemberRole } from '../../db/models.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -262,6 +263,12 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             await orgRepo.addOrganizationMemberRoles({
               memberID: orgMember.id,
               roles: ['admin'],
+            });
+
+            const namespaceRepo = new NamespaceRepository(tx, insertedOrg.id);
+            await namespaceRepo.create({
+              name: DefaultNamespace,
+              createdBy: userId,
             });
           });
 

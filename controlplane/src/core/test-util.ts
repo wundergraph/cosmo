@@ -10,6 +10,7 @@ import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
+import { DefaultNamespace, NamespaceRepository } from './repositories/NamespaceRepository.js';
 
 export type UserTestData = {
   userId: string;
@@ -81,6 +82,12 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
     userID: userTestData.userId,
     expiresAt: ExpiresAt.NEVER,
     targetIds: [],
+  });
+
+  const namespaceRepo = new NamespaceRepository(db, insertedOrg.id);
+  await namespaceRepo.create({
+    name: DefaultNamespace,
+    createdBy: userTestData.userId,
   });
 
   await queryConnection.end({

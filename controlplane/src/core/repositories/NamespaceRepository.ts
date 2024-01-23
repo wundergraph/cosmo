@@ -2,6 +2,8 @@ import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 
+export const DefaultNamespace = 'default';
+
 export class NamespaceRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

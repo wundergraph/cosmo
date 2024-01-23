@@ -166,7 +166,7 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
-import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { PublicError } from '../errors/errors.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
@@ -6155,6 +6155,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               organizationId: organization.id,
               organizationSlug: organization.slug,
               plan: req.plan,
+            });
+
+            const namespaceRepo = new NamespaceRepository(tx, organization.id);
+            await namespaceRepo.create({
+              name: DefaultNamespace,
+              createdBy: authContext.userId,
             });
 
             return {
