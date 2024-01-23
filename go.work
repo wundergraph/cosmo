@@ -1,6 +1,7 @@
 go 1.21
 
 use (
+	./aws-lambda-router
 	./composition-go
 	./demo
 	./graphqlmetrics

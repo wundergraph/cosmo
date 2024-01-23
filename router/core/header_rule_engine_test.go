@@ -3,13 +3,13 @@ package core
 import (
 	"fmt"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/config"
 	"go.uber.org/zap"
 )
 

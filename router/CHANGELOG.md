@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.56.1](https://github.com/wundergraph/cosmo/compare/router@0.56.0...router@0.56.1) (2024-01-22)
+
+**Note:** Version bump only for package router
+
+# [0.56.0](https://github.com/wundergraph/cosmo/compare/router@0.55.0...router@0.56.0) (2024-01-22)
+
+### Features
+
+* **router:** aws lambda support ([#446](https://github.com/wundergraph/cosmo/issues/446)) ([9c7d386](https://github.com/wundergraph/cosmo/commit/9c7d38697ec5196326fb87d9cdadec5bc9b564f4)) (@StarpTech)
+
+# [0.55.0](https://github.com/wundergraph/cosmo/compare/router@0.54.2...router@0.55.0) (2024-01-21)
+
+### Features
+
+* implement key resolvable false and implicit entities ([#445](https://github.com/wundergraph/cosmo/issues/445)) ([5685a43](https://github.com/wundergraph/cosmo/commit/5685a439c7a467e8f195948a5021a5511d91c870)) (@Aenimus)
+
 ## [0.54.2](https://github.com/wundergraph/cosmo/compare/router@0.54.1...router@0.54.2) (2024-01-16)
 
 ### Bug Fixes

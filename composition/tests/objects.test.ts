@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
-import { noFieldDefinitionsError, normalizeSubgraphFromString } from '../src';
+import { ConfigurationData, noFieldDefinitionsError, normalizeSubgraphFromString } from '../src';
 import { normalizeString, versionOneBaseSchema } from './utils/utils';
 
-describe('Objects tests', () => {
-  describe('Normalization tests', () => {
+describe('Objects Tests', () => {
+  describe('Normalization Tests', () => {
     test('that an error is returned if an object does not define any fields', () => {
       const { errors } = normalizeSubgraphFromString(`
         type Object
@@ -57,6 +57,34 @@ describe('Objects tests', () => {
         type Queries
       `,
         ),
+      );
+    });
+  });
+
+  describe('Router Configuration Tests', () => {
+    test('that an object extended within the same graph generates the correct router configuration', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Object {
+          name: String!
+        }
+        
+        extend type Object {
+          age: Int!
+        }
+      `);
+
+      expect(errors).toBeUndefined();
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['age', 'name']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
       );
     });
   });

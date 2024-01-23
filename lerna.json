@@ -26,7 +26,8 @@
     "studio",
     "keycloak",
     "cdn-server",
-    "cdn-server/cdn"
+    "cdn-server/cdn",
+    "aws-lambda-router"
   ],
   "npmClient": "pnpm",
   "loglevel": "verbose"
