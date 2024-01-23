@@ -1,9 +1,11 @@
 import { UserContext } from "@/components/app-provider";
+import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { SubgraphsTable } from "@/components/subgraphs-table";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
@@ -13,9 +15,17 @@ import { useContext } from "react";
 
 const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
+  const [namespace] = useLocalStorage("namespace", "default");
+
   const { data, isLoading, error, refetch } = useQuery({
-    ...getSubgraphs.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetSubgraphs", {}],
+    ...getSubgraphs.useQuery({
+      namespace,
+    }),
+    queryKey: [
+      user?.currentOrganization.slug || "",
+      "GetSubgraphs",
+      { namespace },
+    ],
   });
 
   if (isLoading) return <Loader fullscreen />;
@@ -38,7 +48,13 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
 };
 
 SubgraphsDashboardPage.getLayout = (page) => {
-  return getDashboardLayout(page, "Subgraphs", "An overview of all subgraphs");
+  return getDashboardLayout(
+    page,
+    "Subgraphs",
+    "An overview of all subgraphs",
+    undefined,
+    <NamespaceSelector />,
+  );
 };
 
 export default SubgraphsDashboardPage;
