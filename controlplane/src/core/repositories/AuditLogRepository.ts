@@ -88,9 +88,13 @@ export class AuditLogRepository {
       .execute();
   }
 
-  public async getAuditLogsCount(input: { organizationId: string; startDate: string; endDate: string }) {
+  public async getAuditLogsCount(input: {
+    organizationId: string;
+    startDate: string;
+    endDate: string;
+  }): Promise<number> {
     const auditLogsCount = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql`count(*)`.mapWith(Number) })
       .from(schema.auditLogs)
       .where(
         and(

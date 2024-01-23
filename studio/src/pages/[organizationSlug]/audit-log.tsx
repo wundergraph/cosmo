@@ -1,20 +1,12 @@
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Loader } from "@/components/ui/loader";
-import { NextPageWithLayout } from "@/lib/page";
-import { useQuery } from "@tanstack/react-query";
-import { getAuditLogs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { AuditLogTable, Empty } from "@/components/audit-log-table";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { useUser } from "@/hooks/use-user";
-import { useRouter } from "next/router";
-import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
 } from "@/components/date-picker-with-range";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { Toolbar } from "@/components/ui/toolbar";
-import { useCallback } from "react";
+import { EmptyState } from "@/components/empty-state";
+import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
 import {
   Select,
   SelectContent,
@@ -22,14 +14,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Toolbar } from "@/components/ui/toolbar";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { NextPageWithLayout } from "@/lib/page";
 import {
-  DoubleArrowLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
+  ExclamationTriangleIcon,
 } from "@radix-ui/react-icons";
-import { Button } from "@/components/ui/button";
-import { TableWrapper } from "@/components/ui/table";
+import { useQuery } from "@tanstack/react-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { getAuditLogs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
+import { useRouter } from "next/router";
+import { useCallback } from "react";
 
 const useDateRange = () => {
   const router = useRouter();
@@ -59,8 +59,7 @@ const AuditLogPage: NextPageWithLayout = () => {
 
   const { startDate, endDate } = useDateRange();
 
-  const user = useUser();
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     ...getAuditLogs.useQuery({
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
@@ -88,9 +87,21 @@ const AuditLogPage: NextPageWithLayout = () => {
     return <Empty unauthorized={true} />;
   }
 
+  if (error || data?.response?.code !== EnumStatusCode.OK)
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon className="w-10 h-10" />}
+        title="Could not retrieve the members of this organization."
+        description={
+          data?.response?.details || error?.message || "Please try again"
+        }
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+
   if (!data?.logs.length) return <Empty unauthorized={false} />;
 
-  const noOfPages = Math.ceil(parseInt(data.count) / limit);
+  const noOfPages = Math.ceil(data.count / limit);
 
   return (
     <div className="flex h-full flex-col gap-y-4">

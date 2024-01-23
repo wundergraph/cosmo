@@ -1222,7 +1222,7 @@ message AuditLog {
 message GetAuditLogsResponse {
   Response response = 1;
   repeated AuditLog logs = 2;
-  string count = 3;
+  int32 count = 3;
 }
 
 message GetInvitationsRequest {}

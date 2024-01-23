@@ -9570,9 +9570,9 @@ export class GetAuditLogsResponse extends Message<GetAuditLogsResponse> {
   logs: AuditLog[] = [];
 
   /**
-   * @generated from field: string count = 3;
+   * @generated from field: int32 count = 3;
    */
-  count = "";
+  count = 0;
 
   constructor(data?: PartialMessage<GetAuditLogsResponse>) {
     super();
@@ -9584,7 +9584,7 @@ export class GetAuditLogsResponse extends Message<GetAuditLogsResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "logs", kind: "message", T: AuditLog, repeated: true },
-    { no: 3, name: "count", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAuditLogsResponse {

@@ -5776,7 +5776,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
             logs: [],
-            count: '',
+            count: 0,
           };
         }
 
@@ -5800,19 +5800,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: 'Invalid date range',
             },
             logs: [],
-            count: '',
+            count: 0,
           };
         }
 
-        let limit = req.limit;
         // check that the limit is less than the max option provided in the ui
-        if (limit > 50) {
-          limit = 50;
+        if (req.limit > 50) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid limit',
+            },
+            logs: [],
+            count: 0,
+          };
         }
 
         const auditLogs = await auditLogRepo.getAuditLogs({
           organizationId: authContext.organizationId,
-          limit,
+          limit: req.limit,
           offset: req.offset,
           startDate: dateRange.start,
           endDate: dateRange.end,
@@ -5840,7 +5846,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           logs,
-          count: auditLogsCount.toString(),
+          count: auditLogsCount,
         };
       });
     },
