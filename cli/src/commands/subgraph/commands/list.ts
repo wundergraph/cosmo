@@ -67,6 +67,7 @@ export default (opts: BaseCommandOptions) => {
     const graphsTable = new Table({
       head: [
         pc.bold(pc.white('NAME')),
+        pc.bold(pc.white('NAMESPACE')),
         pc.bold(pc.white('LABELS')),
         pc.bold(pc.white('ROUTING_URL')),
         pc.bold(pc.white('UPDATED_AT')),
@@ -78,6 +79,7 @@ export default (opts: BaseCommandOptions) => {
     for (const graph of resp.graphs) {
       graphsTable.push([
         graph.name,
+        graph.namespace,
         graph.labels.map(({ key, value }) => `${key}=${value}`).join(', '),
         graph.routingURL,
         graph.lastUpdatedAt,

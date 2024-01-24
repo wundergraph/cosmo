@@ -124,6 +124,7 @@ message SchemaChange{
 message CompositionError{
   string message = 1;
   string federatedGraphName = 2;
+  string namespace = 3;
 }
 
 message CheckOperationUsageStats {

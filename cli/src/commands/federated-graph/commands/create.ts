@@ -58,7 +58,11 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.dim(pc.green(`A new federated graph called '${name}' was created.`)));
 
       const compositionErrorsTable = new Table({
-        head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('ERROR_MESSAGE')),
+        ],
         colWidths: [30, 120],
         wordWrap: true,
       });
@@ -69,7 +73,11 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
       for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
+        compositionErrorsTable.push([
+          compositionError.federatedGraphName,
+          compositionError.namespace,
+          compositionError.message,
+        ]);
       }
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());

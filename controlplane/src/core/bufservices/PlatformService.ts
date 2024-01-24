@@ -403,6 +403,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: errors.map((e) => ({
               federatedGraphName: req.name,
               message: e.message,
+              namespace: graph.namespace,
             })),
           };
         }
@@ -641,6 +642,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           compositionErrors.push(
             ...composition.errors.map((e) => ({
               federatedGraphName: federatedGraph.name,
+              namespace: federatedGraph.namespace,
               message: e.message,
             })),
           );
@@ -901,6 +903,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               compositionErrors.push({
                 message: error.message,
                 federatedGraphName: composition.name,
+                namespace: composition.namespace,
               });
             }
           }
@@ -1055,6 +1058,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               compositionErrors.push({
                 message: error.message,
                 federatedGraphName: composition.name,
+                namespace: composition.namespace,
               });
             }
           }
@@ -1536,6 +1540,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors.push(
               ...composition.errors.map((e) => ({
                 federatedGraphName: composition.name,
+                namespace: composition.namespace,
                 message: e.message,
               })),
             );
@@ -1657,6 +1662,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (errors) {
           compositionErrors = errors.map((e) => ({
             federatedGraphName: req.name,
+            namespace: federatedGraph.namespace,
             message: e.message,
           }));
         }
@@ -1907,6 +1913,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors.push({
               message: error.message,
               federatedGraphName: req.name,
+              namespace: federatedGraph.namespace,
             });
           }
 

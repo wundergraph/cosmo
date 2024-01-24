@@ -87,7 +87,11 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const compositionErrorsTable = new Table({
-      head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
+      head: [
+        pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+        pc.bold(pc.white('NAMESPACE')),
+        pc.bold(pc.white('ERROR_MESSAGE')),
+      ],
       colWidths: [30, 120],
       wordWrap: true,
     });
@@ -159,7 +163,11 @@ export default (opts: BaseCommandOptions) => {
         if (resp.compositionErrors.length > 0) {
           console.log(pc.red('\nDetected composition errors:'));
           for (const compositionError of resp.compositionErrors) {
-            compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
+            compositionErrorsTable.push([
+              compositionError.federatedGraphName,
+              compositionError.namespace,
+              compositionError.message,
+            ]);
           }
           console.log(compositionErrorsTable.toString());
         }

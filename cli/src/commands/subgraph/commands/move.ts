@@ -29,7 +29,11 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.dim(`Successfully moved graph to namespace ${pc.bold(options.to)}.`));
 
       const compositionErrorsTable = new CliTable3({
-        head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('ERROR_MESSAGE')),
+        ],
         colWidths: [30, 120],
         wordWrap: true,
       });
@@ -40,7 +44,11 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
       for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
+        compositionErrorsTable.push([
+          compositionError.federatedGraphName,
+          compositionError.namespace,
+          compositionError.message,
+        ]);
       }
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());

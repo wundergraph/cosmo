@@ -40,7 +40,12 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const matchedSubgraphsTable = new Table({
-      head: [pc.bold(pc.white('NAME')), pc.bold(pc.white('URL')), pc.bold(pc.white('LABELS'))],
+      head: [
+        pc.bold(pc.white('NAME')),
+        pc.bold(pc.white('NAMESPACE')),
+        pc.bold(pc.white('URL')),
+        pc.bold(pc.white('LABELS')),
+      ],
       colWidths: [30, 40, 50],
       wordWrap: true,
     });
@@ -51,6 +56,7 @@ export default (opts: BaseCommandOptions) => {
         for (const subgraph of resp.subgraphs) {
           matchedSubgraphsTable.push([
             subgraph.name,
+            subgraph.namespace,
             subgraph.routingURL,
             subgraph.labels.reduce((accumulator, currentLabel) => accumulator + joinLabel(currentLabel), ''),
           ]);
@@ -64,6 +70,7 @@ export default (opts: BaseCommandOptions) => {
         for (const subgraph of resp.subgraphs) {
           matchedSubgraphsTable.push([
             subgraph.name,
+            subgraph.namespace,
             subgraph.routingURL,
             subgraph.labels.reduce((accumulator, currentLabel) => accumulator + joinLabel(currentLabel), ''),
           ]);
