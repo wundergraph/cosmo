@@ -320,6 +320,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<MoveGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        );
 
         const graph = await fedGraphRepo.byName(req.name, req.namespace);
         if (!graph) {
@@ -351,6 +357,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           opts.blobStorage,
         );
+
+        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          federated_graph: {
+            id: graph.id,
+            name: graph.name,
+            namespace: graph.namespace,
+          },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
+          },
+          errors: errors.length > 0,
+          actor_id: authContext.userId,
+        });
 
         if (errors.length > 0) {
           return {
@@ -1594,7 +1614,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: authContext.organizationId,
             slug: authContext.organizationSlug,
           },
-          errors: false,
+          errors: compositionErrors.length > 0,
           actor_id: authContext.userId,
         });
 
