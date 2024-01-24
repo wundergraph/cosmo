@@ -1,9 +1,10 @@
-export type ArgumentConfigurationData = {
+export type FieldConfiguration = {
   argumentNames: string[];
   fieldName: string;
   typeName: string;
+  requiresAuthentication?: boolean;
+  requiredScopes?: string[][];
 };
-
 
 export type EventType = 'subscribe' | 'publish' | 'request';
 
@@ -14,19 +15,11 @@ export type EventConfiguration = {
   sourceId?: string;
 };
 
-export type FieldAuthorizationConfiguration = {
-  authenticated: boolean;
-  fieldName: string;
-  typeName: string;
-  requiresScopes: string[][];
-};
-
 export type RequiredFieldConfiguration = {
   fieldName: string;
   selectionSet: string;
   disableEntityResolver?: boolean;
 };
-
 
 export type ConfigurationData = {
   fieldNames: Set<string>;

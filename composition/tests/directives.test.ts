@@ -13,7 +13,7 @@ describe('Directive tests', () => {
 
   describe('Federation tests', () => {
     test('that @specifiedBy is supported', () => {
-      const { errors, federationResult} = federateSubgraphs([subgraphA, subgraphB]);
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(

@@ -92,7 +92,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const routerConfig = buildRouterConfig({
-      argumentConfigurations: result.federationResult.argumentConfigurations,
+      fieldConfigurationByFieldPath: result.federationResult.fieldConfigurationByFieldPath,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
       schemaVersionId: '',
       subgraphs: config.subgraphs.map((s, index) => {

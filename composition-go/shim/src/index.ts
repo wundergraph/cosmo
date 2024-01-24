@@ -1,4 +1,4 @@
-import { ArgumentConfigurationData, federateSubgraphs as realFederateSubgraphs } from '@wundergraph/composition';
+import { FieldConfiguration, federateSubgraphs as realFederateSubgraphs } from '@wundergraph/composition';
 import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { DocumentNode, parse, print, printSchema } from 'graphql';
 
@@ -11,7 +11,7 @@ export type Subgraph = {
 };
 
 export type FederatedGraph = {
-  argumentConfigurations: ArgumentConfigurationData[];
+  fieldConfigurationByFieldPath: Map<string, FieldConfiguration>;
   sdl: string;
 };
 
@@ -36,7 +36,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
     throw new Error(`could not federate schema: ${errors.map((e) => e.message).join(', ')}`);
   }
   return {
-    argumentConfigurations: federationResult!.argumentConfigurations,
+    fieldConfigurationByFieldPath: federationResult!.fieldConfigurationByFieldPath,
     sdl: print(federationResult!.federatedGraphAST),
   };
 }
@@ -50,7 +50,7 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
     throw new Error(`could not federate subgraphs`);
   }
   const config = buildRouterConfig({
-    argumentConfigurations: result.federationResult.argumentConfigurations,
+    fieldConfigurationByFieldPath: result.federationResult.fieldConfigurationByFieldPath,
     federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
     schemaVersionId: '',
     subgraphs: subgraphs.map((s, index) => {

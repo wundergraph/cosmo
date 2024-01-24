@@ -25,7 +25,8 @@ import {
   inputValueDefinitionNodeToMutable,
   interfaceTypeDefinitionNodeToMutable,
   MutableEnumValueDefinitionNode,
-  MutableInputValueDefinitionNode, MutableScalarTypeDefinitionNode,
+  MutableInputValueDefinitionNode,
+  MutableScalarTypeDefinitionNode,
   MutableTypeDefinitionNode,
   objectTypeDefinitionNodeToMutable,
   objectTypeExtensionNodeToMutable,
@@ -124,13 +125,15 @@ import {
   INACCESSIBLE,
   OVERRIDE,
   PARENTS,
-  QUERY, REQUIRES_SCOPES,
-  ROOT_TYPES, SCOPE_SCALAR,
+  QUERY,
+  REQUIRES_SCOPES,
+  ROOT_TYPES,
   SELECTION_REPRESENTATION,
   TAG,
 } from '../utils/string-constants';
 import {
   addIterableValuesToSet,
+  AuthorizationData,
   doSetsHaveAnyOverlap,
   EntityContainer,
   EntityContainerByTypeName,
@@ -147,14 +150,11 @@ import {
   kindToTypeString,
   newEntityInterfaceFederationData,
   subtractSourceSetFromTargetSet,
+  upsertAuthorizationConfiguration,
   upsertEntityInterfaceFederationData,
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import {
-  ArgumentConfigurationData,
-  ConfigurationData,
-  RequiredFieldConfiguration,
-} from '../subgraph/router-configuration';
+import { FieldConfiguration, ConfigurationData, RequiredFieldConfiguration } from '../subgraph/router-configuration';
 import { BASE_SCALARS, SCOPE_SCALAR_DEFINITION } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
 import {
@@ -165,11 +165,12 @@ import {
 import { BREAK, visit } from 'graphql/index';
 
 export class FederationFactory {
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   abstractToConcreteTypeNames = new Map<string, Set<string>>();
   areFieldsExternal = false;
   areFieldsShareable = false;
   argumentTypeNameSet = new Set<string>();
-  argumentConfigurations: ArgumentConfigurationData[] = [];
+  fieldConfigurationByFieldPath = new Map<string, FieldConfiguration>();
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   executableDirectives = new Set<string>();
   parentTypeName = '';
@@ -200,11 +201,13 @@ export class FederationFactory {
   warnings: string[];
 
   constructor(
+    authorizationDataByParentTypeName: Map<string, AuthorizationData>,
     entityContainersByTypeName: EntityContainerByTypeName,
     entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
     internalSubgraphBySubgraphName: Map<string, InternalSubgraph>,
     warnings?: string[],
   ) {
+    this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
     this.entityContainersByTypeName = entityContainersByTypeName;
     this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
@@ -1044,7 +1047,7 @@ export class FederationFactory {
     if (errors.length > 0) {
       this.errors.push(invalidRequiredArgumentsError(FIELD, fieldPath, errors));
     } else if (argumentNames.length > 0) {
-      this.argumentConfigurations.push({
+      this.fieldConfigurationByFieldPath.set(`${parentTypeName}.${fieldName}`, {
         argumentNames,
         fieldName,
         typeName: parentTypeName,
@@ -1868,9 +1871,12 @@ export class FederationFactory {
         schema: subgraph.schema,
       });
     }
+    for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
+      upsertAuthorizationConfiguration(this.fieldConfigurationByFieldPath, authorizationData);
+    }
     return {
       federationResult: {
-        argumentConfigurations: this.argumentConfigurations,
+        fieldConfigurationByFieldPath: this.fieldConfigurationByFieldPath,
         subgraphConfigBySubgraphName,
         federatedGraphAST: newAst,
         federatedGraphSchema: buildASTSchema(newAst),
@@ -1884,7 +1890,13 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError] };
   }
-  const { entityContainerByTypeName, errors, internalSubgraphBySubgraphName, warnings } = batchNormalize(subgraphs);
+  const {
+    authorizationDataByParentTypeName,
+    entityContainerByTypeName,
+    errors,
+    internalSubgraphBySubgraphName,
+    warnings,
+  } = batchNormalize(subgraphs);
   if (errors) {
     return { errors };
   }
@@ -1935,6 +1947,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
     };
   }
   return new FederationFactory(
+    authorizationDataByParentTypeName,
     entityContainerByTypeName,
     entityInterfaceFederationDataByTypeName,
     internalSubgraphBySubgraphName,

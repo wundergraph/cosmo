@@ -1,5 +1,5 @@
 import { ConstDirectiveNode, DocumentNode, GraphQLSchema, Kind } from 'graphql';
-import { ArgumentConfigurationData } from '../subgraph/./router-configuration';
+import { FieldConfiguration } from '../subgraph/router-configuration';
 import {
   MutableDirectiveDefinitionNode,
   MutableEnumTypeDefinitionNode,
@@ -24,6 +24,7 @@ import {
   SUBSCRIPTION_UPPER,
 } from '../utils/string-constants';
 import { SubgraphConfig } from '../subgraph/subgraph';
+import { AuthorizationData } from '../utils/utils';
 
 export type FederationResultContainer = {
   errors?: Error[];
@@ -32,7 +33,7 @@ export type FederationResultContainer = {
 };
 
 export type FederationResult = {
-  argumentConfigurations: ArgumentConfigurationData[];
+  fieldConfigurationByFieldPath: Map<string, FieldConfiguration>;
   federatedGraphAST: DocumentNode;
   federatedGraphSchema: GraphQLSchema;
   subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;

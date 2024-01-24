@@ -2,15 +2,17 @@ import { Kind, TypeNode } from 'graphql';
 import {
   ArgumentConfiguration,
   ArgumentSource,
+  AuthorizationConfiguration,
   EntityInterfaceConfiguration,
   EventConfiguration,
   EventType,
   FieldConfiguration,
   RequiredField,
+  Scopes,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
-  ArgumentConfigurationData,
+  FieldConfiguration as CompositionFieldConfiguration,
   ConfigurationDataMap,
   RequiredFieldConfiguration,
   EventType as CompositionEventType,
@@ -108,25 +110,33 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
   return output;
 }
 
-export function argumentConfigurationDatasToFieldConfigurations(
-  datas: ArgumentConfigurationData[],
+export function generateFieldConfigurations(
+  fieldConfigurationByFieldPath: Map<string, CompositionFieldConfiguration>,
 ): FieldConfiguration[] {
   const output: FieldConfiguration[] = [];
-  for (const data of datas) {
-    const argumentConfigurations: ArgumentConfiguration[] = data.argumentNames.map(
+  for (const compositionFieldConfiguration of fieldConfigurationByFieldPath.values()) {
+    const argumentConfigurations: ArgumentConfiguration[] = compositionFieldConfiguration.argumentNames.map(
       (argumentName: string) =>
         new ArgumentConfiguration({
           name: argumentName,
           sourceType: ArgumentSource.FIELD_ARGUMENT,
         }),
     );
-    output.push(
-      new FieldConfiguration({
-        argumentsConfiguration: argumentConfigurations,
-        fieldName: data.fieldName,
-        typeName: data.typeName,
-      }),
-    );
+    const fieldConfiguration = new FieldConfiguration({
+      argumentsConfiguration: argumentConfigurations,
+      fieldName: compositionFieldConfiguration.fieldName,
+      typeName: compositionFieldConfiguration.typeName,
+    });
+    const requiredOrScopes =
+      compositionFieldConfiguration.requiredScopes?.map((andScopes) => new Scopes({ requiredAndScopes: andScopes })) ||
+      [];
+    if (compositionFieldConfiguration.requiresAuthentication || requiredOrScopes.length > 0) {
+      fieldConfiguration.authorizationConfiguration = new AuthorizationConfiguration({
+        requiresAuthentication: compositionFieldConfiguration.requiresAuthentication,
+        requiredOrScopes,
+      });
+    }
+    output.push(fieldConfiguration);
   }
   return output;
 }

@@ -11,10 +11,18 @@ import {
   stringToNameNode,
 } from '../ast/utils';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
-import { EntityInterfaceSubgraphData, getOrThrowError } from '../utils/utils';
-import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
+import {
+  EntityInterfaceSubgraphData,
+  getOrThrowError,
+  getValueOrDefault,
+  mergeAuthorizationDataByAND,
+  newAuthorizationData,
+  newFieldAuthorizationData,
+} from '../utils/utils';
+import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
 import { ConfigurationDataMap } from '././router-configuration';
 import { ExtensionContainerByTypeName, ParentContainerByTypeName } from '../normalization/utils';
+import { NormalizationFactory } from '../normalization/normalization-factory';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -52,6 +60,60 @@ export function recordSubgraphName(
     return;
   }
   nonUniqueSubgraphNames.add(subgraphName);
+}
+
+export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFactory, definitions: DocumentNode) {
+  visit(definitions, {
+    FieldDefinition: {
+      enter(node) {
+        factory.childName = node.name.value;
+        const typeName = getNamedTypeForChild(`${factory.parentTypeName}.${factory.childName}`, node.type);
+        const definitionAuthorizationData = factory.authorizationDataByParentTypeName.get(typeName);
+        if (!definitionAuthorizationData || !definitionAuthorizationData.hasParentLevelAuthorization) {
+          return false;
+        }
+        const parentAuthorizationData = getValueOrDefault(
+          factory.authorizationDataByParentTypeName,
+          factory.parentTypeName,
+          () => newAuthorizationData(factory.parentTypeName),
+        );
+        const fieldAuthorizationData = getValueOrDefault(
+          parentAuthorizationData.fieldAuthorizationDataByFieldName,
+          factory.childName,
+          () => newFieldAuthorizationData(factory.childName),
+        );
+        mergeAuthorizationDataByAND(definitionAuthorizationData, fieldAuthorizationData);
+        return false;
+      },
+      leave() {
+        factory.childName = '';
+      },
+    },
+    InterfaceTypeDefinition: {
+      enter(node) {
+        factory.parentTypeName = node.name.value;
+      },
+      leave() {
+        factory.parentTypeName = '';
+      },
+    },
+    ObjectTypeDefinition: {
+      enter(node) {
+        factory.parentTypeName = node.name.value;
+      },
+      leave() {
+        factory.parentTypeName = '';
+      },
+    },
+    ObjectTypeExtension: {
+      enter(node) {
+        factory.parentTypeName = node.name.value;
+      },
+      leave() {
+        factory.parentTypeName = '';
+      },
+    },
+  });
 }
 
 // Places the object-like nodes into the multigraph including the concrete types for abstract types

@@ -1,16 +1,105 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, Subgraph } from '../src';
+import {
+  AuthorizationData,
+  federateSubgraphs,
+  FieldAuthorizationData,
+  normalizeSubgraphFromString,
+  Subgraph,
+} from '../src';
 import { parse } from 'graphql';
 import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
 
 describe('Authorization Directives Tests', () => {
+  describe('Normalization Tests', () => {
+    test('that authentication and scopes are inherited correctly', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Query {
+          object: Object @authenticated @requiresScopes(scopes: [["read:query"], ["read:object"]])
+        }
+        type Object @authenticated @requiresScopes(scopes: [["read:object", "read:field"], ["read:all"]]) {
+          b: Boolean! @authenticated @requiresScopes(scopes: [["read:bool"], ["read:field"]])
+          s: CustomScalar!
+         }
+         
+         scalar CustomScalar @authenticated @requiresScopes(scopes: [["read:field", "read:scalar"], ["read:all"]])
+      `);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult!.authorizationDataByParentTypeName).toStrictEqual(
+        new Map<string, AuthorizationData>([
+          [
+            'Query',
+            {
+              fieldAuthorizationDataByFieldName: new Map<string, FieldAuthorizationData>([
+                [
+                  'object',
+                  {
+                    fieldName: 'object',
+                    requiresAuthentication: true,
+                    requiredScopes: [
+                      new Set<string>(['read:query', 'read:object', 'read:field']),
+                      new Set<string>(['read:query', 'read:all']),
+                      new Set<string>(['read:object', 'read:field']),
+                      new Set<string>(['read:object', 'read:all']),
+                    ],
+                  },
+                ],
+              ]),
+              hasParentLevelAuthorization: false,
+              requiresAuthentication: false,
+              requiredScopes: [],
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldAuthorizationDataByFieldName: new Map<string, FieldAuthorizationData>([
+                [
+                  'b',
+                  {
+                    fieldName: 'b',
+                    requiresAuthentication: true,
+                    requiredScopes: [new Set<string>(['read:bool']), new Set<string>(['read:field'])],
+                  },
+                ],
+                [
+                  's',
+                  {
+                    fieldName: 's',
+                    requiresAuthentication: true,
+                    requiredScopes: [new Set<string>(['read:field', 'read:scalar']), new Set<string>(['read:all'])],
+                  },
+                ],
+              ]),
+              hasParentLevelAuthorization: true,
+              requiresAuthentication: true,
+              requiredScopes: [new Set<string>(['read:object', 'read:field']), new Set<string>(['read:all'])],
+              typeName: 'Object',
+            },
+          ],
+          [
+            'CustomScalar',
+            {
+              fieldAuthorizationDataByFieldName: new Map<string, FieldAuthorizationData>(),
+              hasParentLevelAuthorization: true,
+              requiresAuthentication: true,
+              requiredScopes: [new Set<string>(['read:field', 'read:scalar']), new Set<string>(['read:all'])],
+              typeName: 'CustomScalar',
+            },
+          ],
+        ]),
+      );
+    });
+  });
+
   describe('Federation Tests', () => {
     test('that @authenticated is persisted in the federated schema', () => {
-      const { errors, federationResult} = federateSubgraphs([subgraphA, subgraphB]);
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema + `
+          versionTwoPersistedBaseSchema +
+            `
           type Query {
             object: Object!
           }
@@ -20,16 +109,18 @@ describe('Authorization Directives Tests', () => {
             name: String!
             age: Int!
           }
-        `)
+        `,
+        ),
       );
     });
 
     test('that @requiresScopes is persisted in the federated schema', () => {
-      const { errors, federationResult} = federateSubgraphs([subgraphB, subgraphC]);
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphC]);
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema + `
+          versionTwoPersistedBaseSchema +
+            `
           type Object @requiresScopes(scopes: [["read:object"]]) {
             id: ID!
             age: Int!
@@ -39,14 +130,13 @@ describe('Authorization Directives Tests', () => {
           type Query {
             object: Object!
           }
-        `)
+        `,
+        ),
       );
     });
   });
   describe('Router Configuration Tests', () => {
-    test('that @authenticated generates the correct router configuration', () => {
-
-    });
+    test('that @authenticated generates the correct router configuration', () => {});
   });
 });
 

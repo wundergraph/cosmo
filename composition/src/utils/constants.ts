@@ -27,7 +27,8 @@ import {
   NAME,
   OBJECT_UPPER,
   OVERRIDE,
-  PROVIDES, REASON,
+  PROVIDES,
+  REASON,
   REQUIRES,
   REQUIRES_SCOPES,
   RESOLVABLE,
@@ -41,7 +42,8 @@ import {
   STRING_SCALAR,
   TAG,
   TOPIC,
-  UNION_UPPER, URL_LOWER,
+  UNION_UPPER,
+  URL_LOWER,
 } from './string-constants';
 
 export const BASE_SCALARS = new Set<string>([
@@ -420,10 +422,10 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
                 type: {
                   kind: Kind.NON_NULL_TYPE,
                   type: stringToNamedTypeNode(SCOPE_SCALAR),
-                }
-              }
-            }
-          }
+                },
+              },
+            },
+          },
         },
       },
     ],

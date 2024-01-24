@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { batchNormalize, ConfigurationData, federateSubgraphs, normalizeSubgraphFromString } from '../src';
+import {
+  batchNormalize,
+  ConfigurationData,
+  federateSubgraphs,
+  FieldConfiguration,
+  normalizeSubgraphFromString,
+} from '../src';
 import { createSubgraph } from './utils/utils';
 
 describe('Router Configuration tests', () => {
@@ -459,7 +465,7 @@ describe('Router Configuration tests', () => {
   });
 
   describe('Federation tests', () => {
-    test('that argument configurations are correctly generated', () => {
+    test('that field configurations are correctly generated', () => {
       const { errors, federationResult } = federateSubgraphs([
         createSubgraph('employees', employees),
         createSubgraph('family', family),
@@ -467,21 +473,21 @@ describe('Router Configuration tests', () => {
         createSubgraph('products', products),
       ]);
       expect(errors).toBeUndefined();
-      expect(federationResult!.argumentConfigurations).toStrictEqual([
-        {
+      expect(federationResult!.fieldConfigurationByFieldPath).toStrictEqual(new Map<string, FieldConfiguration>([
+        ['Query.employee', {
           argumentNames: ['id'],
           fieldName: 'employee',
           typeName: 'Query',
-        },
-        {
+        }],
+        ['Query.teammates', {
           argumentNames: ['team'],
           fieldName: 'teammates',
           typeName: 'Query',
-        },
-      ]);
+        }]
+      ]));
     });
 
-    test('that argument configurations are correctly generated', () => {
+    test('that router configuration is correctly generated', () => {
       const { errors, internalSubgraphBySubgraphName } = batchNormalize([
         createSubgraph('monolith', monolith),
         createSubgraph('reviews', reviews),
