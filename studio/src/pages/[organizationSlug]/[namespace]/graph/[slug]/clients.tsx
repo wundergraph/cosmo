@@ -194,7 +194,7 @@ const ClientOperations = () => {
         />
       </div>
     );
-  } else if (data.operations.length == 0) {
+  } else if (data.operations.length === 0) {
     content = (
       <div className="my-auto">
         <EmptyState
@@ -215,7 +215,7 @@ const ClientOperations = () => {
           }
           actions={
             <CLI
-              command={`npx wgc operations push ${slug} -c ${clientName} -f <path-to-file>`}
+              command={`npx wgc operations push ${slug} -ns ${namespace} -c ${clientName} -f <path-to-file>`}
             />
           }
         />

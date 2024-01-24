@@ -15,6 +15,8 @@ import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 
 export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
+  const router = useRouter();
+
   return (
     <EmptyState
       icon={<CommandLineIcon />}
@@ -34,7 +36,7 @@ export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
       }
       actions={
         <CLI
-          command={`npx wgc federated-graph update ${fedGraphName} --readme <path-to-readme>`}
+          command={`npx wgc federated-graph update ${fedGraphName} --namespace ${router.query.namespace} --readme <path-to-readme>`}
         />
       }
     />

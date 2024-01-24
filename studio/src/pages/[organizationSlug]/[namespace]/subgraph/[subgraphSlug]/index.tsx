@@ -22,12 +22,15 @@ import {
   getSubgraphMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
+  const router = useRouter();
+
   return (
     <EmptyState
       icon={<CommandLineIcon />}
@@ -47,7 +50,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
       }
       actions={
         <CLI
-          command={`npx wgc subgraph update ${subgraphName} --readme <path-to-readme>`}
+          command={`npx wgc subgraph update ${subgraphName} --namespace ${router.query.namespace} --readme <path-to-readme>`}
         />
       }
     />

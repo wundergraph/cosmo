@@ -376,6 +376,7 @@ export const Empty = ({
   setIsMigrating: Dispatch<SetStateAction<boolean>>;
 }) => {
   const user = useContext(UserContext);
+  const router = useRouter();
 
   let labels = "team=A";
   return (
@@ -398,7 +399,7 @@ export const Empty = ({
       actions={
         <div className="flex flex-col gap-y-6">
           <CLI
-            command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
+            command={`npx wgc federated-graph create production --namespace ${router.query.namespace} --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
           />
           {checkUserAccess({
             rolesToBe: ["admin", "developer"],

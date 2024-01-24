@@ -93,7 +93,7 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
           }
           actions={
             <CLI
-              command={`npx wgc subgraph publish ${graph.subgraph.name} --schema ${graph.subgraph.name}.graphql`}
+              command={`npx wgc subgraph publish ${graph.subgraph.name} --namespace ${graph.subgraph.namespace} --schema ${graph.subgraph.name}.graphql`}
             />
           }
         />

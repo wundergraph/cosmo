@@ -151,7 +151,7 @@ const ChecksPage: NextPageWithLayout = () => {
         }
         actions={
           <CLI
-            command={`npx wgc subgraph check users --schema users.graphql`}
+            command={`npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`}
           />
         }
       />

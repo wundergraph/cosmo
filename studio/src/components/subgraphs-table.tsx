@@ -59,6 +59,8 @@ import { useToast } from "./ui/use-toast";
 import { cn } from "@/lib/utils";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
+  const router = useRouter();
+
   let label = "team=A";
   if (graph?.labelMatchers && graph.labelMatchers.length > 0) {
     label = graph.labelMatchers[0].split(",")[0];
@@ -86,7 +88,7 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
             {
               description:
                 "Publish a subgraph. If the subgraph does not exist, it will be created.",
-              command: `npx wgc subgraph publish users --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`,
+              command: `npx wgc subgraph publish users --namespace ${router.query.namespace} --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`,
             },
           ]}
         />

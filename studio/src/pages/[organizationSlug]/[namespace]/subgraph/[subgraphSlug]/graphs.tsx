@@ -30,6 +30,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 export const Empty = ({ labels }: { labels: string[] }) => {
+  const router = useRouter();
+
   return (
     <EmptyState
       icon={<CommandLineIcon />}
@@ -50,7 +52,9 @@ export const Empty = ({ labels }: { labels: string[] }) => {
       }
       actions={
         <CLI
-          command={`npx wgc federated-graph create production --label-matcher ${labels.join(
+          command={`npx wgc federated-graph create production --namespace ${
+            router.query.namespace
+          } --label-matcher ${labels.join(
             " ",
           )} --routing-url http://localhost:4000/graphql`}
         />
