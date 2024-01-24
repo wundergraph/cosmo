@@ -326,6 +326,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.logger,
           opts.billingDefaultPlanId,
         );
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.name, req.namespace);
         if (!graph) {
@@ -357,6 +358,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           opts.blobStorage,
         );
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'federated_graph.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'federated_graph',
+          auditableDisplayName: graph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        });
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
           federated_graph: {
@@ -402,7 +414,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<MoveGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-
+        const auditLogRepo = new AuditLogRepository(opts.db);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
           authContext.organizationId,
@@ -440,6 +452,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           opts.blobStorage,
         );
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'subgraph.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'subgraph',
+          auditableDisplayName: graph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        });
 
         for (const graph of updatedFederatedGraphs) {
           orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -1073,6 +1096,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.logger,
           opts.billingDefaultPlanId,
         );
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1181,6 +1205,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           if (!subgraph) {
             throw new Error(`Subgraph '${req.name}' could not be created`);
           }
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'subgraph.created',
+            action: 'created',
+            actorId: authContext.userId,
+            auditableType: 'subgraph',
+            auditableDisplayName: subgraph.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          });
         }
 
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
@@ -1213,6 +1248,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             actor_id: authContext.userId,
           });
         }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'subgraph.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'subgraph',
+          auditableDisplayName: subgraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        });
 
         if (compositionErrors.length > 0) {
           return {
@@ -2553,6 +2599,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.logger,
           opts.billingDefaultPlanId,
         );
+        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2672,6 +2719,31 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             token: '',
           };
+        }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'federated_graph.created',
+          action: 'created',
+          actorId: authContext.userId,
+          auditableType: 'federated_graph',
+          auditableDisplayName: migratedGraph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        });
+
+        const subgraphs = await subgraphRepo.byGraphLabelMatchers(migratedGraph.labelMatchers, migratedGraph.namespace);
+        for (const subgraph of subgraphs) {
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'subgraph.created',
+            action: 'created',
+            actorId: authContext.userId,
+            auditableType: 'subgraph',
+            auditableDisplayName: subgraph.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          });
         }
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
