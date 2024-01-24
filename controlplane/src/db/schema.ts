@@ -998,6 +998,10 @@ export const auditLogs = pgTable('audit_logs', {
   targetType: text('target_type'), // the type of the target e.g. organization
   targetDisplayName: text('target_display_name'), // human-readable name of the target e.g. organization name
 
+  // Namespace information
+  targetNamespaceId: text('target_namespace_id'), // The id of the namespace in which the action is performed
+  targetNamespaceDisplayname: text('target_namespace'), // The name of the namespace in which the action is performed
+
   actorId: uuid('actor_id'), // e.g. id of the user. Can be null if the actor is a system or api_key
   actorDisplayName: text('actor_display_name'), // human-readable name of the actor e.g. user name, email
   actorType: text('actor_type').$type<AuditActorType>(), // user, system, api_key

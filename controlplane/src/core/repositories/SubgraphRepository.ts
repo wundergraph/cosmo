@@ -439,6 +439,7 @@ export class SubgraphRepository {
         name: subgraph.name,
         labels: subgraph.labels,
         namespace: subgraph.namespace,
+        namespaceId: subgraph.namespaceId,
       };
     });
   }
@@ -619,6 +620,7 @@ export class SubgraphRepository {
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
       creatorUserId: resp.createdBy || undefined,
       namespace: resp.namespace.name,
+      namespaceId: resp.namespace.id,
     };
   }
 
@@ -675,6 +677,7 @@ export class SubgraphRepository {
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
       creatorUserId: resp.createdBy || undefined,
       namespace: resp.namespace.name,
+      namespaceId: resp.namespace.id,
     };
   }
 

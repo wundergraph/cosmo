@@ -9631,6 +9631,16 @@ export class AuditLog extends Message<AuditLog> {
    */
   createdAt = "";
 
+  /**
+   * @generated from field: string targetNamespaceId = 10;
+   */
+  targetNamespaceId = "";
+
+  /**
+   * @generated from field: string targetNamespaceDisplayName = 11;
+   */
+  targetNamespaceDisplayName = "";
+
   constructor(data?: PartialMessage<AuditLog>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9648,6 +9658,8 @@ export class AuditLog extends Message<AuditLog> {
     { no: 7, name: "targetDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "targetType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "targetNamespaceId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "targetNamespaceDisplayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuditLog {

@@ -52,6 +52,7 @@ export interface FederatedGraphDTO {
   creatorUserId?: string;
   readme?: string;
   namespace: string;
+  namespaceId: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -80,6 +81,7 @@ export interface SubgraphDTO {
   creatorUserId?: string;
   readme?: string;
   namespace: string;
+  namespaceId: string;
 }
 
 export interface MigrationSubgraph {

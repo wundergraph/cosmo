@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS "namespaces" (
 );
 --> statement-breakpoint
 DROP INDEX IF EXISTS "organization_name_idx";--> statement-breakpoint
+ALTER TABLE "audit_logs" ADD COLUMN "target_namespace_id" text;--> statement-breakpoint
+ALTER TABLE "audit_logs" ADD COLUMN "target_namespace" text;--> statement-breakpoint
 ALTER TABLE "targets" ADD COLUMN "namespace_id" uuid;--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "organization_name_idx" ON "targets" ("organization_id","name","namespace_id");--> statement-breakpoint
 DO $$ BEGIN

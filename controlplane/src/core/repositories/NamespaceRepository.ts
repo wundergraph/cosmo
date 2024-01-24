@@ -1,6 +1,8 @@
 import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as schema from '../../db/schema.js';
+import { PublicError } from '../errors/errors.js';
 
 export const DefaultNamespace = 'default';
 
@@ -32,11 +34,20 @@ export class NamespaceRepository {
   }
 
   public async create(data: { name: string; createdBy: string }) {
-    await this.db.insert(schema.namespaces).values({
-      name: data.name,
-      organizationId: this.organizationId,
-      createdBy: data.createdBy,
-    });
+    const ns = await this.db
+      .insert(schema.namespaces)
+      .values({
+        name: data.name,
+        organizationId: this.organizationId,
+        createdBy: data.createdBy,
+      })
+      .returning();
+
+    if (ns.length === 0) {
+      throw new PublicError(EnumStatusCode.ERR, 'Could not create namespace');
+    }
+
+    return ns[0];
   }
 
   public async delete(name: string) {

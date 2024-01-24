@@ -1239,6 +1239,8 @@ message AuditLog {
    string targetDisplayName = 7;
    string targetType = 8;
    string createdAt = 9;
+   string targetNamespaceId = 10;
+   string targetNamespaceDisplayName = 11;
 }
 
 message GetAuditLogsResponse {

@@ -16,6 +16,8 @@ export type AddAuditLogInput = {
   targetDisplayName?: string;
   auditableType?: AuditableType;
   auditableDisplayName: string;
+  targetNamespaceId?: string;
+  targetNamespaceDisplayname?: string;
 };
 
 /**
@@ -44,6 +46,8 @@ export class AuditLogRepository {
           auditAction: input.auditAction,
           actorDisplayName: input.actorDisplayName,
           actorType: input.actorType,
+          targetNamespaceId: input.targetNamespaceId,
+          targetNamespaceDisplayname: input.targetNamespaceDisplayname,
         })),
       )
       .execute();
@@ -73,6 +77,9 @@ export class AuditLogRepository {
         actorDisplayName: schema.auditLogs.actorDisplayName,
         actorType: schema.auditLogs.actorType,
         createdAt: schema.auditLogs.createdAt,
+
+        targetNamespaceDisplayname: schema.auditLogs.targetNamespaceDisplayname,
+        targetNamespaceId: schema.auditLogs.targetNamespaceId,
       })
       .from(schema.auditLogs)
       .where(

@@ -128,6 +128,7 @@ export class FederatedGraphRepository {
         labelMatchers: data.labelMatchers,
         subgraphsCount: subgraphs.length,
         namespace: data.namespace,
+        namespaceId: ns.id,
       };
     });
   }
@@ -408,6 +409,7 @@ export class FederatedGraphRepository {
       creatorUserId: resp.createdBy || undefined,
       readme: resp.readme || undefined,
       namespace: resp.namespace.name,
+      namespaceId: resp.namespace.id,
     };
   }
 
@@ -485,6 +487,7 @@ export class FederatedGraphRepository {
       creatorUserId: resp.createdBy || undefined,
       readme: resp.readme || undefined,
       namespace: resp.namespace.name,
+      namespaceId: resp.namespace.id,
     };
   }
 
@@ -635,6 +638,7 @@ export class FederatedGraphRepository {
         subgraphsCount: fedGraph.subgraphsCount,
         composedSchemaVersionId: insertedVersion[0].insertedId,
         namespace: fedGraph.namespace,
+        namespaceId: fedGraph.namespaceId,
       };
     });
   }

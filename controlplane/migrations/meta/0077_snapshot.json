@@ -1,5 +1,5 @@
 {
-  "id": "17864d94-41cf-4b6e-bb8f-65113c0425c2",
+  "id": "83635ef7-cea6-47e9-b4c3-cc93aa6a53fe",
   "prevId": "b722f753-92f9-4b48-be20-0db2cc75599f",
   "version": "5",
   "dialect": "pg",
@@ -219,6 +219,18 @@
         },
         "target_display_name": {
           "name": "target_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_namespace_id": {
+          "name": "target_namespace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_namespace": {
+          "name": "target_namespace",
           "type": "text",
           "primaryKey": false,
           "notNull": false
