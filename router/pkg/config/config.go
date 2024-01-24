@@ -242,11 +242,11 @@ type Config struct {
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" default:"60s" validate:"required,min=15s" envconfig:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" default:"20s" validate:"required" envconfig:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" default:"10s" validate:"required,min=5s" envconfig:"POLL_INTERVAL"`
-	HealthCheckPath               string                      `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
-	ReadinessCheckPath            string                      `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
-	LivenessCheckPath             string                      `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
-	GraphQLPath                   string                      `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
-	PlaygroundPath                string                      `yaml:"playground_path" default:"/" envconfig:"PLAYGROUND_PATH"`
+	HealthCheckPath               string                      `yaml:"health_check_path" default:"/health" validate:"uri" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
+	ReadinessCheckPath            string                      `yaml:"readiness_check_path" default:"/health/ready" validate:"uri" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
+	LivenessCheckPath             string                      `yaml:"liveness_check_path" default:"/health/live" validate:"uri" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
+	GraphQLPath                   string                      `yaml:"graphql_path" default:"/graphql" validate:"uri" envconfig:"GRAPHQL_PATH"`
+	PlaygroundPath                string                      `yaml:"playground_path" default:"/" validate:"uri" envconfig:"PLAYGROUND_PATH"`
 	Authentication                AuthenticationConfiguration `yaml:"authentication"`
 	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`

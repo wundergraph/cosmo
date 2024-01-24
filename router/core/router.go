@@ -875,7 +875,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	var graphqlPlaygroundHandler func(http.Handler) http.Handler
 
 	if r.playground {
-		r.logger.Info("Serving GraphQL playground", zap.String("url", r.baseURL+r.playgroundPath))
+		playgroundUrl, err := url.JoinPath(r.baseURL, r.playgroundPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to join playground url: %w", err)
+		}
+		r.logger.Info("Serving GraphQL playground", zap.String("url", playgroundUrl))
 		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Log:        r.logger,
 			Html:       graphiql.PlaygroundHTML(),
@@ -950,9 +954,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
 
+	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to join graphql endpoint url: %w", err)
+	}
+
 	r.logger.Info("GraphQL endpoint",
 		zap.String("method", http.MethodPost),
-		zap.String("url", r.baseURL+r.graphqlPath),
+		zap.String("url", graphqlEndpointURL),
 	)
 
 	ro.server = &http.Server{
