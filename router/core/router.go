@@ -89,6 +89,7 @@ type (
 		listenAddr               string
 		baseURL                  string
 		graphqlWebURL            string
+		playgroundPath           string
 		graphqlPath              string
 		playground               bool
 		introspection            bool
@@ -171,6 +172,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.graphqlWebURL == "" {
 		r.graphqlWebURL = r.graphqlPath
+	}
+
+	if r.playgroundPath == "" {
+		r.playgroundPath = "/"
 	}
 
 	// Default values for trace and metric config
@@ -870,7 +875,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	var graphqlPlaygroundHandler func(http.Handler) http.Handler
 
 	if r.playground {
-		r.logger.Info("Serving GraphQL playground", zap.String("url", r.baseURL))
+		r.logger.Info("Serving GraphQL playground", zap.String("url", r.baseURL+r.playgroundPath))
 		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Log:        r.logger,
 			Html:       graphiql.PlaygroundHTML(),
@@ -925,17 +930,19 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	graphqlChiRouter := chi.NewRouter()
 
 	// When the playground path is equal to the graphql path, we need to handle
-	// ws upgrades and html requests on the same route
-	if r.playground && r.graphqlPath == "/" {
+	// ws upgrades and html requests on the same route.
+	if r.playground && r.graphqlPath == r.playgroundPath {
 		graphqlChiRouter.Use(graphqlPlaygroundHandler, wsMiddleware)
 	} else {
 		if r.playground {
-			httpRouter.Get("/", graphqlPlaygroundHandler(nil).ServeHTTP)
+			httpRouter.Get(r.playgroundPath, graphqlPlaygroundHandler(nil).ServeHTTP)
 		}
 		graphqlChiRouter.Use(wsMiddleware)
 	}
 
 	graphqlChiRouter.Use(graphqlPreHandler.Handler)
+
+	// Built in and custom modules
 	graphqlChiRouter.Use(r.routerMiddlewares...)
 
 	graphqlChiRouter.Post("/", graphqlHandler.ServeHTTP)
@@ -1117,7 +1124,7 @@ func WithCors(corsOpts *cors.Config) Option {
 	}
 }
 
-// WithGraphQLPath sets the path to the GraphQL endpoint.
+// WithGraphQLPath sets the path where the GraphQL endpoint is served.
 func WithGraphQLPath(p string) Option {
 	return func(r *Router) {
 		r.graphqlPath = p
@@ -1130,6 +1137,13 @@ func WithGraphQLPath(p string) Option {
 func WithGraphQLWebURL(p string) Option {
 	return func(r *Router) {
 		r.graphqlWebURL = p
+	}
+}
+
+// WithPlaygroundPath sets the path where the GraphQL Playground is served.
+func WithPlaygroundPath(p string) Option {
+	return func(r *Router) {
+		r.playgroundPath = p
 	}
 }
 
