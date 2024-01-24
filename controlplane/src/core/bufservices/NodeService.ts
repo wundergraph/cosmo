@@ -85,16 +85,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        let target: FederatedGraphDTO | undefined;
+        let federatedGraph: FederatedGraphDTO | undefined;
 
         if (req.graphId) {
-          target = await fedGraphRepo.byId(req.graphId);
+          federatedGraph = await fedGraphRepo.byId(req.graphId);
         } else if (req.graphName) {
           // TODO: deprecate graph name. Assume default namespace for backwards compatibility
-          target = await fedGraphRepo.byName(req.graphName, DefaultNamespace);
+          federatedGraph = await fedGraphRepo.byName(req.graphName, DefaultNamespace);
         }
 
-        if (!target) {
+        if (!federatedGraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -105,7 +105,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
 
         // Avoid downloading the config to check if it's the latest version
         if (req.version) {
-          const isLatestVersion = await fedGraphRepo.isLatestValidSchemaVersion(target.id, req.version);
+          const isLatestVersion = await fedGraphRepo.isLatestValidSchemaVersion(federatedGraph.targetId, req.version);
 
           if (isLatestVersion) {
             return {
@@ -117,7 +117,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         }
 
         // Now, download the config and return it
-        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(target.id);
+        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph.targetId);
 
         if (!routerConfig) {
           return {
