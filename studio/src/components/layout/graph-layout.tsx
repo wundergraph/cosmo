@@ -33,6 +33,7 @@ import {
   SelectGroup,
   SelectItem,
   SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
@@ -241,20 +242,25 @@ export const GraphSelect = () => {
         </SelectValue>
       </SelectTrigger>
       <SelectContent className="min-w-[200px]">
-        {Object.entries(groupedGraphs ?? {}).map(([namespace, graphs]) => {
-          return (
-            <SelectGroup key={namespace}>
-              <SelectLabel>{namespace}</SelectLabel>
-              {graphs.map(({ id, name }) => {
-                return (
-                  <SelectItem key={id} value={id}>
-                    {name}
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          );
-        })}
+        {Object.entries(groupedGraphs ?? {}).map(
+          ([namespace, graphs], index) => {
+            return (
+              <SelectGroup key={namespace}>
+                <SelectLabel>{namespace}</SelectLabel>
+                {graphs.map(({ id, name }) => {
+                  return (
+                    <SelectItem className="pl-4" key={id} value={id}>
+                      {name}
+                    </SelectItem>
+                  );
+                })}
+                {index !== Object.entries(groupedGraphs ?? {}).length - 1 && (
+                  <SelectSeparator />
+                )}
+              </SelectGroup>
+            );
+          },
+        )}
       </SelectContent>
     </Select>
   );

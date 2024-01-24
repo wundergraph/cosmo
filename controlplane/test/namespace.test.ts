@@ -6,6 +6,12 @@ import { SetupTest, createFederatedGraph, createSubgraph } from './test-util.js'
 
 let dbname = '';
 
+const expectedFederatedGraphSDL = `directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+type Query {
+  hello: String!
+}`;
+
 describe('Namespaces', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
@@ -180,6 +186,12 @@ describe('Namespaces', (ctx) => {
     expect(devGraphInProd.subgraphs.length).toBe(1);
     expect(devGraphInProd.subgraphs[0].name).toBe(subgraph1Name);
 
+    const sdlRes = await client.getFederatedGraphSDLByName({
+      name: devGraphInProd.graph?.name,
+      namespace: devGraphInProd.graph?.namespace,
+    });
+    expect(sdlRes.sdl).toBe(expectedFederatedGraphSDL);
+
     await server.close();
   });
 
@@ -225,13 +237,17 @@ describe('Namespaces', (ctx) => {
     expect(devGraph.subgraphs.length).toBe(1);
     expect(devGraph.subgraphs[0].name).toBe(subgraph2Name);
 
-    /* MOVE GRAPH FROM DEV TO PROD */
+    /* MOVE SUBGRAPH FROM DEV TO PROD */
     const moveRes = await client.moveSubgraph({
       name: subgraph2Name,
       namespace: dev,
       newNamespace: prod,
     });
-    expect(moveRes.response?.code).toBe(EnumStatusCode.OK);
+
+    // We expect the dev graph to have composition errors due to not having subgraphs in dev anymore
+    expect(moveRes.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(moveRes.compositionErrors.length).toBe(1);
+    expect(moveRes.compositionErrors[0].federatedGraphName).toBe(fedGraph2Name);
 
     /* VERIFY */
     const subgraphsInDevAfterMove = await client.getSubgraphs({

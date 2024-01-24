@@ -330,6 +330,11 @@ export class SubgraphRepository {
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(tx);
 
+      const currentNS = await namespaceRepo.byTargetId(data.targetId);
+      if (!currentNS) {
+        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace not found.`);
+      }
+
       const newNS = await namespaceRepo.byName(data.newNamespace);
       if (!newNS) {
         throw new PublicError(
@@ -343,6 +348,8 @@ export class SubgraphRepository {
         throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Subgraph not found`);
       }
 
+      updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(subgraph.labels, currentNS.name)));
+
       await tx.update(targets).set({ namespaceId: newNS.id }).where(eq(targets.id, data.targetId));
 
       // Delete all mappings with this subgraph. We will create new mappings with federated graphs in new namespace
@@ -350,14 +357,15 @@ export class SubgraphRepository {
         .delete(schema.subgraphsToFederatedGraph)
         .where(eq(schema.subgraphsToFederatedGraph.subgraphId, subgraph.id));
 
-      updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(subgraph.labels, newNS.name)));
+      const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels, newNS.name);
+      updatedFederatedGraphs.push(...newFederatedGraphs);
 
       // insert new mappings
-      if (updatedFederatedGraphs.length > 0) {
+      if (newFederatedGraphs.length > 0) {
         await tx
           .insert(schema.subgraphsToFederatedGraph)
           .values(
-            updatedFederatedGraphs.map((fg) => ({
+            newFederatedGraphs.map((fg) => ({
               federatedGraphId: fg.id,
               subgraphId: subgraph.id,
             })),

@@ -50,7 +50,9 @@ export const NamespaceSelector = () => {
         }}
       >
         <SelectTrigger className="lg:w-64" value={namespace}>
-          <SelectValue aria-label={namespace}>{namespace}</SelectValue>
+          <SelectValue aria-label={namespace}>
+            Namespace: {namespace}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
