@@ -245,7 +245,8 @@ type Config struct {
 	HealthCheckPath               string                      `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
 	ReadinessCheckPath            string                      `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
 	LivenessCheckPath             string                      `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
-	GraphQLPath                   string                      `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
+	GraphQLPath                   string                      `yaml:"graphql_path" default:"/graphql" validate:"uri" envconfig:"GRAPHQL_PATH"`
+	PlaygroundPath                string                      `yaml:"playground_path" default:"/" validate:"uri" envconfig:"PLAYGROUND_PATH"`
 	Authentication                AuthenticationConfiguration `yaml:"authentication"`
 	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`

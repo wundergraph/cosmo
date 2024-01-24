@@ -29,9 +29,8 @@ func NewPlayground(opts *PlaygroundOptions) func(http.Handler) http.Handler {
 
 func (p *Playground) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Only serve the playground if the request is for text/html
-	// This is especially important for Upgrade websocket requests
-	// when the graphql endpoint is on the same path as the playground
-	if isWsUpgradeRequest(r) || !strings.Contains(r.Header.Get("Accept"), "text/html") {
+	// if not, just pass through to the next handler
+	if !strings.Contains(strings.ToLower(r.Header.Get("Accept")), "text/html") {
 		if p.next != nil {
 			p.next.ServeHTTP(w, r)
 		}
@@ -46,8 +45,4 @@ func (p *Playground) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(resp)
-}
-
-func isWsUpgradeRequest(r *http.Request) bool {
-	return r.Header.Get("Upgrade") == "websocket"
 }
