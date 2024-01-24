@@ -78,17 +78,18 @@ const AuditLogPage: NextPageWithLayout = () => {
     return <Empty unauthorized={true} />;
   }
 
-  if (error || data?.response?.code !== EnumStatusCode.OK)
+  if (error || data?.response?.code !== EnumStatusCode.OK) {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve the members of this organization."
+        title="Could not retrieve audit logs"
         description={
           data?.response?.details || error?.message || "Please try again"
         }
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
+  }
 
   if (!data?.logs.length) return <Empty unauthorized={false} />;
 

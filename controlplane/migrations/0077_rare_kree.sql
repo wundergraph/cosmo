@@ -39,7 +39,7 @@ FROM organizations o;
 UPDATE targets t
 SET namespace_id = n.id
 FROM namespaces n
-WHERE t.organization_id = n.organization_id AND n.name = 'default'
+WHERE t.organization_id = n.organization_id AND n.name = 'default';
 
 -- Set namespace to not be null in targets table --
 

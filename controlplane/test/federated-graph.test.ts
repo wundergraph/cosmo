@@ -43,6 +43,7 @@ describe('Federated Graph', (ctx) => {
 
     const createSubraph1Res = await client.createFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -51,6 +52,7 @@ describe('Federated Graph', (ctx) => {
 
     const publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -58,6 +60,7 @@ describe('Federated Graph', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8081',
       labelMatchers: [joinLabel(label)],
     });
@@ -66,6 +69,7 @@ describe('Federated Graph', (ctx) => {
 
     const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
@@ -149,6 +153,7 @@ describe('Federated Graph', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8081',
       labelMatchers: [joinLabel(label)],
     });
@@ -157,6 +162,7 @@ describe('Federated Graph', (ctx) => {
 
     const createSubraph1Res = await client.createFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -165,6 +171,7 @@ describe('Federated Graph', (ctx) => {
 
     const publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -172,6 +179,7 @@ describe('Federated Graph', (ctx) => {
 
     const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
@@ -256,6 +264,7 @@ describe('Federated Graph', (ctx) => {
 
     const createSubraph1Res = await client.createFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -264,6 +273,7 @@ describe('Federated Graph', (ctx) => {
 
     const createSubraph2Res = await client.createFederatedSubgraph({
       name: subgraph2Name,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8081',
     });
@@ -272,6 +282,7 @@ describe('Federated Graph', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8081',
       labelMatchers: [joinLabel(label)],
     });
@@ -280,6 +291,7 @@ describe('Federated Graph', (ctx) => {
 
     const graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
@@ -362,6 +374,7 @@ describe('Federated Graph', (ctx) => {
 
     const createSubraph1Res = await client.createFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -370,6 +383,7 @@ describe('Federated Graph', (ctx) => {
 
     const createSubraph2Res = await client.createFederatedSubgraph({
       name: subgraph2Name,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8081',
     });
@@ -378,6 +392,7 @@ describe('Federated Graph', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8081',
       labelMatchers: [joinLabel(label)],
     });
@@ -387,11 +402,13 @@ describe('Federated Graph', (ctx) => {
     // fetching schema before publishing the subgraphs
     let graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
+      namespace: 'default',
     });
     expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     let publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -400,6 +417,7 @@ describe('Federated Graph', (ctx) => {
     // fetching the federated schema after publishing one of the subgraphs
     graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
+      namespace: 'default',
     });
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
     expect(graph.sdl).toBeDefined();
@@ -407,6 +425,7 @@ describe('Federated Graph', (ctx) => {
 
     publishResp = await client.publishFederatedSubgraph({
       name: subgraph2Name,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { a: String! }')),
     });
 
@@ -415,6 +434,7 @@ describe('Federated Graph', (ctx) => {
     // fetching the federated schema after publishing both the subgraphs
     graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
+      namespace: 'default',
     });
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
     expect(graph.sdl).toBeDefined();
@@ -497,6 +517,7 @@ describe('Federated Graph', (ctx) => {
 
     const createSubraph1Res = await client.createFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -505,6 +526,7 @@ describe('Federated Graph', (ctx) => {
 
     const createSubraph2Res = await client.createFederatedSubgraph({
       name: subgraph2Name,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8081',
     });
@@ -513,6 +535,7 @@ describe('Federated Graph', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8081',
       labelMatchers: [joinLabel(label)],
     });
@@ -522,11 +545,13 @@ describe('Federated Graph', (ctx) => {
     // fetching schema before publishing the subgraphs
     let graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
+      namespace: 'default',
     });
     expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     let publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -534,6 +559,7 @@ describe('Federated Graph', (ctx) => {
 
     publishResp = await client.publishFederatedSubgraph({
       name: subgraph2Name,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { a: String! }')),
     });
 
@@ -542,6 +568,7 @@ describe('Federated Graph', (ctx) => {
     // fetching the federated schema after publishing both the subgraphs
     graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
+      namespace: 'default',
     });
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
     expect(graph.sdl).toBeDefined();
@@ -550,12 +577,14 @@ describe('Federated Graph', (ctx) => {
     // deleting the subgraph
     let deleteSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName: subgraph1Name,
+      namespace: 'default',
     });
     expect(deleteSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
     // fetching the federated schema after deleting one of the subgraphs
     graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
+      namespace: 'default',
     });
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
     expect(graph.sdl).toBeDefined();
@@ -564,6 +593,7 @@ describe('Federated Graph', (ctx) => {
     // delete the subgraph because it was the only one it produced a composition error
     deleteSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
+      namespace: 'default',
     });
     expect(deleteSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
@@ -571,6 +601,7 @@ describe('Federated Graph', (ctx) => {
     // because a federated graph with no subgraphs is not allowed the last valid schema should be returned
     graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
+      namespace: 'default',
     });
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
     expect(graph.sdl).toBeDefined();
@@ -587,6 +618,7 @@ describe('Federated Graph', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8081',
       labelMatchers: [joinLabel(label)],
       readme,
@@ -596,6 +628,7 @@ describe('Federated Graph', (ctx) => {
 
     const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
@@ -616,6 +649,7 @@ describe('Federated Graph', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8081',
       labelMatchers: [joinLabel(label)],
       readme,
@@ -625,6 +659,7 @@ describe('Federated Graph', (ctx) => {
 
     const updateResponse = await client.updateFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       readme: updatedReadme,
     });
 
@@ -632,6 +667,7 @@ describe('Federated Graph', (ctx) => {
 
     const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);

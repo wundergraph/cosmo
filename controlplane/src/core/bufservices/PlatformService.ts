@@ -3774,14 +3774,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         // Validate everything before we update any data
         const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName, req.namespace);
-        const schema = await federatedGraphRepo.getLatestValidSchemaVersion({
-          targetId: federatedGraph?.targetId ?? '',
-        });
-        if (!schema?.schema || federatedGraph === undefined) {
+        if (federatedGraph === undefined) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.fedGraphName}' does not exist`,
+            },
+            operations: [],
+          };
+        }
+
+        const schema = await federatedGraphRepo.getLatestValidSchemaVersion({
+          targetId: federatedGraph.targetId,
+        });
+        if (!schema?.schema) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Schema for '${req.fedGraphName}' does not exist`,
             },
             operations: [],
           };

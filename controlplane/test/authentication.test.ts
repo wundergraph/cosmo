@@ -72,6 +72,7 @@ describe('Authentication', (ctx) => {
 
     const createPandasSubgraph = await platformClient.createFederatedSubgraph({
       name: genID('fedGraph'),
+      namespace: 'default',
       labels: [genUniqueLabel()],
       routingUrl: 'http://localhost:8081',
     });

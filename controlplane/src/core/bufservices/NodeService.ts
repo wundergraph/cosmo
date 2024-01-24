@@ -7,13 +7,13 @@ import {
   RegistrationInfo,
   SelfRegisterResponse,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { FederatedGraphDTO } from 'src/types/index.js';
 import { lru } from 'tiny-lru';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { handleError } from '../util.js';
+import { FederatedGraphDTO } from 'src/types/index.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeService>> {
   const registrationInfoCache = lru<PlainMessage<RegistrationInfo>>(1000, 300_000);
@@ -117,7 +117,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         }
 
         // Now, download the config and return it
-        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(target?.id);
+        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(target.id);
 
         if (!routerConfig) {
           return {

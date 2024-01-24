@@ -925,7 +925,7 @@ export class SubgraphRepository {
     }
 
     const subgraphs = await this.db
-      .select({ id: schema.subgraphs.id, name: schema.targets.name })
+      .select({ id: schema.subgraphs.id, name: schema.targets.name, targetId: schema.targets.id })
       .from(targets)
       .where(
         and(
@@ -941,7 +941,7 @@ export class SubgraphRepository {
     const subgraphDTOs: SubgraphDTO[] = [];
 
     for (const target of subgraphs) {
-      const subgraph = await this.byTargetId(target.id);
+      const subgraph = await this.byTargetId(target.targetId);
       if (subgraph === undefined) {
         throw new Error(`Subgraph ${target.name} not found`);
       }

@@ -15,6 +15,7 @@ const seed = async (testContext: TestContext) => {
 
   const createSubgraphRes = await client.createFederatedSubgraph({
     name: subgraphName,
+    namespace: 'default',
     labels: [label],
     routingUrl: 'http://localhost:8080',
   });
@@ -23,6 +24,7 @@ const seed = async (testContext: TestContext) => {
 
   const publishResp = await client.publishFederatedSubgraph({
     name: subgraphName,
+    namespace: 'default',
     schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
   });
 
@@ -30,6 +32,7 @@ const seed = async (testContext: TestContext) => {
 
   const createFedGraphRes = await client.createFederatedGraph({
     name: fedGraphName,
+    namespace: 'default',
     routingUrl: 'http://localhost:8081',
     labelMatchers: [joinLabel(label)],
   });
@@ -38,9 +41,11 @@ const seed = async (testContext: TestContext) => {
 
   const { graph, subgraphs } = await client.getFederatedGraphByName({
     name: fedGraphName,
+    namespace: 'default',
   });
   const { versionId } = await client.getFederatedGraphSDLByName({
     name: fedGraphName,
+    namespace: 'default',
   });
 
   expect(graph?.targetId).toBeDefined();
@@ -211,6 +216,7 @@ describe('Discussions', (ctx) => {
 
     const publishResp = await client.publishFederatedSubgraph({
       name: subgraphs[0].name,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String!, bye: String! }')),
     });
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
