@@ -332,6 +332,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const exists = await fedGraphRepo.byName(req.name, req.newNamespace);
+        if (exists) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `A federated graph '${req.name}' already exists in the namespace ${req.newNamespace}`,
+            },
+            compositionErrors: [],
+          };
+        }
+
         const errors = await fedGraphRepo.move(
           {
             targetId: graph.targetId,
@@ -385,6 +396,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Subgraph '${req.name}' not found`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        const exists = await subgraphRepo.byName(req.name, req.newNamespace);
+        if (exists) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `A subgraph '${req.name}' already exists in the namespace ${req.newNamespace}`,
             },
             compositionErrors: [],
           };

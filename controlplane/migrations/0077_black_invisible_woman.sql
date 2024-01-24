@@ -6,7 +6,9 @@ CREATE TABLE IF NOT EXISTS "namespaces" (
 	CONSTRAINT "unique_name" UNIQUE("name","organization_id")
 );
 --> statement-breakpoint
+DROP INDEX IF EXISTS "organization_name_idx";--> statement-breakpoint
 ALTER TABLE "targets" ADD COLUMN "namespace_id" uuid;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "organization_name_idx" ON "targets" ("organization_id","name","namespace_id");--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "targets" ADD CONSTRAINT "targets_namespace_id_namespaces_id_fk" FOREIGN KEY ("namespace_id") REFERENCES "namespaces"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
@@ -24,7 +26,6 @@ DO $$ BEGIN
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
-
 
 BEGIN TRANSACTION;
 

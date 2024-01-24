@@ -1,5 +1,5 @@
 {
-  "id": "8c3c6552-86a2-449d-96e6-7f3acf2c73f9",
+  "id": "17864d94-41cf-4b6e-bb8f-65113c0425c2",
   "prevId": "b722f753-92f9-4b48-be20-0db2cc75599f",
   "version": "5",
   "dialect": "pg",
@@ -3064,7 +3064,8 @@
           "name": "organization_name_idx",
           "columns": [
             "organization_id",
-            "name"
+            "name",
+            "namespace_id"
           ],
           "isUnique": true
         }

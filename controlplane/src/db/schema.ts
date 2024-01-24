@@ -276,7 +276,7 @@ export const targets = pgTable(
   },
   (t) => {
     return {
-      nameIndex: uniqueIndex('organization_name_idx').on(t.organizationId, t.name),
+      nameIndex: uniqueIndex('organization_name_idx').on(t.organizationId, t.name, t.namespaceId),
       // Currently, not supported by drizzle-orm
       // https://github.com/drizzle-team/drizzle-orm/issues/817
       // We create them in a custom migration
