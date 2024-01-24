@@ -303,6 +303,7 @@ export class SubgraphRepository {
         compositionErrors.push(
           ...composition.errors.map((e) => ({
             federatedGraphName: composition.name,
+            namespace: composition.namespace,
             message: e.message,
           })),
         );
@@ -389,6 +390,7 @@ export class SubgraphRepository {
         compositionErrors.push(
           ...composition.errors.map((e) => ({
             federatedGraphName: composition.name,
+            namespace: composition.namespace,
             message: e.message,
           })),
         );
