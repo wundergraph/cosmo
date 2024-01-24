@@ -37,7 +37,6 @@ type configPoller struct {
 	nodeServiceClient         nodev1connect.NodeServiceClient
 	graphApiToken             string
 	controlplaneEndpoint      string
-	federatedGraphName        string
 	logger                    *zap.Logger
 	latestRouterConfigVersion string
 	poller                    controlplane.Poller
@@ -45,11 +44,10 @@ type configPoller struct {
 	cdnConfigClient           *cdn.RouterConfigClient
 }
 
-func New(graphName, endpoint, token string, opts ...Option) ConfigPoller {
+func New(endpoint, token string, opts ...Option) ConfigPoller {
 	c := &configPoller{
 		controlplaneEndpoint: endpoint,
 		graphApiToken:        token,
-		federatedGraphName:   graphName,
 	}
 
 	for _, opt := range opts {
@@ -144,9 +142,8 @@ func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *strin
 	}
 
 	req := connect.NewRequest(&nodev1.GetConfigRequest{
-		GraphName: c.federatedGraphName,
-		GraphId:   federatedGraphID,
-		Version:   version,
+		GraphId: federatedGraphID,
+		Version: version,
 	})
 
 	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", c.graphApiToken))
