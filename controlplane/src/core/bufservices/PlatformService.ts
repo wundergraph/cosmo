@@ -350,6 +350,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: graph.targetId,
+            name: graph.name,
+            targetType: 'federatedGraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
         const errors = await fedGraphRepo.move(
           {
             targetId: graph.targetId,
@@ -443,6 +454,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
           };
         }
+
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: graph.targetId,
+            name: graph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
 
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.move(
           {
