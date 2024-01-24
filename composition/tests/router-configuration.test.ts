@@ -473,18 +473,26 @@ describe('Router Configuration tests', () => {
         createSubgraph('products', products),
       ]);
       expect(errors).toBeUndefined();
-      expect(federationResult!.fieldConfigurationByFieldPath).toStrictEqual(new Map<string, FieldConfiguration>([
-        ['Query.employee', {
-          argumentNames: ['id'],
-          fieldName: 'employee',
-          typeName: 'Query',
-        }],
-        ['Query.teammates', {
-          argumentNames: ['team'],
-          fieldName: 'teammates',
-          typeName: 'Query',
-        }]
-      ]));
+      expect(federationResult!.fieldConfigurationByFieldPath).toStrictEqual(
+        new Map<string, FieldConfiguration>([
+          [
+            'Query.employee',
+            {
+              argumentNames: ['id'],
+              fieldName: 'employee',
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Query.teammates',
+            {
+              argumentNames: ['team'],
+              fieldName: 'teammates',
+              typeName: 'Query',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that router configuration is correctly generated', () => {
