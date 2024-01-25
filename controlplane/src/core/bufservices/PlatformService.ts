@@ -243,7 +243,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-        const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (req.name === DefaultNamespace) {
           return {
@@ -264,16 +263,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await namespaceRepo.delete(req.name);
-        await auditLogRepo.addAuditLog({
-          organizationId: authContext.organizationId,
-          auditAction: 'namespace.deleted',
-          action: 'deleted',
-          actorId: authContext.userId,
-          auditableType: 'namespace',
-          auditableDisplayName: ns.name,
-          actorDisplayName: authContext.userDisplayName,
-          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        await opts.db.transaction(async (tx) => {
+          const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
+          const auditLogRepo = new AuditLogRepository(tx);
+
+          await namespaceRepo.delete(req.name);
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'namespace.deleted',
+            action: 'deleted',
+            actorId: authContext.userId,
+            auditableType: 'namespace',
+            auditableDisplayName: ns.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          });
         });
 
         return {
