@@ -176,35 +176,33 @@ const CreateAPIKeyDialog = ({
     setSelectedSubgraphs([]);
   };
 
-  const groupedSubgraphs = subgraphs.reduce(
-    (result, graph) => {
-      const { namespace, name } = graph;
+  const groupedSubgraphs = subgraphs.reduce<
+    Record<string, GetUserAccessibleResourcesResponse_Graph[]>
+  >((result, graph) => {
+    const { namespace, name } = graph;
 
-      if (!result[namespace]) {
-        result[namespace] = [];
-      }
+    if (!result[namespace]) {
+      result[namespace] = [];
+    }
 
-      result[namespace].push(graph);
+    result[namespace].push(graph);
 
-      return result;
-    },
-    {} as Record<string, GetUserAccessibleResourcesResponse_Graph[]>,
-  );
+    return result;
+  }, {});
 
-  const groupedFederatedGraphs = federatedGraphs.reduce(
-    (result, graph) => {
-      const { namespace, name } = graph;
+  const groupedFederatedGraphs = federatedGraphs.reduce<
+    Record<string, GetUserAccessibleResourcesResponse_Graph[]>
+  >((result, graph) => {
+    const { namespace, name } = graph;
 
-      if (!result[namespace]) {
-        result[namespace] = [];
-      }
+    if (!result[namespace]) {
+      result[namespace] = [];
+    }
 
-      result[namespace].push(graph);
+    result[namespace].push(graph);
 
-      return result;
-    },
-    {} as Record<string, GetUserAccessibleResourcesResponse_Graph[]>,
-  );
+    return result;
+  }, {});
 
   // check if the user has access to create api keys only when rbac is enabled
   if (

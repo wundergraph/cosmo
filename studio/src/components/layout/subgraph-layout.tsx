@@ -141,7 +141,7 @@ export const SubgraphSelect = () => {
     (g) => g.name === slug && g.namespace === namespace,
   );
 
-  const groupedGraphs = data?.graphs.reduce(
+  const groupedGraphs = data?.graphs.reduce<Record<string, Subgraph[]>>(
     (result, graph) => {
       const { namespace, name } = graph;
 
@@ -153,7 +153,7 @@ export const SubgraphSelect = () => {
 
       return result;
     },
-    {} as Record<string, Subgraph[]>,
+    {},
   );
 
   return (

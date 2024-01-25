@@ -198,7 +198,7 @@ export const GraphSelect = () => {
     (g) => g.name === slug && g.namespace === namespace,
   );
 
-  const groupedGraphs = data?.graphs.reduce(
+  const groupedGraphs = data?.graphs.reduce<Record<string, FederatedGraph[]>>(
     (result, graph) => {
       const { namespace, name } = graph;
 
@@ -210,7 +210,7 @@ export const GraphSelect = () => {
 
       return result;
     },
-    {} as Record<string, FederatedGraph[]>,
+    {},
   );
 
   if (router.pathname.split("/")[3] !== "graph") {
