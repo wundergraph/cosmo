@@ -202,6 +202,7 @@ describe('Namespaces', (ctx) => {
     const subgraph2Name = genID('subgraph2');
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
+    const fedGraph3Name = genID('fedGraph2');
     const prod = 'prod';
     const dev = 'dev';
     const label = genUniqueLabel('label');
@@ -220,6 +221,7 @@ describe('Namespaces', (ctx) => {
 
     await createFederatedGraph(client, fedGraph1Name, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraph2Name, dev, [joinLabel(label)], 'http://localhost:8081');
+    await createFederatedGraph(client, fedGraph3Name, dev, [joinLabel(label)], 'http://localhost:8081');
 
     const prodGraph = await client.getFederatedGraphByName({
       name: fedGraph1Name,
@@ -244,10 +246,11 @@ describe('Namespaces', (ctx) => {
       newNamespace: prod,
     });
 
-    // We expect the dev graph to have composition errors due to not having subgraphs in dev anymore
+    // We expect the dev graphs to have composition errors due to not having subgraphs in dev anymore
     expect(moveRes.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-    expect(moveRes.compositionErrors.length).toBe(1);
+    expect(moveRes.compositionErrors.length).toBe(2);
     expect(moveRes.compositionErrors[0].federatedGraphName).toBe(fedGraph2Name);
+    expect(moveRes.compositionErrors[1].federatedGraphName).toBe(fedGraph3Name);
 
     /* VERIFY */
     const subgraphsInDevAfterMove = await client.getSubgraphs({
@@ -268,6 +271,18 @@ describe('Namespaces', (ctx) => {
     });
     expect(prodGraphAfterMove.graph?.namespace).toBe(prod);
     expect(prodGraphAfterMove.subgraphs.length).toBe(2);
+
+    const fedGraph2AfterMove = await client.getFederatedGraphByName({
+      name: fedGraph2Name,
+      namespace: dev,
+    });
+    expect(fedGraph2AfterMove.subgraphs.length).toBe(0);
+
+    const fedGraph3AfterMove = await client.getFederatedGraphByName({
+      name: fedGraph3Name,
+      namespace: dev,
+    });
+    expect(fedGraph3AfterMove.subgraphs.length).toBe(0);
 
     await server.close();
   });
