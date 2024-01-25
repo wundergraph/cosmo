@@ -785,23 +785,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (!isValidLabels(req.labels)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_INVALID_LABELS,
+              details: `One or more labels were found to be invalid`,
+            },
+            compositionErrors: [],
+          };
+        }
+
         const exists = await subgraphRepo.byName(req.name, req.namespace);
 
         if (exists) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Subgraph with this name already exists in the given namespace`,
-            },
-            compositionErrors: [],
-          };
-        }
-
-        if (!isValidLabels(req.labels)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_INVALID_LABELS,
-              details: `One or more labels were found to be invalid`,
+              details: `Subgraph with the name ${req.name} already exists in the namespace ${req.namespace} `,
             },
             compositionErrors: [],
           };
@@ -1827,6 +1827,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (!isValidLabels(req.labels)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_INVALID_LABELS,
+              details: `One ore more labels were found to be invalid`,
+            },
+            compositionErrors: [],
+          };
+        }
+
         const subgraph = await subgraphRepo.byName(req.name, req.namespace);
         if (!subgraph) {
           return {
@@ -1849,16 +1859,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           headers: ctx.requestHeader,
           authContext,
         });
-
-        if (!isValidLabels(req.labels)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_INVALID_LABELS,
-              details: `One ore more labels were found to be invalid`,
-            },
-            compositionErrors: [],
-          };
-        }
 
         if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
           return {
