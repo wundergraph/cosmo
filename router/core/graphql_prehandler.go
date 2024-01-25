@@ -257,8 +257,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		span := trace.SpanFromContext(newReq.Context())
 		if finalErr != nil {
 			// Setting the description has no effect here because it gets overwritten by the trace middleware
-			// which sets the description to the status code
-			// TODO: contribute to the package or maintain our own fork
+			// which sets the description to empty string
+			// TODO: contribute to the package or maintain our own fork once we care about the description
 			rtrace.AttachErrToSpan(span, err)
 		}
 	})
