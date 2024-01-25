@@ -37,12 +37,12 @@ export default (opts: BaseCommandOptions) => {
           }) as OutputFile[number],
       );
       await writeFile(options.out, JSON.stringify(output));
-      process.exit(0);
+      return;
     }
 
     if (options.raw) {
       console.log(resp.namespaces);
-      process.exit(0);
+      return;
     }
 
     const namespaceTable = new Table({
