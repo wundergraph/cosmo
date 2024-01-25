@@ -443,7 +443,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: newNamespace.id,
-          targetNamespaceDisplayname: newNamespace.name,
+          targetNamespaceDisplayName: newNamespace.name,
         });
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -557,7 +557,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             targetNamespaceId: newNamespace.id,
-            targetNamespaceDisplayname: newNamespace.name,
+            targetNamespaceDisplayName: newNamespace.name,
           });
 
           return { compositionErrors, updatedFederatedGraphs };
@@ -689,7 +689,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: federatedGraph.namespaceId,
-          targetNamespaceDisplayname: federatedGraph.namespace,
+          targetNamespaceDisplayName: federatedGraph.namespace,
         });
 
         const subgraphs = await subgraphRepo.listByFederatedGraph({
@@ -839,7 +839,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: subgraph.namespaceId,
-          targetNamespaceDisplayname: subgraph.namespace,
+          targetNamespaceDisplayName: subgraph.namespace,
         });
 
         return {
@@ -1322,7 +1322,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             targetNamespaceId: subgraph.namespaceId,
-            targetNamespaceDisplayname: subgraph.namespace,
+            targetNamespaceDisplayName: subgraph.namespace,
           });
         }
 
@@ -1367,7 +1367,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: subgraph.namespaceId,
-          targetNamespaceDisplayname: subgraph.namespace,
+          targetNamespaceDisplayName: subgraph.namespace,
         });
 
         if (compositionErrors.length > 0) {
@@ -1511,7 +1511,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: federatedGraph.namespaceId,
-          targetNamespaceDisplayname: federatedGraph.namespace,
+          targetNamespaceDisplayName: federatedGraph.namespace,
         });
 
         return {
@@ -1598,7 +1598,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             targetNamespaceId: subgraph.namespaceId,
-            targetNamespaceDisplayname: subgraph.namespace,
+            targetNamespaceDisplayName: subgraph.namespace,
           });
 
           // Collect all federated graphs that use this subgraph after deleting the subgraph
@@ -1765,7 +1765,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: federatedGraph.namespaceId,
-          targetNamespaceDisplayname: federatedGraph.namespace,
+          targetNamespaceDisplayName: federatedGraph.namespace,
         });
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -1895,7 +1895,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: subgraph.namespaceId,
-          targetNamespaceDisplayname: subgraph.namespace,
+          targetNamespaceDisplayName: subgraph.namespace,
         });
 
         for (const graph of updatedFederatedGraphs) {
@@ -2106,7 +2106,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableDisplayName: token.name,
           auditableType: 'graph_token',
           targetNamespaceId: graph.namespaceId,
-          targetNamespaceDisplayname: graph.namespace,
+          targetNamespaceDisplayName: graph.namespace,
         });
 
         return {
@@ -2854,7 +2854,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorDisplayName: authContext.userDisplayName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: migratedGraph.namespaceId,
-          targetNamespaceDisplayname: migratedGraph.namespace,
+          targetNamespaceDisplayName: migratedGraph.namespace,
         });
 
         const subgraphs = await subgraphRepo.byGraphLabelMatchers(migratedGraph.labelMatchers, migratedGraph.namespace);
@@ -2869,7 +2869,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             targetNamespaceId: subgraph.namespaceId,
-            targetNamespaceDisplayname: subgraph.namespace,
+            targetNamespaceDisplayName: subgraph.namespace,
           });
         }
 
@@ -3663,7 +3663,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditableDisplayName: currToken.name,
           auditableType: 'graph_token',
           targetNamespaceId: federatedGraph.namespaceId,
-          targetNamespaceDisplayname: federatedGraph.namespace,
+          targetNamespaceDisplayName: federatedGraph.namespace,
         });
 
         return {
@@ -4374,7 +4374,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetType: 'subgraph',
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: subgraph.namespaceId,
-          targetNamespaceDisplayname: subgraph.namespace,
+          targetNamespaceDisplayName: subgraph.namespace,
         });
 
         return {
@@ -4434,7 +4434,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetType: 'subgraph',
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: subgraph.namespaceId,
-          targetNamespaceDisplayname: subgraph.namespace,
+          targetNamespaceDisplayName: subgraph.namespace,
         });
 
         return {
@@ -4868,7 +4868,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             auditableDisplayName: graphToken.name,
             targetNamespaceId: federatedGraph.namespaceId,
-            targetNamespaceDisplayname: federatedGraph.namespace,
+            targetNamespaceDisplayName: federatedGraph.namespace,
           });
         } else {
           graphToken = tokens[0];
@@ -6393,7 +6393,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           action: log.action,
           targetDisplayName: log.targetDisplayName ?? '',
           id: log.id,
-          targetNamespaceDisplayName: log.targetNamespaceDisplayname ?? '',
+          targetNamespaceDisplayName: log.targetNamespaceDisplayName ?? '',
           targetNamespaceId: log.targetNamespaceId ?? '',
         }));
 
