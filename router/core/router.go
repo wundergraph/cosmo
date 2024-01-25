@@ -892,6 +892,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 		WebSocketStats:                         r.WebsocketStats,
+		Tracer:                                 r.tracerProvider.Tracer("wundergraph/router/graphql_handler"),
 	})
 
 	var publicKey *ecdsa.PublicKey
@@ -915,6 +916,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		DevelopmentMode:             r.developmentMode,
 		TracerProvider:              r.tracerProvider,
 		FlushTelemetryAfterResponse: r.awsLambda,
+		Tracer:                      r.tracerProvider.Tracer("wundergraph/router/pre_handler"),
 	})
 
 	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
