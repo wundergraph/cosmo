@@ -514,14 +514,7 @@ export class SubgraphMetricsRepository {
   }
 
   protected getSubgraphMetricsProps(props: GetSubgraphMetricsViewProps): GetSubgraphMetricsProps {
-    const {
-      range,
-      dateRange,
-      filters: selectedFilters,
-      organizationId,
-      subgraphId,
-      subgraphLabels,
-    } = props;
+    const { range, dateRange, filters: selectedFilters, organizationId, subgraphId, subgraphLabels } = props;
 
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);

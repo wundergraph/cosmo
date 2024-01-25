@@ -6471,7 +6471,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const subgraphMetricsRepo = new SubgraphMetricsRepository(opts.chClient,opts.db);
+        const subgraphMetricsRepo = new SubgraphMetricsRepository(opts.chClient, opts.db);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
