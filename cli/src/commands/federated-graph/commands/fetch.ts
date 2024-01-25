@@ -11,7 +11,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('fetch');
   command.description('Fetches the latest valid SDL of a federated graph. The output can be piped to a file.');
   command.argument('<name>', 'The name of the federated graph to fetch.');
-  command.option('-ns, --namespace [string]', 'The namespace of the federated graph. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the federated graph.');
   command.option('-o, --out [string]', 'Destination file for the SDL.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.getFederatedGraphSDLByName(

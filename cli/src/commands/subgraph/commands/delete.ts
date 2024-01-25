@@ -10,7 +10,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
   command.description('Deletes a subgraph on the control plane.');
   command.argument('<name>', 'The name of the subgraph to delete.');
-  command.option('-ns, --namespace [string]', 'The namespace of the subgraph. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the subgraph.');
   command.option('-f --force', 'Option to force delete');
   command.action(async (name, options) => {
     if (!options.force) {

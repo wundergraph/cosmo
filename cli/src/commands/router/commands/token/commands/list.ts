@@ -19,7 +19,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
   command.description('Lists router tokens of a federated graph.');
   command.argument('<name>', 'The name of the federated graph.');
-  command.option('-ns, --namespace [string]', 'The namespace of the federated graph. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the federated graph.');
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.action(async (name, options) => {

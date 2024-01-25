@@ -16,7 +16,7 @@ export default (opts: BaseCommandOptions) => {
       'you can specify the --out-schema option.',
   );
   command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
-  command.option('-ns, --namespace [string]', 'The namespace of the subgraph. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the subgraph.');
   command.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--out-schema <path-to-out-schema>', 'The path where the fixed schema file should be written.');
 

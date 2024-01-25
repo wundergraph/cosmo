@@ -432,7 +432,7 @@ export class FederatedGraphRepository {
       throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
     }
 
-    const graph = this.db.query.targets.findFirst({
+    const graph = await this.db.query.targets.findFirst({
       where: and(
         eq(schema.targets.name, name),
         eq(schema.targets.organizationId, this.organizationId),
@@ -443,6 +443,8 @@ export class FederatedGraphRepository {
         id: true,
       },
     });
+
+    console.log(graph);
 
     return !!graph;
   }

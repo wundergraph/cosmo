@@ -19,7 +19,7 @@ type OutputFile = {
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
   command.description('Lists subgraphs from a given namespace.');
-  command.option('-ns, --namespace [string]', 'The namespace of the subgraphs. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.action(async (options) => {

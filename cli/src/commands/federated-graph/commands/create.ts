@@ -15,7 +15,7 @@ export default (opts: BaseCommandOptions) => {
     '<name>',
     'The name of the federated graph to create. It is usually in the format of <org>.<env> and is used to uniquely identify your federated graph.',
   );
-  command.option('-ns, --namespace [string]', 'The namespace of the federated graph. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the federated graph.');
   command.requiredOption(
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',

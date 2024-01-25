@@ -629,6 +629,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
 
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
+        req.namespace = req.namespace || DefaultNamespace;
+
+        console.log(req.namespace);
+
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const orgWebhooks = new OrganizationWebhookService(
@@ -801,6 +805,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         if (!authContext.hasWriteAccess) {
           return {
             response: {
@@ -888,6 +894,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const compositionRepo = new GraphCompositionRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1089,6 +1097,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const compositionRepo = new GraphCompositionRepository(opts.db);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
 
         if (!authContext.hasWriteAccess) {
@@ -1228,6 +1238,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.billingDefaultPlanId,
         );
         const auditLogRepo = new AuditLogRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1424,6 +1436,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         if (!authContext.hasWriteAccess) {
           return {
             response: {
@@ -1489,6 +1503,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1562,6 +1578,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.logger,
           opts.billingDefaultPlanId,
         );
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1718,6 +1736,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.billingDefaultPlanId,
         );
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         if (!authContext.hasWriteAccess) {
           return {
             response: {
@@ -1841,6 +1861,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.logger,
           opts.billingDefaultPlanId,
         );
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1968,6 +1990,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         if (!authContext.hasWriteAccess) {
           return {
             response: {
@@ -2065,6 +2089,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2748,6 +2774,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.billingDefaultPlanId,
         );
         const auditLogRepo = new AuditLogRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -3634,6 +3662,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         if (!authContext.hasWriteAccess) {
           return {
             response: {
@@ -4017,6 +4047,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
 
       return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
+        req.namespace = req.namespace || DefaultNamespace;
+
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         if (!authContext.hasWriteAccess) {
           return {
@@ -4703,6 +4735,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const federatedGraph = await fedRepo.byName(req.name, req.namespace);
         if (!federatedGraph) {
           return {
@@ -4942,6 +4976,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         const federatedGraph = await fedgraphRepo.byName(req.name, req.namespace);
         if (!federatedGraph) {
@@ -5522,6 +5558,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const federatedGraph = await fedGraphRepo.byName(req.graphName, req.namespace);
         if (!federatedGraph) {
           return {
@@ -5658,6 +5696,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetRouterTokensResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
         if (!federatedGraph) {

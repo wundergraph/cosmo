@@ -7,7 +7,7 @@ import { baseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
-  command.description('Deletes a new namespace.');
+  command.description('Deletes a namespace and all resources in it.');
   command.argument('<name>', 'The name of the namespace to delete.');
   command.option('-f --force', 'Option to force delete');
   command.action(async (name, options) => {

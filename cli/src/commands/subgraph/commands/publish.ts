@@ -19,7 +19,7 @@ export default (opts: BaseCommandOptions) => {
     'The name of the subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your subgraph.',
   );
   command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
-  command.option('-ns, --namespace [string]', 'The namespace of the subgraph. Fallback to "default"', 'default');
+  command.option('-ns, --namespace [string]', 'The namespace of the subgraph.');
   command.option(
     '-r, --routing-url <url>',
     'The routing url of your subgraph. This is the url that the subgraph will be accessible at (Only required to create the subgraph).',
