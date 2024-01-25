@@ -58,7 +58,7 @@ type HandlerOptions struct {
 	Log                                    *zap.Logger
 	EnableExecutionPlanCacheResponseHeader bool
 	WebSocketStats                         WebSocketsStatistics
-	Tracer                                 trace.Tracer
+	TracerProvider                         trace.TracerProvider
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -67,7 +67,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		executor:                               opts.Executor,
 		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
 		websocketStats:                         opts.WebSocketStats,
-		tracer:                                 opts.Tracer,
+		tracer:                                 opts.TracerProvider.Tracer("wundergraph/router/graphql_handler"),
 	}
 	return graphQLHandler
 }

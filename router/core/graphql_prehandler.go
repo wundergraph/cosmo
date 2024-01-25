@@ -37,7 +37,6 @@ type PreHandlerOptions struct {
 	EnableRequestTracing        bool
 	TracerProvider              *sdktrace.TracerProvider
 	FlushTelemetryAfterResponse bool
-	Tracer                      trace.Tracer
 }
 
 type PreHandler struct {
@@ -56,7 +55,6 @@ type PreHandler struct {
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
-
 	return &PreHandler{
 		log:                         opts.Logger,
 		executor:                    opts.Executor,
@@ -69,7 +67,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		enableRequestTracing:        opts.EnableRequestTracing,
 		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
 		tracerProvider:              opts.TracerProvider,
-		tracer:                      opts.Tracer,
+		tracer:                      opts.TracerProvider.Tracer("wundergraph/router/pre_handler"),
 	}
 }
 
@@ -203,8 +201,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		opContext, err := h.planner.Plan(operation, clientInfo, OperationProtocolHTTP, traceOptions)
 
-		enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
-
 		commonAttributeValues := commonMetricAttributes(opContext)
 		metrics.AddAttributes(commonAttributeValues...)
 
@@ -221,6 +217,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			h.writeOperationError(enginePlanSpanCtx, w, requestLogger, err)
 			return
 		}
+
+		enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
 
 		enginePlanSpan.End()
 
@@ -286,15 +284,13 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 		}
 	}()
 
-	if h.tracerProvider != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := h.tracerProvider.ForceFlush(ctx); err != nil {
-				requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
-			}
-		}()
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := h.tracerProvider.ForceFlush(ctx); err != nil {
+			requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
+		}
+	}()
 
 	wg.Wait()
 
