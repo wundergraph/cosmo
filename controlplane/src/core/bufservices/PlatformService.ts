@@ -254,6 +254,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const ns = await namespaceRepo.byName(req.name);
+        if (!ns) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'The namespace was not found',
+            },
+          };
+        }
+
         const orgMember = await orgRepo.getOrganizationMember({
           organizationID: authContext.organizationId,
           userID: authContext.userId,
@@ -268,22 +278,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // non admins cannot delete a namespace because it will delete all underlying resources
-        if (!orgMember.roles.includes('admin')) {
+        // Ensure that only creator and admin can delete a namespace because it will delete all underlying resources
+        if (ns.createdBy !== authContext.userId && !orgMember.roles.includes('admin')) {
           return {
             response: {
               code: EnumStatusCode.ERR,
               details: 'User does not have the permissions to delete the namespace.',
-            },
-          };
-        }
-
-        const ns = await namespaceRepo.byName(req.name);
-        if (!ns) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'The namespace was not found',
             },
           };
         }
