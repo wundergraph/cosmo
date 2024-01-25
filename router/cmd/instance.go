@@ -5,15 +5,15 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/automaxprocs/maxprocs"
 
-	"github.com/wundergraph/cosmo/router/authentication"
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/handler/cors"
-	"github.com/wundergraph/cosmo/router/internal/metric"
-	"github.com/wundergraph/cosmo/router/internal/trace"
 	"go.uber.org/zap"
 )
 
@@ -102,6 +102,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
+		core.WithPlaygroundPath(cfg.PlaygroundPath),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
 		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{

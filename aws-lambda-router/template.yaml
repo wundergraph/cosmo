@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  aws-lambda-router
+
+  Sample SAM Template for the Router
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+    #AutoPublishAlias: Prod
+    MemorySize: 1536 # Minimum to have adequate cold start performance for the router. Reduce to 512 if you can accept the cold start latency or have high traffic.
+    # ReservedConcurrentExecutions: 30 # This represents the maximum number of concurrent instances allocated to your function.
+    # To improve cold start performance and latency in general
+    #ProvisionedConcurrencyConfig:
+      #ProvisionedConcurrentExecutions: 1 # This is the number of pre-initialized execution environments allocated to your function. These execution environments are ready to respond immediately to incoming function requests.
+
+    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
+    LoggingConfig:
+      LogFormat: JSON
+Resources:
+  Api:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      CodeUri: cmd
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Tracing: Active # Enable AWS X-Ray Tracing for Lambda Function
+      Architectures:
+        - x86_64
+      Events:
+        RootEndpoint:
+          Properties:
+            Method: any
+            Path: /
+          Type: Api
+        EverythingElse:
+          Properties:
+            Method: any
+            Path: /{proxy+}
+          Type: Api
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          GRAPH_API_TOKEN: "" # Add your Graph API token here
+          STAGE: "Prod" # Add the stage e.g. "Prod" if you use the Lambda default endpoint
+          DEV_MODE: "false" # Set to "true" to enable the dev mode
+
+Outputs:
+  Endpoint:
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  Api:
+    Description: GraphQL Playground
+    Value: !GetAtt Api.Arn

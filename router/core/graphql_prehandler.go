@@ -1,10 +1,14 @@
 package core
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
@@ -12,7 +16,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -20,40 +23,46 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger               *zap.Logger
-	Executor             *Executor
-	Metrics              *RouterMetrics
-	Parser               *OperationParser
-	Planner              *OperationPlanner
-	AccessController     *AccessController
-	DevelopmentMode      bool
-	RouterPublicKey      *ecdsa.PublicKey
-	EnableRequestTracing bool
+	Logger                      *zap.Logger
+	Executor                    *Executor
+	Metrics                     RouterMetrics
+	Parser                      *OperationParser
+	Planner                     *OperationPlanner
+	AccessController            *AccessController
+	DevelopmentMode             bool
+	RouterPublicKey             *ecdsa.PublicKey
+	EnableRequestTracing        bool
+	TracerProvider              *sdktrace.TracerProvider
+	FlushTelemetryAfterResponse bool
 }
 
 type PreHandler struct {
-	log                  *zap.Logger
-	executor             *Executor
-	metrics              *RouterMetrics
-	parser               *OperationParser
-	planner              *OperationPlanner
-	accessController     *AccessController
-	developmentMode      bool
-	routerPublicKey      *ecdsa.PublicKey
-	enableRequestTracing bool
+	log                         *zap.Logger
+	executor                    *Executor
+	metrics                     RouterMetrics
+	parser                      *OperationParser
+	planner                     *OperationPlanner
+	accessController            *AccessController
+	developmentMode             bool
+	routerPublicKey             *ecdsa.PublicKey
+	enableRequestTracing        bool
+	tracerProvider              *sdktrace.TracerProvider
+	flushTelemetryAfterResponse bool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:                  opts.Logger,
-		executor:             opts.Executor,
-		metrics:              opts.Metrics,
-		parser:               opts.Parser,
-		planner:              opts.Planner,
-		accessController:     opts.AccessController,
-		routerPublicKey:      opts.RouterPublicKey,
-		developmentMode:      opts.DevelopmentMode,
-		enableRequestTracing: opts.EnableRequestTracing,
+		log:                         opts.Logger,
+		executor:                    opts.Executor,
+		metrics:                     opts.Metrics,
+		parser:                      opts.Parser,
+		planner:                     opts.Planner,
+		accessController:            opts.AccessController,
+		routerPublicKey:             opts.RouterPublicKey,
+		developmentMode:             opts.DevelopmentMode,
+		enableRequestTracing:        opts.EnableRequestTracing,
+		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
+		tracerProvider:              opts.TracerProvider,
 	}
 }
 
@@ -83,6 +92,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		clientInfo := NewClientInfoFromRequest(r)
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
+
+		if h.flushTelemetryAfterResponse {
+			defer h.flushMetrics(r.Context(), requestLogger)
+		}
+
 		defer func() {
 			metrics.Finish(hasRequestError, statusCode, writtenBytes)
 		}()
@@ -193,6 +207,43 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// Evaluate the request after the request has been handled by the engine
 		hasRequestError = requestContext.hasError
 	})
+}
+
+func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger) {
+	requestLogger.Debug("Flushing metrics ...")
+
+	now := time.Now()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := h.metrics.GqlMetricsExporter().ForceFlush(ctx); err != nil {
+			requestLogger.Error("Failed to flush schema usage metrics", zap.Error(err))
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := h.metrics.MetricStore().ForceFlush(ctx); err != nil {
+			requestLogger.Error("Failed to flush OTEL metrics", zap.Error(err))
+		}
+	}()
+
+	if h.tracerProvider != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := h.tracerProvider.ForceFlush(ctx); err != nil {
+				requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
 }
 
 func (h *PreHandler) writeOperationError(w http.ResponseWriter, r *http.Request, requestLogger *zap.Logger, err error) {

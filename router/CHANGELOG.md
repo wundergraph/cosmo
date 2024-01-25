@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.57.0](https://github.com/wundergraph/cosmo/compare/router@0.56.1...router@0.57.0) (2024-01-24)
+
+### Features
+
+* allow custom playground path ([#452](https://github.com/wundergraph/cosmo/issues/452)) ([be250f5](https://github.com/wundergraph/cosmo/commit/be250f544a7345e4820c44eca34aa9558610cf6e)) (@StarpTech)
+
+## [0.56.1](https://github.com/wundergraph/cosmo/compare/router@0.56.0...router@0.56.1) (2024-01-22)
+
+**Note:** Version bump only for package router
+
+# [0.56.0](https://github.com/wundergraph/cosmo/compare/router@0.55.0...router@0.56.0) (2024-01-22)
+
+### Features
+
+* **router:** aws lambda support ([#446](https://github.com/wundergraph/cosmo/issues/446)) ([9c7d386](https://github.com/wundergraph/cosmo/commit/9c7d38697ec5196326fb87d9cdadec5bc9b564f4)) (@StarpTech)
+
 # [0.55.0](https://github.com/wundergraph/cosmo/compare/router@0.54.2...router@0.55.0) (2024-01-21)
 
 ### Features
