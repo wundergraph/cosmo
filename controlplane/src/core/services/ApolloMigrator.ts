@@ -200,6 +200,7 @@ export default class ApolloMigrator {
 
   public migrateGraphFromApollo({
     namespace,
+    namespaceId,
     fedGraph,
     subgraphs,
     organizationID,
@@ -207,6 +208,7 @@ export default class ApolloMigrator {
     creatorUserId,
   }: {
     namespace: string;
+    namespaceId: string;
     fedGraph: {
       name: string;
       routingURL: string;
@@ -223,15 +225,21 @@ export default class ApolloMigrator {
       const federatedGraph = await fedGraphRepo.create({
         name: fedGraph.name,
         namespace,
+        namespaceId,
         labelMatchers: ['env=main', `name=${sanitizedGraphName}`],
         routingUrl: fedGraph.routingURL,
         createdBy: creatorUserId,
       });
 
+      if (!federatedGraph) {
+        throw new Error(`Could not create federated graph ${fedGraph.name}`);
+      }
+
       for (const subgraph of subgraphs) {
         const createdSubgraph = await subgraphRepo.create({
           name: subgraph.name,
           namespace,
+          namespaceId,
           createdBy: creatorUserId,
           labels: [
             { key: 'env', value: 'main' },

@@ -1,5 +1,4 @@
 import { PlainMessage } from '@bufbuild/protobuf';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
@@ -28,11 +27,9 @@ import {
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { Composer } from '../composition/composer.js';
-import { PublicError } from '../errors/errors.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
-import { NamespaceRepository } from './NamespaceRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
@@ -47,25 +44,20 @@ export class SubgraphRepository {
   ) {}
 
   public async exists(name: string, namespace: string): Promise<boolean> {
-    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
-    const ns = await namespaceRepo.byName(namespace);
-    if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
-    }
+    const graphs = await this.db
+      .select()
+      .from(targets)
+      .innerJoin(schema.namespaces, and(eq(schema.namespaces.id, targets.namespaceId)))
+      .where(
+        and(
+          eq(schema.targets.name, name),
+          eq(schema.targets.organizationId, this.organizationId),
+          eq(schema.targets.type, 'subgraph'),
+          eq(schema.namespaces.name, namespace),
+        ),
+      );
 
-    const graph = await this.db.query.targets.findFirst({
-      where: and(
-        eq(schema.targets.name, name),
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.type, 'subgraph'),
-        eq(schema.targets.namespaceId, ns.id),
-      ),
-      columns: {
-        id: true,
-      },
-    });
-
-    return !!graph;
+    return graphs.length === 1;
   }
 
   public create(data: {
@@ -77,6 +69,7 @@ export class SubgraphRepository {
     subscriptionUrl?: string;
     subscriptionProtocol?: SubscriptionProtocol;
     readme?: string;
+    namespaceId: string;
   }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -86,12 +79,6 @@ export class SubgraphRepository {
     }
 
     return this.db.transaction(async (tx) => {
-      const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
-      const ns = await namespaceRepo.byName(data.namespace);
-      if (!ns) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${data.namespace} not found`);
-      }
-
       /**
        * 1. Create a new target of type subgraph.
        * The name is the name of the subgraph.
@@ -100,7 +87,7 @@ export class SubgraphRepository {
         .insert(targets)
         .values({
           name: data.name,
-          namespaceId: ns.id,
+          namespaceId: data.namespaceId,
           createdBy: data.createdBy,
           type: 'subgraph',
           organizationId: this.organizationId,
@@ -128,7 +115,10 @@ export class SubgraphRepository {
        * 3. Insert into federatedSubgraphs by matching labels
        */
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
-      const federatedGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels, data.namespace);
+      const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
+        labels: uniqueLabels,
+        namespaceId: data.namespaceId,
+      });
 
       if (federatedGraphs.length > 0) {
         await tx
@@ -159,6 +149,8 @@ export class SubgraphRepository {
         schemaSDL: '',
         schemaVersionId: '',
         lastUpdatedAt: '',
+        namespace: data.namespace,
+        namespaceId: data.namespaceId,
       } as SubgraphDTO;
     });
   }
@@ -173,6 +165,7 @@ export class SubgraphRepository {
       subscriptionProtocol?: SubscriptionProtocol;
       updatedBy: string;
       readme?: string;
+      namespaceId: string;
     },
     blobStorage: BlobStorage,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
@@ -186,12 +179,6 @@ export class SubgraphRepository {
       const compositionRepo = new GraphCompositionRepository(tx);
       const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
       let subgraphChanged = false;
-
-      const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
-      const ns = await namespaceRepo.byTargetId(data.targetId);
-      if (!ns) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace not found`);
-      }
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
@@ -263,7 +250,10 @@ export class SubgraphRepository {
           .where(eq(targets.id, subgraph.targetId));
 
         // find all federated graphs that match with the new subgraph labels
-        const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels(newLabels, ns.name);
+        const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+          labels: newLabels,
+          namespaceId: data.namespaceId,
+        });
 
         // add them to the updatedFederatedGraphs array without duplicates
         for (const federatedGraph of newFederatedGraphs) {
@@ -307,7 +297,9 @@ export class SubgraphRepository {
       // We need to compose and build a new router config also on routing/subscription urls and labels changes
       if (subgraphChanged || labelChanged) {
         // find all federated graphs that use this subgraph. We need evaluate them again.
-        updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(subgraph.labels, ns.name)));
+        updatedFederatedGraphs.push(
+          ...(await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: data.namespaceId })),
+        );
       }
       // Validate all federated graphs that use this subgraph.
       for (const federatedGraph of updatedFederatedGraphs) {
@@ -341,46 +333,40 @@ export class SubgraphRepository {
   }
 
   public async move(
-    data: { targetId: string; newNamespace: string; updatedBy: string },
+    data: {
+      targetId: string;
+      subgraphId: string;
+      subgraphLabels: Label[];
+      newNamespace: string;
+      updatedBy: string;
+      currentNamespaceId: string;
+      newNamespaceId: string;
+    },
     blobStorage: BlobStorage,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
     await this.db.transaction(async (tx) => {
-      const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(tx);
 
-      const currentNS = await namespaceRepo.byTargetId(data.targetId);
-      if (!currentNS) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace not found.`);
-      }
+      updatedFederatedGraphs.push(
+        ...(await fedGraphRepo.bySubgraphLabels({ labels: data.subgraphLabels, namespaceId: data.currentNamespaceId })),
+      );
 
-      const newNS = await namespaceRepo.byName(data.newNamespace);
-      if (!newNS) {
-        throw new PublicError(
-          EnumStatusCode.ERR_NOT_FOUND,
-          `Namespace ${data.newNamespace} not found. Please create it before moving.`,
-        );
-      }
-
-      const subgraph = await subgraphRepo.byTargetId(data.targetId);
-      if (!subgraph) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Subgraph not found`);
-      }
-
-      updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(subgraph.labels, currentNS.name)));
-
-      await tx.update(targets).set({ namespaceId: newNS.id }).where(eq(targets.id, data.targetId));
+      await tx.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
 
       // Delete all mappings with this subgraph. We will create new mappings with federated graphs in new namespace
       await tx
         .delete(schema.subgraphsToFederatedGraph)
-        .where(eq(schema.subgraphsToFederatedGraph.subgraphId, subgraph.id));
+        .where(eq(schema.subgraphsToFederatedGraph.subgraphId, data.subgraphId));
 
-      const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels, newNS.name);
+      const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+        labels: data.subgraphLabels,
+        namespaceId: data.newNamespaceId,
+      });
       updatedFederatedGraphs.push(...newFederatedGraphs);
 
       // insert new mappings
@@ -390,7 +376,7 @@ export class SubgraphRepository {
           .values(
             newFederatedGraphs.map((fg) => ({
               federatedGraphId: fg.id,
-              subgraphId: subgraph.id,
+              subgraphId: data.subgraphId,
             })),
           )
           .onConflictDoNothing()
@@ -565,25 +551,29 @@ export class SubgraphRepository {
     return subgraphs;
   }
 
-  public async byTargetId(targetId: string): Promise<SubgraphDTO | undefined> {
-    const resp = await this.db.query.targets.findFirst({
-      where: and(
-        eq(schema.targets.id, targetId),
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.type, 'subgraph'),
-      ),
-      with: {
-        subgraph: {
-          with: {
-            schemaVersion: true,
-          },
-        },
-        namespace: true,
-      },
-    });
+  private async getSubgraph(conditions: SQL<unknown>[]): Promise<SubgraphDTO | undefined> {
+    const resp = await this.db
+      .select({
+        name: schema.targets.name,
+        labels: schema.targets.labels,
+        createdBy: schema.targets.createdBy,
+        readme: schema.targets.readme,
+        id: schema.subgraphs.id,
+        routingUrl: schema.subgraphs.routingUrl,
+        subscriptionUrl: schema.subgraphs.subscriptionUrl,
+        subscriptionProtocol: schema.subgraphs.subscriptionProtocol,
+        targetId: schema.subgraphs.targetId,
+        namespaceId: schema.namespaces.id,
+        namespaceName: schema.namespaces.name,
+        schemaVersionId: schema.subgraphs.schemaVersionId,
+      })
+      .from(targets)
+      .innerJoin(schema.subgraphs, eq(targets.id, schema.subgraphs.targetId))
+      .innerJoin(schema.namespaces, eq(schema.namespaces.id, targets.namespaceId))
+      .where(and(...conditions));
 
-    if (resp === undefined) {
-      return undefined;
+    if (resp.length === 0) {
+      return;
     }
 
     let lastUpdatedAt = '';
@@ -591,85 +581,48 @@ export class SubgraphRepository {
     let schemaVersionId = '';
 
     // Subgraphs are created without a schema version.
-    if (resp.subgraph.schemaVersion !== null) {
-      lastUpdatedAt = resp.subgraph.schemaVersion.createdAt?.toISOString() ?? '';
-      schemaSDL = resp.subgraph.schemaVersion.schemaSDL ?? '';
-      schemaVersionId = resp.subgraph.schemaVersion.id ?? '';
+    if (resp[0].schemaVersionId !== null) {
+      const sv = await this.db.query.schemaVersion.findFirst({
+        where: eq(schema.schemaVersion.id, resp[0].schemaVersionId),
+      });
+      lastUpdatedAt = sv?.createdAt?.toISOString() ?? '';
+      schemaSDL = sv?.schemaSDL ?? '';
+      schemaVersionId = sv?.id ?? '';
     }
 
     return {
-      id: resp.subgraph.id,
-      targetId: resp.id,
-      routingUrl: resp.subgraph.routingUrl,
-      readme: resp.readme || undefined,
-      subscriptionUrl: resp.subgraph.subscriptionUrl ?? '',
-      subscriptionProtocol: resp.subgraph.subscriptionProtocol ?? 'ws',
-      name: resp.name,
+      id: resp[0].id,
+      targetId: resp[0].targetId,
+      routingUrl: resp[0].routingUrl,
+      readme: resp[0].readme || undefined,
+      subscriptionUrl: resp[0].subscriptionUrl ?? '',
+      subscriptionProtocol: resp[0].subscriptionProtocol ?? 'ws',
+      name: resp[0].name,
       schemaSDL,
       schemaVersionId,
       lastUpdatedAt,
-      labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
-      creatorUserId: resp.createdBy || undefined,
-      namespace: resp.namespace.name,
-      namespaceId: resp.namespace.id,
+      labels: resp[0].labels?.map?.((l) => splitLabel(l)) ?? [],
+      creatorUserId: resp[0].createdBy || undefined,
+      namespace: resp[0].namespaceName,
+      namespaceId: resp[0].namespaceId,
     };
   }
 
-  public async byName(name: string, namespace: string): Promise<SubgraphDTO | undefined> {
-    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
-    const ns = await namespaceRepo.byName(namespace);
-    if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
-    }
+  public byTargetId(targetId: string): Promise<SubgraphDTO | undefined> {
+    return this.getSubgraph([
+      eq(schema.targets.id, targetId),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+    ]);
+  }
 
-    const resp = await this.db.query.targets.findFirst({
-      where: and(
-        eq(schema.targets.name, name),
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.type, 'subgraph'),
-        eq(schema.targets.namespaceId, ns.id),
-      ),
-      with: {
-        subgraph: {
-          with: {
-            schemaVersion: true,
-          },
-        },
-        namespace: true,
-      },
-    });
-
-    if (resp === undefined) {
-      return undefined;
-    }
-
-    let lastUpdatedAt = '';
-    let schemaSDL = '';
-    let schemaVersionId = '';
-
-    // Subgraphs are created without a schema version.
-    if (resp.subgraph.schemaVersion !== null) {
-      lastUpdatedAt = resp.subgraph.schemaVersion.createdAt?.toISOString() ?? '';
-      schemaSDL = resp.subgraph.schemaVersion.schemaSDL ?? '';
-      schemaVersionId = resp.subgraph.schemaVersion.id ?? '';
-    }
-
-    return {
-      id: resp.subgraph.id,
-      targetId: resp.id,
-      routingUrl: resp.subgraph.routingUrl,
-      readme: resp.readme || undefined,
-      subscriptionUrl: resp.subgraph.subscriptionUrl ?? '',
-      subscriptionProtocol: resp.subgraph.subscriptionProtocol ?? 'ws',
-      name: resp.name,
-      schemaSDL,
-      schemaVersionId,
-      lastUpdatedAt,
-      labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
-      creatorUserId: resp.createdBy || undefined,
-      namespace: resp.namespace.name,
-      namespaceId: resp.namespace.id,
-    };
+  public byName(name: string, namespace: string): Promise<SubgraphDTO | undefined> {
+    return this.getSubgraph([
+      eq(schema.targets.name, name),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+      eq(schema.namespaces.name, namespace),
+    ]);
   }
 
   public async checks({
@@ -907,9 +860,9 @@ export class SubgraphRepository {
     await this.db.delete(targets).where(eq(targets.id, targetID)).execute();
   }
 
-  public async byGraphLabelMatchers(labelMatchers: string[], namespace: string): Promise<SubgraphDTO[]> {
+  public async byGraphLabelMatchers(data: { labelMatchers: string[]; namespaceId: string }): Promise<SubgraphDTO[]> {
     const groupedLabels: Label[][] = [];
-    for (const lm of labelMatchers) {
+    for (const lm of data.labelMatchers) {
       const labels = lm.split(',').map((l) => splitLabel(l));
       const normalizedLabels = normalizeLabels(labels);
       groupedLabels.push(normalizedLabels);
@@ -922,12 +875,6 @@ export class SubgraphRepository {
       conditions.push(sql.raw(`labels && '{${labelsSQL}}'`));
     }
 
-    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
-    const ns = await namespaceRepo.byName(namespace);
-    if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
-    }
-
     const subgraphs = await this.db
       .select({ id: schema.subgraphs.id, name: schema.targets.name, targetId: schema.targets.id })
       .from(targets)
@@ -935,7 +882,7 @@ export class SubgraphRepository {
         and(
           eq(targets.organizationId, this.organizationId),
           eq(targets.type, 'subgraph'),
-          eq(targets.namespaceId, ns.id),
+          eq(targets.namespaceId, data.namespaceId),
           ...conditions,
         ),
       )

@@ -5,15 +5,12 @@ import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SignJWT, generateKeyPair, importPKCS8 } from 'jose';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { Target } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
   graphApiTokens,
   graphCompositions,
   graphRequestKeys,
-  schemaChecks,
   schemaVersion,
   schemaVersionChangeAction,
   targetLabelMatchers,
@@ -32,11 +29,10 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
-import { PublicError } from '../errors/errors.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
+import { NamespaceRepository } from './NamespaceRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
-import { NamespaceRepository } from './NamespaceRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -54,22 +50,17 @@ export class FederatedGraphRepository {
   public create(data: {
     name: string;
     namespace: string;
+    namespaceId: string;
     routingUrl: string;
     labelMatchers: string[];
     createdBy: string;
     readme?: string;
-  }): Promise<FederatedGraphDTO> {
+  }): Promise<FederatedGraphDTO | undefined> {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
-      const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
 
       const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
       const routingUrl = normalizeURL(data.routingUrl);
-
-      const ns = await namespaceRepo.byName(data.namespace);
-      if (!ns) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${data.namespace} not found`);
-      }
 
       const insertedTarget = await tx
         .insert(targets)
@@ -79,7 +70,7 @@ export class FederatedGraphRepository {
           type: 'federated',
           createdBy: data.createdBy,
           readme: data.readme,
-          namespaceId: ns.id,
+          namespaceId: data.namespaceId,
         })
         .returning()
         .execute();
@@ -103,7 +94,10 @@ export class FederatedGraphRepository {
         )
         .execute();
 
-      const subgraphs = await subgraphRepo.byGraphLabelMatchers(data.labelMatchers, ns.name);
+      const subgraphs = await subgraphRepo.byGraphLabelMatchers({
+        labelMatchers: data.labelMatchers,
+        namespaceId: data.namespaceId,
+      });
 
       if (subgraphs.length > 0) {
         await tx
@@ -128,7 +122,7 @@ export class FederatedGraphRepository {
         labelMatchers: data.labelMatchers,
         subgraphsCount: subgraphs.length,
         namespace: data.namespace,
-        namespaceId: ns.id,
+        namespaceId: data.namespaceId,
       };
     });
   }
@@ -140,6 +134,7 @@ export class FederatedGraphRepository {
     updatedBy: string;
     readme?: string;
     blobStorage: BlobStorage;
+    namespaceId: string;
   }) {
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -149,12 +144,6 @@ export class FederatedGraphRepository {
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(tx);
-      const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
-
-      const ns = await namespaceRepo.byTargetId(data.targetId);
-      if (!ns) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace not found`);
-      }
 
       const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
       if (!federatedGraph) {
@@ -187,7 +176,7 @@ export class FederatedGraphRepository {
           )
           .execute();
 
-        const subgraphs = await subgraphRepo.byGraphLabelMatchers(labelMatchers, ns.name);
+        const subgraphs = await subgraphRepo.byGraphLabelMatchers({ labelMatchers, namespaceId: data.namespaceId });
 
         let deleteCondition: SQL<unknown> | undefined = eq(
           schema.subgraphsToFederatedGraph.federatedGraphId,
@@ -235,34 +224,27 @@ export class FederatedGraphRepository {
     });
   }
 
-  public move(data: { targetId: string; newNamespace: string; updatedBy: string }, blobStorage: BlobStorage) {
+  public move(
+    data: { targetId: string; newNamespaceId: string; updatedBy: string; federatedGraph: FederatedGraphDTO },
+    blobStorage: BlobStorage,
+  ) {
     return this.db.transaction(async (tx) => {
       const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(tx);
 
-      const newNS = await namespaceRepo.byName(data.newNamespace);
-      if (!newNS) {
-        throw new PublicError(
-          EnumStatusCode.ERR_NOT_FOUND,
-          `Namespace ${data.newNamespace} not found. Please create it before moving.`,
-        );
-      }
-
-      const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
-      if (!federatedGraph) {
-        throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Federated graph not found`);
-      }
-
-      await tx.update(targets).set({ namespaceId: newNS.id }).where(eq(targets.id, data.targetId));
+      await tx.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
 
       // Delete all mappings because we will deal with new subgraphs in new namespace
       await tx
         .delete(schema.subgraphsToFederatedGraph)
-        .where(eq(schema.subgraphsToFederatedGraph.federatedGraphId, federatedGraph.id));
+        .where(eq(schema.subgraphsToFederatedGraph.federatedGraphId, data.federatedGraph.id));
 
-      const newNamespaceSubgraphs = await subgraphRepo.byGraphLabelMatchers(federatedGraph.labelMatchers, newNS.name);
+      const newNamespaceSubgraphs = await subgraphRepo.byGraphLabelMatchers({
+        labelMatchers: data.federatedGraph.labelMatchers,
+        namespaceId: data.newNamespaceId,
+      });
 
       // insert new mappings
       if (newNamespaceSubgraphs.length > 0) {
@@ -271,7 +253,7 @@ export class FederatedGraphRepository {
           .values(
             newNamespaceSubgraphs.map((sg) => ({
               subgraphId: sg.id,
-              federatedGraphId: federatedGraph.id,
+              federatedGraphId: data.federatedGraph.id,
             })),
           )
           .onConflictDoNothing()
@@ -279,7 +261,7 @@ export class FederatedGraphRepository {
       }
 
       const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
-      const composedGraph = await composer.composeFederatedGraph(federatedGraph);
+      const composedGraph = await composer.composeFederatedGraph(data.federatedGraph);
 
       await composer.deployComposition({
         composedGraph,
@@ -333,29 +315,26 @@ export class FederatedGraphRepository {
     return result[0]?.count || 0;
   }
 
-  public async byTargetId(targetId: string): Promise<FederatedGraphDTO | undefined> {
-    const resp = await this.db.query.targets.findFirst({
-      where: and(
-        eq(schema.targets.id, targetId),
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.type, 'federated'),
-      ),
-      with: {
-        federatedGraph: {
-          with: {
-            subgraphs: {
-              columns: {
-                subgraphId: true,
-              },
-            },
-          },
-        },
-        namespace: true,
-        labelMatchers: true,
-      },
-    });
+  private async getFederatedGraph(conditions: SQL<unknown>[]): Promise<FederatedGraphDTO | undefined> {
+    const resp = await this.db
+      .select({
+        name: schema.targets.name,
+        labelMatchers: schema.targets.labels,
+        createdBy: schema.targets.createdBy,
+        readme: schema.targets.readme,
+        id: schema.federatedGraphs.id,
+        routingUrl: schema.federatedGraphs.routingUrl,
+        targetId: schema.federatedGraphs.targetId,
+        composedSchemaVersionId: schema.federatedGraphs.composedSchemaVersionId,
+        namespaceId: schema.namespaces.id,
+        namespaceName: schema.namespaces.name,
+      })
+      .from(targets)
+      .where(and(...conditions))
+      .innerJoin(schema.federatedGraphs, eq(targets.id, schema.federatedGraphs.targetId))
+      .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.targets.namespaceId));
 
-    if (!resp) {
+    if (resp.length === 0) {
       return undefined;
     }
 
@@ -368,28 +347,44 @@ export class FederatedGraphRepository {
       })
       .from(schemaVersion)
       .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .where(eq(schemaVersion.targetId, resp.federatedGraph.targetId))
+      .where(eq(schemaVersion.targetId, resp[0].targetId))
       .orderBy(desc(schemaVersion.createdAt))
       .limit(1)
       .execute();
 
+    const labelMatchers = await this.db.query.targetLabelMatchers.findMany({
+      where: eq(schema.targetLabelMatchers.targetId, resp[0].targetId),
+    });
+
+    const subgraphs = await this.db.query.subgraphsToFederatedGraph.findMany({
+      where: eq(schema.subgraphsToFederatedGraph.federatedGraphId, resp[0].id),
+    });
+
     // Composed schema version is not set when the federated graph was not composed.
     return {
-      id: resp.federatedGraph.id,
-      name: resp.name,
-      routingUrl: resp.federatedGraph.routingUrl,
+      id: resp[0].id,
+      name: resp[0].name,
+      routingUrl: resp[0].routingUrl,
       isComposable: latestVersion?.[0]?.isComposable ?? false,
       compositionErrors: latestVersion?.[0]?.compositionErrors ?? '',
       lastUpdatedAt: latestVersion?.[0]?.createdAt?.toISOString() ?? '',
-      targetId: resp.id,
-      schemaVersionId: resp.federatedGraph.composedSchemaVersionId ?? undefined,
-      subgraphsCount: resp.federatedGraph.subgraphs.length ?? 0,
-      labelMatchers: resp.labelMatchers.map((s) => s.labelMatcher.join(',')),
-      creatorUserId: resp.createdBy || undefined,
-      readme: resp.readme || undefined,
-      namespace: resp.namespace.name,
-      namespaceId: resp.namespace.id,
+      targetId: resp[0].targetId,
+      schemaVersionId: resp[0].composedSchemaVersionId ?? undefined,
+      subgraphsCount: subgraphs.length ?? 0,
+      labelMatchers: labelMatchers.map((s) => s.labelMatcher.join(',')),
+      creatorUserId: resp[0].createdBy || undefined,
+      readme: resp[0].readme || undefined,
+      namespace: resp[0].namespaceName,
+      namespaceId: resp[0].namespaceId,
     };
+  }
+
+  public byTargetId(targetId: string): Promise<FederatedGraphDTO | undefined> {
+    return this.getFederatedGraph([
+      eq(schema.targets.id, targetId),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'federated'),
+    ]);
   }
 
   public async byId(id: string): Promise<FederatedGraphDTO | undefined> {
@@ -405,106 +400,36 @@ export class FederatedGraphRepository {
   }
 
   public async exists(name: string, namespace: string): Promise<boolean> {
-    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
-    const ns = await namespaceRepo.byName(namespace);
-    if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
-    }
+    const graphs = await this.db
+      .select()
+      .from(targets)
+      .innerJoin(schema.namespaces, and(eq(schema.namespaces.id, targets.namespaceId)))
+      .where(
+        and(
+          eq(schema.targets.name, name),
+          eq(schema.targets.organizationId, this.organizationId),
+          eq(schema.targets.type, 'federated'),
+          eq(schema.namespaces.name, namespace),
+        ),
+      );
 
-    const graph = await this.db.query.targets.findFirst({
-      where: and(
-        eq(schema.targets.name, name),
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.namespaceId, ns.id),
-        eq(schema.targets.type, 'federated'),
-      ),
-      columns: {
-        id: true,
-      },
-    });
-
-    console.log(graph);
-
-    return !!graph;
+    return graphs.length === 1;
   }
 
-  public async byName(name: string, namespace: string): Promise<FederatedGraphDTO | undefined> {
-    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
-    const ns = await namespaceRepo.byName(namespace);
-    if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
-    }
-
-    const resp = await this.db.query.targets.findFirst({
-      where: and(
-        eq(schema.targets.name, name),
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.namespaceId, ns.id),
-        eq(schema.targets.type, 'federated'),
-      ),
-      with: {
-        federatedGraph: {
-          with: {
-            subgraphs: {
-              columns: {
-                subgraphId: true,
-              },
-            },
-          },
-        },
-        labelMatchers: true,
-        namespace: true,
-      },
-    });
-
-    if (!resp) {
-      return undefined;
-    }
-
-    const latestVersion = await this.db
-      .select({
-        id: schemaVersion.id,
-        isComposable: graphCompositions.isComposable,
-        compositionErrors: graphCompositions.compositionErrors,
-        createdAt: schemaVersion.createdAt,
-      })
-      .from(schemaVersion)
-      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .where(eq(schemaVersion.targetId, resp.federatedGraph.targetId))
-      .orderBy(desc(schemaVersion.createdAt))
-      .limit(1)
-      .execute();
-
-    // Composed schema version is not set when the federated graph was not composed.
-    return {
-      id: resp.federatedGraph.id,
-      name: resp.name,
-      routingUrl: resp.federatedGraph.routingUrl,
-      isComposable: latestVersion?.[0]?.isComposable ?? false,
-      compositionErrors: latestVersion?.[0]?.compositionErrors ?? '',
-      lastUpdatedAt: latestVersion?.[0]?.createdAt?.toISOString() ?? '',
-      targetId: resp.id,
-      schemaVersionId: resp.federatedGraph.composedSchemaVersionId ?? undefined,
-      subgraphsCount: resp.federatedGraph.subgraphs.length ?? 0,
-      labelMatchers: resp.labelMatchers.map((s) => s.labelMatcher.join(',')),
-      creatorUserId: resp.createdBy || undefined,
-      readme: resp.readme || undefined,
-      namespace: resp.namespace.name,
-      namespaceId: resp.namespace.id,
-    };
+  public byName(name: string, namespace: string): Promise<FederatedGraphDTO | undefined> {
+    return this.getFederatedGraph([
+      eq(schema.targets.name, name),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'federated'),
+      eq(schema.namespaces.name, namespace),
+    ]);
   }
 
   /**
    * bySubgraphLabels returns federated graphs whose label matchers satisfy the given subgraph labels.
    */
-  public async bySubgraphLabels(labels: Label[], namespace: string): Promise<FederatedGraphDTO[]> {
-    const uniqueLabels = normalizeLabels(labels);
-
-    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
-    const ns = await namespaceRepo.byName(namespace);
-    if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
-    }
+  public async bySubgraphLabels(data: { labels: Label[]; namespaceId: string }): Promise<FederatedGraphDTO[]> {
+    const uniqueLabels = normalizeLabels(data.labels);
 
     const graphs = await this.db
       .select({
@@ -516,7 +441,7 @@ export class FederatedGraphRepository {
         and(
           eq(targets.organizationId, this.organizationId),
           eq(targets.type, 'federated'),
-          eq(targets.namespaceId, ns.id),
+          eq(targets.namespaceId, data.namespaceId),
           // This is a negative lookup. We check if there is a label matchers of a federated graph
           // that does not match the given subgraph labels. If all label matchers match, then the
           // federated graph will be part of the result.

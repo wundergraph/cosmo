@@ -184,7 +184,6 @@ describe('Apollo Federated Graph', (ctx) => {
       namespace: 'default',
     });
 
-    console.log(graph.response?.details);
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
 
     expect(graph.subgraphs.length).toBe(4);

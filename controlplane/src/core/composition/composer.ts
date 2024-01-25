@@ -186,14 +186,14 @@ export class Composer {
 
   protected async composeWithLabels(
     subgraphLabels: Label[],
-    namespace: string,
+    namespaceId: string,
     mapSubgraphs: (
       subgraphs: SubgraphDTO[],
     ) => [SubgraphDTO[], { name: string; url: string; definitions: DocumentNode }[]],
   ): Promise<CompositionResult> {
     const composedGraphs: ComposedFederatedGraph[] = [];
 
-    for await (const graph of await this.federatedGraphRepo.bySubgraphLabels(subgraphLabels, namespace)) {
+    for await (const graph of await this.federatedGraphRepo.bySubgraphLabels({ labels: subgraphLabels, namespaceId })) {
       try {
         const [subgraphs, subgraphsToBeComposed] = mapSubgraphs(
           await this.subgraphRepo.listByFederatedGraph({ federatedGraphTargetId: graph.targetId }),
@@ -230,8 +230,13 @@ export class Composer {
   /**
    * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table, so it is passed to the function
    */
-  composeWithProposedSDL(subgraphLabels: Label[], subgraphName: string, namespace: string, subgraphSchemaSDL: string) {
-    return this.composeWithLabels(subgraphLabels, namespace, (subgraphs) => {
+  composeWithProposedSDL(
+    subgraphLabels: Label[],
+    subgraphName: string,
+    namespaceId: string,
+    subgraphSchemaSDL: string,
+  ) {
+    return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
       const subgraphsToBeComposed = [];
 
       for (const subgraph of subgraphs) {
@@ -254,8 +259,8 @@ export class Composer {
     });
   }
 
-  composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string, namespace: string) {
-    return this.composeWithLabels(subgraphLabels, namespace, (subgraphs) => {
+  composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string, namespaceId: string) {
+    return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
       const subgraphsToBeComposed = [];
 
       const filteredSubgraphs = subgraphs.filter((s) => s.name !== subgraphName);

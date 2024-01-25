@@ -448,15 +448,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
-        const errors = await fedGraphRepo.move(
-          {
-            targetId: graph.targetId,
-            newNamespace: req.newNamespace,
-            updatedBy: authContext.userId,
-          },
-          opts.blobStorage,
-        );
-
         const newNamespace = await namespaceRepo.byName(req.newNamespace);
         if (!newNamespace) {
           return {
@@ -467,6 +458,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
           };
         }
+
+        const errors = await fedGraphRepo.move(
+          {
+            targetId: graph.targetId,
+            newNamespaceId: newNamespace.id,
+            updatedBy: authContext.userId,
+            federatedGraph: graph,
+          },
+          opts.blobStorage,
+        );
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
@@ -568,19 +569,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             );
           }
 
-          const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.move(
-            {
-              targetId: graph.targetId,
-              newNamespace: req.newNamespace,
-              updatedBy: authContext.userId,
-            },
-            opts.blobStorage,
-          );
-
           const newNamespace = await namespaceRepo.byName(req.newNamespace);
           if (!newNamespace) {
             throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.newNamespace}`);
           }
+
+          const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.move(
+            {
+              targetId: graph.targetId,
+              newNamespace: newNamespace.id,
+              updatedBy: authContext.userId,
+              subgraphId: graph.id,
+              subgraphLabels: graph.labels,
+              currentNamespaceId: graph.namespaceId,
+              newNamespaceId: newNamespace.id,
+            },
+            opts.blobStorage,
+          );
 
           await auditLogRepo.addAuditLog({
             organizationId: authContext.organizationId,
@@ -641,8 +646,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
         req.namespace = req.namespace || DefaultNamespace;
 
-        console.log(req.namespace);
-
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const orgWebhooks = new OrganizationWebhookService(
@@ -654,12 +657,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
               details: `The user doesn't have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
             },
             compositionErrors: [],
           };
@@ -711,7 +726,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
           readme: req.readme,
           namespace: req.namespace,
+          namespaceId: namespace.id,
         });
+
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Could not create federated graph`,
+            },
+            compositionErrors: [],
+          };
+        }
 
         await fedGraphRepo.createGraphCryptoKeyPairs({
           federatedGraphId: federatedGraph.id,
@@ -814,6 +840,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -836,8 +863,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const exists = await subgraphRepo.exists(req.name, req.namespace);
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
+            },
+            graphs: [],
+          };
+        }
 
+        const exists = await subgraphRepo.exists(req.name, req.namespace);
         if (exists) {
           return {
             response: {
@@ -851,6 +888,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraph = await subgraphRepo.create({
           name: req.name,
           namespace: req.namespace,
+          namespaceId: namespace.id,
           createdBy: authContext.userId,
           labels: req.labels,
           routingUrl: req.routingUrl,
@@ -984,8 +1022,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
 
         const result = req.delete
-          ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, req.namespace)
-          : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, req.namespace, newSchemaSDL);
+          ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
+          : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, subgraph.namespaceId, newSchemaSDL);
 
         await schemaCheckRepo.createSchemaCheckCompositions({
           schemaCheckID,
@@ -1172,7 +1210,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const result = await compChecker.composeWithProposedSDL(
           subgraph.labels,
           subgraph.name,
-          req.namespace,
+          subgraph.namespaceId,
           newSchemaSDL,
         );
 
@@ -1248,6 +1286,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.billingDefaultPlanId,
         );
         const auditLogRepo = new AuditLogRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -1280,6 +1319,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
               details: e.message,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
             },
             compositionErrors: [],
           };
@@ -1346,6 +1396,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subgraph = await subgraphRepo.create({
             name: req.name,
             namespace: req.namespace,
+            namespaceId: namespace.id,
             createdBy: authContext.userId,
             labels: req.labels,
             routingUrl: req.routingUrl!,
@@ -1384,6 +1435,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               ? formatSubscriptionProtocol(req.subscriptionProtocol)
               : undefined,
             updatedBy: authContext.userId,
+            namespaceId: namespace.id,
           },
           opts.blobStorage,
         );
@@ -1636,7 +1688,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const auditLogRepo = new AuditLogRepository(tx);
 
           // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
-          const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels, req.namespace);
+          const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+            labels: subgraph.labels,
+            namespaceId: subgraph.namespaceId,
+          });
 
           // Delete the subgraph
           await subgraphRepo.delete(subgraph.targetId);
@@ -1655,7 +1710,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
 
           // Collect all federated graphs that use this subgraph after deleting the subgraph
-          const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels, req.namespace);
+          const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+            labels: subgraph.labels,
+            namespaceId: subgraph.namespaceId,
+          });
 
           // Remove duplicates
           for (const federatedGraph of currentFederatedGraphs) {
@@ -1800,6 +1858,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           updatedBy: authContext.userId,
           readme: req.readme,
           blobStorage: opts.blobStorage,
+          namespaceId: federatedGraph.namespaceId,
         });
 
         if (errors) {
@@ -1938,6 +1997,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               : undefined,
             updatedBy: authContext.userId,
             readme: req.readme,
+            namespaceId: subgraph.namespaceId,
           },
           opts.blobStorage,
         );
@@ -2036,7 +2096,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraphs = await subgraphRepo.byGraphLabelMatchers(req.labelMatchers, req.namespace);
+        const subgraphs = await subgraphRepo.byGraphLabelMatchers({
+          labelMatchers: req.labelMatchers,
+          namespaceId: federatedGraph.namespaceId,
+        });
 
         const subgraphsDetails = subgraphs.map((s) => ({
           id: s.id,
@@ -2784,6 +2847,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           opts.billingDefaultPlanId,
         );
         const auditLogRepo = new AuditLogRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -2800,6 +2864,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_INIT, {
           actor_id: authContext.userId,
         });
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
+            },
+            token: '',
+          };
+        }
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -2884,6 +2959,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             db: tx,
             creatorUserId: authContext.userId,
             namespace: req.namespace,
+            namespaceId: namespace.id,
           });
 
           const composition = await composer.composeFederatedGraph(federatedGraph);
@@ -2920,7 +2996,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetNamespaceDisplayName: migratedGraph.namespace,
         });
 
-        const subgraphs = await subgraphRepo.byGraphLabelMatchers(migratedGraph.labelMatchers, migratedGraph.namespace);
+        const subgraphs = await subgraphRepo.byGraphLabelMatchers({
+          labelMatchers: migratedGraph.labelMatchers,
+          namespaceId: migratedGraph.namespaceId,
+        });
         for (const subgraph of subgraphs) {
           await auditLogRepo.addAuditLog({
             organizationId: authContext.organizationId,
@@ -4557,20 +4636,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const namespace = await namespaceRepo.byName(req.namespace);
-        if (!namespace) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Could not find namespace ${req.namespace}`,
-            },
-            graphs: [],
-          };
-        }
 
         const list: SubgraphDTO[] = await repo.list({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace.id,
+          namespaceId: namespace?.id,
         });
 
         return {
@@ -4643,24 +4713,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetFederatedGraphsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const namespace = await namespaceRepo.byName(req.namespace);
-        if (!namespace) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Could not find namespace ${req.namespace}`,
-            },
-            graphs: [],
-          };
-        }
 
         const list: FederatedGraphDTO[] = await fedGraphRepo.list({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace.id,
+          namespaceId: namespace?.id,
         });
 
         let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
@@ -4714,7 +4774,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels, req.namespace);
+        const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
+          labels: subgraph.labels,
+          namespaceId: subgraph.namespaceId,
+        });
 
         return {
           graphs: federatedGraphs.map((g) => ({

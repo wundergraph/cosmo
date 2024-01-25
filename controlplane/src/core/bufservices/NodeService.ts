@@ -9,7 +9,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { lru } from 'tiny-lru';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
-import { DefaultNamespace } from '../repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { handleError } from '../util.js';
