@@ -16,7 +16,7 @@ export class TargetRepository {
     const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
     const ns = await namespaceRepo.byName(namespace);
     if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
+      return;
     }
 
     const target = await this.db

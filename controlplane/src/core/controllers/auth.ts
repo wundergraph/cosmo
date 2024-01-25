@@ -266,10 +266,13 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             });
 
             const namespaceRepo = new NamespaceRepository(tx, insertedOrg.id);
-            await namespaceRepo.create({
+            const ns = await namespaceRepo.create({
               name: DefaultNamespace,
               createdBy: userId,
             });
+            if (!ns) {
+              throw new Error(`Could not create ${DefaultNamespace} namespace`);
+            }
           });
 
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {

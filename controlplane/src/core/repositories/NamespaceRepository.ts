@@ -44,7 +44,7 @@ export class NamespaceRepository {
       .returning();
 
     if (ns.length === 0) {
-      throw new PublicError(EnumStatusCode.ERR, 'Could not create namespace');
+      return;
     }
 
     return ns[0];

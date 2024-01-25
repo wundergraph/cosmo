@@ -466,39 +466,14 @@ export class SubgraphRepository {
     });
   }
 
-  public async listAll(opts: Omit<ListFilterOptions, 'namespace'>): Promise<SubgraphDTO[]> {
-    const targets = await this.db
-      .select({
-        id: schema.targets.id,
-        name: schema.targets.name,
-        lastUpdatedAt: schema.schemaVersion.createdAt,
-      })
-      .from(schema.targets)
-      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
-      .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
-      .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
-      .where(and(eq(schema.targets.organizationId, this.organizationId), eq(schema.targets.type, 'subgraph')))
-      .limit(opts.limit)
-      .offset(opts.offset);
-
-    const subgraphs: SubgraphDTO[] = [];
-
-    for (const target of targets) {
-      const sg = await this.byTargetId(target.id);
-      if (sg === undefined) {
-        throw new Error(`Subgraph ${target.name} not found`);
-      }
-      subgraphs.push(sg);
-    }
-
-    return subgraphs;
-  }
-
   public async list(opts: ListFilterOptions): Promise<SubgraphDTO[]> {
-    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
-    const ns = await namespaceRepo.byName(opts.namespace);
-    if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${opts.namespace} not found`);
+    const conditions: SQL<unknown>[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+    ];
+
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
     }
 
     const targets = await this.db
@@ -511,13 +486,7 @@ export class SubgraphRepository {
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
       .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
       .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
-      .where(
-        and(
-          eq(schema.targets.organizationId, this.organizationId),
-          eq(schema.targets.type, 'subgraph'),
-          eq(schema.targets.namespaceId, ns.id),
-        ),
-      )
+      .where(and(...conditions))
       .limit(opts.limit)
       .offset(opts.offset);
 

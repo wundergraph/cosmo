@@ -215,6 +215,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           createdBy: authContext.userId,
         });
 
+        if (!ns) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not create namespace ${req.name}`,
+            },
+            graphs: [],
+          };
+        }
+
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
           auditAction: 'namespace.created',
@@ -4517,7 +4527,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Target ${req.targetName} not found`,
+              details: `Target ${req.targetName} not found in ${req.namespace} namespace`,
             },
           };
         }
@@ -4544,24 +4554,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetSubgraphsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        const list: SubgraphDTO[] = [];
-        if (req.namespace) {
-          list.push(
-            ...(await repo.list({
-              limit: req.limit,
-              offset: req.offset,
-              namespace: req.namespace,
-            })),
-          );
-        } else {
-          list.push(
-            ...(await repo.listAll({
-              limit: req.limit,
-              offset: req.offset,
-            })),
-          );
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
+            },
+            graphs: [],
+          };
         }
+
+        const list: SubgraphDTO[] = await repo.list({
+          limit: req.limit,
+          offset: req.offset,
+          namespaceId: namespace.id,
+        });
 
         return {
           graphs: list.map((g) => ({
@@ -4634,23 +4644,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const list: FederatedGraphDTO[] = [];
-        if (req.namespace) {
-          list.push(
-            ...(await fedGraphRepo.list({
-              limit: req.limit,
-              offset: req.offset,
-              namespace: req.namespace,
-            })),
-          );
-        } else {
-          list.push(
-            ...(await fedGraphRepo.listAll({
-              limit: req.limit,
-              offset: req.offset,
-            })),
-          );
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
+            },
+            graphs: [],
+          };
         }
+
+        const list: FederatedGraphDTO[] = await fedGraphRepo.list({
+          limit: req.limit,
+          offset: req.offset,
+          namespaceId: namespace.id,
+        });
 
         let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
 
@@ -6258,12 +6269,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
         if (authContext.isAdmin) {
-          const federatedGraphs = await fedRepo.listAll({
+          const federatedGraphs = await fedRepo.list({
             limit: 0,
             offset: 0,
           });
 
-          const subgraphs = await subgraphRepo.listAll({
+          const subgraphs = await subgraphRepo.list({
             limit: 0,
             offset: 0,
           });
@@ -6560,6 +6571,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               name: DefaultNamespace,
               createdBy: authContext.userId,
             });
+
+            if (!ns) {
+              throw new PublicError(EnumStatusCode.ERR, `Could not create ${DefaultNamespace} namespace`);
+            }
 
             await auditLogRepo.addAuditLog({
               organizationId: authContext.organizationId,

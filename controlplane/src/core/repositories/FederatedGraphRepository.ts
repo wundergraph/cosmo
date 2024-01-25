@@ -292,42 +292,21 @@ export class FederatedGraphRepository {
     });
   }
 
-  public async listAll(opts: Omit<ListFilterOptions, 'namespace'>): Promise<FederatedGraphDTO[]> {
+  public async list(opts: ListFilterOptions): Promise<FederatedGraphDTO[]> {
+    const conditions: SQL<unknown>[] = [
+      eq(schema.targets.type, 'federated'),
+      eq(schema.targets.organizationId, this.organizationId),
+    ];
+
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
     const targets = await this.db.query.targets.findMany({
-      where: and(eq(schema.targets.type, 'federated'), eq(schema.targets.organizationId, this.organizationId)),
+      where: and(...conditions),
       limit: opts.limit,
       offset: opts.offset,
       orderBy: asc(schema.targets.namespaceId),
-    });
-
-    const federatedGraphs: FederatedGraphDTO[] = [];
-
-    for (const target of targets) {
-      const fg = await this.byTargetId(target.id);
-      if (fg === undefined) {
-        throw new Error(`FederatedGraph ${target.name} not found`);
-      }
-      federatedGraphs.push(fg);
-    }
-
-    return federatedGraphs;
-  }
-
-  public async list(opts: ListFilterOptions): Promise<FederatedGraphDTO[]> {
-    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
-    const ns = await namespaceRepo.byName(opts.namespace);
-    if (!ns) {
-      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${opts.namespace} not found`);
-    }
-
-    const targets = await this.db.query.targets.findMany({
-      where: and(
-        eq(schema.targets.type, 'federated'),
-        eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.namespaceId, ns.id),
-      ),
-      limit: opts.limit,
-      offset: opts.offset,
     });
 
     const federatedGraphs: FederatedGraphDTO[] = [];

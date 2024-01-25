@@ -85,10 +85,13 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
   });
 
   const namespaceRepo = new NamespaceRepository(db, insertedOrg.id);
-  await namespaceRepo.create({
+  const ns = await namespaceRepo.create({
     name: DefaultNamespace,
     createdBy: userTestData.userId,
   });
+  if (!ns) {
+    throw new Error(`Could not create ${DefaultNamespace} namespace`);
+  }
 
   await queryConnection.end({
     timeout: 3,
