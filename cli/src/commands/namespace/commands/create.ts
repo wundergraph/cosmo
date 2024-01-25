@@ -7,7 +7,10 @@ import { baseHeaders } from '../../../core/config.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
   command.description('Creates a new namespace.');
-  command.argument('<name>', 'The name of the namespace to create.');
+  command.argument(
+    '<name>',
+    'The name of the namespace to create. This helps you scope your graphs so you can isolate into different environments.',
+  );
   command.action(async (name, options) => {
     const resp = await opts.client.platform.createNamespace(
       {
