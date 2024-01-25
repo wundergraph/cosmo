@@ -162,6 +162,7 @@ import {
   handleError,
   isValidLabelMatchers,
   isValidLabels,
+  isValidNamespaceName,
   isValidOrganizationName,
   isValidOrganizationSlug,
   validateDateRanges,
@@ -187,6 +188,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
+
+        const isValid = isValidNamespaceName(req.name);
+        if (!isValid) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                'The provided name is invalid. The name can contain letters and numbers separated by underscore or hyphens',
+            },
+          };
+        }
 
         const exists = await namespaceRepo.byName(req.name);
         if (exists) {
@@ -281,6 +293,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<RenameNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const isValid = isValidNamespaceName(req.name);
+        if (!isValid) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                'The provided name is invalid. The name can contain letters and numbers separated by underscore or hyphens',
+            },
+          };
+        }
 
         if (req.name === DefaultNamespace) {
           return {

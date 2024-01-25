@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { extractOperationNames, hasLabelsChanged, isValidLabels, isValidOrganizationSlug } from './util.js';
+import {
+  extractOperationNames,
+  hasLabelsChanged,
+  isValidLabels,
+  isValidNamespaceName,
+  isValidOrganizationSlug,
+} from './util.js';
 
 describe('Util', (ctx) => {
   test('Should validate label', () => {
@@ -191,6 +197,7 @@ describe('Util', (ctx) => {
       ),
     ).toBe(true);
   });
+
   test('Valid organization slug', () => {
     const slugs = [
       { slug: 'acme-corp', expected: true },
@@ -205,6 +212,22 @@ describe('Util', (ctx) => {
 
     for (const entry of slugs) {
       expect(isValidOrganizationSlug(entry.slug)).equal(entry.expected);
+    }
+  });
+
+  test('Valid namespace name', () => {
+    const entries = [
+      { name: 'prod-1', expected: true },
+      { name: '1prod-prod2', expected: true },
+      { name: 'dev', expected: true },
+      { name: 'acme-', expected: false },
+      { name: '-acme', expected: false },
+      { name: 'ac_24', expected: true },
+      { name: '1a$c', expected: false },
+    ];
+
+    for (const entry of entries) {
+      expect(isValidNamespaceName(entry.name)).equal(entry.expected);
     }
   });
 });
