@@ -172,6 +172,10 @@ const GraphOverviewPage: NextPageWithLayout = () => {
             </CardHeader>
             <CardContent className="flex flex-col gap-y-2 text-sm">
               <div className="flex gap-x-4">
+                <span className="w-28 text-muted-foreground">Name</span>
+                <span className="w-32">{graphData.graph.name}</span>
+              </div>
+              <div className="flex gap-x-4">
                 <span className="w-28 text-muted-foreground">Subgraphs</span>
                 <span className="w-32">{connectedSubgraphs}</span>
               </div>
