@@ -35,12 +35,7 @@ describe('Authorization Directives Tests', () => {
                   {
                     fieldName: 'object',
                     requiresAuthentication: true,
-                    requiredScopes: [
-                      new Set<string>(['read:query', 'read:object', 'read:field']),
-                      new Set<string>(['read:query', 'read:all']),
-                      new Set<string>(['read:object', 'read:field']),
-                      new Set<string>(['read:object', 'read:all']),
-                    ],
+                    requiredScopes: [new Set<string>(['read:query']), new Set<string>(['read:object'])],
                   },
                 ],
               ]),
@@ -59,7 +54,12 @@ describe('Authorization Directives Tests', () => {
                   {
                     fieldName: 'b',
                     requiresAuthentication: true,
-                    requiredScopes: [new Set<string>(['read:bool']), new Set<string>(['read:field'])],
+                    requiredScopes: [
+                      new Set<string>(['read:bool', 'read:object', 'read:field']),
+                      new Set<string>(['read:bool', 'read:all']),
+                      new Set<string>(['read:field', 'read:object']),
+                      new Set<string>(['read:field', 'read:all']),
+                    ],
                   },
                 ],
                 [
@@ -67,7 +67,12 @@ describe('Authorization Directives Tests', () => {
                   {
                     fieldName: 's',
                     requiresAuthentication: true,
-                    requiredScopes: [new Set<string>(['read:field', 'read:scalar']), new Set<string>(['read:all'])],
+                    requiredScopes: [
+                      new Set<string>(['read:object', 'read:field', 'read:scalar']),
+                      new Set<string>(['read:object', 'read:field', 'read:all']),
+                      new Set<string>(['read:all', 'read:field', 'read:scalar']),
+                      new Set<string>(['read:all']),
+                    ],
                   },
                 ],
               ]),
@@ -104,9 +109,9 @@ describe('Authorization Directives Tests', () => {
             object: Object!
           }
           
-          type Object @authenticated {
-            id: ID!
-            name: String!
+          type Object {
+            id: ID! @authenticated
+            name: String! @authenticated
             age: Int!
           }
         `,
@@ -121,10 +126,10 @@ describe('Authorization Directives Tests', () => {
         normalizeString(
           versionTwoPersistedBaseSchema +
             `
-          type Object @requiresScopes(scopes: [["read:object"]]) {
-            id: ID!
+          type Object {
+            id: ID! @requiresScopes(scopes: [["read:object"]])
             age: Int!
-            name: String!
+            name: String! @requiresScopes(scopes: [["read:object"]])
           }
           
           type Query {
@@ -146,16 +151,65 @@ describe('Authorization Directives Tests', () => {
           fieldName: 'name',
           typeName: 'Object',
           requiresAuthentication: true,
-          requiredScopes: [],
+          requiredScopes: [['read:object']],
         },
         {
           argumentNames: [],
-          fieldName: 'object',
-          typeName: 'Query',
+          fieldName: 'id',
+          typeName: 'Object',
           requiresAuthentication: false,
           requiredScopes: [['read:object']],
         },
       ]);
+    });
+
+    test('that the federated graph and its router configuration are generated correctly', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphF]);
+      expect(errors).toBeUndefined();
+      expect(federationResult!.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: 'id',
+          typeName: 'Entity',
+          requiresAuthentication: true,
+          requiredScopes: [['read:object']],
+        },
+        {
+          argumentNames: [],
+          fieldName: 'name',
+          typeName: 'Entity',
+          requiresAuthentication: true,
+          requiredScopes: [['read:object']],
+        },
+        {
+          argumentNames: [],
+          fieldName: 'customScalarTwo',
+          typeName: 'Query',
+          requiresAuthentication: true,
+          requiredScopes: [],
+        },
+      ]);
+      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+        normalizeString(
+          versionTwoPersistedBaseSchema +
+            `
+          type Query {
+            entities: [Entity!]!
+            customScalar: CustomScalar
+            entity: Entity!
+            customScalarTwo: CustomScalar @authenticated
+          }
+
+          type Entity {
+            id: ID! @authenticated @requiresScopes(scopes: [["read:object"]])
+            name: String! @authenticated @requiresScopes(scopes: [["read:object"]])
+            age: Int!
+          }
+
+          scalar CustomScalar
+        `,
+        ),
+      );
     });
   });
 });
@@ -213,5 +267,41 @@ const subgraphD: Subgraph = {
       id: ID!
       name: String! @authenticated
     }
+  `),
+};
+
+const subgraphE: Subgraph = {
+  name: 'subgraph-e',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+      customScalar: CustomScalar
+    }
+    
+    type Entity @key(fields: "id") @authenticated @requiresScopes(scopes: [["read:object"]]) {
+      id: ID!
+      name: String!
+    }
+    
+    scalar CustomScalar
+  `),
+};
+
+const subgraphF: Subgraph = {
+  name: 'subgraph-f',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+      customScalarTwo: CustomScalar
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      age: Int!
+    }
+    
+    scalar CustomScalar @authenticated
   `),
 };

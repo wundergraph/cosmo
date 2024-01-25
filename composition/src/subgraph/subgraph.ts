@@ -12,12 +12,14 @@ import {
 } from '../ast/utils';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import {
+  AuthorizationData,
   EntityInterfaceSubgraphData,
   getOrThrowError,
   getValueOrDefault,
   mergeAuthorizationDataByAND,
   newAuthorizationData,
   newFieldAuthorizationData,
+  setAndGetValue,
 } from '../utils/utils';
 import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
 import { ConfigurationDataByTypeName } from '../router-configuration/router-configuration';
@@ -63,26 +65,39 @@ export function recordSubgraphName(
 }
 
 export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFactory, definitions: DocumentNode) {
+  let parentAuthorizationData: AuthorizationData | undefined;
   visit(definitions, {
     FieldDefinition: {
       enter(node) {
         factory.childName = node.name.value;
         const typeName = getNamedTypeForChild(`${factory.parentTypeName}.${factory.childName}`, node.type);
-        const definitionAuthorizationData = factory.authorizationDataByParentTypeName.get(typeName);
-        if (!definitionAuthorizationData || !definitionAuthorizationData.hasParentLevelAuthorization) {
+        const inheritsAuthorization = factory.leafTypeNamesWithAuthorizationDirectives.has(typeName);
+        if (
+          (!parentAuthorizationData || !parentAuthorizationData.hasParentLevelAuthorization) &&
+          !inheritsAuthorization
+        ) {
           return false;
         }
-        const parentAuthorizationData = getValueOrDefault(
-          factory.authorizationDataByParentTypeName,
-          factory.parentTypeName,
-          () => newAuthorizationData(factory.parentTypeName),
-        );
+        if (!parentAuthorizationData) {
+          parentAuthorizationData = setAndGetValue(
+            factory.authorizationDataByParentTypeName,
+            factory.parentTypeName,
+            newAuthorizationData(factory.parentTypeName),
+          );
+        }
         const fieldAuthorizationData = getValueOrDefault(
           parentAuthorizationData.fieldAuthorizationDataByFieldName,
           factory.childName,
           () => newFieldAuthorizationData(factory.childName),
         );
-        mergeAuthorizationDataByAND(definitionAuthorizationData, fieldAuthorizationData);
+        mergeAuthorizationDataByAND(parentAuthorizationData, fieldAuthorizationData);
+        if (!inheritsAuthorization) {
+          return false;
+        }
+        const definitionAuthorizationData = factory.authorizationDataByParentTypeName.get(typeName);
+        if (definitionAuthorizationData && definitionAuthorizationData.hasParentLevelAuthorization) {
+          mergeAuthorizationDataByAND(definitionAuthorizationData, fieldAuthorizationData);
+        }
         return false;
       },
       leave() {
@@ -92,25 +107,31 @@ export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFact
     InterfaceTypeDefinition: {
       enter(node) {
         factory.parentTypeName = node.name.value;
+        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
       },
       leave() {
         factory.parentTypeName = '';
+        parentAuthorizationData = undefined;
       },
     },
     ObjectTypeDefinition: {
       enter(node) {
         factory.parentTypeName = node.name.value;
+        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
       },
       leave() {
         factory.parentTypeName = '';
+        parentAuthorizationData = undefined;
       },
     },
     ObjectTypeExtension: {
       enter(node) {
         factory.parentTypeName = node.name.value;
+        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
       },
       leave() {
         factory.parentTypeName = '';
+        parentAuthorizationData = undefined;
       },
     },
   });

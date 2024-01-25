@@ -481,7 +481,7 @@ describe('Router Configuration tests', () => {
       ]);
     });
 
-    test('that router configuration is correctly generated', () => {
+    test('that the router configuration is correctly generated', () => {
       const { errors, internalSubgraphBySubgraphName } = batchNormalize([
         createSubgraph('monolith', monolith),
         createSubgraph('reviews', reviews),

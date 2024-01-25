@@ -132,9 +132,10 @@ export function generateFieldConfigurations(
     const requiredOrScopes =
       compositionFieldConfiguration.requiredScopes?.map((andScopes) => new Scopes({ requiredAndScopes: andScopes })) ||
       [];
-    if (compositionFieldConfiguration.requiresAuthentication || requiredOrScopes.length > 0) {
+    const hasRequiredOrScopes = requiredOrScopes.length > 0;
+    if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {
       fieldConfiguration.authorizationConfiguration = new AuthorizationConfiguration({
-        requiresAuthentication: compositionFieldConfiguration.requiresAuthentication,
+        requiresAuthentication: compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes,
         requiredOrScopes,
       });
     }

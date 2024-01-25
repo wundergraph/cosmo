@@ -138,6 +138,8 @@ import {
   EntityContainer,
   EntityContainerByTypeName,
   EntityInterfaceFederationData,
+  generateAuthenticatedDirective,
+  generateRequiresScopesDirective,
   getAllMutualEntries,
   getEntriesNotInHashSet,
   getOrThrowError,
@@ -178,7 +180,8 @@ export class FederationFactory {
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   executableDirectives = new Set<string>();
   parentTypeName = '';
-  persistedDirectives = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, REQUIRES_SCOPES, TAG]);
+  persistedDirectives = new Set<string>([DEPRECATED, INACCESSIBLE, TAG]);
+  persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   currentSubgraphName = '';
   childName = '';
   directiveDefinitions: DirectiveMap = new Map<string, DirectiveContainer>();
@@ -1037,11 +1040,33 @@ export class FederationFactory {
     definitions.push(directiveContainer.node);
   }
 
+  pushAuthorizationDirectives(fieldContainer: FieldContainer, parentTypeName: string) {
+    const authorizationData = this.authorizationDataByParentTypeName.get(parentTypeName);
+    if (!authorizationData) {
+      return;
+    }
+    const fieldAuthorizationData = authorizationData.fieldAuthorizationDataByFieldName.get(
+      fieldContainer.node.name.value,
+    );
+    if (!fieldAuthorizationData) {
+      return;
+    }
+    if (fieldAuthorizationData.requiresAuthentication) {
+      fieldContainer.directives.directives.set(AUTHENTICATED, [generateAuthenticatedDirective()]);
+    }
+    if (fieldAuthorizationData.requiredScopes.length > 0) {
+      fieldContainer.directives.directives.set(REQUIRES_SCOPES, [
+        generateRequiresScopesDirective(fieldAuthorizationData.requiredScopes),
+      ]);
+    }
+  }
+
   getMergedFieldDefinitionNode(fieldContainer: FieldContainer, parentTypeName: string): FieldDefinitionNode {
-    if (!fieldContainer.arguments) {
+    this.pushAuthorizationDirectives(fieldContainer, parentTypeName);
+    pushPersistedDirectivesAndGetNode(fieldContainer);
+    if (fieldContainer.arguments.size < 1) {
       return fieldContainer.node;
     }
-    pushPersistedDirectivesAndGetNode(fieldContainer);
     const fieldName = fieldContainer.node.name.value;
     const fieldPath = `${parentTypeName}.${fieldName}`;
     const args: MutableInputValueDefinitionNode[] = [];
@@ -1629,7 +1654,7 @@ export class FederationFactory {
     }
     const definitions: MutableTypeDefinitionNode[] = [];
     for (const [directiveName, directiveContainer] of this.directiveDefinitions) {
-      if (this.persistedDirectives.has(directiveName)) {
+      if (this.persistedDirectiveDefinitions.has(directiveName)) {
         definitions.push(directiveContainer.node);
         continue;
       }

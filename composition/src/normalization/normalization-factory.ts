@@ -258,6 +258,7 @@ export class NormalizationFactory {
   handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
+  leafTypeNamesWithAuthorizationDirectives = new Set<string>();
   keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
   operationTypeNames = new Map<string, OperationTypeNode>();
   parentContainerByTypeName: ParentContainerByTypeName = new Map<string, ParentContainer>();
@@ -388,6 +389,14 @@ export class NormalizationFactory {
     }
     if (authorizationDirectives.length < 1) {
       return map;
+    }
+    if (
+      node.kind === Kind.ENUM_TYPE_DEFINITION ||
+      node.kind === Kind.ENUM_TYPE_EXTENSION ||
+      node.kind === Kind.SCALAR_TYPE_DEFINITION ||
+      node.kind === Kind.SCALAR_TYPE_EXTENSION
+    ) {
+      this.leafTypeNamesWithAuthorizationDirectives.add(this.parentTypeName);
     }
     const parentAuthorizationData = getValueOrDefault(this.authorizationDataByParentTypeName, this.parentTypeName, () =>
       newAuthorizationData(this.parentTypeName),

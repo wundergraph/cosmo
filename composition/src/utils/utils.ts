@@ -1,10 +1,11 @@
-import { Kind } from 'graphql';
-import { FIELD, UNION } from './string-constants';
+import { ConstDirectiveNode, Kind, StringValueNode } from 'graphql';
+import { AUTHENTICATED, FIELD, REQUIRES_SCOPES, SCOPES, UNION } from './string-constants';
 import { MultiGraph } from 'graphology';
 import { invalidKeyFatalError } from '../errors/errors';
-import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode } from '../ast/utils';
+import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode, stringToNameNode } from '../ast/utils';
 import { FieldDefinitionNode } from 'graphql/index';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
+import { ConstValueNode } from 'graphql/language/ast';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {
@@ -481,4 +482,44 @@ export function upsertAuthorizationConfiguration(
       });
     }
   }
+}
+
+export function setAndGetValue<K, V>(map: Map<K, V>, key: K, value: V) {
+  map.set(key, value);
+  return value;
+}
+
+export function generateAuthenticatedDirective(): ConstDirectiveNode {
+  return {
+    kind: Kind.DIRECTIVE,
+    name: stringToNameNode(AUTHENTICATED),
+  };
+}
+
+export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstDirectiveNode {
+  const values: ConstValueNode[] = [];
+  const scopes: StringValueNode[] = [];
+  for (const andScopes of orScopes) {
+    for (const scope of andScopes) {
+      scopes.push({
+        kind: Kind.STRING,
+        value: scope,
+      });
+    }
+    values.push({ kind: Kind.LIST, values: scopes });
+  }
+  return {
+    kind: Kind.DIRECTIVE,
+    name: stringToNameNode(REQUIRES_SCOPES),
+    arguments: [
+      {
+        kind: Kind.ARGUMENT,
+        name: stringToNameNode(SCOPES),
+        value: {
+          kind: Kind.LIST,
+          values,
+        },
+      },
+    ],
+  };
 }
