@@ -6556,9 +6556,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             });
 
             const namespaceRepo = new NamespaceRepository(tx, organization.id);
-            await namespaceRepo.create({
+            const ns = await namespaceRepo.create({
               name: DefaultNamespace,
               createdBy: authContext.userId,
+            });
+
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'namespace.created',
+              action: 'created',
+              actorId: authContext.userId,
+              auditableType: 'namespace',
+              auditableDisplayName: ns.name,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
             });
 
             return {
