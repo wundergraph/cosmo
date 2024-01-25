@@ -299,10 +299,57 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         await opts.db.transaction(async (tx) => {
+          const federatedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
+          const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
           const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
           const auditLogRepo = new AuditLogRepository(tx);
 
+          const federatedGraphs = await federatedGraphRepo.list({
+            namespaceId: ns.id,
+            offset: 0,
+            limit: 999,
+          });
+
+          const subgraphs = await subgraphRepo.list({
+            namespaceId: ns.id,
+            offset: 0,
+            limit: 999,
+          });
+
           await namespaceRepo.delete(req.name);
+
+          for (const federatedGraph of federatedGraphs) {
+            const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
+            await opts.blobStorage.removeDirectory(blobStorageDirectory);
+
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'federated_graph.created',
+              action: 'deleted',
+              actorId: authContext.userId,
+              auditableType: 'federated_graph',
+              auditableDisplayName: federatedGraph.name,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: federatedGraph.namespaceId,
+              targetNamespaceDisplayName: federatedGraph.namespace,
+            });
+          }
+
+          for (const subgraph of subgraphs) {
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'subgraph.deleted',
+              action: 'deleted',
+              actorId: authContext.userId,
+              auditableType: 'subgraph',
+              auditableDisplayName: subgraph.name,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: subgraph.namespaceId,
+              targetNamespaceDisplayName: subgraph.namespace,
+            });
+          }
 
           await auditLogRepo.addAuditLog({
             organizationId: authContext.organizationId,

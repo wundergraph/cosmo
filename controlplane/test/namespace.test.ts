@@ -65,8 +65,105 @@ describe('Namespaces', (ctx) => {
     await server.close();
   });
 
-  test('Deleting namespace should delete all graphs in it', async (testContext) => {
+  test('Ensure no duplicate graph exist in same namespace', async (testContext) => {
     const { client, server } = await SetupTest(testContext, dbname);
+
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const prod = 'prod';
+    const label = genUniqueLabel('label');
+
+    await client.createNamespace({
+      name: prod,
+    });
+    const createFirstSubgraph = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: prod,
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+    });
+    expect(createFirstSubgraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const createSecondSubgraph = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: prod,
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+    });
+    expect(createSecondSubgraph.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+
+    const createFirstGraph = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: prod,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createFirstGraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const createSecondGraph = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: prod,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createSecondGraph.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+
+    await server.close();
+  });
+
+  test('Ensure duplicates can exist across namespaces', async (testContext) => {
+    const { client, server } = await SetupTest(testContext, dbname);
+
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const prod = 'prod';
+    const dev = 'dev';
+    const label = genUniqueLabel('label');
+
+    await client.createNamespace({
+      name: prod,
+    });
+    await client.createNamespace({
+      name: dev,
+    });
+
+    const createFirstSubgraph = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: prod,
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+    });
+    expect(createFirstSubgraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const createSecondSubgraph = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: dev,
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+    });
+    expect(createSecondSubgraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const createFirstGraph = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: prod,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createFirstGraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const createSecondGraph = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: dev,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createSecondGraph.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Deleting namespace should delete all graphs in it', async (testContext) => {
+    const { client, server, blobStorage } = await SetupTest(testContext, dbname);
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -111,6 +208,10 @@ describe('Namespaces', (ctx) => {
     expect(subgraphsAfterDeleteRes?.response?.code).toBe(EnumStatusCode.OK);
     expect(subgraphsAfterDeleteRes?.graphs.length).toBe(1);
     expect(subgraphsAfterDeleteRes?.graphs[0].namespace).toBe(prod);
+
+    const keys = blobStorage.keys();
+    expect(keys.length).toBe(1);
+    expect(keys[0]).toContain(graphsAfterDeleteRes.graphs[0].id);
 
     await server.close();
   });
