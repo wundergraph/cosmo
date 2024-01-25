@@ -21,7 +21,7 @@ test:
 	go test -v ./...
 
 fetch-router-config:
-	wgc router fetch production -o router.json
+	wgc router fetch mygraph --namespace default -o router.json
 
 sync:
 	sam sync --watch

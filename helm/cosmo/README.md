@@ -12,8 +12,8 @@ You can use it to deploy a fully functional Cosmo stack for development or produ
 ### Prerequisites
 
 - A running Kubernetes cluster, with support for:
-    - PersistentVolume (only development)
-    - Ingress Controller
+  - PersistentVolume (only development)
+  - Ingress Controller
 - [Helm 3.2.0+](https://helm.sh/docs/intro/install/) installed locally
 
 ### Configuring the stack
@@ -50,6 +50,7 @@ global:
 ```
 
 and run:
+
 ```shell
 helm test cosmo
 ```
@@ -58,7 +59,7 @@ you should see the following output after a few seconds:
 
 ```shell
 ❯ helm test cosmo
-NAME: cosmo cosmo                                  
+NAME: cosmo cosmo
 LAST DEPLOYED: Tue Nov 21 22:50:40 2023
 NAMESPACE: default
 STATUS: deployed
@@ -82,6 +83,7 @@ Phase:          Succeeded
 ```
 
 ### Removing stack after use
+
 In order to prevent any costs, you can remove the stack after use with:
 
 ```shell
@@ -93,7 +95,8 @@ helm uninstall cosmo
 
 ## Production use
 
-We ***strongly recommend*** that if you want to ship this helm chart to production you either:
+We **_strongly recommend_** that if you want to ship this helm chart to production you either:
+
 - Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/)), Minio ([Minio Cloud](https://min.io/)) or any other S3 compatible storage provider.
 - Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation), [Minio](https://github.com/minio/operator) Kubernetes operator of your choice.
 - Use [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com/login) ✨
@@ -122,8 +125,8 @@ You need to update the `values.yaml` file accordingly:
 ```yaml
 controlplane:
   configuration:
-    s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
-````
+    s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+```
 
 ### CLI Key
 
@@ -136,12 +139,13 @@ npx wgc -h
 ```
 
 ### Router
-The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.full.yaml` file.
+
+The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name> --namespace <namespace>`, set the right configurations in the `values.full.yaml` file.
 
 ```yaml
 router:
   configuration:
-    graphApiToken: "<changeme>"
+    graphApiToken: '<changeme>'
 ```
 
 Run `helm upgrade cosmo -f values.full.yaml .` to apply the changes.

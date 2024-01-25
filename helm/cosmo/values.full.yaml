@@ -125,7 +125,7 @@ router:
       maxSurge: 1
       maxUnavailable: 0
   configuration:
-    # You need to run `wgc federated-graph create-token production` to generate a token
+    # You need to run `wgc federated-graph create-token mygraph --namespace default` to generate a token
     graphApiToken: ""
     # -- Log level of the router
     logLevel: "info"

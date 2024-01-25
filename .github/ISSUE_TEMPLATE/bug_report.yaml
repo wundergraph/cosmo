@@ -1,12 +1,12 @@
 name: Bug report
 description: Create a report to help us improve
-labels: ["bug", "needs triage"]
+labels: ['bug', 'needs triage']
 body:
   - type: markdown
     attributes:
       value: |
         Thank you for taking the time to complete this bug report! Please ensure that you fill out the entire form below, offering as much context as possible to assist us in triaging and swiftly locating the source of the bug.
-  
+
         Before submitting a bug, please make sure to search through the [existing bugs](https://github.com/wundergraph/cosmo/issues) to check if an existing issue already addresses your problem.
   - type: dropdown
     id: component
@@ -62,7 +62,7 @@ body:
   - type: textarea
     attributes:
       label: Router execution config
-      description: Please provide your router config (Run `npx wgc federated-graph fetch <name>` to get the config)
+      description: Please provide your router config (Run `npx wgc federated-graph fetch <name> --namespace <namespace>` to get the config)
       render: json
   - type: textarea
     attributes:
