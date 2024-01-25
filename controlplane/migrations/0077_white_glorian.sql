@@ -44,6 +44,13 @@ SET namespace_id = n.id
 FROM namespaces n
 WHERE t.organization_id = n.organization_id AND n.name = 'default';
 
+-- Update existing audit logs --
+
+UPDATE audit_logs a
+SET target_namespace = n.name, target_namespace_id = n.id
+FROM namespaces n
+WHERE a.organization_id = n.organization_id AND n.name = 'default';
+
 -- Set namespace to not be null in targets table --
 
 ALTER TABLE targets
