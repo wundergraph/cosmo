@@ -67,11 +67,6 @@ spec:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: listenAddress
-            - name: FEDERATED_GRAPH_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "router.fullname" . }}
-                  key: federatedGraphName
             {{ if .Values.configuration.devMode }}
             - name: DEV_MODE
               valueFrom:

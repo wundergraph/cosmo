@@ -141,7 +141,6 @@ The router is not enabled by default because it requires an API token to be set 
 ```yaml
 router:
   configuration:
-    federatedGraphName: "<graph_name>"
     graphApiToken: "<changeme>"
 ```
 
