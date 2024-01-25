@@ -243,12 +243,37 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         if (req.name === DefaultNamespace) {
           return {
             response: {
               code: EnumStatusCode.ERR,
               details: 'You cannot delete the default namespace',
+            },
+          };
+        }
+
+        const orgMember = await orgRepo.getOrganizationMember({
+          organizationID: authContext.organizationId,
+          userID: authContext.userId,
+        });
+
+        if (!orgMember) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User is not a part of this organization.',
+            },
+          };
+        }
+
+        // non admins cannot delete a namespace because it will delete all underlying resources
+        if (!orgMember.roles.includes('admin')) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User does not have the permissions to delete the namespace.',
             },
           };
         }
