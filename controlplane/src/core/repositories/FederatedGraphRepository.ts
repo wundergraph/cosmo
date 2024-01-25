@@ -425,6 +425,28 @@ export class FederatedGraphRepository {
     return this.byTargetId(res.targetId);
   }
 
+  public async exists(name: string, namespace: string): Promise<boolean> {
+    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
+    const ns = await namespaceRepo.byName(namespace);
+    if (!ns) {
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
+    }
+
+    const graph = this.db.query.targets.findFirst({
+      where: and(
+        eq(schema.targets.name, name),
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.namespaceId, ns.id),
+        eq(schema.targets.type, 'federated'),
+      ),
+      columns: {
+        id: true,
+      },
+    });
+
+    return !!graph;
+  }
+
   public async byName(name: string, namespace: string): Promise<FederatedGraphDTO | undefined> {
     const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
     const ns = await namespaceRepo.byName(namespace);

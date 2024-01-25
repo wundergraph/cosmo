@@ -46,6 +46,28 @@ export class SubgraphRepository {
     private organizationId: string,
   ) {}
 
+  public async exists(name: string, namespace: string): Promise<boolean> {
+    const namespaceRepo = new NamespaceRepository(this.db, this.organizationId);
+    const ns = await namespaceRepo.byName(namespace);
+    if (!ns) {
+      throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Namespace ${namespace} not found`);
+    }
+
+    const graph = this.db.query.targets.findFirst({
+      where: and(
+        eq(schema.targets.name, name),
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.type, 'subgraph'),
+        eq(schema.targets.namespaceId, ns.id),
+      ),
+      columns: {
+        id: true,
+      },
+    });
+
+    return !!graph;
+  }
+
   public create(data: {
     name: string;
     namespace: string;

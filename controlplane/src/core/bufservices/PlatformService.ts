@@ -391,7 +391,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const exists = await fedGraphRepo.byName(req.name, req.newNamespace);
+        const exists = await fedGraphRepo.exists(req.name, req.newNamespace);
         if (exists) {
           return {
             response: {
@@ -525,7 +525,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
           const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
 
-          const exists = await subgraphRepo.byName(req.name, req.newNamespace);
+          const exists = await subgraphRepo.exists(req.name, req.newNamespace);
           if (exists) {
             throw new PublicError(
               EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -626,7 +626,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (await fedGraphRepo.byName(req.name, req.namespace)) {
+        if (await fedGraphRepo.exists(req.name, req.namespace)) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -795,7 +795,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const exists = await subgraphRepo.byName(req.name, req.namespace);
+        const exists = await subgraphRepo.exists(req.name, req.namespace);
 
         if (exists) {
           return {
@@ -2783,7 +2783,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (await fedGraphRepo.byName(graph.name, req.namespace)) {
+        if (await fedGraphRepo.exists(graph.name, req.namespace)) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -2794,7 +2794,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         for await (const subgraph of graphDetails.subgraphs) {
-          if (await subgraphRepo.byName(subgraph.name, req.namespace)) {
+          if (await subgraphRepo.exists(subgraph.name, req.namespace)) {
             return {
               response: {
                 code: EnumStatusCode.ERR_ALREADY_EXISTS,
