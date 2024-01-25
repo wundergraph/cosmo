@@ -89,7 +89,7 @@ export const SelectFederatedGraphs = ({
     setMeta(tempMeta);
   };
 
-  const groupedGraphs = data?.graphs.reduce<Record<string, FederatedGraph[]>(
+  const groupedGraphs = data?.graphs.reduce<Record<string, FederatedGraph[]>>(
     (result, graph) => {
       const { namespace, name } = graph;
 
@@ -101,7 +101,7 @@ export const SelectFederatedGraphs = ({
 
       return result;
     },
-    {}>,
+    {},
   );
 
   return (
