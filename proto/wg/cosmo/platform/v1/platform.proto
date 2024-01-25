@@ -1129,6 +1129,37 @@ message MetricsErrorRateSeriesItem {
   float errorRate = 3;
 }
 
+ message GetSubgraphMetricsRequest {
+  string subgraphName = 1;
+  string namespace = 2;
+  int32 range = 4;
+  DateRange dateRange = 5;
+  repeated AnalyticsFilter filters = 6;
+}
+
+message GetSubgraphMetricsResponse {
+  Response response = 1;
+  MetricsDashboardMetric requests = 2;
+  MetricsDashboardMetric latency = 3;
+  MetricsDashboardMetric errors = 4;
+  repeated AnalyticsViewResultFilter filters = 5;
+  optional string resolution = 6;
+}
+
+message GetSubgraphMetricsErrorRateRequest {
+  string subgraphName = 1;
+  string namespace = 2;
+  int32 range = 4;
+  DateRange dateRange = 5;
+  repeated AnalyticsFilter filters = 6;
+}
+
+message GetSubgraphMetricsErrorRateResponse {
+  Response response = 1;
+  repeated MetricsErrorRateSeriesItem series = 2;
+  optional string resolution = 3;
+}
+
 message ForceCheckSuccessRequest {
   string check_id = 1;
   string graph_name = 2;
@@ -1712,6 +1743,14 @@ service PlatformService {
   }
 
   rpc GetMetricsErrorRate(GetMetricsErrorRateRequest) returns (GetMetricsErrorRateResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetSubgraphMetrics(GetSubgraphMetricsRequest) returns (GetSubgraphMetricsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetSubgraphMetricsErrorRate(GetSubgraphMetricsErrorRateRequest) returns (GetSubgraphMetricsErrorRateResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 

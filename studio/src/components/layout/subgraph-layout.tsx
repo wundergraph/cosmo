@@ -28,6 +28,7 @@ import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { GetSubgraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { PiChat, PiGraphLight } from "react-icons/pi";
+import { ChartBarIcon } from "@heroicons/react/24/outline";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -77,6 +78,12 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         title: "Federated Graphs",
         href: basePath + "/graphs",
         icon: <PiGraphLight className="h-4 w-4" />,
+      },
+      {
+        title: "Analytics",
+        href: basePath + "/analytics",
+        matchExact: false,
+        icon: <ChartBarIcon className="h-4 w-4" />,
       },
       {
         title: "Discussions",

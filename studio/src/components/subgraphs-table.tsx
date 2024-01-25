@@ -3,7 +3,7 @@ import { useFeature } from "@/hooks/use-feature";
 import { useHas } from "@/hooks/use-has";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
+import { ChartBarIcon, CommandLineIcon } from "@heroicons/react/24/outline";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -372,6 +372,24 @@ export const SubgraphsTable = ({
           {subgraphs.map(
             ({ name, routingURL, lastUpdatedAt, labels, creatorUserId }) => {
               const path = `/${organizationSlug}/subgraph/${name}`;
+              let analyticsPath = `${path}/analytics`;
+              if (router.asPath.split("/")[2] === "graph") {
+                const query = [
+                  {
+                    id: "federatedGraphId",
+                    value: [
+                      JSON.stringify({
+                        label: graph?.name,
+                        operator: 0,
+                        value: graph?.id,
+                      }),
+                    ],
+                  },
+                ];
+                analyticsPath += `?filterState=${encodeURIComponent(
+                  JSON.stringify(query),
+                )}`;
+              }
               return (
                 <TableRow
                   key={name}
@@ -401,13 +419,18 @@ export const SubgraphsTable = ({
                         })
                       : "Never"}
                   </TableCell>
-                  <TableCell className="flex justify-end">
+                  <TableCell className="flex justify-end gap-0.5">
                     {rbac && (
                       <AddSubgraphUsers
                         subgraphName={name}
                         creatorUserId={creatorUserId}
                       />
                     )}
+                    <Button variant="ghost" size="icon-sm">
+                      <Link href={analyticsPath}>
+                        <ChartBarIcon className="h-4 w-4" />
+                      </Link>
+                    </Button>
                     <Button
                       asChild
                       variant="ghost"

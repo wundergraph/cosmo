@@ -420,3 +420,10 @@ export const toISO9075 = (date: Date): string => {
   const seconds = String(date.getUTCSeconds()).padStart(2, '0');
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
+
+export const parseValue = (value?: string | number | null) => {
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  return value || '0';
+};

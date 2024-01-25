@@ -8790,6 +8790,244 @@ export class MetricsErrorRateSeriesItem extends Message<MetricsErrorRateSeriesIt
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphMetricsRequest
+ */
+export class GetSubgraphMetricsRequest extends Message<GetSubgraphMetricsRequest> {
+  /**
+   * @generated from field: string subgraphName = 1;
+   */
+  subgraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: int32 range = 4;
+   */
+  range = 0;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 5;
+   */
+  dateRange?: DateRange;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 6;
+   */
+  filters: AnalyticsFilter[] = [];
+
+  constructor(data?: PartialMessage<GetSubgraphMetricsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphMetricsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "dateRange", kind: "message", T: DateRange },
+    { no: 6, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphMetricsRequest {
+    return new GetSubgraphMetricsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphMetricsRequest {
+    return new GetSubgraphMetricsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphMetricsRequest {
+    return new GetSubgraphMetricsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSubgraphMetricsRequest | PlainMessage<GetSubgraphMetricsRequest> | undefined, b: GetSubgraphMetricsRequest | PlainMessage<GetSubgraphMetricsRequest> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphMetricsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphMetricsResponse
+ */
+export class GetSubgraphMetricsResponse extends Message<GetSubgraphMetricsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.MetricsDashboardMetric requests = 2;
+   */
+  requests?: MetricsDashboardMetric;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.MetricsDashboardMetric latency = 3;
+   */
+  latency?: MetricsDashboardMetric;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.MetricsDashboardMetric errors = 4;
+   */
+  errors?: MetricsDashboardMetric;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsViewResultFilter filters = 5;
+   */
+  filters: AnalyticsViewResultFilter[] = [];
+
+  /**
+   * @generated from field: optional string resolution = 6;
+   */
+  resolution?: string;
+
+  constructor(data?: PartialMessage<GetSubgraphMetricsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphMetricsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "requests", kind: "message", T: MetricsDashboardMetric },
+    { no: 3, name: "latency", kind: "message", T: MetricsDashboardMetric },
+    { no: 4, name: "errors", kind: "message", T: MetricsDashboardMetric },
+    { no: 5, name: "filters", kind: "message", T: AnalyticsViewResultFilter, repeated: true },
+    { no: 6, name: "resolution", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphMetricsResponse {
+    return new GetSubgraphMetricsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphMetricsResponse {
+    return new GetSubgraphMetricsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphMetricsResponse {
+    return new GetSubgraphMetricsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSubgraphMetricsResponse | PlainMessage<GetSubgraphMetricsResponse> | undefined, b: GetSubgraphMetricsResponse | PlainMessage<GetSubgraphMetricsResponse> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphMetricsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphMetricsErrorRateRequest
+ */
+export class GetSubgraphMetricsErrorRateRequest extends Message<GetSubgraphMetricsErrorRateRequest> {
+  /**
+   * @generated from field: string subgraphName = 1;
+   */
+  subgraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: int32 range = 4;
+   */
+  range = 0;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 5;
+   */
+  dateRange?: DateRange;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 6;
+   */
+  filters: AnalyticsFilter[] = [];
+
+  constructor(data?: PartialMessage<GetSubgraphMetricsErrorRateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphMetricsErrorRateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "dateRange", kind: "message", T: DateRange },
+    { no: 6, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphMetricsErrorRateRequest {
+    return new GetSubgraphMetricsErrorRateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphMetricsErrorRateRequest {
+    return new GetSubgraphMetricsErrorRateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphMetricsErrorRateRequest {
+    return new GetSubgraphMetricsErrorRateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSubgraphMetricsErrorRateRequest | PlainMessage<GetSubgraphMetricsErrorRateRequest> | undefined, b: GetSubgraphMetricsErrorRateRequest | PlainMessage<GetSubgraphMetricsErrorRateRequest> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphMetricsErrorRateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphMetricsErrorRateResponse
+ */
+export class GetSubgraphMetricsErrorRateResponse extends Message<GetSubgraphMetricsErrorRateResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.MetricsErrorRateSeriesItem series = 2;
+   */
+  series: MetricsErrorRateSeriesItem[] = [];
+
+  /**
+   * @generated from field: optional string resolution = 3;
+   */
+  resolution?: string;
+
+  constructor(data?: PartialMessage<GetSubgraphMetricsErrorRateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphMetricsErrorRateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "series", kind: "message", T: MetricsErrorRateSeriesItem, repeated: true },
+    { no: 3, name: "resolution", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphMetricsErrorRateResponse {
+    return new GetSubgraphMetricsErrorRateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphMetricsErrorRateResponse {
+    return new GetSubgraphMetricsErrorRateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphMetricsErrorRateResponse {
+    return new GetSubgraphMetricsErrorRateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSubgraphMetricsErrorRateResponse | PlainMessage<GetSubgraphMetricsErrorRateResponse> | undefined, b: GetSubgraphMetricsErrorRateResponse | PlainMessage<GetSubgraphMetricsErrorRateResponse> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphMetricsErrorRateResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.ForceCheckSuccessRequest
  */
 export class ForceCheckSuccessRequest extends Message<ForceCheckSuccessRequest> {

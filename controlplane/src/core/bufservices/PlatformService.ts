@@ -100,6 +100,8 @@ import {
   WhoAmIResponse,
   GetAuditLogsResponse,
   AuditLog,
+  GetSubgraphMetricsResponse,
+  GetSubgraphMetricsErrorRateResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -107,6 +109,7 @@ import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
 import {
   DateRange,
+  FederatedGraphDTO,
   GraphApiKeyDTO,
   GraphApiKeyJwtPayload,
   PublishedOperationData,
@@ -162,6 +165,7 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
+import { SubgraphMetricsRepository } from '../repositories/analytics/SubgraphMetricsRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -6447,6 +6451,127 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    getSubgraphMetrics: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetSubgraphMetricsResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            filters: [],
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphMetricsRepo = new SubgraphMetricsRepository(opts.chClient,opts.db);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+
+        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.subgraphName}' not found`,
+            },
+            filters: [],
+          };
+        }
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { range, dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
+
+        const view = await subgraphMetricsRepo.getSubgraphMetricsView({
+          range,
+          dateRange,
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          subgraphId: subgraph.id,
+          subgraphLabels: subgraph.labels,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          ...view,
+        };
+      });
+    },
+
+    getSubgraphMetricsErrorRate: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetSubgraphMetricsErrorRateResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            series: [],
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphMetricsRepo = new SubgraphMetricsRepository(opts.chClient, opts.db);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+
+        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.subgraphName}' not found`,
+            },
+            series: [],
+          };
+        }
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { range, dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
+
+        const metrics = await subgraphMetricsRepo.getSubgraphErrorsView({
+          range,
+          dateRange,
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          subgraphId: subgraph.id,
+          subgraphLabels: subgraph.labels,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          series: metrics.errorRate.series,
+          resolution: metrics.resolution,
         };
       });
     },
