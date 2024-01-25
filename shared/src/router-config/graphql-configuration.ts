@@ -12,10 +12,10 @@ import {
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
-  FieldConfiguration as CompositionFieldConfiguration,
   ConfigurationDataByTypeName,
-  RequiredFieldConfiguration,
   EventType as CompositionEventType,
+  FieldConfiguration as CompositionFieldConfiguration,
+  RequiredFieldConfiguration,
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
@@ -64,7 +64,9 @@ function eventType(type: CompositionEventType) {
   throw new Error(`Unknown event type ${type}`);
 }
 
-export function configurationDataMapToDataSourceConfiguration(dataMap: ConfigurationDataByTypeName): DataSourceConfiguration {
+export function configurationDataMapToDataSourceConfiguration(
+  dataMap: ConfigurationDataByTypeName,
+): DataSourceConfiguration {
   const output: DataSourceConfiguration = {
     rootNodes: [],
     childNodes: [],

@@ -1,4 +1,3 @@
-
 export type EventType = 'subscribe' | 'publish' | 'request';
 
 export type EventConfiguration = {

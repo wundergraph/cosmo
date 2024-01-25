@@ -1,11 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import {
-  batchNormalize,
-  ConfigurationData,
-  federateSubgraphs,
-  FieldConfiguration,
-  normalizeSubgraphFromString,
-} from '../src';
+import { batchNormalize, ConfigurationData, federateSubgraphs, normalizeSubgraphFromString } from '../src';
 import { createSubgraph } from './utils/utils';
 
 describe('Router Configuration tests', () => {
@@ -473,26 +467,18 @@ describe('Router Configuration tests', () => {
         createSubgraph('products', products),
       ]);
       expect(errors).toBeUndefined();
-      expect(federationResult!.fieldConfigurations).toStrictEqual(
-        new Map<string, FieldConfiguration>([
-          [
-            'Query.employee',
-            {
-              argumentNames: ['id'],
-              fieldName: 'employee',
-              typeName: 'Query',
-            },
-          ],
-          [
-            'Query.teammates',
-            {
-              argumentNames: ['team'],
-              fieldName: 'teammates',
-              typeName: 'Query',
-            },
-          ],
-        ]),
-      );
+      expect(federationResult!.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: ['id'],
+          fieldName: 'employee',
+          typeName: 'Query',
+        },
+        {
+          argumentNames: ['team'],
+          fieldName: 'teammates',
+          typeName: 'Query',
+        },
+      ]);
     });
 
     test('that router configuration is correctly generated', () => {
