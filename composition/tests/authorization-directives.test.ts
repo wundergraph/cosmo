@@ -135,8 +135,28 @@ describe('Authorization Directives Tests', () => {
       );
     });
   });
+
   describe('Router Configuration Tests', () => {
-    test('that @authenticated generates the correct router configuration', () => {});
+    test('that authorization directives generate the correct router configuration', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphD]);
+      expect(errors).toBeUndefined();
+      expect(federationResult!.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: 'name',
+          typeName: 'Object',
+          requiresAuthentication: true,
+          requiredScopes: [],
+        },
+        {
+          argumentNames: [],
+          fieldName: 'object',
+          typeName: 'Query',
+          requiresAuthentication: false,
+          requiredScopes: [['read:object']],
+        },
+      ]);
+    });
   });
 });
 
@@ -177,6 +197,21 @@ const subgraphC: Subgraph = {
     type Object @key(fields: "id") @requiresScopes(scopes: [["read:object"]]) {
       id: ID!
       name: String!
+    }
+  `),
+};
+
+const subgraphD: Subgraph = {
+  name: 'subgraph-d',
+  url: '',
+  definitions: parse(`
+      type Query {
+      object: Object!
+    }
+    
+    type Object @key(fields: "id") @requiresScopes(scopes: [["read:object"]]) {
+      id: ID!
+      name: String! @authenticated
     }
   `),
 };

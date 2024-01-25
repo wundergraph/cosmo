@@ -4,7 +4,7 @@ import { MultiGraph } from 'graphology';
 import { invalidKeyFatalError } from '../errors/errors';
 import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode } from '../ast/utils';
 import { FieldDefinitionNode } from 'graphql/index';
-import { FieldConfiguration } from '../subgraph/router-configuration';
+import { FieldConfiguration } from '../router-configuration/router-configuration';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {

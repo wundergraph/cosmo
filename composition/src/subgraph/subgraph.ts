@@ -20,7 +20,7 @@ import {
   newFieldAuthorizationData,
 } from '../utils/utils';
 import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
-import { ConfigurationDataMap } from '././router-configuration';
+import { ConfigurationDataByTypeName } from '../router-configuration/router-configuration';
 import { ExtensionContainerByTypeName, ParentContainerByTypeName } from '../normalization/utils';
 import { NormalizationFactory } from '../normalization/normalization-factory';
 
@@ -31,7 +31,7 @@ export type Subgraph = {
 };
 
 export type InternalSubgraph = {
-  configurationDataMap: ConfigurationDataMap;
+  configurationDataMap: ConfigurationDataByTypeName;
   definitions: DocumentNode;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   extensionContainerByTypeName: ExtensionContainerByTypeName;
@@ -46,7 +46,7 @@ export type InternalSubgraph = {
 };
 
 export type SubgraphConfig = {
-  configurationDataMap: ConfigurationDataMap;
+  configurationDataMap: ConfigurationDataByTypeName;
   schema: GraphQLSchema;
 };
 

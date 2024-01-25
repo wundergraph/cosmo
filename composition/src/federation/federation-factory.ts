@@ -154,7 +154,11 @@ import {
   upsertEntityInterfaceFederationData,
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import { FieldConfiguration, ConfigurationData, RequiredFieldConfiguration } from '../subgraph/router-configuration';
+import {
+  ConfigurationData,
+  FieldConfiguration,
+  RequiredFieldConfiguration,
+} from '../router-configuration/router-configuration';
 import { BASE_SCALARS, SCOPE_SCALAR_DEFINITION } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
 import {
@@ -1874,9 +1878,10 @@ export class FederationFactory {
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
       upsertAuthorizationConfiguration(this.fieldConfigurationByFieldPath, authorizationData);
     }
+
     return {
       federationResult: {
-        fieldConfigurationByFieldPath: this.fieldConfigurationByFieldPath,
+        fieldConfigurations: Array.from(this.fieldConfigurationByFieldPath.values()),
         subgraphConfigBySubgraphName,
         federatedGraphAST: newAst,
         federatedGraphSchema: buildASTSchema(newAst),

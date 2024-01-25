@@ -473,7 +473,7 @@ describe('Router Configuration tests', () => {
         createSubgraph('products', products),
       ]);
       expect(errors).toBeUndefined();
-      expect(federationResult!.fieldConfigurationByFieldPath).toStrictEqual(
+      expect(federationResult!.fieldConfigurations).toStrictEqual(
         new Map<string, FieldConfiguration>([
           [
             'Query.employee',

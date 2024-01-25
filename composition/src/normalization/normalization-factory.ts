@@ -182,10 +182,10 @@ import {
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import {
   ConfigurationData,
-  ConfigurationDataMap,
+  ConfigurationDataByTypeName,
   EventConfiguration,
   EventType,
-} from '../subgraph/router-configuration';
+} from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode, ObjectLikeTypeNode } from '../ast/ast';
 import {
@@ -198,7 +198,7 @@ import { invalidOverrideTargetSubgraphNameWarning } from '../warnings/warnings';
 
 export type NormalizationResult = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
-  configurationDataMap: ConfigurationDataMap;
+  configurationDataMap: ConfigurationDataByTypeName;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityContainerByTypeName: EntityContainerByTypeName;
   extensionContainerByTypeName: ExtensionContainerByTypeName;

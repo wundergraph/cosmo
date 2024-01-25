@@ -52,7 +52,7 @@ export interface ComposedFederatedGraph {
   composedSchema?: string;
   errors: Error[];
   subgraphs: ComposedSubgraph[];
-  fieldConfigurationByFieldPath: Map<string, FieldConfiguration>;
+  fieldConfigurations: FieldConfiguration[];
 }
 
 export class Composer {
@@ -86,7 +86,7 @@ export class Composer {
     // Build router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
       const routerConfig = buildRouterConfig({
-        fieldConfigurationByFieldPath: composedGraph.fieldConfigurationByFieldPath,
+        fieldConfigurations: composedGraph.fieldConfigurations,
         subgraphs: composedGraph.subgraphs,
         federatedSDL: composedGraph.composedSchema,
         schemaVersionId: federatedSchemaVersionId,
@@ -163,7 +163,7 @@ export class Composer {
         targetID: federatedGraph.targetId,
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
-        fieldConfigurationByFieldPath: result?.fieldConfigurationByFieldPath || new Map<string, FieldConfiguration>(),
+        fieldConfigurations: result?.fieldConfigurations || [],
         subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
       };
     } catch (e: any) {
@@ -171,7 +171,7 @@ export class Composer {
         id: federatedGraph.id,
         name: federatedGraph.name,
         targetID: federatedGraph.targetId,
-        fieldConfigurationByFieldPath: new Map<string, FieldConfiguration>(),
+        fieldConfigurations: [],
         errors: [e],
         subgraphs: [],
       };
@@ -197,7 +197,7 @@ export class Composer {
           id: graph.id,
           name: graph.name,
           targetID: graph.targetId,
-          fieldConfigurationByFieldPath: result?.fieldConfigurationByFieldPath || new Map<string, FieldConfiguration>(),
+          fieldConfigurations: result?.fieldConfigurations || [],
           composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
           errors: errors || [],
           subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
@@ -207,7 +207,7 @@ export class Composer {
           id: graph.id,
           name: graph.name,
           targetID: graph.targetId,
-          fieldConfigurationByFieldPath: new Map<string, FieldConfiguration>(),
+          fieldConfigurations: [],
           errors: [e],
           subgraphs: [],
         });

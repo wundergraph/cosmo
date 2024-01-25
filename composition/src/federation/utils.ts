@@ -1,5 +1,5 @@
 import { ConstDirectiveNode, DocumentNode, GraphQLSchema, Kind } from 'graphql';
-import { FieldConfiguration } from '../subgraph/router-configuration';
+import { FieldConfiguration } from '../router-configuration/router-configuration';
 import {
   MutableDirectiveDefinitionNode,
   MutableEnumTypeDefinitionNode,
@@ -33,7 +33,7 @@ export type FederationResultContainer = {
 };
 
 export type FederationResult = {
-  fieldConfigurationByFieldPath: Map<string, FieldConfiguration>;
+  fieldConfigurations: FieldConfiguration[];
   federatedGraphAST: DocumentNode;
   federatedGraphSchema: GraphQLSchema;
   subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
