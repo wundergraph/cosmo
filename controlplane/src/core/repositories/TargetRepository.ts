@@ -1,9 +1,7 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { targets } from '../../db/schema.js';
-import { PublicError } from '../errors/errors.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
 
 export class TargetRepository {

@@ -1,8 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as schema from '../../db/schema.js';
-import { PublicError } from '../errors/errors.js';
 
 export const DefaultNamespace = 'default';
 
