@@ -67,7 +67,10 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		executor:                               opts.Executor,
 		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
 		websocketStats:                         opts.WebSocketStats,
-		tracer:                                 opts.TracerProvider.Tracer("wundergraph/router/graphql_handler"),
+		tracer: opts.TracerProvider.Tracer(
+			"wundergraph/cosmo/router/graphql_handler",
+			trace.WithInstrumentationVersion("0.0.1"),
+		),
 	}
 	return graphQLHandler
 }

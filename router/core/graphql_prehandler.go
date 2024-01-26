@@ -67,7 +67,10 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		enableRequestTracing:        opts.EnableRequestTracing,
 		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
 		tracerProvider:              opts.TracerProvider,
-		tracer:                      opts.TracerProvider.Tracer("wundergraph/router/pre_handler"),
+		tracer: opts.TracerProvider.Tracer(
+			"wundergraph/cosmo/router/pre_handler",
+			trace.WithInstrumentationVersion("0.0.1"),
+		),
 	}
 }
 
