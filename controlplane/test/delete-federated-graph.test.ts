@@ -1,12 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  genID,
-  genUniqueLabel,
-} from '../src/core/test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -22,13 +17,14 @@ describe('DeleteFederatedGraph', (ctx) => {
 
   test('Should be able to create a subgraph, publish the schema, create a federated graph and then delete a federated graph', async (testContext) => {
     const { client, server } = await SetupTest(testContext, dbname);
-    
+
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
     const label = genUniqueLabel();
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:4000',
     });
@@ -37,6 +33,7 @@ describe('DeleteFederatedGraph', (ctx) => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -45,6 +42,7 @@ describe('DeleteFederatedGraph', (ctx) => {
 
     const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -52,18 +50,21 @@ describe('DeleteFederatedGraph', (ctx) => {
 
     const getFederatedGraphBeforeDeleteResp = await client.getFederatedGraphByName({
       name: federatedGraphName,
+      namespace: 'default',
     });
     expect(getFederatedGraphBeforeDeleteResp.response?.code).toBe(EnumStatusCode.OK);
 
     // delete the federatedGraph
     const deleteFederatedGraphResp = await client.deleteFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
     });
     expect(deleteFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
 
     // after deletion of federated graph verify if it was deleted
     const getFederatedGraphResp = await client.getFederatedGraphByName({
       name: federatedGraphName,
+      namespace: 'default',
     });
     expect(getFederatedGraphResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
@@ -71,6 +72,7 @@ describe('DeleteFederatedGraph', (ctx) => {
     for (const subgraph of getFederatedGraphBeforeDeleteResp.subgraphs) {
       const getSubgraphResp = await client.getSubgraphByName({
         name: subgraph.name,
+        namespace: 'default',
       });
       expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
     }

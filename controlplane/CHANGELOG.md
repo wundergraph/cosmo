@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.57.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.57.0...controlplane@0.57.1) (2024-01-26)
+
+### Bug Fixes
+
+* allow to create subgraph and federated graphs with same name ([#461](https://github.com/wundergraph/cosmo/issues/461)) ([dcf0b7b](https://github.com/wundergraph/cosmo/commit/dcf0b7bb059f0fe05375955ace6859dcb9dada09)) (@StarpTech)
+
+# [0.57.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.56.0...controlplane@0.57.0) (2024-01-26)
+
+### Features
+
+* namespaces ([#447](https://github.com/wundergraph/cosmo/issues/447)) ([bbe5258](https://github.com/wundergraph/cosmo/commit/bbe5258c5e764c52947f831d3a7f1a2f93c267d4)) (@thisisnithin)
+
 # [0.56.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.55.0...controlplane@0.56.0) (2024-01-26)
 
 ### Features

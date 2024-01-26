@@ -49,6 +49,7 @@ export interface ComposedFederatedGraph {
   id: string;
   targetID: string;
   name: string;
+  namespace: string;
   composedSchema?: string;
   errors: Error[];
   subgraphs: ComposedSubgraph[];
@@ -107,10 +108,12 @@ export class Composer {
       }
     }
 
-    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion(composedGraph.name);
+    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
+      targetId: composedGraph.targetID,
+    });
 
     const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
-      graphName: composedGraph.name,
+      targetId: composedGraph.targetID,
       composedSDL: composedGraph.composedSchema,
       subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
@@ -143,7 +146,8 @@ export class Composer {
    */
   async composeFederatedGraph(federatedGraph: FederatedGraphDTO): Promise<ComposedFederatedGraph> {
     try {
-      const subgraphs = await this.subgraphRepo.listByFederatedGraph(federatedGraph.name, {
+      const subgraphs = await this.subgraphRepo.listByFederatedGraph({
+        federatedGraphTargetId: federatedGraph.targetId,
         published: true,
       });
 
@@ -160,6 +164,7 @@ export class Composer {
       return {
         id: federatedGraph.id,
         name: federatedGraph.name,
+        namespace: federatedGraph.namespace,
         targetID: federatedGraph.targetId,
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
@@ -170,6 +175,7 @@ export class Composer {
       return {
         id: federatedGraph.id,
         name: federatedGraph.name,
+        namespace: federatedGraph.namespace,
         targetID: federatedGraph.targetId,
         fieldConfigurations: [],
         errors: [e],
@@ -180,22 +186,24 @@ export class Composer {
 
   protected async composeWithLabels(
     subgraphLabels: Label[],
+    namespaceId: string,
     mapSubgraphs: (
       subgraphs: SubgraphDTO[],
     ) => [SubgraphDTO[], { name: string; url: string; definitions: DocumentNode }[]],
   ): Promise<CompositionResult> {
     const composedGraphs: ComposedFederatedGraph[] = [];
 
-    for await (const graph of await this.federatedGraphRepo.bySubgraphLabels(subgraphLabels)) {
+    for await (const graph of await this.federatedGraphRepo.bySubgraphLabels({ labels: subgraphLabels, namespaceId })) {
       try {
         const [subgraphs, subgraphsToBeComposed] = mapSubgraphs(
-          await this.subgraphRepo.listByFederatedGraph(graph.name),
+          await this.subgraphRepo.listByFederatedGraph({ federatedGraphTargetId: graph.targetId }),
         );
 
         const { errors, federationResult: result } = composeSubgraphs(subgraphsToBeComposed);
         composedGraphs.push({
           id: graph.id,
           name: graph.name,
+          namespace: graph.namespace,
           targetID: graph.targetId,
           fieldConfigurations: result?.fieldConfigurations || [],
           composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
@@ -206,6 +214,7 @@ export class Composer {
         composedGraphs.push({
           id: graph.id,
           name: graph.name,
+          namespace: graph.namespace,
           targetID: graph.targetId,
           fieldConfigurations: [],
           errors: [e],
@@ -221,8 +230,13 @@ export class Composer {
   /**
    * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table, so it is passed to the function
    */
-  composeWithProposedSDL(subgraphLabels: Label[], subgraphName: string, subgraphSchemaSDL: string) {
-    return this.composeWithLabels(subgraphLabels, (subgraphs) => {
+  composeWithProposedSDL(
+    subgraphLabels: Label[],
+    subgraphName: string,
+    namespaceId: string,
+    subgraphSchemaSDL: string,
+  ) {
+    return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
       const subgraphsToBeComposed = [];
 
       for (const subgraph of subgraphs) {
@@ -245,8 +259,8 @@ export class Composer {
     });
   }
 
-  composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string) {
-    return this.composeWithLabels(subgraphLabels, (subgraphs) => {
+  composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string, namespaceId: string) {
+    return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
       const subgraphsToBeComposed = [];
 
       const filteredSubgraphs = subgraphs.filter((s) => s.name !== subgraphName);

@@ -1,12 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  genID,
-  genUniqueLabel,
-} from '../src/core/test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -22,7 +17,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
   test('Should be able to create a Apollo Federated Graph', async (testContext) => {
     const { client, server } = await SetupTest(testContext, dbname);
-    
+
     const inventorySubgraph = genID('inventory');
     const pandasSubgraph = genID('pandas');
     const usersSubgraph = genID('users');
@@ -32,6 +27,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const createPandasSubgraph = await client.createFederatedSubgraph({
       name: pandasSubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8081',
     });
@@ -40,6 +36,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const publishPandaResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         type Query {
@@ -59,6 +56,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const createUsersSubgraph = await client.createFederatedSubgraph({
       name: usersSubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8082',
     });
@@ -67,6 +65,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const publishUsersResp = await client.publishFederatedSubgraph({
       name: usersSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         type User @key(fields: "email") {
@@ -86,6 +85,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const createInvetorySubgraph = await client.createFederatedSubgraph({
       name: inventorySubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8083',
     });
@@ -94,6 +94,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const publishInventoryResp = await client.publishFederatedSubgraph({
       name: inventorySubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
           directive @tag(name: String!) repeatable on FIELD_DEFINITION
@@ -121,6 +122,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const createProductsSubgraph = await client.createFederatedSubgraph({
       name: productsSubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8084',
     });
@@ -129,6 +131,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const publishProductsResp = await client.publishFederatedSubgraph({
       name: productsSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         directive @tag(name: String!) repeatable on FIELD_DEFINITION
@@ -169,6 +172,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8080',
       labelMatchers: [joinLabel(label)],
     });
@@ -177,6 +181,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);

@@ -1,17 +1,19 @@
-import { ServiceImpl } from '@connectrpc/connect';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlainMessage } from '@bufbuild/protobuf';
-import { lru } from 'tiny-lru';
+import { ServiceImpl } from '@connectrpc/connect';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import {
   GetConfigResponse,
   RegistrationInfo,
   SelfRegisterResponse,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { handleError } from '../util.js';
-import type { RouterOptions } from '../routes.js';
+import { lru } from 'tiny-lru';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import type { RouterOptions } from '../routes.js';
+import { handleError } from '../util.js';
+import { FederatedGraphDTO } from 'src/types/index.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeService>> {
   const registrationInfoCache = lru<PlainMessage<RegistrationInfo>>(1000, 300_000);
@@ -72,6 +74,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         };
       });
     },
+
     getLatestValidRouterConfig: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -82,8 +85,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const target = await fedGraphRepo.targetByName(req.graphName);
-        if (!target) {
+        let federatedGraph: FederatedGraphDTO | undefined;
+
+        if (req.graphId) {
+          federatedGraph = await fedGraphRepo.byId(req.graphId);
+        } else if (req.graphName) {
+          // TODO: deprecate graph name. Assume default namespace for backwards compatibility
+          federatedGraph = await fedGraphRepo.byName(req.graphName, DefaultNamespace);
+        }
+
+        if (!federatedGraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -94,7 +105,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
 
         // Avoid downloading the config to check if it's the latest version
         if (req.version) {
-          const isLatestVersion = await fedGraphRepo.isLatestValidSchemaVersion(target.id, req.version);
+          const isLatestVersion = await fedGraphRepo.isLatestValidSchemaVersion(federatedGraph.targetId, req.version);
 
           if (isLatestVersion) {
             return {
@@ -106,7 +117,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         }
 
         // Now, download the config and return it
-        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(target?.id);
+        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph.targetId);
 
         if (!routerConfig) {
           return {

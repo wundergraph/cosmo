@@ -274,7 +274,6 @@ services:
     platform: linux/amd64
     environment:
       LOG_LEVEL: info
-      FEDERATED_GRAPH_NAME: production
       CORS_ALLOW_CREDENTIALS: true
       LISTEN_ADDR: "0.0.0.0:3002"
       CONTROLPLANE_URL: http://controlplane:3001

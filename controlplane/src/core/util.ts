@@ -11,6 +11,7 @@ import { isAuthenticationError, isAuthorizationError, isPublicError } from './er
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
+const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -184,6 +185,10 @@ export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) =
     return 'developer';
   }
   return 'viewer';
+};
+
+export const isValidNamespaceName = (name: string): boolean => {
+  return namespaceRegex.test(name);
 };
 
 export const isValidOrganizationSlug = (slug: string): boolean => {

@@ -77,8 +77,7 @@ const Organizations = () => {
   const user = useContext(UserContext);
   const router = useRouter();
   const currentPage = router.asPath.split("/")[2];
-
-  const nonRootPages = ["graph", "invitations", "subgraph"];
+  const isOrganizationRoot = router.asPath.split("/").length === 3;
 
   if (!user?.currentOrganization) return null;
 
@@ -102,9 +101,9 @@ const Organizations = () => {
             );
             if (currentOrg) {
               router.replace(
-                nonRootPages.includes(currentPage)
-                  ? `/${currentOrg.slug}/graphs`
-                  : `/${currentOrg.slug}/${currentPage}`,
+                isOrganizationRoot
+                  ? `/${currentOrg.slug}/${currentPage}`
+                  : `/${currentOrg.slug}`,
               );
             }
           }}

@@ -147,8 +147,6 @@ global:
 #############################
 
 configuration:
-  # -- The name of the graph to be served by the router (required)
-  federatedGraphName: "production"
   # -- The router token is used to authenticate the router against the controlplane (required)
   graphApiToken: "replace-me"
   # -- The execution config file to statically configure the router (If no pulling of the config is desired)

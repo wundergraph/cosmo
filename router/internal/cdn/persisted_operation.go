@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/buger/jsonparser"
 	"github.com/dgraph-io/ristretto"
+	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"go.uber.org/zap"
 	"io"
@@ -192,11 +193,10 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 		opts.Logger = zap.NewNop()
 	}
 
-	federatedGraphID, organizationID, err := parseCDNToken(token)
+	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
 	if err != nil {
 		return nil, err
 	}
-
 	cacheSize := int64(opts.CacheSize)
 	var cache *ristretto.Cache
 	if cacheSize > 0 {
@@ -214,8 +214,8 @@ func NewPersistentOperationClient(endpoint string, token string, opts Persistent
 	return &PersistentOperationClient{
 		cdnURL:              u,
 		authenticationToken: token,
-		federatedGraphID:    url.PathEscape(federatedGraphID),
-		organizationID:      url.PathEscape(organizationID),
+		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
+		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          newRetryableHTTPClient(opts.Logger),
 		logger:              opts.Logger,
 		operationsCache: &cdnPersistedOperationsCache{

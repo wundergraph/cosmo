@@ -16,17 +16,24 @@ import {
   getFederatedGraphByName,
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  FederatedGraph,
+  GetFederatedGraphByNameResponse,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import { Fragment, ReactNode, createContext, useMemo } from "react";
 import { PiChat, PiCubeFocus, PiDevices, PiGitBranch } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
@@ -61,11 +68,13 @@ export const GraphContext = createContext<GraphContextProps | undefined>(
 export const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
       name: slug,
+      namespace,
     }),
   );
 
@@ -82,7 +91,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   }, [data]);
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${organizationSlug}/graph/${slug}`;
+    const basePath = `/${organizationSlug}/${namespace}/graph/${slug}`;
 
     return [
       {
@@ -141,7 +150,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <PiChat className="h-4 w-4" />,
       },
     ];
-  }, [slug, organizationSlug]);
+  }, [organizationSlug, namespace, slug]);
 
   let render: React.ReactNode;
 
@@ -183,35 +192,75 @@ export const GraphSelect = () => {
 
   const router = useRouter();
   const slug = router.query.slug as string;
-  if (router.pathname.split("/")[2] !== "graph") return null;
+  const namespace = router.query.namespace as string;
+
+  const selected = data?.graphs.find(
+    (g) => g.name === slug && g.namespace === namespace,
+  );
+
+  const groupedGraphs = data?.graphs.reduce<Record<string, FederatedGraph[]>>(
+    (result, graph) => {
+      const { namespace, name } = graph;
+
+      if (!result[namespace]) {
+        result[namespace] = [];
+      }
+
+      result[namespace].push(graph);
+
+      return result;
+    },
+    {},
+  );
+
+  if (router.pathname.split("/")[3] !== "graph") {
+    return null;
+  }
 
   return (
     <Select
-      value={slug}
-      onValueChange={(gID) =>
+      value={selected?.id}
+      onValueChange={(gID) => {
+        const graph = data?.graphs.find((g) => g.id === gID);
         router.push({
           pathname: router.pathname,
           query: {
             ...router.query,
-            slug: gID,
+            namespace: graph?.namespace,
+            slug: graph?.name,
           },
-        })
-      }
+        });
+      }}
     >
       <SelectTrigger
-        value={slug}
+        value={selected?.id}
         className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
       >
-        <SelectValue aria-label={slug}>{slug}</SelectValue>
+        <SelectValue aria-label={selected?.name}>
+          {selected?.name}{" "}
+          <Badge variant="secondary">{selected?.namespace}</Badge>
+        </SelectValue>
       </SelectTrigger>
       <SelectContent className="min-w-[200px]">
-        {data?.graphs?.map(({ name }) => {
-          return (
-            <SelectItem key={name} value={name}>
-              {name}
-            </SelectItem>
-          );
-        })}
+        {Object.entries(groupedGraphs ?? {}).map(
+          ([namespace, graphs], index) => {
+            return (
+              <SelectGroup key={namespace}>
+                <SelectLabel>{namespace}</SelectLabel>
+                {graphs.map(({ id, name }) => {
+                  return (
+                    <SelectItem className="pl-4" key={id} value={id}>
+                      {name}
+                    </SelectItem>
+                  );
+                })}
+                {index !== Object.entries(groupedGraphs ?? {}).length - 1 && (
+                  <SelectSeparator />
+                )}
+              </SelectGroup>
+            );
+          },
+        )}
       </SelectContent>
     </Select>
   );

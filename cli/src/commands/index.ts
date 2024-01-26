@@ -6,6 +6,7 @@ import FederatedGraphCommands from './federated-graph/index.js';
 import OperationCommands from './operations/index.js';
 import RouterCommands from './router/index.js';
 import SchemaCommands from './subgraph/index.js';
+import NamespaceCommands from './namespace/index.js';
 
 const client = CreateClient({
   baseUrl: config.baseURL,
@@ -44,5 +45,9 @@ program.addCommand(
     client,
   }),
 );
-
+program.addCommand(
+  NamespaceCommands({
+    client,
+  }),
+);
 export default program;
