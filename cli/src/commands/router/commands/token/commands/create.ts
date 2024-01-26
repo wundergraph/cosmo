@@ -14,7 +14,7 @@ export default (opts: BaseCommandOptions) => {
     '-g, --graph-name <graphName>',
     'The name of the federated graph that the token should be created for.',
   );
-  command.option('-ns, --namespace [string]', 'The namespace of the federated graph.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option(
     '-r, --raw',
     'Prints the token in raw format. This is useful if you want to pipe the token into another command.',

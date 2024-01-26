@@ -215,7 +215,7 @@ const ClientOperations = () => {
           }
           actions={
             <CLI
-              command={`npx wgc operations push ${slug} -ns ${namespace} -c ${clientName} -f <path-to-file>`}
+              command={`npx wgc operations push ${slug} -n ${namespace} -c ${clientName} -f <path-to-file>`}
             />
           }
         />

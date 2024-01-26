@@ -16,7 +16,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
   command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
   command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
-  command.option('-ns, --namespace [string]', 'The namespace of the subgraph.');
+  command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--delete', 'Run checks in case the subgraph is deleted.');
 

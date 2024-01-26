@@ -14,7 +14,7 @@ export default (opts: BaseCommandOptions) => {
     '<name>',
     'The name of the federated graph. It is usually in the format of <org>.<env> and is used to uniquely identify your federated graph.',
   );
-  command.option('-ns, --namespace [string]', 'The namespace of the federated graph.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.requiredOption(
     '--label-matcher <labels...>',
     'The label matchers to the federated graph with which the check is to be performed',

@@ -12,7 +12,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
   command.description('Updates a federated graph on the control plane.');
   command.argument('<name>', 'The name of the federated graph to update.');
-  command.option('-ns, --namespace [string]', 'The namespace of the federated graph.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option(
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',

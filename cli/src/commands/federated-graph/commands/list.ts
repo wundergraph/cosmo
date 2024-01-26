@@ -21,7 +21,7 @@ type OutputFile = {
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
   command.description('Lists all federated graphs in the organization.');
-  command.option('-ns, --namespace [string]', 'Filter to get graphs in this namespace only.');
+  command.option('-n, --namespace [string]', 'Filter to get graphs in this namespace only.');
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.action(async (options) => {

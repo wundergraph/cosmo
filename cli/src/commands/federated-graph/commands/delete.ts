@@ -9,7 +9,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
   command.description('Deletes a federated graph on the control plane.');
   command.argument('<name>', 'The name of the federated graph to delete.');
-  command.option('-ns, --namespace [string]', 'The namespace of the federated graph.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option('-f --force', 'Option to force delete');
   command.action(async (name, options) => {
     if (!options.force) {
