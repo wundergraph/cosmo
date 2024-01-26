@@ -53,7 +53,6 @@ export const NamespaceSelector = () => {
   return (
     <Toolbar className="flex-nowrap py-0 lg:w-auto">
       <Select
-        open
         value={namespace}
         onValueChange={(namespace) => {
           applyParams({ namespace });
