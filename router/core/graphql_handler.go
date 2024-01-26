@@ -4,14 +4,13 @@ import (
 	"context"
 	"errors"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
@@ -59,6 +58,7 @@ type HandlerOptions struct {
 	Log                                    *zap.Logger
 	EnableExecutionPlanCacheResponseHeader bool
 	WebSocketStats                         WebSocketsStatistics
+	TracerProvider                         trace.TracerProvider
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -67,6 +67,10 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		executor:                               opts.Executor,
 		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
 		websocketStats:                         opts.WebSocketStats,
+		tracer: opts.TracerProvider.Tracer(
+			"wundergraph/cosmo/router/graphql_handler",
+			trace.WithInstrumentationVersion("0.0.1"),
+		),
 	}
 	return graphQLHandler
 }
@@ -86,11 +90,17 @@ type GraphQLHandler struct {
 	executor                               *Executor
 	enableExecutionPlanCacheResponseHeader bool
 	websocketStats                         WebSocketsStatistics
+	tracer                                 trace.Tracer
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 	operationCtx := getOperationContext(r.Context())
+
+	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execution",
+		trace.WithSpanKind(trace.SpanKindServer),
+	)
+	defer graphqlExecutionSpan.End()
 
 	ctx := &resolve.Context{
 		Variables: operationCtx.Variables(),
@@ -102,7 +112,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		InitialPayload:        operationCtx.initialPayload,
 		Extensions:            operationCtx.extensions,
 	}
-	ctx = ctx.WithContext(r.Context())
+	ctx = ctx.WithContext(executionContext)
 	defer propagateSubgraphErrors(ctx)
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
@@ -117,11 +127,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			var nErr net.Error
 
 			if errors.Is(err, context.Canceled) {
-				writeRequestErrors(r, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerCanceled), w, requestLogger)
+				writeRequestErrors(executionContext, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerCanceled), w, requestLogger)
 			} else if errors.As(err, &nErr) && nErr.Timeout() {
-				writeRequestErrors(r, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerTimeout), w, requestLogger)
+				writeRequestErrors(executionContext, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerTimeout), w, requestLogger)
 			} else {
-				writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+				writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 			}
 
 			requestLogger.Error("unable to resolve GraphQL response", zap.Error(err))
@@ -151,12 +161,12 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
-				writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+				writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 				return
 			}
 
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
-			writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+			writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 			return
 		}
 	default:
@@ -191,17 +201,11 @@ func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *
 	}
 }
 
-func addErrorToTrace(ctx context.Context, err error) {
-	if ctx == nil {
-		return
-	}
+func addErrorToSpan(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
 	span := trace.SpanFromContext(ctx)
-	if span == nil {
-		return
-	}
 	if err == nil {
 		return
 	}
@@ -209,28 +213,19 @@ func addErrorToTrace(ctx context.Context, err error) {
 	if reqCtx == nil {
 		return
 	}
-	if reqCtx.hasError {
-		// already set status to codes.Error
-		// and added error attribute,
-		// so we can just record the error
-		// we call this function multiple times,
-		// e.g. if there are subgraph errors AND request errors,
-		// so we might want to record all errors
-		span.RecordError(err)
-	} else {
-		reqCtx.hasError = true
-		description := err.Error()
-		span.SetStatus(codes.Error, description)
-		span.SetAttributes(otel.WgRequestError.Bool(true))
-	}
+
+	reqCtx.error = err
+	rtrace.AttachErrToSpan(span, err)
 }
 
 func propagateSubgraphErrors(ctx *resolve.Context) {
 	err := ctx.SubgraphErrors()
-	addErrorToTrace(ctx.Context(), err)
+	addErrorToSpan(ctx.Context(), err)
 }
 
-func writeRequestErrors(r *http.Request, statusCode int, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
+func writeRequestErrors(ctx context.Context, statusCode int, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
+	addErrorToSpan(ctx, requestErrors)
+
 	if requestErrors != nil {
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
@@ -241,9 +236,8 @@ func writeRequestErrors(r *http.Request, statusCode int, requestErrors graphql.R
 			}
 		}
 	}
-	addErrorToTrace(r.Context(), requestErrors)
 }
 
-func writeInternalError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger) {
-	writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
+func writeInternalError(ctx context.Context, w http.ResponseWriter, requestLogger *zap.Logger) {
+	writeRequestErrors(ctx, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
 }

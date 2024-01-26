@@ -5549,103 +5549,6 @@ export class MigrateFromApolloResponse extends Message<MigrateFromApolloResponse
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.SpanAttributes
- */
-export class SpanAttributes extends Message<SpanAttributes> {
-  /**
-   * @generated from field: string httpStatusCode = 1;
-   */
-  httpStatusCode = "";
-
-  /**
-   * @generated from field: string componentName = 2;
-   */
-  componentName = "";
-
-  /**
-   * @generated from field: string operationName = 3;
-   */
-  operationName = "";
-
-  /**
-   * @generated from field: string operationType = 4;
-   */
-  operationType = "";
-
-  /**
-   * @generated from field: string operationContent = 5;
-   */
-  operationContent = "";
-
-  /**
-   * @generated from field: string httpURL = 6;
-   */
-  httpURL = "";
-
-  /**
-   * @generated from field: string httpHost = 7;
-   */
-  httpHost = "";
-
-  /**
-   * @generated from field: string httpUserAgent = 8;
-   */
-  httpUserAgent = "";
-
-  /**
-   * @generated from field: string httpMethod = 9;
-   */
-  httpMethod = "";
-
-  /**
-   * @generated from field: string httpTarget = 10;
-   */
-  httpTarget = "";
-
-  /**
-   * @generated from field: string subgraphName = 11;
-   */
-  subgraphName = "";
-
-  constructor(data?: PartialMessage<SpanAttributes>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.SpanAttributes";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "httpStatusCode", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "componentName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "operationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "operationType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "operationContent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "httpURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "httpHost", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "httpUserAgent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 9, name: "httpMethod", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "httpTarget", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 11, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpanAttributes {
-    return new SpanAttributes().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpanAttributes {
-    return new SpanAttributes().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpanAttributes {
-    return new SpanAttributes().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SpanAttributes | PlainMessage<SpanAttributes> | undefined, b: SpanAttributes | PlainMessage<SpanAttributes> | undefined): boolean {
-    return proto3.util.equals(SpanAttributes, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.platform.v1.Span
  */
 export class Span extends Message<Span> {
@@ -5655,54 +5558,59 @@ export class Span extends Message<Span> {
   timestamp = protoInt64.zero;
 
   /**
-   * @generated from field: string traceID = 2;
+   * @generated from field: string scopeName = 2;
+   */
+  scopeName = "";
+
+  /**
+   * @generated from field: string traceID = 3;
    */
   traceID = "";
 
   /**
-   * @generated from field: string spanID = 3;
+   * @generated from field: string spanID = 4;
    */
   spanID = "";
 
   /**
-   * @generated from field: string parentSpanID = 4;
+   * @generated from field: string parentSpanID = 5;
    */
   parentSpanID = "";
 
   /**
-   * @generated from field: string spanName = 5;
+   * @generated from field: string spanName = 6;
    */
   spanName = "";
 
   /**
-   * @generated from field: string spanKind = 6;
+   * @generated from field: string spanKind = 7;
    */
   spanKind = "";
 
   /**
-   * @generated from field: int64 duration = 7;
+   * @generated from field: int64 duration = 8;
    */
   duration = protoInt64.zero;
 
   /**
-   * @generated from field: string serviceName = 8;
+   * @generated from field: string serviceName = 9;
    */
   serviceName = "";
 
   /**
-   * @generated from field: string statusCode = 9;
+   * @generated from field: string statusCode = 10;
    */
   statusCode = "";
 
   /**
-   * @generated from field: string statusMessage = 10;
+   * @generated from field: string statusMessage = 11;
    */
   statusMessage = "";
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.SpanAttributes attributes = 11;
+   * @generated from field: map<string, string> attributes = 12;
    */
-  attributes?: SpanAttributes;
+  attributes: { [key: string]: string } = {};
 
   constructor(data?: PartialMessage<Span>) {
     super();
@@ -5713,16 +5621,17 @@ export class Span extends Message<Span> {
   static readonly typeName = "wg.cosmo.platform.v1.Span";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "timestamp", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 2, name: "traceID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "spanID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "parentSpanID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "spanName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "spanKind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "duration", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 8, name: "serviceName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 9, name: "statusCode", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "statusMessage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 11, name: "attributes", kind: "message", T: SpanAttributes },
+    { no: 2, name: "scopeName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "traceID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "spanID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "parentSpanID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "spanName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "spanKind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "duration", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 9, name: "serviceName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "statusCode", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "statusMessage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Span {

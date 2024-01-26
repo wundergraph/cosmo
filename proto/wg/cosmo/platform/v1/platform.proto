@@ -733,32 +733,19 @@ message MigrateFromApolloResponse {
   string token = 2;
 }
 
-message SpanAttributes {
-  string httpStatusCode = 1;
-  string componentName = 2;
-  string operationName = 3;
-  string operationType = 4;
-  string operationContent = 5;
-  string httpURL = 6;
-  string httpHost = 7;
-  string httpUserAgent = 8;
-  string httpMethod = 9;
-  string httpTarget = 10;
-  string subgraphName = 11;
-}
-
 message Span {
   int64 timestamp = 1;
-  string traceID = 2;
-  string spanID = 3;
-  string parentSpanID = 4;
-  string spanName = 5;
-  string spanKind = 6;
-  int64 duration = 7;
-  string serviceName = 8;
-  string statusCode = 9;
-  string statusMessage = 10;
-  SpanAttributes attributes = 11;
+  string scopeName = 2;
+  string traceID = 3;
+  string spanID = 4;
+  string parentSpanID = 5;
+  string spanName = 6;
+  string spanKind = 7;
+  int64 duration = 8;
+  string serviceName = 9;
+  string statusCode = 10;
+  string statusMessage = 11;
+  map<string, string> attributes = 12;
 }
 
 message GetTraceRequest {
