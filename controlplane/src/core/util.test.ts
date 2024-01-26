@@ -224,6 +224,10 @@ describe('Util', (ctx) => {
       { name: '-acme', expected: false },
       { name: 'ac_24', expected: true },
       { name: '1a$c', expected: false },
+      { name: ' prod', expected: false },
+      { name: 'prod ', expected: false },
+      { name: 'prod env', expected: false },
+      { name: 'prod^env', expected: false },
     ];
 
     for (const entry of entries) {
