@@ -1,6 +1,8 @@
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { docsBaseURL } from "@/lib/constants";
 import { useQuery } from "@tanstack/react-query";
 import { getNamespaces } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
@@ -10,6 +12,7 @@ import {
   SelectGroup,
   SelectItem,
   SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
@@ -50,6 +53,7 @@ export const NamespaceSelector = () => {
   return (
     <Toolbar className="flex-nowrap py-0 lg:w-auto">
       <Select
+        open
         value={namespace}
         onValueChange={(namespace) => {
           applyParams({ namespace });
@@ -61,9 +65,20 @@ export const NamespaceSelector = () => {
             Namespace: {namespace}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent align="end">
           <SelectGroup>
-            <SelectLabel>Namespace</SelectLabel>
+            <SelectLabel>Namespaces</SelectLabel>
+            <p className="max-w-xs px-2 text-sm text-muted-foreground">
+              Easily switch between namespaces. Learn more{" "}
+              <Link
+                target="_blank"
+                className="text-primary"
+                href={`${docsBaseURL}/cli/essentials#namespaces`}
+              >
+                here.
+              </Link>{" "}
+            </p>
+            <SelectSeparator />
             {namespaces.map((ns) => {
               return (
                 <SelectItem key={ns} value={ns}>
