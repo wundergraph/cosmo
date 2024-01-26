@@ -59,6 +59,7 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 				Tag:       employee.Tag,
 				Role:      employee.Role,
 				Notes:     employee.Notes,
+				StartDate: employee.StartDate,
 			}, nil
 		}
 	}
@@ -79,6 +80,7 @@ func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error
 			Role:      employee.Role,
 			Notes:     employee.Notes,
 			UpdatedAt: time.Now().String(),
+			StartDate: employee.StartDate,
 		}
 	}
 	return out, nil

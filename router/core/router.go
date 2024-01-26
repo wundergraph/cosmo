@@ -5,6 +5,12 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"sync"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -14,11 +20,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"net"
-	"net/http"
-	"net/url"
-	"sync"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
@@ -899,6 +900,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 		WebSocketStats:                         r.WebsocketStats,
 		TracerProvider:                         r.tracerProvider,
+		Authorizer: NewCosmoAuthorizer(&CosmoAuthorizerOptions{
+			FieldConfigurations: routerConfig.EngineConfig.FieldConfigurations,
+		}),
 	})
 
 	var publicKey *ecdsa.PublicKey
