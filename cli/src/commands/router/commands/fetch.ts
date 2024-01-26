@@ -12,11 +12,13 @@ export default (opts: BaseCommandOptions) => {
     'Fetches the latest valid router config for a federated graph. The output can be piped to a file.',
   );
   command.argument('<name>', 'The name of the federated graph to fetch.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.getLatestValidRouterConfig(
       {
         graphName: name,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,

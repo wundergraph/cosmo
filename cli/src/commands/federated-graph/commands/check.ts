@@ -8,23 +8,25 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schemaPush = new Command('check');
-  schemaPush.description('Validates the federated graph with the provided configuration for errors.');
-  schemaPush.argument(
+  const command = new Command('check');
+  command.description('Validates the federated graph with the provided configuration for errors.');
+  command.argument(
     '<name>',
     'The name of the federated graph. It is usually in the format of <org>.<env> and is used to uniquely identify your federated graph.',
   );
-  schemaPush.requiredOption(
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
+  command.requiredOption(
     '--label-matcher <labels...>',
     'The label matchers to the federated graph with which the check is to be performed',
   );
 
-  schemaPush.action(async (name, options) => {
+  command.action(async (name, options) => {
     let success = false;
     const resp = await opts.client.platform.checkFederatedGraph(
       {
         name,
         labelMatchers: options.labelMatcher,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,
@@ -38,7 +40,12 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const matchedSubgraphsTable = new Table({
-      head: [pc.bold(pc.white('NAME')), pc.bold(pc.white('URL')), pc.bold(pc.white('LABELS'))],
+      head: [
+        pc.bold(pc.white('NAME')),
+        pc.bold(pc.white('NAMESPACE')),
+        pc.bold(pc.white('URL')),
+        pc.bold(pc.white('LABELS')),
+      ],
       colWidths: [30, 40, 50],
       wordWrap: true,
     });
@@ -49,6 +56,7 @@ export default (opts: BaseCommandOptions) => {
         for (const subgraph of resp.subgraphs) {
           matchedSubgraphsTable.push([
             subgraph.name,
+            subgraph.namespace,
             subgraph.routingURL,
             subgraph.labels.reduce((accumulator, currentLabel) => accumulator + joinLabel(currentLabel), ''),
           ]);
@@ -62,6 +70,7 @@ export default (opts: BaseCommandOptions) => {
         for (const subgraph of resp.subgraphs) {
           matchedSubgraphsTable.push([
             subgraph.name,
+            subgraph.namespace,
             subgraph.routingURL,
             subgraph.labels.reduce((accumulator, currentLabel) => accumulator + joinLabel(currentLabel), ''),
           ]);
@@ -90,5 +99,5 @@ export default (opts: BaseCommandOptions) => {
     }
   });
 
-  return schemaPush;
+  return command;
 };

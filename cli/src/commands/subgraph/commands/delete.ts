@@ -7,11 +7,12 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const deleteSubgraph = new Command('delete');
-  deleteSubgraph.description('Deletes a subgraph on the control plane.');
-  deleteSubgraph.argument('<name>', 'The name of the subgraph to delete.');
-  deleteSubgraph.option('-f --force', 'Option to force delete');
-  deleteSubgraph.action(async (name, options) => {
+  const command = new Command('delete');
+  command.description('Deletes a subgraph on the control plane.');
+  command.argument('<name>', 'The name of the subgraph to delete.');
+  command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
+  command.option('-f --force', 'Option to force delete');
+  command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
@@ -26,6 +27,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.deleteFederatedSubgraph(
       {
         subgraphName: name,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,
@@ -36,7 +38,11 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.dim(pc.green(`Subgraph '${name}' was deleted.`)));
     } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
       const compositionErrorsTable = new Table({
-        head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('ERROR_MESSAGE')),
+        ],
         colWidths: [30, 120],
         wordWrap: true,
       });
@@ -49,7 +55,11 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
       for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
+        compositionErrorsTable.push([
+          compositionError.federatedGraphName,
+          compositionError.namespace,
+          compositionError.message,
+        ]);
       }
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());
@@ -62,5 +72,5 @@ export default (opts: BaseCommandOptions) => {
     }
   });
 
-  return deleteSubgraph;
+  return command;
 };

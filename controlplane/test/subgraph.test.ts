@@ -25,6 +25,7 @@ describe('Subgraph', (ctx) => {
 
     let resp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -33,6 +34,7 @@ describe('Subgraph', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -51,6 +53,7 @@ describe('Subgraph', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:8081',
     });
@@ -58,6 +61,7 @@ describe('Subgraph', (ctx) => {
 
     const publishResp = await client.publishFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       schema: pandasSchema,
       labels: [label],
       routingUrl: 'http://localhost:3000',
@@ -66,6 +70,7 @@ describe('Subgraph', (ctx) => {
 
     const graph = await client.getFederatedGraphByName({
       name: federatedGraphName,
+      namespace: 'default',
     });
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
 
@@ -88,6 +93,7 @@ describe('Subgraph', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: [joinLabel(label1)],
       routingUrl: 'http://localhost:8081',
     });
@@ -95,6 +101,7 @@ describe('Subgraph', (ctx) => {
 
     const createSubgraphResp = await client.createFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       labels: [label1],
       routingUrl: 'http://localhost:8002',
     });
@@ -102,12 +109,14 @@ describe('Subgraph', (ctx) => {
 
     const getSubgraphResp = await client.getSubgraphByName({
       name: 'pandas',
+      namespace: 'default',
     });
 
     expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
     const publishSubgraphResp = await client.publishFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       schema: pandasSchema,
       labels: [label1, label2],
       routingUrl: 'http://localhost:3001',
@@ -119,6 +128,7 @@ describe('Subgraph', (ctx) => {
 
     const getGraphResp = await client.getFederatedGraphByName({
       name: federatedGraphName,
+      namespace: 'default',
     });
 
     expect(getGraphResp.response?.code).toBe(EnumStatusCode.OK);
@@ -148,6 +158,7 @@ describe('Subgraph', (ctx) => {
 
     const resp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
       readme,
@@ -157,6 +168,7 @@ describe('Subgraph', (ctx) => {
 
     const subgraph = await client.getSubgraphByName({
       name: subgraphName,
+      namespace: 'default',
     });
 
     expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
@@ -177,6 +189,7 @@ describe('Subgraph', (ctx) => {
 
     const resp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
       readme,
@@ -186,6 +199,7 @@ describe('Subgraph', (ctx) => {
 
     const updateResponse = await client.updateSubgraph({
       name: subgraphName,
+      namespace: 'default',
       readme: updatedReadme,
     });
 
@@ -193,6 +207,7 @@ describe('Subgraph', (ctx) => {
 
     const subgraph = await client.getSubgraphByName({
       name: subgraphName,
+      namespace: 'default',
     });
 
     expect(subgraph.response?.code).toBe(EnumStatusCode.OK);

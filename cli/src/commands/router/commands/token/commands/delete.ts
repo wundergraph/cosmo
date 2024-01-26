@@ -10,6 +10,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Deletes a router token of a federated graph.');
   command.argument('<name>', 'The name of the router token.');
   command.requiredOption('-g, --graph-name <graphName>', 'The name of the federated graph the token belongs to');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option('-f --force', 'Option to force delete');
   command.action(async (name, options) => {
     if (!options.force) {
@@ -26,6 +27,7 @@ export default (opts: BaseCommandOptions) => {
       {
         tokenName: name,
         fedGraphName: options.graphName,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,

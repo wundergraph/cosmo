@@ -16,6 +16,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
   command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
   command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
+  command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--delete', 'Run checks in case the subgraph is deleted.');
 
@@ -69,6 +70,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.checkSubgraphSchema(
       {
         subgraphName: name,
+        namespace: options.namespace,
         schema,
         gitInfo,
         delete: options.delete,
@@ -85,7 +87,11 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const compositionErrorsTable = new Table({
-      head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
+      head: [
+        pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+        pc.bold(pc.white('NAMESPACE')),
+        pc.bold(pc.white('ERROR_MESSAGE')),
+      ],
       colWidths: [30, 120],
       wordWrap: true,
     });
@@ -157,7 +163,11 @@ export default (opts: BaseCommandOptions) => {
         if (resp.compositionErrors.length > 0) {
           console.log(pc.red('\nDetected composition errors:'));
           for (const compositionError of resp.compositionErrors) {
-            compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
+            compositionErrorsTable.push([
+              compositionError.federatedGraphName,
+              compositionError.namespace,
+              compositionError.message,
+            ]);
           }
           console.log(compositionErrorsTable.toString());
         }

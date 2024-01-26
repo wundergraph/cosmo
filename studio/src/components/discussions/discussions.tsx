@@ -138,20 +138,17 @@ export const GraphDiscussions = ({
 
   const discussionsBySchema = data?.discussions
     .filter((d) => d.isResolved === !!resolved)
-    .reduce(
-      (acc, discussion) => {
-        const schemaVersionId = discussion.schemaVersionId;
+    .reduce<Record<string, Discussion[]>>((acc, discussion) => {
+      const schemaVersionId = discussion.schemaVersionId;
 
-        if (!acc[schemaVersionId]) {
-          acc[schemaVersionId] = [];
-        }
+      if (!acc[schemaVersionId]) {
+        acc[schemaVersionId] = [];
+      }
 
-        acc[schemaVersionId].push(discussion);
+      acc[schemaVersionId].push(discussion);
 
-        return acc;
-      },
-      {} as Record<string, Discussion[]>,
-    );
+      return acc;
+    }, {});
 
   return (
     <>
@@ -170,7 +167,7 @@ export const GraphDiscussions = ({
         <Discussions
           discussions={discussionsBySchema}
           refetch={() => refetch()}
-          graphLink={linkToSchema.split("/").slice(0, 4).join("/")}
+          graphLink={linkToSchema.split("/").slice(0, 5).join("/")}
         />
       )}
       {Object.keys(discussionsBySchema ?? {}).length === 0 && !isLoading && (

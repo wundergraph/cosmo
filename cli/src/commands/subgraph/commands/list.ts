@@ -18,12 +18,14 @@ type OutputFile = {
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
-  command.description('Lists subgraphs.');
+  command.description('Lists subgraphs from a given namespace.');
+  command.option('-n, --namespace [string]', 'The namespace of the subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.action(async (options) => {
     const resp = await opts.client.platform.getSubgraphs(
       {
+        namespace: options.namespace,
         // limit 0 fetches all
         limit: 0,
         offset: 0,
@@ -65,6 +67,7 @@ export default (opts: BaseCommandOptions) => {
     const graphsTable = new Table({
       head: [
         pc.bold(pc.white('NAME')),
+        pc.bold(pc.white('NAMESPACE')),
         pc.bold(pc.white('LABELS')),
         pc.bold(pc.white('ROUTING_URL')),
         pc.bold(pc.white('UPDATED_AT')),
@@ -76,6 +79,7 @@ export default (opts: BaseCommandOptions) => {
     for (const graph of resp.graphs) {
       graphsTable.push([
         graph.name,
+        graph.namespace,
         graph.labels.map(({ key, value }) => `${key}=${value}`).join(', '),
         graph.routingURL,
         graph.lastUpdatedAt,

@@ -309,12 +309,16 @@ export class AnalyticsDashboardViewRepository {
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
   ): Promise<PlainMessage<SubgraphMetrics>[]> {
+    const metrics: PlainMessage<SubgraphMetrics>[] = [];
+
+    if (subgraphs.length === 0) {
+      return metrics;
+    }
+
     const [requestRates, latency] = await Promise.all([
       this.getSubgraphRates(federatedGraphId, organizationId, dateRange, subgraphs),
       this.getSubgraphLatency(federatedGraphId, organizationId, dateRange, subgraphs),
     ]);
-
-    const metrics: PlainMessage<SubgraphMetrics>[] = [];
 
     for (const subgraph of subgraphs) {
       const rate = requestRates.find((r) => r.subgraphID === subgraph.id);
