@@ -9,9 +9,9 @@ type Queries {
 }
 
 enum TopSecretFactType @authenticated {
-  DIRECTIVE,
-  ENTITY,
-  MISCELLANEOUS,
+  DIRECTIVE
+  ENTITY
+  MISCELLANEOUS
 }
 
 interface TopSecretFact @authenticated {
@@ -27,7 +27,7 @@ type DirectiveFact implements TopSecretFact @authenticated {
   factType: TopSecretFactType
 }
 
-type EntityFact implements TopSecretFact @requiresScopes(scopes: [["read:entity"]]){
+type EntityFact implements TopSecretFact @requiresScopes(scopes: [["read:entity"]]) {
   title: String!
   description: FactContent!
   factType: TopSecretFactType

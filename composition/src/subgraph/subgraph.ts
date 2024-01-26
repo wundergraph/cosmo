@@ -178,13 +178,14 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
           factory.validateKeyFieldSetsForImplicitEntity(entityContainer);
         }
         addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
-        if (typeName !== parentTypeName) {
-          return {
-            ...node,
-            name: stringToNameNode(parentTypeName),
-          };
+        if (typeName == parentTypeName) {
+          return false;
         }
-        return false;
+        factory.renamedTypeNameByOriginalTypeName.set(typeName, parentTypeName);
+        return {
+          ...node,
+          name: stringToNameNode(parentTypeName),
+        };
       },
     },
     ObjectTypeExtension: {

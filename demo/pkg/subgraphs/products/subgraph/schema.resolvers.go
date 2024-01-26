@@ -6,7 +6,6 @@ package subgraph
 
 import (
 	"context"
-
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/model"
 )
@@ -28,6 +27,16 @@ func (r *documentationResolver) Urls(ctx context.Context, obj *model.Documentati
 // ProductTypes is the resolver for the productTypes field.
 func (r *queriesResolver) ProductTypes(ctx context.Context) ([]model.Products, error) {
 	return products, nil
+}
+
+// TopSecretFederationFacts is the resolver for the topSecretFederationFacts field.
+func (r *queriesResolver) TopSecretFederationFacts(ctx context.Context) ([]model.TopSecretFact, error) {
+	return topSecretFederationFacts, nil
+}
+
+// FactTypes is the resolver for the factTypes field.
+func (r *queriesResolver) FactTypes(ctx context.Context) ([]model.TopSecretFactType, error) {
+	return model.AllTopSecretFactType, nil
 }
 
 // Documentation returns generated.DocumentationResolver implementation.

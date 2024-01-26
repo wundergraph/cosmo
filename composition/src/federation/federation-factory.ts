@@ -132,6 +132,7 @@ import {
   TAG,
 } from '../utils/string-constants';
 import {
+  addAuthorizationDataProperties,
   addIterableValuesToSet,
   AuthorizationData,
   doSetsHaveAnyOverlap,
@@ -205,6 +206,7 @@ export class FederationFactory {
   rootTypeNames = new Set<string>([DEFAULT_MUTATION, DEFAULT_QUERY, DEFAULT_SUBSCRIPTION]);
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   shareableErrorTypeNames = new Map<string, Set<string>>();
+  renamedTypeNameByOriginalTypeName = new Map<string, string>();
   warnings: string[];
 
   constructor(
@@ -1577,6 +1579,23 @@ export class FederationFactory {
     }
   }
 
+  handleAuthorizationDataForRenamedTypes() {
+    for (const [originalTypeName, renamedTypeName] of this.renamedTypeNameByOriginalTypeName) {
+      const originalAuthorizationData = this.authorizationDataByParentTypeName.get(originalTypeName);
+      if (!originalAuthorizationData) {
+        continue;
+      }
+      originalAuthorizationData.typeName = renamedTypeName;
+      const renamedAuthorizationData = this.authorizationDataByParentTypeName.get(renamedTypeName);
+      if (!renamedAuthorizationData) {
+        this.authorizationDataByParentTypeName.set(renamedTypeName, originalAuthorizationData);
+      } else {
+        addAuthorizationDataProperties(originalAuthorizationData, renamedAuthorizationData);
+      }
+      this.authorizationDataByParentTypeName.delete(originalTypeName);
+    }
+  }
+
   federate(): FederationResultContainer {
     this.populateMultiGraphAndRenameOperations(this.internalSubgraphBySubgraphName);
     const factory = this;
@@ -1586,6 +1605,7 @@ export class FederationFactory {
       this.keyFieldNamesByParentTypeName = subgraph.keyFieldNamesByParentTypeName;
       walkSubgraphToFederate(subgraph.definitions, subgraph.overriddenFieldNamesByParentTypeName, factory);
     }
+    this.handleAuthorizationDataForRenamedTypes();
     for (const [typeName, entityInterfaceData] of this.entityInterfaceFederationDataByTypeName) {
       subtractSourceSetFromTargetSet(
         entityInterfaceData.interfaceFieldNames,

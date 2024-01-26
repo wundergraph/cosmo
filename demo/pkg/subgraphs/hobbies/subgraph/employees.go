@@ -147,27 +147,6 @@ var employees = []*model.Employee{
 		},
 	},
 	{
-		// Alberto
-		ID: 9,
-		Hobbies: []model.Hobby{
-			model.Exercise{
-				Category: model.ExerciseTypeCalisthenics,
-			},
-			model.Gaming{
-				Genres: []model.GameGenre{
-					model.GameGenreBoard,
-				},
-				Name:              "Chess",
-				YearsOfExperience: 2.0,
-			},
-			model.Programming{
-				Languages: []model.ProgrammingLanguage{
-					model.ProgrammingLanguageRust,
-				},
-			},
-		},
-	},
-	{
 		// Eelco
 		ID: 10,
 		Hobbies: []model.Hobby{

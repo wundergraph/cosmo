@@ -74,6 +74,7 @@ type Employee struct {
 	Role      RoleType `json:"role"`
 	Notes     *string  `json:"notes,omitempty"`
 	UpdatedAt string   `json:"updatedAt"`
+	StartDate string   `json:"startDate"`
 }
 
 func (Employee) IsIdentifiable() {}

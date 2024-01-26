@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { batchNormalize, ConfigurationData, federateSubgraphs, normalizeSubgraphFromString } from '../src';
 import { createSubgraph } from './utils/utils';
+import fs from 'node:fs';
+import { join } from 'node:path';
 
 describe('Router Configuration tests', () => {
   describe('Normalization tests', () => {
@@ -14,9 +16,25 @@ describe('Router Configuration tests', () => {
           [
             'Query',
             {
-              fieldNames: new Set<string>(['employee', 'employees', 'teammates']),
+              fieldNames: new Set<string>(['employee', 'employees', 'products', 'teammates']),
               isRootNode: true,
               typeName: 'Query',
+            },
+          ],
+          [
+            'Mutation',
+            {
+              fieldNames: new Set<string>(['updateEmployeeTag']),
+              isRootNode: true,
+              typeName: 'Mutation',
+            },
+          ],
+          [
+            'Subscription',
+            {
+              fieldNames: new Set<string>(['currentTime']),
+              isRootNode: true,
+              typeName: 'Subscription',
             },
           ],
           [
@@ -70,10 +88,53 @@ describe('Router Configuration tests', () => {
           [
             'Employee',
             {
-              fieldNames: new Set<string>(['details', 'id', 'role']),
+              fieldNames: new Set<string>(['details', 'id', 'tag', 'role', 'notes', 'updatedAt', 'startDate']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Employee',
+            },
+          ],
+          [
+            'Time',
+            {
+              fieldNames: new Set<string>(['unixTime', 'timeStamp']),
+              isRootNode: false,
+              typeName: 'Time',
+            },
+          ],
+          [
+            'IProduct',
+            {
+              fieldNames: new Set<string>(['upc', 'engineers']),
+              isRootNode: false,
+              typeName: 'IProduct',
+            },
+          ],
+          [
+            'Consultancy',
+            {
+              fieldNames: new Set<string>(['upc', 'lead']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'upc' }],
+              typeName: 'Consultancy',
+            },
+          ],
+          [
+            'Cosmo',
+            {
+              fieldNames: new Set<string>(['upc', 'engineers', 'lead']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'upc' }],
+              typeName: 'Cosmo',
+            },
+          ],
+          [
+            'SDK',
+            {
+              fieldNames: new Set<string>(['upc', 'engineers', 'owner']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'upc' }],
+              typeName: 'SDK',
             },
           ],
         ]),
@@ -87,6 +148,14 @@ describe('Router Configuration tests', () => {
       const configurationDataMap = normalizationResult!.configurationDataMap;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['findEmployees']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
           [
             'Animal',
             {
@@ -146,7 +215,15 @@ describe('Router Configuration tests', () => {
           [
             'Details',
             {
-              fieldNames: new Set<string>(['forename', 'surname']),
+              fieldNames: new Set<string>([
+                'forename',
+                'middlename',
+                'surname',
+                'hasChildren',
+                'maritalStatus',
+                'nationality',
+                'pets',
+              ]),
               isRootNode: false,
               typeName: 'Details',
             },
@@ -154,7 +231,7 @@ describe('Router Configuration tests', () => {
           [
             'Employee',
             {
-              fieldNames: new Set<string>(['details', 'id', 'hasChildren', 'maritalStatus', 'nationality', 'pets']),
+              fieldNames: new Set<string>(['details', 'id']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Employee',
@@ -236,6 +313,15 @@ describe('Router Configuration tests', () => {
               typeName: 'Employee',
             },
           ],
+          [
+            'SDK',
+            {
+              fieldNames: new Set<string>(['upc', 'clientLanguages']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'upc' }],
+              typeName: 'SDK',
+            },
+          ],
         ]),
       );
     });
@@ -248,12 +334,78 @@ describe('Router Configuration tests', () => {
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
+            'Queries',
+            {
+              fieldNames: new Set<string>(['productTypes', 'topSecretFederationFacts', 'factTypes']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'TopSecretFact',
+            {
+              fieldNames: new Set<string>(['description', 'factType']),
+              isRootNode: false,
+              typeName: 'TopSecretFact',
+            },
+          ],
+          [
+            'DirectiveFact',
+            {
+              fieldNames: new Set<string>(['title', 'description', 'factType']),
+              isRootNode: false,
+              typeName: 'DirectiveFact',
+            },
+          ],
+          [
+            'EntityFact',
+            {
+              fieldNames: new Set<string>(['title', 'description', 'factType']),
+              isRootNode: false,
+              typeName: 'EntityFact',
+            },
+          ],
+          [
+            'MiscellaneousFact',
+            {
+              fieldNames: new Set<string>(['title', 'description', 'factType']),
+              isRootNode: false,
+              typeName: 'MiscellaneousFact',
+            },
+          ],
+          [
             'Employee',
             {
-              fieldNames: new Set<string>(['id', 'products']),
+              fieldNames: new Set<string>(['id', 'products', 'notes']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Employee',
+            },
+          ],
+          [
+            'Consultancy',
+            {
+              fieldNames: new Set<string>(['upc', 'name']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'upc' }],
+              typeName: 'Consultancy',
+            },
+          ],
+          [
+            'Cosmo',
+            {
+              fieldNames: new Set<string>(['upc', 'name', 'repositoryURL']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'upc' }],
+              typeName: 'Cosmo',
+            },
+          ],
+          [
+            'Documentation',
+            {
+              fieldNames: new Set<string>(['url', 'urls']),
+              isRootNode: false,
+              typeName: 'Documentation',
             },
           ],
         ]),
@@ -478,6 +630,123 @@ describe('Router Configuration tests', () => {
           fieldName: 'teammates',
           typeName: 'Query',
         },
+        {
+          argumentNames: ['criteria'],
+          fieldName: 'findEmployees',
+          typeName: 'Query',
+        },
+        {
+          argumentNames: ['id', 'tag'],
+          fieldName: 'updateEmployeeTag',
+          typeName: 'Mutation',
+        },
+        {
+          argumentNames: ['product'],
+          fieldName: 'url',
+          typeName: 'Documentation',
+        },
+        {
+          argumentNames: ['products'],
+          fieldName: 'urls',
+          typeName: 'Documentation',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'startDate',
+          requiredScopes: [['read:employee', 'read:private'], ['read:all']],
+          requiresAuthentication: false,
+          typeName: 'Employee',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'description',
+          requiredScopes: [['read:scalar'], ['read:all']],
+          requiresAuthentication: true,
+          typeName: 'TopSecretFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'factType',
+          requiredScopes: [],
+          requiresAuthentication: true,
+          typeName: 'TopSecretFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'title',
+          requiredScopes: [],
+          requiresAuthentication: true,
+          typeName: 'DirectiveFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'description',
+          requiredScopes: [['read:scalar'], ['read:all']],
+          requiresAuthentication: true,
+          typeName: 'DirectiveFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'factType',
+          requiredScopes: [],
+          requiresAuthentication: true,
+          typeName: 'DirectiveFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'title',
+          requiredScopes: [['read:entity']],
+          requiresAuthentication: false,
+          typeName: 'EntityFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'description',
+          requiredScopes: [
+            ['read:entity', 'read:scalar'],
+            ['read:entity', 'read:all'],
+          ],
+          requiresAuthentication: false,
+          typeName: 'EntityFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'factType',
+          requiredScopes: [['read:entity']],
+          requiresAuthentication: true,
+          typeName: 'EntityFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'description',
+          requiredScopes: [
+            ['read:miscellaneous', 'read:scalar'],
+            ['read:miscellaneous', 'read:all'],
+          ],
+          requiresAuthentication: false,
+          typeName: 'MiscellaneousFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'factType',
+          requiredScopes: [],
+          requiresAuthentication: true,
+          typeName: 'MiscellaneousFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'topSecretFederationFacts',
+          requiredScopes: [['read:fact'], ['read:all']],
+          requiresAuthentication: false,
+          typeName: 'Query',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'factTypes',
+          requiredScopes: [],
+          requiresAuthentication: true,
+          typeName: 'Query',
+        },
       ]);
     });
 
@@ -552,275 +821,10 @@ describe('Router Configuration tests', () => {
   });
 });
 
-const employees = `
-type Query {
-  employee(id: Int!): Employee
-  employees: [Employee!]!
-  teammates(team: Department!): [Employee!]!
-}
-
-enum Department {
-  ENGINEERING
-  MARKETING
-  OPERATIONS
-}
-
-interface RoleType {
-  departments: [Department!]!
-  title: [String!]!
-}
-
-enum EngineerType {
-  FRONTEND
-  BACKEND
-  FULLSTACK
-}
-
-interface Identifiable {
-  id: Int!
-}
-
-type Engineer implements RoleType {
-  departments: [Department!]!
-  engineerType: EngineerType!
-  title: [String!]!
-}
-
-type Marketer implements RoleType{
-  departments: [Department!]!
-  title: [String!]!
-}
-
-enum OperationType {
-  FINANCE
-  HUMAN_RESOURCES
-}
-
-type Operator implements RoleType {
-  departments: [Department!]!
-  operatorType: [OperationType!]!
-  title: [String!]!
-}
-
-enum Country {
-  AMERICA
-  ENGLAND
-  GERMANY
-  INDIA
-  NETHERLANDS
-  PORTUGAL
-  SPAIN
-  UKRAINE
-}
-
-type Details @shareable {
-  forename: String!
-  location: Country!
-  surname: String!
-}
-
-type Employee implements Identifiable @key(fields: "id") {
-  details: Details! @shareable
-  id: Int!
-  role: RoleType!
-}
-`;
-
-const family = `
-enum Class {
-  Fish
-  Mammal
-  Reptile
-}
-
-enum Gender {
-  FEMALE
-  MALE
-  UNKNOWN
-}
-
-interface Animal {
-  class: Class!
-  gender: Gender!
-}
-
-interface Pet implements Animal {
-  class: Class!
-  gender: Gender!
-  name: String!
-}
-
-enum CatType {
-  HOME
-  STREET
-}
-
-type Alligator implements Pet & Animal {
-  class: Class!
-  dangerous: String!
-  gender: Gender!
-  name: String!
-}
-
-type Cat implements Pet & Animal {
-  class: Class!
-  gender: Gender!
-  name: String!
-  type: CatType!
-}
-
-enum DogBreed {
-  GOLDEN_RETRIEVER
-  POODLE
-  ROTTWEILER
-  YORKSHIRE_TERRIER
-}
-
-type Dog implements Pet & Animal {
-  breed: DogBreed!
-  class: Class!
-  gender: Gender!
-  name: String!
-}
-
-type Mouse implements Pet & Animal {
-  class: Class!
-  gender: Gender!
-  name: String!
-}
-
-type Pony implements Pet & Animal {
-  class: Class!
-  gender: Gender!
-  name: String!
-}
-
-enum MaritalStatus {
-  ENGAGED
-  MARRIED
-}
-
-enum Nationality {
-  AMERICAN
-  DUTCH
-  ENGLISH
-  GERMAN
-  INDIAN
-  SPANISH
-  UKRAINIAN
-}
-
-type Details  {
-  forename: String! @shareable
-  surname: String! @shareable
-}
-
-type Employee @key(fields: "id") {
-  details: Details @shareable
-  id: Int!
-  # move to details eventually
-  hasChildren: Boolean!
-  maritalStatus: MaritalStatus
-  nationality: Nationality!
-  pets: [Pet]
-}
-`;
-
-const hobbies = `
-enum ExerciseType {
-  CALISTHENICS
-  HIKING
-  SPORT
-  STRENGTH_TRAINING
-}
-
-type Exercise {
-  category: ExerciseType!
-}
-
-interface Experience {
-  yearsOfExperience: Float!
-}
-
-type Flying implements Experience {
-  planeModels: [String!]!
-  yearsOfExperience: Float!
-}
-
-enum GameGenre {
-  ADVENTURE
-  BOARD
-  FPS
-  CARD
-  RPG
-  ROGUELITE
-  SIMULATION
-  STRATEGY
-}
-
-type Gaming implements Experience {
-  genres: [GameGenre!]!
-  name: String!
-  yearsOfExperience: Float!
-}
-
-type Other {
-  name: String!
-}
-
-enum ProgrammingLanguage {
-  CSHARP
-  GO
-  RUST
-  TYPESCRIPT
-}
-
-type Programming {
-  languages: [ProgrammingLanguage!]!
-}
-
-enum Country {
-  AMERICA
-  ENGLAND
-  GERMANY
-  KOREA
-  NETHERLANDS
-  INDONESIA
-  PORTUGAL
-  SERBIA
-  SPAIN
-  TAIWAN
-  THAILAND
-}
-
-type Travelling {
-  countriesLived: [Country!]!
-}
-
-union Hobby = Exercise | Flying | Gaming | Programming | Travelling | Other
-
-type Employee @key(fields: "id") {
-  id: Int!
-  hobbies: [Hobby!]!
-}
-`;
-
-const products = `
-enum ProductNames {
-  CLOUD
-  COSMO
-  ENGINE
-  FINANCE
-  HUMAN_RESOURCES
-  MARKETING
-  SDK
-}
-
-type Employee @key(fields: "id") {
-  id: Int!
-  products: [ProductNames!]!
-}
-`;
+const employees = fs.readFileSync(join(process.cwd(), 'tests/test-data/employees.graphql')).toString();
+const family = fs.readFileSync(join(process.cwd(), 'tests/test-data/family.graphql')).toString();
+const hobbies = fs.readFileSync(join(process.cwd(), 'tests/test-data/hobbies.graphql')).toString();
+const products = fs.readFileSync(join(process.cwd(), 'tests/test-data/products.graphql')).toString();
 
 const monolith = `
   type Query {

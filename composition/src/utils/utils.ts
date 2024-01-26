@@ -439,7 +439,7 @@ export function mergeAuthorizationDataByAND(
   target.requiredScopes = mergedOrScopes;
 }
 
-function addAuthorizationDataProperties(source: AuthorizationData, target: AuthorizationData) {
+export function addAuthorizationDataProperties(source: AuthorizationData, target: AuthorizationData) {
   mergeAuthorizationDataByAND(source, target);
   for (const [fieldName, incomingFieldAuthorizationData] of source.fieldAuthorizationDataByFieldName) {
     const existingFieldAuthorizationData = target.fieldAuthorizationDataByFieldName.get(fieldName);
@@ -498,8 +498,8 @@ export function generateAuthenticatedDirective(): ConstDirectiveNode {
 
 export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstDirectiveNode {
   const values: ConstValueNode[] = [];
-  const scopes: StringValueNode[] = [];
   for (const andScopes of orScopes) {
+    const scopes: StringValueNode[] = [];
     for (const scope of andScopes) {
       scopes.push({
         kind: Kind.STRING,
