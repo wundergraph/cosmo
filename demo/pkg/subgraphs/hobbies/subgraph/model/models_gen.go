@@ -15,6 +15,7 @@ type Experience interface {
 
 type Hobby interface {
 	IsHobby()
+	GetEmployees() []*Employee
 }
 
 type Employee struct {
@@ -25,22 +26,45 @@ type Employee struct {
 func (Employee) IsEntity() {}
 
 type Exercise struct {
-	Category ExerciseType `json:"category"`
+	Employees []*Employee  `json:"employees"`
+	Category  ExerciseType `json:"category"`
 }
 
 func (Exercise) IsHobby() {}
+func (this Exercise) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Flying struct {
-	PlaneModels       []string `json:"planeModels"`
-	YearsOfExperience float64  `json:"yearsOfExperience"`
+	Employees         []*Employee `json:"employees"`
+	PlaneModels       []string    `json:"planeModels"`
+	YearsOfExperience float64     `json:"yearsOfExperience"`
 }
 
 func (Flying) IsExperience()                      {}
 func (this Flying) GetYearsOfExperience() float64 { return this.YearsOfExperience }
 
 func (Flying) IsHobby() {}
+func (this Flying) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Gaming struct {
+	Employees         []*Employee `json:"employees"`
 	Genres            []GameGenre `json:"genres"`
 	Name              string      `json:"name"`
 	YearsOfExperience float64     `json:"yearsOfExperience"`
@@ -50,18 +74,50 @@ func (Gaming) IsExperience()                      {}
 func (this Gaming) GetYearsOfExperience() float64 { return this.YearsOfExperience }
 
 func (Gaming) IsHobby() {}
+func (this Gaming) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Other struct {
-	Name string `json:"name"`
+	Employees []*Employee `json:"employees"`
+	Name      string      `json:"name"`
 }
 
 func (Other) IsHobby() {}
+func (this Other) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Programming struct {
+	Employees []*Employee           `json:"employees"`
 	Languages []ProgrammingLanguage `json:"languages"`
 }
 
 func (Programming) IsHobby() {}
+func (this Programming) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Sdk struct {
 	Upc             string                `json:"upc"`
@@ -71,10 +127,21 @@ type Sdk struct {
 func (Sdk) IsEntity() {}
 
 type Travelling struct {
-	CountriesLived []Country `json:"countriesLived"`
+	Employees      []*Employee `json:"employees"`
+	CountriesLived []Country   `json:"countriesLived"`
 }
 
 func (Travelling) IsHobby() {}
+func (this Travelling) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Country string
 
