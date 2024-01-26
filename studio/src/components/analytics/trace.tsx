@@ -149,7 +149,10 @@ function Node({
   let additionalTooltipContent = "";
 
   if (span.scopeName.startsWith("wundergraph/cosmo/router/")) {
-    if (span.spanName === "Operation - Parse and Validate") {
+    if (span.spanName === "Authenticate") {
+      additionalTooltipContent =
+        "Authenticates the request against the configured authentication provider.";
+    } else if (span.spanName === "Operation - Parse and Validate") {
       additionalTooltipContent =
         "This is the first step in the query execution. It parses the variables, query and validates it against the schema.";
     } else if (span.spanName === "Operation - Planning") {
