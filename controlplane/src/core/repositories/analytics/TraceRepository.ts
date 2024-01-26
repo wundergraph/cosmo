@@ -30,6 +30,7 @@ export class TraceRepository {
         ServiceName as serviceName,
         StatusCode as statusCode,
         StatusMessage as statusMessage,
+        ScopeName as scopeName,
         SpanAttributes['wg.operation.content'] as attrOperationContent,
         SpanAttributes['wg.operation.name'] as attrOperationName,
         SpanAttributes['http.status_code'] as attrHttpStatusCode,
@@ -40,7 +41,9 @@ export class TraceRepository {
         SpanAttributes['http.user_agent'] as attrHttpUserAgent,
         SpanAttributes['http.method'] as attrHttpMethod,
         SpanAttributes['http.target'] as attrHttpTarget,
-        SpanAttributes['wg.subgraph.name'] as attrSubgraphName
+        SpanAttributes['wg.subgraph.name'] as attrSubgraphName,
+        SpanAttributes['wg.engine.plan_cache_hit'] as attrEnginePlanCacheHit,
+        SpanAttributes['wg.engine.request_tracing_enabled'] as attrEngineRequestTracingEnabled
     FROM ${this.client.database}.otel_traces
     WHERE (TraceId = trace_id) AND (Timestamp >= start) AND (Timestamp <= end) AND SpanAttributes['wg.organization.id'] = '${organizationID}'
     ORDER BY Timestamp ASC
@@ -53,6 +56,7 @@ export class TraceRepository {
     }
 
     return results.map((result) => ({
+      scopeName: result.scopeName,
       timestamp: timestampToNanoseconds(result.timestamp),
       traceID: result.traceId,
       spanID: result.spanId,
@@ -75,6 +79,8 @@ export class TraceRepository {
         httpMethod: result.attrHttpMethod,
         httpTarget: result.attrHttpTarget,
         subgraphName: result.attrSubgraphName,
+        enginePlanCacheHit: result.attrEnginePlanCacheHit,
+        engineRequestTracingEnabled: result.attrEngineRequestTracingEnabled,
       },
     }));
   }
