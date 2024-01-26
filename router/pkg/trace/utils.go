@@ -2,6 +2,8 @@ package trace
 
 import (
 	"context"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/codes"
 	"net/http"
 	"strings"
 
@@ -51,4 +53,14 @@ func GetClientInfo(h http.Header, primaryHeader, fallbackHeader, defaultValue st
 		}
 	}
 	return value
+}
+
+// AttachErrToSpan attaches an error to a span if it is not nil.
+// If called multiple times, every error will be attached.
+func AttachErrToSpan(span trace.Span, err error) {
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(rotel.WgRequestError.Bool(true))
+		span.RecordError(err)
+	}
 }
