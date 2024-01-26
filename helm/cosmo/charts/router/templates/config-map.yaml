@@ -15,4 +15,3 @@ data:
   controlplaneUrl: "{{ .Values.configuration.controlplaneUrl }}"
   otelCollectorUrl: "{{ .Values.configuration.otelCollectorUrl }}"
   graphqlMetricsCollectorUrl: "{{ .Values.configuration.graphqlMetricsCollectorUrl }}"
-  federatedGraphName: "{{ .Values.configuration.federatedGraphName }}"

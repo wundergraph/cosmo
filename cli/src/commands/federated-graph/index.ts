@@ -8,6 +8,7 @@ import FetchFederatedGraphCommand from './commands/fetch.js';
 import ListFederatedGraphs from './commands/list.js';
 import UpdateFederatedGraphCommand from './commands/update.js';
 import GetFederatedGraphChangelog from './commands/changelog.js';
+import MoveFederatedGraph from './commands/move.js';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('federated-graph');
@@ -19,6 +20,7 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(CheckFederatedGraphCommand(opts));
   schema.addCommand(ListFederatedGraphs(opts));
   schema.addCommand(GetFederatedGraphChangelog(opts));
+  schema.addCommand(MoveFederatedGraph(opts));
 
   schema.hook('preAction', () => {
     checkAPIKey();

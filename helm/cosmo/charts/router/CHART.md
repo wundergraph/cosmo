@@ -16,7 +16,6 @@ WunderGraph Cosmo router.
 | configuration.controlplaneUrl | string | `""` | The URL of the Cosmo Controlplane. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.devMode | bool | `false` | Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground |
 | configuration.executionConfig | string | `""` | The execution config file to statically configure the router (If no pulling of the config is desired) |
-| configuration.federatedGraphName | string | `"production"` | The name of the graph to be served by the router (required) |
 | configuration.graphApiToken | string | `"replace-me"` | The router token is used to authenticate the router against the controlplane (required) |
 | configuration.graphqlMetricsCollectorUrl | string | `""` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |

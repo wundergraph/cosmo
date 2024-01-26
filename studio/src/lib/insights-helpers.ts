@@ -166,9 +166,16 @@ export const nsToTime = (ns: bigint) => {
   return milliseconds.toFixed(2) + " ms";
 };
 
-export const createDateRange = (range: number) => {
+export const createStringifiedDateRange = (range: number) => {
   return JSON.stringify({
     start: formatISO(subHours(new Date(), range)),
     end: formatISO(new Date()),
   });
+};
+
+export const createDateRange = (range: number) => {
+  return {
+    start: subHours(new Date(), range),
+    end: new Date(),
+  };
 };

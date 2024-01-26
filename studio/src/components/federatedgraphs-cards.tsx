@@ -281,7 +281,6 @@ export const RunRouterCommand = ({
   -p 3002:3002 \\
   --add-host=host.docker.internal:host-gateway \\
   --platform=linux/amd64 \\
-  -e FEDERATED_GRAPH_NAME="${graphName}" \\
   -e DEV_MODE=true \\
   -e LISTEN_ADDR=0.0.0.0:3002 \\
   -e GRAPH_API_TOKEN=${token} \\
@@ -376,6 +375,7 @@ export const Empty = ({
   setIsMigrating: Dispatch<SetStateAction<boolean>>;
 }) => {
   const user = useContext(UserContext);
+  const router = useRouter();
 
   let labels = "team=A";
   return (
@@ -398,7 +398,7 @@ export const Empty = ({
       actions={
         <div className="flex flex-col gap-y-6">
           <CLI
-            command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
+            command={`npx wgc federated-graph create production --namespace ${router.query.namespace} --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
           />
           {checkUserAccess({
             rolesToBe: ["admin", "developer"],
@@ -442,7 +442,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
 
   return (
     <Link
-      href={`/${user?.currentOrganization?.slug}/graph/${graph.name}`}
+      href={`/${user?.currentOrganization?.slug}/${graph.namespace}/graph/${graph.name}`}
       className="project-list-item group"
     >
       <Card className="flex h-full flex-col py-4 transition-all group-hover:border-input-active">

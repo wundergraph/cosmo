@@ -295,9 +295,10 @@ UsagesPage.getLayout = (page) => {
     page,
     "Usage",
     "Usage and limits of the current billing cycle",
-    <>
+    undefined,
+    <Toolbar className="w-auto">
       <IncreaseLimits />
-    </>,
+    </Toolbar>,
   );
 };
 

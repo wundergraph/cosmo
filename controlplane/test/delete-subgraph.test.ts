@@ -24,6 +24,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:4000',
     });
@@ -32,6 +33,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -40,6 +42,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -48,18 +51,21 @@ describe('DeleteSubgraph', (ctx) => {
     // delete the subgraph because it was the only one it produced a composition error
     const deleteFederatedSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName,
+      namespace: 'default',
     });
     expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
     // after deletion of subgraph verify if the subgraph was deleted
     const getSubgraphResp = await client.getSubgraphByName({
       name: subgraphName,
+      namespace: 'default',
     });
     expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     // after deletion of subgraph verify if the federated graph exists
     const getFederatedGraphResp = await client.getFederatedGraphByName({
       name: federatedGraphName,
+      namespace: 'default',
     });
     expect(getFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getFederatedGraphResp.subgraphs.length).toBe(0);
@@ -78,6 +84,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     const createFederatedGraph1Resp = await client.createFederatedGraph({
       name: federatedGraph1Name,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:4000',
     });
@@ -86,6 +93,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     const createFederatedGraph2Resp = await client.createFederatedGraph({
       name: federatedGraph2Name,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:4000',
     });
@@ -94,6 +102,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -102,6 +111,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -110,6 +120,7 @@ describe('DeleteSubgraph', (ctx) => {
     // Check if subgraph exists on both federated graphs
     let getGraph1Resp = await client.getFederatedGraphByName({
       name: federatedGraph1Name,
+      namespace: 'default',
     });
 
     expect(getGraph1Resp.response?.code).toBe(EnumStatusCode.OK);
@@ -118,6 +129,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     let getGraph2Resp = await client.getFederatedGraphByName({
       name: federatedGraph1Name,
+      namespace: 'default',
     });
 
     expect(getGraph2Resp.response?.code).toBe(EnumStatusCode.OK);
@@ -127,6 +139,7 @@ describe('DeleteSubgraph', (ctx) => {
     // delete the subgraph because it was the only one it produced a composition error
     const deleteFederatedSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName,
+      namespace: 'default',
     });
     expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
@@ -134,11 +147,13 @@ describe('DeleteSubgraph', (ctx) => {
     // and don't exist on both federated graphs
     const getSubgraphResp = await client.getSubgraphByName({
       name: subgraphName,
+      namespace: 'default',
     });
     expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     getGraph1Resp = await client.getFederatedGraphByName({
       name: federatedGraph1Name,
+      namespace: 'default',
     });
 
     expect(getGraph1Resp.response?.code).toBe(EnumStatusCode.OK);
@@ -146,6 +161,7 @@ describe('DeleteSubgraph', (ctx) => {
 
     getGraph2Resp = await client.getFederatedGraphByName({
       name: federatedGraph1Name,
+      namespace: 'default',
     });
 
     expect(getGraph2Resp.response?.code).toBe(EnumStatusCode.OK);

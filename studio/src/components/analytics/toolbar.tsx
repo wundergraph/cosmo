@@ -1,34 +1,32 @@
+import { useFeature } from "@/hooks/use-feature";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { calURL } from "@/lib/constants";
 import Link from "next/link";
-import { ParsedUrlQueryInput } from "querystring";
 import { useRouter } from "next/router";
+import { ParsedUrlQueryInput } from "querystring";
 import { BiAnalyse } from "react-icons/bi";
+import { BsQuestionCircle } from "react-icons/bs";
 import { IoBarcodeSharp } from "react-icons/io5";
+import { Button } from "../ui/button";
+import { Spacer } from "../ui/spacer";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { Toolbar } from "../ui/toolbar";
-import { Button } from "../ui/button";
-import { calURL } from "@/lib/constants";
-import { BsQuestionCircle } from "react-icons/bs";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
-import { useContext } from "react";
-import { UserContext } from "../app-provider";
-import { Spacer } from "../ui/spacer";
-import { useFeature } from "@/hooks/use-feature";
 
 export const AnalyticsToolbar: React.FC<{
   tab: string;
   children?: React.ReactNode;
 }> = (props) => {
   const router = useRouter();
-  const user = useContext(UserContext);
 
   const query: ParsedUrlQueryInput = {
     organizationSlug: router.query.organizationSlug,
+    namespace: router.query.namespace,
     slug: router.query.slug,
   };
 
@@ -65,7 +63,8 @@ export const AnalyticsToolbar: React.FC<{
           <TabsTrigger value="overview" asChild>
             <Link
               href={{
-                pathname: "/[organizationSlug]/graph/[slug]/analytics",
+                pathname:
+                  "/[organizationSlug]/[namespace]/graph/[slug]/analytics",
                 query: isTracePage ? tracesRoute : query,
               }}
               onClick={updateRoute}
@@ -78,7 +77,8 @@ export const AnalyticsToolbar: React.FC<{
           <TabsTrigger value="traces" asChild>
             <Link
               href={{
-                pathname: "/[organizationSlug]/graph/[slug]/analytics/traces",
+                pathname:
+                  "/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces",
                 query: isTracePage ? tracesRoute : query,
               }}
               onClick={updateRoute}

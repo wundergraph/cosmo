@@ -7,12 +7,12 @@ cd "../cli"
 export COSMO_API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705
 export COSMO_API_URL=http://localhost:3001
 
-pnpm wgc federated-graph create production --label-matcher team=A,team=B --label-matcher env=production --routing-url http://localhost:3002/graphql
+pnpm wgc federated-graph create mygraph --namespace default --label-matcher team=A,team=B --routing-url http://localhost:3002/graphql
 
-pnpm wgc subgraph create employees --label team=A env=production --routing-url http://employees:4001/graphql
-pnpm wgc subgraph create family --label team=A env=production --routing-url http://family:4002/graphql
-pnpm wgc subgraph create hobbies --label team=B env=production --routing-url http://hobbies:4003/graphql
-pnpm wgc subgraph create products --label team=B env=production --routing-url http://products:4004/graphql
+pnpm wgc subgraph create employees --namespace default --label team=A --routing-url http://employees:4001/graphql
+pnpm wgc subgraph create family --namespace default --label team=A --routing-url http://family:4002/graphql
+pnpm wgc subgraph create hobbies --namespace default --label team=B --routing-url http://hobbies:4003/graphql
+pnpm wgc subgraph create products --namespace default --label team=B --routing-url http://products:4004/graphql
 
 cd "../scripts"
 
@@ -20,4 +20,4 @@ cd "../scripts"
 
 cd "../cli"
 
-pnpm wgc router token create mytoken --graph-name production
+pnpm wgc router token create mytoken --graph-name mygraph --namespace default

@@ -15,6 +15,7 @@ export const SchemaToolbar = ({
 
   const query = {
     organizationSlug: router.query.organizationSlug,
+    namespace: router.query.namespace,
     slug: router.query.slug,
   };
 
@@ -25,7 +26,7 @@ export const SchemaToolbar = ({
           <TabsTrigger value="explorer" asChild>
             <Link
               href={{
-                pathname: "/[organizationSlug]/graph/[slug]/schema",
+                pathname: "/[organizationSlug]/[namespace]/graph/[slug]/schema",
                 query,
               }}
               className="flex items-center gap-x-2"
@@ -37,7 +38,8 @@ export const SchemaToolbar = ({
           <TabsTrigger value="sdl" asChild>
             <Link
               href={{
-                pathname: "/[organizationSlug]/graph/[slug]/schema/sdl",
+                pathname:
+                  "/[organizationSlug]/[namespace]/graph/[slug]/schema/sdl",
                 query,
               }}
               className="flex items-center gap-x-2"

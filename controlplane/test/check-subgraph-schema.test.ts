@@ -43,6 +43,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     let resp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -51,6 +52,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -59,6 +61,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     // test for no changes in schema
     let checkResp = await client.checkSubgraphSchema({
       subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
@@ -68,6 +71,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     // test for breaking changes in schema
     checkResp = await client.checkSubgraphSchema({
       subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
@@ -152,6 +156,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:8081',
     });
@@ -159,6 +164,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     let resp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -167,6 +173,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
 
@@ -174,6 +181,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const checkResp = await client.checkSubgraphSchema({
       subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! } extend type Product { hello: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
@@ -258,6 +266,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:8081',
     });
@@ -265,6 +274,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const resp = await client.createFederatedSubgraph({
       name: subgraphName,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -273,6 +283,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const checkResp = await client.checkSubgraphSchema({
       subgraphName,
+      namespace: 'default',
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);

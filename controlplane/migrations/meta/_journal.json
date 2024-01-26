@@ -540,6 +540,13 @@
       "when": 1705415801445,
       "tag": "0076_brave_wilson_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "5",
+      "when": 1706098558720,
+      "tag": "0077_white_glorian",
+      "breakpoints": true
     }
   ]
 }

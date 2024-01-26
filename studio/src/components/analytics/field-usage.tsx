@@ -21,7 +21,10 @@ import {
 } from "@/components/ui/table";
 import useWindowSize from "@/hooks/use-window-size";
 import { formatMetric } from "@/lib/format-metric";
-import { createDateRange, useChartData } from "@/lib/insights-helpers";
+import {
+  createStringifiedDateRange,
+  useChartData,
+} from "@/lib/insights-helpers";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { CubeIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -55,7 +58,6 @@ import { ChartTooltip } from "./charts";
 import { createFilterState } from "./constructAnalyticsTableQueryState";
 import { useApplyParams } from "./use-apply-params";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
-import { UserContext } from "../app-provider";
 
 export const FieldUsage = ({
   usageData,
@@ -64,7 +66,6 @@ export const FieldUsage = ({
 }) => {
   const router = useRouter();
   const { slug, organizationSlug } = router.query;
-  const user = useContext(UserContext);
 
   const subgraphs = useContext(GraphContext)?.subgraphs ?? [];
 
@@ -240,8 +241,9 @@ export const FieldUsage = ({
                                 <TableCell>
                                   <Link
                                     href={{
-                                      pathname: `/[organizationSlug]/graph/[slug]/analytics/traces`,
+                                      pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces`,
                                       query: {
+                                        namespace: router.query.namespace,
                                         organizationSlug:
                                           router.query.organizationSlug,
                                         slug: router.query.slug,
@@ -250,7 +252,9 @@ export const FieldUsage = ({
                                           operationHash: op.hash,
                                         }),
                                         dateRange: range
-                                          ? createDateRange(getRange(range))
+                                          ? createStringifiedDateRange(
+                                              getRange(range),
+                                            )
                                           : JSON.stringify({
                                               start: formatISO(dateRange.start),
                                               end: formatISO(dateRange.end),
@@ -291,7 +295,7 @@ export const FieldUsage = ({
                   return (
                     <Link
                       key={id}
-                      href={`/${organizationSlug}/graph/${slug}/schema/sdl?subgraph=${subgraph.name}`}
+                      href={`/${organizationSlug}/${subgraph.namespace}/graph/${slug}/schema/sdl?subgraph=${subgraph.name}`}
                       className="text-primary"
                     >
                       <div className="flex items-center gap-x-1">
@@ -349,6 +353,7 @@ export const FieldUsageSheet = () => {
       typename: isNamedType ? undefined : type,
       namedType: isNamedType ? type : undefined,
       graphName: graph?.graph?.name,
+      namespace: graph?.graph?.namespace,
       range: range,
       dateRange: {
         start: formatISO(dateRange.start),

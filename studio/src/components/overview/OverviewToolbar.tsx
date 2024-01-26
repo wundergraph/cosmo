@@ -16,6 +16,7 @@ export const OverviewToolbar = ({
   const router = useRouter();
 
   const query = {
+    namespace: router.query.namespace,
     organizationSlug: router.query.organizationSlug,
     slug: router.query.slug,
   };
@@ -27,7 +28,7 @@ export const OverviewToolbar = ({
           <TabsTrigger value="overview" asChild>
             <Link
               href={{
-                pathname: "/[organizationSlug]/graph/[slug]",
+                pathname: "/[organizationSlug]/[namespace]/graph/[slug]",
                 query,
               }}
               className="flex items-center gap-x-2"
@@ -39,7 +40,7 @@ export const OverviewToolbar = ({
           <TabsTrigger value="readme" asChild>
             <Link
               href={{
-                pathname: "/[organizationSlug]/graph/[slug]/readme",
+                pathname: "/[organizationSlug]/[namespace]/graph/[slug]/readme",
                 query,
               }}
               className="flex items-center gap-x-2"

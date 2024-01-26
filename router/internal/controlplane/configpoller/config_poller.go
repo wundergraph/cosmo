@@ -11,6 +11,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
+	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
 	"net/http"
@@ -36,7 +37,6 @@ type configPoller struct {
 	nodeServiceClient         nodev1connect.NodeServiceClient
 	graphApiToken             string
 	controlplaneEndpoint      string
-	federatedGraphName        string
 	logger                    *zap.Logger
 	latestRouterConfigVersion string
 	poller                    controlplane.Poller
@@ -44,11 +44,10 @@ type configPoller struct {
 	cdnConfigClient           *cdn.RouterConfigClient
 }
 
-func New(graphName, endpoint, token string, opts ...Option) ConfigPoller {
+func New(endpoint, token string, opts ...Option) ConfigPoller {
 	c := &configPoller{
 		controlplaneEndpoint: endpoint,
 		graphApiToken:        token,
-		federatedGraphName:   graphName,
 	}
 
 	for _, opt := range opts {
@@ -126,9 +125,14 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *string) (*nodev1.RouterConfig, error) {
 	start := time.Now()
 
+	claims, err := jwt.ExtractFederatedGraphTokenClaims(c.graphApiToken)
+	if err != nil {
+		return nil, err
+	}
+
 	req := connect.NewRequest(&nodev1.GetConfigRequest{
-		GraphName: c.federatedGraphName,
-		Version:   version,
+		GraphId: claims.FederatedGraphID,
+		Version: version,
 	})
 
 	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", c.graphApiToken))

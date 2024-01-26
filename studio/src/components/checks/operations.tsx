@@ -131,6 +131,7 @@ export const CheckOperations = () => {
     ...getCheckOperations.useQuery({
       checkId: id,
       graphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
     }),
     enabled: !!graphContext?.graph?.name,
     refetchOnWindowFocus: false,

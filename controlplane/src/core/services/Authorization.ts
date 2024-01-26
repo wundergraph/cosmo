@@ -70,12 +70,12 @@ export class Authorization {
       }
 
       if (targetType === 'federatedGraph') {
-        const fedGraph = await fedRepo.byName(name);
+        const fedGraph = await fedRepo.byTargetId(targetId);
         if (!(fedGraph?.creatorUserId && fedGraph.creatorUserId === userId)) {
           throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'Not authorized');
         }
       } else {
-        const subgraph = await subgraphRepo.byName(name);
+        const subgraph = await subgraphRepo.byTargetId(targetId);
         const subgraphMembers = await subgraphRepo.getSubgraphMembersbyTargetId(targetId);
         const userIds = subgraphMembers.map((s) => s.userId);
 

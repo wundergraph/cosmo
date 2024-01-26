@@ -9,34 +9,35 @@ import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schemaPush = new Command('create');
-  schemaPush.description('Creates a federated subgraph on the control plane.');
-  schemaPush.argument(
+  const command = new Command('create');
+  command.description('Creates a federated subgraph on the control plane.');
+  command.argument(
     '<name>',
     'The name of the subgraph to create. It is usually in the format of <org>.<service.name> and is used to uniquely identify your subgraph.',
   );
-  schemaPush.requiredOption(
+  command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
+  command.requiredOption(
     '-r, --routing-url <url>',
     'The routing url of your subgraph. This is the url that the subgraph will be accessible at.',
   );
-  schemaPush.requiredOption(
+  command.requiredOption(
     '--label [labels...]',
     'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
-  schemaPush.option(
+  command.option(
     '--header [headers...]',
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
   );
-  schemaPush.option(
+  command.option(
     '--subscription-url [url]',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.',
   );
-  schemaPush.option(
+  command.option(
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
   );
-  schemaPush.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
-  schemaPush.action(async (name, options) => {
+  command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
+  command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
       readmeFile = resolve(process.cwd(), options.readme);
@@ -53,6 +54,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
         name,
+        namespace: options.namespace,
         labels: options.label.map((label: string) => splitLabel(label)),
         routingUrl: options.routingUrl,
         headers: options.header,
@@ -79,5 +81,5 @@ export default (opts: BaseCommandOptions) => {
     }
   });
 
-  return schemaPush;
+  return command;
 };

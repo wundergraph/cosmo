@@ -31,6 +31,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:8081',
     });
@@ -38,6 +39,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
 
     let resp = await client.createFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8000',
     });
@@ -45,12 +47,14 @@ describe('ComposeFederationV2Graphs', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       schema: pandasSchema,
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
       name: 'products',
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8001',
     });
@@ -58,12 +62,14 @@ describe('ComposeFederationV2Graphs', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: 'products',
+      namespace: 'default',
       schema: productsSchema,
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
       name: 'reviews',
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8002',
     });
@@ -71,12 +77,14 @@ describe('ComposeFederationV2Graphs', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: 'reviews',
+      namespace: 'default',
       schema: reviewsSchema,
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
       name: 'users',
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8002',
     });
@@ -84,12 +92,14 @@ describe('ComposeFederationV2Graphs', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: 'users',
+      namespace: 'default',
       schema: usersSchema,
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     const graph = await client.getFederatedGraphByName({
       name: federatedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
@@ -98,6 +108,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
 
     const fetchSchemaResp = await client.getFederatedGraphSDLByName({
       name: federatedGraphName,
+      namespace: 'default',
     });
     expect(fetchSchemaResp.response?.code).toBe(EnumStatusCode.OK);
 

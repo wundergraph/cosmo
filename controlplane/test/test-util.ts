@@ -93,18 +93,21 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
 export const createSubgraph = async (
   client: PromiseClient<typeof PlatformService>,
   name: string,
+  namespace: string,
   schemaSDL: string,
   labels: Label[],
   routingUrl: string,
 ) => {
   const createRes = await client.createFederatedSubgraph({
     name,
+    namespace,
     labels,
     routingUrl,
   });
   expect(createRes.response?.code).toBe(EnumStatusCode.OK);
   const publishResp = await client.publishFederatedSubgraph({
     name,
+    namespace,
     schema: Uint8Array.from(Buffer.from(schemaSDL)),
   });
   expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
@@ -115,11 +118,13 @@ export const createSubgraph = async (
 export const createFederatedGraph = async (
   client: PromiseClient<typeof PlatformService>,
   name: string,
+  namespace: string,
   labelMatchers: string[],
   routingUrl: string,
 ) => {
   const createFedGraphRes = await client.createFederatedGraph({
     name,
+    namespace,
     routingUrl,
     labelMatchers,
   });

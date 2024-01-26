@@ -13,6 +13,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
   command.description('Updates a subgraph on the control plane.');
   command.argument('<name>', 'The name of the subgraph to update.');
+  command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option(
     '-r, --routing-url <url>',
     'The routing url of your subgraph. This is the url that the subgraph will be accessible at.',
@@ -52,6 +53,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.updateSubgraph(
       {
         name,
+        namespace: options.namespace,
         labels:
           options.label?.map?.((label: string) => {
             const { key, value } = splitLabel(label);
@@ -80,7 +82,11 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.dim(pc.green(`Subgraph called '${name}' was updated.`)));
 
       const compositionErrorsTable = new Table({
-        head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('ERROR_MESSAGE')),
+        ],
         colWidths: [30, 120],
         wordWrap: true,
       });
@@ -93,7 +99,11 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
       for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
+        compositionErrorsTable.push([
+          compositionError.federatedGraphName,
+          compositionError.namespace,
+          compositionError.message,
+        ]);
       }
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());

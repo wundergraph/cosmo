@@ -322,9 +322,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, nats *natsserver.Server) (*core.Router, error) {
 	cfg := config.Config{
-		Graph: config.Graph{
-			Name: "production",
-		},
+		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
 			URL:       cdn.URL,
 			CacheSize: 1024 * 1024,
@@ -372,7 +370,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	routerOpts := []core.Option{
-		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
 		core.WithGraphApiToken(graphApiToken),

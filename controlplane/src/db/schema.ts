@@ -228,6 +228,27 @@ export const federatedGraphToSubgraphsRelations = relations(subgraphsToFederated
   }),
 }));
 
+export const namespaces = pgTable(
+  'namespaces',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      uniqueName: unique('unique_name').on(t.name, t.organizationId),
+    };
+  },
+);
+
 export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph'] as const);
 
 export const targets = pgTable(
@@ -247,10 +268,15 @@ export const targets = pgTable(
       onDelete: 'set null',
     }),
     readme: text('readme'),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
   },
   (t) => {
     return {
-      nameIndex: uniqueIndex('organization_name_idx').on(t.organizationId, t.name),
+      nameIndex: uniqueIndex('organization_name_idx').on(t.organizationId, t.name, t.namespaceId),
       // Currently, not supported by drizzle-orm
       // https://github.com/drizzle-team/drizzle-orm/issues/817
       // We create them in a custom migration
@@ -300,6 +326,14 @@ export const targetsRelations = relations(targets, ({ one, many }) => ({
     references: [federatedGraphs.targetId],
   }),
   labelMatchers: many(targetLabelMatchers),
+  namespace: one(namespaces, {
+    fields: [targets.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
+
+export const namespacesRelations = relations(namespaces, ({ many }) => ({
+  targets: many(targets),
 }));
 
 export const schemaVersion = pgTable('schema_versions', {
@@ -963,6 +997,10 @@ export const auditLogs = pgTable('audit_logs', {
   targetId: uuid('target_id'), // e.g. id of the organization when a federated graph is created
   targetType: text('target_type'), // the type of the target e.g. organization
   targetDisplayName: text('target_display_name'), // human-readable name of the target e.g. organization name
+
+  // Namespace information
+  targetNamespaceId: text('target_namespace_id'), // The id of the namespace in which the action is performed
+  targetNamespaceDisplayName: text('target_namespace'), // The name of the namespace in which the action is performed
 
   actorId: uuid('actor_id'), // e.g. id of the user. Can be null if the actor is a system or api_key
   actorDisplayName: text('actor_display_name'), // human-readable name of the actor e.g. user name, email

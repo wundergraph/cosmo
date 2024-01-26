@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 	"io"
@@ -141,7 +142,7 @@ func NewRouterConfigClient(endpoint string, token string, opts PersistentOperati
 		opts.Logger = zap.NewNop()
 	}
 
-	federatedGraphID, organizationID, err := parseCDNToken(token)
+	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +150,8 @@ func NewRouterConfigClient(endpoint string, token string, opts PersistentOperati
 	return &RouterConfigClient{
 		cdnURL:              u,
 		authenticationToken: token,
-		federatedGraphID:    url.PathEscape(federatedGraphID),
-		organizationID:      url.PathEscape(organizationID),
+		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
+		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          newRetryableHTTPClient(opts.Logger),
 		logger:              opts.Logger,
 	}, nil

@@ -99,6 +99,7 @@ export class GraphCompositionRepository {
         id: graphCompositionSubgraphs.id,
         schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
         name: targets.name,
+        targetId: targets.id,
       })
       .from(graphCompositionSubgraphs)
       .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))

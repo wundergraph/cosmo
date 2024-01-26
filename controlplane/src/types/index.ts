@@ -27,6 +27,7 @@ export type Feature = {
 };
 
 export interface ListFilterOptions {
+  namespaceId?: string;
   limit: number;
   offset: number;
 }
@@ -50,6 +51,8 @@ export interface FederatedGraphDTO {
   composedSchemaVersionId?: string;
   creatorUserId?: string;
   readme?: string;
+  namespace: string;
+  namespaceId: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -77,6 +80,8 @@ export interface SubgraphDTO {
   labels: Label[];
   creatorUserId?: string;
   readme?: string;
+  namespace: string;
+  namespaceId: string;
 }
 
 export interface MigrationSubgraph {

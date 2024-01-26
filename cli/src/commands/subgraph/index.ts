@@ -9,6 +9,7 @@ import UpdateSubgraph from './commands/update.js';
 import FixSubGraph from './commands/fix.js';
 import ListSubgraphs from './commands/list.js';
 import IntrospectSubgraph from './commands/introspect.js';
+import MoveSubgraph from './commands/move.js';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('subgraph');
@@ -21,6 +22,7 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(FixSubGraph(opts));
   schema.addCommand(ListSubgraphs(opts));
   schema.addCommand(IntrospectSubgraph(opts));
+  schema.addCommand(MoveSubgraph(opts));
 
   schema.hook('preAction', () => {
     checkAPIKey();

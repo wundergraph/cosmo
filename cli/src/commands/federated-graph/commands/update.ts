@@ -12,6 +12,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
   command.description('Updates a federated graph on the control plane.');
   command.argument('<name>', 'The name of the federated graph to update.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option(
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',
@@ -38,6 +39,7 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.updateFederatedGraph(
       {
         name,
+        namespace: options.namespace,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
@@ -53,7 +55,11 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.dim(pc.green(`The federated graph '${name}' was updated.`)));
 
       const compositionErrorsTable = new Table({
-        head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('ERROR_MESSAGE')),
+        ],
         colWidths: [30, 120],
         wordWrap: true,
       });
@@ -64,7 +70,11 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
       for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
+        compositionErrorsTable.push([
+          compositionError.federatedGraphName,
+          compositionError.namespace,
+          compositionError.message,
+        ]);
       }
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());

@@ -18,7 +18,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
   test('Should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors', async (testContext) => {
     const { client, server } = await SetupTest(testContext, dbname);
-    
+
     const federatedGraphName = genID('fedGraph');
 
     const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
@@ -27,6 +27,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: ['team=A'],
       routingUrl: 'http://localhost:8080',
     });
@@ -34,6 +35,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     let resp = await client.createFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       labels: [{ key: 'team', value: 'A' }],
       routingUrl: 'http://localhost:8081',
     });
@@ -42,6 +44,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     let publishResp = await client.publishFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       schema: pandasSchema,
     });
 
@@ -49,6 +52,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     resp = await client.createFederatedSubgraph({
       name: 'users',
+      namespace: 'default',
       labels: [{ key: 'team', value: 'A' }],
       routingUrl: 'http://localhost:8082',
     });
@@ -57,6 +61,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     publishResp = await client.publishFederatedSubgraph({
       name: 'users',
+      namespace: 'default',
       schema: usersSchema,
     });
 
@@ -64,6 +69,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     resp = await client.createFederatedSubgraph({
       name: 'products',
+      namespace: 'default',
       labels: [{ key: 'team', value: 'B' }],
       routingUrl: 'http://localhost:8082',
     });
@@ -72,6 +78,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     publishResp = await client.publishFederatedSubgraph({
       name: 'products',
+      namespace: 'default',
       schema: productsSchema,
     });
 
@@ -79,6 +86,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     let checkResp = await client.checkFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: ['team=A'],
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
@@ -86,6 +94,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     checkResp = await client.checkFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: ['team=B'],
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);

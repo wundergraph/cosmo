@@ -9,9 +9,10 @@
 ## Getting started for local development
 
 ### Prerequisites
+
 - A running Kubernetes cluster, with PV provisioner support + ingress controller
-    - [Minikube](https://minikube.sigs.k8s.io/docs/start/)
-      - Requires enabling `minikube addons enable ingress`
+  - [Minikube](https://minikube.sigs.k8s.io/docs/start/)
+    - Requires enabling `minikube addons enable ingress`
 - [Helm 3.2.0+](https://helm.sh/docs/intro/install/) installed locally
 - [Kapp](https://carvel.dev/kapp/docs/latest/install/) installed locally
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/) installed locally
@@ -35,9 +36,11 @@ kubectl cluster-info
 ```
 
 #### 1. Getting container images built
+
 For local development we're assuming you are building the container images locally rather than consuming the released versions from the container repository.
 
 If you are running the kubernetes instances locally:
+
 ```shell
 make docker-build-minikube # If you're running k8s on the same CPU architecture as locally
                            # If your cluster runs on a linux/amd64 architecture please update the Makefile accordingly
@@ -60,6 +63,7 @@ We run several Kubernetes jobs to run migrations. While we provide Helm hook sup
 #### 3. Make ingress available locally
 
 ##### Linux
+
 Minikube will automatically expose the ingress controller on your local machine. You can get the IP with `minikube ip`.
 Now, add the following entries to your `/etc/hosts` file and replace the IP with the IP you get from the previous step.
 
@@ -91,7 +95,7 @@ the tunnel on privileged ports.
 
 #### 4. Access the Cosmo Studio
 
-Open [http://studio.local](http://studio.local) in your browser and login with the default credentials:
+Open [http://studio.wundergraph.local](http://studio.wundergraph.local) in your browser and login with the default credentials:
 
 ```
 Username: foo@wundergraph.com

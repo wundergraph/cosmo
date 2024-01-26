@@ -38,6 +38,7 @@ describe('CompositionErrors', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
+      namespace: 'default',
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:8081',
     });
@@ -45,6 +46,7 @@ describe('CompositionErrors', (ctx) => {
 
     let resp = await client.createFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8000',
     });
@@ -52,6 +54,7 @@ describe('CompositionErrors', (ctx) => {
 
     let publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: 'pandas',
+      namespace: 'default',
       schema: pandasSchema,
     });
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
@@ -59,6 +62,7 @@ describe('CompositionErrors', (ctx) => {
 
     resp = await client.createFederatedSubgraph({
       name: 'products',
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8001',
     });
@@ -66,6 +70,7 @@ describe('CompositionErrors', (ctx) => {
 
     publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: 'products',
+      namespace: 'default',
       schema: productsSchema,
     });
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);

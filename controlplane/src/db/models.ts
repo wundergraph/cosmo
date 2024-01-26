@@ -30,7 +30,8 @@ export type AuditableType =
   | 'integration'
   | 'member_role'
   | 'user'
-  | 'subscription';
+  | 'subscription'
+  | 'namespace';
 
 export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'user';
 
@@ -40,6 +41,7 @@ export type AuditLogAction =
   | 'created'
   | 'updated'
   | 'deleted'
+  | 'moved'
   | 'accepted'
   | 'declined'
   | 'joined'
@@ -49,6 +51,8 @@ export type AuditLogAction =
   | 'left';
 
 export type AuditLogFullAction =
+  | 'namespace.created'
+  | 'namespace.deleted'
   | 'organization.created'
   | 'organization.updated'
   | 'graph_token.created'
@@ -56,9 +60,11 @@ export type AuditLogFullAction =
   | 'federated_graph.created'
   | 'federated_graph.deleted'
   | 'federated_graph.updated'
+  | 'federated_graph.moved'
   | 'subgraph.created'
   | 'subgraph.deleted'
   | 'subgraph.updated'
+  | 'subgraph.moved'
   | 'subgraph_member.created'
   | 'subgraph_member.deleted'
   | 'webhook_config.created'

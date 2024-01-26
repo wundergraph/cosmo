@@ -19,8 +19,6 @@ const (
 )
 
 type Graph struct {
-	// Name is required if no router config path is provided
-	Name string `yaml:"name" envconfig:"FEDERATED_GRAPH_NAME" validate:"required_without_router_config"`
 	// Token is required if no router config path is provided
 	Token string `yaml:"token" envconfig:"GRAPH_API_TOKEN" validate:"required_without_router_config"`
 }
