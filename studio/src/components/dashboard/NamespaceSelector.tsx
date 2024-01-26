@@ -21,16 +21,23 @@ export const NamespaceSelector = () => {
 
   const [namespaces, setNamespaces] = useState(["default"]);
 
+  // Retrieve the stored namespace from local storage
   const [namespace, setNamespace] = useLocalStorage(
     "namespace",
     namespaceParam || "default",
   );
 
   const { data } = useQuery(getNamespaces.useQuery());
+
   useEffect(() => {
     if (!data || data.namespaces.length === 0) return;
+
+    if (!data.namespaces.some((ns) => ns.name === namespace)) {
+      setNamespace("default");
+    }
+
     setNamespaces(data.namespaces.map((ns) => ns.name));
-  }, [data]);
+  }, [data, namespace, setNamespace]);
 
   const applyParams = useApplyParams();
 
