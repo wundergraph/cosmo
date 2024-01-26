@@ -277,7 +277,7 @@ export const targets = pgTable(
   (t) => {
     return {
       // A target is unique by its name, type and namespace
-      // That implies that a user can create a subgraph and a federated graph with the same name
+      // That implies that a user can create a subgraph and a federated graph with the same name in the same namespace
       nameIndex: uniqueIndex('organization_name_idx').on(t.organizationId, t.type, t.name, t.namespaceId),
       // Currently, not supported by drizzle-orm
       // https://github.com/drizzle-team/drizzle-orm/issues/817
