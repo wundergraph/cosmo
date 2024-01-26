@@ -127,7 +127,8 @@ type requestContext struct {
 	keys map[string]any
 	// responseWriter is the original response writer received by the router.
 	responseWriter http.ResponseWriter
-	// error indicates if the request / response has an error. Error can be set even if the response status code is 200.
+	// error indicates if the request / response has an error. Due to the nature of GraphQL
+	// Error can be set even if the response status code is 200.
 	error error
 	// request is the original request received by the router.
 	request *http.Request
