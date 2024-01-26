@@ -727,11 +727,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (await subgraphRepo.exists(req.name, req.namespace)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `Subgraph '${req.name}' already exists in the namespace ${req.namespace}`,
+            },
+            compositionErrors: [],
+          };
+        }
+
         if (await fedGraphRepo.exists(req.name, req.namespace)) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Federated graph '${req.name}' already exists in the namespace`,
+              details: `Federated graph '${req.name}' already exists in the namespace ${req.namespace}`,
             },
             compositionErrors: [],
           };
@@ -888,6 +898,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -911,6 +922,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const namespace = await namespaceRepo.byName(req.namespace);
+
         if (!namespace) {
           return {
             response: {
@@ -921,12 +933,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const exists = await subgraphRepo.exists(req.name, req.namespace);
-        if (exists) {
+        if (await federatedGraphRepo.exists(req.name, req.namespace)) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Subgraph with the name ${req.name} already exists in the namespace ${req.namespace} `,
+              details: `Federated Graph with the name '${req.name}' already exists in the namespace ${req.namespace}`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        if (await subgraphRepo.exists(req.name, req.namespace)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `Subgraph with the name '${req.name}' already exists in the namespace ${req.namespace}`,
             },
             compositionErrors: [],
           };
