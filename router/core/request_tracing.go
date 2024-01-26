@@ -23,11 +23,11 @@ func ParseRequestTraceOptions(r *http.Request) (options resolve.RequestTraceOpti
 	var (
 		values []string
 	)
-	if r.Header.Get(RequestTraceHeader) == "true" {
+	if r.Header.Get(RequestTraceHeader) != "" {
 		options.Enable = true
 		values = r.Header.Values(RequestTraceHeader)
 	}
-	if r.URL.Query().Get(RequestTraceQueryParameter) == "true" {
+	if r.URL.Query().Get(RequestTraceQueryParameter) != "" {
 		options.Enable = true
 		values = r.URL.Query()[RequestTraceQueryParameter]
 	}
