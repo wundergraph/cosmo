@@ -197,7 +197,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			tracePlanStart = resolve.GetDurationNanoSinceTraceStart(r.Context())
 		}
 
-		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Plan",
+		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Planning",
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
 		)
