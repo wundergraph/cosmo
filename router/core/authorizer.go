@@ -12,17 +12,20 @@ import (
 )
 
 type CosmoAuthorizerOptions struct {
-	FieldConfigurations []*nodev1.FieldConfiguration
+	FieldConfigurations           []*nodev1.FieldConfiguration
+	RejectOperationIfUnauthorized bool
 }
 
 func NewCosmoAuthorizer(opts *CosmoAuthorizerOptions) *CosmoAuthorizer {
 	return &CosmoAuthorizer{
-		FieldConfigurations: opts.FieldConfigurations,
+		fieldConfigurations: opts.FieldConfigurations,
+		rejectUnauthorized:  opts.RejectOperationIfUnauthorized,
 	}
 }
 
 type CosmoAuthorizer struct {
-	FieldConfigurations []*nodev1.FieldConfiguration
+	fieldConfigurations []*nodev1.FieldConfiguration
+	rejectUnauthorized  bool
 }
 
 func (a *CosmoAuthorizer) getAuth(ctx context.Context) (isAuthenticated bool, scopes []string) {
@@ -33,26 +36,36 @@ func (a *CosmoAuthorizer) getAuth(ctx context.Context) (isAuthenticated bool, sc
 	return true, auth.Scopes()
 }
 
+func (a *CosmoAuthorizer) handleRejectUnauthorized(result *resolve.AuthorizationDeny) (*resolve.AuthorizationDeny, error) {
+	if result == nil {
+		return nil, nil
+	}
+	if a.rejectUnauthorized {
+		return nil, ErrUnauthorized
+	}
+	return result, nil
+}
+
 func (a *CosmoAuthorizer) AuthorizePreFetch(ctx *resolve.Context, dataSourceID string, input json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
-	return a.validateScopes(required, isAuthenticated, actual)
+	return a.handleRejectUnauthorized(a.validateScopes(required, isAuthenticated, actual))
 }
 
 func (a *CosmoAuthorizer) AuthorizeObjectField(ctx *resolve.Context, dataSourceID string, object json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
-	return a.validateScopes(required, isAuthenticated, actual)
+	return a.handleRejectUnauthorized(a.validateScopes(required, isAuthenticated, actual))
 }
 
-func (a *CosmoAuthorizer) validateScopes(requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny, err error) {
+func (a *CosmoAuthorizer) validateScopes(requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny) {
 	if !isAuthenticated {
 		return &resolve.AuthorizationDeny{
 			Reason: "not authenticated",
-		}, nil
+		}
 	}
 	if len(requiredOrScopes) == 0 {
-		return nil, nil
+		return nil
 	}
 WithNext:
 	for _, requiredOrScope := range requiredOrScopes {
@@ -61,11 +74,11 @@ WithNext:
 				continue WithNext
 			}
 		}
-		return nil, nil
+		return nil
 	}
 	return &resolve.AuthorizationDeny{
 		Reason: a.renderReason(requiredOrScopes, actual),
-	}, nil
+	}
 }
 
 func (a *CosmoAuthorizer) renderReason(requiredOrScopes []*nodev1.Scopes, actual []string) string {
@@ -100,9 +113,9 @@ func (a *CosmoAuthorizer) renderReason(requiredOrScopes []*nodev1.Scopes, actual
 }
 
 func (a *CosmoAuthorizer) requiredScopesForField(coordinate resolve.GraphCoordinate) []*nodev1.Scopes {
-	for i := range a.FieldConfigurations {
-		if a.FieldConfigurations[i].TypeName == coordinate.TypeName && a.FieldConfigurations[i].FieldName == coordinate.FieldName {
-			return a.FieldConfigurations[i].AuthorizationConfiguration.RequiredOrScopes
+	for i := range a.fieldConfigurations {
+		if a.fieldConfigurations[i].TypeName == coordinate.TypeName && a.fieldConfigurations[i].FieldName == coordinate.FieldName {
+			return a.fieldConfigurations[i].AuthorizationConfiguration.RequiredOrScopes
 		}
 	}
 	return nil

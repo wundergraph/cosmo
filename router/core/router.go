@@ -127,6 +127,8 @@ type (
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
+
+		authorization *config.AuthorizationConfiguration
 	}
 
 	Server interface {
@@ -890,15 +892,22 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		})
 	}
 
+	authorizerOptions := &CosmoAuthorizerOptions{
+		FieldConfigurations:           routerConfig.EngineConfig.FieldConfigurations,
+		RejectOperationIfUnauthorized: false,
+	}
+
+	if r.Config.authorization != nil {
+		authorizerOptions.RejectOperationIfUnauthorized = r.Config.authorization.RejectOperationIfUnauthorized
+	}
+
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
 		Executor:                               executor,
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 		WebSocketStats:                         r.WebsocketStats,
 		TracerProvider:                         r.tracerProvider,
-		Authorizer: NewCosmoAuthorizer(&CosmoAuthorizerOptions{
-			FieldConfigurations: routerConfig.EngineConfig.FieldConfigurations,
-		}),
+		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
 	})
 
 	var publicKey *ecdsa.PublicKey
@@ -1309,6 +1318,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 func WithAccessController(controller *AccessController) Option {
 	return func(r *Router) {
 		r.accessController = controller
+	}
+}
+
+func WithAuthorizationConfig(cfg *config.AuthorizationConfiguration) Option {
+	return func(r *Router) {
+		r.Config.authorization = cfg
 	}
 }
 
