@@ -30,7 +30,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
-	jwt2 "github.com/wundergraph/cosmo/router/internal/jwt"
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	brotli "go.withmatt.com/connect-brotli"
 
 	"github.com/dgraph-io/ristretto"
@@ -712,7 +712,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	if r.graphApiToken != "" {
-		claims, err := jwt2.ExtractFederatedGraphTokenClaims(r.graphApiToken)
+		claims, err := rjwt.ExtractFederatedGraphTokenClaims(r.graphApiToken)
 		if err != nil {
 			return nil, err
 		}
