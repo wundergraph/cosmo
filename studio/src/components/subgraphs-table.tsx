@@ -157,7 +157,7 @@ export const AddSubgraphUsersContent = ({
     <div className="flex flex-col gap-y-6">
       {!rbac?.enabled ? (
         <Alert>
-          <InfoCircledIcon className="h-4 w-4" />
+          <InfoCircledIcon className="h-5 w-5" />
           <AlertTitle>Attention!</AlertTitle>
           <AlertDescription>
             Enable RBAC in the settings to add subgraph members.
