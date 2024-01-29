@@ -32,6 +32,7 @@ export const config = {
   webURL: process.env.COSMO_WEB_URL || 'https://cosmo.wundergraph.com',
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
   kcRealm: process.env.KC_REALM || 'cosmo',
+  cdnURL: process.env.CDN_URL || 'http://127.0.0.1:11000',
   version: info.version,
 };
 
