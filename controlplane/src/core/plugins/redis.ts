@@ -53,6 +53,7 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
   }
 
   const redis = new IORedis.Redis({
+    connectionName: 'controlplane',
     host: opts.host,
     port: opts.port,
     maxRetriesPerRequest: 0, // required for bullmq

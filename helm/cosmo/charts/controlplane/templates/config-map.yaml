@@ -26,3 +26,5 @@ data:
   githubAppId: "{{ .Values.configuration.githubAppId }}"
   slackAppClientId: "{{ .Values.configuration.slackAppClientId }}"
   defaultBillingPlan: "{{ .Values.configuration.defaultBillingPlan }}"
+  redisHost: "{{ .Values.global.redis.host }}"
+  redisPort: "{{ .Values.global.redis.port }}"

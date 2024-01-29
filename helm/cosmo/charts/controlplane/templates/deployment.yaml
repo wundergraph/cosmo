@@ -13,6 +13,10 @@ metadata:
     # Support for k14s.io. This annotation will wait for the keycloak deployments to be ready before deploying.
     kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
     {{- end }}
+    {{- if .Values.global.redis.enabled }}
+    # Support for k14s.io. This annotation will wait for the redis deployments to be ready before deploying.
+    kapp.k14s.io/change-rule.redis: "upsert after upserting cosmo.apps.redis.wundergraph.com/deployment"
+    {{- end }}
     # Only deploy the controlplane after the migrations have been applied.
     kapp.k14s.io/change-rule.ch-migration: "upsert after upserting cosmo.apps.controlplane.wundergraph.com/ch-migration"
     kapp.k14s.io/change-rule.db-migration: "upsert after upserting cosmo.apps.controlplane.wundergraph.com/db-migration"
@@ -142,6 +146,16 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: keycloakClientId
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: redisHost
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: redisPort
             - name: WEBHOOK_URL
               valueFrom:
                 configMapKeyRef:
