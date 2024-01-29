@@ -14,15 +14,17 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { cn } from "@/lib/utils";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
-  Table as TableInstance,
   ColumnFiltersState,
   PaginationState,
   Row,
   SortingState,
+  Table as TableInstance,
   VisibilityState,
   flexRender,
   functionalUpdate,
@@ -57,9 +59,6 @@ import { getDataTableFilters } from "./getDataTableFilters";
 import { RefreshInterval, refreshIntervals } from "./refresh-interval";
 import { useApplyParams } from "./use-apply-params";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
-import { cn } from "@/lib/utils";
-import { useUser } from "@/hooks/use-user";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -81,7 +80,6 @@ export function AnalyticsDataTable<T>({
   refresh: () => void;
 }) {
   const router = useRouter();
-  const user = useUser();
 
   const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
 

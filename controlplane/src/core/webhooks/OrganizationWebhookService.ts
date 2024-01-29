@@ -12,6 +12,7 @@ export interface FederatedGraphSchemaUpdate {
   federated_graph: {
     id: string;
     name: string;
+    namespace: string;
   };
   organization: {
     id: string;

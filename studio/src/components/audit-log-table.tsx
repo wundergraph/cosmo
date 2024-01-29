@@ -71,6 +71,7 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               auditableDisplayName,
               targetDisplayName,
               targetType,
+              targetNamespaceDisplayName,
             }) => {
               let preParagraph = null;
               let postParagraph = null;
@@ -80,8 +81,13 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               } else if (auditAction === "member_role.updated") {
                 preParagraph = "role for";
                 postParagraph = "to";
+              } else if (action === "moved") {
+                postParagraph = `to ${targetNamespaceDisplayName} namespace,`;
               } else if (auditableDisplayName) {
                 preParagraph = "in";
+                if (!!targetNamespaceDisplayName) {
+                  postParagraph = `in ${targetNamespaceDisplayName} namespace,`;
+                }
               }
 
               let label = null;

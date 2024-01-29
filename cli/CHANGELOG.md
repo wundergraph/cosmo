@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.38.1](https://github.com/wundergraph/cosmo/compare/wgc@0.38.0...wgc@0.38.1) (2024-01-26)
+
+### Bug Fixes
+
+* remove typo in move option ([#459](https://github.com/wundergraph/cosmo/issues/459)) ([71397df](https://github.com/wundergraph/cosmo/commit/71397dfaa85f2ffc23be14871299dc35f0a3d38f)) (@StarpTech)
+
+# [0.38.0](https://github.com/wundergraph/cosmo/compare/wgc@0.37.4...wgc@0.38.0) (2024-01-26)
+
+### Features
+
+* namespaces ([#447](https://github.com/wundergraph/cosmo/issues/447)) ([bbe5258](https://github.com/wundergraph/cosmo/commit/bbe5258c5e764c52947f831d3a7f1a2f93c267d4)) (@thisisnithin)
+
+## [0.37.4](https://github.com/wundergraph/cosmo/compare/wgc@0.37.3...wgc@0.37.4) (2024-01-26)
+
+**Note:** Version bump only for package wgc
+
 ## [0.37.3](https://github.com/wundergraph/cosmo/compare/wgc@0.37.2...wgc@0.37.3) (2024-01-23)
 
 **Note:** Version bump only for package wgc

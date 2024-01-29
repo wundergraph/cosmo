@@ -5,17 +5,27 @@ import {
   HomeIcon,
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getSubgraphByName,
   getSubgraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  GetSubgraphByNameResponse,
+  Subgraph,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import { Fragment, createContext, useMemo } from "react";
+import { PiChat, PiGraphLight } from "react-icons/pi";
+import { EmptyState } from "../empty-state";
+import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
@@ -29,6 +39,7 @@ import { Button } from "../ui/button";
 import { GetSubgraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { PiChat, PiGraphLight } from "react-icons/pi";
 import { ChartBarIcon } from "@heroicons/react/24/outline";
+import { Badge } from "../ui/badge";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -42,11 +53,13 @@ export const SubgraphContext = createContext<SubgraphContextProps | undefined>(
 export const SubgraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.subgraphSlug as string;
 
   const { data, isLoading, error, refetch } = useQuery(
     getSubgraphByName.useQuery({
       name: slug,
+      namespace,
     }),
   );
 
@@ -61,7 +74,7 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
   }, [data]);
 
   const links: NavLink[] = useMemo(() => {
-    const basePath = `/${organizationSlug}/subgraph/${slug}`;
+    const basePath = `/${organizationSlug}/${namespace}/subgraph/${slug}`;
 
     return [
       {
@@ -92,7 +105,7 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         icon: <PiChat className="h-4 w-4" />,
       },
     ];
-  }, [slug, organizationSlug]);
+  }, [organizationSlug, namespace, slug]);
 
   let render: React.ReactNode;
 
@@ -134,32 +147,64 @@ export const SubgraphSelect = () => {
 
   const router = useRouter();
   const slug = router.query.subgraphSlug as string;
+  const namespace = router.query.namespace as string;
+
+  const selected = data?.graphs.find(
+    (g) => g.name === slug && g.namespace === namespace,
+  );
+
+  const groupedGraphs = data?.graphs.reduce<Record<string, Subgraph[]>>(
+    (result, graph) => {
+      const { namespace, name } = graph;
+
+      if (!result[namespace]) {
+        result[namespace] = [];
+      }
+
+      result[namespace].push(graph);
+
+      return result;
+    },
+    {},
+  );
 
   return (
     <Select
-      value={slug}
-      onValueChange={(gID) =>
+      value={selected?.id}
+      onValueChange={(gID) => {
+        const graph = data?.graphs.find((g) => g.id === gID);
         router.push({
           pathname: router.pathname,
           query: {
             ...router.query,
-            subgraphSlug: gID,
+            namespace: graph?.namespace,
+            subgraphSlug: graph?.name,
           },
-        })
-      }
+        });
+      }}
     >
       <SelectTrigger
         value={slug}
         className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
       >
-        <SelectValue aria-label={slug}>{slug}</SelectValue>
+        <SelectValue aria-label={selected?.name}>
+          {selected?.name}{" "}
+          <Badge variant="secondary">{selected?.namespace}</Badge>
+        </SelectValue>
       </SelectTrigger>
       <SelectContent className="min-w-[200px]">
-        {data?.graphs?.map(({ name }) => {
+        {Object.entries(groupedGraphs ?? {}).map(([namespace, graphs]) => {
           return (
-            <SelectItem key={name} value={name}>
-              {name}
-            </SelectItem>
+            <SelectGroup key={namespace}>
+              <SelectLabel>{namespace}</SelectLabel>
+              {graphs.map(({ id, name }) => {
+                return (
+                  <SelectItem key={id} value={id}>
+                    {name}
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
           );
         })}
       </SelectContent>

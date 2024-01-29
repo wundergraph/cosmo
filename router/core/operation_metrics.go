@@ -44,14 +44,14 @@ func (m *OperationMetrics) AddOperationContext(opContext *operationContext) {
 	m.opContext = opContext
 }
 
-func (m *OperationMetrics) Finish(hasErrored bool, statusCode int, responseSize int) {
+func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int) {
 	m.inflightMetric()
 
 	ctx := context.Background()
 
-	if hasErrored {
+	if err != nil {
 		// We don't store false values in the metrics, so only add the error attribute if it's true, DON'T CHANGE THIS
-		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(hasErrored))
+		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(true))
 	}
 
 	rm := m.routerMetrics.MetricStore()
@@ -66,7 +66,7 @@ func (m *OperationMetrics) Finish(hasErrored bool, statusCode int, responseSize 
 	rm.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
 
 	if m.opContext != nil {
-		m.exportSchemaUsageInfo(m.opContext, statusCode, hasErrored)
+		m.exportSchemaUsageInfo(m.opContext, statusCode, err != nil)
 	}
 }
 

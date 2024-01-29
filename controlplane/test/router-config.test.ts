@@ -1,7 +1,7 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { joinLabel } from '@wundergraph/cosmo-shared';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { noQueryRootTypeError } from '@wundergraph/composition';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { joinLabel } from '@wundergraph/cosmo-shared';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
@@ -28,6 +28,7 @@ describe('Router Config', (ctx) => {
 
     const createPandasSubgraph = await client.createFederatedSubgraph({
       name: pandasSubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8081',
     });
@@ -36,13 +37,14 @@ describe('Router Config', (ctx) => {
 
     const publishPandaResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         type Query {
           allPandas: [Panda]
           panda(name: ID!): Panda
         }
-        
+
         type Panda {
             name:ID!
             favoriteFood: String
@@ -55,6 +57,7 @@ describe('Router Config', (ctx) => {
 
     const createUsersSubgraph = await client.createFederatedSubgraph({
       name: usersSubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8082',
     });
@@ -63,6 +66,7 @@ describe('Router Config', (ctx) => {
 
     const publishUsersResp = await client.publishFederatedSubgraph({
       name: usersSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         type User @key(fields: "email") {
@@ -70,7 +74,7 @@ describe('Router Config', (ctx) => {
           name: String
           totalProductsCreated: Int
         }
-        
+
         type Query {
           user: User
         }
@@ -80,16 +84,18 @@ describe('Router Config', (ctx) => {
 
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
 
-    const createInvetorySubgraph = await client.createFederatedSubgraph({
+    const createInventorySubgraph = await client.createFederatedSubgraph({
       name: inventorySubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8083',
     });
 
-    expect(createInvetorySubgraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(createInventorySubgraph.response?.code).toBe(EnumStatusCode.OK);
 
     const publishInventoryResp = await client.publishFederatedSubgraph({
       name: inventorySubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
           directive @tag(name: String!) repeatable on FIELD_DEFINITION
@@ -117,6 +123,7 @@ describe('Router Config', (ctx) => {
 
     const createProductsSubgraph = await client.createFederatedSubgraph({
       name: productsSubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8084',
     });
@@ -125,6 +132,7 @@ describe('Router Config', (ctx) => {
 
     const publishProductsResp = await client.publishFederatedSubgraph({
       name: productsSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         directive @tag(name: String!) repeatable on FIELD_DEFINITION
@@ -135,28 +143,28 @@ describe('Router Config', (ctx) => {
           package: String
           variation: ProductVariation
           dimensions: ProductDimension
-        
+
           createdBy: User @provides(fields: "totalProductsCreated")
         }
-        
+
         type ProductVariation {
           id: ID!
         }
-        
+
         type ProductDimension {
           size: String
           weight: Float
         }
-        
+
         extend type Query {
           allProducts: [Product]
           product(id: ID!): Product
         }
-        
+
         extend type User @key(fields: "email") {
           email: ID! @external
           totalProductsCreated: Int @external
-        }        
+        }
       `),
       ),
     });
@@ -165,6 +173,7 @@ describe('Router Config', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8080',
       labelMatchers: [joinLabel(label)],
     });
@@ -173,6 +182,7 @@ describe('Router Config', (ctx) => {
 
     const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
@@ -200,6 +210,7 @@ describe('Router Config', (ctx) => {
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
+      namespace: 'default',
       routingUrl: 'http://localhost:8080',
       labelMatchers: [joinLabel(label)],
     });
@@ -208,6 +219,7 @@ describe('Router Config', (ctx) => {
 
     const createPandasSubgraph = await client.createFederatedSubgraph({
       name: pandasSubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8081',
     });
@@ -216,6 +228,7 @@ describe('Router Config', (ctx) => {
 
     const publishPandaResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         type Panda {
@@ -232,6 +245,7 @@ describe('Router Config', (ctx) => {
 
     const createUsersSubgraph = await client.createFederatedSubgraph({
       name: usersSubgraph,
+      namespace: 'default',
       labels: [label],
       routingUrl: 'http://localhost:8082',
     });
@@ -240,6 +254,7 @@ describe('Router Config', (ctx) => {
 
     let publishUsersResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         type Query {
@@ -256,6 +271,7 @@ describe('Router Config', (ctx) => {
 
     const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
+      namespace: 'default',
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
@@ -275,6 +291,7 @@ describe('Router Config', (ctx) => {
 
     publishUsersResp = await client.publishFederatedSubgraph({
       name: usersSubgraph,
+      namespace: 'default',
       schema: Uint8Array.from(
         Buffer.from(`
         type User @key(fields: "email") {
@@ -282,7 +299,7 @@ describe('Router Config', (ctx) => {
           name: String
           totalProductsCreated: Int
         }
-        
+
         type Query {
           user: User
         }

@@ -23,6 +23,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('changelog');
   command.description('Fetches the changelog for a federated graph');
   command.argument('<name>', 'The name of the federated graph to update.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option('-l, --limit [number]', 'Limit of entries. Defaults to 10', '10');
   command.option('-f, --offset [number]', 'Offset of entries. Defaults to 0', '0');
   command.option('-s, --start [date]', 'Start date. Defaults to 3 days back');
@@ -50,6 +51,7 @@ export default (opts: BaseCommandOptions) => {
           start: formatISO(startOfDay(startDate)),
           end: formatISO(endOfDay(endDate)),
         },
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,

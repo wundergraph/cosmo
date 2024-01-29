@@ -6,7 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"sync"
 	"time"
@@ -48,6 +51,7 @@ type PreHandler struct {
 	enableRequestTracing        bool
 	tracerProvider              *sdktrace.TracerProvider
 	flushTelemetryAfterResponse bool
+	tracer                      trace.Tracer
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -63,6 +67,10 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		enableRequestTracing:        opts.EnableRequestTracing,
 		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
 		tracerProvider:              opts.TracerProvider,
+		tracer: opts.TracerProvider.Tracer(
+			"wundergraph/cosmo/router/pre_handler",
+			trace.WithInstrumentationVersion("0.0.1"),
+		),
 	}
 }
 
@@ -83,11 +91,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		var (
 			// In GraphQL the statusCode does not always express the error state of the request
 			// we use this flag to determine if we have an error for the request metrics
-			hasRequestError bool
-			writtenBytes    int
-			statusCode      = http.StatusOK
-			traceOptions    = resolve.RequestTraceOptions{}
-			tracePlanStart  int64
+			finalErr       error
+			writtenBytes   int
+			statusCode     = http.StatusOK
+			traceOptions   = resolve.RequestTraceOptions{}
+			tracePlanStart int64
 		)
 
 		clientInfo := NewClientInfoFromRequest(r)
@@ -98,7 +106,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		defer func() {
-			metrics.Finish(hasRequestError, statusCode, writtenBytes)
+			metrics.Finish(finalErr, statusCode, writtenBytes)
 		}()
 
 		// XXX: This buffer needs to be returned to the pool only
@@ -108,9 +116,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		body, err := h.parser.ReadBody(r.Context(), buf, r.Body)
 		if err != nil {
-			hasRequestError = true
+			finalErr = err
 			requestLogger.Error(err.Error())
-			writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(err), w, requestLogger)
+			writeRequestErrors(r.Context(), http.StatusBadRequest, graphql.RequestErrorsFromError(err), w, requestLogger)
 			return
 		}
 
@@ -121,9 +129,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 				if err != nil {
 					err := errors.New("invalid request token. Router version 0.42.1 or above is required to use request tracing in production")
-					hasRequestError = true
+					finalErr = err
 					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-					writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
+					writeRequestErrors(r.Context(), http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
 					return
 				}
 
@@ -142,21 +150,45 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
 		}
 
-		validatedReq, err := h.accessController.Access(w, r)
-		if err != nil {
-			hasRequestError = true
-			requestLogger.Error(err.Error())
-			writeRequestErrors(r, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
-			return
+		// If we have authenticators, we try to authenticate the request
+		if len(h.accessController.authenticators) > 0 {
+			authenticateSpanCtx, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
+				trace.WithSpanKind(trace.SpanKindServer),
+			)
+
+			validatedReq, err := h.accessController.Access(w, r)
+			if err != nil {
+				finalErr = err
+				requestLogger.Error(err.Error())
+
+				rtrace.AttachErrToSpan(authenticateSpan, err)
+				authenticateSpan.End()
+
+				writeRequestErrors(authenticateSpanCtx, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
+				return
+			}
+
+			authenticateSpan.End()
+
+			r = validatedReq
 		}
-		r = validatedReq
+
+		engineParseValidateCtx, engineParseValidateSpan := h.tracer.Start(r.Context(), "Operation - Parse and Validate",
+			trace.WithSpanKind(trace.SpanKindServer),
+		)
 
 		operation, err := h.parser.Parse(r.Context(), clientInfo, body, requestLogger)
 		if err != nil {
-			hasRequestError = true
-			h.writeOperationError(w, r, requestLogger, err)
+			finalErr = err
+
+			rtrace.AttachErrToSpan(engineParseValidateSpan, err)
+			engineParseValidateSpan.End()
+
+			h.writeOperationError(engineParseValidateCtx, w, requestLogger, err)
 			return
 		}
+
+		engineParseValidateSpan.End()
 
 		// If the request has a query parameter wg_trace=true we skip the cache
 		// and always plan the operation
@@ -164,20 +196,35 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if !traceOptions.ExcludePlannerStats {
 			tracePlanStart = resolve.GetDurationNanoSinceTraceStart(r.Context())
 		}
+
+		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Planning",
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
+		)
+
 		opContext, err := h.planner.Plan(operation, clientInfo, OperationProtocolHTTP, traceOptions)
 
 		commonAttributeValues := commonMetricAttributes(opContext)
-
 		metrics.AddAttributes(commonAttributeValues...)
 
+		// The attributes have to be added on the root router span
 		initializeSpan(r.Context(), operation, commonAttributeValues)
 
 		if err != nil {
-			hasRequestError = true
+			finalErr = err
+
+			rtrace.AttachErrToSpan(enginePlanSpan, err)
+			enginePlanSpan.End()
+
 			requestLogger.Error("failed to plan operation", zap.Error(err))
-			h.writeOperationError(w, r, requestLogger, err)
+			h.writeOperationError(enginePlanSpanCtx, w, requestLogger, err)
 			return
 		}
+
+		enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
+
+		enginePlanSpan.End()
+
 		if !traceOptions.ExcludePlannerStats {
 			planningTime := resolve.GetDurationNanoSinceTraceStart(r.Context()) - tracePlanStart
 			resolve.SetPlannerStats(r.Context(), resolve.PlannerStats{
@@ -205,7 +252,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		writtenBytes = ww.BytesWritten()
 
 		// Evaluate the request after the request has been handled by the engine
-		hasRequestError = requestContext.hasError
+		finalErr = requestContext.error
+
+		// Mark the root span of the router as failed, so we can easily identify failed requests
+		span := trace.SpanFromContext(newReq.Context())
+		if finalErr != nil {
+			rtrace.AttachErrToSpan(span, finalErr)
+		}
 	})
 }
 
@@ -231,49 +284,47 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 		}
 	}()
 
-	if h.tracerProvider != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := h.tracerProvider.ForceFlush(ctx); err != nil {
-				requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
-			}
-		}()
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := h.tracerProvider.ForceFlush(ctx); err != nil {
+			requestLogger.Error("Failed to flush OTEL tracer", zap.Error(err))
+		}
+	}()
 
 	wg.Wait()
 
 	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
 }
 
-func (h *PreHandler) writeOperationError(w http.ResponseWriter, r *http.Request, requestLogger *zap.Logger, err error) {
+func (h *PreHandler) writeOperationError(ctx context.Context, w http.ResponseWriter, requestLogger *zap.Logger, err error) {
 	var reportErr ReportError
 	var inputErr InputError
 	var poNotFoundErr cdn.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &inputErr):
 		requestLogger.Debug(inputErr.Error())
-		writeRequestErrors(r, inputErr.StatusCode(), graphql.RequestErrorsFromError(err), w, requestLogger)
+		writeRequestErrors(ctx, inputErr.StatusCode(), graphql.RequestErrorsFromError(err), w, requestLogger)
 	case errors.As(err, &poNotFoundErr):
 		requestLogger.Debug("persisted operation not found",
 			zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
 			zap.String("clientName", poNotFoundErr.ClientName()))
-		writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)
+		writeRequestErrors(ctx, http.StatusBadRequest, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
 		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 
 		requestErrors := graphql.RequestErrorsFromOperationReport(*report)
 		if len(requestErrors) > 0 {
-			writeRequestErrors(r, http.StatusOK, requestErrors, w, requestLogger)
+			writeRequestErrors(ctx, http.StatusOK, requestErrors, w, requestLogger)
 			return
 		} else {
 			// there was no external errors to return to user,
 			// so we return an internal server error
-			writeInternalError(r, w, requestLogger)
+			writeInternalError(ctx, w, requestLogger)
 		}
 	default: // If we have an unknown error, we log it and return an internal server error
 		requestLogger.Error(err.Error())
-		writeInternalError(r, w, requestLogger)
+		writeInternalError(ctx, w, requestLogger)
 	}
 }

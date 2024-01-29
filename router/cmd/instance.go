@@ -54,7 +54,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			return nil, err
 		}
 
-		configPoller = configpoller.New(cfg.Graph.Name, cfg.ControlplaneURL, cfg.Graph.Token,
+		configPoller = configpoller.New(cfg.ControlplaneURL, cfg.Graph.Token,
 			configpoller.WithLogger(logger),
 			configpoller.WithPollInterval(cfg.PollInterval),
 			configpoller.WithCDNClient(routerCDN),
@@ -90,7 +90,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	}
 
 	options := []core.Option{
-		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithLogger(logger),
