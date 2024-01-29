@@ -21,6 +21,18 @@ export const envVariables = z
       .transform((val) => Number.parseInt(val)),
     LOG_LEVEL: z.string().default('info'),
     /**
+     * Redis
+     */
+    REDIS_HOST: z.string().default('localhost'),
+    REDIS_PORT: z
+      .string()
+      .default('6379')
+      .transform((val) => Number.parseInt(val)),
+    /**
+     * OPEN AI
+     */
+    OPENAI_API_KEY: z.string().optional(),
+    /**
      * Auth
      */
     AUTH_JWT_SECRET: z.string().min(32).max(32),

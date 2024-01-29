@@ -974,6 +974,7 @@ export class OrganizationRepository {
       security: false,
       support: false,
       oidc: false,
+      ai: false,
     };
 
     for (const feature of features) {

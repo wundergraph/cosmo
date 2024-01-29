@@ -42,6 +42,9 @@ const {
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
   DEFAULT_PLAN,
+  OPENAI_API_KEY,
+  REDIS_HOST,
+  REDIS_PORT,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -55,6 +58,7 @@ const options: BuildConfig = {
     enabled: true,
     level: LOG_LEVEL as pino.LevelWithSilent,
   },
+  openaiAPIKey: OPENAI_API_KEY,
   keycloak: {
     realm: KC_REALM,
     loginRealm: KC_LOGIN_REALM,
@@ -89,6 +93,10 @@ const options: BuildConfig = {
   s3StorageUrl: S3_STORAGE_URL,
   smtpUsername: SMTP_USERNAME,
   smtpPassword: SMTP_PASSWORD,
+  redis: {
+    host: REDIS_HOST,
+    port: REDIS_PORT,
+  },
 };
 
 if (STRIPE_SECRET_KEY) {

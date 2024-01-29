@@ -12,7 +12,7 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres:/data/postgres
     ports:
-      - "5432:5432"
+      - '5432:5432'
     restart: unless-stopped
     networks:
       - primary
@@ -22,7 +22,7 @@ services:
       context: keycloak
       dockerfile: Dockerfile
     environment:
-      KEYCLOAK_EXTRA_ARGS: "--import-realm --health-enabled=true"
+      KEYCLOAK_EXTRA_ARGS: '--import-realm --health-enabled=true'
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
       KEYCLOAK_DATABASE_PORT: ${POSTGRES_PORT:-5432}
@@ -31,7 +31,7 @@ services:
       KEYCLOAK_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       KEYCLOAK_DATABASE_USER: ${POSTGRES_USER:-postgres}
     ports:
-      - "8080:8080"
+      - '8080:8080'
     volumes:
       - ./docker/keycloak/realm.json:/opt/bitnami/keycloak/data/import/realm.json:ro
     restart: unless-stopped
@@ -69,9 +69,9 @@ services:
       - ./docker/prometheus/web.yml:/etc/prometheus/web.yml
     extra_hosts:
       # https://medium.com/@TimvanBaarsen/how-to-connect-to-the-docker-host-from-inside-a-docker-container-112b4c71bc66
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     ports:
-      - "9090:9090"
+      - '9090:9090'
 
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
@@ -79,11 +79,11 @@ services:
       context: graphqlmetrics
       dockerfile: Dockerfile
     environment:
-      CLICKHOUSE_DSN: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}"
+      CLICKHOUSE_DSN: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}'
       INGEST_JWT_SECRET: ${INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
-      LISTEN_ADDR: "0.0.0.0:4005"
+      LISTEN_ADDR: '0.0.0.0:4005'
     ports:
-      - "4005:4005"
+      - '4005:4005'
     restart: unless-stopped
     depends_on:
       - clickhouse
@@ -95,11 +95,11 @@ services:
       context: otelcollector
       dockerfile: Dockerfile
     environment:
-      CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
+      CLICKHOUSE_ENDPOINT: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4'
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
     ports:
-      - "4317:4317" # otlpgrpc
-      - "4318:4318" # otlphttp
+      - '4317:4317' # otlpgrpc
+      - '4318:4318' # otlphttp
     restart: unless-stopped
     depends_on:
       - clickhouse
@@ -114,9 +114,9 @@ services:
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: ${CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:-1}
     ports:
-      - "8123:8123"
-      - "9000:9000"
-      - "9440:9440"
+      - '8123:8123'
+      - '9000:9000'
+      - '9440:9440'
     volumes:
       - clickhouse:/var/lib/clickhouse
       - ./docker/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
@@ -129,8 +129,8 @@ services:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
     ports:
-      - "10000:9000"
-      - "10001:9001"
+      - '10000:9000'
+      - '10001:9001'
     volumes:
       - minio:/data
       - ./docker/minio/entrypoint.sh:/entrypoint.sh
@@ -147,16 +147,39 @@ services:
       - AUTH_JWT_SECRET=fkczyomvdprgvtmvkuhvprxuggkbgwld
       - S3_STORAGE_URL=http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo
     ports:
-      - "11000:11000"
+      - '11000:11000'
     networks:
       - primary
 
   nats:
     image: nats:${DC_NATS_VERSION:-2.10.6}
     ports:
-      - "4222:4222"
-      - "8222:8222"
-      - "6222:6222"
+      - '4222:4222'
+      - '8222:8222'
+      - '6222:6222'
+    networks:
+      - primary
+
+  redis:
+    image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis:/data
+    networks:
+      - primary
+
+  redis-slave:
+    image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    ports:
+      - '6380:6379'
+    command: redis-server --slaveof redis 6379
+    depends_on:
+      - redis
+    volumes:
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis-slave:/data
     networks:
       - primary
 
@@ -172,3 +195,5 @@ volumes:
   clickhouse:
   prometheus:
   minio:
+  redis:
+  redis-slave:

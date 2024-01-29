@@ -3,8 +3,6 @@ import type { Options } from 'tsup';
 import type { Plugin } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 
-
-
 const polyfillPlugin: Plugin = {
   name: 'Polyfill',
   setup(build) {
@@ -31,9 +29,9 @@ const stringHashPLugin: Plugin = {
         const replaced = file.text.replace(needle, 'stringHash($1)');
         file.contents = new TextEncoder().encode(replaced);
       }
-    })
-  }
-}
+    });
+  },
+};
 
 const polyfillNodePlugin = polyfillNode({}) as any;
 
@@ -46,9 +44,8 @@ export const tsup: Options = {
   minify: true,
   esbuildPlugins: [polyfillNodePlugin, polyfillPlugin, stringHashPLugin],
   noExternal: [/(.*)/],
-  entryPoints: ['src/index.ts'],
   watch: false,
-  target: 'es6',
+  target: 'es6', // goja supports only es6
   outDir: 'dist',
-  entry: ['src/**/*.ts'],
+  entry: ['src/**/index.ts'],
 };

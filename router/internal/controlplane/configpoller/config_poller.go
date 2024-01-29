@@ -1,10 +1,13 @@
 package configpoller
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -14,8 +17,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
-	"net/http"
-	"time"
 )
 
 type Option func(cp *configPoller)

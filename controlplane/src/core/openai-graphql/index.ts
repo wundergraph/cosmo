@@ -12,22 +12,27 @@ export class OpenAIGraphql {
     this.client = new OpenAI(configuration);
   }
 
-  public async createREADME(input: { graphName: string; sdl: string }): Promise<{ readme: string }> {
+  public async generateReadme(input: { graphName: string; sdl: string }): Promise<{ readme: string }> {
     const response = await this.client.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
-          content: `You are a friendly assistant that helps to create documentation for users based on GraphQL schema. The output must be markdown. Concentrate what data can be retrieved from it and what use cases it enables from a consumer perspective. The name of the project is "${input.graphName}". Start with a short but easy to understand summary, conclude with key features and use cases. Add exactly one example for a valid graphql query according to the provided graph schema.
+          content: `You are a friendly assistant that helps to create documentation for users based on GraphQL schema. The output must be markdown. Concentrate what data can be retrieved from it and what use cases it enables from a consumer perspective. The name of the graph is "${input.graphName}". Start with a short but easy to understand summary, conclude with key features and use cases. Add exactly one example for a valid graphql query according to the provided graph schema.
 `,
         },
         {
           role: 'user',
-          content: `Use the following graphql schema to generate the readme: ${input.sdl}`,
+          content: `Use the following graphql schema to generate the readme:
+          \`\`\`graphql
+          ${input.sdl}
+          \`\`\`
+          `,
         },
       ],
       temperature: 0,
       max_tokens: 1000,
+      n: 1,
       top_p: 1,
       frequency_penalty: 0,
       presence_penalty: 0,
@@ -46,6 +51,7 @@ export class OpenAIGraphql {
       model: 'gpt-3.5-turbo',
       temperature: 0,
       top_p: 1,
+      n: 1,
       frequency_penalty: 0,
       presence_penalty: 0,
       stream: false,

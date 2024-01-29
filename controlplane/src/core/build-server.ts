@@ -7,10 +7,12 @@ import { pino, stdTimeFunctions, LoggerOptions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
+import { Worker } from 'bullmq';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
+import fastifyRedis from './plugins/redis.js';
 import AuthController from './controllers/auth.js';
 import GitHubWebhookController from './controllers/github.js';
 import StripeWebhookController from './controllers/stripe.js';
@@ -32,6 +34,7 @@ import { Authorization } from './services/Authorization.js';
 import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
+import { GraphReadmeWorker, createDispatcher } from './workers/GraphReadmeWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -43,6 +46,7 @@ export interface BuildConfig {
       keyPath?: string; // e.g. '/path/to/my/client-key.pem'
     };
   };
+  openaiAPIKey?: string;
   allowedOrigins?: string[];
   debugSQL?: boolean;
   production?: boolean;
@@ -83,6 +87,15 @@ export interface BuildConfig {
     webhookSecret?: string;
     defaultPlanId?: string;
   };
+  redis: {
+    host: string;
+    port: number;
+    ssl?: {
+      certPath?: string; // e.g. '/path/to/my/client-cert.pem'
+      caPath?: string; // e.g., '/path/to/my/server-ca.pem'
+      keyPath?: string; // e.g. '/path/to/my/client-key.pem'
+    };
+  };
 }
 
 const developmentLoggerOpts: LoggerOptions = {
@@ -120,6 +133,10 @@ export default async function build(opts: BuildConfig) {
   /**
    * Plugin registration
    */
+
+  await fastify.register(fastifyGracefulShutdown, {
+    timeout: 60_000,
+  });
 
   await fastify.register(fastifyHealth);
 
@@ -192,6 +209,35 @@ export default async function build(opts: BuildConfig) {
   if (opts.smtpUsername && opts.smtpPassword) {
     mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
   }
+
+  const bullWorkers: Worker[] = [];
+  const readmeQueue = createDispatcher(fastify.redis);
+
+  await fastify.register(fastifyRedis, {
+    host: opts.redis.host,
+    port: opts.redis.port,
+    ssl: opts.redis.ssl,
+  });
+
+  if (opts.openaiAPIKey) {
+    bullWorkers.push(
+      GraphReadmeWorker({
+        db: fastify.db,
+        redisConnection: fastify.redis,
+        openAiApiKey: opts.openaiAPIKey,
+        log,
+      }),
+    );
+  }
+
+  fastify.gracefulShutdown((signal, next) => {
+    fastify.log.debug('Shutting down bull workers');
+    for (const worker of bullWorkers) {
+      worker.close();
+    }
+    fastify.log.debug('Bull workers shut down');
+    next();
+  });
 
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
@@ -298,6 +344,8 @@ export default async function build(opts: BuildConfig) {
       blobStorage,
       mailerClient,
       billingDefaultPlanId: opts.stripe?.defaultPlanId,
+      openaiApiKey: opts.openaiAPIKey,
+      readmeQueue,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
@@ -308,10 +356,6 @@ export default async function build(opts: BuildConfig) {
     // We go with 32MiB to avoid allocating too much memory for large requests
     writeMaxBytes: 32 * 1024 * 1024,
     acceptCompression: [compressionBrotli, compressionGzip],
-  });
-
-  await fastify.register(fastifyGracefulShutdown, {
-    timeout: 60_000,
   });
 
   return fastify;

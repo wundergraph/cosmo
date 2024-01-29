@@ -1,6 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFeature } from "@/hooks/use-feature";
-import { useHas } from "@/hooks/use-has";
+import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
@@ -363,7 +363,7 @@ export const SubgraphsTable = ({
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
 }) => {
-  const rbac = useHas("rbac");
+  const rbac = useHasFeature("rbac");
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug;
 

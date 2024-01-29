@@ -10,6 +10,12 @@ import { useRouter } from "next/router";
 import { createContext, ReactNode, useEffect, useState } from "react";
 import { useCookies } from "react-cookie";
 
+export const UserContext = createContext<User | undefined>(undefined);
+
+const queryClient = new QueryClient();
+
+const publicPaths = ["/login", "/signup"];
+
 export interface User {
   id: string;
   email: string;
@@ -18,7 +24,7 @@ export interface User {
   invitations: InvitedOrgs[];
 }
 
-interface InvitedOrgs {
+export interface InvitedOrgs {
   id: string;
   name: string;
   slug: string;
@@ -62,16 +68,12 @@ export interface Session {
   invitations: InvitedOrgs[];
 }
 
-class UnauthorizedError extends Error {
+export class UnauthorizedError extends Error {
   constructor() {
     super();
     this.name = "UnauthorizedError";
   }
 }
-
-const queryClient = new QueryClient();
-
-export const UserContext = createContext<User | undefined>(undefined);
 
 const fetchSession = async () => {
   try {
@@ -94,8 +96,6 @@ const fetchSession = async () => {
     throw e;
   }
 };
-
-const publicPaths = ["/login", "/signup"];
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
@@ -131,9 +131,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (error instanceof UnauthorizedError) return false;
         return failureCount < 3;
       },
+      refetchOnWindowFocus: false,
     },
     queryClient,
   );
+
   const [user, setUser] = useState<User>();
   const [transport, setTransport] = useState<Transport>();
 
