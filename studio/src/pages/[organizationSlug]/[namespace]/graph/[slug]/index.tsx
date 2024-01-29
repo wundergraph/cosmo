@@ -31,6 +31,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CLI } from "@/components/ui/cli";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Spacer } from "@/components/ui/spacer";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
@@ -166,8 +167,17 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               <CardDescription className="text-xs">
                 Last updated:{" "}
                 {lastUpdatedAt
-                  ? `on ${formatDateTime(new Date(lastUpdatedAt))}`
+                  ? `${formatDateTime(new Date(lastUpdatedAt))}`
                   : "Never"}
+                <div className="-mt-1 flex items-center gap-x-2">
+                  <span className="flex-shrink-0 text-muted-foreground">
+                    ID:
+                  </span>
+                  <span className="w-auto flex-shrink-0">
+                    {graphData.graph.id}
+                  </span>
+                  <CopyButton tooltip="Copy ID" value={graphData.graph.id} />
+                </div>
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-y-2 text-sm">
