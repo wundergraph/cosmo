@@ -314,7 +314,7 @@ importers:
         version: 1.1.3(@bufbuild/protobuf@1.4.1)
       '@connectrpc/connect-fastify':
         specifier: ^1.1.3
-        version: 1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect-node@1.1.3)(@connectrpc/connect@1.1.3)(fastify@4.24.3)
+        version: 1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect-node@1.1.3)(@connectrpc/connect@1.1.3)(fastify@4.25.2)
       '@connectrpc/connect-node':
         specifier: ^1.1.3
         version: 1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect@1.1.3)
@@ -367,8 +367,8 @@ importers:
         specifier: ^3.1.9
         version: 3.1.9
       fastify:
-        specifier: ^4.24.3
-        version: 4.24.3
+        specifier: ^4.25.2
+        version: 4.25.2
       fastify-graceful-shutdown:
         specifier: ^3.5.1
         version: 3.5.1
@@ -3058,7 +3058,7 @@ packages:
       chalk: 4.1.2
     dev: true
 
-  /@connectrpc/connect-fastify@1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect-node@1.1.3)(@connectrpc/connect@1.1.3)(fastify@4.24.3):
+  /@connectrpc/connect-fastify@1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect-node@1.1.3)(@connectrpc/connect@1.1.3)(fastify@4.25.2):
     resolution: {integrity: sha512-t5ALJYTbabHeybWK0TuLljanShCArPd9xrVs9ofVzA6nD2TaGwgUg38dzAgWdzHOpagbXShgPM2RlTSVbek+Ag==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
@@ -3070,7 +3070,7 @@ packages:
       '@bufbuild/protobuf': 1.4.1
       '@connectrpc/connect': 1.1.3(@bufbuild/protobuf@1.4.1)
       '@connectrpc/connect-node': 1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect@1.1.3)
-      fastify: 4.24.3
+      fastify: 4.25.2
     dev: false
 
   /@connectrpc/connect-node@1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect@1.1.3):
@@ -13066,8 +13066,8 @@ packages:
       secure-json-parse: 2.7.0
     dev: false
 
-  /fastify@4.24.3:
-    resolution: {integrity: sha512-6HHJ+R2x2LS3y1PqxnwEIjOTZxFl+8h4kSC/TuDPXtA+v2JnV9yEtOsNSKK1RMD7sIR2y1ZsA4BEFaid/cK5pg==}
+  /fastify@4.25.2:
+    resolution: {integrity: sha512-SywRouGleDHvRh054onj+lEZnbC1sBCLkR0UY3oyJwjD4BdZJUrxBqfkfCaqn74pVCwBaRHGuL3nEWeHbHzAfw==}
     dependencies:
       '@fastify/ajv-compiler': 3.5.0
       '@fastify/error': 3.4.0
@@ -13078,8 +13078,8 @@ packages:
       fast-json-stringify: 5.9.1
       find-my-way: 7.7.0
       light-my-request: 5.11.0
-      pino: 8.16.1
-      process-warning: 2.2.0
+      pino: 8.17.2
+      process-warning: 3.0.0
       proxy-addr: 2.0.7
       rfdc: 1.3.0
       secure-json-parse: 2.7.0
@@ -16993,6 +16993,23 @@ packages:
       thread-stream: 2.3.0
     dev: false
 
+  /pino@8.17.2:
+    resolution: {integrity: sha512-LA6qKgeDMLr2ux2y/YiUt47EfgQ+S9LznBWOJdN3q1dx2sv0ziDLUBeVpyVv17TEcGCBuWf0zNtg3M5m1NhhWQ==}
+    hasBin: true
+    dependencies:
+      atomic-sleep: 1.0.0
+      fast-redact: 3.2.0
+      on-exit-leak-free: 2.1.0
+      pino-abstract-transport: 1.1.0
+      pino-std-serializers: 6.2.2
+      process-warning: 3.0.0
+      quick-format-unescaped: 4.0.4
+      real-require: 0.2.0
+      safe-stable-stringify: 2.4.3
+      sonic-boom: 3.7.0
+      thread-stream: 2.3.0
+    dev: false
+
   /pirates@4.0.6:
     resolution: {integrity: sha512-saLsH7WeYYPiD25LDuLRRY/i+6HaPYr6G1OUlN39otzkSTxKnubR9RTxS3/Kk50s1g2JTgFwWQDQyplC5/SHZg==}
     engines: {node: '>= 6'}
@@ -17253,6 +17270,10 @@ packages:
 
   /process-warning@2.2.0:
     resolution: {integrity: sha512-/1WZ8+VQjR6avWOgHeEPd7SDQmFQ1B5mC1eRXsCm5TarlNmx/wCsa5GEaxGm05BORRtyG/Ex/3xq3TuRvq57qg==}
+    dev: false
+
+  /process-warning@3.0.0:
+    resolution: {integrity: sha512-mqn0kFRl0EoqhnL0GQ0veqFHyIN1yig9RHh/InzORTUiZHFRAur+aMtRkELNwGs9aNwKS6tg/An4NYBPGwvtzQ==}
     dev: false
 
   /process@0.11.10:
