@@ -1,24 +1,54 @@
-import { Configuration, OpenAIApi } from 'openai';
+import { OpenAI, ClientOptions } from 'openai';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export class OpenAIGraphql {
-  private readonly client: OpenAIApi;
+  private readonly client: OpenAI;
 
   constructor(config: { openAiApiKey: string | undefined }) {
-    const configuration = new Configuration({
+    const configuration: ClientOptions = {
       apiKey: config.openAiApiKey,
+    };
+    this.client = new OpenAI(configuration);
+  }
+
+  public async createREADME(input: { graphName: string; sdl: string }): Promise<{ readme: string }> {
+    const response = await this.client.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a friendly assistant that helps to create documentation for users based on GraphQL schema. The output must be markdown. Concentrate what data can be retrieved from it and what use cases it enables from a consumer perspective. The name of the project is "${input.graphName}". Start with a short but easy to understand summary, conclude with key features and use cases. Add exactly one example for a valid graphql query according to the provided graph schema.
+`,
+        },
+        {
+          role: 'user',
+          content: `Use the following graphql schema to generate the readme: ${input.sdl}`,
+        },
+      ],
+      temperature: 0,
+      max_tokens: 1000,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      stream: false,
     });
-    this.client = new OpenAIApi(configuration);
+
+    return { readme: response.choices[0].message.content ?? '' };
   }
 
   public async fixSDL(input: { sdl: string; checkResult: string }): Promise<{ sdl: string }> {
     const out = z.object({
       sdl: z.string().describe('The fixed GraphQL Schema'),
     });
-    const res = await this.client.createChatCompletion({
+
+    const res = await this.client.chat.completions.create({
       model: 'gpt-3.5-turbo',
       temperature: 0,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      stream: false,
       messages: [
         {
           role: 'user',
@@ -49,13 +79,12 @@ export class OpenAIGraphql {
     });
 
     try {
-      return out.parse(JSON.parse(res.data.choices[0].message!.function_call!.arguments!));
+      return out.parse(JSON.parse(res.choices[0].message!.function_call!.arguments!));
     } catch (e: any) {
       const errorText = e.toString();
       if (errorText.includes('Unexpected token')) {
         return this.fixSDL(input);
       }
-      console.log(`OpenAI fixSDL failed: ${errorText}\n\nresponse:\n\n${JSON.stringify(res.data)}`);
       throw new Error('OpenAI fixSDL failed');
     }
   }
