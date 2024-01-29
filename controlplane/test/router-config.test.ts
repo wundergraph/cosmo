@@ -190,9 +190,16 @@ describe('Router Config', (ctx) => {
     expect(graph.graph?.isComposable).toBe(true);
     expect(graph.graph?.compositionErrors).toBe('');
 
-    const resp = await nodeClient.getLatestValidRouterConfig({
-      graphName: fedGraphName,
-    });
+    const resp = await nodeClient.getLatestValidRouterConfig(
+      {
+        graphName: fedGraphName,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${graph.graphToken}`,
+        },
+      },
+    );
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     expect(resp.config?.engineConfig).toBeDefined();
@@ -280,9 +287,16 @@ describe('Router Config', (ctx) => {
     );
     expect(graph.graph?.isComposable).toBe(false);
 
-    let resp = await nodeClient.getLatestValidRouterConfig({
-      graphName: fedGraphName,
-    });
+    let resp = await nodeClient.getLatestValidRouterConfig(
+      {
+        graphName: fedGraphName,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${graph.graphToken}`,
+        },
+      },
+    );
 
     expect(resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(resp.config).toBeUndefined();
@@ -309,9 +323,16 @@ describe('Router Config', (ctx) => {
 
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await nodeClient.getLatestValidRouterConfig({
-      graphName: fedGraphName,
-    });
+    resp = await nodeClient.getLatestValidRouterConfig(
+      {
+        graphName: fedGraphName,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${graph.graphToken}`,
+        },
+      },
+    );
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     expect(resp.config).toBeDefined();

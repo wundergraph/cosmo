@@ -85,14 +85,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        let federatedGraph: FederatedGraphDTO | undefined;
-
-        if (req.graphId) {
-          federatedGraph = await fedGraphRepo.byId(req.graphId);
-        } else if (req.graphName) {
-          // TODO: deprecate graph name. Assume default namespace for backwards compatibility
-          federatedGraph = await fedGraphRepo.byName(req.graphName, DefaultNamespace);
-        }
+        const federatedGraph = await fedGraphRepo.byId(authContext.federatedGraphId);
 
         if (!federatedGraph) {
           return {
