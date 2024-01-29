@@ -132,10 +132,11 @@ export const ChangesTable = ({
                                 href={
                                   path
                                     ? {
-                                        pathname: `/[organizationSlug]/graph/[slug]/schema`,
+                                        pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
                                         query: {
                                           organizationSlug:
                                             router.query.organizationSlug,
+                                          namespace: router.query.namespace,
                                           slug: router.query.slug,
                                           typename: path?.split(".")?.[0],
                                         },

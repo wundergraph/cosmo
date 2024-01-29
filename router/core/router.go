@@ -30,6 +30,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	brotli "go.withmatt.com/connect-brotli"
 
 	"github.com/dgraph-io/ristretto"
@@ -41,6 +42,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -706,14 +708,26 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Config:            r.Config,
 	}
 
+	baseAttributes := []attribute.KeyValue{
+		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+		otel.WgRouterVersion.String(Version),
+	}
+
+	if r.graphApiToken != "" {
+		claims, err := rjwt.ExtractFederatedGraphTokenClaims(r.graphApiToken)
+		if err != nil {
+			return nil, err
+		}
+		baseAttributes = append(baseAttributes, otel.WgFederatedGraphID.String(claims.FederatedGraphID))
+	}
+
 	recoveryHandler := recoveryhandler.New(recoveryhandler.WithLogger(r.logger), recoveryhandler.WithPrintStack())
 	var traceHandler *rtrace.Middleware
 	if r.traceConfig.Enabled {
 		traceHandler = rtrace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
-					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-					otel.WgRouterVersion.String(Version),
+					baseAttributes...,
 				),
 			),
 			otelhttp.WithFilter(rtrace.CommonRequestFilter),
@@ -797,8 +811,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			rmetric.WithOtlpMeterProvider(r.otlpMeterProvider),
 			rmetric.WithLogger(r.logger),
 			rmetric.WithAttributes(
-				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-				otel.WgRouterVersion.String(Version),
+				baseAttributes...,
 			),
 		)
 		if err != nil {

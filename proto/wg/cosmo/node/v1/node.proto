@@ -35,7 +35,6 @@ message GetConfigRequest {
   // Otherwise, the version will be used to check if a newer version of the router config is available.
   // That allow us to not send the router config if the version is the same.
   optional string version = 2;
-  string graph_id = 3;
 }
 
 message GetConfigResponse {
