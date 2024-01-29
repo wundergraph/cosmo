@@ -41,17 +41,17 @@ export default fp<DbPluginOptions>(async function (fastify, opts) {
       rejectUnauthorized: false,
     };
 
-    // Check if the ca is a path and read it.
-    if (opts.ssl.ca && opts.ssl.ca !== path.basename(opts.ssl.ca)) {
+    // Check if the ca is a file and read it.
+    if (opts.ssl.ca && path.extname(opts.ssl.ca)) {
       sslOptions.ca = await readFile(opts.ssl.ca, 'utf8');
     }
-    // Check if the cert is a path and read it.
-    if (opts.ssl.cert && opts.ssl.cert !== path.basename(opts.ssl.cert)) {
+    // Check if the cert is a file and read it.
+    if (opts.ssl.cert && path.extname(opts.ssl.cert)) {
       sslOptions.cert = await readFile(opts.ssl.cert, 'utf8');
     }
 
-    // Check if the key is a path and read it.
-    if (opts.ssl.key && opts.ssl.key !== path.basename(opts.ssl.key)) {
+    // Check if the key is a file and read it.
+    if (opts.ssl.key && path.extname(opts.ssl.key)) {
       sslOptions.key = await readFile(opts.ssl.key, 'utf8');
     }
 
