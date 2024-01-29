@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.59.1](https://github.com/wundergraph/cosmo/compare/router@0.59.0...router@0.59.1) (2024-01-29)
+
+### Bug Fixes
+
+* use graph id from token ([#463](https://github.com/wundergraph/cosmo/issues/463)) ([5582d00](https://github.com/wundergraph/cosmo/commit/5582d004c98eb20f62ecf2332b327c7959e5b64f)) (@thisisnithin)
+
 # [0.59.0](https://github.com/wundergraph/cosmo/compare/router@0.58.0...router@0.59.0) (2024-01-26)
 
 ### Features

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.57.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.57.1...controlplane@0.57.2) (2024-01-29)
+
+### Bug Fixes
+
+* use graph id from token ([#463](https://github.com/wundergraph/cosmo/issues/463)) ([5582d00](https://github.com/wundergraph/cosmo/commit/5582d004c98eb20f62ecf2332b327c7959e5b64f)) (@thisisnithin)
+
 ## [0.57.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.57.0...controlplane@0.57.1) (2024-01-26)
 
 ### Bug Fixes
