@@ -6,6 +6,8 @@ package subgraph
 
 import (
 	"context"
+	"errors"
+
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/model"
 )
@@ -24,6 +26,40 @@ func (r *documentationResolver) Urls(ctx context.Context, obj *model.Documentati
 	return urls, nil
 }
 
+// AddFact is the resolver for the addFact field.
+func (r *mutationResolver) AddFact(ctx context.Context, fact model.TopSecretFactInput) (model.TopSecretFact, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
+	switch fact.FactType {
+	case model.TopSecretFactTypeDirective:
+		fact := model.DirectiveFact{
+			Title:       fact.Title,
+			Description: fact.Description,
+			FactType:    &topSecretFactTypeDirective,
+		}
+		topSecretFederationFacts = append(topSecretFederationFacts, fact)
+		return fact, nil
+	case model.TopSecretFactTypeEntity:
+		fact := model.EntityFact{
+			Title:       fact.Title,
+			Description: fact.Description,
+			FactType:    &topSecretFactTypeEntity,
+		}
+		topSecretFederationFacts = append(topSecretFederationFacts, fact)
+		return fact, nil
+	case model.TopSecretFactTypeMiscellaneous:
+		fact := model.MiscellaneousFact{
+			Title:       fact.Title,
+			Description: fact.Description,
+			FactType:    &topSecretFactTypeMiscellaneous,
+		}
+		topSecretFederationFacts = append(topSecretFederationFacts, fact)
+		return fact, nil
+	default:
+		return nil, errors.New("unknown fact type")
+	}
+}
+
 // ProductTypes is the resolver for the productTypes field.
 func (r *queriesResolver) ProductTypes(ctx context.Context) ([]model.Products, error) {
 	return products, nil
@@ -31,6 +67,8 @@ func (r *queriesResolver) ProductTypes(ctx context.Context) ([]model.Products, e
 
 // TopSecretFederationFacts is the resolver for the topSecretFederationFacts field.
 func (r *queriesResolver) TopSecretFederationFacts(ctx context.Context) ([]model.TopSecretFact, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
 	return topSecretFederationFacts, nil
 }
 
@@ -42,8 +80,12 @@ func (r *queriesResolver) FactTypes(ctx context.Context) ([]model.TopSecretFactT
 // Documentation returns generated.DocumentationResolver implementation.
 func (r *Resolver) Documentation() generated.DocumentationResolver { return &documentationResolver{r} }
 
+// Mutation returns generated.MutationResolver implementation.
+func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
+
 // Queries returns generated.QueriesResolver implementation.
 func (r *Resolver) Queries() generated.QueriesResolver { return &queriesResolver{r} }
 
 type documentationResolver struct{ *Resolver }
+type mutationResolver struct{ *Resolver }
 type queriesResolver struct{ *Resolver }

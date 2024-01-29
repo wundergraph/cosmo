@@ -41,6 +41,7 @@ type Config struct {
 type ResolverRoot interface {
 	Documentation() DocumentationResolver
 	Entity() EntityResolver
+	Mutation() MutationResolver
 	Queries() QueriesResolver
 }
 
@@ -94,6 +95,10 @@ type ComplexityRoot struct {
 		Title       func(childComplexity int) int
 	}
 
+	Mutation struct {
+		AddFact func(childComplexity int, fact model.TopSecretFactInput) int
+	}
+
 	Queries struct {
 		FactTypes                func(childComplexity int) int
 		ProductTypes             func(childComplexity int) int
@@ -115,6 +120,9 @@ type EntityResolver interface {
 	FindConsultancyByUpc(ctx context.Context, upc string) (*model.Consultancy, error)
 	FindCosmoByUpc(ctx context.Context, upc string) (*model.Cosmo, error)
 	FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error)
+}
+type MutationResolver interface {
+	AddFact(ctx context.Context, fact model.TopSecretFactInput) (model.TopSecretFact, error)
 }
 type QueriesResolver interface {
 	ProductTypes(ctx context.Context) ([]model.Products, error)
@@ -320,6 +328,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.MiscellaneousFact.Title(childComplexity), true
 
+	case "Mutation.addFact":
+		if e.complexity.Mutation.AddFact == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addFact_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddFact(childComplexity, args["fact"].(model.TopSecretFactInput)), true
+
 	case "Queries.factTypes":
 		if e.complexity.Queries.FactTypes == nil {
 			break
@@ -374,7 +394,9 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputTopSecretFactInput,
+	)
 	first := true
 
 	switch rc.Operation.Operation {
@@ -407,6 +429,21 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 
 			return &response
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
 		}
 
 	default:
@@ -458,12 +495,23 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `schema {
   query: Queries
+  mutation: Mutation
 }
 
 type Queries {
   productTypes: [Products!]!
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
+}
+
+type Mutation {
+  addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [["write:fact"], ["write:all"]])
+}
+
+input TopSecretFactInput {
+  title: String!
+  description: FactContent!
+  factType: TopSecretFactType!
 }
 
 enum TopSecretFactType @authenticated {
@@ -674,6 +722,21 @@ func (ec *executionContext) field_Entity_findEmployeeByID_args(ctx context.Conte
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addFact_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.TopSecretFactInput
+	if tmp, ok := rawArgs["fact"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fact"))
+		arg0, err = ec.unmarshalNTopSecretFactInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["fact"] = arg0
 	return args, nil
 }
 
@@ -1774,6 +1837,61 @@ func (ec *executionContext) fieldContext_MiscellaneousFact_factType(ctx context.
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type TopSecretFactType does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addFact(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addFact(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddFact(rctx, fc.Args["fact"].(model.TopSecretFactInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.TopSecretFact)
+	fc.Result = res
+	return ec.marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFact(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addFact(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addFact_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3953,6 +4071,53 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputTopSecretFactInput(ctx context.Context, obj interface{}) (model.TopSecretFactInput, error) {
+	var it model.TopSecretFactInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"title", "description", "factType"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "title":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Title = data
+		case "description":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalNFactContent2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "factType":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("factType"))
+			data, err := ec.unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.FactType = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -4519,6 +4684,55 @@ func (ec *executionContext) _MiscellaneousFact(ctx context.Context, sel ast.Sele
 			}
 		case "factType":
 			out.Values[i] = ec._MiscellaneousFact_factType(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var mutationImplementors = []string{"Mutation"}
+
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		innerCtx := graphql.WithRootFieldContext(ctx, &graphql.RootFieldContext{
+			Object: field.Name,
+			Field:  field,
+		})
+
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "addFact":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addFact(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5402,6 +5616,11 @@ func (ec *executionContext) marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraph�
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalNTopSecretFactInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactInput(ctx context.Context, v interface{}) (model.TopSecretFactInput, error) {
+	res, err := ec.unmarshalInputTopSecretFactInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, v interface{}) (model.TopSecretFactType, error) {

@@ -25,6 +25,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Jens notes resolved by employees"),
 		StartDate: "January 2020",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -40,6 +41,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Dustin notes resolved by employees"),
 		StartDate: "July 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -54,6 +56,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Stefan notes resolved by employees"),
 		StartDate: "June 2021",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -71,6 +74,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Björn notes resolved by employees"),
 		StartDate: "July 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		ID: 5,
@@ -86,6 +90,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Serigy notes resolved by employees"),
 		StartDate: "July 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -101,6 +106,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Suvij notes resolved by employees"),
 		StartDate: "September 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -116,6 +122,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Nithin notes resolved by employees"),
 		StartDate: "September 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -131,6 +138,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Eelco notes resolved by employees"),
 		StartDate: "November 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -148,6 +156,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("Alexandra notes resolved by employees"),
 		StartDate: "November 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -163,6 +172,7 @@ var employees = []*model.Employee{
 		},
 		Notes:     strPtr("David notes resolved by employees"),
 		StartDate: "December 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 }
 

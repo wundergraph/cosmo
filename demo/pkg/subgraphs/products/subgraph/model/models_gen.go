@@ -82,6 +82,12 @@ func (MiscellaneousFact) IsTopSecretFact()                     {}
 func (this MiscellaneousFact) GetDescription() string          { return this.Description }
 func (this MiscellaneousFact) GetFactType() *TopSecretFactType { return this.FactType }
 
+type TopSecretFactInput struct {
+	Title       string            `json:"title"`
+	Description string            `json:"description"`
+	FactType    TopSecretFactType `json:"factType"`
+}
+
 type ProductName string
 
 const (

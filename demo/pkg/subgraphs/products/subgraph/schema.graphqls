@@ -1,11 +1,22 @@
 schema {
   query: Queries
+  mutation: Mutation
 }
 
 type Queries {
   productTypes: [Products!]!
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
+}
+
+type Mutation {
+  addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [["write:fact"], ["write:all"]])
+}
+
+input TopSecretFactInput {
+  title: String!
+  description: FactContent!
+  factType: TopSecretFactType!
 }
 
 enum TopSecretFactType @authenticated {

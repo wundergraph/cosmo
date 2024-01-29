@@ -391,7 +391,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at path 'query'. Reason: not authenticated"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"factTypes":null}}`, string(data))
 		})
 	})
 	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned", func(t *testing.T) {
@@ -408,7 +408,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at path 'query'. Reason: not authenticated"}],"data":{"factTypes":null,"productTypes":[{"upc":"cosmo"},{},{}]}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"factTypes":null,"productTypes":[{"upc":"cosmo"},{},{}]}}`, string(data))
 		})
 	})
 	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned (reordered fields)", func(t *testing.T) {
@@ -425,7 +425,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at path 'query'. Reason: not authenticated"}],"data":{"productTypes":[{"upc":"cosmo"},{},{}],"factTypes":null}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"productTypes":[{"upc":"cosmo"},{},{}],"factTypes":null}}`, string(data))
 		})
 	})
 	t.Run("data requiring authentication is returned when authenticated", func(t *testing.T) {
@@ -448,6 +448,105 @@ func TestAuthentication(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"factTypes":["DIRECTIVE","ENTITY","MISCELLANEOUS"],"productTypes":[{"upc":"cosmo"},{},{}]}}`, string(data))
+		})
+	})
+	t.Run("mutation with valid scopes", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scopes": "write:fact read:miscellaneous read:all",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"addFact":{"title":"title","description":"description"}}}`, string(data))
+		})
+	})
+	t.Run("mutation with cope missing for response field", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scopes": "write:fact read:miscellaneous",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Mutation.addFact.description'. Reason: required scopes: ('read:miscellaneous' AND 'read:scalar') OR ('read:miscellaneous' AND 'read:all'), actual scopes: write:fact, read:miscellaneous","path":["addFact","description"]}],"data":null}`, string(data))
+		})
+	})
+	t.Run("mutation with scope missing for mutation root field", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:miscellaneous read:all",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at path 'mutation'. Reason: required scopes: ('write:fact') OR ('write:all'), actual scopes: read:miscellaneous, read:all"}],"data":null}`, string(data))
+		})
+	})
+	t.Run("mutation with scope missing for mutation root field (with reject)", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:miscellaneous read:all",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
 		})
 	})
 }
