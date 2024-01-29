@@ -13,6 +13,7 @@ const (
 	WgClientVersion               = attribute.Key("wg.client.version")
 	WgRouterVersion               = attribute.Key("wg.router.version")
 	WgRouterConfigVersion         = attribute.Key("wg.router.config.version")
+	WgFederatedGraphID            = attribute.Key("wg.federated_graph.id")
 	WgSubgraphID                  = attribute.Key("wg.subgraph.id")
 	WgSubgraphName                = attribute.Key("wg.subgraph.name")
 	WgRequestError                = attribute.Key("wg.request.error")
