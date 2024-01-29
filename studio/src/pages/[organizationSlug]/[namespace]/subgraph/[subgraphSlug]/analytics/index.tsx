@@ -297,12 +297,14 @@ const OverviewToolbar = () => {
             client.invalidateQueries({
               queryKey: getSubgraphMetrics.getQueryKey({
                 subgraphName: subgraph?.subgraph?.name,
+                namespace: subgraph?.subgraph?.namespace,
                 range,
               }),
             });
             client.invalidateQueries({
               queryKey: getSubgraphMetricsErrorRate.getQueryKey({
                 subgraphName: subgraph?.subgraph?.name,
+                namespace: subgraph?.subgraph?.namespace,
                 range,
               }),
             });
