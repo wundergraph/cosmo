@@ -1,21 +1,21 @@
 package configpoller
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
-	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
-	"net/http"
-	"time"
 )
 
 type Option func(cp *configPoller)
@@ -125,13 +125,7 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *string) (*nodev1.RouterConfig, error) {
 	start := time.Now()
 
-	claims, err := jwt.ExtractFederatedGraphTokenClaims(c.graphApiToken)
-	if err != nil {
-		return nil, err
-	}
-
 	req := connect.NewRequest(&nodev1.GetConfigRequest{
-		GraphId: claims.FederatedGraphID,
 		Version: version,
 	})
 
