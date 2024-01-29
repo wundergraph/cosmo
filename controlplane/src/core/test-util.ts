@@ -8,9 +8,10 @@ import * as schema from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
-import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
+import { GraphApiJwtPayload, GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { DefaultNamespace, NamespaceRepository } from './repositories/NamespaceRepository.js';
+import { verifyJwt } from './crypto/jwt.js';
 
 export type UserTestData = {
   userId: string;
@@ -120,11 +121,25 @@ export function createTestAuthenticator(): {
 
   return {
     authenticator: {
-      authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext> {
-        return Promise.resolve({
+      async authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext> {
+        const authorization = headers.get('authorization');
+        if (authorization) {
+          try {
+            const token = authorization.replace(/^bearer\s+/i, '');
+            const jwtPayload = await verifyJwt<GraphApiJwtPayload>('secret', token);
+            return {
+              organizationId: jwtPayload.organization_id,
+              federatedGraphId: jwtPayload.federated_graph_id,
+            };
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        return {
           federatedGraphId: 'federated-graph-id',
           organizationId: userAuthContext.organizationId,
-        });
+        };
       },
       authenticate(headers: Headers): Promise<AuthContext> {
         return Promise.resolve(userAuthContext);
