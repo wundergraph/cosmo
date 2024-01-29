@@ -366,9 +366,9 @@ const SubgraphAnalyticsPage: NextPageWithLayout = () => {
     <div className="w-full space-y-4">
       <OverviewToolbar />
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
-        <RequestMetricsCard data={data?.requests} />
-        <LatencyMetricsCard data={data?.latency} />
-        <ErrorMetricsCard data={data?.errors} />
+        <RequestMetricsCard data={data?.requests} isSubgraphAnalytics={true} />
+        <LatencyMetricsCard data={data?.latency} isSubgraphAnalytics={true} />
+        <ErrorMetricsCard data={data?.errors} isSubgraphAnalytics={true} />
       </div>
 
       <SubgraphErrorRateOverTimeCard />

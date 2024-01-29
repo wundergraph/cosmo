@@ -3,7 +3,11 @@ import { useFeature } from "@/hooks/use-feature";
 import { useHas } from "@/hooks/use-has";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
-import { ChartBarIcon, CommandLineIcon } from "@heroicons/react/24/outline";
+import {
+  ChartBarIcon,
+  CommandLineIcon,
+  EyeIcon,
+} from "@heroicons/react/24/outline";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -383,10 +387,17 @@ export const SubgraphsTable = ({
         </TableHeader>
         <TableBody>
           {subgraphs.map(
-            ({ name, routingURL, lastUpdatedAt, labels, creatorUserId, namespace }) => {
+            ({
+              name,
+              routingURL,
+              lastUpdatedAt,
+              labels,
+              creatorUserId,
+              namespace,
+            }) => {
               const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
               let analyticsPath = `${path}/analytics`;
-              if (router.asPath.split("/")[2] === "graph") {
+              if (router.asPath.split("/")[3] === "graph") {
                 const query = [
                   {
                     id: "federatedGraphId",
@@ -432,7 +443,7 @@ export const SubgraphsTable = ({
                         })
                       : "Never"}
                   </TableCell>
-                  <TableCell className="flex justify-end gap-0.5">
+                  <TableCell className="flex justify-end gap-2">
                     {rbac && (
                       <AddSubgraphUsers
                         subgraphName={name}
@@ -440,19 +451,34 @@ export const SubgraphsTable = ({
                         creatorUserId={creatorUserId}
                       />
                     )}
-                    <Button variant="ghost" size="icon-sm">
-                      <Link href={analyticsPath}>
-                        <ChartBarIcon className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="table-action"
-                    >
-                      <Link href={path}>View</Link>
-                    </Button>
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon-sm"
+                        >
+                          <Link href={analyticsPath}>
+                            <ChartBarIcon className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Analytics</TooltipContent>
+                    </Tooltip>
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon-sm"
+                        >
+                          <Link href={path}>
+                            <EyeIcon className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View Subgraph</TooltipContent>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               );

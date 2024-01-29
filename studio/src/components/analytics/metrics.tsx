@@ -3,61 +3,54 @@ import { ChartTooltip } from "@/components/analytics/charts";
 import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { DeltaBadge } from "@/components/analytics/delta-badge";
 import {
-    AnalyticsFilter,
-    AnalyticsFilters
+  AnalyticsFilter,
+  AnalyticsFilters,
 } from "@/components/analytics/filters";
 import { optionConstructor } from "@/components/analytics/getDataTableFilters";
 import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
-import {
-    GraphContext
-} from "@/components/layout/graph-layout";
+import { GraphContext } from "@/components/layout/graph-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import useWindowSize from "@/hooks/use-window-size";
 import {
-    formatDurationMetric,
-    formatMetric,
-    formatPercentMetric,
+  formatDurationMetric,
+  formatMetric,
+  formatPercentMetric,
 } from "@/lib/format-metric";
 import { useChartData } from "@/lib/insights-helpers";
 import { cn } from "@/lib/utils";
 import {
-    ChevronRightIcon,
-    ExclamationTriangleIcon,
+  ChevronRightIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import {
-    keepPreviousData,
-    useQuery
-} from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { getMetricsErrorRate } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
-    getMetricsErrorRate
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-    AnalyticsViewResultFilter,
-    MetricsDashboardMetric,
-    MetricsTopItem,
+  AnalyticsViewResultFilter,
+  MetricsDashboardMetric,
+  MetricsTopItem,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { differenceInHours, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useCallback, useContext, useId, useMemo } from "react";
 import {
-    Area,
-    AreaChart,
-    Legend,
-    ResponsiveContainer,
-    XAxis,
-    YAxis,
+  Area,
+  AreaChart,
+  Legend,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
 } from "recharts";
 
 export const getInfoTip = (range?: number) => {
@@ -240,8 +233,9 @@ const TopList: React.FC<{
   title: string;
   items: MetricsTopItem[];
   formatter: (value: number) => string;
+  isSubgraphAnalytics?: boolean;
   queryParams?: Record<string, string | number>;
-}> = ({ title, items, formatter, queryParams = {} }) => {
+}> = ({ title, items, formatter, isSubgraphAnalytics, queryParams = {} }) => {
   const router = useRouter();
 
   const range = router.query.range;
@@ -252,30 +246,38 @@ const TopList: React.FC<{
   return (
     <CardContent className="pt-6">
       <div className="mb-2 flex space-x-2 text-sm">
-        <Tooltip delayDuration={200}>
-          <TooltipTrigger asChild>
-            <h5 className="group text-sm font-medium">
-              <Link
-                href={{
-                  pathname: `${router.pathname}/traces`,
-                  query: {
-                    organizationSlug: router.query.organizationSlug,
-                    slug: router.query.slug,
-                    filterState: router.query.filterState || "[]",
-                    range,
-                    dateRange,
-                    ...queryParams,
-                  },
-                }}
-                className="inline-flex rounded-md px-2 py-1 hover:bg-muted"
-              >
-                {title}
-                <ChevronRightIcon className="h4 ml-1 w-4 transition-all group-hover:ml-2" />
-              </Link>
-            </h5>
-          </TooltipTrigger>
-          <TooltipContent>View all operations</TooltipContent>
-        </Tooltip>
+        {isSubgraphAnalytics ? (
+          <h5 className="group inline-flex cursor-default rounded-md px-2 py-1 text-sm font-medium">
+            {title}
+            <ChevronRightIcon className="h4 ml-1 w-4" />
+          </h5>
+        ) : (
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger asChild>
+              <h5 className="group text-sm font-medium">
+                <Link
+                  href={{
+                    pathname: `${router.pathname}/traces`,
+                    query: {
+                      organizationSlug: router.query.organizationSlug,
+                      namespace: router.query.namespace,
+                      slug: router.query.slug,
+                      filterState: router.query.filterState || "[]",
+                      range,
+                      dateRange,
+                      ...queryParams,
+                    },
+                  }}
+                  className="inline-flex rounded-md px-2 py-1 hover:bg-muted"
+                >
+                  {title}
+                  <ChevronRightIcon className="h4 ml-1 w-4 transition-all group-hover:ml-2" />
+                </Link>
+              </h5>
+            </TooltipTrigger>
+            <TooltipContent>View all operations</TooltipContent>
+          </Tooltip>
+        )}
       </div>
       <BarList
         data={items.map((row) => ({
@@ -304,19 +306,22 @@ const TopList: React.FC<{
               )}
             </div>
           ),
-          href: {
-            pathname: `${router.pathname}/traces`,
-            query: {
-              organizationSlug: router.query.organizationSlug,
-              slug: router.query.slug,
-              filterState: createFilterState({
-                operationName: row.name,
-                operationHash: row.hash,
-              }),
-              range,
-              dateRange,
-            },
-          },
+          href: isSubgraphAnalytics
+            ? undefined
+            : {
+                pathname: `${router.pathname}/traces`,
+                query: {
+                  organizationSlug: router.query.organizationSlug,
+                  namespace: router.query.namespace,
+                  slug: router.query.slug,
+                  filterState: createFilterState({
+                    operationName: row.name,
+                    operationHash: row.hash,
+                  }),
+                  range,
+                  dateRange,
+                },
+              },
         }))}
         valueFormatter={formatter}
         rowHeight={4}
@@ -415,7 +420,10 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
   );
 };
 
-export const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
+export const RequestMetricsCard = (props: {
+  data?: MetricsDashboardMetric;
+  isSubgraphAnalytics?: boolean;
+}) => {
   const range = useRange();
   const { data } = props;
 
@@ -470,12 +478,16 @@ export const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => 
         items={top}
         formatter={formatter}
         queryParams={top.length > 1 ? { group: "OperationName" } : {}}
+        isSubgraphAnalytics={props.isSubgraphAnalytics}
       />
     </Card>
   );
 };
 
-export const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
+export const LatencyMetricsCard = (props: {
+  data?: MetricsDashboardMetric;
+  isSubgraphAnalytics?: boolean;
+}) => {
   const range = useRange();
   const { data } = props;
 
@@ -523,12 +535,16 @@ export const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => 
             ? { group: "OperationName", sort: "p95", sortDir: "desc" }
             : {}
         }
+        isSubgraphAnalytics={props.isSubgraphAnalytics}
       />
     </Card>
   );
 };
 
-export const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
+export const ErrorMetricsCard = (props: {
+  data?: MetricsDashboardMetric;
+  isSubgraphAnalytics?: boolean;
+}) => {
   const range = useRange();
   const { data } = props;
 
@@ -571,6 +587,7 @@ export const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
             ? { group: "OperationName", sort: "errorsWithRate" }
             : {}
         }
+        isSubgraphAnalytics={props.isSubgraphAnalytics}
       />
     </Card>
   );
@@ -675,6 +692,7 @@ export const ErrorRateOverTimeCard = () => {
   } = useQuery({
     ...getMetricsErrorRate.useQuery({
       federatedGraphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
       range,
       dateRange: range
         ? undefined
@@ -793,4 +811,3 @@ export const ErrorRateOverTimeCard = () => {
     </Card>
   );
 };
-
