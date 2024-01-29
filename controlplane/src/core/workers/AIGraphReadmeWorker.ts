@@ -1,0 +1,112 @@
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { ConnectionOptions, Job, Worker, Queue } from 'bullmq';
+import pino from 'pino';
+import * as schema from '../../db/schema.js';
+import { OpenAIGraphql } from '../openai-graphql/index.js';
+import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+
+const QueueName = 'ai.graph-readme-generator';
+
+export interface CreateReadmeInputEvent {
+  targetId: string;
+  organizationId: string;
+  type: 'subgraph' | 'federated_graph';
+}
+
+export class AIGraphReadmeQueue {
+  private readonly queue: Queue<CreateReadmeInputEvent>;
+
+  constructor(conn: ConnectionOptions) {
+    this.queue = new Queue<CreateReadmeInputEvent>(QueueName, {
+      connection: conn,
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: true,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+      },
+    });
+  }
+
+  public async addJob(job: CreateReadmeInputEvent) {
+    await this.queue.add(`targets/${job.targetId}`, job);
+  }
+}
+
+class AIGraphReadmeWorker {
+  private readonly oaig: OpenAIGraphql;
+
+  constructor(
+    private input: {
+      redisConnection: ConnectionOptions;
+      db: PostgresJsDatabase<typeof schema>;
+      log: pino.Logger;
+      openAiApiKey: string;
+    },
+  ) {
+    this.oaig = new OpenAIGraphql({
+      openAiApiKey: input.openAiApiKey,
+    });
+    this.input.log = input.log.child({ worker: this.constructor.name });
+  }
+
+  public async handler(job: Job<CreateReadmeInputEvent>) {
+    if (job.data.type === 'subgraph') {
+      const subgraphRepo = new SubgraphRepository(this.input.db, job.data.organizationId);
+      const subgraph = await subgraphRepo.byTargetId(job.data.targetId);
+      if (!subgraph) {
+        throw new Error(`Subgraph with target id ${job.data.targetId} not found`);
+      }
+
+      const resp = await this.oaig.generateReadme({
+        sdl: subgraph.schemaSDL,
+        graphName: subgraph.name,
+      });
+
+      await subgraphRepo.updateReadme({
+        targetId: subgraph.targetId,
+        readme: resp.readme,
+      });
+    } else if (job.data.type === 'federated_graph') {
+      const fedGraphRepo = new FederatedGraphRepository(this.input.db, job.data.organizationId);
+      const graph = await fedGraphRepo.byTargetId(job.data.targetId);
+      if (!graph) {
+        throw new Error(`Federated Graph with target id ${job.data.targetId} not found`);
+      }
+
+      const schema = await fedGraphRepo.getLatestValidSchemaVersion({
+        targetId: job.data.targetId,
+      });
+
+      if (!schema?.schema) {
+        return;
+      }
+
+      const resp = await this.oaig.generateReadme({
+        sdl: schema?.schema,
+        graphName: graph.name,
+      });
+
+      await fedGraphRepo.updateReadme({
+        targetId: graph.targetId,
+        readme: resp.readme,
+      });
+    }
+  }
+}
+
+export const createAIGraphReadmeWorker = (input: {
+  redisConnection: ConnectionOptions;
+  db: PostgresJsDatabase<typeof schema>;
+  log: pino.Logger;
+  openAiApiKey: string;
+}) => {
+  return new Worker<CreateReadmeInputEvent>(QueueName, (job) => new AIGraphReadmeWorker(input).handler(job), {
+    connection: input.redisConnection,
+    concurrency: 10,
+  });
+};

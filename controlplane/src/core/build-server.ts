@@ -34,7 +34,7 @@ import { Authorization } from './services/Authorization.js';
 import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
-import { GraphReadmeWorker, createDispatcher } from './workers/GraphReadmeWorker.js';
+import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -211,7 +211,7 @@ export default async function build(opts: BuildConfig) {
   }
 
   const bullWorkers: Worker[] = [];
-  const readmeQueue = createDispatcher(fastify.redis);
+  const readmeQueue = new AIGraphReadmeQueue(fastify.redis);
 
   await fastify.register(fastifyRedis, {
     host: opts.redis.host,
@@ -221,11 +221,11 @@ export default async function build(opts: BuildConfig) {
 
   if (opts.openaiAPIKey) {
     bullWorkers.push(
-      GraphReadmeWorker({
-        db: fastify.db,
+      createAIGraphReadmeWorker({
         redisConnection: fastify.redis,
-        openAiApiKey: opts.openaiAPIKey,
+        db: fastify.db,
         log,
+        openAiApiKey: opts.openaiAPIKey,
       }),
     );
   }

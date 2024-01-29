@@ -5,7 +5,6 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { App } from 'octokit';
-import { Queue, Worker } from 'bullmq';
 import * as schema from '../db/schema.js';
 import NodeServiceImpl from './bufservices/NodeService.js';
 import PlatformServiceImpl from './bufservices/PlatformService.js';
@@ -16,7 +15,7 @@ import { IPlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import { BlobStorage } from './blobstorage/index.js';
 import Mailer from './services/Mailer.js';
 import { Authorization } from './services/Authorization.js';
-import { CreateReadmeInputEvent } from './workers/GraphReadmeWorker.js';
+import { AIGraphReadmeQueue } from './workers/AIGraphReadmeWorker.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -36,7 +35,7 @@ export interface RouterOptions {
   mailerClient?: Mailer;
   billingDefaultPlanId?: string;
   openaiApiKey?: string;
-  readmeQueue: Queue<CreateReadmeInputEvent>;
+  readmeQueue: AIGraphReadmeQueue;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

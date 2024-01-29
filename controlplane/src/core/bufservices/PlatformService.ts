@@ -1542,7 +1542,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
 
           if (feature?.enabled) {
-            await opts.readmeQueue.add(`target/${subgraph.targetId}`, {
+            await opts.readmeQueue.addJob({
               organizationId: authContext.organizationId,
               targetId: subgraph.targetId,
               type: 'subgraph',
