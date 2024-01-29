@@ -43,7 +43,7 @@ export const ViewHeaders = ({
             <TabsTrigger value="response">Response</TabsTrigger>
           </TabsList>
           <TabsContent value="request">
-            <div className="scrollbar-custom h-96 overflow-auto rounded border">
+            <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
               <CodeViewer
                 code={requestHeaders}
                 language="json"
@@ -52,7 +52,7 @@ export const ViewHeaders = ({
             </div>
           </TabsContent>
           <TabsContent value="response">
-            <div className="scrollbar-custom h-96 overflow-auto rounded border">
+            <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
               <CodeViewer
                 code={responseHeaders}
                 language="json"
