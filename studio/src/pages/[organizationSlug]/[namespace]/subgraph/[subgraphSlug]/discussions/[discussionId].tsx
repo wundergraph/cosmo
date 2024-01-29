@@ -51,7 +51,7 @@ const SubgraphDiscussionPage: NextPageWithLayout = () => {
         breadcrumbs={[
           <Link
             key={0}
-            href={`/${organizationSlug}/${namespace}/graph/${slug}/discussions`}
+            href={`/${organizationSlug}/${namespace}/subgraph/${slug}/discussions`}
           >
             Discussions
           </Link>,
