@@ -7237,7 +7237,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
         if (!subgraph) {
           return {
             response: {
@@ -7266,6 +7266,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
           subgraphId: subgraph.id,
           subgraphLabels: subgraph.labels,
+          namespaceId: subgraph.namespaceId,
         });
 
         return {
@@ -7297,7 +7298,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
         if (!subgraph) {
           return {
             response: {
@@ -7326,6 +7327,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
           subgraphId: subgraph.id,
           subgraphLabels: subgraph.labels,
+          namespaceId: subgraph.namespaceId,
         });
 
         return {

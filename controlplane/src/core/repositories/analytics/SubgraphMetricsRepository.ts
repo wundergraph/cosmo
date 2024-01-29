@@ -23,6 +23,7 @@ interface GetSubgraphMetricsViewProps {
   organizationId: string;
   subgraphId: string;
   subgraphLabels: Label[];
+  namespaceId: string;
 }
 
 interface GetSubgraphMetricsProps {
@@ -40,6 +41,7 @@ interface GetSubgraphMetricsProps {
   organizationId: string;
   subgraphId: string;
   subgraphLabels: Label[];
+  namespaceId: string;
   queryParams?: Record<string, string | number>;
 }
 
@@ -514,7 +516,15 @@ export class SubgraphMetricsRepository {
   }
 
   protected getSubgraphMetricsProps(props: GetSubgraphMetricsViewProps): GetSubgraphMetricsProps {
-    const { range, dateRange, filters: selectedFilters, organizationId, subgraphId, subgraphLabels } = props;
+    const {
+      range,
+      dateRange,
+      filters: selectedFilters,
+      organizationId,
+      subgraphId,
+      subgraphLabels,
+      namespaceId,
+    } = props;
 
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);
@@ -543,6 +553,7 @@ export class SubgraphMetricsRepository {
       organizationId,
       subgraphId,
       subgraphLabels,
+      namespaceId,
       whereSql,
       queryParams: coercedFilters.result,
     };
@@ -600,6 +611,7 @@ export class SubgraphMetricsRepository {
     organizationId,
     subgraphId,
     subgraphLabels,
+    namespaceId,
   }: GetSubgraphMetricsProps) {
     const filters = { ...this.baseFilters };
 
@@ -655,7 +667,7 @@ export class SubgraphMetricsRepository {
     }
 
     const fedRepo = new FederatedGraphRepository(this.db, organizationId);
-    const graphs = await fedRepo.bySubgraphLabels(subgraphLabels);
+    const graphs = await fedRepo.bySubgraphLabels({ labels: subgraphLabels, namespaceId });
     for (const graph of graphs) {
       addFilterOption('federatedGraphId', graph.id, graph.name);
     }

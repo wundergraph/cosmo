@@ -383,8 +383,8 @@ export const SubgraphsTable = ({
         </TableHeader>
         <TableBody>
           {subgraphs.map(
-            ({ name, routingURL, lastUpdatedAt, labels, creatorUserId }) => {
-              const path = `/${organizationSlug}/subgraph/${name}`;
+            ({ name, routingURL, lastUpdatedAt, labels, creatorUserId, namespace }) => {
+              const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
               let analyticsPath = `${path}/analytics`;
               if (router.asPath.split("/")[2] === "graph") {
                 const query = [

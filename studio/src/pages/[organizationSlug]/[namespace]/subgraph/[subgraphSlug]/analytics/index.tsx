@@ -43,7 +43,7 @@ import {
   getSubgraphMetrics,
   getSubgraphMetricsErrorRate,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { differenceInHours, formatISO } from "date-fns";
+import { differenceInHours, formatISO, sub } from "date-fns";
 import { useRouter } from "next/router";
 import { useId } from "react";
 import {
@@ -58,8 +58,6 @@ import {
 const SubgraphErrorRateOverTimeCard = () => {
   const id = useId();
   const subgraph = useSubgraph();
-  const router = useRouter();
-  const fedGraphName = router.query.graph;
 
   const formatter = (value: number) => {
     if (value < 1) {
@@ -90,6 +88,7 @@ const SubgraphErrorRateOverTimeCard = () => {
   } = useQuery({
     ...getSubgraphMetricsErrorRate.useQuery({
       subgraphName: subgraph?.subgraph?.name,
+      namespace: subgraph?.subgraph?.namespace,
       range,
       dateRange: range
         ? undefined
@@ -221,6 +220,7 @@ const OverviewToolbar = () => {
   let { data } = useQuery({
     ...getSubgraphMetrics.useQuery({
       subgraphName: subgraph?.subgraph?.name,
+      namespace: subgraph?.subgraph?.namespace,
       range,
       dateRange: range
         ? undefined
@@ -330,6 +330,7 @@ const SubgraphAnalyticsPage: NextPageWithLayout = () => {
   let { data, isLoading, error, refetch } = useQuery({
     ...getSubgraphMetrics.useQuery({
       subgraphName: subgraph?.subgraph?.name,
+      namespace: subgraph?.subgraph?.namespace,
       range,
       dateRange: range
         ? undefined

@@ -33,11 +33,6 @@ import { TitleLayoutProps } from "./graph-layout";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { EmptyState } from "../empty-state";
-import { Button } from "../ui/button";
-import { GetSubgraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { PiChat, PiGraphLight } from "react-icons/pi";
 import { ChartBarIcon } from "@heroicons/react/24/outline";
 import { Badge } from "../ui/badge";
 
