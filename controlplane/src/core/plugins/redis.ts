@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import * as tls from 'node:tls';
+import path from 'node:path';
 import fp from 'fastify-plugin';
 import IORedis from 'ioredis';
 
@@ -13,12 +14,13 @@ declare module 'fastify' {
 export interface RedisPluginOptions {
   host: string;
   port: number;
+  password?: string;
   ssl?: {
     // Necessary only if the server uses a self-signed certificate.
-    caPath?: string;
+    ca?: string;
     // Necessary only if the server requires client certificate authentication.
-    keyPath?: string;
-    certPath?: string;
+    key?: string;
+    cert?: string;
   };
 }
 
@@ -30,18 +32,18 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
       rejectUnauthorized: false,
     };
 
-    // Necessary only if the server uses a self-signed certificate.
-    if (opts.ssl.caPath) {
-      sslOptions.ca = await readFile(opts.ssl.caPath, 'utf8');
+    // Check if the ca is a path and read it.
+    if (opts.ssl.ca && opts.ssl.ca !== path.basename(opts.ssl.ca)) {
+      sslOptions.ca = await readFile(opts.ssl.ca, 'utf8');
+    }
+    // Check if the cert is a path and read it.
+    if (opts.ssl.cert && opts.ssl.cert !== path.basename(opts.ssl.cert)) {
+      sslOptions.cert = await readFile(opts.ssl.cert, 'utf8');
     }
 
-    // Necessary only if the server requires client certificate authentication.
-    if (opts.ssl.certPath) {
-      sslOptions.cert = await readFile(opts.ssl.certPath, 'utf8');
-    }
-
-    if (opts.ssl.keyPath) {
-      sslOptions.key = await readFile(opts.ssl.keyPath, 'utf8');
+    // Check if the key is a path and read it.
+    if (opts.ssl.key && opts.ssl.key !== path.basename(opts.ssl.key)) {
+      sslOptions.key = await readFile(opts.ssl.key, 'utf8');
     }
 
     connectionConfig.tls = {
@@ -56,6 +58,7 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
     connectionName: 'controlplane',
     host: opts.host,
     port: opts.port,
+    password: opts.password,
     maxRetriesPerRequest: 0, // required for bullmq
   });
 

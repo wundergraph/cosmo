@@ -41,9 +41,9 @@ export interface BuildConfig {
   database: {
     url: string;
     ssl?: {
-      certPath?: string; // e.g. '/path/to/my/client-cert.pem'
-      caPath?: string; // e.g., '/path/to/my/server-ca.pem'
-      keyPath?: string; // e.g. '/path/to/my/client-key.pem'
+      cert?: string; // e.g. string or '/path/to/my/client-cert.pem'
+      ca?: string; // e.g. string or '/path/to/my/server-ca.pem'
+      key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
   openaiAPIKey?: string;
@@ -90,10 +90,11 @@ export interface BuildConfig {
   redis: {
     host: string;
     port: number;
+    password?: string;
     ssl?: {
-      certPath?: string; // e.g. '/path/to/my/client-cert.pem'
-      caPath?: string; // e.g., '/path/to/my/server-ca.pem'
-      keyPath?: string; // e.g. '/path/to/my/client-key.pem'
+      cert?: string; // e.g. string or '/path/to/my/client-cert.pem'
+      ca?: string; // e.g. string or '/path/to/my/server-ca.pem'
+      key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
 }
@@ -216,6 +217,7 @@ export default async function build(opts: BuildConfig) {
   await fastify.register(fastifyRedis, {
     host: opts.redis.host,
     port: opts.redis.port,
+    password: opts.redis.password,
     ssl: opts.redis.ssl,
   });
 

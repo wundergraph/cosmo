@@ -28,6 +28,10 @@ export const envVariables = z
       .string()
       .default('6379')
       .transform((val) => Number.parseInt(val)),
+    REDIS_PASSWORD: z.string().optional(),
+    REDIS_TLS_CERT: z.string().optional(),
+    REDIS_TLS_CA: z.string().optional(),
+    REDIS_TLS_KEY: z.string().optional(),
     /**
      * OPEN AI
      */
@@ -41,9 +45,9 @@ export const envVariables = z
      * Database
      */
     DB_URL: z.string(),
-    DB_CERT_PATH: z.string().optional(),
-    DB_CA_PATH: z.string().optional(),
-    DB_KEY_PATH: z.string().optional(),
+    DB_TLS_CERT: z.string().optional(),
+    DB_TLS_CA: z.string().optional(),
+    DB_TLS_KEY: z.string().optional(),
     /**
      * Keycloak
      */
