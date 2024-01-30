@@ -11,14 +11,16 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 const (
-	jwksName                 = "my-jwks-server"
-	employeesQuery           = `{"query":"{ employees { id } }"}`
-	employeesExpectedData    = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`
-	unauthorizedExpectedData = `{"errors":[{"message":"unauthorized"}],"data":null}`
-	xAuthenticatedByHeader   = "X-Authenticated-By"
+	jwksName                      = "my-jwks-server"
+	employeesQuery                = `{"query":"{ employees { id } }"}`
+	employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
+	employeesExpectedData         = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+	unauthorizedExpectedData      = `{"errors":[{"message":"unauthorized"}],"data":null}`
+	xAuthenticatedByHeader        = "X-Authenticated-By"
 )
 
 func TestAuthentication(t *testing.T) {
@@ -41,7 +43,7 @@ func TestAuthentication(t *testing.T) {
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Operations without token should work succeed
+			// Operations without token should succeed
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQuery))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -80,7 +82,7 @@ func TestAuthentication(t *testing.T) {
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Operations with an token should succeed
+			// Operations with a token should succeed
 			token, err := authServer.Token(nil)
 			require.NoError(t, err)
 			header := http.Header{
@@ -94,6 +96,457 @@ func TestAuthentication(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("scopes required no token", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: not authenticated","path":["employees",0,"startDate"]}],"data":null}`, string(data))
+		})
+	})
+	t.Run("scopes required valid token no scopes", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: required scopes: ('read:employee' AND 'read:private') OR ('read:all'), actual scopes: <none>","path":["employees",0,"startDate"]}],"data":null}`, string(data))
+		})
+	})
+	t.Run("scopes required valid token AND scopes present", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:employee read:private",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+		})
+	})
+	t.Run("scopes required valid token AND scopes partially present", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with an token should succeed
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:employee",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: required scopes: ('read:employee' AND 'read:private') OR ('read:all'), actual scopes: read:employee","path":["employees",0,"startDate"]}],"data":null}`, string(data))
+		})
+	})
+	t.Run("reject unauthorized missing scope", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:employee",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+		})
+	})
+	t.Run("reject unauthorized no scope", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+		})
+	})
+	t.Run("reject unauthorized invalid token", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer token"},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+		})
+	})
+	t.Run("reject unauthorized no token", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+		})
+	})
+	t.Run("scopes required valid token OR scopes present", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:all",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+		})
+	})
+	t.Run("scopes required valid token AND and OR scopes present", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:employee read:private read:all",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+		})
+	})
+	t.Run("nullable, unauthorized data returns an error but partial authorized data is returned", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:fact",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"{ topSecretFederationFacts { ... on EntityFact { factType } ... on MiscellaneousFact { title } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.factType'. Reason: required scopes: ('read:entity'), actual scopes: read:fact","path":["topSecretFederationFacts",2,"factType"]}],"data":{"topSecretFederationFacts":[{},{},{"factType":null},{"title":"Unreachable Concrete Types through Interface"}]}}`, string(data))
+		})
+	})
+	t.Run("non-nullable, unauthorized data returns no data even if some is authorized", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:fact read:miscellaneous",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"{ topSecretFederationFacts { ... on EntityFact { description } ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.description'. Reason: required scopes: ('read:entity' AND 'read:scalar') OR ('read:entity' AND 'read:all'), actual scopes: read:fact, read:miscellaneous","path":["topSecretFederationFacts",2,"description"]}],"data":null}`, string(data))
+		})
+	})
+	t.Run("return unauthenticated error if a field requiring authentication is queried", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
+				{"query":"{ factTypes }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"factTypes":null}}`, string(data))
+		})
+	})
+	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
+				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"factTypes":null,"productTypes":[{"upc":"cosmo"},{},{}]}}`, string(data))
+		})
+	})
+	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned (reordered fields)", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
+				{"query":"{ productTypes { ... on Cosmo { upc } } factTypes }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"productTypes":[{"upc":"cosmo"},{},{}],"factTypes":null}}`, string(data))
+		})
+	})
+	t.Run("data requiring authentication is returned when authenticated", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"factTypes":["DIRECTIVE","ENTITY","MISCELLANEOUS"],"productTypes":[{"upc":"cosmo"},{},{}]}}`, string(data))
+		})
+	})
+	t.Run("mutation with valid scopes", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scopes": "write:fact read:miscellaneous read:all",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"addFact":{"title":"title","description":"description"}}}`, string(data))
+		})
+	})
+	t.Run("mutation with scope missing for response field", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scopes": "write:fact read:miscellaneous",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Mutation.addFact.description'. Reason: required scopes: ('read:miscellaneous' AND 'read:scalar') OR ('read:miscellaneous' AND 'read:all'), actual scopes: write:fact, read:miscellaneous","path":["addFact","description"]}],"data":null}`, string(data))
+		})
+	})
+	t.Run("mutation with scope missing for mutation root field", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:miscellaneous read:all",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at path 'mutation'. Reason: required scopes: ('write:fact') OR ('write:all'), actual scopes: read:miscellaneous, read:all"}],"data":null}`, string(data))
+		})
+	})
+	t.Run("mutation with scope missing for mutation root field (with reject)", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scopes": "read:miscellaneous read:all",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+			`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
 		})
 	})
 }
@@ -214,7 +667,7 @@ func TestAuthorization(t *testing.T) {
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Operations with an token should succeed
+			// Operations with a token should succeed
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}

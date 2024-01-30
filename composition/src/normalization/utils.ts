@@ -79,7 +79,7 @@ import {
   unparsableFieldSetSelectionErrorMessage,
 } from '../errors/errors';
 import { BASE_SCALARS } from '../utils/constants';
-import { RequiredFieldConfiguration } from '../subgraph/router-configuration';
+import { RequiredFieldConfiguration } from '../router-configuration/router-configuration';
 
 export type EnumContainer = {
   description?: StringValueNode;

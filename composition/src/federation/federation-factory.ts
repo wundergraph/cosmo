@@ -26,6 +26,7 @@ import {
   interfaceTypeDefinitionNodeToMutable,
   MutableEnumValueDefinitionNode,
   MutableInputValueDefinitionNode,
+  MutableScalarTypeDefinitionNode,
   MutableTypeDefinitionNode,
   objectTypeDefinitionNodeToMutable,
   objectTypeExtensionNodeToMutable,
@@ -112,6 +113,7 @@ import {
   walkSubgraphToFederate,
 } from '../subgraph/subgraph';
 import {
+  AUTHENTICATED,
   DEFAULT_MUTATION,
   DEFAULT_QUERY,
   DEFAULT_SUBSCRIPTION,
@@ -124,16 +126,21 @@ import {
   OVERRIDE,
   PARENTS,
   QUERY,
+  REQUIRES_SCOPES,
   ROOT_TYPES,
   SELECTION_REPRESENTATION,
   TAG,
 } from '../utils/string-constants';
 import {
+  addAuthorizationDataProperties,
   addIterableValuesToSet,
+  AuthorizationData,
   doSetsHaveAnyOverlap,
   EntityContainer,
   EntityContainerByTypeName,
   EntityInterfaceFederationData,
+  generateAuthenticatedDirective,
+  generateRequiresScopesDirective,
   getAllMutualEntries,
   getEntriesNotInHashSet,
   getOrThrowError,
@@ -146,34 +153,36 @@ import {
   kindToTypeString,
   newEntityInterfaceFederationData,
   subtractSourceSetFromTargetSet,
+  upsertAuthorizationConfiguration,
   upsertEntityInterfaceFederationData,
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
-  ArgumentConfigurationData,
   ConfigurationData,
+  FieldConfiguration,
   RequiredFieldConfiguration,
-} from '../subgraph/router-configuration';
-import { BASE_SCALARS } from '../utils/constants';
+} from '../router-configuration/router-configuration';
+import { BASE_SCALARS, SCOPE_SCALAR_DEFINITION } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
 import {
   getNormalizedFieldSet,
   isNodeQuery,
   ObjectLikeContainer as NormalizationObjectLikeContainer,
-  ParentContainerByTypeName,
 } from '../normalization/utils';
 import { BREAK, visit } from 'graphql/index';
 
 export class FederationFactory {
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   abstractToConcreteTypeNames = new Map<string, Set<string>>();
   areFieldsExternal = false;
   areFieldsShareable = false;
   argumentTypeNameSet = new Set<string>();
-  argumentConfigurations: ArgumentConfigurationData[] = [];
+  fieldConfigurationByFieldPath = new Map<string, FieldConfiguration>();
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   executableDirectives = new Set<string>();
   parentTypeName = '';
   persistedDirectives = new Set<string>([DEPRECATED, INACCESSIBLE, TAG]);
+  persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   currentSubgraphName = '';
   childName = '';
   directiveDefinitions: DirectiveMap = new Map<string, DirectiveContainer>();
@@ -197,14 +206,17 @@ export class FederationFactory {
   rootTypeNames = new Set<string>([DEFAULT_MUTATION, DEFAULT_QUERY, DEFAULT_SUBSCRIPTION]);
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   shareableErrorTypeNames = new Map<string, Set<string>>();
+  renamedTypeNameByOriginalTypeName = new Map<string, string>();
   warnings: string[];
 
   constructor(
+    authorizationDataByParentTypeName: Map<string, AuthorizationData>,
     entityContainersByTypeName: EntityContainerByTypeName,
     entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
     internalSubgraphBySubgraphName: Map<string, InternalSubgraph>,
     warnings?: string[],
   ) {
+    this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
     this.entityContainersByTypeName = entityContainersByTypeName;
     this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
@@ -1030,11 +1042,33 @@ export class FederationFactory {
     definitions.push(directiveContainer.node);
   }
 
+  pushAuthorizationDirectives(fieldContainer: FieldContainer, parentTypeName: string) {
+    const authorizationData = this.authorizationDataByParentTypeName.get(parentTypeName);
+    if (!authorizationData) {
+      return;
+    }
+    const fieldAuthorizationData = authorizationData.fieldAuthorizationDataByFieldName.get(
+      fieldContainer.node.name.value,
+    );
+    if (!fieldAuthorizationData) {
+      return;
+    }
+    if (fieldAuthorizationData.requiresAuthentication) {
+      fieldContainer.directives.directives.set(AUTHENTICATED, [generateAuthenticatedDirective()]);
+    }
+    if (fieldAuthorizationData.requiredScopes.length > 0) {
+      fieldContainer.directives.directives.set(REQUIRES_SCOPES, [
+        generateRequiresScopesDirective(fieldAuthorizationData.requiredScopes),
+      ]);
+    }
+  }
+
   getMergedFieldDefinitionNode(fieldContainer: FieldContainer, parentTypeName: string): FieldDefinitionNode {
-    if (!fieldContainer.arguments) {
+    this.pushAuthorizationDirectives(fieldContainer, parentTypeName);
+    pushPersistedDirectivesAndGetNode(fieldContainer);
+    if (fieldContainer.arguments.size < 1) {
       return fieldContainer.node;
     }
-    pushPersistedDirectivesAndGetNode(fieldContainer);
     const fieldName = fieldContainer.node.name.value;
     const fieldPath = `${parentTypeName}.${fieldName}`;
     const args: MutableInputValueDefinitionNode[] = [];
@@ -1044,7 +1078,7 @@ export class FederationFactory {
     if (errors.length > 0) {
       this.errors.push(invalidRequiredArgumentsError(FIELD, fieldPath, errors));
     } else if (argumentNames.length > 0) {
-      this.argumentConfigurations.push({
+      this.fieldConfigurationByFieldPath.set(`${parentTypeName}.${fieldName}`, {
         argumentNames,
         fieldName,
         typeName: parentTypeName,
@@ -1545,6 +1579,23 @@ export class FederationFactory {
     }
   }
 
+  handleAuthorizationDataForRenamedTypes() {
+    for (const [originalTypeName, renamedTypeName] of this.renamedTypeNameByOriginalTypeName) {
+      const originalAuthorizationData = this.authorizationDataByParentTypeName.get(originalTypeName);
+      if (!originalAuthorizationData) {
+        continue;
+      }
+      originalAuthorizationData.typeName = renamedTypeName;
+      const renamedAuthorizationData = this.authorizationDataByParentTypeName.get(renamedTypeName);
+      if (!renamedAuthorizationData) {
+        this.authorizationDataByParentTypeName.set(renamedTypeName, originalAuthorizationData);
+      } else {
+        addAuthorizationDataProperties(originalAuthorizationData, renamedAuthorizationData);
+      }
+      this.authorizationDataByParentTypeName.delete(originalTypeName);
+    }
+  }
+
   federate(): FederationResultContainer {
     this.populateMultiGraphAndRenameOperations(this.internalSubgraphBySubgraphName);
     const factory = this;
@@ -1554,6 +1605,7 @@ export class FederationFactory {
       this.keyFieldNamesByParentTypeName = subgraph.keyFieldNamesByParentTypeName;
       walkSubgraphToFederate(subgraph.definitions, subgraph.overriddenFieldNamesByParentTypeName, factory);
     }
+    this.handleAuthorizationDataForRenamedTypes();
     for (const [typeName, entityInterfaceData] of this.entityInterfaceFederationDataByTypeName) {
       subtractSourceSetFromTargetSet(
         entityInterfaceData.interfaceFieldNames,
@@ -1622,12 +1674,15 @@ export class FederationFactory {
     }
     const definitions: MutableTypeDefinitionNode[] = [];
     for (const [directiveName, directiveContainer] of this.directiveDefinitions) {
-      if (this.persistedDirectives.has(directiveName)) {
+      if (this.persistedDirectiveDefinitions.has(directiveName)) {
         definitions.push(directiveContainer.node);
         continue;
       }
-      // The definitions must be present in all subgraphs to kept in the federated graph
+      // The definitions must be present in all subgraphs to be kept in the federated graph
       this.addValidExecutableDirectiveDefinition(directiveName, directiveContainer, definitions);
+    }
+    if (this.directiveDefinitions.has(REQUIRES_SCOPES)) {
+      definitions.push(SCOPE_SCALAR_DEFINITION as MutableScalarTypeDefinitionNode);
     }
     for (const [typeName, extension] of this.extensions) {
       this.parentTypeName = typeName;
@@ -1865,9 +1920,13 @@ export class FederationFactory {
         schema: subgraph.schema,
       });
     }
+    for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
+      upsertAuthorizationConfiguration(this.fieldConfigurationByFieldPath, authorizationData);
+    }
+
     return {
       federationResult: {
-        argumentConfigurations: this.argumentConfigurations,
+        fieldConfigurations: Array.from(this.fieldConfigurationByFieldPath.values()),
         subgraphConfigBySubgraphName,
         federatedGraphAST: newAst,
         federatedGraphSchema: buildASTSchema(newAst),
@@ -1881,7 +1940,13 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError] };
   }
-  const { entityContainerByTypeName, errors, internalSubgraphBySubgraphName, warnings } = batchNormalize(subgraphs);
+  const {
+    authorizationDataByParentTypeName,
+    entityContainerByTypeName,
+    errors,
+    internalSubgraphBySubgraphName,
+    warnings,
+  } = batchNormalize(subgraphs);
   if (errors) {
     return { errors };
   }
@@ -1932,6 +1997,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
     };
   }
   return new FederationFactory(
+    authorizationDataByParentTypeName,
     entityContainerByTypeName,
     entityInterfaceFederationDataByTypeName,
     internalSubgraphBySubgraphName,

@@ -2,6 +2,7 @@ import { DirectiveDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
+  AUTHENTICATED,
   BOOLEAN_TYPE,
   COMPOSE_DIRECTIVE,
   DEPRECATED,
@@ -13,8 +14,9 @@ import {
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
-  FIELD_SET,
+  FIELD_SET_SCALAR,
   FIELDS,
+  FROM,
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
@@ -26,17 +28,22 @@ import {
   OBJECT_UPPER,
   OVERRIDE,
   PROVIDES,
+  REASON,
   REQUIRES,
+  REQUIRES_SCOPES,
   RESOLVABLE,
   SCALAR_UPPER,
   SCHEMA_UPPER,
+  SCOPES,
+  SCOPE_SCALAR,
   SHAREABLE,
   SOURCE_ID,
   SPECIFIED_BY,
-  STRING_TYPE,
+  STRING_SCALAR,
   TAG,
   TOPIC,
   UNION_UPPER,
+  URL_LOWER,
 } from './string-constants';
 
 export const BASE_SCALARS = new Set<string>([
@@ -46,8 +53,9 @@ export const BASE_SCALARS = new Set<string>([
   'Float',
   'ID',
   'Int',
-  'openfed__FieldSet',
-  'String',
+  FIELD_SET_SCALAR,
+  SCOPE_SCALAR,
+  STRING_SCALAR,
 ]);
 
 export const VERSION_ONE_DIRECTIVES = new Set<string>([
@@ -61,11 +69,13 @@ export const VERSION_ONE_DIRECTIVES = new Set<string>([
   TAG,
 ]);
 export const VERSION_TWO_DIRECTIVES = new Set<string>([
+  AUTHENTICATED,
   COMPOSE_DIRECTIVE,
   LINK,
   OVERRIDE,
   INACCESSIBLE,
   INTERFACE_OBJECT,
+  REQUIRES_SCOPES,
   SHAREABLE,
 ]);
 
@@ -77,8 +87,8 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     arguments: [
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
-        name: stringToNameNode('reason'),
-        type: stringToNamedTypeNode(STRING_TYPE),
+        name: stringToNameNode(REASON),
+        type: stringToNamedTypeNode(STRING_SCALAR),
         defaultValue: {
           kind: Kind.STRING,
           value: 'No longer supported',
@@ -117,13 +127,13 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(TOPIC),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode(SOURCE_ID),
-        type: stringToNamedTypeNode(STRING_TYPE),
+        type: stringToNamedTypeNode(STRING_SCALAR),
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
@@ -139,13 +149,13 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(TOPIC),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode(SOURCE_ID),
-        type: stringToNamedTypeNode(STRING_TYPE),
+        type: stringToNamedTypeNode(STRING_SCALAR),
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
@@ -161,13 +171,13 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(TOPIC),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode(SOURCE_ID),
-        type: stringToNamedTypeNode(STRING_TYPE),
+        type: stringToNamedTypeNode(STRING_SCALAR),
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
@@ -183,7 +193,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(FIELDS),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(FIELD_SET),
+          type: stringToNamedTypeNode(FIELD_SET_SCALAR),
         },
       },
       {
@@ -209,7 +219,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(FIELDS),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(FIELD_SET),
+          type: stringToNamedTypeNode(FIELD_SET_SCALAR),
         },
       },
     ],
@@ -226,7 +236,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(FIELDS),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(FIELD_SET),
+          type: stringToNamedTypeNode(FIELD_SET_SCALAR),
         },
       },
     ],
@@ -240,10 +250,10 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     arguments: [
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
-        name: stringToNameNode('url'),
+        name: stringToNameNode(URL_LOWER),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
     ],
@@ -262,7 +272,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(NAME),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
     ],
@@ -285,6 +295,19 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
 ];
 
 export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
+  // @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+  {
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: stringArrayToNameNodeArray([
+      ENUM_UPPER,
+      FIELD_DEFINITION_UPPER,
+      INTERFACE_UPPER,
+      OBJECT_UPPER,
+      SCALAR_UPPER,
+    ]),
+    name: stringToNameNode(AUTHENTICATED),
+    repeatable: false,
+  },
   // @composeDirective is currently unimplemented
   /* directive @composeDirective(name: String!) repeatable on SCHEMA */
   {
@@ -294,7 +317,7 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(NAME),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
     ],
@@ -335,28 +358,28 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     arguments: [
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
-        name: stringToNameNode('url'),
+        name: stringToNameNode(URL_LOWER),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode('as'),
-        type: stringToNamedTypeNode(STRING_TYPE),
+        type: stringToNamedTypeNode(STRING_SCALAR),
       },
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode('for'),
-        type: stringToNamedTypeNode(STRING_TYPE),
+        type: stringToNamedTypeNode(STRING_SCALAR),
       },
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode('import'),
         type: {
           kind: Kind.LIST_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
     ],
@@ -370,16 +393,51 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     arguments: [
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
-        name: stringToNameNode('from'),
+        name: stringToNameNode(FROM),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(STRING_SCALAR),
         },
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
     locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
     name: stringToNameNode(OVERRIDE),
+    repeatable: false,
+  },
+  // @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+  {
+    arguments: [
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(SCOPES),
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {
+                kind: Kind.LIST_TYPE,
+                type: {
+                  kind: Kind.NON_NULL_TYPE,
+                  type: stringToNamedTypeNode(SCOPE_SCALAR),
+                },
+              },
+            },
+          },
+        },
+      },
+    ],
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: stringArrayToNameNodeArray([
+      ENUM_UPPER,
+      FIELD_DEFINITION_UPPER,
+      INTERFACE_UPPER,
+      OBJECT_UPPER,
+      SCALAR_UPPER,
+    ]),
+    name: stringToNameNode(REQUIRES_SCOPES),
     repeatable: false,
   },
   // directive @shareable on FIELD_DEFINITION | OBJECT
@@ -391,7 +449,12 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   },
 ];
 
-export const FIELD_SET_DEFINITION: ScalarTypeDefinitionNode = {
+export const FIELD_SET_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
   kind: Kind.SCALAR_TYPE_DEFINITION,
-  name: stringToNameNode(FIELD_SET),
+  name: stringToNameNode(FIELD_SET_SCALAR),
+};
+
+export const SCOPE_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(SCOPE_SCALAR),
 };

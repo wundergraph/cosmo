@@ -1,6 +1,5 @@
 schema {
   query: Queries
-  mutation: Mutation
 }
 
 type Queries {
@@ -9,20 +8,10 @@ type Queries {
   factTypes: [TopSecretFactType!]
 }
 
-type Mutation {
-  addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [["write:fact"], ["write:all"]])
-}
-
-input TopSecretFactInput {
-  title: String!
-  description: FactContent!
-  factType: TopSecretFactType!
-}
-
 enum TopSecretFactType @authenticated {
-  DIRECTIVE,
-  ENTITY,
-  MISCELLANEOUS,
+  DIRECTIVE
+  ENTITY
+  MISCELLANEOUS
 }
 
 interface TopSecretFact @authenticated {
@@ -38,7 +27,7 @@ type DirectiveFact implements TopSecretFact @authenticated {
   factType: TopSecretFactType
 }
 
-type EntityFact implements TopSecretFact @requiresScopes(scopes: [["read:entity"]]){
+type EntityFact implements TopSecretFact @requiresScopes(scopes: [["read:entity"]]) {
   title: String!
   description: FactContent!
   factType: TopSecretFactType

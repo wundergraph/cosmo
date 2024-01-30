@@ -1,28 +1,11 @@
-import { Kind } from 'graphql';
-import { FIELD, UNION } from './string-constants';
+import { ConstDirectiveNode, Kind, StringValueNode } from 'graphql';
+import { AUTHENTICATED, FIELD, REQUIRES_SCOPES, SCOPES, UNION } from './string-constants';
 import { MultiGraph } from 'graphology';
-import {
-  abstractTypeInKeyFieldSetErrorMessage,
-  argumentsInKeyFieldSetErrorMessage,
-  duplicateFieldInFieldSetErrorMessage,
-  inlineFragmentInFieldSetErrorMessage,
-  invalidKeyDirectivesError,
-  invalidKeyFatalError,
-  invalidSelectionSetDefinitionErrorMessage,
-  invalidSelectionSetErrorMessage,
-  undefinedFieldInFieldSetErrorMessage,
-  unexpectedArgumentErrorMessage,
-  unknownTypeInFieldSetErrorMessage,
-  unparsableFieldSetErrorMessage,
-  unparsableFieldSetSelectionErrorMessage,
-} from '../errors/errors';
-import { NormalizationFactory } from '../normalization/normalization-factory';
-import { ConfigurationData, RequiredFieldConfiguration } from '../subgraph/router-configuration';
-import { isKindAbstract, safeParse } from '../ast/utils';
-import { BREAK, visit } from 'graphql/index';
-import { getNamedTypeForChild } from '../type-merging/type-merging';
-import { BASE_SCALARS } from './constants';
-import { getNormalizedFieldSet, ObjectLikeContainer } from '../normalization/utils';
+import { invalidKeyFatalError } from '../errors/errors';
+import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode, stringToNameNode } from '../ast/utils';
+import { FieldDefinitionNode } from 'graphql/index';
+import { FieldConfiguration } from '../router-configuration/router-configuration';
+import { ConstValueNode } from 'graphql/language/ast';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {
@@ -372,11 +355,9 @@ export function upsertEntityContainerProperties(
   params: EntityContainerParams,
 ) {
   const existingEntityContainer = entityContainersByTypeName.get(params.typeName);
-  if (existingEntityContainer) {
-    addEntityContainerProperties(params, existingEntityContainer);
-    return;
-  }
-  entityContainersByTypeName.set(params.typeName, newEntityContainer(params));
+  existingEntityContainer
+    ? addEntityContainerProperties(params, existingEntityContainer)
+    : entityContainersByTypeName.set(params.typeName, newEntityContainer(params));
 }
 
 export function upsertEntityContainer(
@@ -384,9 +365,161 @@ export function upsertEntityContainer(
   entityContainer: EntityContainer,
 ) {
   const existingEntityContainer = entityContainersByTypeName.get(entityContainer.typeName);
-  if (!existingEntityContainer) {
-    entityContainersByTypeName.set(entityContainer.typeName, entityContainer);
+  existingEntityContainer
+    ? addEntityContainerProperties(entityContainer, existingEntityContainer)
+    : entityContainersByTypeName.set(entityContainer.typeName, entityContainer);
+}
+
+export type FieldAuthorizationData = {
+  fieldName: string;
+  requiresAuthentication: boolean;
+  requiredScopes: Set<string>[];
+};
+
+export function newFieldAuthorizationData(fieldName: string): FieldAuthorizationData {
+  return {
+    fieldName,
+    requiresAuthentication: false,
+    requiredScopes: [],
+  };
+}
+
+export type AuthorizationData = {
+  fieldAuthorizationDataByFieldName: Map<string, FieldAuthorizationData>;
+  hasParentLevelAuthorization: boolean;
+  requiresAuthentication: boolean;
+  requiredScopes: Set<string>[];
+  typeName: string;
+};
+
+export function getAuthorizationDataToUpdate(
+  authorizationContainer: AuthorizationData,
+  node: EnumTypeNode | FieldDefinitionNode | InterfaceTypeNode | ObjectTypeNode | ScalarTypeNode,
+  fieldName: string,
+): AuthorizationData | FieldAuthorizationData {
+  if (node.kind === Kind.FIELD_DEFINITION) {
+    return getValueOrDefault(authorizationContainer.fieldAuthorizationDataByFieldName, fieldName, () =>
+      newFieldAuthorizationData(fieldName),
+    );
+  }
+  authorizationContainer.hasParentLevelAuthorization = true;
+  return authorizationContainer;
+}
+
+export function newAuthorizationData(typeName: string): AuthorizationData {
+  return {
+    fieldAuthorizationDataByFieldName: new Map<string, FieldAuthorizationData>(),
+    hasParentLevelAuthorization: false,
+    requiresAuthentication: false,
+    requiredScopes: [],
+    typeName,
+  };
+}
+
+export function mergeAuthorizationDataByAND(
+  source: AuthorizationData | FieldAuthorizationData,
+  target: AuthorizationData | FieldAuthorizationData,
+) {
+  target.requiresAuthentication ||= source.requiresAuthentication;
+  if (source.requiredScopes.length < 1) {
     return;
   }
-  addEntityContainerProperties(entityContainer, existingEntityContainer);
+  if (target.requiredScopes.length < 1) {
+    target.requiredScopes = source.requiredScopes;
+    return;
+  }
+  const mergedOrScopes: Set<string>[] = [];
+  for (const existingOrScopes of target.requiredScopes) {
+    for (const incomingOrScopes of source.requiredScopes) {
+      const newOrScopes = new Set<string>(existingOrScopes);
+      addIterableValuesToSet(incomingOrScopes, newOrScopes);
+      mergedOrScopes.push(newOrScopes);
+    }
+  }
+  target.requiredScopes = mergedOrScopes;
+}
+
+export function addAuthorizationDataProperties(source: AuthorizationData, target: AuthorizationData) {
+  mergeAuthorizationDataByAND(source, target);
+  for (const [fieldName, incomingFieldAuthorizationData] of source.fieldAuthorizationDataByFieldName) {
+    const existingFieldAuthorizationData = target.fieldAuthorizationDataByFieldName.get(fieldName);
+    existingFieldAuthorizationData
+      ? mergeAuthorizationDataByAND(incomingFieldAuthorizationData, existingFieldAuthorizationData)
+      : target.fieldAuthorizationDataByFieldName.set(fieldName, incomingFieldAuthorizationData);
+  }
+}
+
+export function upsertAuthorizationData(
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>,
+  authorizationData: AuthorizationData,
+) {
+  const existingAuthorizationData = authorizationDataByParentTypeName.get(authorizationData.typeName);
+  existingAuthorizationData
+    ? addAuthorizationDataProperties(authorizationData, existingAuthorizationData)
+    : authorizationDataByParentTypeName.set(authorizationData.typeName, authorizationData);
+}
+
+export function upsertAuthorizationConfiguration(
+  fieldConfigurationByFieldPath: Map<string, FieldConfiguration>,
+  authorizationData: AuthorizationData,
+) {
+  const typeName = authorizationData.typeName;
+  for (const [fieldName, fieldAuthorizationData] of authorizationData.fieldAuthorizationDataByFieldName) {
+    const fieldPath = `${typeName}.${fieldName}`;
+    const existingFieldConfiguration = fieldConfigurationByFieldPath.get(fieldPath);
+    if (existingFieldConfiguration) {
+      existingFieldConfiguration.requiresAuthentication = fieldAuthorizationData.requiresAuthentication;
+      existingFieldConfiguration.requiredScopes = fieldAuthorizationData.requiredScopes.map((orScopes) => [
+        ...orScopes,
+      ]);
+    } else {
+      fieldConfigurationByFieldPath.set(fieldPath, {
+        argumentNames: [],
+        typeName,
+        fieldName,
+        requiresAuthentication: fieldAuthorizationData.requiresAuthentication,
+        requiredScopes: fieldAuthorizationData.requiredScopes.map((orScopes) => [...orScopes]),
+      });
+    }
+  }
+}
+
+export function setAndGetValue<K, V>(map: Map<K, V>, key: K, value: V) {
+  map.set(key, value);
+  return value;
+}
+
+export function generateAuthenticatedDirective(): ConstDirectiveNode {
+  return {
+    kind: Kind.DIRECTIVE,
+    name: stringToNameNode(AUTHENTICATED),
+  };
+}
+
+export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstDirectiveNode {
+  const values: ConstValueNode[] = [];
+  for (const andScopes of orScopes) {
+    const scopes: StringValueNode[] = [];
+    for (const scope of andScopes) {
+      scopes.push({
+        kind: Kind.STRING,
+        value: scope,
+      });
+    }
+    values.push({ kind: Kind.LIST, values: scopes });
+  }
+  return {
+    kind: Kind.DIRECTIVE,
+    name: stringToNameNode(REQUIRES_SCOPES),
+    arguments: [
+      {
+        kind: Kind.ARGUMENT,
+        name: stringToNameNode(SCOPES),
+        value: {
+          kind: Kind.LIST,
+          values,
+        },
+      },
+    ],
+  };
 }

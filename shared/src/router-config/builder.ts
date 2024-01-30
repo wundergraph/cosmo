@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { ArgumentConfigurationData, ConfigurationDataMap } from '@wundergraph/composition';
+import { FieldConfiguration, ConfigurationDataByTypeName } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -18,15 +18,12 @@ import {
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import {
-  argumentConfigurationDatasToFieldConfigurations,
-  configurationDataMapToDataSourceConfiguration,
-} from './graphql-configuration.js';
+import { generateFieldConfigurations, configurationDataMapToDataSourceConfiguration } from './graphql-configuration.js';
 import { normalizationFailureError } from './errors.js';
 
 export interface Input {
-  argumentConfigurations: ArgumentConfigurationData[];
   federatedSDL: string;
+  fieldConfigurations: FieldConfiguration[];
   schemaVersionId: string;
   subgraphs: ComposedSubgraph[];
 }
@@ -49,7 +46,7 @@ export interface ComposedSubgraph {
   subscriptionUrl: string;
   subscriptionProtocol: SubscriptionProtocol;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataMap?: ConfigurationDataMap;
+  configurationDataMap?: ConfigurationDataByTypeName;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
 }
@@ -182,7 +179,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     });
     engineConfig.datasourceConfigurations.push(datasourceConfig);
   }
-  engineConfig.fieldConfigurations = argumentConfigurationDatasToFieldConfigurations(input.argumentConfigurations);
+  engineConfig.fieldConfigurations = generateFieldConfigurations(input.fieldConfigurations);
   engineConfig.graphqlSchema = input.federatedSDL;
   return new RouterConfig({
     engineConfig,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 )
 
 type Claims map[string]any
@@ -30,6 +31,9 @@ type Authentication interface {
 	// Claims returns the claims of the authenticated request, as returned by
 	// the Authenticator.
 	Claims() Claims
+	// Scopes returns the scopes of the authenticated request, as returned by
+	// the Authenticator.
+	Scopes() []string
 }
 
 type authentication struct {
@@ -42,7 +46,21 @@ func (a *authentication) Authenticator() string {
 }
 
 func (a *authentication) Claims() Claims {
+	if a == nil {
+		return nil
+	}
 	return a.claims
+}
+
+func (a *authentication) Scopes() []string {
+	if a == nil {
+		return nil
+	}
+	scopes, ok := a.claims["scopes"].(string)
+	if !ok {
+		return nil
+	}
+	return strings.Split(scopes, " ")
 }
 
 // Authenticate tries to authenticate the given Provider using the given authenticators. If any of

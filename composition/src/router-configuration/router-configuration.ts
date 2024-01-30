@@ -1,15 +1,3 @@
-export type ArgumentConfigurationData = {
-  argumentNames: string[];
-  fieldName: string;
-  typeName: string;
-};
-
-export type RequiredFieldConfiguration = {
-  fieldName: string;
-  selectionSet: string;
-  disableEntityResolver?: boolean;
-};
-
 export type EventType = 'subscribe' | 'publish' | 'request';
 
 export type EventConfiguration = {
@@ -17,6 +5,20 @@ export type EventConfiguration = {
   topic: string;
   type: EventType;
   sourceId?: string;
+};
+
+export type FieldConfiguration = {
+  argumentNames: string[];
+  fieldName: string;
+  typeName: string;
+  requiresAuthentication?: boolean;
+  requiredScopes?: string[][];
+};
+
+export type RequiredFieldConfiguration = {
+  fieldName: string;
+  selectionSet: string;
+  disableEntityResolver?: boolean;
 };
 
 export type ConfigurationData = {
@@ -31,4 +33,4 @@ export type ConfigurationData = {
   requires?: RequiredFieldConfiguration[];
 };
 
-export type ConfigurationDataMap = Map<string, ConfigurationData>;
+export type ConfigurationDataByTypeName = Map<string, ConfigurationData>;

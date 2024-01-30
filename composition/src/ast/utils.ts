@@ -4,6 +4,8 @@ import {
   DocumentNode,
   FieldDefinitionNode,
   FieldNode,
+  InputObjectTypeDefinitionNode,
+  InputObjectTypeExtensionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
   Kind,
@@ -13,6 +15,8 @@ import {
   ObjectTypeExtensionNode,
   OperationTypeNode,
   parse,
+  SchemaDefinitionNode,
+  SchemaExtensionNode,
   SelectionSetNode,
   StringValueNode,
   UnionTypeExtensionNode,
@@ -50,7 +54,13 @@ import {
   UNION_UPPER,
 } from '../utils/string-constants';
 import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/errors';
-import { UnionTypeDefinitionNode } from 'graphql/index';
+import {
+  EnumTypeDefinitionNode,
+  EnumTypeExtensionNode,
+  ScalarTypeDefinitionNode,
+  ScalarTypeExtensionNode,
+  UnionTypeDefinitionNode,
+} from 'graphql/index';
 import { DirectiveContainer, EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
@@ -427,3 +437,11 @@ export function safeParse(value: string): ParseResult {
     return { error: e as Error };
   }
 }
+
+export type EnumTypeNode = EnumTypeDefinitionNode | EnumTypeExtensionNode;
+export type InputObjectTypeNode = InputObjectTypeDefinitionNode | InputObjectTypeExtensionNode;
+export type InterfaceTypeNode = InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode;
+export type ObjectTypeNode = ObjectTypeDefinitionNode | ObjectTypeExtensionNode;
+export type ScalarTypeNode = ScalarTypeDefinitionNode | ScalarTypeExtensionNode;
+export type SchemaNode = SchemaDefinitionNode | SchemaExtensionNode;
+export type UnionTypeNode = UnionTypeDefinitionNode | UnionTypeExtensionNode;

@@ -23,15 +23,17 @@ type Subgraph struct {
 	Schema string `goja:"schema"`
 }
 
-type ArgumentConfiguration struct {
-	ArgumentNames []string `goja:"argumentNames"`
-	FieldName     string   `goja:"fieldName"`
-	TypeName      string   `goja:"typeName"`
+type FieldConfiguration struct {
+	ArgumentNames          []string   `goja:"argumentNames"`
+	FieldName              string     `goja:"fieldName"`
+	TypeName               string     `goja:"typeName"`
+	RequiresAuthentication bool       `goja:"requiresAuthentication"`
+	RequiredScopes         [][]string `goja:"requiredScopes"`
 }
 
 type FederatedGraph struct {
-	ArgumentConfigurations []*ArgumentConfiguration `goja:"argumentConfigurations"`
-	SDL                    string                   `goja:"sdl"`
+	FieldConfigurations []*FieldConfiguration `goja:"fieldConfigurations"`
+	SDL                 string                `goja:"sdl"`
 }
 
 type sdlResponse struct {

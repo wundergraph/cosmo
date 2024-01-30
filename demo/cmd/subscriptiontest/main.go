@@ -115,7 +115,7 @@ func main() {
 }
 
 func connect(ctx context.Context, num int, tick chan struct{}, acked *sync.WaitGroup) {
-	u, err := url.Parse(fmt.Sprintf("ws://%s:3002/graphql", *host))
+	u, err := url.Parse(fmt.Sprintf("ws://%s:3003/graphql", *host))
 	if err != nil {
 		slog.Error(err.Error())
 		return

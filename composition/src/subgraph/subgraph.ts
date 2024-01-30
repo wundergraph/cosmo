@@ -11,10 +11,20 @@ import {
   stringToNameNode,
 } from '../ast/utils';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
-import { EntityInterfaceSubgraphData, getOrThrowError } from '../utils/utils';
-import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
-import { ConfigurationDataMap } from '././router-configuration';
+import {
+  AuthorizationData,
+  EntityInterfaceSubgraphData,
+  getOrThrowError,
+  getValueOrDefault,
+  mergeAuthorizationDataByAND,
+  newAuthorizationData,
+  newFieldAuthorizationData,
+  setAndGetValue,
+} from '../utils/utils';
+import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
+import { ConfigurationDataByTypeName } from '../router-configuration/router-configuration';
 import { ExtensionContainerByTypeName, ParentContainerByTypeName } from '../normalization/utils';
+import { NormalizationFactory } from '../normalization/normalization-factory';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -23,7 +33,7 @@ export type Subgraph = {
 };
 
 export type InternalSubgraph = {
-  configurationDataMap: ConfigurationDataMap;
+  configurationDataMap: ConfigurationDataByTypeName;
   definitions: DocumentNode;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   extensionContainerByTypeName: ExtensionContainerByTypeName;
@@ -38,7 +48,7 @@ export type InternalSubgraph = {
 };
 
 export type SubgraphConfig = {
-  configurationDataMap: ConfigurationDataMap;
+  configurationDataMap: ConfigurationDataByTypeName;
   schema: GraphQLSchema;
 };
 
@@ -52,6 +62,79 @@ export function recordSubgraphName(
     return;
   }
   nonUniqueSubgraphNames.add(subgraphName);
+}
+
+export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFactory, definitions: DocumentNode) {
+  let parentAuthorizationData: AuthorizationData | undefined;
+  visit(definitions, {
+    FieldDefinition: {
+      enter(node) {
+        factory.childName = node.name.value;
+        const typeName = getNamedTypeForChild(`${factory.parentTypeName}.${factory.childName}`, node.type);
+        const inheritsAuthorization = factory.leafTypeNamesWithAuthorizationDirectives.has(typeName);
+        if (
+          (!parentAuthorizationData || !parentAuthorizationData.hasParentLevelAuthorization) &&
+          !inheritsAuthorization
+        ) {
+          return false;
+        }
+        if (!parentAuthorizationData) {
+          parentAuthorizationData = setAndGetValue(
+            factory.authorizationDataByParentTypeName,
+            factory.parentTypeName,
+            newAuthorizationData(factory.parentTypeName),
+          );
+        }
+        const fieldAuthorizationData = getValueOrDefault(
+          parentAuthorizationData.fieldAuthorizationDataByFieldName,
+          factory.childName,
+          () => newFieldAuthorizationData(factory.childName),
+        );
+        mergeAuthorizationDataByAND(parentAuthorizationData, fieldAuthorizationData);
+        if (!inheritsAuthorization) {
+          return false;
+        }
+        const definitionAuthorizationData = factory.authorizationDataByParentTypeName.get(typeName);
+        if (definitionAuthorizationData && definitionAuthorizationData.hasParentLevelAuthorization) {
+          mergeAuthorizationDataByAND(definitionAuthorizationData, fieldAuthorizationData);
+        }
+        return false;
+      },
+      leave() {
+        factory.childName = '';
+      },
+    },
+    InterfaceTypeDefinition: {
+      enter(node) {
+        factory.parentTypeName = node.name.value;
+        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
+      },
+      leave() {
+        factory.parentTypeName = '';
+        parentAuthorizationData = undefined;
+      },
+    },
+    ObjectTypeDefinition: {
+      enter(node) {
+        factory.parentTypeName = node.name.value;
+        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
+      },
+      leave() {
+        factory.parentTypeName = '';
+        parentAuthorizationData = undefined;
+      },
+    },
+    ObjectTypeExtension: {
+      enter(node) {
+        factory.parentTypeName = node.name.value;
+        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
+      },
+      leave() {
+        factory.parentTypeName = '';
+        parentAuthorizationData = undefined;
+      },
+    },
+  });
 }
 
 // Places the object-like nodes into the multigraph including the concrete types for abstract types
@@ -95,13 +178,14 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
           factory.validateKeyFieldSetsForImplicitEntity(entityContainer);
         }
         addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
-        if (typeName !== parentTypeName) {
-          return {
-            ...node,
-            name: stringToNameNode(parentTypeName),
-          };
+        if (typeName == parentTypeName) {
+          return false;
         }
-        return false;
+        factory.renamedTypeNameByOriginalTypeName.set(typeName, parentTypeName);
+        return {
+          ...node,
+          name: stringToNameNode(parentTypeName),
+        };
       },
     },
     ObjectTypeExtension: {

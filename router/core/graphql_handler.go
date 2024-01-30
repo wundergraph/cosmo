@@ -3,11 +3,12 @@ package core
 import (
 	"context"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
@@ -59,6 +60,7 @@ type HandlerOptions struct {
 	EnableExecutionPlanCacheResponseHeader bool
 	WebSocketStats                         WebSocketsStatistics
 	TracerProvider                         trace.TracerProvider
+	Authorizer                             *CosmoAuthorizer
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -71,6 +73,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 			"wundergraph/cosmo/router/graphql_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
+		authorizer: opts.Authorizer,
 	}
 	return graphQLHandler
 }
@@ -91,6 +94,7 @@ type GraphQLHandler struct {
 	enableExecutionPlanCacheResponseHeader bool
 	websocketStats                         WebSocketsStatistics
 	tracer                                 trace.Tracer
+	authorizer                             *CosmoAuthorizer
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +117,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Extensions:            operationCtx.extensions,
 	}
 	ctx = ctx.WithContext(executionContext)
+	ctx.WithAuthorizer(h.authorizer)
+
 	defer propagateSubgraphErrors(ctx)
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
@@ -126,7 +132,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			var nErr net.Error
 
-			if errors.Is(err, context.Canceled) {
+			if errors.Is(err, ErrUnauthorized) {
+				writeRequestErrors(executionContext, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
+			} else if errors.Is(err, context.Canceled) {
 				writeRequestErrors(executionContext, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerCanceled), w, requestLogger)
 			} else if errors.As(err, &nErr) && nErr.Timeout() {
 				writeRequestErrors(executionContext, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerTimeout), w, requestLogger)
@@ -159,7 +167,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer h.websocketStats.SynchronousSubscriptionsDec()
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
+			if errors.Is(err, ErrUnauthorized) {
+				writeRequestErrors(executionContext, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
+			} else if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
 				writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 				return

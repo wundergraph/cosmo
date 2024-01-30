@@ -68,16 +68,6 @@ var employees = []*model.Employee{
 		Notes: strPtr("Nithin notes resolved by products"),
 	},
 	{
-		ID: 9,
-		Products: []model.ProductName{
-			model.ProductNameConsultancy,
-			model.ProductNameCosmo,
-			model.ProductNameEngine,
-			model.ProductNameSdk,
-		},
-		Notes: strPtr("Alberto notes resolved by products"),
-	},
-	{
 		ID: 10,
 		Products: []model.ProductName{
 			model.ProductNameConsultancy,

@@ -31,7 +31,7 @@ func TestPersistedOperation(t *testing.T) {
 			Header:        header,
 		})
 		require.NoError(t, err)
-		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
 }
 
@@ -47,10 +47,10 @@ func TestPersistedOperationsCache(t *testing.T) {
 		}
 		res1, err := xEnv.MakeGraphQLRequest(req)
 		require.NoError(t, err)
-		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res1.Body)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res1.Body)
 		res2, err := xEnv.MakeGraphQLRequest(req)
 		require.NoError(t, err)
-		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
 	}
 
 	retrieveNumberOfCDNRequests := func(t *testing.T, cdnURL string) int {

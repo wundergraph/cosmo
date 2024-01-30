@@ -2,10 +2,11 @@ package core
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/jensneuse/abstractlogger"
 	"github.com/nats-io/nats.go"
@@ -145,11 +146,13 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			}
 			args = append(args, arg)
 		}
-		outConfig.Fields = append(outConfig.Fields, plan.FieldConfiguration{
-			TypeName:  configuration.TypeName,
-			FieldName: configuration.FieldName,
-			Arguments: args,
-		})
+		fieldConfig := plan.FieldConfiguration{
+			TypeName:             configuration.TypeName,
+			FieldName:            configuration.FieldName,
+			Arguments:            args,
+			HasAuthorizationRule: l.fieldHasAuthorizationRule(configuration),
+		}
+		outConfig.Fields = append(outConfig.Fields, fieldConfig)
 	}
 
 	for _, configuration := range engineConfig.TypeConfigurations {
@@ -343,4 +346,20 @@ func (l *Loader) resolveFactory(ds *nodev1.DataSourceConfiguration) (plan.Planne
 		}
 	}
 	return nil, nil
+}
+
+func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {
+	if fieldConfiguration == nil {
+		return false
+	}
+	if fieldConfiguration.AuthorizationConfiguration == nil {
+		return false
+	}
+	if fieldConfiguration.AuthorizationConfiguration.RequiresAuthentication {
+		return true
+	}
+	if len(fieldConfiguration.AuthorizationConfiguration.RequiredOrScopes) > 0 {
+		return true
+	}
+	return false
 }
