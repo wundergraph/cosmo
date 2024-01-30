@@ -34,8 +34,6 @@ global:
 
   redis:
     enabled: false
-    host: 'cosmo-redis-master'
-    port: 6379
 
   cdn:
     enabled: false

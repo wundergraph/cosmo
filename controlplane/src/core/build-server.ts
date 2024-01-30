@@ -40,7 +40,7 @@ export interface BuildConfig {
   logger: LoggerOptions;
   database: {
     url: string;
-    ssl?: {
+    tls?: {
       cert?: string; // e.g. string or '/path/to/my/client-cert.pem'
       ca?: string; // e.g. string or '/path/to/my/server-ca.pem'
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
@@ -91,7 +91,7 @@ export interface BuildConfig {
     host: string;
     port: number;
     password?: string;
-    ssl?: {
+    tls?: {
       cert?: string; // e.g. string or '/path/to/my/client-cert.pem'
       ca?: string; // e.g. string or '/path/to/my/server-ca.pem'
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
@@ -144,7 +144,7 @@ export default async function build(opts: BuildConfig) {
   await fastify.register(fastifyDatabase, {
     databaseConnectionUrl: opts.database.url,
     gracefulTimeoutSec: 15,
-    ssl: opts.database.ssl,
+    tls: opts.database.tls,
     debugSQL: opts.debugSQL,
   });
 
@@ -212,14 +212,15 @@ export default async function build(opts: BuildConfig) {
   }
 
   const bullWorkers: Worker[] = [];
-  const readmeQueue = new AIGraphReadmeQueue(fastify.redis);
 
   await fastify.register(fastifyRedis, {
     host: opts.redis.host,
     port: opts.redis.port,
     password: opts.redis.password,
-    ssl: opts.redis.ssl,
+    tls: opts.redis.tls,
   });
+
+  const readmeQueue = new AIGraphReadmeQueue(fastify.redis);
 
   if (opts.openaiAPIKey) {
     bullWorkers.push(

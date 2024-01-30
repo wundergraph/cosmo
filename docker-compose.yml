@@ -164,6 +164,7 @@ services:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
     ports:
       - '6379:6379'
+    command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
       - redis:/data
@@ -174,7 +175,7 @@ services:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
     ports:
       - '6380:6379'
-    command: redis-server --slaveof redis 6379
+    command: redis-server --slaveof redis 6379 /usr/local/etc/redis/redis.conf
     depends_on:
       - redis
     volumes:

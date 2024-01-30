@@ -15,7 +15,7 @@ export interface RedisPluginOptions {
   host: string;
   port: number;
   password?: string;
-  ssl?: {
+  tls?: {
     // Necessary only if the server uses a self-signed certificate.
     ca?: string;
     // Necessary only if the server requires client certificate authentication.
@@ -25,27 +25,34 @@ export interface RedisPluginOptions {
 }
 
 export default fp<RedisPluginOptions>(async function (fastify, opts) {
-  const connectionConfig: IORedis.RedisOptions = {};
+  const connectionConfig: IORedis.RedisOptions = {
+    connectionName: 'controlplane',
+    host: opts.host,
+    port: opts.port,
+    password: opts.password,
+    maxRetriesPerRequest: 0, // required for bullmq
+  };
 
-  console.log(path.extname('wedwdew'));
-
-  if (opts.ssl) {
+  if (opts.tls) {
     const sslOptions: tls.TlsOptions = {
       rejectUnauthorized: false,
+      ca: opts.tls.ca,
+      cert: opts.tls.cert,
+      key: opts.tls.key,
     };
 
     // Check if the ca is a file and read it.
-    if (opts.ssl.ca && path.extname(opts.ssl.ca)) {
-      sslOptions.ca = await readFile(opts.ssl.ca, 'utf8');
+    if (opts.tls.ca && path.extname(opts.tls.ca)) {
+      sslOptions.ca = await readFile(opts.tls.ca, 'utf8');
     }
     // Check if the cert is a file and read it.
-    if (opts.ssl.cert && path.extname(opts.ssl.cert)) {
-      sslOptions.cert = await readFile(opts.ssl.cert, 'utf8');
+    if (opts.tls.cert && path.extname(opts.tls.cert)) {
+      sslOptions.cert = await readFile(opts.tls.cert, 'utf8');
     }
 
     // Check if the key is a file and read it.
-    if (opts.ssl.key && path.extname(opts.ssl.key)) {
-      sslOptions.key = await readFile(opts.ssl.key, 'utf8');
+    if (opts.tls.key && path.extname(opts.tls.key)) {
+      sslOptions.key = await readFile(opts.tls.key, 'utf8');
     }
 
     connectionConfig.tls = {
@@ -56,13 +63,7 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
     };
   }
 
-  const redis = new IORedis.Redis({
-    connectionName: 'controlplane',
-    host: opts.host,
-    port: opts.port,
-    password: opts.password,
-    maxRetriesPerRequest: 0, // required for bullmq
-  });
+  const redis = new IORedis.Redis(connectionConfig);
 
   fastify.decorate('redisHealthcheck', async () => {
     try {
@@ -73,13 +74,6 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
       fastify.log.error(error);
       throw new Error('Redis connection healthcheck failed');
     }
-  });
-  fastify.addHook('onClose', () => {
-    fastify.log.debug('Closing redis connection ...');
-
-    redis.disconnect();
-
-    fastify.log.debug('Redis connection closed');
   });
 
   await fastify.redisHealthcheck();

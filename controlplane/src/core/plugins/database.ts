@@ -20,7 +20,7 @@ export interface DbPluginOptions {
   debugSQL?: boolean;
   gracefulTimeoutSec?: number;
   runMigration?: boolean;
-  ssl?: {
+  tls?: {
     // Necessary only if the server uses a self-signed certificate.
     ca?: string;
     // Necessary only if the server requires client certificate authentication.
@@ -36,23 +36,26 @@ export default fp<DbPluginOptions>(async function (fastify, opts) {
     },
   };
 
-  if (opts.ssl) {
+  if (opts.tls) {
     const sslOptions: tls.TlsOptions = {
       rejectUnauthorized: false,
+      ca: opts.tls.ca,
+      cert: opts.tls.cert,
+      key: opts.tls.key,
     };
 
     // Check if the ca is a file and read it.
-    if (opts.ssl.ca && path.extname(opts.ssl.ca)) {
-      sslOptions.ca = await readFile(opts.ssl.ca, 'utf8');
+    if (opts.tls.ca && path.extname(opts.tls.ca)) {
+      sslOptions.ca = await readFile(opts.tls.ca, 'utf8');
     }
     // Check if the cert is a file and read it.
-    if (opts.ssl.cert && path.extname(opts.ssl.cert)) {
-      sslOptions.cert = await readFile(opts.ssl.cert, 'utf8');
+    if (opts.tls.cert && path.extname(opts.tls.cert)) {
+      sslOptions.cert = await readFile(opts.tls.cert, 'utf8');
     }
 
     // Check if the key is a file and read it.
-    if (opts.ssl.key && path.extname(opts.ssl.key)) {
-      sslOptions.key = await readFile(opts.ssl.key, 'utf8');
+    if (opts.tls.key && path.extname(opts.tls.key)) {
+      sslOptions.key = await readFile(opts.tls.key, 'utf8');
     }
 
     connectionConfig.ssl = sslOptions;

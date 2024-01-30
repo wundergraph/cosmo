@@ -54,7 +54,7 @@ const {
 const options: BuildConfig = {
   database: {
     url: DB_URL,
-    ssl: DB_TLS_CA || DB_TLS_CERT || DB_TLS_KEY ? { ca: DB_TLS_CA, cert: DB_TLS_CERT, key: DB_TLS_KEY } : undefined,
+    tls: DB_TLS_CA || DB_TLS_CERT || DB_TLS_KEY ? { ca: DB_TLS_CA, cert: DB_TLS_CERT, key: DB_TLS_KEY } : undefined,
   },
   allowedOrigins: ALLOWED_ORIGINS,
   production: process.env.NODE_ENV === 'production',
@@ -102,7 +102,7 @@ const options: BuildConfig = {
     host: REDIS_HOST,
     port: REDIS_PORT,
     password: REDIS_PASSWORD,
-    ssl:
+    tls:
       REDIS_TLS_CERT || REDIS_TLS_KEY || REDIS_TLS_CA
         ? {
             cert: REDIS_TLS_CERT,

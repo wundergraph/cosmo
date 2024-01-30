@@ -19,6 +19,9 @@ WunderGraph Cosmo Controlplane
 | configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
 | configuration.clickhouseDsn | string | `"http://default:changeme@cosmo-clickhouse:8123?database=cosmo"` |  |
 | configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"` |  |
+| configuration.databaseTlsCa | string | `""` | When connecting to a postgresql database over TLS |
+| configuration.databaseTlsCert | string | `""` |  |
+| configuration.databaseTlsKey | string | `""` |  |
 | configuration.databaseUrl | string | `"postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"` |  |
 | configuration.debugSQL | bool | `false` |  |
 | configuration.defaultBillingPlan | string | `""` | The default billing plan, eg `developer@1` |
@@ -28,6 +31,12 @@ WunderGraph Cosmo Controlplane
 | configuration.githubAppPrivateKey | string | `""` |  |
 | configuration.githubAppWebhookSecret | string | `""` |  |
 | configuration.logLevel | string | `"info"` |  |
+| configuration.redisHost | string | `"cosmo-redis-master"` |  |
+| configuration.redisPassword | string | `""` |  |
+| configuration.redisPort | int | `6379` |  |
+| configuration.redisTlsCa | string | `""` | When connecting to a redis instance over TLS |
+| configuration.redisTlsCert | string | `""` |  |
+| configuration.redisTlsKey | string | `""` |  |
 | configuration.s3StorageUrl | string | `"http://minio:changeme@minio.wundergraph.local:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |

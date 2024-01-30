@@ -31,8 +31,6 @@ global:
 
   redis:
     enabled: true
-    host: 'cosmo-redis-master'
-    port: 6379
 
   postgresql:
     enabled: true
@@ -97,7 +95,7 @@ cdn:
 # Cosmo Controlplane. For more options, please refer to the README.md
 controlplane:
   configuration:
-    logLevel: 'info'
+    logLevel: 'debug'
     allowedOrigins:
       - 'http://studio.wundergraph.local'
     debugSQL: false
@@ -107,20 +105,9 @@ controlplane:
     clickhouseDsn: 'http://default:changeme@cosmo-clickhouse:8123/?database=cosmo'
     # Migration tool doesn't support HTTP clickhouse protocol yet
     clickhouseMigrationDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&max_execution_time=60'
-    postgres:
-      database: 'controlplane'
-    webhookUrl: ''
-    webhookSecret: ''
-    githubAppClientId: ''
-    githubAppClientSecret: ''
-    githubAppId: ''
-    githubAppPrivateKey: ''
-    githubAppWebhookSecret: ''
-    slackAppClientId: ''
-    slackAppClientSecret: ''
+    redisHost: 'cosmo-redis-master'
+    redisPort: 6379
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
-    smtpUsername: ''
-    smtpPassword: ''
 
 # Cosmo Router. For more options, please refer to the CHART.md
 router:
@@ -306,3 +293,7 @@ redis:
     appendonly no
     # Enable RDB persistence
     save "60 1"
+    # Disable maxmemory-policy https://redis.io/topics/lru-cache#eviction-policies
+    maxmemory-policy noeviction
+    # Set maxmemory to 100mb
+    maxmemory 100mb
