@@ -111,12 +111,12 @@ func (m *v8Vm) FederateSubgraphs(subgraphs []*Subgraph) (*FederatedGraph, error)
 		return nil, err
 	}
 	resultObject := result.Object()
-	argumentConfigurationsValue, err := resultObject.Get("argumentConfigurations")
+	fieldConfigurationsValue, err := resultObject.Get("fieldConfigurations")
 	if err != nil {
 		return nil, err
 	}
-	argumentConfigurationsObject := argumentConfigurationsValue.Object()
-	argumentConfigurations, err := deserializeArray(argumentConfigurationsObject, func(o *v8.Object) (*ArgumentConfiguration, error) {
+	fieldConfigurationsObject := fieldConfigurationsValue.Object()
+	fieldConfigurations, err := deserializeArray(fieldConfigurationsObject, func(o *v8.Object) (*FieldConfiguration, error) {
 		argumentNamesValue, err := o.Get("argumentNames")
 		if err != nil {
 			return nil, err
@@ -135,11 +135,32 @@ func (m *v8Vm) FederateSubgraphs(subgraphs []*Subgraph) (*FederatedGraph, error)
 		if err != nil {
 			return nil, err
 		}
-		return &ArgumentConfiguration{
+		requiresAuthenticationValue, _ := o.Get("requiresAuthentication")
+		requiredScopesValue, _ := o.Get("requiredScopes")
+		fieldConfiguration := &FieldConfiguration{
 			ArgumentNames: argumentNames,
 			FieldName:     fieldNameValue.String(),
 			TypeName:      typeNameValue.String(),
-		}, nil
+		}
+		if requiresAuthenticationValue.IsBoolean() {
+			fieldConfiguration.RequiresAuthentication = requiresAuthenticationValue.Boolean()
+		}
+		if requiredScopesValue.IsArray() {
+			requiredScopes, err := deserializeArray(requiredScopesValue.Object(), func(orScopes *v8.Object) ([]string, error) {
+				deserializedAndScopes, err := deserializeArray(orScopes, func(andScopes *v8.Object) (string, error) {
+					return andScopes.String(), nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				return deserializedAndScopes, nil
+			})
+			if err != nil {
+				return nil, err
+			}
+			fieldConfiguration.RequiredScopes = requiredScopes
+		}
+		return fieldConfiguration, nil
 	})
 	if err != nil {
 		return nil, err
@@ -149,8 +170,8 @@ func (m *v8Vm) FederateSubgraphs(subgraphs []*Subgraph) (*FederatedGraph, error)
 		return nil, err
 	}
 	return &FederatedGraph{
-		ArgumentConfigurations: argumentConfigurations,
-		SDL:                    sdl.String(),
+		FieldConfigurations: fieldConfigurations,
+		SDL:                 sdl.String(),
 	}, nil
 }
 

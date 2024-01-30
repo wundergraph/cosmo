@@ -1,6 +1,8 @@
 package subgraph
 
 import (
+	"sync"
+
 	"github.com/nats-io/nats.go"
 )
 
@@ -9,5 +11,6 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	NC *nats.Conn
+	NC  *nats.Conn
+	mux sync.Mutex
 }

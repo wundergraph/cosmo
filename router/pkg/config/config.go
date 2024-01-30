@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"os"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -203,6 +204,8 @@ type AuthenticationConfiguration struct {
 
 type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" default:"false" envconfig:"REQUIRE_AUTHENTICATION"`
+	// RejectOperationIfUnauthorized makes the router reject the whole GraphQL Operation if one field fails to authorize
+	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" default:"false" envconfig:"REJECT_OPERATION_IF_UNAUTHORIZED"`
 }
 
 type CDNConfiguration struct {
