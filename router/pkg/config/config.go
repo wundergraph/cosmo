@@ -180,6 +180,7 @@ type EngineExecutionConfiguration struct {
 	EpollKqueuePollTimeout                 time.Duration            `default:"1s" envconfig:"ENGINE_EPOLL_KQUEUE_POLL_TIMEOUT" yaml:"epoll_kqueue_poll_timeout"`
 	EpollKqueueConnBufferSize              int                      `default:"128" envconfig:"ENGINE_EPOLL_KQUEUE_CONN_BUFFER_SIZE" yaml:"epoll_kqueue_conn_buffer_size"`
 	WebSocketReadTimeout                   time.Duration            `default:"5s" envconfig:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout"`
+	ExecutionPlanCacheSize                 int64                    `default:"10000" envconfig:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size"`
 }
 
 type OverrideRoutingURLConfiguration struct {

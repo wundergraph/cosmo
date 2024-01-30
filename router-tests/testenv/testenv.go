@@ -364,6 +364,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EpollKqueueConnBufferSize: 1,
 		WebSocketReadTimeout:      time.Millisecond * 100,
 		MaxConcurrentResolvers:    128,
+		ExecutionPlanCacheSize:    1024,
 	}
 	if testConfig.ModifyEngineExecutionConfiguration != nil {
 		testConfig.ModifyEngineExecutionConfiguration(&engineExecutionConfig)
