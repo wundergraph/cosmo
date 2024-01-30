@@ -15,15 +15,29 @@ SELECT
     sumSimpleState(Sum) AS Sum,
     sumSimpleState(Count) AS Count,
     minSimpleState(Min) AS MinDuration,
-    maxSimpleState(Max) AS MaxDuration
+    maxSimpleState(Max) AS MaxDuration,
+    toLowCardinality(Attributes [ 'wg.operation.name' ]) as OperationName,
+    Attributes [ 'wg.operation.hash' ] as OperationHash,
+    Attributes [ 'wg.operation.persisted_id' ] as OperationPersistedID,
+    toLowCardinality(Attributes [ 'wg.operation.type' ]) as OperationType,
+    toLowCardinality(Attributes [ 'wg.router.config.version']) as RouterConfigVersion,
+    toLowCardinality(Attributes [ 'wg.client.name' ]) as ClientName,
+    toLowCardinality(Attributes [ 'wg.client.version' ]) as ClientVersion
 FROM otel_metrics_histogram
 -- Only works with the same bounds for all buckets. If bounds are different, we can't add them together
 WHERE ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND MetricName = 'router.http.request.duration_milliseconds' AND SubgraphID != '' AND OrganizationID != '' AND FederatedGraphID != ''
 GROUP BY
+    SubgraphID,
     FederatedGraphID,
     OrganizationID,
+    OperationName,
+    OperationType,
+    OperationHash,
+    OperationPersistedID,
+    RouterConfigVersion,
     Timestamp,
-    SubgraphID,
+    ClientName,
+    ClientVersion,
     ExplicitBounds
 ORDER BY
     Timestamp;
