@@ -255,6 +255,7 @@ postgresql:
 # https://artifacthub.io/packages/helm/bitnami/minio
 minio:
   persistence:
+    size: 1Gi
     annotations:
       # Support for k14s.io. This annotation will allow kapp to delete the PVCs.
       kapp.k14s.io/owned-for-deletion: ''
@@ -290,7 +291,7 @@ redis:
     kapp.k14s.io/change-group: 'cosmo.apps.redis.wundergraph.com/deployment'
   commonConfiguration: |-
     # Enable AOF https://redis.io/topics/persistence#append-only-file
-    appendonly true
+    appendonly yes
     # Enable RDB persistence (backup every 24h)
     save "86400 1"
     # Disable maxmemory-policy https://redis.io/topics/lru-cache#eviction-policies
