@@ -1,28 +1,9 @@
-import { createPromiseClient } from '@connectrpc/connect';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { createConnectTransport } from '@connectrpc/connect-node';
-import Fastify from 'fastify';
-import pino from 'pino';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import database from '../src/core/plugins/database.js';
-import routes from '../src/core/routes.js';
 import { SchemaChangeType } from '../src/types/index.js';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  createTestAuthenticator,
-  genID,
-  genUniqueLabel,
-  seedTest,
-} from '../src/core/test-util.js';
-import Keycloak from '../src/core/services/Keycloak.js';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
-import Mailer from '../src/core/services/Mailer.js';
-import { Authorization } from '../src/core/services/Authorization.js';
-import { InMemoryBlobStorage, SetupTest } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -84,72 +65,8 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a federated graph,subgraph, publish the schema and then check the new schema for composition errors', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
+    const { client, server } = await SetupTest(testContext, dbname);
 
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const mailerClient = new Mailer({ username: '', password: '' });
-    const platformWebhooks = new MockPlatformWebhookService();
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-        keycloakApiUrl: apiUrl,
-        blobStorage: new InMemoryBlobStorage(),
-        mailerClient,
-        authorizer: new Authorization(),
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
-
-    const client = createPromiseClient(PlatformService, transport);
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -194,72 +111,8 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a federated graph,subgraph and then perform the check operation on the subgragh with valid schema ', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
+    const { client, server } = await SetupTest(testContext, dbname);
 
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const platformWebhooks = new MockPlatformWebhookService();
-    const mailerClient = new Mailer({ username: '', password: '' });
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-        keycloakApiUrl: apiUrl,
-        blobStorage: new InMemoryBlobStorage(),
-        mailerClient,
-        authorizer: new Authorization(),
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
-
-    const client = createPromiseClient(PlatformService, transport);
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();

@@ -31,7 +31,7 @@ describe('OpenAI GraphQL', () => {
       const ai = new OpenAIGraphql({
         openAiApiKey: process.env.OPENAI_API_KEY,
       });
-      const result = await ai.createREADME({
+      const result = await ai.generateReadme({
         sdl: schemaSDL,
         graphName: 'MyGraph',
       });

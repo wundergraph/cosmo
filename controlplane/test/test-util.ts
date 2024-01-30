@@ -16,6 +16,8 @@ import { createTestAuthenticator, seedTest } from '../src/core/test-util.js';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { Label } from '../src/types/index.js';
 import { Authorization } from '../src/core/services/Authorization.js';
+import fastifyRedis from '../src/core/plugins/redis.js';
+import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -51,6 +53,13 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
   const platformWebhooks = new MockPlatformWebhookService();
   const mailerClient = new Mailer({ username: '', password: '' });
 
+  await server.register(fastifyRedis, {
+    host: 'localhost',
+    port: 6379,
+  });
+
+  const readmeQueue = new AIGraphReadmeQueue(server.redis);
+
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
     routes: routes({
@@ -70,6 +79,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
       blobStorage,
       mailerClient,
       authorizer: new Authorization(),
+      readmeQueue,
     }),
   });
 
