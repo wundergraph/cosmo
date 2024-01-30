@@ -44,6 +44,10 @@ export class OpenAIGraphql {
       },
     );
 
+    if (response.choices?.length === 0) {
+      throw new Error('OpenAI generateReadme failed with empty choices');
+    }
+
     return { readme: response.choices[0].message.content ?? '' };
   }
 

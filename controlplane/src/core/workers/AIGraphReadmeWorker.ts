@@ -26,7 +26,7 @@ export class AIGraphReadmeQueue {
         attempts: 3,
         backoff: {
           type: 'exponential',
-          delay: 5000,
+          delay: 10_000,
         },
       },
     });
@@ -38,7 +38,7 @@ export class AIGraphReadmeQueue {
 }
 
 class AIGraphReadmeWorker {
-  private readonly oaig: OpenAIGraphql;
+  private readonly openaiGraphql: OpenAIGraphql;
 
   constructor(
     private input: {
@@ -48,53 +48,63 @@ class AIGraphReadmeWorker {
       openAiApiKey: string;
     },
   ) {
-    this.oaig = new OpenAIGraphql({
+    this.openaiGraphql = new OpenAIGraphql({
       openAiApiKey: input.openAiApiKey,
     });
     this.input.log = input.log.child({ worker: this.constructor.name });
   }
 
+  private async generateSubgraphReadme(job: Job<CreateReadmeInputEvent>) {
+    const subgraphRepo = new SubgraphRepository(this.input.db, job.data.organizationId);
+    const subgraph = await subgraphRepo.byTargetId(job.data.targetId);
+    if (!subgraph) {
+      throw new Error(`Subgraph with target id ${job.data.targetId} not found`);
+    }
+
+    const resp = await this.openaiGraphql.generateReadme({
+      sdl: subgraph.schemaSDL,
+      graphName: subgraph.name,
+    });
+
+    await subgraphRepo.updateReadme({
+      targetId: subgraph.targetId,
+      readme: resp.readme,
+    });
+  }
+
+  private async generateFederatedGraphReadme(job: Job<CreateReadmeInputEvent>) {
+    const fedGraphRepo = new FederatedGraphRepository(this.input.db, job.data.organizationId);
+    const graph = await fedGraphRepo.byTargetId(job.data.targetId);
+    if (!graph) {
+      throw new Error(`Federated Graph with target id ${job.data.targetId} not found`);
+    }
+
+    const schema = await fedGraphRepo.getLatestValidSchemaVersion({
+      targetId: job.data.targetId,
+    });
+
+    if (!schema?.schema) {
+      return;
+    }
+
+    const resp = await this.openaiGraphql.generateReadme({
+      sdl: schema?.schema,
+      graphName: graph.name,
+    });
+
+    await fedGraphRepo.updateReadme({
+      targetId: graph.targetId,
+      readme: resp.readme,
+    });
+  }
+
   public async handler(job: Job<CreateReadmeInputEvent>) {
     if (job.data.type === 'subgraph') {
-      const subgraphRepo = new SubgraphRepository(this.input.db, job.data.organizationId);
-      const subgraph = await subgraphRepo.byTargetId(job.data.targetId);
-      if (!subgraph) {
-        throw new Error(`Subgraph with target id ${job.data.targetId} not found`);
-      }
-
-      const resp = await this.oaig.generateReadme({
-        sdl: subgraph.schemaSDL,
-        graphName: subgraph.name,
-      });
-
-      await subgraphRepo.updateReadme({
-        targetId: subgraph.targetId,
-        readme: resp.readme,
-      });
+      await this.generateSubgraphReadme(job);
     } else if (job.data.type === 'federated_graph') {
-      const fedGraphRepo = new FederatedGraphRepository(this.input.db, job.data.organizationId);
-      const graph = await fedGraphRepo.byTargetId(job.data.targetId);
-      if (!graph) {
-        throw new Error(`Federated Graph with target id ${job.data.targetId} not found`);
-      }
-
-      const schema = await fedGraphRepo.getLatestValidSchemaVersion({
-        targetId: job.data.targetId,
-      });
-
-      if (!schema?.schema) {
-        return;
-      }
-
-      const resp = await this.oaig.generateReadme({
-        sdl: schema?.schema,
-        graphName: graph.name,
-      });
-
-      await fedGraphRepo.updateReadme({
-        targetId: graph.targetId,
-        readme: resp.readme,
-      });
+      await this.generateFederatedGraphReadme(job);
+    } else {
+      throw new Error(`Unknown job type ${job.data.type}`);
     }
   }
 }

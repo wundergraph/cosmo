@@ -478,7 +478,15 @@ export class OrganizationRepository {
       ),
     });
 
-    // merge the features from the plan with the overrides from the organization
+    if (feature) {
+      return {
+        id: feature.feature as FeatureIds,
+        enabled: feature.enabled,
+        limit: feature.limit,
+      };
+    }
+
+    // if the feature is not set for the organization, we try to find it in the plan
     const billingPlan = await this.billing.getPlanById(plan as string);
     const billingFeature = billingPlan?.features?.find((f) => f.id === input.featureId);
 
@@ -487,10 +495,9 @@ export class OrganizationRepository {
     }
 
     return {
-      ...billingFeature,
-      // custom feature overrides the plan feature
-      enabled: feature?.enabled,
-      limit: feature?.limit || billingFeature?.limit,
+      id: billingFeature.id,
+      limit: billingFeature?.limit,
+      enabled: true,
     };
   }
 
