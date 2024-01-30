@@ -1223,7 +1223,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (opts.openaiApiKey) {
+        if (!opts.openaiApiKey) {
           return {
             response: {
               code: EnumStatusCode.ERR_OPENAI_DISABLED,
