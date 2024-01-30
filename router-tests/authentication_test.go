@@ -474,7 +474,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, `{"data":{"addFact":{"title":"title","description":"description"}}}`, string(data))
 		})
 	})
-	t.Run("mutation with cope missing for response field", func(t *testing.T) {
+	t.Run("mutation with scope missing for response field", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
