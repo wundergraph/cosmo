@@ -289,10 +289,10 @@ redis:
     # Support for Kapp. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: 'cosmo.apps.redis.wundergraph.com/deployment'
   commonConfiguration: |-
-    # Disable AOF https://redis.io/topics/persistence#append-only-file
-    appendonly no
-    # Enable RDB persistence
-    save "60 1"
+    # Enable AOF https://redis.io/topics/persistence#append-only-file
+    appendonly true
+    # Enable RDB persistence (backup every 24h)
+    save "86400 1"
     # Disable maxmemory-policy https://redis.io/topics/lru-cache#eviction-policies
     maxmemory-policy noeviction
     # Set maxmemory to 100mb
