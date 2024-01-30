@@ -408,10 +408,6 @@ export class OrganizationRepository {
       plan = billing?.plan || this.defaultBillingPlanId;
     }
 
-    if (!plan) {
-      return [];
-    }
-
     const orgFeatures = await this.db
       .select({
         id: organizationFeatures.feature,
@@ -422,7 +418,6 @@ export class OrganizationRepository {
       .where(eq(organizationFeatures.organizationId, input.organizationId))
       .execute();
 
-    const billingPlan = await this.billing.getPlanById(plan);
     const featureMap = new Map<string, Feature>();
 
     // Fill the map with the features from the organization
@@ -435,22 +430,24 @@ export class OrganizationRepository {
     }
 
     // Merge the features from the plan with the overrides from the organization
-
-    const planFeatures = billingPlan?.features || [];
-    for (const planFeature of planFeatures) {
-      const feature = orgFeatures.find((f) => f.id === planFeature.id);
-      if (feature) {
-        featureMap.set(planFeature.id, {
-          enabled: feature.enabled,
-          id: feature.id as FeatureIds,
-          limit: feature.limit,
-        });
-      } else {
-        featureMap.set(planFeature.id, {
-          enabled: true,
-          id: planFeature.id as FeatureIds,
-          limit: planFeature.limit,
-        });
+    if (plan) {
+      const billingPlan = await this.billing.getPlanById(plan);
+      const planFeatures = billingPlan?.features || [];
+      for (const planFeature of planFeatures) {
+        const feature = orgFeatures.find((f) => f.id === planFeature.id);
+        if (feature) {
+          featureMap.set(planFeature.id, {
+            enabled: feature.enabled,
+            id: feature.id as FeatureIds,
+            limit: feature.limit,
+          });
+        } else {
+          featureMap.set(planFeature.id, {
+            enabled: true,
+            id: planFeature.id as FeatureIds,
+            limit: planFeature.limit,
+          });
+        }
       }
     }
 
@@ -467,10 +464,6 @@ export class OrganizationRepository {
 
     const plan = billing?.plan || this.defaultBillingPlanId;
 
-    if (!plan) {
-      return;
-    }
-
     const feature = await this.db.query.organizationFeatures.findFirst({
       where: and(
         eq(organizationFeatures.organizationId, input.organizationId),
@@ -486,19 +479,19 @@ export class OrganizationRepository {
       };
     }
 
-    // if the feature is not set for the organization, we try to find it in the plan
-    const billingPlan = await this.billing.getPlanById(plan as string);
-    const billingFeature = billingPlan?.features?.find((f) => f.id === input.featureId);
-
-    if (!billingFeature) {
-      return;
+    // If the feature is not set for the organization, we try to find it in the plan
+    if (plan) {
+      const billingPlan = await this.billing.getPlanById(plan);
+      const billingFeature = billingPlan?.features?.find((f) => f.id === input.featureId);
+      if (!billingFeature) {
+        return;
+      }
+      return {
+        id: billingFeature.id,
+        limit: billingFeature?.limit,
+        enabled: true,
+      };
     }
-
-    return {
-      id: billingFeature.id,
-      limit: billingFeature?.limit,
-      enabled: true,
-    };
   }
 
   public async updateFeature(
@@ -791,7 +784,7 @@ export class OrganizationRepository {
         const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
           where: eq(slackIntegrationConfigs.integrationId, res.id),
           with: {
-            slackSchemUpdateEventConfigs: true,
+            slackSchemaUpdateEventConfigs: true,
           },
         });
 
@@ -821,7 +814,7 @@ export class OrganizationRepository {
               meta: {
                 case: 'federatedGraphSchemaUpdated',
                 value: {
-                  graphIds: slackIntegrationConfig.slackSchemUpdateEventConfigs.map((i) => i.federatedGraphId),
+                  graphIds: slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId),
                 },
               },
             },
@@ -848,7 +841,7 @@ export class OrganizationRepository {
           const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
             where: eq(slackIntegrationConfigs.integrationId, r.id),
             with: {
-              slackSchemUpdateEventConfigs: true,
+              slackSchemaUpdateEventConfigs: true,
             },
           });
           if (!slackIntegrationConfig) {
@@ -877,7 +870,7 @@ export class OrganizationRepository {
                 meta: {
                   case: 'federatedGraphSchemaUpdated',
                   value: {
-                    graphIds: slackIntegrationConfig.slackSchemUpdateEventConfigs.map((i) => i.federatedGraphId),
+                    graphIds: slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId),
                   },
                 },
               },

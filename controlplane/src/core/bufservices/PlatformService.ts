@@ -1664,7 +1664,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
@@ -6522,6 +6521,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateAISettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+
+        if (!opts.openaiApiKey) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'AI integration is disabled',
+            },
+          };
+        }
 
         const enabled = await orgRepo.updateFeature({
           id: 'ai',
