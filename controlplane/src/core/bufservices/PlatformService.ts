@@ -1234,6 +1234,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'ai',
+        });
+
+        if (!feature?.enabled) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_OPENAI_DISABLED,
+              details: `The organization must enable the AI feature to use this feature`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
+
         if (!subgraph) {
           return {
             response: {

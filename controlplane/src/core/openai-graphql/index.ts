@@ -98,6 +98,10 @@ export class OpenAIGraphql {
       },
     );
 
+    if (res.choices?.length === 0) {
+      throw new Error('OpenAI fixSDL failed with empty choices');
+    }
+
     try {
       return out.parse(JSON.parse(res.choices[0].message!.function_call!.arguments!));
     } catch (e: any) {
