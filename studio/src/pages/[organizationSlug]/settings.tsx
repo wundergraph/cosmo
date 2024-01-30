@@ -941,8 +941,8 @@ const CosmoAi = () => {
             <Badge variant="outline">Beta</Badge>
           </CardTitle>
           <CardDescription>
-            Elevate your workflow performance by enabling the advanced features
-            of Cosmo AI.{" "}
+            Enable generative AI to create documentation for your GraphQL schema
+            or fix queries.{" "}
             <Link
               href={docsBaseURL + "/studio/cosmo-ai"}
               className="text-sm text-primary"
