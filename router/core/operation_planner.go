@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -23,11 +22,30 @@ type planWithMetaData struct {
 
 type OperationPlanner struct {
 	sf        singleflight.Group
-	planCache *ristretto.Cache
+	planCache ExecutionPlanCache
 	executor  *Executor
 }
 
-func NewOperationPlanner(executor *Executor, planCache *ristretto.Cache) *OperationPlanner {
+type ExecutionPlanCache interface {
+	Get(key interface{}) (interface{}, bool)
+	Set(key, value interface{}, cost int64) bool
+}
+
+func NewNoopExecutionPlanCache() ExecutionPlanCache {
+	return &noopExecutionPlanCache{}
+}
+
+type noopExecutionPlanCache struct{}
+
+func (n *noopExecutionPlanCache) Get(key interface{}) (interface{}, bool) {
+	return nil, false
+}
+
+func (n *noopExecutionPlanCache) Set(key, value interface{}, cost int64) bool {
+	return true
+}
+
+func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache) *OperationPlanner {
 	return &OperationPlanner{
 		planCache: planCache,
 		executor:  executor,
