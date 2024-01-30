@@ -750,6 +750,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (!isValidUrl(req.routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Routing URL is not a valid URL`,
+            },
+            compositionErrors: [],
+          };
+        }
+
         const count = await fedGraphRepo.count();
 
         const feature = await orgRepo.getFeature({
@@ -908,6 +918,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_INVALID_LABELS,
               details: `One or more labels were found to be invalid`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        if (!isValidUrl(req.routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Routing URL is not a valid URL`,
             },
             compositionErrors: [],
           };
