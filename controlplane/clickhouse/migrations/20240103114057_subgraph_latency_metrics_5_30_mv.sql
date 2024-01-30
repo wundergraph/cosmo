@@ -18,8 +18,8 @@ SELECT
     maxSimpleState(Max) AS MaxDuration,
     toLowCardinality(Attributes [ 'wg.operation.name' ]) as OperationName,
     Attributes [ 'wg.operation.hash' ] as OperationHash,
-    Attributes [ 'wg.operation.persisted_id' ] as OperationPersistedID,
     toLowCardinality(Attributes [ 'wg.operation.type' ]) as OperationType,
+    Attributes [ 'wg.operation.persisted_id' ] as OperationPersistedID,
     toLowCardinality(Attributes [ 'wg.router.config.version']) as RouterConfigVersion,
     toLowCardinality(Attributes [ 'wg.client.name' ]) as ClientName,
     toLowCardinality(Attributes [ 'wg.client.version' ]) as ClientVersion
