@@ -13,6 +13,8 @@ import {
   versionOnePersistedBaseSchema,
   versionTwoPersistedBaseSchema,
 } from './utils/utils';
+import fs from 'node:fs';
+import { join } from 'node:path';
 
 describe('FederationFactory tests', () => {
   test('that trying to federate with non-unique subgraph names returns an error', () => {
@@ -55,6 +57,351 @@ describe('FederationFactory tests', () => {
     expect(errorMessage).contains(
       ` The 7th subgraph in the array did not define a name.` +
         ` Consequently, any further errors will temporarily identify this subgraph as "`,
+    );
+  });
+
+  test('that the demo subgraphs federate to generate the correct federated graph', () => {
+    const { errors, federationResult } = federateSubgraphs([demoEmployees, demoFamily, demoHobbies, demoProducts]);
+    expect(errors).toBeUndefined();
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
+        interface RoleType {
+          departments: [Department!]!
+          title: [String!]!
+        }
+        
+        interface Identifiable {
+          id: Int!
+        }
+        
+        union Products = Consultancy | Cosmo | SDK | Documentation
+        
+        interface IProduct {
+          upc: ID!
+          engineers: [Employee!]!
+        }
+        
+        interface Animal {
+          class: Class!
+          gender: Gender!
+        }
+        
+        interface Experience {
+          yearsOfExperience: Float!
+        }
+        
+        union Hobby = Exercise | Flying | Gaming | Programming | Travelling | Other
+        
+        interface TopSecretFact {
+          description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+          factType: TopSecretFactType @authenticated
+        }
+        
+        type Query {
+          employee(id: Int!): Employee
+          employees: [Employee!]!
+          products: [Products!]!
+          teammates(team: Department!): [Employee!]!
+          findEmployees(criteria: SearchInput): [Employee!]!
+          productTypes: [Products!]!
+          topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
+          factTypes: [TopSecretFactType!] @authenticated
+        }
+        
+        type Mutation {
+          updateEmployeeTag(id: Int!, tag: String!): Employee
+        }
+        
+        type Subscription {
+          """\`currentTime\` will return a stream of \`Time\` objects."""
+          currentTime: Time!
+        }
+        
+        enum Department {
+          ENGINEERING
+          MARKETING
+          OPERATIONS
+        }
+        
+        enum EngineerType {
+          BACKEND
+          FRONTEND
+          FULLSTACK
+        }
+        
+        enum OperationType {
+          FINANCE
+          HUMAN_RESOURCES
+        }
+        
+        enum Country {
+          AMERICA
+          ENGLAND
+          GERMANY
+          INDIA
+          NETHERLANDS
+          PORTUGAL
+          SPAIN
+          UKRAINE
+          INDONESIA
+          KOREA
+          SERBIA
+          TAIWAN
+          THAILAND
+        }
+        
+        type Details {
+          forename: String!
+          location: Country!
+          surname: String!
+          middlename: String @deprecated
+          hasChildren: Boolean!
+          maritalStatus: MaritalStatus
+          nationality: Nationality!
+          pets: [Pet]
+        }
+        
+        type Time {
+          unixTime: Int!
+          timeStamp: String!
+        }
+        
+        type Consultancy {
+          upc: ID!
+          lead: Employee!
+          name: ProductName!
+        }
+        
+        enum Class {
+          FISH
+          MAMMAL
+          REPTILE
+        }
+        
+        enum Gender {
+          FEMALE
+          MALE
+          UNKNOWN
+        }
+        
+        enum CatType {
+          HOME
+          STREET
+        }
+        
+        enum DogBreed {
+          GOLDEN_RETRIEVER
+          POODLE
+          ROTTWEILER
+          YORKSHIRE_TERRIER
+        }
+        
+        enum MaritalStatus {
+          ENGAGED
+          MARRIED
+        }
+        
+        enum Nationality {
+          AMERICAN
+          DUTCH
+          ENGLISH
+          GERMAN
+          INDIAN
+          SPANISH
+          UKRAINIAN
+        }
+        
+        input SearchInput {
+          hasPets: Boolean
+          nationality: Nationality
+          nested: NestedSearchInput
+        }
+        
+        input NestedSearchInput {
+          maritalStatus: MaritalStatus
+          hasChildren: Boolean
+        }
+        
+        enum ExerciseType {
+          CALISTHENICS
+          HIKING
+          SPORT
+          STRENGTH_TRAINING
+        }
+        
+        type Exercise {
+          category: ExerciseType!
+        }
+        
+        enum GameGenre {
+          ADVENTURE
+          BOARD
+          FPS
+          CARD
+          RPG
+          ROGUELITE
+          SIMULATION
+          STRATEGY
+        }
+        
+        type Other {
+          name: String!
+        }
+        
+        enum ProgrammingLanguage {
+          CSHARP
+          GO
+          RUST
+          TYPESCRIPT
+        }
+        
+        type Programming {
+          languages: [ProgrammingLanguage!]!
+        }
+        
+        type Travelling {
+          countriesLived: [Country!]!
+        }
+        
+        enum TopSecretFactType {
+          DIRECTIVE
+          ENTITY
+          MISCELLANEOUS
+        }
+        
+        scalar FactContent
+        
+        enum ProductName {
+          CONSULTANCY
+          COSMO
+          ENGINE
+          FINANCE
+          HUMAN_RESOURCES
+          MARKETING
+          SDK
+        }
+        
+        type Documentation {
+          url(product: ProductName!): String!
+          urls(products: [ProductName!]!): [String!]!
+        }
+        
+        interface Pet implements Animal {
+          class: Class!
+          gender: Gender!
+          name: String!
+        }
+        
+        type Engineer implements RoleType {
+          departments: [Department!]!
+          engineerType: EngineerType!
+          title: [String!]!
+        }
+        
+        type Marketer implements RoleType {
+          departments: [Department!]!
+          title: [String!]!
+        }
+        
+        type Operator implements RoleType {
+          departments: [Department!]!
+          operatorType: [OperationType!]!
+          title: [String!]!
+        }
+
+        type Employee implements Identifiable {
+          details: Details
+          id: Int!
+          tag: String!
+          role: RoleType!
+          updatedAt: String!
+          startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+          hobbies: [Hobby!]!
+          products: [ProductName!]!
+          notes: String
+        }
+        
+        type Cosmo implements IProduct {
+          upc: ID!
+          engineers: [Employee!]!
+          lead: Employee!
+          name: ProductName!
+          repositoryURL: String!
+        }
+        
+        type SDK implements IProduct {
+          upc: ID!
+          engineers: [Employee!]!
+          owner: Employee!
+          clientLanguages: [ProgrammingLanguage!]!
+        }
+        
+        type Alligator implements Pet & Animal {
+          class: Class!
+          dangerous: String!
+          gender: Gender!
+          name: String!
+        }
+        
+        type Cat implements Pet & Animal {
+          class: Class!
+          gender: Gender!
+          name: String!
+          type: CatType!
+        }
+        
+        type Dog implements Pet & Animal {
+          breed: DogBreed!
+          class: Class!
+          gender: Gender!
+          name: String!
+        }
+        
+        type Mouse implements Pet & Animal {
+          class: Class!
+          gender: Gender!
+          name: String!
+        }
+        
+        type Pony implements Pet & Animal {
+          class: Class!
+          gender: Gender!
+          name: String!
+        }
+        
+        type Flying implements Experience {
+          planeModels: [String!]!
+          yearsOfExperience: Float!
+        }
+        
+        type Gaming implements Experience {
+          genres: [GameGenre!]!
+          name: String!
+          yearsOfExperience: Float!
+        }
+        
+        type DirectiveFact implements TopSecretFact {
+          title: String! @authenticated
+          description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+          factType: TopSecretFactType @authenticated
+        }
+        
+        type EntityFact implements TopSecretFact {
+          title: String! @requiresScopes(scopes: [["read:entity"]])
+          description: FactContent! @requiresScopes(scopes: [["read:entity", "read:scalar"], ["read:entity", "read:all"]])
+          factType: TopSecretFactType @authenticated @requiresScopes(scopes: [["read:entity"]])
+        }
+        
+        type MiscellaneousFact implements TopSecretFact {
+          title: String!
+          description: FactContent! @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]])
+          factType: TopSecretFactType @authenticated
+        }
+      `,
+      ),
     );
   });
 
@@ -349,7 +696,31 @@ describe('FederationFactory tests', () => {
   });
 });
 
-const subgraphA = {
+const demoEmployees: Subgraph = {
+  name: 'employees',
+  url: '',
+  definitions: parse(fs.readFileSync(join(process.cwd(), 'tests/test-data/employees.graphql')).toString()),
+};
+
+const demoFamily: Subgraph = {
+  name: 'family',
+  url: '',
+  definitions: parse(fs.readFileSync(join(process.cwd(), 'tests/test-data/family.graphql')).toString()),
+};
+
+const demoHobbies: Subgraph = {
+  name: 'hobbies',
+  url: '',
+  definitions: parse(fs.readFileSync(join(process.cwd(), 'tests/test-data/hobbies.graphql')).toString()),
+};
+
+const demoProducts: Subgraph = {
+  name: 'products',
+  url: '',
+  definitions: parse(fs.readFileSync(join(process.cwd(), 'tests/test-data/products.graphql')).toString()),
+};
+
+const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
@@ -381,7 +752,7 @@ const subgraphA = {
   `),
 };
 
-const subgraphB = {
+const subgraphB: Subgraph = {
   name: 'subgraph-b',
   url: '',
   definitions: parse(`
