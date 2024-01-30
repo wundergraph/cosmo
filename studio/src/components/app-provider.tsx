@@ -131,7 +131,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (error instanceof UnauthorizedError) return false;
         return failureCount < 3;
       },
-      refetchOnWindowFocus: false,
     },
     queryClient,
   );
