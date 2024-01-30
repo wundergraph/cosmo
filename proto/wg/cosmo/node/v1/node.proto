@@ -35,7 +35,6 @@ message GetConfigRequest {
   // Otherwise, the version will be used to check if a newer version of the router config is available.
   // That allow us to not send the router config if the version is the same.
   optional string version = 2;
-  string graph_id = 3;
 }
 
 message GetConfigResponse {
@@ -97,15 +96,25 @@ message DataSourceConfiguration {
   repeated EntityInterfaceConfiguration interface_objects = 15;
 }
 
+message ArgumentConfiguration {
+  string name = 1;
+  ArgumentSource source_type = 2;
+}
+
+message Scopes {
+  repeated string required_and_scopes = 1;
+}
+
+message AuthorizationConfiguration {
+  bool requires_authentication = 1;
+  repeated Scopes required_or_scopes = 2;
+}
+
 message FieldConfiguration {
   string type_name = 1;
   string field_name = 2;
   repeated ArgumentConfiguration arguments_configuration = 3;
-}
-
-message ArgumentConfiguration {
-  string name = 1;
-  ArgumentSource source_type = 2;
+  AuthorizationConfiguration authorization_configuration = 4;
 }
 
 enum ArgumentRenderConfiguration {

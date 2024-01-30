@@ -1,4 +1,4 @@
-import { ArgumentConfigurationData, federateSubgraphs as realFederateSubgraphs } from '@wundergraph/composition';
+import { FieldConfiguration, federateSubgraphs as realFederateSubgraphs } from '@wundergraph/composition';
 import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { DocumentNode, parse, print, printSchema } from 'graphql';
 
@@ -11,7 +11,7 @@ export type Subgraph = {
 };
 
 export type FederatedGraph = {
-  argumentConfigurations: ArgumentConfigurationData[];
+  fieldConfigurations: FieldConfiguration[];
   sdl: string;
 };
 
@@ -33,10 +33,10 @@ function createFederableSubgraph(subgraph: Subgraph) {
 export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
   const { federationResult, errors } = realFederateSubgraphs(subgraphs.map(createFederableSubgraph));
   if (errors && errors.length > 0) {
-    throw new Error(`could not federate schema: ${errors.map((e) => e.message).join(', ')}`);
+    throw new Error(`could not federate schema: ${errors.map((e: Error) => e.message).join(', ')}`);
   }
   return {
-    argumentConfigurations: federationResult!.argumentConfigurations,
+    fieldConfigurations: federationResult!.fieldConfigurations,
     sdl: print(federationResult!.federatedGraphAST),
   };
 }
@@ -44,13 +44,13 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
 export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
   const result = realFederateSubgraphs(subgraphs.map(createFederableSubgraph));
   if (result.errors && result.errors.length > 0) {
-    throw new Error(`could not federate schema: ${result.errors.map((e) => e.message).join(', ')}`);
+    throw new Error(`could not federate schema: ${result.errors.map((e: Error) => e.message).join(', ')}`);
   }
   if (result.federationResult === undefined) {
     throw new Error(`could not federate subgraphs`);
   }
   const config = buildRouterConfig({
-    argumentConfigurations: result.federationResult.argumentConfigurations,
+    fieldConfigurations: result.federationResult.fieldConfigurations,
     federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
     schemaVersionId: '',
     subgraphs: subgraphs.map((s, index) => {

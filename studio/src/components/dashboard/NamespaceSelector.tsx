@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getNamespaces } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
 import {
   Select,
@@ -17,8 +17,10 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Toolbar } from "../ui/toolbar";
+import { UserContext } from "../app-provider";
 
 export const NamespaceSelector = () => {
+  const user = useContext(UserContext);
   const router = useRouter();
   const namespaceParam = router.query.namespace as string;
 
@@ -30,7 +32,10 @@ export const NamespaceSelector = () => {
     namespaceParam || "default",
   );
 
-  const { data } = useQuery(getNamespaces.useQuery());
+  const { data } = useQuery({
+    ...getNamespaces.useQuery(),
+    queryKey: [user?.currentOrganization.slug || "", "GetNamespaces", {}],
+  });
 
   useEffect(() => {
     if (!data || data.namespaces.length === 0) return;

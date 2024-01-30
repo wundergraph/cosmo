@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.50.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.49.1...@wundergraph/cosmo-connect@0.50.0) (2024-01-30)
+
+### Features
+
+* implement authorization directives ([#448](https://github.com/wundergraph/cosmo/issues/448)) ([181d89d](https://github.com/wundergraph/cosmo/commit/181d89d8e7dbf8eb23cddfa0b6c91c840a2986b0)) (@Aenimus)
+
+## [0.49.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.49.0...@wundergraph/cosmo-connect@0.49.1) (2024-01-29)
+
+### Bug Fixes
+
+* use graph id from token ([#463](https://github.com/wundergraph/cosmo/issues/463)) ([5582d00](https://github.com/wundergraph/cosmo/commit/5582d004c98eb20f62ecf2332b327c7959e5b64f)) (@thisisnithin)
+
 # [0.49.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.48.0...@wundergraph/cosmo-connect@0.49.0) (2024-01-26)
 
 ### Features

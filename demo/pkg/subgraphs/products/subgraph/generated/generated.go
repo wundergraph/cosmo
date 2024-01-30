@@ -41,6 +41,7 @@ type Config struct {
 type ResolverRoot interface {
 	Documentation() DocumentationResolver
 	Entity() EntityResolver
+	Mutation() MutationResolver
 	Queries() QueriesResolver
 }
 
@@ -57,6 +58,12 @@ type ComplexityRoot struct {
 		Name          func(childComplexity int) int
 		RepositoryURL func(childComplexity int) int
 		Upc           func(childComplexity int) int
+	}
+
+	DirectiveFact struct {
+		Description func(childComplexity int) int
+		FactType    func(childComplexity int) int
+		Title       func(childComplexity int) int
 	}
 
 	Documentation struct {
@@ -76,10 +83,28 @@ type ComplexityRoot struct {
 		FindEmployeeByID     func(childComplexity int, id int) int
 	}
 
+	EntityFact struct {
+		Description func(childComplexity int) int
+		FactType    func(childComplexity int) int
+		Title       func(childComplexity int) int
+	}
+
+	MiscellaneousFact struct {
+		Description func(childComplexity int) int
+		FactType    func(childComplexity int) int
+		Title       func(childComplexity int) int
+	}
+
+	Mutation struct {
+		AddFact func(childComplexity int, fact model.TopSecretFactInput) int
+	}
+
 	Queries struct {
-		ProductTypes       func(childComplexity int) int
-		__resolve__service func(childComplexity int) int
-		__resolve_entities func(childComplexity int, representations []map[string]interface{}) int
+		FactTypes                func(childComplexity int) int
+		ProductTypes             func(childComplexity int) int
+		TopSecretFederationFacts func(childComplexity int) int
+		__resolve__service       func(childComplexity int) int
+		__resolve_entities       func(childComplexity int, representations []map[string]interface{}) int
 	}
 
 	_Service struct {
@@ -96,8 +121,13 @@ type EntityResolver interface {
 	FindCosmoByUpc(ctx context.Context, upc string) (*model.Cosmo, error)
 	FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error)
 }
+type MutationResolver interface {
+	AddFact(ctx context.Context, fact model.TopSecretFactInput) (model.TopSecretFact, error)
+}
 type QueriesResolver interface {
 	ProductTypes(ctx context.Context) ([]model.Products, error)
+	TopSecretFederationFacts(ctx context.Context) ([]model.TopSecretFact, error)
+	FactTypes(ctx context.Context) ([]model.TopSecretFactType, error)
 }
 
 type executableSchema struct {
@@ -153,6 +183,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Cosmo.Upc(childComplexity), true
+
+	case "DirectiveFact.description":
+		if e.complexity.DirectiveFact.Description == nil {
+			break
+		}
+
+		return e.complexity.DirectiveFact.Description(childComplexity), true
+
+	case "DirectiveFact.factType":
+		if e.complexity.DirectiveFact.FactType == nil {
+			break
+		}
+
+		return e.complexity.DirectiveFact.FactType(childComplexity), true
+
+	case "DirectiveFact.title":
+		if e.complexity.DirectiveFact.Title == nil {
+			break
+		}
+
+		return e.complexity.DirectiveFact.Title(childComplexity), true
 
 	case "Documentation.url":
 		if e.complexity.Documentation.URL == nil {
@@ -235,12 +286,80 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Entity.FindEmployeeByID(childComplexity, args["id"].(int)), true
 
+	case "EntityFact.description":
+		if e.complexity.EntityFact.Description == nil {
+			break
+		}
+
+		return e.complexity.EntityFact.Description(childComplexity), true
+
+	case "EntityFact.factType":
+		if e.complexity.EntityFact.FactType == nil {
+			break
+		}
+
+		return e.complexity.EntityFact.FactType(childComplexity), true
+
+	case "EntityFact.title":
+		if e.complexity.EntityFact.Title == nil {
+			break
+		}
+
+		return e.complexity.EntityFact.Title(childComplexity), true
+
+	case "MiscellaneousFact.description":
+		if e.complexity.MiscellaneousFact.Description == nil {
+			break
+		}
+
+		return e.complexity.MiscellaneousFact.Description(childComplexity), true
+
+	case "MiscellaneousFact.factType":
+		if e.complexity.MiscellaneousFact.FactType == nil {
+			break
+		}
+
+		return e.complexity.MiscellaneousFact.FactType(childComplexity), true
+
+	case "MiscellaneousFact.title":
+		if e.complexity.MiscellaneousFact.Title == nil {
+			break
+		}
+
+		return e.complexity.MiscellaneousFact.Title(childComplexity), true
+
+	case "Mutation.addFact":
+		if e.complexity.Mutation.AddFact == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addFact_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddFact(childComplexity, args["fact"].(model.TopSecretFactInput)), true
+
+	case "Queries.factTypes":
+		if e.complexity.Queries.FactTypes == nil {
+			break
+		}
+
+		return e.complexity.Queries.FactTypes(childComplexity), true
+
 	case "Queries.productTypes":
 		if e.complexity.Queries.ProductTypes == nil {
 			break
 		}
 
 		return e.complexity.Queries.ProductTypes(childComplexity), true
+
+	case "Queries.topSecretFederationFacts":
+		if e.complexity.Queries.TopSecretFederationFacts == nil {
+			break
+		}
+
+		return e.complexity.Queries.TopSecretFederationFacts(childComplexity), true
 
 	case "Queries._service":
 		if e.complexity.Queries.__resolve__service == nil {
@@ -275,7 +394,9 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputTopSecretFactInput,
+	)
 	first := true
 
 	switch rc.Operation.Operation {
@@ -308,6 +429,21 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 
 			return &response
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
 		}
 
 	default:
@@ -359,10 +495,54 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `schema {
   query: Queries
+  mutation: Mutation
 }
 
 type Queries {
   productTypes: [Products!]!
+  topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
+  factTypes: [TopSecretFactType!]
+}
+
+type Mutation {
+  addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [["write:fact"], ["write:all"]])
+}
+
+input TopSecretFactInput {
+  title: String!
+  description: FactContent!
+  factType: TopSecretFactType!
+}
+
+enum TopSecretFactType @authenticated {
+  DIRECTIVE,
+  ENTITY,
+  MISCELLANEOUS,
+}
+
+interface TopSecretFact @authenticated {
+  description: FactContent!
+  factType: TopSecretFactType
+}
+
+scalar FactContent @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+
+type DirectiveFact implements TopSecretFact @authenticated {
+  title: String!
+  description: FactContent!
+  factType: TopSecretFactType
+}
+
+type EntityFact implements TopSecretFact @requiresScopes(scopes: [["read:entity"]]){
+  title: String!
+  description: FactContent!
+  factType: TopSecretFactType
+}
+
+type MiscellaneousFact implements TopSecretFact {
+  title: String!
+  description: FactContent! @requiresScopes(scopes: [["read:miscellaneous"]])
+  factType: TopSecretFactType
 }
 
 enum ProductName {
@@ -542,6 +722,21 @@ func (ec *executionContext) field_Entity_findEmployeeByID_args(ctx context.Conte
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addFact_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.TopSecretFactInput
+	if tmp, ok := rawArgs["fact"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fact"))
+		arg0, err = ec.unmarshalNTopSecretFactInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["fact"] = arg0
 	return args, nil
 }
 
@@ -828,6 +1023,135 @@ func (ec *executionContext) fieldContext_Cosmo_repositoryURL(ctx context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DirectiveFact_title(ctx context.Context, field graphql.CollectedField, obj *model.DirectiveFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DirectiveFact_title(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Title, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DirectiveFact_title(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DirectiveFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DirectiveFact_description(ctx context.Context, field graphql.CollectedField, obj *model.DirectiveFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DirectiveFact_description(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNFactContent2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DirectiveFact_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DirectiveFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type FactContent does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DirectiveFact_factType(ctx context.Context, field graphql.CollectedField, obj *model.DirectiveFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DirectiveFact_factType(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FactType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.TopSecretFactType)
+	fc.Result = res
+	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DirectiveFact_factType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DirectiveFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type TopSecretFactType does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1259,6 +1583,319 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _EntityFact_title(ctx context.Context, field graphql.CollectedField, obj *model.EntityFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_EntityFact_title(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Title, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_EntityFact_title(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EntityFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EntityFact_description(ctx context.Context, field graphql.CollectedField, obj *model.EntityFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_EntityFact_description(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNFactContent2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_EntityFact_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EntityFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type FactContent does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EntityFact_factType(ctx context.Context, field graphql.CollectedField, obj *model.EntityFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_EntityFact_factType(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FactType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.TopSecretFactType)
+	fc.Result = res
+	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_EntityFact_factType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EntityFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type TopSecretFactType does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MiscellaneousFact_title(ctx context.Context, field graphql.CollectedField, obj *model.MiscellaneousFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MiscellaneousFact_title(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Title, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MiscellaneousFact_title(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MiscellaneousFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MiscellaneousFact_description(ctx context.Context, field graphql.CollectedField, obj *model.MiscellaneousFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MiscellaneousFact_description(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNFactContent2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MiscellaneousFact_description(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MiscellaneousFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type FactContent does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MiscellaneousFact_factType(ctx context.Context, field graphql.CollectedField, obj *model.MiscellaneousFact) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MiscellaneousFact_factType(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FactType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.TopSecretFactType)
+	fc.Result = res
+	return ec.marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MiscellaneousFact_factType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MiscellaneousFact",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type TopSecretFactType does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addFact(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addFact(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddFact(rctx, fc.Args["fact"].(model.TopSecretFactInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.TopSecretFact)
+	fc.Result = res
+	return ec.marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFact(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addFact(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addFact_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Queries_productTypes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Queries_productTypes(ctx, field)
 	if err != nil {
@@ -1298,6 +1935,91 @@ func (ec *executionContext) fieldContext_Queries_productTypes(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Products does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Queries_topSecretFederationFacts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries_topSecretFederationFacts(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Queries().TopSecretFederationFacts(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]model.TopSecretFact)
+	fc.Result = res
+	return ec.marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Queries_topSecretFederationFacts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Queries",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Queries_factTypes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries_factTypes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Queries().FactTypes(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]model.TopSecretFactType)
+	fc.Result = res
+	return ec.marshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Queries_factTypes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Queries",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type TopSecretFactType does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3349,6 +4071,53 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputTopSecretFactInput(ctx context.Context, obj interface{}) (model.TopSecretFactInput, error) {
+	var it model.TopSecretFactInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"title", "description", "factType"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "title":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Title = data
+		case "description":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalNFactContent2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "factType":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("factType"))
+			data, err := ec.unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.FactType = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -3378,6 +4147,36 @@ func (ec *executionContext) _Products(ctx context.Context, sel ast.SelectionSet,
 			return graphql.Null
 		}
 		return ec._Documentation(ctx, sel, obj)
+	default:
+		panic(fmt.Errorf("unexpected type %T", obj))
+	}
+}
+
+func (ec *executionContext) _TopSecretFact(ctx context.Context, sel ast.SelectionSet, obj model.TopSecretFact) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.DirectiveFact:
+		return ec._DirectiveFact(ctx, sel, &obj)
+	case *model.DirectiveFact:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._DirectiveFact(ctx, sel, obj)
+	case model.EntityFact:
+		return ec._EntityFact(ctx, sel, &obj)
+	case *model.EntityFact:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._EntityFact(ctx, sel, obj)
+	case model.MiscellaneousFact:
+		return ec._MiscellaneousFact(ctx, sel, &obj)
+	case *model.MiscellaneousFact:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._MiscellaneousFact(ctx, sel, obj)
 	default:
 		panic(fmt.Errorf("unexpected type %T", obj))
 	}
@@ -3487,6 +4286,52 @@ func (ec *executionContext) _Cosmo(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var directiveFactImplementors = []string{"DirectiveFact", "TopSecretFact"}
+
+func (ec *executionContext) _DirectiveFact(ctx context.Context, sel ast.SelectionSet, obj *model.DirectiveFact) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, directiveFactImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DirectiveFact")
+		case "title":
+			out.Values[i] = ec._DirectiveFact_title(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "description":
+			out.Values[i] = ec._DirectiveFact_description(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "factType":
+			out.Values[i] = ec._DirectiveFact_factType(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3770,6 +4615,147 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 	return out
 }
 
+var entityFactImplementors = []string{"EntityFact", "TopSecretFact"}
+
+func (ec *executionContext) _EntityFact(ctx context.Context, sel ast.SelectionSet, obj *model.EntityFact) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, entityFactImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("EntityFact")
+		case "title":
+			out.Values[i] = ec._EntityFact_title(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "description":
+			out.Values[i] = ec._EntityFact_description(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "factType":
+			out.Values[i] = ec._EntityFact_factType(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var miscellaneousFactImplementors = []string{"MiscellaneousFact", "TopSecretFact"}
+
+func (ec *executionContext) _MiscellaneousFact(ctx context.Context, sel ast.SelectionSet, obj *model.MiscellaneousFact) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, miscellaneousFactImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MiscellaneousFact")
+		case "title":
+			out.Values[i] = ec._MiscellaneousFact_title(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "description":
+			out.Values[i] = ec._MiscellaneousFact_description(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "factType":
+			out.Values[i] = ec._MiscellaneousFact_factType(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var mutationImplementors = []string{"Mutation"}
+
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		innerCtx := graphql.WithRootFieldContext(ctx, &graphql.RootFieldContext{
+			Object: field.Name,
+			Field:  field,
+		})
+
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "addFact":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addFact(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var queriesImplementors = []string{"Queries"}
 
 func (ec *executionContext) _Queries(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -3802,6 +4788,47 @@ func (ec *executionContext) _Queries(ctx context.Context, sel ast.SelectionSet) 
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "topSecretFederationFacts":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Queries_topSecretFederationFacts(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "factTypes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Queries_factTypes(ctx, field)
 				return res
 			}
 
@@ -4305,6 +5332,21 @@ func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcos
 	return ec._Employee(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNFactContent2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNFactContent2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) unmarshalNFieldSet2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4520,6 +5562,75 @@ func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFact(ctx context.Context, sel ast.SelectionSet, v model.TopSecretFact) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TopSecretFact(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNTopSecretFact2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TopSecretFact) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFact(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNTopSecretFactInput2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactInput(ctx context.Context, v interface{}) (model.TopSecretFactInput, error) {
+	res, err := ec.unmarshalInputTopSecretFactInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, v interface{}) (model.TopSecretFactType, error) {
+	var res model.TopSecretFactType
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, sel ast.SelectionSet, v model.TopSecretFactType) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalN_Any2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
@@ -5037,6 +6148,89 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	}
 	res := graphql.MarshalString(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx context.Context, v interface{}) ([]model.TopSecretFactType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]model.TopSecretFactType, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOTopSecretFactType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TopSecretFactType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTopSecretFactType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, v interface{}) (*model.TopSecretFactType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.TopSecretFactType)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOTopSecretFactType2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFactType(ctx context.Context, sel ast.SelectionSet, v *model.TopSecretFactType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) marshalO_Entity2githubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐEntity(ctx context.Context, sel ast.SelectionSet, v fedruntime.Entity) graphql.Marshaler {

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { DocumentNode, parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
-import { ArgumentConfigurationData, FederationResult } from '@wundergraph/composition';
+import { FieldConfiguration, FederationResult } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
@@ -53,7 +53,7 @@ export interface ComposedFederatedGraph {
   composedSchema?: string;
   errors: Error[];
   subgraphs: ComposedSubgraph[];
-  argumentConfigurations: ArgumentConfigurationData[];
+  fieldConfigurations: FieldConfiguration[];
 }
 
 export class Composer {
@@ -87,7 +87,7 @@ export class Composer {
     // Build router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
       const routerConfig = buildRouterConfig({
-        argumentConfigurations: composedGraph.argumentConfigurations,
+        fieldConfigurations: composedGraph.fieldConfigurations,
         subgraphs: composedGraph.subgraphs,
         federatedSDL: composedGraph.composedSchema,
         schemaVersionId: federatedSchemaVersionId,
@@ -168,7 +168,7 @@ export class Composer {
         targetID: federatedGraph.targetId,
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
-        argumentConfigurations: result?.argumentConfigurations || [],
+        fieldConfigurations: result?.fieldConfigurations || [],
         subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
       };
     } catch (e: any) {
@@ -177,7 +177,7 @@ export class Composer {
         name: federatedGraph.name,
         namespace: federatedGraph.namespace,
         targetID: federatedGraph.targetId,
-        argumentConfigurations: [],
+        fieldConfigurations: [],
         errors: [e],
         subgraphs: [],
       };
@@ -205,7 +205,7 @@ export class Composer {
           name: graph.name,
           namespace: graph.namespace,
           targetID: graph.targetId,
-          argumentConfigurations: result?.argumentConfigurations || [],
+          fieldConfigurations: result?.fieldConfigurations || [],
           composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
           errors: errors || [],
           subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
@@ -216,7 +216,7 @@ export class Composer {
           name: graph.name,
           namespace: graph.namespace,
           targetID: graph.targetId,
-          argumentConfigurations: [],
+          fieldConfigurations: [],
           errors: [e],
           subgraphs: [],
         });

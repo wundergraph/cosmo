@@ -5,6 +5,12 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"sync"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -14,11 +20,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"net"
-	"net/http"
-	"net/url"
-	"sync"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
@@ -29,6 +30,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	brotli "go.withmatt.com/connect-brotli"
 
 	"github.com/dgraph-io/ristretto"
@@ -40,6 +42,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -126,6 +129,8 @@ type (
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
+
+		authorization *config.AuthorizationConfiguration
 	}
 
 	Server interface {
@@ -703,14 +708,26 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Config:            r.Config,
 	}
 
+	baseAttributes := []attribute.KeyValue{
+		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+		otel.WgRouterVersion.String(Version),
+	}
+
+	if r.graphApiToken != "" {
+		claims, err := rjwt.ExtractFederatedGraphTokenClaims(r.graphApiToken)
+		if err != nil {
+			return nil, err
+		}
+		baseAttributes = append(baseAttributes, otel.WgFederatedGraphID.String(claims.FederatedGraphID))
+	}
+
 	recoveryHandler := recoveryhandler.New(recoveryhandler.WithLogger(r.logger), recoveryhandler.WithPrintStack())
 	var traceHandler *rtrace.Middleware
 	if r.traceConfig.Enabled {
 		traceHandler = rtrace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
-					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-					otel.WgRouterVersion.String(Version),
+					baseAttributes...,
 				),
 			),
 			otelhttp.WithFilter(rtrace.CommonRequestFilter),
@@ -794,8 +811,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			rmetric.WithOtlpMeterProvider(r.otlpMeterProvider),
 			rmetric.WithLogger(r.logger),
 			rmetric.WithAttributes(
-				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-				otel.WgRouterVersion.String(Version),
+				baseAttributes...,
 			),
 		)
 		if err != nil {
@@ -889,12 +905,22 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		})
 	}
 
+	authorizerOptions := &CosmoAuthorizerOptions{
+		FieldConfigurations:           routerConfig.EngineConfig.FieldConfigurations,
+		RejectOperationIfUnauthorized: false,
+	}
+
+	if r.Config.authorization != nil {
+		authorizerOptions.RejectOperationIfUnauthorized = r.Config.authorization.RejectOperationIfUnauthorized
+	}
+
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
 		Executor:                               executor,
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 		WebSocketStats:                         r.WebsocketStats,
 		TracerProvider:                         r.tracerProvider,
+		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
 	})
 
 	var publicKey *ecdsa.PublicKey
@@ -1305,6 +1331,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 func WithAccessController(controller *AccessController) Option {
 	return func(r *Router) {
 		r.accessController = controller
+	}
+}
+
+func WithAuthorizationConfig(cfg *config.AuthorizationConfiguration) Option {
+	return func(r *Router) {
+		r.Config.authorization = cfg
 	}
 }
 
