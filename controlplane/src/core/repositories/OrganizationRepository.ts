@@ -422,27 +422,37 @@ export class OrganizationRepository {
       .where(eq(organizationFeatures.organizationId, input.organizationId))
       .execute();
 
-    // merge the features from the plan with the overrides from the organization
-    const billingPlan = await this.billing.getPlanById(plan as string);
+    const billingPlan = await this.billing.getPlanById(plan);
+    const featureMap = new Map<string, Feature>();
 
-    return (
-      billingPlan?.features?.map(({ id, limit }) => {
-        const feature = orgFeatures.find((f) => f.id === id);
-        if (feature) {
-          return {
-            ...feature,
-            id: feature.id as FeatureIds,
-            limit: feature.limit || limit,
-          };
-        }
+    // Fill the map with the features from the organization
+    for (const feature of orgFeatures) {
+      featureMap.set(feature.id, {
+        enabled: feature.enabled,
+        id: feature.id as FeatureIds,
+        limit: feature.limit,
+      });
+    }
 
-        return {
-          id,
-          limit,
+    // Merge the features from the plan with the overrides from the organization
+    billingPlan?.features?.forEach(({ id, limit }) => {
+      const feature = orgFeatures.find((f) => f.id === id);
+      if (feature) {
+        featureMap.set(id, {
+          enabled: feature.enabled,
+          id: feature.id as FeatureIds,
+          limit: feature.limit,
+        });
+      } else {
+        featureMap.set(id, {
           enabled: true,
-        };
-      }) || []
-    );
+          id: id as FeatureIds,
+          limit,
+        });
+      }
+    });
+
+    return [...featureMap.values()];
   }
 
   public async getFeature(input: { organizationId: string; featureId: FeatureIds }): Promise<Feature | undefined> {
