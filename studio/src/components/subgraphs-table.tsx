@@ -3,7 +3,11 @@ import { useFeature } from "@/hooks/use-feature";
 import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
+import {
+  ChartBarIcon,
+  CommandLineIcon,
+  EyeIcon,
+} from "@heroicons/react/24/outline";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -153,7 +157,7 @@ export const AddSubgraphUsersContent = ({
     <div className="flex flex-col gap-y-6">
       {!rbac?.enabled ? (
         <Alert>
-          <InfoCircledIcon className="h-4 w-4" />
+          <InfoCircledIcon className="h-5 w-5" />
           <AlertTitle>Attention!</AlertTitle>
           <AlertDescription>
             Enable RBAC in the settings to add subgraph members.
@@ -392,6 +396,24 @@ export const SubgraphsTable = ({
               namespace,
             }) => {
               const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
+              let analyticsPath = `${path}/analytics`;
+              if (router.asPath.split("/")[3] === "graph") {
+                const query = [
+                  {
+                    id: "federatedGraphId",
+                    value: [
+                      JSON.stringify({
+                        label: graph?.name,
+                        operator: 0,
+                        value: graph?.id,
+                      }),
+                    ],
+                  },
+                ];
+                analyticsPath += `?filterState=${encodeURIComponent(
+                  JSON.stringify(query),
+                )}`;
+              }
               return (
                 <TableRow
                   key={name}
@@ -421,7 +443,7 @@ export const SubgraphsTable = ({
                         })
                       : "Never"}
                   </TableCell>
-                  <TableCell className="flex justify-end">
+                  <TableCell className="flex justify-end gap-2">
                     {rbac && (
                       <AddSubgraphUsers
                         subgraphName={name}
@@ -429,14 +451,34 @@ export const SubgraphsTable = ({
                         creatorUserId={creatorUserId}
                       />
                     )}
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="table-action"
-                    >
-                      <Link href={path}>View</Link>
-                    </Button>
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon-sm"
+                        >
+                          <Link href={analyticsPath}>
+                            <ChartBarIcon className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Analytics</TooltipContent>
+                    </Tooltip>
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon-sm"
+                        >
+                          <Link href={path}>
+                            <EyeIcon className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View Subgraph</TooltipContent>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               );

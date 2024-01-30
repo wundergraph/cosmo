@@ -12,12 +12,19 @@ CREATE TABLE IF NOT EXISTS cosmo.subgraph_latency_metrics_5_30 (
    Sum SimpleAggregateFunction(sum, Float64) CODEC(ZSTD(3)),
    Count SimpleAggregateFunction(sum, UInt64) CODEC(ZSTD(3)),
    MinDuration SimpleAggregateFunction(min, Float64) CODEC(ZSTD(3)),
-   MaxDuration SimpleAggregateFunction(max, Float64) CODEC(ZSTD(3))
+   MaxDuration SimpleAggregateFunction(max, Float64) CODEC(ZSTD(3)),
+   OperationName LowCardinality(String) CODEC (ZSTD(3)),
+   OperationHash String CODEC (ZSTD(3)),
+   OperationType LowCardinality(String) CODEC (ZSTD(3)),
+   OperationPersistedID String CODEC (ZSTD(3)),
+   RouterConfigVersion LowCardinality(String) CODEC(ZSTD(3)),
+   ClientName LowCardinality(String) CODEC (ZSTD(3)),
+   ClientVersion LowCardinality(String) CODEC (ZSTD(3))
 ) ENGINE = AggregatingMergeTree
 PARTITION BY toDate(Timestamp)
 -- This allows us to fetch latency metrics by subgraph ID in the most efficient way
 ORDER BY (
-    SubgraphID, FederatedGraphID, OrganizationID, toUnixTimestamp(Timestamp)
+    SubgraphID, FederatedGraphID, OrganizationID, OperationName, ClientName, ClientVersion, toUnixTimestamp(Timestamp), RouterConfigVersion, OperationType, OperationHash
 )
 TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
