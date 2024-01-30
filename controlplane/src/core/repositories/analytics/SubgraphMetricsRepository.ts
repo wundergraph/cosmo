@@ -1,6 +1,9 @@
 import { AnalyticsFilter, AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { DateRange } from '../../../types/index.js';
+import { DateRange, Label } from '../../../types/index.js';
+import { FederatedGraphRepository } from '../FederatedGraphRepository.js';
+import * as schema from '../../../db/schema.js';
 import {
   BaseFilters,
   buildAnalyticsViewFilters,
@@ -13,15 +16,17 @@ import {
   toISO9075,
 } from './util.js';
 
-interface GetMetricsViewProps {
+interface GetSubgraphMetricsViewProps {
   range?: number;
   dateRange?: DateRange;
   filters: AnalyticsFilter[];
   organizationId: string;
-  graphId: string;
+  subgraphId: string;
+  subgraphLabels: Label[];
+  namespaceId: string;
 }
 
-interface GetMetricsProps {
+interface GetSubgraphMetricsProps {
   granule: string;
   rangeInHours: number;
   dateRange: {
@@ -34,26 +39,31 @@ interface GetMetricsProps {
   };
   whereSql?: string;
   organizationId: string;
-  graphId: string;
+  subgraphId: string;
+  subgraphLabels: Label[];
+  namespaceId: string;
   queryParams?: Record<string, string | number>;
 }
 
-export class MetricsRepository {
-  constructor(private chClient: ClickHouseClient) {}
+export class SubgraphMetricsRepository {
+  constructor(
+    private chClient: ClickHouseClient,
+    private db: PostgresJsDatabase<typeof schema>,
+  ) {}
 
   /**
-   * Get request rate metrics
+   * Get subgraph request rate metrics
    */
-  public async getRequestRateMetrics({
+  public async getSubgraphRequestRateMetrics({
     rangeInHours,
     granule,
     dateRange,
     prevDateRange,
     organizationId,
-    graphId,
+    subgraphId,
     whereSql,
     queryParams,
-  }: GetMetricsProps) {
+  }: GetSubgraphMetricsProps) {
     // to minutes
     const multiplier = rangeInHours * 60;
 
@@ -66,10 +76,10 @@ export class MetricsRepository {
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate,
           sum(TotalRequests) AS total
-        FROM operation_request_metrics_5_30_mv
+        FROM subgraph_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND SubgraphID = '${subgraphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp 
       )
@@ -94,10 +104,10 @@ export class MetricsRepository {
           OperationName as name,
           IF(empty(OperationPersistedID), false, true) as isPersisted,
           sum(TotalRequests) as total
-        FROM operation_request_metrics_5_30_mv
+        FROM subgraph_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND SubgraphID = '${subgraphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp, OperationName, OperationHash, OperationPersistedID
       ) GROUP BY name, hash, isPersisted ORDER BY value DESC LIMIT 5
@@ -115,10 +125,10 @@ export class MetricsRepository {
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           round(sum(TotalRequests) / ${granule}, 4) AS value
-      FROM operation_request_metrics_5_30_mv
+      FROM subgraph_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
+        AND SubgraphID = '${subgraphId}'
         ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM 
@@ -158,18 +168,18 @@ export class MetricsRepository {
   }
 
   /**
-   * Get latency metrics
+   * Get subgraph latency metrics
    */
-  public async getLatencyMetrics({
+  public async getSubgraphLatencyMetrics({
     rangeInHours,
     granule,
     dateRange,
     prevDateRange,
     organizationId,
-    graphId,
+    subgraphId,
     whereSql,
     queryParams,
-  }: GetMetricsProps) {
+  }: GetSubgraphMetricsProps) {
     const queryLatency = (quantile: string, start: number, end: number) => {
       return this.chClient.queryPromise<{ value: number }>(
         `
@@ -188,10 +198,10 @@ export class MetricsRepository {
 
           -- Histogram aggregations
           sumForEachMerge(BucketCounts) as BucketCounts
-        FROM operation_latency_metrics_5_30_mv
+        FROM subgraph_latency_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND SubgraphID = '${subgraphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
     `,
         queryParams,
@@ -223,10 +233,10 @@ export class MetricsRepository {
 
           -- Histogram aggregations
           sumForEachMerge(BucketCounts) as BucketCounts
-        FROM operation_latency_metrics_5_30_mv
+        FROM subgraph_latency_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND SubgraphID = '${subgraphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY OperationName, OperationHash, OperationPersistedID ORDER BY value DESC LIMIT 5
     `,
@@ -256,10 +266,10 @@ export class MetricsRepository {
 
             -- Histogram aggregations
             sumForEachMerge(BucketCounts) as BucketCounts
-        FROM operation_latency_metrics_5_30_mv
+        FROM subgraph_latency_metrics_5_30_mv
         WHERE timestamp >= startDate AND timestamp <= endDate
           AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND SubgraphID = '${subgraphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY timestamp, ExplicitBounds
         ORDER BY timestamp ASC WITH FILL FROM
@@ -301,16 +311,16 @@ export class MetricsRepository {
   /**
    * Get error metrics
    */
-  public async getErrorMetrics({
+  public async getSubgraphErrorMetrics({
     rangeInHours,
     granule,
     dateRange,
     prevDateRange,
     organizationId,
-    graphId,
+    subgraphId,
     whereSql,
     queryParams,
-  }: GetMetricsProps) {
+  }: GetSubgraphMetricsProps) {
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
       return this.chClient.queryPromise<{ errorPercentage: number }>(
@@ -326,10 +336,10 @@ export class MetricsRepository {
           SELECT
             sum(TotalRequests) as totalRequests,
             sum(TotalErrors) as totalErrors
-          FROM operation_request_metrics_5_30_mv
+          FROM subgraph_request_metrics_5_30_mv
           WHERE Timestamp >= startDate AND Timestamp <= endDate
             AND OrganizationID = '${organizationId}'
-            AND FederatedGraphID = '${graphId}'
+            AND SubgraphID = '${subgraphId}'
             ${whereSql ? `AND ${whereSql}` : ''}
           GROUP BY Timestamp, OperationName 
         )
@@ -361,10 +371,10 @@ export class MetricsRepository {
           sum(TotalErrors) as totalErrors,
           if(totalErrors > 0, round(totalErrors / totalRequests * 100, 2), 0) AS errorPercentage,
           IF(empty(OperationPersistedID), false, true) as isPersisted
-        FROM operation_request_metrics_5_30_mv
+        FROM subgraph_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND SubgraphID = '${subgraphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp, OperationName, OperationHash, OperationPersistedID
       ) GROUP BY name, hash, isPersisted ORDER BY value DESC LIMIT 5
@@ -384,10 +394,10 @@ export class MetricsRepository {
           sum(TotalErrors) AS errors,
           sum(TotalRequests) AS requests,
           if(errors > 0, round(errors / requests * 100, 2), 0) AS value
-      FROM operation_request_metrics_5_30_mv
+      FROM subgraph_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
+        AND SubgraphID = '${subgraphId}'
         ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM 
@@ -429,14 +439,14 @@ export class MetricsRepository {
   /**
    * Get error rate metrics
    */
-  public async getErrorRateMetrics({
+  public async getSubgraphErrorRateMetrics({
     dateRange,
     granule,
     organizationId,
-    graphId,
+    subgraphId,
     whereSql,
     queryParams,
-  }: GetMetricsProps) {
+  }: GetSubgraphMetricsProps) {
     // get requests in last [range] hours in series of [step]
     const series = await this.chClient.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
@@ -447,10 +457,10 @@ export class MetricsRepository {
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           round(sum(TotalRequests) / ${granule}, 4) AS requestRate,
           round(sum(TotalErrors) / ${granule}, 4) AS errorRate
-      FROM operation_request_metrics_5_30_mv
+      FROM subgraph_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
+        AND SubgraphID = '${subgraphId}'
         ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM
@@ -475,14 +485,14 @@ export class MetricsRepository {
     };
   }
 
-  public async getMetricsView(props: GetMetricsViewProps) {
-    const metricsProps = this.getMetricsProps(props);
+  public async getSubgraphMetricsView(props: GetSubgraphMetricsViewProps) {
+    const metricsProps = this.getSubgraphMetricsProps(props);
 
     const [requests, latency, errors, filters] = await Promise.all([
-      this.getRequestRateMetrics(metricsProps),
-      this.getLatencyMetrics(metricsProps),
-      this.getErrorMetrics(metricsProps),
-      this.getMetricFilters(metricsProps),
+      this.getSubgraphRequestRateMetrics(metricsProps),
+      this.getSubgraphLatencyMetrics(metricsProps),
+      this.getSubgraphErrorMetrics(metricsProps),
+      this.getSubgraphMetricFilters(metricsProps),
     ]);
 
     return {
@@ -494,10 +504,10 @@ export class MetricsRepository {
     };
   }
 
-  public async getErrorsView(props: GetMetricsViewProps) {
-    const metricsProps = this.getMetricsProps(props);
+  public async getSubgraphErrorsView(props: GetSubgraphMetricsViewProps) {
+    const metricsProps = this.getSubgraphMetricsProps(props);
 
-    const [errorRate] = await Promise.all([this.getErrorRateMetrics(metricsProps)]);
+    const [errorRate] = await Promise.all([this.getSubgraphErrorRateMetrics(metricsProps)]);
 
     return {
       resolution: metricsProps.granule,
@@ -505,8 +515,16 @@ export class MetricsRepository {
     };
   }
 
-  protected getMetricsProps(props: GetMetricsViewProps): GetMetricsProps {
-    const { range, dateRange, filters: selectedFilters, organizationId, graphId } = props;
+  protected getSubgraphMetricsProps(props: GetSubgraphMetricsViewProps): GetSubgraphMetricsProps {
+    const {
+      range,
+      dateRange,
+      filters: selectedFilters,
+      organizationId,
+      subgraphId,
+      subgraphLabels,
+      namespaceId,
+    } = props;
 
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);
@@ -533,7 +551,9 @@ export class MetricsRepository {
         end: prevEnd,
       },
       organizationId,
-      graphId,
+      subgraphId,
+      subgraphLabels,
+      namespaceId,
       whereSql,
       queryParams: coercedFilters.result,
     };
@@ -577,9 +597,22 @@ export class MetricsRepository {
       title: 'Client Version',
       options: [],
     },
+    federatedGraphId: {
+      dbField: 'FederatedGraphID',
+      dbClause: 'where',
+      columnName: 'federatedGraphId',
+      title: 'Federated Graph',
+      options: [],
+    },
   };
 
-  public async getMetricFilters({ dateRange, organizationId, graphId }: GetMetricsProps) {
+  public async getSubgraphMetricFilters({
+    dateRange,
+    organizationId,
+    subgraphId,
+    subgraphLabels,
+    namespaceId,
+  }: GetSubgraphMetricsProps) {
     const filters = { ...this.baseFilters };
 
     const query = `
@@ -590,31 +623,33 @@ export class MetricsRepository {
         OperationName as operationName,
         ClientName as clientName,
         ClientVersion as clientVersion
-      FROM operation_request_metrics_5_30_mv
+      FROM subgraph_request_metrics_5_30_mv
       WHERE Timestamp >= startDate AND Timestamp <= endDate
         AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
+        AND SubgraphID = '${subgraphId}'
       GROUP BY OperationName, ClientName, ClientVersion
     `;
 
     const res = await this.chClient.queryPromise(query);
 
-    const addFilterOption = (filter: string, option: string) => {
+    // filterLabelis the label for the values of the filters
+    // for ex:- the federatedGraphId filter will have "slug" as the label and the id as the value
+    const addFilterOption = (filter: string, value: string, filterLabel?: string) => {
       if (!filters[filter].options) {
         filters[filter].options = [];
       }
 
-      let label = option;
-      if (filter === 'clientVersion' && option === 'missing') {
+      let label = filterLabel || value;
+      if (filter === 'clientVersion' && value === 'missing') {
         label = 'missing';
-      } else if (filter === 'clientName' && option === 'unknown') {
+      } else if (filter === 'clientName' && value === 'unknown') {
         label = 'unknown';
       }
 
       filters[filter].options.push({
         label,
         operator: AnalyticsViewFilterOperator.EQUALS,
-        value: option,
+        value,
       });
     };
 
@@ -631,8 +666,21 @@ export class MetricsRepository {
       }
     }
 
+    const fedRepo = new FederatedGraphRepository(this.db, organizationId);
+    const graphs = await fedRepo.bySubgraphLabels({ labels: subgraphLabels, namespaceId });
+    for (const graph of graphs) {
+      addFilterOption('federatedGraphId', graph.id, graph.name);
+    }
+
     return buildAnalyticsViewFilters(
-      { operationName: '', operationHash: '', operationPersistedId: '', clientName: '', clientVersion: '' },
+      {
+        operationName: '',
+        operationHash: '',
+        operationPersistedId: '',
+        clientName: '',
+        clientVersion: '',
+        federatedGraphId: '',
+      },
       filters,
     );
   }

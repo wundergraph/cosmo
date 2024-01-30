@@ -33,6 +33,7 @@ import { TitleLayoutProps } from "./graph-layout";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
+import { ChartBarIcon } from "@heroicons/react/24/outline";
 import { Badge } from "../ui/badge";
 
 export interface SubgraphContextProps {
@@ -85,6 +86,12 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         title: "Federated Graphs",
         href: basePath + "/graphs",
         icon: <PiGraphLight className="h-4 w-4" />,
+      },
+      {
+        title: "Analytics",
+        href: basePath + "/analytics",
+        matchExact: false,
+        icon: <ChartBarIcon className="h-4 w-4" />,
       },
       {
         title: "Discussions",
