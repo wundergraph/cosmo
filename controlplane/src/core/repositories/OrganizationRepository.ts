@@ -435,22 +435,24 @@ export class OrganizationRepository {
     }
 
     // Merge the features from the plan with the overrides from the organization
-    billingPlan?.features?.forEach(({ id, limit }) => {
-      const feature = orgFeatures.find((f) => f.id === id);
+
+    const planFeatures = billingPlan?.features || [];
+    for (const planFeature of planFeatures) {
+      const feature = orgFeatures.find((f) => f.id === planFeature.id);
       if (feature) {
-        featureMap.set(id, {
+        featureMap.set(planFeature.id, {
           enabled: feature.enabled,
           id: feature.id as FeatureIds,
           limit: feature.limit,
         });
       } else {
-        featureMap.set(id, {
+        featureMap.set(planFeature.id, {
           enabled: true,
-          id: id as FeatureIds,
-          limit,
+          id: planFeature.id as FeatureIds,
+          limit: planFeature.limit,
         });
       }
-    });
+    }
 
     return [...featureMap.values()];
   }
