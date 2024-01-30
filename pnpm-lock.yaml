@@ -314,7 +314,7 @@ importers:
         version: 1.1.3(@bufbuild/protobuf@1.4.1)
       '@connectrpc/connect-fastify':
         specifier: ^1.1.3
-        version: 1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect-node@1.1.3)(@connectrpc/connect@1.1.3)(fastify@4.25.2)
+        version: 1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect-node@1.1.3)(@connectrpc/connect@1.1.3)(fastify@4.26.0)
       '@connectrpc/connect-node':
         specifier: ^1.1.3
         version: 1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect@1.1.3)
@@ -322,8 +322,8 @@ importers:
         specifier: ^8.4.0
         version: 8.4.0
       '@graphql-inspector/core':
-        specifier: ^5.0.1
-        version: 5.0.1(graphql@16.7.1)
+        specifier: ^5.0.2
+        version: 5.0.2(graphql@16.7.1)
       '@keycloak/keycloak-admin-client':
         specifier: ^22.0.4
         version: 22.0.4
@@ -343,11 +343,11 @@ importers:
         specifier: workspace:*
         version: link:../shared
       axios:
-        specifier: ^1.5.1
-        version: 1.5.1
+        specifier: ^1.6.7
+        version: 1.6.7
       axios-retry:
-        specifier: ^3.8.0
-        version: 3.8.0
+        specifier: ^4.0.0
+        version: 4.0.0(axios@1.6.7)
       bullmq:
         specifier: ^5.1.5
         version: 5.1.5
@@ -367,8 +367,8 @@ importers:
         specifier: ^3.1.9
         version: 3.1.9
       fastify:
-        specifier: ^4.25.2
-        version: 4.25.2
+        specifier: ^4.26.0
+        version: 4.26.0
       fastify-graceful-shutdown:
         specifier: ^3.5.1
         version: 3.5.1
@@ -385,11 +385,11 @@ importers:
         specifier: ^5.3.2
         version: 5.3.2
       jose:
-        specifier: ^4.15.2
-        version: 4.15.2
+        specifier: ^4.15.4
+        version: 4.15.4
       nodemailer:
-        specifier: ^6.9.7
-        version: 6.9.7
+        specifier: ^6.9.8
+        version: 6.9.8
       nuid:
         specifier: ^1.1.6
         version: 1.1.6
@@ -400,8 +400,8 @@ importers:
         specifier: ^4.26.0
         version: 4.26.0
       pino:
-        specifier: ^8.16.1
-        version: 8.16.1
+        specifier: ^8.17.2
+        version: 8.17.2
       postgres:
         specifier: ^3.4.3
         version: 3.4.3
@@ -473,17 +473,17 @@ importers:
         specifier: ^0.1.3
         version: 0.1.3(eslint@8.56.0)
       pino-pretty:
-        specifier: ^10.2.3
-        version: 10.2.3
+        specifier: ^10.3.1
+        version: 10.3.1
       prettier:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.2.4
+        version: 3.2.4
       tsc-watch:
         specifier: ^6.0.4
         version: 6.0.4(typescript@5.2.2)
       tsx:
-        specifier: ^3.14.0
-        version: 3.14.0
+        specifier: ^4.7.0
+        version: 4.7.0
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -709,7 +709,7 @@ importers:
         version: 0.45.0
       monaco-graphql:
         specifier: ^1.4.0
-        version: 1.4.0(graphql@16.7.1)(monaco-editor@0.45.0)(prettier@3.0.3)
+        version: 1.4.0(graphql@16.7.1)(monaco-editor@0.45.0)(prettier@3.2.4)
       next:
         specifier: 14.1.0
         version: 14.1.0(@babel/core@7.23.7)(react-dom@18.2.0)(react@18.2.0)
@@ -836,7 +836,7 @@ importers:
         version: 8.4.24
       prettier-plugin-tailwindcss:
         specifier: ^0.5.6
-        version: 0.5.6(prettier@3.0.3)
+        version: 0.5.6(prettier@3.2.4)
       typescript:
         specifier: 5.1.3
         version: 5.1.3
@@ -3058,7 +3058,7 @@ packages:
       chalk: 4.1.2
     dev: true
 
-  /@connectrpc/connect-fastify@1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect-node@1.1.3)(@connectrpc/connect@1.1.3)(fastify@4.25.2):
+  /@connectrpc/connect-fastify@1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect-node@1.1.3)(@connectrpc/connect@1.1.3)(fastify@4.26.0):
     resolution: {integrity: sha512-t5ALJYTbabHeybWK0TuLljanShCArPd9xrVs9ofVzA6nD2TaGwgUg38dzAgWdzHOpagbXShgPM2RlTSVbek+Ag==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
@@ -3070,7 +3070,7 @@ packages:
       '@bufbuild/protobuf': 1.4.1
       '@connectrpc/connect': 1.1.3(@bufbuild/protobuf@1.4.1)
       '@connectrpc/connect-node': 1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect@1.1.3)
-      fastify: 4.25.2
+      fastify: 4.26.0
     dev: false
 
   /@connectrpc/connect-node@1.1.3(@bufbuild/protobuf@1.4.1)(@connectrpc/connect@1.1.3):
@@ -4353,8 +4353,8 @@ packages:
       - '@types/node'
     dev: false
 
-  /@graphql-inspector/core@5.0.1(graphql@16.7.1):
-    resolution: {integrity: sha512-1CWfFYucnRdULGiN1NDSinlNlpucBT+0x4i4AIthKe5n5jD9RIVyJtkA8zBbujUFrP++YE3l+TQifwbN1yTQsw==}
+  /@graphql-inspector/core@5.0.2(graphql@16.7.1):
+    resolution: {integrity: sha512-pXHPCggwLmgi5NACPPV4qyf2xW/sQONnu6ZqCAid3k/S2APmVYN4Z3OvxvLA12NFhzby5Sz5K4fRsId43cK8ww==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       graphql: 16.7.1
@@ -4362,7 +4362,7 @@ packages:
       dependency-graph: 0.11.0
       graphql: 16.7.1
       object-inspect: 1.12.3
-      tslib: 2.6.0
+      tslib: 2.6.2
     dev: false
 
   /@graphql-tools/merge@8.3.1(graphql@16.7.1):
@@ -8581,7 +8581,7 @@ packages:
     resolution: {integrity: sha512-mFMBfMOz8QxhYVbuINtswBp9VL2b4Y0QqYHwqLz3YbgtfAcat2Dl6Y1o4e22S/OVE6Ebl9m7wWiMT2lSbAs1wA==}
     deprecated: This is a stub types definition. prettier provides its own type definitions, so you do not need this installed.
     dependencies:
-      prettier: 3.0.3
+      prettier: 3.2.4
     dev: true
 
   /@types/prismjs@1.26.3:
@@ -9525,17 +9525,19 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /axios-retry@3.8.0:
-    resolution: {integrity: sha512-CfIsQyWNc5/AE7x/UEReRUadiBmQeoBpSEC+4QyGLJMswTsP1tz0GW2YYPnE7w9+ESMef5zOgLDFpHynNyEZ1w==}
+  /axios-retry@4.0.0(axios@1.6.7):
+    resolution: {integrity: sha512-F6P4HVGITD/v4z9Lw2mIA24IabTajvpDZmKa6zq/gGwn57wN5j1P3uWrAV0+diqnW6kTM2fTqmWNfgYWGmMuiA==}
+    peerDependencies:
+      axios: 0.x || 1.x
     dependencies:
-      '@babel/runtime': 7.22.6
+      axios: 1.6.7
       is-retry-allowed: 2.2.0
     dev: false
 
-  /axios@1.5.1:
-    resolution: {integrity: sha512-Q28iYCWzNHjAm+yEAot5QaAMxhMghWLFVf7rRdwhUI+c2jix2DUXjAHXVi+s1ibs3mjPO/cCgbA++3BjD0vP/A==}
+  /axios@1.6.7:
+    resolution: {integrity: sha512-/hDJGff6/c7u0hDkvkGxR/oy6CbCs8ziCsC7SqmhjfozqiJGc8Z11wrv9z9lYfY4K8l+H9TpjcMDX0xOZmx+RA==}
     dependencies:
-      follow-redirects: 1.15.2
+      follow-redirects: 1.15.5
       form-data: 4.0.0
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
@@ -13071,8 +13073,8 @@ packages:
       secure-json-parse: 2.7.0
     dev: false
 
-  /fastify@4.25.2:
-    resolution: {integrity: sha512-SywRouGleDHvRh054onj+lEZnbC1sBCLkR0UY3oyJwjD4BdZJUrxBqfkfCaqn74pVCwBaRHGuL3nEWeHbHzAfw==}
+  /fastify@4.26.0:
+    resolution: {integrity: sha512-Fq/7ziWKc6pYLYLIlCRaqJqEVTIZ5tZYfcW/mDK2AQ9v/sqjGFpj0On0/7hU50kbPVjLO4de+larPA1WwPZSfw==}
     dependencies:
       '@fastify/ajv-compiler': 3.5.0
       '@fastify/error': 3.4.0
@@ -13081,7 +13083,7 @@ packages:
       avvio: 8.2.1
       fast-content-type-parse: 1.1.0
       fast-json-stringify: 5.9.1
-      find-my-way: 7.7.0
+      find-my-way: 8.1.0
       light-my-request: 5.11.0
       pino: 8.17.2
       process-warning: 3.0.0
@@ -13161,8 +13163,8 @@ packages:
     dependencies:
       to-regex-range: 5.0.1
 
-  /find-my-way@7.7.0:
-    resolution: {integrity: sha512-+SrHpvQ52Q6W9f3wJoJBbAQULJuNEEQwBvlvYwACDhBTLOTMiQ0HYWh4+vC3OivGP2ENcTI1oKlFA2OepJNjhQ==}
+  /find-my-way@8.1.0:
+    resolution: {integrity: sha512-41QwjCGcVTODUmLLqTMeoHeiozbMXYMAE1CKFiDyi9zVZ2Vjh0yz3MF0WQZoIb+cmzP/XlbFjlF2NtJmvZHznA==}
     engines: {node: '>=14'}
     dependencies:
       fast-deep-equal: 3.1.3
@@ -13213,11 +13215,11 @@ packages:
     resolution: {integrity: sha512-KSuV3ur4gf2KqMNoZx3nXNVhqCkn42GuTYCX4tXPEwf0MjpFQmNMiN6m7dXaUXgIoivL6/65agoUMg4RLS0Vbg==}
     engines: {node: '>=10'}
     dependencies:
-      tslib: 2.6.1
+      tslib: 2.6.2
     dev: false
 
-  /follow-redirects@1.15.2:
-    resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
+  /follow-redirects@1.15.5:
+    resolution: {integrity: sha512-vSFWUON1B+yAw1VN4xMfxgn5fTUiaOzAJCKBwIIgT/+7CuGy9+r+5gITvP62j3RmaD5Ph65UaERdOSRGUzZtgw==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -13289,7 +13291,7 @@ packages:
     dependencies:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      tslib: 2.6.1
+      tslib: 2.6.2
     optionalDependencies:
       '@emotion/is-prop-valid': 0.8.8
     dev: false
@@ -13953,11 +13955,8 @@ packages:
     resolution: {integrity: sha512-2bsegYkkHO+h/9MGbn6KWcE45cHZgPANo5LXF7EvWdT0yT2EguSVO1nDgU5c8+ZOPwp2vMNa7YFsJhVcDR9Sdg==}
     dev: true
 
-  /help-me@4.2.0:
-    resolution: {integrity: sha512-TAOnTB8Tz5Dw8penUuzHVrKNKlCIbwwbHnXraNJxPwf8LRtE2HlM84RYuezMFcwOJmoYOCWVDyJ8TQGxn9PgxA==}
-    dependencies:
-      glob: 8.1.0
-      readable-stream: 3.6.2
+  /help-me@5.0.0:
+    resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
     dev: true
 
   /hey-listen@1.0.8:
@@ -14638,6 +14637,10 @@ packages:
 
   /jose@4.15.2:
     resolution: {integrity: sha512-IY73F228OXRl9ar3jJagh7Vnuhj/GzBunPiZP13K0lOl7Am9SoWW3kEzq3MCllJMTtZqHTiDXQvoRd4U95aU6A==}
+    dev: false
+
+  /jose@4.15.4:
+    resolution: {integrity: sha512-W+oqK4H+r5sITxfxpSU+MMdr/YSWGvgZMQDIsNoBDGGy4i7GBPTtvFKibQzW06n3U3TqHjhvBJsirShsEJ6eeQ==}
     dev: false
 
   /joycon@3.1.1:
@@ -16028,7 +16031,7 @@ packages:
     resolution: {integrity: sha512-mjv1G1ZzfEE3k9HZN0dQ2olMdwIfaeAAjFiwNprLfYNRSz7ctv9XuCT7gPtBGrMUeV1/iZzYKj17Khu1hxoHOA==}
     dev: false
 
-  /monaco-graphql@1.4.0(graphql@16.7.1)(monaco-editor@0.45.0)(prettier@3.0.3):
+  /monaco-graphql@1.4.0(graphql@16.7.1)(monaco-editor@0.45.0)(prettier@3.2.4):
     resolution: {integrity: sha512-+AoCVFkifSPtGpdLsqJM+uZ2dDeRB4QTHLgIZIj1QB9o8VrnInXeI2C8QnKuON0b2PVEPdu8fEQ/jSuNJFDAOg==}
     peerDependencies:
       graphql: 16.7.1
@@ -16039,7 +16042,7 @@ packages:
       graphql-language-service: 5.2.0(graphql@16.7.1)
       monaco-editor: 0.45.0
       picomatch-browser: 2.2.6
-      prettier: 3.0.3
+      prettier: 3.2.4
     dev: false
 
   /ms@2.1.2:
@@ -16243,8 +16246,8 @@ packages:
   /node-releases@2.0.14:
     resolution: {integrity: sha512-y10wOWt8yZpqXmOgRo77WaHEmhYQYGNA6y421PKsKYWEK8aW+cqAphborZDhqfyKrbZEN92CN1X2KbafY2s7Yw==}
 
-  /nodemailer@6.9.7:
-    resolution: {integrity: sha512-rUtR77ksqex/eZRLmQ21LKVH5nAAsVicAtAYudK7JgwenEDZ0UIQ1adUGqErz7sMkWYxWTTU1aeP2Jga6WQyJw==}
+  /nodemailer@6.9.8:
+    resolution: {integrity: sha512-cfrYUk16e67Ks051i4CntM9kshRYei1/o/Gi8K1d+R34OIs21xdFnW7Pt7EucmVKA0LKtqUGNcjMZ7ehjl49mQ==}
     engines: {node: '>=6.0.0'}
     dev: false
 
@@ -16934,15 +16937,15 @@ packages:
       readable-stream: 4.4.2
       split2: 4.2.0
 
-  /pino-pretty@10.2.3:
-    resolution: {integrity: sha512-4jfIUc8TC1GPUfDyMSlW1STeORqkoxec71yhxIpLDQapUu8WOuoz2TTCoidrIssyz78LZC69whBMPIKCMbi3cw==}
+  /pino-pretty@10.3.1:
+    resolution: {integrity: sha512-az8JbIYeN/1iLj2t0jR9DV48/LQ3RC6hZPpapKPkb84Q+yTidMCpgWxIT3N0flnBDilyBQ1luWNpOeJptjdp/g==}
     hasBin: true
     dependencies:
       colorette: 2.0.20
       dateformat: 4.6.3
       fast-copy: 3.0.1
       fast-safe-stringify: 2.1.1
-      help-me: 4.2.0
+      help-me: 5.0.0
       joycon: 3.1.1
       minimist: 1.2.8
       on-exit-leak-free: 2.1.0
@@ -16972,23 +16975,6 @@ packages:
       real-require: 0.2.0
       safe-stable-stringify: 2.4.3
       sonic-boom: 3.3.0
-      thread-stream: 2.3.0
-    dev: false
-
-  /pino@8.16.1:
-    resolution: {integrity: sha512-3bKsVhBmgPjGV9pyn4fO/8RtoVDR8ssW1ev819FsRXlRNgW8gR/9Kx+gCK4UPWd4JjrRDLWpzd/pb1AyWm3MGA==}
-    hasBin: true
-    dependencies:
-      atomic-sleep: 1.0.0
-      fast-redact: 3.2.0
-      on-exit-leak-free: 2.1.0
-      pino-abstract-transport: 1.1.0
-      pino-std-serializers: 6.2.2
-      process-warning: 2.2.0
-      quick-format-unescaped: 4.0.4
-      real-require: 0.2.0
-      safe-stable-stringify: 2.4.3
-      sonic-boom: 3.7.0
       thread-stream: 2.3.0
     dev: false
 
@@ -17158,7 +17144,7 @@ packages:
     engines: {node: '>= 0.8.0'}
     dev: true
 
-  /prettier-plugin-tailwindcss@0.5.6(prettier@3.0.3):
+  /prettier-plugin-tailwindcss@0.5.6(prettier@3.2.4):
     resolution: {integrity: sha512-2Xgb+GQlkPAUCFi3sV+NOYcSI5XgduvDBL2Zt/hwJudeKXkyvRS65c38SB0yb9UB40+1rL83I6m0RtlOQ8eHdg==}
     engines: {node: '>=14.21.3'}
     peerDependencies:
@@ -17210,11 +17196,17 @@ packages:
       prettier-plugin-twig-melody:
         optional: true
     dependencies:
-      prettier: 3.0.3
+      prettier: 3.2.4
     dev: true
 
   /prettier@3.0.3:
     resolution: {integrity: sha512-L/4pUDMxcNa8R/EthV08Zt42WBO4h1rarVtK0K+QJG0X187OLo7l699jWw0GKuwzkPQ//jMFA/8Xm6Fh3J/DAg==}
+    engines: {node: '>=14'}
+    hasBin: true
+    dev: true
+
+  /prettier@3.2.4:
+    resolution: {integrity: sha512-FWu1oLHKCrtpO1ypU6J0SbK2d9Ckwysq6bHj/uaCP26DxrPpppCLQRGVuqAxSTvhF00AcvDRyYrLNW7ocBhFFQ==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -17773,7 +17765,7 @@ packages:
       react: 18.2.0
       react-remove-scroll-bar: 2.3.4(@types/react@18.2.14)(react@18.2.0)
       react-style-singleton: 2.2.1(@types/react@18.2.14)(react@18.2.0)
-      tslib: 2.6.1
+      tslib: 2.6.2
       use-callback-ref: 1.3.0(@types/react@18.2.14)(react@18.2.0)
       use-sidecar: 1.1.2(@types/react@18.2.14)(react@18.2.0)
     dev: false
@@ -19333,12 +19325,12 @@ packages:
     resolution: {integrity: sha512-d6xOpEDfsi2CZVlPQzGeux8XMwLT9hssAsaPYExaQMuYskwb+x1x7J371tWlbBdWHroy99KnVB6qIkUbs5X3UQ==}
     dev: false
 
-  /tslib@2.6.0:
-    resolution: {integrity: sha512-7At1WUettjcSRHXCyYtTselblcHl9PJFFVKiCAy/bY97+BPZXSQ2wbq0P9s8tK2G7dFQfNnlJnPAiArVBVBsfA==}
-    dev: false
-
   /tslib@2.6.1:
     resolution: {integrity: sha512-t0hLfiEKfMUoqhG+U1oid7Pva4bbDPHYfJNiB7BiIjRkj1pyC++4N3huJfqY6aRH6VTB0rvtzQwjM4K6qpfOig==}
+
+  /tslib@2.6.2:
+    resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
+    dev: false
 
   /tsup@8.0.1(ts-node@10.9.1)(typescript@5.2.2):
     resolution: {integrity: sha512-hvW7gUSG96j53ZTSlT4j/KL0q1Q2l6TqGBFc6/mu/L46IoNWqLLUzLRLP1R8Q7xrJTmkDxxDoojV5uCVs1sVOg==}
