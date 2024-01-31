@@ -349,8 +349,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0(axios@1.6.7)
       bullmq:
-        specifier: ^5.1.5
-        version: 5.1.5
+        specifier: ^5.1.6
+        version: 5.1.6
       cookie:
         specifier: ^0.5.0
         version: 0.5.0
@@ -9720,8 +9720,8 @@ packages:
       semver: 7.5.4
     dev: true
 
-  /bullmq@5.1.5:
-    resolution: {integrity: sha512-Rc9QGHrj/wJ8RMENKa839o1pJmdicg7KBTfmVU8YqYuEK2JcMSJaKMg2XrAi7sdYSawgOJgC/kiW9fCGYEj6Yg==}
+  /bullmq@5.1.6:
+    resolution: {integrity: sha512-VkLfig+xm4U3hc4QChzuuAy0NGQ9dfPB8o54hmcZHCX9ofp0Zn6bEY+W3Ytkk76eYwPAgXfywDBlAb2Unjl1Rg==}
     dependencies:
       cron-parser: 4.9.0
       glob: 8.1.0
@@ -9730,7 +9730,7 @@ packages:
       msgpackr: 1.10.1
       node-abort-controller: 3.1.1
       semver: 7.5.4
-      tslib: 2.6.1
+      tslib: 2.6.2
       uuid: 9.0.0
     transitivePeerDependencies:
       - supports-color
