@@ -73,7 +73,7 @@ export default (opts: BaseCommandOptions) => {
     if (resp.response?.code === EnumStatusCode.OK) {
       console.log(pc.dim(pc.green(`A new subgraph called '${name}' was created.`)));
     } else {
-      console.log(`Failed to create subgraph '${pc.bold(name)}'.`);
+      console.log(pc.red(`Failed to create subgraph '${pc.bold(name)}'.`));
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
