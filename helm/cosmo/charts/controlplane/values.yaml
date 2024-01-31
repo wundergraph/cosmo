@@ -181,3 +181,4 @@ configuration:
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`
   defaultBillingPlan: ''
+  openAiApiKey: ''

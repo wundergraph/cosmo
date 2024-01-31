@@ -292,6 +292,13 @@ spec:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: redisTlsKey
             {{- end }}
+            {{- if .Values.configuration.openAIApiKey }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: openAiApiKey
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
