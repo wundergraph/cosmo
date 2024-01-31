@@ -21,6 +21,22 @@ export const envVariables = z
       .transform((val) => Number.parseInt(val)),
     LOG_LEVEL: z.string().default('info'),
     /**
+     * Redis
+     */
+    REDIS_HOST: z.string().default('localhost'),
+    REDIS_PORT: z
+      .string()
+      .default('6379')
+      .transform((val) => Number.parseInt(val)),
+    REDIS_PASSWORD: z.string().optional(),
+    REDIS_TLS_CERT: z.string().optional(),
+    REDIS_TLS_CA: z.string().optional(),
+    REDIS_TLS_KEY: z.string().optional(),
+    /**
+     * OPEN AI
+     */
+    OPENAI_API_KEY: z.string().optional(),
+    /**
      * Auth
      */
     AUTH_JWT_SECRET: z.string().min(32).max(32),
@@ -29,9 +45,9 @@ export const envVariables = z
      * Database
      */
     DB_URL: z.string(),
-    DB_CERT_PATH: z.string().optional(),
-    DB_CA_PATH: z.string().optional(),
-    DB_KEY_PATH: z.string().optional(),
+    DB_TLS_CERT: z.string().optional(),
+    DB_TLS_CA: z.string().optional(),
+    DB_TLS_KEY: z.string().optional(),
     /**
      * Keycloak
      */

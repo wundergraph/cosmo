@@ -1,7 +1,6 @@
 version: '3.8'
 name: 'full-cosmo'
 services:
-
   # Services for the demo
 
   employees:
@@ -104,9 +103,9 @@ services:
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: ${CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:-1}
     ports:
-      - "8123:8123"
-      - "9000:9000"
-      - "9440:9440"
+      - '8123:8123'
+      - '9000:9000'
+      - '9440:9440'
     profiles:
       - default
     networks:
@@ -126,7 +125,7 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres:/data/postgres
     ports:
-      - "5432:5432"
+      - '5432:5432'
     profiles:
       - default
     restart: unless-stopped
@@ -137,7 +136,7 @@ services:
     image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
     platform: linux/amd64
     environment:
-      KEYCLOAK_EXTRA_ARGS: "--import-realm --health-enabled=true"
+      KEYCLOAK_EXTRA_ARGS: '--import-realm --health-enabled=true'
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
       KEYCLOAK_DATABASE_PORT: ${POSTGRES_PORT:-5432}
@@ -146,7 +145,7 @@ services:
       KEYCLOAK_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       KEYCLOAK_DATABASE_USER: ${POSTGRES_USER:-postgres}
     ports:
-      - "8080:8080"
+      - '8080:8080'
     volumes:
       - ./docker/keycloak/realm.json:/opt/bitnami/keycloak/data/import/realm.json:ro
     restart: unless-stopped
@@ -163,8 +162,8 @@ services:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
     ports:
-      - "10000:9000"
-      - "10001:9001"
+      - '10000:9000'
+      - '10001:9001'
     volumes:
       - minio:/data
       - ./docker/minio/entrypoint.sh:/entrypoint.sh
@@ -180,9 +179,9 @@ services:
     profiles:
       - default
     ports:
-      - "4222:4222"
-      - "8222:8222"
-      - "6222:6222"
+      - '4222:4222'
+      - '8222:8222'
+      - '6222:6222'
     networks:
       - primary
 
@@ -197,7 +196,7 @@ services:
       - AUTH_JWT_SECRET=fkczyomvdprgvtmvkuhvprxuggkbgwld
       - S3_STORAGE_URL=http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo
     ports:
-      - "11000:11000"
+      - '11000:11000'
     networks:
       - primary
     profiles:
@@ -207,9 +206,9 @@ services:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
     platform: linux/amd64
     environment:
-      CLICKHOUSE_DSN: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}"
+      CLICKHOUSE_DSN: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}'
       INGEST_JWT_SECRET: ${INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
-      LISTEN_ADDR: "0.0.0.0:4005"
+      LISTEN_ADDR: '0.0.0.0:4005'
     ports:
       - '4005:4005'
     restart: unless-stopped
@@ -224,7 +223,7 @@ services:
     image: ghcr.io/wundergraph/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
     platform: linux/amd64
     environment:
-      CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
+      CLICKHOUSE_ENDPOINT: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4'
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
     ports:
       - '4318:4318'
@@ -240,24 +239,27 @@ services:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
     platform: linux/amd64
     environment:
-      DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
+      DB_URL: 'postgresql://postgres:changeme@postgres:5432/controlplane'
       PORT: 3001
-      HOST: "0.0.0.0"
-      ALLOWED_ORIGINS: "http://localhost:3000"
-      LOG_LEVEL: "info"
-      DEBUG_SQL: "true"
-      CLICKHOUSE_DSN: "http://default:changeme@clickhouse:8123?database=cosmo"
-      AUTH_REDIRECT_URI: "http://localhost:3001/v1/auth/callback"
-      WEB_BASE_URL: "http://localhost:3000"
-      AUTH_JWT_SECRET: "fkczyomvdprgvtmvkuhvprxuggkbgwld"
-      KC_CLIENT_ID: "studio"
-      KC_REALM: "cosmo"
+      HOST: '0.0.0.0'
+      ALLOWED_ORIGINS: 'http://localhost:3000'
+      LOG_LEVEL: 'info'
+      DEBUG_SQL: 'true'
+      CLICKHOUSE_DSN: 'http://default:changeme@clickhouse:8123?database=cosmo'
+      AUTH_REDIRECT_URI: 'http://localhost:3001/v1/auth/callback'
+      WEB_BASE_URL: 'http://localhost:3000'
+      AUTH_JWT_SECRET: 'fkczyomvdprgvtmvkuhvprxuggkbgwld'
+      KC_CLIENT_ID: 'studio'
+      KC_REALM: 'cosmo'
       KC_ADMIN_USER: ${KEYCLOAK_ADMIN:-admin}
       KC_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
-      KC_API_URL: "http://keycloak:8080"
-      KC_FRONTEND_URL: "http://localhost:8080"
-      PROMETHEUS_API_URL: "http://admin:test@prometheus:9090/api/v1"
+      KC_API_URL: 'http://keycloak:8080'
+      KC_FRONTEND_URL: 'http://localhost:8080'
+      PROMETHEUS_API_URL: 'http://admin:test@prometheus:9090/api/v1'
       S3_STORAGE_URL: http://minio:changeme@minio:9000/cosmo
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: 'test'
     ports:
       - '3001:3001'
     restart: on-failure
@@ -269,13 +271,23 @@ services:
       - postgres
       - clickhouse
 
+  redis:
+    image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis:/data
+    networks:
+      - primary
+
   router:
     image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
     platform: linux/amd64
     environment:
       LOG_LEVEL: info
       CORS_ALLOW_CREDENTIALS: true
-      LISTEN_ADDR: "0.0.0.0:3002"
+      LISTEN_ADDR: '0.0.0.0:3002'
       CONTROLPLANE_URL: http://controlplane:3001
       DEFAULT_TELEMETRY_ENDPOINT: http://otelcollector:4318
       GRAPHQL_METRICS_COLLECTOR_ENDPOINT: http://graphqlmetrics:4005
@@ -300,7 +312,7 @@ services:
     environment:
       NEXT_PUBLIC_COSMO_CP_URL: http://localhost:3001
       NEXT_PUBLIC_COSMO_STUDIO_URL: http://localhost:3000
-      HOSTNAME: "0.0.0.0"
+      HOSTNAME: '0.0.0.0'
     profiles:
       - default
     ports:
@@ -312,15 +324,15 @@ services:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
     platform: linux/amd64
     command:
-      - "/app/dist/bin/seed.js"
+      - '/app/dist/bin/seed.js'
     environment:
-      KC_REALM: "cosmo"
-      KC_API_URL: "http://keycloak:8080"
-      KC_ADMIN_USER: "admin"
-      KC_ADMIN_PASSWORD: "changeme"
-      KC_CLIENT_ID: "studio"
+      KC_REALM: 'cosmo'
+      KC_API_URL: 'http://keycloak:8080'
+      KC_ADMIN_USER: 'admin'
+      KC_ADMIN_PASSWORD: 'changeme'
+      KC_CLIENT_ID: 'studio'
       API_KEY: cosmo_669b576aaadc10ee1ae81d9193425705
-      DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
+      DB_URL: 'postgresql://postgres:changeme@postgres:5432/controlplane'
       USER_EMAIL: foo@wundergraph.com
       USER_PASSWORD: wunder@123
       USER_FIRSTNAME: foo
@@ -377,3 +389,4 @@ volumes:
   clickhouse:
   prometheus:
   minio:
+  redis:

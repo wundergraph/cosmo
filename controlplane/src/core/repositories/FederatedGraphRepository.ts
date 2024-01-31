@@ -224,6 +224,13 @@ export class FederatedGraphRepository {
     });
   }
 
+  public updateReadme({ targetId, readme }: { targetId: string; readme: string }) {
+    return this.db
+      .update(targets)
+      .set({ readme })
+      .where(and(eq(targets.id, targetId), eq(schema.targets.organizationId, this.organizationId)));
+  }
+
   public move(
     data: { targetId: string; newNamespaceId: string; updatedBy: string; federatedGraph: FederatedGraphDTO },
     blobStorage: BlobStorage,

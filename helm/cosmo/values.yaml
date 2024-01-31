@@ -6,19 +6,19 @@ global:
   # Enable this once to seed a new organization
   seed:
     enabled: false
-    apiKey: "cosmo_669b576aaadc10ee1ae81d9193425705"
-    userEmail: "foo@wundergraph.com"
-    userName: "foo"
-    userPassword: "wunder@123"
-    firstName: "Foo"
-    lastName: "Bar"
-    organizationName: "WunderGraph"
-    organizationSlug: "wundergraph"
+    apiKey: 'cosmo_669b576aaadc10ee1ae81d9193425705'
+    userEmail: 'foo@wundergraph.com'
+    userName: 'foo'
+    userPassword: 'wunder@123'
+    firstName: 'Foo'
+    lastName: 'Bar'
+    organizationName: 'WunderGraph'
+    organizationSlug: 'wundergraph'
 
   studio:
     enabled: false
     port: 3000
-    webUrl: "http://studio.wundergraph.local"
+    webUrl: 'http://studio.wundergraph.local'
 
   router:
     enabled: false
@@ -32,36 +32,39 @@ global:
   postgresql:
     enabled: false
 
+  redis:
+    enabled: false
+
   cdn:
     enabled: false
-    s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
+    s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
 
   controlplane:
     enabled: false
     port: 3001
-    webUrl: "http://controlplane.wundergraph.local"
+    webUrl: 'http://controlplane.wundergraph.local'
     # The following secret is used to sign cookie and JWT tokens
-    jwtSecret: "1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM"
+    jwtSecret: '1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM'
 
   otelcollector:
     enabled: false
     port: 4318
-    webUrl: "http://otelcollector.wundergraph.local"
+    webUrl: 'http://otelcollector.wundergraph.local'
 
   graphqlmetrics:
     enabled: false
     port: 4005
-    webUrl: "http://graphqlmetrics.wundergraph.local"
+    webUrl: 'http://graphqlmetrics.wundergraph.local'
 
   keycloak:
     enabled: false
-    realm: "cosmo"
+    realm: 'cosmo'
     # User internal DNS name to access Keycloak
-    apiUrl: "http://cosmo-keycloak:8080"
-    webUrl: "http://keycloak.wundergraph.local"
+    apiUrl: 'http://cosmo-keycloak:8080'
+    webUrl: 'http://keycloak.wundergraph.local'
     port: 8080
-    adminUser: "admin"
-    adminPassword: "changeme"
+    adminUser: 'admin'
+    adminPassword: 'changeme'
 
 # Overall Ingress for the Cosmo Platform
 ingress:

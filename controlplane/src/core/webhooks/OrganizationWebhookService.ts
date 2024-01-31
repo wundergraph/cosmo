@@ -116,8 +116,9 @@ export class OrganizationWebhookService {
 
     switch (eventName) {
       case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {
-        const meta = config.meta.find((m) => m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED)
-          ?.meta;
+        const meta = config.meta.find(
+          (m) => m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+        )?.meta;
 
         if (!meta || meta?.case !== 'federatedGraphSchemaUpdated' || meta.value.graphIds?.length === 0) {
           return true;

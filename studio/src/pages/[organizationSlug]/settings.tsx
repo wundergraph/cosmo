@@ -51,7 +51,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useHas } from "@/hooks/use-has";
+import { useHasFeature } from "@/hooks/use-has-feature";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useIsCreator } from "@/hooks/use-is-creator";
 import { useUser } from "@/hooks/use-user";
@@ -66,8 +66,8 @@ import {
   deleteOIDCProvider,
   deleteOrganization,
   getOIDCProvider,
-  isRBACEnabled,
   leaveOrganization,
+  updateAISettings,
   updateOrganizationDetails,
   updateRBACSettings,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -75,6 +75,7 @@ import { GetOIDCProviderResponse } from "@wundergraph/cosmo-connect/dist/platfor
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useContext, useState } from "react";
+import { FaMagic } from "react-icons/fa";
 import { z } from "zod";
 
 const OrganizationDetails = () => {
@@ -372,7 +373,7 @@ const OpenIDConnectProvider = ({
   refetch: () => void;
 }) => {
   const user = useUser();
-  const oidc = useHas("oidc");
+  const oidc = useHasFeature("oidc");
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
@@ -835,9 +836,133 @@ const OpenIDConnectProvider = ({
   );
 };
 
+const CosmoAi = () => {
+  const router = useRouter();
+  const ai = useHasFeature("ai");
+  const queryClient = useQueryClient();
+  const { mutate, isPending, data } = useMutation(
+    updateAISettings.useMutation(),
+  );
+  const { toast } = useToast();
+
+  const disable = () => {
+    mutate(
+      {
+        enable: false,
+      },
+      {
+        onSuccess: async (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            await queryClient.invalidateQueries({
+              queryKey: ["user", router.asPath],
+            });
+            toast({
+              description: "Disabled Cosmo AI successfully.",
+              duration: 3000,
+            });
+          } else if (d.response?.details) {
+            toast({
+              description: d.response.details,
+              duration: 4000,
+            });
+          }
+        },
+        onError: () => {
+          toast({
+            description: "Could not disable Cosmo AI. Please try again.",
+            duration: 3000,
+          });
+        },
+      },
+    );
+  };
+
+  const enable = () => {
+    mutate(
+      {
+        enable: true,
+      },
+      {
+        onSuccess: async (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            await queryClient.invalidateQueries({
+              queryKey: ["user", router.asPath],
+            });
+            toast({
+              description: "Enabled Cosmo AI successfully.",
+              duration: 3000,
+            });
+          } else if (d.response?.details) {
+            toast({
+              description: d.response.details,
+              duration: 4000,
+            });
+          }
+        },
+        onError: () => {
+          toast({
+            description: "Could not enable Cosmo AI. Please try again.",
+            duration: 3000,
+          });
+        },
+      },
+    );
+  };
+
+  const action = ai ? (
+    <Button
+      className="md:ml-auto"
+      type="submit"
+      variant="destructive"
+      isLoading={isPending}
+      onClick={() => disable()}
+    >
+      Disable
+    </Button>
+  ) : (
+    <Button
+      className="md:ml-auto"
+      type="submit"
+      variant="default"
+      isLoading={isPending}
+      onClick={() => enable()}
+    >
+      Enable
+    </Button>
+  );
+
+  return (
+    <Card>
+      <CardHeader className="gap-y-6 md:flex-row">
+        <div className="space-y-1.5">
+          <CardTitle className="flex items-center gap-x-2">
+            <FaMagic />
+            <span>Cosmo AI</span>
+            <Badge variant="outline">Beta</Badge>
+          </CardTitle>
+          <CardDescription>
+            Enable generative AI to create documentation for your GraphQL schema
+            or fix queries.{" "}
+            <Link
+              href={docsBaseURL + "/studio/cosmo-ai"}
+              className="text-sm text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
+          </CardDescription>
+        </div>
+        {action}
+      </CardHeader>
+    </Card>
+  );
+};
+
 const RBAC = () => {
-  const rbac = useHas("rbac");
-  const { data, refetch } = useQuery(isRBACEnabled.useQuery());
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const rbac = useHasFeature("rbac");
   const { mutate, isPending } = useMutation(updateRBACSettings.useMutation());
   const { toast } = useToast();
 
@@ -847,9 +972,11 @@ const RBAC = () => {
         enable: false,
       },
       {
-        onSuccess: (d) => {
-          refetch();
+        onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
+            await queryClient.invalidateQueries({
+              queryKey: ["user", router.asPath],
+            });
             toast({
               description: "Disabled RBAC successfully.",
               duration: 3000,
@@ -877,9 +1004,11 @@ const RBAC = () => {
         enable: true,
       },
       {
-        onSuccess: (d) => {
-          refetch();
+        onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
+            await queryClient.invalidateQueries({
+              queryKey: ["user", router.asPath],
+            });
             toast({
               description: "Enabled RBAC successfully.",
               duration: 3000,
@@ -901,7 +1030,7 @@ const RBAC = () => {
     );
   };
 
-  const action = data?.enabled ? (
+  const action = rbac ? (
     <Button
       className="md:ml-auto"
       type="submit"
@@ -1214,6 +1343,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
       <OrganizationDetails key={user?.currentOrganization.slug || ""} />
       <Separator className="my-2" />
 
+      <CosmoAi />
       <RBAC />
       <Separator className="my-2" />
 

@@ -14,6 +14,7 @@ export type FeatureIds =
   | 'sso'
   | 'security'
   | 'support'
+  | 'ai'
   | 'oidc';
 
 export type Features = {

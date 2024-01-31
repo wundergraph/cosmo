@@ -7,7 +7,7 @@ import { useUser } from "./use-user";
  * @param orgId
  * @returns {boolean}
  */
-export const useHas = (feature: string, orgId?: string) => {
+export const useHasFeature = (feature: string, orgId?: string) => {
   const user = useUser();
 
   const features = useMemo(() => {

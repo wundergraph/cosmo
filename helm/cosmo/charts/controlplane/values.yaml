@@ -9,17 +9,17 @@ image:
   registry: ghcr.io
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.
-  version: "latest"
+  version: 'latest'
 
 deploymentStrategy: {}
 
 imagePullSecrets: []
 
 # -- String to partially override common.names.fullname template (will maintain the release name)
-nameOverride: ""
+nameOverride: ''
 
 # -- String to fully override common.names.fullname template
-fullnameOverride: ""
+fullnameOverride: ''
 
 serviceAccount:
   # -- Specifies whether a service account should be created
@@ -28,16 +28,18 @@ serviceAccount:
   annotations: {}
   # -- The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  name: ''
 
 serviceAnnotations: {}
 
 podAnnotations: {}
 
-podSecurityContext: {}
+podSecurityContext:
+  {}
   # fsGroup: 2000
 
-securityContext: {}
+securityContext:
+  {}
   # capabilities:
   #   drop:
   #   - ALL
@@ -50,22 +52,23 @@ service:
   port: 3001
 
 ingress:
-#  enabled: true
-#  className: ""
-#  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
+  #  enabled: true
+  #  className: ""
+  #  annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
   hosts:
-#    - host: controlplane.wundergraph.local
-#      paths:
-#        - path: /
-#          pathType: ImplementationSpecific
+  #    - host: controlplane.wundergraph.local
+  #      paths:
+  #        - path: /
+  #          pathType: ImplementationSpecific
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
 
-resources: {}
+resources:
+  {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -104,7 +107,7 @@ affinity: {}
 podDisruptionBudget: {}
 
 # -- Set to existing PriorityClass name to control pod preemption by the scheduler
-priorityClassName: ""
+priorityClassName: ''
 
 # -- Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods
 terminationGracePeriodSeconds: 60
@@ -143,28 +146,38 @@ probes:
 #############################
 
 configuration:
-  logLevel: "info"
+  logLevel: 'info'
   allowedOrigins:
-    - "*"
+    - '*'
   debugSQL: false
-  authRedirectUri: "http://controlplane.wundergraph.local/v1/auth/callback"
-  databaseUrl: "postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"
-  clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo"
-  clickhouseMigrationDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"
-  webhookUrl: ""
-  webhookSecret: ""
-  githubAppClientId: ""
-  githubAppClientSecret: ""
-  githubAppId: ""
-  githubAppPrivateKey: ""
-  githubAppWebhookSecret: ""
-  slackAppClientId: ""
-  slackAppClientSecret: ""
-  s3StorageUrl: "http://minio:changeme@minio.wundergraph.local:9000/cosmo"
-  smtpUsername: ""
-  smtpPassword: ""
-  stripeSecretKey: ""
-  stripeWebhookSecret: ""
+  authRedirectUri: 'http://controlplane.wundergraph.local/v1/auth/callback'
+  databaseUrl: 'postgres://postgres:changeme@cosmo-postgresql:5432/controlplane'
+  # -- When connecting to a postgres instance over TLS. Accept a cert in PEM format (as one-line with \n) or file.
+  databaseTlsCa: ''
+  databaseTlsCert: ''
+  databaseTlsKey: ''
+  redisPassword: ''
+  redisHost: 'cosmo-redis-master'
+  redisPort: 6379
+  # -- When connecting to a redis instance over TLS. Accept a cert in PEM format (as one-line with \n) or file.
+  redisTlsCa: ''
+  redisTlsCert: ''
+  redisTlsKey: ''
+  clickhouseDsn: 'http://default:changeme@cosmo-clickhouse:8123?database=cosmo'
+  clickhouseMigrationDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo'
+  webhookUrl: ''
+  webhookSecret: ''
+  githubAppClientId: ''
+  githubAppClientSecret: ''
+  githubAppId: ''
+  githubAppPrivateKey: ''
+  githubAppWebhookSecret: ''
+  slackAppClientId: ''
+  slackAppClientSecret: ''
+  s3StorageUrl: 'http://minio:changeme@minio.wundergraph.local:9000/cosmo'
+  smtpUsername: ''
+  smtpPassword: ''
+  stripeSecretKey: ''
+  stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`
-  defaultBillingPlan: ""
-
+  defaultBillingPlan: ''

@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useHas } from "@/hooks/use-has";
+import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
@@ -83,7 +83,7 @@ const CreateAPIKeyDialog = ({
   refresh: () => void;
 }) => {
   const user = useUser();
-  const rbac = useHas("rbac");
+  const rbac = useHasFeature("rbac");
   const { toast } = useToast();
 
   const { mutate, isPending } = useMutation(createAPIKey.useMutation());

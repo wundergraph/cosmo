@@ -1357,19 +1357,20 @@ message GetUserAccessibleResourcesResponse {
   repeated Graph subgraphs = 3;
 }
 
+message UpdateAISettingsRequest {
+  bool enable = 1;
+}
+
+message UpdateAISettingsResponse {
+  Response response = 1;
+}
+
 message UpdateRBACSettingsRequest {
   bool enable = 1;
 }
 
 message UpdateRBACSettingsResponse {
   Response response = 1;
-}
-
-message IsRBACEnabledRequest {}
-
-message IsRBACEnabledResponse {
-  Response response = 1;
-  bool enabled = 2;
 }
 
 message AddSubgraphMemberRequest {
@@ -1780,8 +1781,8 @@ service PlatformService {
   rpc GetUserAccessibleResources(GetUserAccessibleResourcesRequest) returns (GetUserAccessibleResourcesResponse) {}
   // UpdateRBACSettings updates rbac setting of the organization
   rpc UpdateRBACSettings(UpdateRBACSettingsRequest) returns (UpdateRBACSettingsResponse) {}
-  // IsRBACEnabled returns true if rbac is enabled or false
-  rpc IsRBACEnabled(IsRBACEnabledRequest) returns (IsRBACEnabledResponse) {}
+  // UpdateAISettings updates ai setting of the organization
+  rpc UpdateAISettings(UpdateAISettingsRequest) returns (UpdateAISettingsResponse) {}
   // AddSubgraphMember adds a user to the subgraph
   rpc AddSubgraphMember(AddSubgraphMemberRequest) returns (AddSubgraphMemberResponse) {}
   // RemoveSubgraphMember removes a member from the subgraph

@@ -22,7 +22,7 @@ version: 0.0.1
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "0.0.1"
+appVersion: '0.0.1'
 
 keywords:
   - wundergraph
@@ -39,37 +39,41 @@ maintainers:
 
 dependencies:
   - name: controlplane
-    version: "^0"
+    version: '^0'
     condition: global.controlplane.enabled
   - name: router
-    version: "^0"
+    version: '^0'
     condition: global.router.enabled
   - name: studio
-    version: "^0"
+    version: '^0'
     condition: global.studio.enabled
   - name: otelcollector
-    version: "^0"
+    version: '^0'
     condition: global.otelcollector.enabled
   - name: graphqlmetrics
-    version: "^0"
+    version: '^0'
     condition: global.graphqlmetrics.enabled
   - name: cdn
-    version: "^0"
+    version: '^0'
     condition: global.cdn.enabled
     # Only designed for development. For production use a managed Postgres / Keycloak / ClickHouse instance
   - name: postgresql
-    version: "12.8.0"
+    version: '12.8.0'
     condition: global.postgresql.enabled
-    repository: "https://charts.bitnami.com/bitnami"
+    repository: 'https://charts.bitnami.com/bitnami'
   - name: keycloak
-    version: "^17.3.1"
-    repository: "https://charts.bitnami.com/bitnami"
+    version: '^17.3.1'
+    repository: 'https://charts.bitnami.com/bitnami'
     condition: global.keycloak.enabled
   - name: clickhouse
-    version: "^4.1.5"
+    version: '^4.1.5'
     condition: global.clickhouse.enabled
-    repository: "https://charts.bitnami.com/bitnami"
+    repository: 'https://charts.bitnami.com/bitnami'
   - name: minio
-    version: "12.10.0"
+    version: '12.10.0'
     condition: global.minio.enabled
-    repository: "https://charts.bitnami.com/bitnami"
+    repository: 'https://charts.bitnami.com/bitnami'
+  - name: redis
+    version: '18.9.1'
+    condition: global.redis.enabled
+    repository: 'https://charts.bitnami.com/bitnami'
