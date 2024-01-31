@@ -75,7 +75,6 @@ import {
   GetUserAccessibleResourcesResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
-  IsRBACEnabledResponse,
   LeaveOrganizationResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
@@ -106,8 +105,9 @@ import {
   RenameNamespaceResponse,
   GetNamespacesResponse,
   MoveGraphResponse,
+  UpdateAISettingsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
+import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
@@ -174,6 +174,7 @@ import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
 import { SubgraphMetricsRepository } from '../repositories/analytics/SubgraphMetricsRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { PublicError } from '../errors/errors.js';
+import { OpenAIGraphql } from '../openai-graphql/index.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1230,11 +1231,40 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!process.env.OPENAI_API_KEY) {
+        // Avoid calling OpenAI API if the schema is too big
+        if (req.schema.length > 10_000) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The schema is too big to be fixed automatically`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
+
+        if (!opts.openaiApiKey) {
           return {
             response: {
               code: EnumStatusCode.ERR_OPENAI_DISABLED,
               details: `Env var 'OPENAI_API_KEY' must be set to use this feature`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
+
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'ai',
+        });
+
+        if (!feature?.enabled) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_OPENAI_DISABLED,
+              details: `The organization must enable the AI feature to use this feature`,
             },
             modified: false,
             schema: '',
@@ -1313,7 +1343,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           .join('\n\n');
 
         const ai = new OpenAIGraphql({
-          openAiApiKey: process.env.OPENAI_API_KEY,
+          openAiApiKey: opts.openaiApiKey,
         });
 
         const fixResult = await ai.fixSDL({
@@ -1539,6 +1569,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetNamespaceDisplayName: subgraph.namespace,
         });
 
+        if (
+          opts.openaiApiKey &&
+          // Avoid calling OpenAI API if the schema is too big.
+          // Best effort approach. This way of counting tokens is not accurate.
+          subgraph.schemaSDL.length <= 10_000
+        ) {
+          const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+          const feature = await orgRepo.getFeature({
+            organizationId: authContext.organizationId,
+            featureId: 'ai',
+          });
+
+          if (feature?.enabled) {
+            try {
+              await opts.readmeQueue.addJob({
+                organizationId: authContext.organizationId,
+                targetId: subgraph.targetId,
+                type: 'subgraph',
+              });
+            } catch (e) {
+              logger.error(e, `Error adding job to subgraph readme queue`);
+              // Swallow error because this is not critical
+            }
+          }
+        }
+
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -1633,7 +1689,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
@@ -6482,17 +6537,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    isRBACEnabled: (req, ctx) => {
+    updateAISettings: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<IsRBACEnabledResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateAISettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const enabled = await orgRepo.isFeatureEnabled(authContext.organizationId, 'rbac');
+        const enabled = await orgRepo.updateFeature({
+          id: 'ai',
+          organizationId: authContext.organizationId,
+          enabled: req.enable,
+        });
 
         return {
           response: {

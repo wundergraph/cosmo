@@ -19,6 +19,11 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     services:
+      redis:
+        # Docker Hub image
+        image: redis:7
+        ports:
+          - 6379:6379
       postgres:
         # Docker Hub image
         image: postgres:14
