@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.20.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.19.1...@wundergraph/cosmo-shared@0.20.0) (2024-01-31)
+
+### Features
+
+* cosmo ai, generate docs on publish ([#466](https://github.com/wundergraph/cosmo/issues/466)) ([033ff90](https://github.com/wundergraph/cosmo/commit/033ff9068716935a7d646adebcc0e2b776d0295d)) (@StarpTech)
+
+## [0.19.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.19.0...@wundergraph/cosmo-shared@0.19.1) (2024-01-30)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.19.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.18.4...@wundergraph/cosmo-shared@0.19.0) (2024-01-30)
+
+### Features
+
+* implement authorization directives ([#448](https://github.com/wundergraph/cosmo/issues/448)) ([181d89d](https://github.com/wundergraph/cosmo/commit/181d89d8e7dbf8eb23cddfa0b6c91c840a2986b0)) (@Aenimus)
+
 ## [0.18.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.18.3...@wundergraph/cosmo-shared@0.18.4) (2024-01-29)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

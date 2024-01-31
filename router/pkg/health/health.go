@@ -1,9 +1,10 @@
 package health
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 	"sync/atomic"
+
+	"go.uber.org/zap"
 )
 
 // Checker defines an interface that must be implemented by a health checker to

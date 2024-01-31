@@ -9,15 +9,9 @@ import {
   getDateRange,
   getGranularity,
   isoDateRangeToTimestamps,
+  parseValue,
   toISO9075,
 } from './util.js';
-
-const parseValue = (value?: string | number | null) => {
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  return value || '0';
-};
 
 interface GetMetricsViewProps {
   range?: number;

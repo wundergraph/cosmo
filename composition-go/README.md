@@ -6,7 +6,7 @@ This packages implements federation composition for GraphQL and static router co
 ## Composition
 
 
-Use `Federate` to produce a federated subgraph from the a set of subgraphs:
+Use `Federate` to produce a federated subgraph from a set of subgraphs:
 
 ```go
 

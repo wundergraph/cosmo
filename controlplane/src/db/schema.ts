@@ -930,7 +930,7 @@ export const organizationIntegrationRelations = relations(organizationIntegratio
 }));
 
 export const slackIntegrationConfigsRelations = relations(slackIntegrationConfigs, ({ many }) => ({
-  slackSchemUpdateEventConfigs: many(slackSchemaUpdateEventConfigs),
+  slackSchemaUpdateEventConfigs: many(slackSchemaUpdateEventConfigs),
 }));
 
 export const slackSchemaUpdateEventConfigRelations = relations(slackSchemaUpdateEventConfigs, ({ one }) => ({

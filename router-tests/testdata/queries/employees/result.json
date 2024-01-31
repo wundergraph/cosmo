@@ -406,58 +406,6 @@
           ]
         },
         {
-          "id": 9,
-          "notes": "Alberto notes resolved by products",
-          "details": {
-            "forename": "Alberto",
-            "surname": "Garcia Hierro",
-            "location": "PORTUGAL",
-            "hasChildren": true,
-            "maritalStatus": "MARRIED",
-            "nationality": "SPANISH",
-            "pets": [
-              {
-                "class": "MAMMAL",
-                "gender": "MALE",
-                "name": "Thor",
-                "type": "HOME"
-              }
-            ]
-          },
-          "role": {
-            "departments": [
-              "ENGINEERING"
-            ],
-            "title": [
-              "Senior Backend Engineer"
-            ],
-            "engineerType": "BACKEND"
-          },
-          "hobbies": [
-            {
-              "category": "CALISTHENICS"
-            },
-            {
-              "genres": [
-                "BOARD"
-              ],
-              "name": "Chess",
-              "yearsOfExperience": 2
-            },
-            {
-              "languages": [
-                "RUST"
-              ]
-            }
-          ],
-          "products": [
-            "CONSULTANCY",
-            "COSMO",
-            "ENGINE",
-            "SDK"
-          ]
-        },
-        {
           "id": 10,
           "notes": "Eelco notes resolved by products",
           "details": {

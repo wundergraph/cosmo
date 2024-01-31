@@ -23,7 +23,9 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Founder", "CEO"},
 		},
-		Notes: strPtr("Jens notes resolved by employees"),
+		Notes:     strPtr("Jens notes resolved by employees"),
+		StartDate: "January 2020",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -37,7 +39,9 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Co-founder", "Tech Lead"},
 		},
-		Notes: strPtr("Dustin notes resolved by employees"),
+		Notes:     strPtr("Dustin notes resolved by employees"),
+		StartDate: "July 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -50,7 +54,9 @@ var employees = []*model.Employee{
 			Departments: []model.Department{model.DepartmentMarketing},
 			Title:       []string{"Co-founder", "Head of Growth"},
 		},
-		Notes: strPtr("Stefan notes resolved by employees"),
+		Notes:     strPtr("Stefan notes resolved by employees"),
+		StartDate: "June 2021",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -66,7 +72,9 @@ var employees = []*model.Employee{
 			},
 			Title: []string{"Co-founder", "COO"},
 		},
-		Notes: strPtr("Björn notes resolved by employees"),
+		Notes:     strPtr("Björn notes resolved by employees"),
+		StartDate: "July 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		ID: 5,
@@ -80,7 +88,9 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Senior GO Engineer"},
 		},
-		Notes: strPtr("Serigy notes resolved by employees"),
+		Notes:     strPtr("Serigy notes resolved by employees"),
+		StartDate: "July 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -94,7 +104,9 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes: strPtr("Suvij notes resolved by employees"),
+		Notes:     strPtr("Suvij notes resolved by employees"),
+		StartDate: "September 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -108,21 +120,9 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes: strPtr("Nithin notes resolved by employees"),
-	},
-	{
-		Details: &model.Details{
-			Forename: "Alberto",
-			Location: model.CountryPortugal,
-			Surname:  "Garcia Hierro",
-		},
-		ID: 9,
-		Role: model.Engineer{
-			Departments:  []model.Department{model.DepartmentEngineering},
-			EngineerType: model.EngineerTypeBackend,
-			Title:        []string{"Senior Backend Engineer"},
-		},
-		Notes: strPtr("Alberto notes resolved by employees"),
+		Notes:     strPtr("Nithin notes resolved by employees"),
+		StartDate: "September 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -136,7 +136,9 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFrontend,
 			Title:        []string{"Senior Frontend Engineer"},
 		},
-		Notes: strPtr("Eelco notes resolved by employees"),
+		Notes:     strPtr("Eelco notes resolved by employees"),
+		StartDate: "November 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -152,7 +154,9 @@ var employees = []*model.Employee{
 			},
 			Title: []string{"Accounting & Finance"},
 		},
-		Notes: strPtr("Alexandra notes resolved by employees"),
+		Notes:     strPtr("Alexandra notes resolved by employees"),
+		StartDate: "November 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 	{
 		Details: &model.Details{
@@ -166,7 +170,9 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes: strPtr("David notes resolved by employees"),
+		Notes:     strPtr("David notes resolved by employees"),
+		StartDate: "December 2022",
+		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
 }
 

@@ -2,18 +2,20 @@ import { Kind, TypeNode } from 'graphql';
 import {
   ArgumentConfiguration,
   ArgumentSource,
+  AuthorizationConfiguration,
   EntityInterfaceConfiguration,
   EventConfiguration,
   EventType,
   FieldConfiguration,
   RequiredField,
+  Scopes,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
-  ArgumentConfigurationData,
-  ConfigurationDataMap,
-  RequiredFieldConfiguration,
+  ConfigurationDataByTypeName,
   EventType as CompositionEventType,
+  FieldConfiguration as CompositionFieldConfiguration,
+  RequiredFieldConfiguration,
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
@@ -62,7 +64,9 @@ function eventType(type: CompositionEventType) {
   throw new Error(`Unknown event type ${type}`);
 }
 
-export function configurationDataMapToDataSourceConfiguration(dataMap: ConfigurationDataMap): DataSourceConfiguration {
+export function configurationDataMapToDataSourceConfiguration(
+  dataMap: ConfigurationDataByTypeName,
+): DataSourceConfiguration {
   const output: DataSourceConfiguration = {
     rootNodes: [],
     childNodes: [],
@@ -108,25 +112,34 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
   return output;
 }
 
-export function argumentConfigurationDatasToFieldConfigurations(
-  datas: ArgumentConfigurationData[],
+export function generateFieldConfigurations(
+  fieldConfigurations: CompositionFieldConfiguration[],
 ): FieldConfiguration[] {
   const output: FieldConfiguration[] = [];
-  for (const data of datas) {
-    const argumentConfigurations: ArgumentConfiguration[] = data.argumentNames.map(
+  for (const compositionFieldConfiguration of fieldConfigurations) {
+    const argumentConfigurations: ArgumentConfiguration[] = compositionFieldConfiguration.argumentNames.map(
       (argumentName: string) =>
         new ArgumentConfiguration({
           name: argumentName,
           sourceType: ArgumentSource.FIELD_ARGUMENT,
         }),
     );
-    output.push(
-      new FieldConfiguration({
-        argumentsConfiguration: argumentConfigurations,
-        fieldName: data.fieldName,
-        typeName: data.typeName,
-      }),
-    );
+    const fieldConfiguration = new FieldConfiguration({
+      argumentsConfiguration: argumentConfigurations,
+      fieldName: compositionFieldConfiguration.fieldName,
+      typeName: compositionFieldConfiguration.typeName,
+    });
+    const requiredOrScopes =
+      compositionFieldConfiguration.requiredScopes?.map((andScopes) => new Scopes({ requiredAndScopes: andScopes })) ||
+      [];
+    const hasRequiredOrScopes = requiredOrScopes.length > 0;
+    if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {
+      fieldConfiguration.authorizationConfiguration = new AuthorizationConfiguration({
+        requiresAuthentication: compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes,
+        requiredOrScopes,
+      });
+    }
+    output.push(fieldConfiguration);
   }
   return output;
 }

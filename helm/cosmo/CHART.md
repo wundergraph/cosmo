@@ -24,6 +24,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | https://charts.bitnami.com/bitnami | keycloak | ^17.3.1 |
 | https://charts.bitnami.com/bitnami | minio | 12.10.0 |
 | https://charts.bitnami.com/bitnami | postgresql | 12.8.0 |
+| https://charts.bitnami.com/bitnami | redis | 18.9.1 |
 
 ## Values
 
@@ -52,6 +53,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.otelcollector.port | int | `4318` |  |
 | global.otelcollector.webUrl | string | `"http://otelcollector.wundergraph.local"` |  |
 | global.postgresql.enabled | bool | `false` |  |
+| global.redis.enabled | bool | `false` |  |
 | global.router.enabled | bool | `false` |  |
 | global.seed.apiKey | string | `"cosmo_669b576aaadc10ee1ae81d9193425705"` |  |
 | global.seed.enabled | bool | `false` |  |

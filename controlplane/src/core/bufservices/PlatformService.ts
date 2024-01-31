@@ -75,7 +75,6 @@ import {
   GetUserAccessibleResourcesResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
-  IsRBACEnabledResponse,
   LeaveOrganizationResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
@@ -99,14 +98,17 @@ import {
   WhoAmIResponse,
   GetAuditLogsResponse,
   AuditLog,
+  GetSubgraphMetricsResponse,
+  GetSubgraphMetricsErrorRateResponse,
   CreateNamespaceResponse,
   DeleteNamespaceResponse,
   RenameNamespaceResponse,
   GetNamespacesResponse,
   MoveGraphResponse,
   GenerateRouterTokenResponse,
+  UpdateAISettingsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
+import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
@@ -170,8 +172,10 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
+import { SubgraphMetricsRepository } from '../repositories/analytics/SubgraphMetricsRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { PublicError } from '../errors/errors.js';
+import { OpenAIGraphql } from '../openai-graphql/index.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -748,6 +752,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (!isValidUrl(req.routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Routing URL is not a valid URL`,
+            },
+            compositionErrors: [],
+          };
+        }
+
         const count = await fedGraphRepo.count();
 
         const feature = await orgRepo.getFeature({
@@ -906,6 +920,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_INVALID_LABELS,
               details: `One or more labels were found to be invalid`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        if (!isValidUrl(req.routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Routing URL is not a valid URL`,
             },
             compositionErrors: [],
           };
@@ -1208,11 +1232,40 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!process.env.OPENAI_API_KEY) {
+        // Avoid calling OpenAI API if the schema is too big
+        if (req.schema.length > 10_000) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The schema is too big to be fixed automatically`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
+
+        if (!opts.openaiApiKey) {
           return {
             response: {
               code: EnumStatusCode.ERR_OPENAI_DISABLED,
               details: `Env var 'OPENAI_API_KEY' must be set to use this feature`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
+
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'ai',
+        });
+
+        if (!feature?.enabled) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_OPENAI_DISABLED,
+              details: `The organization must enable the AI feature to use this feature`,
             },
             modified: false,
             schema: '',
@@ -1291,7 +1344,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           .join('\n\n');
 
         const ai = new OpenAIGraphql({
-          openAiApiKey: process.env.OPENAI_API_KEY,
+          openAiApiKey: opts.openaiApiKey,
         });
 
         const fixResult = await ai.fixSDL({
@@ -1517,6 +1570,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetNamespaceDisplayName: subgraph.namespace,
         });
 
+        if (
+          opts.openaiApiKey &&
+          // Avoid calling OpenAI API if the schema is too big.
+          // Best effort approach. This way of counting tokens is not accurate.
+          subgraph.schemaSDL.length <= 10_000
+        ) {
+          const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+          const feature = await orgRepo.getFeature({
+            organizationId: authContext.organizationId,
+            featureId: 'ai',
+          });
+
+          if (feature?.enabled) {
+            try {
+              await opts.readmeQueue.addJob({
+                organizationId: authContext.organizationId,
+                targetId: subgraph.targetId,
+                type: 'subgraph',
+              });
+            } catch (e) {
+              logger.error(e, `Error adding job to subgraph readme queue`);
+              // Swallow error because this is not critical
+            }
+          }
+        }
+
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -1611,7 +1690,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
@@ -6511,17 +6589,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    isRBACEnabled: (req, ctx) => {
+    updateAISettings: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<IsRBACEnabledResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateAISettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const enabled = await orgRepo.isFeatureEnabled(authContext.organizationId, 'rbac');
+        const enabled = await orgRepo.updateFeature({
+          id: 'ai',
+          organizationId: authContext.organizationId,
+          enabled: req.enable,
+        });
 
         return {
           response: {
@@ -7262,6 +7344,129 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    getSubgraphMetrics: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetSubgraphMetricsResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            filters: [],
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphMetricsRepo = new SubgraphMetricsRepository(opts.chClient, opts.db);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.subgraphName}' not found`,
+            },
+            filters: [],
+          };
+        }
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { range, dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
+
+        const view = await subgraphMetricsRepo.getSubgraphMetricsView({
+          range,
+          dateRange,
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          subgraphId: subgraph.id,
+          subgraphLabels: subgraph.labels,
+          namespaceId: subgraph.namespaceId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          ...view,
+        };
+      });
+    },
+
+    getSubgraphMetricsErrorRate: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetSubgraphMetricsErrorRateResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            series: [],
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphMetricsRepo = new SubgraphMetricsRepository(opts.chClient, opts.db);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+
+        const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.subgraphName}' not found`,
+            },
+            series: [],
+          };
+        }
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { range, dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
+
+        const metrics = await subgraphMetricsRepo.getSubgraphErrorsView({
+          range,
+          dateRange,
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          subgraphId: subgraph.id,
+          subgraphLabels: subgraph.labels,
+          namespaceId: subgraph.namespaceId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          series: metrics.errorRate.series,
+          resolution: metrics.resolution,
         };
       });
     },

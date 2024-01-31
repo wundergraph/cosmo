@@ -72,6 +72,7 @@ type ComplexityRoot struct {
 		ID        func(childComplexity int) int
 		Notes     func(childComplexity int) int
 		Role      func(childComplexity int) int
+		StartDate func(childComplexity int) int
 		Tag       func(childComplexity int) int
 		UpdatedAt func(childComplexity int) int
 	}
@@ -254,6 +255,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Employee.Role(childComplexity), true
+
+	case "Employee.startDate":
+		if e.complexity.Employee.StartDate == nil {
+			break
+		}
+
+		return e.complexity.Employee.StartDate(childComplexity), true
 
 	case "Employee.tag":
 		if e.complexity.Employee.Tag == nil {
@@ -657,7 +665,7 @@ type Engineer implements RoleType {
   title: [String!]!
 }
 
-type Marketer implements RoleType{
+type Marketer implements RoleType {
   departments: [Department!]!
   title: [String!]!
 }
@@ -697,6 +705,7 @@ type Employee implements Identifiable @key(fields: "id") {
   role: RoleType!
   notes: String
   updatedAt: String!
+  startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
 }
 
 type Time {
@@ -1078,6 +1087,8 @@ func (ec *executionContext) fieldContext_Consultancy_lead(ctx context.Context, f
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -1180,6 +1191,8 @@ func (ec *executionContext) fieldContext_Cosmo_engineers(ctx context.Context, fi
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -1238,6 +1251,8 @@ func (ec *executionContext) fieldContext_Cosmo_lead(ctx context.Context, field g
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -1646,6 +1661,50 @@ func (ec *executionContext) fieldContext_Employee_updatedAt(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Employee_startDate(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_startDate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_startDate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Engineer_departments(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Engineer_departments(ctx, field)
 	if err != nil {
@@ -1953,6 +2012,8 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2170,6 +2231,8 @@ func (ec *executionContext) fieldContext_Mutation_updateEmployeeTag(ctx context.
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2368,6 +2431,8 @@ func (ec *executionContext) fieldContext_Query_employee(ctx context.Context, fie
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2437,6 +2502,8 @@ func (ec *executionContext) fieldContext_Query_employees(ctx context.Context, fi
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2539,6 +2606,8 @@ func (ec *executionContext) fieldContext_Query_teammates(ctx context.Context, fi
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2884,6 +2953,8 @@ func (ec *executionContext) fieldContext_SDK_engineers(ctx context.Context, fiel
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2942,6 +3013,8 @@ func (ec *executionContext) fieldContext_SDK_owner(ctx context.Context, field gr
 				return ec.fieldContext_Employee_notes(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -5236,6 +5309,11 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._Employee_notes(ctx, field, obj)
 		case "updatedAt":
 			out.Values[i] = ec._Employee_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "startDate":
+			out.Values[i] = ec._Employee_startDate(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

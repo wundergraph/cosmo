@@ -7,12 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net"
 	"net/http"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/epoller"
@@ -597,6 +598,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		Extensions:            operationCtx.extensions,
 	}
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, h.r, operationCtx, h.logger)))
+	resolveCtx.WithAuthorizer(h.graphqlHandler.authorizer)
 
 	h.stats.SubscriptionsInc()
 

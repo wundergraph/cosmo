@@ -28,11 +28,13 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 				details.Location = employee.Details.Location
 			}
 			return &model.Employee{
-				ID:      employee.ID,
-				Details: details,
-				Tag:     tag,
-				Role:    employee.Role,
-				Notes:   employee.Notes,
+				ID:        employee.ID,
+				Details:   details,
+				Tag:       tag,
+				Role:      employee.Role,
+				Notes:     employee.Notes,
+				UpdatedAt: time.Now().String(),
+				StartDate: employee.StartDate,
 			}, nil
 		}
 	}
@@ -59,6 +61,7 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 				Tag:       employee.Tag,
 				Role:      employee.Role,
 				Notes:     employee.Notes,
+				StartDate: employee.StartDate,
 			}, nil
 		}
 	}
@@ -79,6 +82,7 @@ func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error
 			Role:      employee.Role,
 			Notes:     employee.Notes,
 			UpdatedAt: time.Now().String(),
+			StartDate: employee.StartDate,
 		}
 	}
 	return out, nil

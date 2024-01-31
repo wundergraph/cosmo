@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.57.0](https://github.com/wundergraph/cosmo/compare/studio@0.56.0...studio@0.57.0) (2024-01-31)
+
+### Features
+
+* cosmo ai, generate docs on publish ([#466](https://github.com/wundergraph/cosmo/issues/466)) ([033ff90](https://github.com/wundergraph/cosmo/commit/033ff9068716935a7d646adebcc0e2b776d0295d)) (@StarpTech)
+
+# [0.56.0](https://github.com/wundergraph/cosmo/compare/studio@0.55.2...studio@0.56.0) (2024-01-30)
+
+### Features
+
+* subgraph analytics page ([#455](https://github.com/wundergraph/cosmo/issues/455)) ([f7a65c7](https://github.com/wundergraph/cosmo/commit/f7a65c79611da2d7efc603ef7e5a5b2e194203c9)) (@JivusAyrus)
+
+## [0.55.2](https://github.com/wundergraph/cosmo/compare/studio@0.55.1...studio@0.55.2) (2024-01-30)
+
+### Bug Fixes
+
+*  namespace selector list on org change ([#465](https://github.com/wundergraph/cosmo/issues/465)) ([d84dca3](https://github.com/wundergraph/cosmo/commit/d84dca32745f04fb8e70cbf5274243e6ad729936)) (@thisisnithin)
+
 ## [0.55.1](https://github.com/wundergraph/cosmo/compare/studio@0.55.0...studio@0.55.1) (2024-01-29)
 
 ### Bug Fixes

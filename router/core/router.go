@@ -129,6 +129,8 @@ type (
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
+
+		authorization *config.AuthorizationConfiguration
 	}
 
 	Server interface {
@@ -779,19 +781,28 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())
 
+	var (
+		planCache ExecutionPlanCache
+	)
+
 	// when an execution plan was generated, which can be quite expensive, we want to cache it
 	// this means that we can hash the input and cache the generated plan
 	// the next time we get the same input, we can just return the cached plan
 	// the engine is smart enough to first do normalization and then hash the input
 	// this means that we can cache the normalized input and don't have to worry about
 	// different inputs that would generate the same execution plan
-	planCache, err := ristretto.NewCache(&ristretto.Config{
-		MaxCost:     1024 * 10,      // keep 10k execution plans in the cache
-		NumCounters: 1024 * 10 * 10, // 10k * 10
-		BufferItems: 64,             // number of keys per Get buffer.
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create planner cache: %w", err)
+	if r.engineExecutionConfiguration.ExecutionPlanCacheSize > 0 {
+		planCacheConfig := &ristretto.Config{
+			MaxCost:     r.engineExecutionConfiguration.ExecutionPlanCacheSize,
+			NumCounters: r.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
+			BufferItems: 64,
+		}
+		planCache, err = ristretto.NewCache(planCacheConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create planner cache: %w", err)
+		}
+	} else {
+		planCache = NewNoopExecutionPlanCache()
 	}
 
 	if r.localhostFallbackInsideDocker && docker.Inside() {
@@ -903,12 +914,22 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		})
 	}
 
+	authorizerOptions := &CosmoAuthorizerOptions{
+		FieldConfigurations:           routerConfig.EngineConfig.FieldConfigurations,
+		RejectOperationIfUnauthorized: false,
+	}
+
+	if r.Config.authorization != nil {
+		authorizerOptions.RejectOperationIfUnauthorized = r.Config.authorization.RejectOperationIfUnauthorized
+	}
+
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
 		Executor:                               executor,
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 		WebSocketStats:                         r.WebsocketStats,
 		TracerProvider:                         r.tracerProvider,
+		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
 	})
 
 	var publicKey *ecdsa.PublicKey
@@ -1319,6 +1340,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 func WithAccessController(controller *AccessController) Option {
 	return func(r *Router) {
 		r.accessController = controller
+	}
+}
+
+func WithAuthorizationConfig(cfg *config.AuthorizationConfiguration) Option {
+	return func(r *Router) {
+		r.Config.authorization = cfg
 	}
 }
 

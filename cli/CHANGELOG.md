@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.39.2](https://github.com/wundergraph/cosmo/compare/wgc@0.39.1...wgc@0.39.2) (2024-01-31)
+
+### Bug Fixes
+
+* validate routing urls ([#470](https://github.com/wundergraph/cosmo/issues/470)) ([166d9ef](https://github.com/wundergraph/cosmo/commit/166d9efb53f5554b1dcbd49f7dd334f6cc1e4a87)) (@JivusAyrus)
+
+## [0.39.1](https://github.com/wundergraph/cosmo/compare/wgc@0.39.0...wgc@0.39.1) (2024-01-30)
+
+**Note:** Version bump only for package wgc
+
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/wgc@0.38.2...wgc@0.39.0) (2024-01-30)
+
+### Features
+
+* implement authorization directives ([#448](https://github.com/wundergraph/cosmo/issues/448)) ([181d89d](https://github.com/wundergraph/cosmo/commit/181d89d8e7dbf8eb23cddfa0b6c91c840a2986b0)) (@Aenimus)
+
 ## [0.38.2](https://github.com/wundergraph/cosmo/compare/wgc@0.38.1...wgc@0.38.2) (2024-01-29)
 
 **Note:** Version bump only for package wgc

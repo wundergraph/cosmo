@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"os"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -179,6 +180,7 @@ type EngineExecutionConfiguration struct {
 	EpollKqueuePollTimeout                 time.Duration            `default:"1s" envconfig:"ENGINE_EPOLL_KQUEUE_POLL_TIMEOUT" yaml:"epoll_kqueue_poll_timeout"`
 	EpollKqueueConnBufferSize              int                      `default:"128" envconfig:"ENGINE_EPOLL_KQUEUE_CONN_BUFFER_SIZE" yaml:"epoll_kqueue_conn_buffer_size"`
 	WebSocketReadTimeout                   time.Duration            `default:"5s" envconfig:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout"`
+	ExecutionPlanCacheSize                 int64                    `default:"10000" envconfig:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size"`
 }
 
 type OverrideRoutingURLConfiguration struct {
@@ -203,6 +205,8 @@ type AuthenticationConfiguration struct {
 
 type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" default:"false" envconfig:"REQUIRE_AUTHENTICATION"`
+	// RejectOperationIfUnauthorized makes the router reject the whole GraphQL Operation if one field fails to authorize
+	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" default:"false" envconfig:"REJECT_OPERATION_IF_UNAUTHORIZED"`
 }
 
 type CDNConfiguration struct {

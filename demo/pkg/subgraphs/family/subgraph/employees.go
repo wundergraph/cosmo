@@ -158,24 +158,6 @@ var employees = []*model.Employee{
 		},
 	},
 	{
-		ID: 9,
-		Details: &model.Details{
-			Forename:      "Alberto",
-			Surname:       "Garcia Hierro",
-			HasChildren:   true,
-			MaritalStatus: &married,
-			Nationality:   model.NationalitySpanish,
-			Pets: []model.Pet{
-				model.Cat{
-					Class:  model.ClassMammal,
-					Gender: model.GenderMale,
-					Name:   "Thor",
-					Type:   model.CatTypeHome,
-				},
-			},
-		},
-	},
-	{
 		ID: 10,
 		Details: &model.Details{
 			Forename:    "Eelco",

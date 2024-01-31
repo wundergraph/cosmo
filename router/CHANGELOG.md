@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.61.0](https://github.com/wundergraph/cosmo/compare/router@0.60.0...router@0.61.0) (2024-01-31)
+
+### Features
+
+* cosmo ai, generate docs on publish ([#466](https://github.com/wundergraph/cosmo/issues/466)) ([033ff90](https://github.com/wundergraph/cosmo/commit/033ff9068716935a7d646adebcc0e2b776d0295d)) (@StarpTech)
+* make execution plan cache & resolve concurrency configurable ([#469](https://github.com/wundergraph/cosmo/issues/469)) ([73edc64](https://github.com/wundergraph/cosmo/commit/73edc644070728c55772ef8714a72d1437095683)) (@jensneuse)
+
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/router@0.59.1...router@0.60.0) (2024-01-30)
+
+### Features
+
+* add federated graph id to attributes ([#464](https://github.com/wundergraph/cosmo/issues/464)) ([9c60bda](https://github.com/wundergraph/cosmo/commit/9c60bdab4a70bb603454c0dc38a335af9c445047)) (@thisisnithin)
+* implement authorization directives ([#448](https://github.com/wundergraph/cosmo/issues/448)) ([181d89d](https://github.com/wundergraph/cosmo/commit/181d89d8e7dbf8eb23cddfa0b6c91c840a2986b0)) (@Aenimus)
+
 ## [0.59.1](https://github.com/wundergraph/cosmo/compare/router@0.59.0...router@0.59.1) (2024-01-29)
 
 ### Bug Fixes

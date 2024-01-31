@@ -52,6 +52,11 @@ describe('Authentication', (ctx) => {
       s3StorageUrl: 'http://localhost:9000',
       smtpUsername: '',
       smtpPassword: '',
+      redis: {
+        host: 'localhost',
+        port: 6379,
+        password: 'test',
+      },
     });
 
     testContext.onTestFailed(async () => {
