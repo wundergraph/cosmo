@@ -1913,11 +1913,6 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
   subgraphs: Subgraph[] = [];
 
   /**
-   * @generated from field: string graphToken = 4;
-   */
-  graphToken = "";
-
-  /**
    * @generated from field: string graphRequestToken = 5;
    */
   graphRequestToken = "";
@@ -1933,7 +1928,6 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "graph", kind: "message", T: FederatedGraph },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
-    { no: 4, name: "graphToken", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "graphRequestToken", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
@@ -5863,6 +5857,92 @@ export class RouterToken extends Message<RouterToken> {
 
   static equals(a: RouterToken | PlainMessage<RouterToken> | undefined, b: RouterToken | PlainMessage<RouterToken> | undefined): boolean {
     return proto3.util.equals(RouterToken, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GenerateRouterTokenRequest
+ */
+export class GenerateRouterTokenRequest extends Message<GenerateRouterTokenRequest> {
+  /**
+   * @generated from field: string fedGraphName = 1;
+   */
+  fedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GenerateRouterTokenRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GenerateRouterTokenRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GenerateRouterTokenRequest {
+    return new GenerateRouterTokenRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GenerateRouterTokenRequest {
+    return new GenerateRouterTokenRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GenerateRouterTokenRequest {
+    return new GenerateRouterTokenRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GenerateRouterTokenRequest | PlainMessage<GenerateRouterTokenRequest> | undefined, b: GenerateRouterTokenRequest | PlainMessage<GenerateRouterTokenRequest> | undefined): boolean {
+    return proto3.util.equals(GenerateRouterTokenRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GenerateRouterTokenResponse
+ */
+export class GenerateRouterTokenResponse extends Message<GenerateRouterTokenResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string token = 2;
+   */
+  token = "";
+
+  constructor(data?: PartialMessage<GenerateRouterTokenResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GenerateRouterTokenResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GenerateRouterTokenResponse {
+    return new GenerateRouterTokenResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GenerateRouterTokenResponse {
+    return new GenerateRouterTokenResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GenerateRouterTokenResponse {
+    return new GenerateRouterTokenResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GenerateRouterTokenResponse | PlainMessage<GenerateRouterTokenResponse> | undefined, b: GenerateRouterTokenResponse | PlainMessage<GenerateRouterTokenResponse> | undefined): boolean {
+    return proto3.util.equals(GenerateRouterTokenResponse, a, b);
   }
 }
 

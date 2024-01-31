@@ -25,9 +25,9 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.action(async (name, options) => {
-    const resp = await opts.client.platform.getFederatedGraphByName(
+    const resp = await opts.client.platform.generateRouterToken(
       {
-        name,
+        fedGraphName: name,
         namespace: options.namespace,
       },
       {
@@ -36,7 +36,7 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code !== EnumStatusCode.OK) {
-      console.log(`${pc.red(`Federated graph ${pc.bold(name)} not found.`)}`);
+      console.log(`${pc.red(`Could not fetch the router config for the federated graph ${pc.bold(name)}`)}`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
@@ -46,7 +46,7 @@ export default (opts: BaseCommandOptions) => {
     let decoded: GraphToken;
 
     try {
-      decoded = jwtDecode<GraphToken>(resp.graphToken);
+      decoded = jwtDecode<GraphToken>(resp.token);
     } catch {
       program.error('Could not fetch the router config. Please try again');
     }
@@ -57,7 +57,7 @@ export default (opts: BaseCommandOptions) => {
 
     const headers = new Headers();
     headers.append('Content-Type', 'application/json; charset=UTF-8');
-    headers.append('Authorization', 'Bearer ' + resp.graphToken);
+    headers.append('Authorization', 'Bearer ' + resp.token);
     headers.append('Accept-Encoding', 'gzip');
 
     const url = new URL(
