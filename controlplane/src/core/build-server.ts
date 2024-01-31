@@ -220,12 +220,12 @@ export default async function build(opts: BuildConfig) {
     tls: opts.redis.tls,
   });
 
-  const readmeQueue = new AIGraphReadmeQueue(fastify.redis);
+  const readmeQueue = new AIGraphReadmeQueue(log, fastify.redisForQueue);
 
   if (opts.openaiAPIKey) {
     bullWorkers.push(
       createAIGraphReadmeWorker({
-        redisConnection: fastify.redis,
+        redisConnection: fastify.redisForWorker,
         db: fastify.db,
         log,
         openAiApiKey: opts.openaiAPIKey,

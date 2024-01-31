@@ -1582,11 +1582,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
 
           if (feature?.enabled) {
-            await opts.readmeQueue.addJob({
-              organizationId: authContext.organizationId,
-              targetId: subgraph.targetId,
-              type: 'subgraph',
-            });
+            try {
+              await opts.readmeQueue.addJob({
+                organizationId: authContext.organizationId,
+                targetId: subgraph.targetId,
+                type: 'subgraph',
+              });
+            } catch (e) {
+              logger.error(e, `Error adding job to subgraph readme queue`);
+              // Swallow error because this is not critical
+            }
           }
         }
 

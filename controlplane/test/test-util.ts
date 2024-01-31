@@ -20,8 +20,11 @@ import fastifyRedis from '../src/core/plugins/redis.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
+  const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-  const server = Fastify();
+  const server = Fastify({
+    logger: log,
+  });
 
   await server.register(database, {
     databaseConnectionUrl,
@@ -56,9 +59,10 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
   await server.register(fastifyRedis, {
     host: 'localhost',
     port: 6379,
+    password: 'test',
   });
 
-  const readmeQueue = new AIGraphReadmeQueue(server.redis);
+  const readmeQueue = new AIGraphReadmeQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {

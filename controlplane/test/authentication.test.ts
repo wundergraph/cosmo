@@ -55,6 +55,7 @@ describe('Authentication', (ctx) => {
       redis: {
         host: 'localhost',
         port: 6379,
+        password: 'test',
       },
     });
 

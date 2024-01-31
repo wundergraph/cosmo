@@ -6,8 +6,9 @@ import IORedis from 'ioredis';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    redis: IORedis.Redis;
-    redisHealthcheck(): Promise<void>;
+    redisForWorker: IORedis.Redis;
+    redisForQueue: IORedis.Redis;
+    redisConnect(): Promise<void>;
   }
 }
 
@@ -26,11 +27,9 @@ export interface RedisPluginOptions {
 
 export default fp<RedisPluginOptions>(async function (fastify, opts) {
   const connectionConfig: IORedis.RedisOptions = {
-    connectionName: 'controlplane',
     host: opts.host,
     port: opts.port,
     password: opts.password,
-    maxRetriesPerRequest: 0, // required for bullmq
   };
 
   if (opts.tls) {
@@ -63,20 +62,44 @@ export default fp<RedisPluginOptions>(async function (fastify, opts) {
     };
   }
 
-  const redis = new IORedis.Redis(connectionConfig);
+  // It's best practice to use a different redis connection for the worker and the queue.
+  // The queue should be able to fail fast if redis is not available.
+  // The worker should be able to reconnect if redis is not available.
 
-  fastify.decorate('redisHealthcheck', async () => {
+  const redisWorker = new IORedis.Redis({
+    ...connectionConfig,
+    maxRetriesPerRequest: 0, // required for bullmq worker
+    connectionName: 'controlplane-worker',
+    lazyConnect: true,
+  });
+  const redisQueue = new IORedis.Redis({
+    ...connectionConfig,
+    connectionName: 'controlplane-queue',
+    // Disable offline queue to let the worker fail fast if redis is not available.
+    // In that way, if a user makes a request to the API, it will fail fast instead of waiting for the timeout.
+    enableOfflineQueue: false,
+    lazyConnect: true,
+  });
+
+  fastify.decorate('redisConnect', async () => {
     try {
-      await redis.ping();
+      // Wait explicitly for the connection to be established.
+      await redisQueue.connect();
+      await redisWorker.connect();
+
+      // Healthcheck.
+      await redisWorker.ping();
+      await redisQueue.ping();
 
       fastify.log.debug('Redis connection healthcheck succeeded');
     } catch (error) {
       fastify.log.error(error);
-      throw new Error('Redis connection healthcheck failed');
+      throw new Error('Redis connection failed');
     }
   });
 
-  await fastify.redisHealthcheck();
+  await fastify.redisConnect();
 
-  fastify.decorate<IORedis.Redis>('redis', redis);
+  fastify.decorate<IORedis.Redis>('redisForWorker', redisWorker);
+  fastify.decorate<IORedis.Redis>('redisForQueue', redisQueue);
 });

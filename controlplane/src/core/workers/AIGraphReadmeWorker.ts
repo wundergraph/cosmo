@@ -7,6 +7,7 @@ import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 
 const QueueName = 'ai.graph-readme-generator';
+const WorkerName = 'AIGraphReadmeWorker';
 
 export interface CreateReadmeInputEvent {
   targetId: string;
@@ -16,8 +17,10 @@ export interface CreateReadmeInputEvent {
 
 export class AIGraphReadmeQueue {
   private readonly queue: Queue<CreateReadmeInputEvent>;
+  private readonly log: pino.Logger;
 
-  constructor(conn: ConnectionOptions) {
+  constructor(log: pino.Logger, conn: ConnectionOptions) {
+    this.log = log.child({ queue: QueueName });
     this.queue = new Queue<CreateReadmeInputEvent>(QueueName, {
       connection: conn,
       defaultJobOptions: {
@@ -29,6 +32,10 @@ export class AIGraphReadmeQueue {
           delay: 10_000,
         },
       },
+    });
+
+    this.queue.on('error', (err) => {
+      this.log.error(err, 'Queue error');
     });
   }
 
@@ -51,7 +58,7 @@ class AIGraphReadmeWorker {
     this.openaiGraphql = new OpenAIGraphql({
       openAiApiKey: input.openAiApiKey,
     });
-    this.input.log = input.log.child({ worker: this.constructor.name });
+    this.input.log = input.log.child({ worker: WorkerName });
   }
 
   private async generateSubgraphReadme(job: Job<CreateReadmeInputEvent>) {
@@ -120,8 +127,16 @@ export const createAIGraphReadmeWorker = (input: {
   log: pino.Logger;
   openAiApiKey: string;
 }) => {
-  return new Worker<CreateReadmeInputEvent>(QueueName, (job) => new AIGraphReadmeWorker(input).handler(job), {
+  const log = input.log.child({ worker: WorkerName });
+  const worker = new Worker<CreateReadmeInputEvent>(QueueName, (job) => new AIGraphReadmeWorker(input).handler(job), {
     connection: input.redisConnection,
     concurrency: 10,
   });
+  worker.on('stalled', (job) => {
+    log.warn(`Job ${job} stalled`);
+  });
+  worker.on('error', (err) => {
+    input.log.error(err, 'Worker error');
+  });
+  return worker;
 };
