@@ -20,7 +20,6 @@
         },
         { "id": "support", "description": "Discord Community Support" },
         { "id": "analytics-retention", "limit": 7 },
-        { "id": "ai" },
         { "id": "tracing-retention", "limit": 7 },
         { "id": "changelog-retention", "limit": 7 },
         { "id": "breaking-change-retention", "limit": 7 },
@@ -46,7 +45,6 @@
           "description": "Up to 100M Requests per month",
           "limit": 100
         },
-        { "id": "ai" },
         { "id": "support", "description": "Email Support" },
         { "id": "analytics-retention", "limit": 7 },
         { "id": "tracing-retention", "limit": 7 },
@@ -74,7 +72,6 @@
           "description": "Up to 250M Requests per month",
           "limit": 250
         },
-        { "id": "ai" },
         {
           "id": "retention",
           "description": "14 days of Data Retention",
@@ -114,7 +111,6 @@
           "description": "Unlimited days of Data Retention",
           "limit": 365
         },
-        { "id": "ai" },
         { "id": "rbac", "description": "Role-based Access Control" },
         { "id": "sla", "description": "99.99% SLA" },
         { "id": "sso", "description": "Single Sign-On (SSO)" },
