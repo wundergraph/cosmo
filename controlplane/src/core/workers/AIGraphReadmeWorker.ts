@@ -99,12 +99,17 @@ class AIGraphReadmeWorker {
   }
 
   public async handler(job: Job<CreateReadmeInputEvent>) {
-    if (job.data.type === 'subgraph') {
-      await this.generateSubgraphReadme(job);
-    } else if (job.data.type === 'federated_graph') {
-      await this.generateFederatedGraphReadme(job);
-    } else {
-      throw new Error(`Unknown job type ${job.data.type}`);
+    try {
+      if (job.data.type === 'subgraph') {
+        await this.generateSubgraphReadme(job);
+      } else if (job.data.type === 'federated_graph') {
+        await this.generateFederatedGraphReadme(job);
+      } else {
+        throw new Error(`Unknown job type ${job.data.type}`);
+      }
+    } catch (err) {
+      this.input.log.error(err, `Failed to generate readme for type: ${job.data.type} targetId: ${job.data.targetId}`);
+      throw err;
     }
   }
 }
