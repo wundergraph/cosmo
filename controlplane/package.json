@@ -53,7 +53,7 @@
     "@wundergraph/cosmo-shared": "workspace:*",
     "axios": "^1.6.7",
     "axios-retry": "^4.0.0",
-    "bullmq": "^5.1.5",
+    "bullmq": "^5.1.6",
     "cookie": "^0.5.0",
     "date-fns": "^2.30.0",
     "dotenv": "^16.3.1",
