@@ -152,14 +152,14 @@ configuration:
   debugSQL: false
   authRedirectUri: 'http://controlplane.wundergraph.local/v1/auth/callback'
   databaseUrl: 'postgres://postgres:changeme@cosmo-postgresql:5432/controlplane'
-  # -- When connecting to a postgresql database over TLS
+  # -- When connecting to a postgres instance over TLS. Accept a cert in PEM format (as one-line with \n) or file.
   databaseTlsCa: ''
   databaseTlsCert: ''
   databaseTlsKey: ''
   redisPassword: ''
   redisHost: 'cosmo-redis-master'
   redisPort: 6379
-  # -- When connecting to a redis instance over TLS
+  # -- When connecting to a redis instance over TLS. Accept a cert in PEM format (as one-line with \n) or file.
   redisTlsCa: ''
   redisTlsCert: ''
   redisTlsKey: ''

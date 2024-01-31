@@ -19,7 +19,7 @@ WunderGraph Cosmo Controlplane
 | configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
 | configuration.clickhouseDsn | string | `"http://default:changeme@cosmo-clickhouse:8123?database=cosmo"` |  |
 | configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"` |  |
-| configuration.databaseTlsCa | string | `""` | When connecting to a postgresql database over TLS |
+| configuration.databaseTlsCa | string | `""` | When connecting to a postgres instance over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
 | configuration.databaseTlsCert | string | `""` |  |
 | configuration.databaseTlsKey | string | `""` |  |
 | configuration.databaseUrl | string | `"postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"` |  |
@@ -34,7 +34,7 @@ WunderGraph Cosmo Controlplane
 | configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | configuration.redisPassword | string | `""` |  |
 | configuration.redisPort | int | `6379` |  |
-| configuration.redisTlsCa | string | `""` | When connecting to a redis instance over TLS |
+| configuration.redisTlsCa | string | `""` | When connecting to a redis instance over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
 | configuration.redisTlsCert | string | `""` |  |
 | configuration.redisTlsKey | string | `""` |  |
 | configuration.s3StorageUrl | string | `"http://minio:changeme@minio.wundergraph.local:9000/cosmo"` |  |
