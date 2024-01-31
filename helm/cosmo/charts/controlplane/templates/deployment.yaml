@@ -292,7 +292,7 @@ spec:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: redisTlsKey
             {{- end }}
-            {{- if .Values.configuration.openAIApiKey }}
+            {{- if .Values.configuration.openAiApiKey }}
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
