@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.39.2](https://github.com/wundergraph/cosmo/compare/wgc@0.39.1...wgc@0.39.2) (2024-01-31)
+
+### Bug Fixes
+
+* validate routing urls ([#470](https://github.com/wundergraph/cosmo/issues/470)) ([166d9ef](https://github.com/wundergraph/cosmo/commit/166d9efb53f5554b1dcbd49f7dd334f6cc1e4a87)) (@JivusAyrus)
+
 ## [0.39.1](https://github.com/wundergraph/cosmo/compare/wgc@0.39.0...wgc@0.39.1) (2024-01-30)
 
 **Note:** Version bump only for package wgc
