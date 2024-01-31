@@ -6522,15 +6522,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        if (!opts.openaiApiKey) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'AI integration is disabled',
-            },
-          };
-        }
-
         const enabled = await orgRepo.updateFeature({
           id: 'ai',
           organizationId: authContext.organizationId,

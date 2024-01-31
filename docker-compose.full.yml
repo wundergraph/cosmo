@@ -259,6 +259,7 @@ services:
       S3_STORAGE_URL: http://minio:changeme@minio:9000/cosmo
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: 'test'
     ports:
       - '3001:3001'
     restart: on-failure
