@@ -238,7 +238,7 @@ message GetFederatedGraphByNameResponse {
   Response response = 1;
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
-  string graphRequestToken = 5;
+  string graphRequestToken = 4;
 }
 
 message GetFederatedGraphSDLByNameRequest {
