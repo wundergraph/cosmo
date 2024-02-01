@@ -25,6 +25,10 @@ subgraphs:
     schema:
       file: ./pkg/subgraphs/availability/subgraph/schema.graphqls
   - name: mood
-    routing_url: http://localhos2:4008/graphql
+    routing_url: http://localhost:4008/graphql
     schema:
       file: ./pkg/subgraphs/mood/subgraph/schema.graphqls
+  - name: countries
+    routing_url: http://localhost:4009/graphql
+    schema:
+      file: ./pkg/subgraphs/countries/subgraph/schema.graphqls

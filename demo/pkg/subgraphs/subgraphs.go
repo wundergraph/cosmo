@@ -16,6 +16,7 @@ import (
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/countries"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies"
@@ -32,6 +33,7 @@ type Ports struct {
 	Test1        int
 	Availability int
 	Mood         int
+	Countries    int
 }
 
 func (p *Ports) AsArray() []int {
@@ -43,6 +45,7 @@ func (p *Ports) AsArray() []int {
 		p.Test1,
 		p.Availability,
 		p.Mood,
+		p.Countries,
 	}
 }
 
@@ -142,6 +145,10 @@ func MoodHandler(opts *SubgraphOptions) http.Handler {
 	return subgraphHandler(mood.NewSchema(opts.NC))
 }
 
+func CountriesHandler(opts *SubgraphOptions) http.Handler {
+	return subgraphHandler(countries.NewSchema(opts.NC))
+}
+
 func New(config *Config) (*Subgraphs, error) {
 
 	url := nats.DefaultURL
@@ -173,6 +180,9 @@ func New(config *Config) (*Subgraphs, error) {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(nc)); srv != nil {
+		servers = append(servers, srv)
+	}
+	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(nc)); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{

@@ -1,0 +1,8 @@
+type Country @key(fields: "key { name }") {
+  key: CountryKey!
+  language: String
+}
+
+type CountryKey {
+  name: String!
+}

@@ -11,16 +11,14 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies/subgraph/model"
 )
 
-// FindEmployeeByID is the resolver for the findEmployeeByID field.
-func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
-	if id < 1 {
-		return nil, nil
-	}
-	for _, employee := range employees {
-		if id == employee.ID {
-			return employee, nil
+// FindDetailsByID is the resolver for the findDetailsByID field.
+func (r *entityResolver) FindDetailsByID(ctx context.Context, id int) (*model.Details, error) {
+	for _, detail := range employees {
+		if id == detail.ID {
+			return detail, nil
 		}
 	}
+
 	return nil, nil
 }
 

@@ -80,41 +80,21 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 		}()
 
 		switch typeName {
-		case "Details":
-			resolverName, err := entityResolverNameForDetails(ctx, rep)
+		case "Country":
+			resolverName, err := entityResolverNameForCountry(ctx, rep)
 			if err != nil {
-				return fmt.Errorf(`finding resolver for Entity "Details": %w`, err)
+				return fmt.Errorf(`finding resolver for Entity "Country": %w`, err)
 			}
 			switch resolverName {
 
-			case "findDetailsByID":
-				id0, err := ec.unmarshalNInt2int(ctx, rep["id"])
+			case "findCountryByKeyName":
+				id0, err := ec.unmarshalNString2string(ctx, rep["key"].(map[string]interface{})["name"])
 				if err != nil {
-					return fmt.Errorf(`unmarshalling param 0 for findDetailsByID(): %w`, err)
+					return fmt.Errorf(`unmarshalling param 0 for findCountryByKeyName(): %w`, err)
 				}
-				entity, err := ec.resolvers.Entity().FindDetailsByID(ctx, id0)
+				entity, err := ec.resolvers.Entity().FindCountryByKeyName(ctx, id0)
 				if err != nil {
-					return fmt.Errorf(`resolving Entity "Details": %w`, err)
-				}
-
-				list[idx[i]] = entity
-				return nil
-			}
-		case "SDK":
-			resolverName, err := entityResolverNameForSDK(ctx, rep)
-			if err != nil {
-				return fmt.Errorf(`finding resolver for Entity "SDK": %w`, err)
-			}
-			switch resolverName {
-
-			case "findSDKByUpc":
-				id0, err := ec.unmarshalNID2string(ctx, rep["upc"])
-				if err != nil {
-					return fmt.Errorf(`unmarshalling param 0 for findSDKByUpc(): %w`, err)
-				}
-				entity, err := ec.resolvers.Entity().FindSDKByUpc(ctx, id0)
-				if err != nil {
-					return fmt.Errorf(`resolving Entity "SDK": %w`, err)
+					return fmt.Errorf(`resolving Entity "Country": %w`, err)
 				}
 
 				list[idx[i]] = entity
@@ -189,7 +169,7 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 	}
 }
 
-func entityResolverNameForDetails(ctx context.Context, rep map[string]interface{}) (string, error) {
+func entityResolverNameForCountry(ctx context.Context, rep map[string]interface{}) (string, error) {
 	for {
 		var (
 			m   map[string]interface{}
@@ -198,27 +178,16 @@ func entityResolverNameForDetails(ctx context.Context, rep map[string]interface{
 		)
 		_ = val
 		m = rep
-		if _, ok = m["id"]; !ok {
+		if val, ok = m["key"]; !ok {
 			break
 		}
-		return "findDetailsByID", nil
-	}
-	return "", fmt.Errorf("%w for Details", ErrTypeNotFound)
-}
-
-func entityResolverNameForSDK(ctx context.Context, rep map[string]interface{}) (string, error) {
-	for {
-		var (
-			m   map[string]interface{}
-			val interface{}
-			ok  bool
-		)
-		_ = val
-		m = rep
-		if _, ok = m["upc"]; !ok {
+		if m, ok = val.(map[string]interface{}); !ok {
 			break
 		}
-		return "findSDKByUpc", nil
+		if _, ok = m["name"]; !ok {
+			break
+		}
+		return "findCountryByKeyName", nil
 	}
-	return "", fmt.Errorf("%w for SDK", ErrTypeNotFound)
+	return "", fmt.Errorf("%w for Country", ErrTypeNotFound)
 }

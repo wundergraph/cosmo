@@ -11,20 +11,20 @@ enum ExerciseType {
   STRENGTH_TRAINING
 }
 
-type Exercise implements Hobby {
-  employees: [Employee!]! @goField(forceResolver: true)
-  category: ExerciseType!
-}
+# type Exercise implements Hobby {
+#   employees: [Employee!]! @goField(forceResolver: true)
+#   category: ExerciseType!
+# }
 
 interface Experience {
   yearsOfExperience: Float!
 }
 
-type Flying implements Experience & Hobby {
-  employees: [Employee!]! @goField(forceResolver: true)
-  planeModels: [String!]!
-  yearsOfExperience: Float!
-}
+# type Flying implements Experience & Hobby {
+#   employees: [Employee!]! @goField(forceResolver: true)
+#   planeModels: [String!]!
+#   yearsOfExperience: Float!
+# }
 
 enum GameGenre {
   ADVENTURE
@@ -37,17 +37,17 @@ enum GameGenre {
   STRATEGY
 }
 
-type Gaming implements Experience & Hobby {
-  employees: [Employee!]! @goField(forceResolver: true)
-  genres: [GameGenre!]!
-  name: String!
-  yearsOfExperience: Float!
-}
+# type Gaming implements Experience & Hobby {
+#   employees: [Employee!]! @goField(forceResolver: true)
+#   genres: [GameGenre!]!
+#   name: String!
+#   yearsOfExperience: Float!
+# }
 
-type Other implements Hobby {
-  employees: [Employee!]! @goField(forceResolver: true)
-  name: String!
-}
+# type Other implements Hobby {
+#   employees: [Employee!]! @goField(forceResolver: true)
+#   name: String!
+# }
 
 enum ProgrammingLanguage {
   CSHARP
@@ -56,37 +56,28 @@ enum ProgrammingLanguage {
   TYPESCRIPT
 }
 
-type Programming implements Hobby {
-  employees: [Employee!]! @goField(forceResolver: true)
-  languages: [ProgrammingLanguage!]!
+# type Programming implements Hobby {
+#   employees: [Employee!]! @goField(forceResolver: true)
+#   languages: [ProgrammingLanguage!]!
+# }
+
+# type Country @key(fields: "name", resolvable: false) {
+#   name: String!
+# }
+
+# type Travelling implements Hobby {
+#   employees: [Employee!]! @goField(forceResolver: true)
+#   countriesLived: [Country!]!
+# }
+
+type Hobby {
+  type: String!
+  # employees: [Employee!]! @goField(forceResolver: true)
 }
 
-enum Country {
-  AMERICA
-  ENGLAND
-  GERMANY
-  INDONESIA
-  KOREA
-  NETHERLANDS
-  PORTUGAL
-  SERBIA
-  SPAIN
-  TAIWAN
-  THAILAND
-}
-
-type Travelling implements Hobby {
-  employees: [Employee!]! @goField(forceResolver: true)
-  countriesLived: [Country!]!
-}
-
-interface Hobby {
-  employees: [Employee!]! @goField(forceResolver: true)
-}
-
-type Employee @key(fields: "id") {
+type Details @key(fields: "id") {
   id: Int!
-  hobbies: [Hobby!]!
+  hobbies: [Hobby!]
 }
 
 type SDK @key(fields: "upc") {

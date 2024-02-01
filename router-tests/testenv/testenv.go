@@ -84,6 +84,7 @@ type SubgraphsConfig struct {
 	Test1            SubgraphConfig
 	Availability     SubgraphConfig
 	Mood             SubgraphConfig
+	Countries        SubgraphConfig
 }
 
 type SubgraphConfig struct {
@@ -137,6 +138,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Test1:        atomic.NewInt64(0),
 		Availability: atomic.NewInt64(0),
 		Mood:         atomic.NewInt64(0),
+		Countries:    atomic.NewInt64(0),
 	}
 
 	employees := &Subgraph{
@@ -209,6 +211,16 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Mood.Delay,
 	}
 
+	countries := &Subgraph{
+		handler:          subgraphs.CountriesHandler(subgraphOptions(t, ns)),
+		middleware:       cfg.Subgraphs.Countries.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Countries,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Countries.Delay,
+	}
+
 	employeesServer := httptest.NewServer(employees)
 	familyServer := httptest.NewServer(family)
 	hobbiesServer := httptest.NewServer(hobbies)
@@ -216,6 +228,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	test1Server := httptest.NewServer(test1)
 	availabilityServer := httptest.NewServer(availability)
 	moodServer := httptest.NewServer(mood)
+	countriesServer := httptest.NewServer(countries)
 
 	replacements := map[string]string{
 		"EmployeesURL":    gqlURL(employeesServer),
@@ -225,6 +238,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		"Test1URL":        gqlURL(test1Server),
 		"AvailabilityURL": gqlURL(availabilityServer),
 		"MoodURL":         gqlURL(moodServer),
+		"CountriesURL":    gqlURL(countriesServer),
 	}
 
 	replaced := configJSONTemplate
@@ -295,6 +309,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.Subgraphs.Mood.CloseOnStart {
 		moodServer.Close()
 	}
+	if cfg.Subgraphs.Countries.CloseOnStart {
+		countriesServer.Close()
+	}
 
 	return &Environment{
 		t:                    t,
@@ -316,6 +333,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			test1Server,
 			availabilityServer,
 			moodServer,
+			countriesServer,
 		},
 	}, nil
 }
@@ -479,6 +497,7 @@ type SubgraphRequestCount struct {
 	Test1        *atomic.Int64
 	Availability *atomic.Int64
 	Mood         *atomic.Int64
+	Countries    *atomic.Int64
 }
 
 type GraphQLRequest struct {

@@ -51,13 +51,17 @@ func (this Cat) GetName() string   { return this.Name }
 func (Cat) IsAnimal() {}
 
 type Details struct {
+	ID            int            `json:"id"`
 	Forename      string         `json:"forename"`
+	Middlename    *string        `json:"middlename,omitempty"`
 	Surname       string         `json:"surname"`
 	HasChildren   bool           `json:"hasChildren"`
 	MaritalStatus *MaritalStatus `json:"maritalStatus,omitempty"`
 	Nationality   Nationality    `json:"nationality"`
 	Pets          []Pet          `json:"pets,omitempty"`
 }
+
+func (Details) IsEntity() {}
 
 type Dog struct {
 	Breed  DogBreed `json:"breed"`
@@ -74,7 +78,7 @@ func (this Dog) GetName() string   { return this.Name }
 func (Dog) IsAnimal() {}
 
 type Employee struct {
-	Details *Details `json:"details,omitempty"`
+	Details *Details `json:"details"`
 	ID      int      `json:"id"`
 }
 

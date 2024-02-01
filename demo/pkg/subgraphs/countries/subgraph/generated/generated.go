@@ -16,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/plugin/federation/fedruntime"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies/subgraph/model"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/countries/subgraph/model"
 )
 
 // region    ************************** generated!.gotpl **************************
@@ -46,28 +46,22 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	Details struct {
-		Hobbies func(childComplexity int) int
-		ID      func(childComplexity int) int
+	Country struct {
+		Key      func(childComplexity int) int
+		Language func(childComplexity int) int
+	}
+
+	CountryKey struct {
+		Name func(childComplexity int) int
 	}
 
 	Entity struct {
-		FindDetailsByID func(childComplexity int, id int) int
-		FindSDKByUpc    func(childComplexity int, upc string) int
-	}
-
-	Hobby struct {
-		Type func(childComplexity int) int
+		FindCountryByKeyName func(childComplexity int, keyName string) int
 	}
 
 	Query struct {
 		__resolve__service func(childComplexity int) int
 		__resolve_entities func(childComplexity int, representations []map[string]interface{}) int
-	}
-
-	SDK struct {
-		ClientLanguages func(childComplexity int) int
-		Upc             func(childComplexity int) int
 	}
 
 	_Service struct {
@@ -76,8 +70,7 @@ type ComplexityRoot struct {
 }
 
 type EntityResolver interface {
-	FindDetailsByID(ctx context.Context, id int) (*model.Details, error)
-	FindSDKByUpc(ctx context.Context, upc string) (*model.Sdk, error)
+	FindCountryByKeyName(ctx context.Context, keyName string) (*model.Country, error)
 }
 
 type executableSchema struct {
@@ -99,50 +92,38 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "Details.hobbies":
-		if e.complexity.Details.Hobbies == nil {
+	case "Country.key":
+		if e.complexity.Country.Key == nil {
 			break
 		}
 
-		return e.complexity.Details.Hobbies(childComplexity), true
+		return e.complexity.Country.Key(childComplexity), true
 
-	case "Details.id":
-		if e.complexity.Details.ID == nil {
+	case "Country.language":
+		if e.complexity.Country.Language == nil {
 			break
 		}
 
-		return e.complexity.Details.ID(childComplexity), true
+		return e.complexity.Country.Language(childComplexity), true
 
-	case "Entity.findDetailsByID":
-		if e.complexity.Entity.FindDetailsByID == nil {
+	case "CountryKey.name":
+		if e.complexity.CountryKey.Name == nil {
 			break
 		}
 
-		args, err := ec.field_Entity_findDetailsByID_args(context.TODO(), rawArgs)
+		return e.complexity.CountryKey.Name(childComplexity), true
+
+	case "Entity.findCountryByKeyName":
+		if e.complexity.Entity.FindCountryByKeyName == nil {
+			break
+		}
+
+		args, err := ec.field_Entity_findCountryByKeyName_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Entity.FindDetailsByID(childComplexity, args["id"].(int)), true
-
-	case "Entity.findSDKByUpc":
-		if e.complexity.Entity.FindSDKByUpc == nil {
-			break
-		}
-
-		args, err := ec.field_Entity_findSDKByUpc_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Entity.FindSDKByUpc(childComplexity, args["upc"].(string)), true
-
-	case "Hobby.type":
-		if e.complexity.Hobby.Type == nil {
-			break
-		}
-
-		return e.complexity.Hobby.Type(childComplexity), true
+		return e.complexity.Entity.FindCountryByKeyName(childComplexity, args["keyName"].(string)), true
 
 	case "Query._service":
 		if e.complexity.Query.__resolve__service == nil {
@@ -162,20 +143,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.__resolve_entities(childComplexity, args["representations"].([]map[string]interface{})), true
-
-	case "SDK.clientLanguages":
-		if e.complexity.SDK.ClientLanguages == nil {
-			break
-		}
-
-		return e.complexity.SDK.ClientLanguages(childComplexity), true
-
-	case "SDK.upc":
-		if e.complexity.SDK.Upc == nil {
-			break
-		}
-
-		return e.complexity.SDK.Upc(childComplexity), true
 
 	case "_Service.sdl":
 		if e.complexity._Service.SDL == nil {
@@ -273,91 +240,13 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `directive @goField(
-	forceResolver: Boolean
-	name: String
-	omittable: Boolean
-) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
-
-enum ExerciseType {
-  CALISTHENICS
-  HIKING
-  SPORT
-  STRENGTH_TRAINING
+	{Name: "../schema.graphqls", Input: `type Country @key(fields: "key { name }") {
+  key: CountryKey!
+  language: String
 }
 
-# type Exercise implements Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   category: ExerciseType!
-# }
-
-interface Experience {
-  yearsOfExperience: Float!
-}
-
-# type Flying implements Experience & Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   planeModels: [String!]!
-#   yearsOfExperience: Float!
-# }
-
-enum GameGenre {
-  ADVENTURE
-  BOARD
-  FPS
-  CARD
-  RPG
-  ROGUELITE
-  SIMULATION
-  STRATEGY
-}
-
-# type Gaming implements Experience & Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   genres: [GameGenre!]!
-#   name: String!
-#   yearsOfExperience: Float!
-# }
-
-# type Other implements Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   name: String!
-# }
-
-enum ProgrammingLanguage {
-  CSHARP
-  GO
-  RUST
-  TYPESCRIPT
-}
-
-# type Programming implements Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   languages: [ProgrammingLanguage!]!
-# }
-
-# type Country @key(fields: "name", resolvable: false) {
-#   name: String!
-# }
-
-# type Travelling implements Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   countriesLived: [Country!]!
-# }
-
-type Hobby {
-  type: String!
-  # employees: [Employee!]! @goField(forceResolver: true)
-}
-
-type Details @key(fields: "id") {
-  id: Int!
-  hobbies: [Hobby!]
-}
-
-type SDK @key(fields: "upc") {
-  upc: ID!
-  clientLanguages: [ProgrammingLanguage!]!
+type CountryKey {
+  name: String!
 }
 `, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
@@ -406,12 +295,11 @@ type SDK @key(fields: "upc") {
 `, BuiltIn: true},
 	{Name: "../../federation/entity.graphql", Input: `
 # a union of all types that use the @key directive
-union _Entity = Details | SDK
+union _Entity = Country
 
 # fake type to build resolver interfaces for users to implement
 type Entity {
-		findDetailsByID(id: Int!,): Details!
-	findSDKByUpc(upc: ID!,): SDK!
+		findCountryByKeyName(keyName: String!,): Country!
 
 }
 
@@ -431,33 +319,18 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_Entity_findDetailsByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Entity_findSDKByUpc_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Entity_findCountryByKeyName_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["upc"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("upc"))
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+	if tmp, ok := rawArgs["keyName"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyName"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["upc"] = arg0
+	args["keyName"] = arg0
 	return args, nil
 }
 
@@ -529,8 +402,8 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Details_id(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Details_id(ctx, field)
+func (ec *executionContext) _Country_key(ctx context.Context, field graphql.CollectedField, obj *model.Country) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Country_key(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -543,7 +416,7 @@ func (ec *executionContext) _Details_id(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
+		return obj.Key, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -555,71 +428,30 @@ func (ec *executionContext) _Details_id(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(*model.CountryKey)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNCountryKey2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋcountriesᚋsubgraphᚋmodelᚐCountryKey(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Details_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Country_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Details",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Details_hobbies(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Details_hobbies(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Hobbies, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Hobby)
-	fc.Result = res
-	return ec.marshalOHobby2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐHobbyᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Details_hobbies(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Details",
+		Object:     "Country",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "type":
-				return ec.fieldContext_Hobby_type(ctx, field)
+			case "name":
+				return ec.fieldContext_CountryKey_name(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Hobby", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type CountryKey", field.Name)
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Entity_findDetailsByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Entity_findDetailsByID(ctx, field)
+func (ec *executionContext) _Country_language(ctx context.Context, field graphql.CollectedField, obj *model.Country) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Country_language(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -632,55 +464,35 @@ func (ec *executionContext) _Entity_findDetailsByID(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Entity().FindDetailsByID(rctx, fc.Args["id"].(int))
+		return obj.Language, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Details)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Entity_findDetailsByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Country_language(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Entity",
+		Object:     "Country",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Details_id(ctx, field)
-			case "hobbies":
-				return ec.fieldContext_Details_hobbies(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Details", field.Name)
+			return nil, errors.New("field of type String does not have child fields")
 		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Entity_findDetailsByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Entity_findSDKByUpc(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Entity_findSDKByUpc(ctx, field)
+func (ec *executionContext) _CountryKey_name(ctx context.Context, field graphql.CollectedField, obj *model.CountryKey) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CountryKey_name(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -693,68 +505,7 @@ func (ec *executionContext) _Entity_findSDKByUpc(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Entity().FindSDKByUpc(rctx, fc.Args["upc"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Sdk)
-	fc.Result = res
-	return ec.marshalNSDK2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐSdk(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Entity_findSDKByUpc(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Entity",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "upc":
-				return ec.fieldContext_SDK_upc(ctx, field)
-			case "clientLanguages":
-				return ec.fieldContext_SDK_clientLanguages(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type SDK", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Entity_findSDKByUpc_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Hobby_type(ctx context.Context, field graphql.CollectedField, obj *model.Hobby) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Hobby_type(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Type, nil
+		return obj.Name, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -771,15 +522,76 @@ func (ec *executionContext) _Hobby_type(ctx context.Context, field graphql.Colle
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Hobby_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CountryKey_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Hobby",
+		Object:     "CountryKey",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Entity_findCountryByKeyName(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findCountryByKeyName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindCountryByKeyName(rctx, fc.Args["keyName"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Country)
+	fc.Result = res
+	return ec.marshalNCountry2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋcountriesᚋsubgraphᚋmodelᚐCountry(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Entity_findCountryByKeyName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Entity",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_Country_key(ctx, field)
+			case "language":
+				return ec.fieldContext_Country_language(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Country", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Entity_findCountryByKeyName_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -1011,94 +823,6 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SDK_upc(ctx context.Context, field graphql.CollectedField, obj *model.Sdk) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SDK_upc(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Upc, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SDK_upc(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SDK",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SDK_clientLanguages(ctx context.Context, field graphql.CollectedField, obj *model.Sdk) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SDK_clientLanguages(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ClientLanguages, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]model.ProgrammingLanguage)
-	fc.Result = res
-	return ec.marshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SDK_clientLanguages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SDK",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ProgrammingLanguage does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2922,33 +2646,17 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    ************************** interface.gotpl ***************************
 
-func (ec *executionContext) _Experience(ctx context.Context, sel ast.SelectionSet, obj model.Experience) graphql.Marshaler {
-	switch obj := (obj).(type) {
-	case nil:
-		return graphql.Null
-	default:
-		panic(fmt.Errorf("unexpected type %T", obj))
-	}
-}
-
 func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, obj fedruntime.Entity) graphql.Marshaler {
 	switch obj := (obj).(type) {
 	case nil:
 		return graphql.Null
-	case model.Details:
-		return ec._Details(ctx, sel, &obj)
-	case *model.Details:
+	case model.Country:
+		return ec._Country(ctx, sel, &obj)
+	case *model.Country:
 		if obj == nil {
 			return graphql.Null
 		}
-		return ec._Details(ctx, sel, obj)
-	case model.Sdk:
-		return ec._SDK(ctx, sel, &obj)
-	case *model.Sdk:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._SDK(ctx, sel, obj)
+		return ec._Country(ctx, sel, obj)
 	default:
 		panic(fmt.Errorf("unexpected type %T", obj))
 	}
@@ -2958,24 +2666,63 @@ func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, 
 
 // region    **************************** object.gotpl ****************************
 
-var detailsImplementors = []string{"Details", "_Entity"}
+var countryImplementors = []string{"Country", "_Entity"}
 
-func (ec *executionContext) _Details(ctx context.Context, sel ast.SelectionSet, obj *model.Details) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, detailsImplementors)
+func (ec *executionContext) _Country(ctx context.Context, sel ast.SelectionSet, obj *model.Country) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, countryImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	deferred := make(map[string]*graphql.FieldSet)
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("Details")
-		case "id":
-			out.Values[i] = ec._Details_id(ctx, field, obj)
+			out.Values[i] = graphql.MarshalString("Country")
+		case "key":
+			out.Values[i] = ec._Country_key(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "hobbies":
-			out.Values[i] = ec._Details_hobbies(ctx, field, obj)
+		case "language":
+			out.Values[i] = ec._Country_language(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var countryKeyImplementors = []string{"CountryKey"}
+
+func (ec *executionContext) _CountryKey(ctx context.Context, sel ast.SelectionSet, obj *model.CountryKey) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, countryKeyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CountryKey")
+		case "name":
+			out.Values[i] = ec._CountryKey_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3018,7 +2765,7 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Entity")
-		case "findDetailsByID":
+		case "findCountryByKeyName":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -3027,7 +2774,7 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Entity_findDetailsByID(ctx, field)
+				res = ec._Entity_findCountryByKeyName(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -3040,67 +2787,6 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "findSDKByUpc":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Entity_findSDKByUpc(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var hobbyImplementors = []string{"Hobby"}
-
-func (ec *executionContext) _Hobby(ctx context.Context, sel ast.SelectionSet, obj *model.Hobby) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, hobbyImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Hobby")
-		case "type":
-			out.Values[i] = ec._Hobby_type(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3195,50 +2881,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___schema(ctx, field)
 			})
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var sDKImplementors = []string{"SDK", "_Entity"}
-
-func (ec *executionContext) _SDK(ctx context.Context, sel ast.SelectionSet, obj *model.Sdk) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, sDKImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("SDK")
-		case "upc":
-			out.Values[i] = ec._SDK_upc(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "clientLanguages":
-			out.Values[i] = ec._SDK_clientLanguages(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3639,18 +3281,28 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNDetails2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v model.Details) graphql.Marshaler {
-	return ec._Details(ctx, sel, &v)
+func (ec *executionContext) marshalNCountry2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋcountriesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, sel ast.SelectionSet, v model.Country) graphql.Marshaler {
+	return ec._Country(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {
+func (ec *executionContext) marshalNCountry2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋcountriesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, sel ast.SelectionSet, v *model.Country) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._Details(ctx, sel, v)
+	return ec._Country(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCountryKey2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋcountriesᚋsubgraphᚋmodelᚐCountryKey(ctx context.Context, sel ast.SelectionSet, v *model.CountryKey) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CountryKey(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNFieldSet2string(ctx context.Context, v interface{}) (string, error) {
@@ -3666,131 +3318,6 @@ func (ec *executionContext) marshalNFieldSet2string(ctx context.Context, sel ast
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) marshalNHobby2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐHobby(ctx context.Context, sel ast.SelectionSet, v *model.Hobby) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Hobby(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
-	res, err := graphql.UnmarshalID(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalID(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
-	res, err := graphql.UnmarshalInt(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
-	res := graphql.MarshalInt(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx context.Context, v interface{}) (model.ProgrammingLanguage, error) {
-	var res model.ProgrammingLanguage
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx context.Context, sel ast.SelectionSet, v model.ProgrammingLanguage) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) unmarshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx context.Context, v interface{}) ([]model.ProgrammingLanguage, error) {
-	var vSlice []interface{}
-	if v != nil {
-		vSlice = graphql.CoerceList(v)
-	}
-	var err error
-	res := make([]model.ProgrammingLanguage, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProgrammingLanguage) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNSDK2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐSdk(ctx context.Context, sel ast.SelectionSet, v model.Sdk) graphql.Marshaler {
-	return ec._SDK(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNSDK2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐSdk(ctx context.Context, sel ast.SelectionSet, v *model.Sdk) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._SDK(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -4259,53 +3786,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
-}
-
-func (ec *executionContext) marshalOHobby2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐHobbyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Hobby) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNHobby2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋhobbiesᚋsubgraphᚋmodelᚐHobby(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

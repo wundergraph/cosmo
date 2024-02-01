@@ -64,7 +64,9 @@ type ComplexityRoot struct {
 	Details struct {
 		Forename      func(childComplexity int) int
 		HasChildren   func(childComplexity int) int
+		ID            func(childComplexity int) int
 		MaritalStatus func(childComplexity int) int
+		Middlename    func(childComplexity int) int
 		Nationality   func(childComplexity int) int
 		Pets          func(childComplexity int) int
 		Surname       func(childComplexity int) int
@@ -83,6 +85,7 @@ type ComplexityRoot struct {
 	}
 
 	Entity struct {
+		FindDetailsByID  func(childComplexity int, id int) int
 		FindEmployeeByID func(childComplexity int, id int) int
 	}
 
@@ -110,6 +113,7 @@ type ComplexityRoot struct {
 }
 
 type EntityResolver interface {
+	FindDetailsByID(ctx context.Context, id int) (*model.Details, error)
 	FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error)
 }
 type QueryResolver interface {
@@ -205,12 +209,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Details.HasChildren(childComplexity), true
 
+	case "Details.id":
+		if e.complexity.Details.ID == nil {
+			break
+		}
+
+		return e.complexity.Details.ID(childComplexity), true
+
 	case "Details.maritalStatus":
 		if e.complexity.Details.MaritalStatus == nil {
 			break
 		}
 
 		return e.complexity.Details.MaritalStatus(childComplexity), true
+
+	case "Details.middlename":
+		if e.complexity.Details.Middlename == nil {
+			break
+		}
+
+		return e.complexity.Details.Middlename(childComplexity), true
 
 	case "Details.nationality":
 		if e.complexity.Details.Nationality == nil {
@@ -274,6 +292,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Employee.ID(childComplexity), true
+
+	case "Entity.findDetailsByID":
+		if e.complexity.Entity.FindDetailsByID == nil {
+			break
+		}
+
+		args, err := ec.field_Entity_findDetailsByID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Entity.FindDetailsByID(childComplexity, args["id"].(int)), true
 
 	case "Entity.findEmployeeByID":
 		if e.complexity.Entity.FindEmployeeByID == nil {
@@ -546,8 +576,10 @@ enum Nationality {
   UKRAINIAN
 }
 
-type Details  {
+type Details @key(fields: "id") {
+  id: Int!
   forename: String! @shareable
+  middlename: String @deprecated
   surname: String! @shareable
   hasChildren: Boolean!
   maritalStatus: MaritalStatus
@@ -556,7 +588,7 @@ type Details  {
 }
 
 type Employee @key(fields: "id") {
-  details: Details @shareable
+  details: Details!
   id: Int!
 }
 
@@ -569,7 +601,8 @@ input SearchInput {
 input NestedSearchInput {
   maritalStatus: MaritalStatus
   hasChildren: Boolean
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
 	directive @composeDirective(name: String!) repeatable on SCHEMA
@@ -616,11 +649,12 @@ input NestedSearchInput {
 `, BuiltIn: true},
 	{Name: "../../federation/entity.graphql", Input: `
 # a union of all types that use the @key directive
-union _Entity = Employee
+union _Entity = Details | Employee
 
 # fake type to build resolver interfaces for users to implement
 type Entity {
-		findEmployeeByID(id: Int!,): Employee!
+		findDetailsByID(id: Int!,): Details!
+	findEmployeeByID(id: Int!,): Employee!
 
 }
 
@@ -639,6 +673,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Entity_findDetailsByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Entity_findEmployeeByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -1090,6 +1139,50 @@ func (ec *executionContext) fieldContext_Cat_type(ctx context.Context, field gra
 	return fc, nil
 }
 
+func (ec *executionContext) _Details_id(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Details_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Details_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Details",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Details_forename(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Details_forename(ctx, field)
 	if err != nil {
@@ -1122,6 +1215,47 @@ func (ec *executionContext) _Details_forename(ctx context.Context, field graphql
 }
 
 func (ec *executionContext) fieldContext_Details_forename(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Details",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Details_middlename(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Details_middlename(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Middlename, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Details_middlename(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Details",
 		Field:      field,
@@ -1545,11 +1679,14 @@ func (ec *executionContext) _Employee_details(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.Details)
 	fc.Result = res
-	return ec.marshalODetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
+	return ec.marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_details(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1560,8 +1697,12 @@ func (ec *executionContext) fieldContext_Employee_details(ctx context.Context, f
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Details_id(ctx, field)
 			case "forename":
 				return ec.fieldContext_Details_forename(ctx, field)
+			case "middlename":
+				return ec.fieldContext_Details_middlename(ctx, field)
 			case "surname":
 				return ec.fieldContext_Details_surname(ctx, field)
 			case "hasChildren":
@@ -1619,6 +1760,79 @@ func (ec *executionContext) fieldContext_Employee_id(ctx context.Context, field 
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Entity_findDetailsByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findDetailsByID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindDetailsByID(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Details)
+	fc.Result = res
+	return ec.marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Entity_findDetailsByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Entity",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Details_id(ctx, field)
+			case "forename":
+				return ec.fieldContext_Details_forename(ctx, field)
+			case "middlename":
+				return ec.fieldContext_Details_middlename(ctx, field)
+			case "surname":
+				return ec.fieldContext_Details_surname(ctx, field)
+			case "hasChildren":
+				return ec.fieldContext_Details_hasChildren(ctx, field)
+			case "maritalStatus":
+				return ec.fieldContext_Details_maritalStatus(ctx, field)
+			case "nationality":
+				return ec.fieldContext_Details_nationality(ctx, field)
+			case "pets":
+				return ec.fieldContext_Details_pets(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Details", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Entity_findDetailsByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4241,6 +4455,13 @@ func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, 
 	switch obj := (obj).(type) {
 	case nil:
 		return graphql.Null
+	case model.Details:
+		return ec._Details(ctx, sel, &obj)
+	case *model.Details:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Details(ctx, sel, obj)
 	case model.Employee:
 		return ec._Employee(ctx, sel, &obj)
 	case *model.Employee:
@@ -4365,7 +4586,7 @@ func (ec *executionContext) _Cat(ctx context.Context, sel ast.SelectionSet, obj 
 	return out
 }
 
-var detailsImplementors = []string{"Details"}
+var detailsImplementors = []string{"Details", "_Entity"}
 
 func (ec *executionContext) _Details(ctx context.Context, sel ast.SelectionSet, obj *model.Details) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, detailsImplementors)
@@ -4376,11 +4597,18 @@ func (ec *executionContext) _Details(ctx context.Context, sel ast.SelectionSet, 
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Details")
+		case "id":
+			out.Values[i] = ec._Details_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "forename":
 			out.Values[i] = ec._Details_forename(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "middlename":
+			out.Values[i] = ec._Details_middlename(ctx, field, obj)
 		case "surname":
 			out.Values[i] = ec._Details_surname(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4490,6 +4718,9 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = graphql.MarshalString("Employee")
 		case "details":
 			out.Values[i] = ec._Employee_details(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "id":
 			out.Values[i] = ec._Employee_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4537,6 +4768,28 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Entity")
+		case "findDetailsByID":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Entity_findDetailsByID(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "findEmployeeByID":
 			field := field
 
@@ -5193,6 +5446,20 @@ func (ec *executionContext) marshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋd
 	return v
 }
 
+func (ec *executionContext) marshalNDetails2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v model.Details) graphql.Marshaler {
+	return ec._Details(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Details(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNDogBreed2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDogBreed(ctx context.Context, v interface{}) (model.DogBreed, error) {
 	var res model.DogBreed
 	err := res.UnmarshalGQL(v)
@@ -5777,13 +6044,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
-}
-
-func (ec *executionContext) marshalODetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Details(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx context.Context, v interface{}) (*model.MaritalStatus, error) {

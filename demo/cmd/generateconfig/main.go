@@ -29,6 +29,8 @@ func main() {
 
 	mood := subgraphs.MoodHandler(&subgraphs.SubgraphOptions{})
 
+	countries := subgraphs.CountriesHandler(&subgraphs.SubgraphOptions{})
+
 	employeesServer := httptest.NewServer(employees)
 	defer employeesServer.Close()
 	familyServer := httptest.NewServer(family)
@@ -43,6 +45,8 @@ func main() {
 	defer availabilityServer.Close()
 	moodServer := httptest.NewServer(mood)
 	defer moodServer.Close()
+	countriesServer := httptest.NewServer(countries)
+	defer countriesServer.Close()
 
 	employeeUpdatedSchema, err := os.ReadFile(filepath.Join("..", "..", "pkg", "subgraphs", "employeeupdated", "subgraph", "schema.graphqls"))
 	if err != nil {
@@ -79,6 +83,10 @@ func main() {
 			URL:  gqlURL(moodServer),
 		},
 		{
+			Name: "countries",
+			URL:  gqlURL(countriesServer),
+		},
+		{
 			Name:   "employeeupdated",
 			Schema: string(employeeUpdatedSchema),
 		},
@@ -112,6 +120,8 @@ func main() {
 			return "{{ .AvailabilityURL }}"
 		case sgs[6].URL:
 			return "{{ .MoodURL }}"
+		case sgs[7].URL:
+			return "{{ .CountriesURL }}"
 		default:
 			return s
 		}

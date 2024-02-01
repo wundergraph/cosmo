@@ -9,6 +9,7 @@ var employees = []*model.Employee{
 	{
 		ID: 1,
 		Details: &model.Details{
+			ID:            1,
 			Forename:      "Jens",
 			Surname:       "Neuse",
 			HasChildren:   true,
@@ -19,6 +20,7 @@ var employees = []*model.Employee{
 	{
 		ID: 2,
 		Details: &model.Details{
+			ID:            2,
 			Forename:      "Dustin",
 			Surname:       "Deus",
 			HasChildren:   false,
@@ -29,6 +31,7 @@ var employees = []*model.Employee{
 	{
 		ID: 3,
 		Details: &model.Details{
+			ID:            3,
 			Forename:      "Stefan",
 			Surname:       "Avram",
 			HasChildren:   false,
@@ -47,6 +50,7 @@ var employees = []*model.Employee{
 	{
 		ID: 4,
 		Details: &model.Details{
+			ID:            4,
 			Forename:      "Björn",
 			Surname:       "Schwenzer",
 			HasChildren:   true,
@@ -70,6 +74,7 @@ var employees = []*model.Employee{
 	{
 		ID: 5,
 		Details: &model.Details{
+			ID:            5,
 			Forename:      "Sergiy",
 			Surname:       "Petrunin",
 			HasChildren:   false,
@@ -142,6 +147,7 @@ var employees = []*model.Employee{
 	{
 		ID: 7,
 		Details: &model.Details{
+			ID:          7,
 			Forename:    "Suvij",
 			Surname:     "Surya",
 			HasChildren: false,
@@ -151,6 +157,7 @@ var employees = []*model.Employee{
 	{
 		ID: 8,
 		Details: &model.Details{
+			ID:          8,
 			Forename:    "Nithin",
 			Surname:     "Kumar",
 			HasChildren: false,
@@ -160,6 +167,7 @@ var employees = []*model.Employee{
 	{
 		ID: 10,
 		Details: &model.Details{
+			ID:          10,
 			Forename:    "Eelco",
 			Surname:     "Wiersma",
 			HasChildren: false,
@@ -176,6 +184,7 @@ var employees = []*model.Employee{
 	{
 		ID: 11,
 		Details: &model.Details{
+			ID:            11,
 			Forename:      "Alexandra",
 			Surname:       "Neuse",
 			HasChildren:   true,
@@ -186,6 +195,7 @@ var employees = []*model.Employee{
 	{
 		ID: 12,
 		Details: &model.Details{
+			ID:            12,
 			Forename:      "David",
 			Surname:       "Stutt",
 			HasChildren:   false,

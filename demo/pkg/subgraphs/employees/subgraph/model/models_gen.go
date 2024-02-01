@@ -27,6 +27,13 @@ type RoleType interface {
 	IsRoleType()
 	GetDepartments() []Department
 	GetTitle() []string
+	GetEmployees() []*Employee
+}
+
+type City struct {
+	Type    string   `json:"type"`
+	Name    string   `json:"name"`
+	Country *Country `json:"country,omitempty"`
 }
 
 type Consultancy struct {
@@ -61,11 +68,25 @@ func (this Cosmo) GetEngineers() []*Employee {
 
 func (Cosmo) IsEntity() {}
 
-type Details struct {
-	Forename string  `json:"forename"`
-	Location Country `json:"location"`
-	Surname  string  `json:"surname"`
+type Country struct {
+	Key *CountryKey `json:"key"`
 }
+
+func (Country) IsEntity() {}
+
+type CountryKey struct {
+	Name string `json:"name"`
+}
+
+type Details struct {
+	ID            int      `json:"id"`
+	Forename      string   `json:"forename"`
+	Location      *Country `json:"location"`
+	Surname       string   `json:"surname"`
+	PastLocations []*City  `json:"pastLocations"`
+}
+
+func (Details) IsEntity() {}
 
 type Employee struct {
 	Details   *Details `json:"details"`
@@ -82,10 +103,15 @@ func (this Employee) GetID() int { return this.ID }
 
 func (Employee) IsEntity() {}
 
+type EmployeesResponse struct {
+	Employees []*Employee `json:"employees"`
+}
+
 type Engineer struct {
 	Departments  []Department `json:"departments"`
-	EngineerType EngineerType `json:"engineerType"`
 	Title        []string     `json:"title"`
+	Employees    []*Employee  `json:"employees"`
+	EngineerType EngineerType `json:"engineerType"`
 }
 
 func (Engineer) IsRoleType() {}
@@ -109,10 +135,21 @@ func (this Engineer) GetTitle() []string {
 	}
 	return interfaceSlice
 }
+func (this Engineer) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Marketer struct {
 	Departments []Department `json:"departments"`
 	Title       []string     `json:"title"`
+	Employees   []*Employee  `json:"employees"`
 }
 
 func (Marketer) IsRoleType() {}
@@ -136,11 +173,22 @@ func (this Marketer) GetTitle() []string {
 	}
 	return interfaceSlice
 }
+func (this Marketer) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Operator struct {
 	Departments  []Department    `json:"departments"`
-	OperatorType []OperationType `json:"operatorType"`
 	Title        []string        `json:"title"`
+	Employees    []*Employee     `json:"employees"`
+	OperatorType []OperationType `json:"operatorType"`
 }
 
 func (Operator) IsRoleType() {}
@@ -160,6 +208,16 @@ func (this Operator) GetTitle() []string {
 	}
 	interfaceSlice := make([]string, 0, len(this.Title))
 	for _, concrete := range this.Title {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
+func (this Operator) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
 		interfaceSlice = append(interfaceSlice, concrete)
 	}
 	return interfaceSlice
@@ -191,59 +249,6 @@ func (Sdk) IsEntity() {}
 type Time struct {
 	UnixTime  int    `json:"unixTime"`
 	TimeStamp string `json:"timeStamp"`
-}
-
-type Country string
-
-const (
-	CountryAmerica     Country = "AMERICA"
-	CountryEngland     Country = "ENGLAND"
-	CountryGermany     Country = "GERMANY"
-	CountryIndia       Country = "INDIA"
-	CountryNetherlands Country = "NETHERLANDS"
-	CountryPortugal    Country = "PORTUGAL"
-	CountrySpain       Country = "SPAIN"
-	CountryUkraine     Country = "UKRAINE"
-)
-
-var AllCountry = []Country{
-	CountryAmerica,
-	CountryEngland,
-	CountryGermany,
-	CountryIndia,
-	CountryNetherlands,
-	CountryPortugal,
-	CountrySpain,
-	CountryUkraine,
-}
-
-func (e Country) IsValid() bool {
-	switch e {
-	case CountryAmerica, CountryEngland, CountryGermany, CountryIndia, CountryNetherlands, CountryPortugal, CountrySpain, CountryUkraine:
-		return true
-	}
-	return false
-}
-
-func (e Country) String() string {
-	return string(e)
-}
-
-func (e *Country) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = Country(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid Country", str)
-	}
-	return nil
-}
-
-func (e Country) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type Department string

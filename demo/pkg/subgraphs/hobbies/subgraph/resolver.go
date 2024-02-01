@@ -15,8 +15,8 @@ type Resolver struct {
 	NC *nats.Conn
 }
 
-func (r *Resolver) Employees(hobby model.Hobby) ([]*model.Employee, error) {
-	var res []*model.Employee
+func (r *Resolver) Details(hobby *model.Hobby) ([]*model.Details, error) {
+	var res []*model.Details
 	for _, employee := range employees {
 		for _, curHobby := range employee.Hobbies {
 			if isSameType(hobby, curHobby) {
