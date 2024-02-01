@@ -141,7 +141,7 @@ export class OrganizationWebhookService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
+            text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
           },
         },
       ],
@@ -153,7 +153,7 @@ export class OrganizationWebhookService {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name}| here> for more details.`,
+                text: `Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name}| here> for more details.`,
               },
             },
           ],
