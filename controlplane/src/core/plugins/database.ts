@@ -15,11 +15,7 @@ declare module 'fastify' {
   }
 }
 
-export interface DbPluginOptions {
-  databaseConnectionUrl: string;
-  debugSQL?: boolean;
-  gracefulTimeoutSec?: number;
-  runMigration?: boolean;
+export interface DatabaseConnectionConfig {
   tls?: {
     // Necessary only if the server uses a self-signed certificate.
     ca?: string;
@@ -29,14 +25,19 @@ export interface DbPluginOptions {
   };
 }
 
-export default fp<DbPluginOptions>(async function (fastify, opts) {
-  const connectionConfig: postgres.Options<any> = {
-    onnotice(notice) {
-      fastify.log.debug(notice);
-    },
-  };
+export interface DbPluginOptions {
+  databaseConnectionUrl: string;
+  debugSQL?: boolean;
+  gracefulTimeoutSec?: number;
+  runMigration?: boolean;
+}
 
-  if (opts.tls) {
+export const buildDatabaseConnectionConfig = async (
+  opts?: DatabaseConnectionConfig,
+): Promise<postgres.Options<any>> => {
+  const connectionConfig: postgres.Options<any> = {};
+
+  if (opts?.tls) {
     const sslOptions: tls.TlsOptions = {
       rejectUnauthorized: false,
       ca: opts.tls.ca,
@@ -60,6 +61,15 @@ export default fp<DbPluginOptions>(async function (fastify, opts) {
 
     connectionConfig.ssl = sslOptions;
   }
+
+  return connectionConfig;
+};
+
+export default fp<DbPluginOptions & DatabaseConnectionConfig>(async function (fastify, opts) {
+  const connectionConfig = await buildDatabaseConnectionConfig(opts);
+  connectionConfig.onnotice = (notice) => {
+    fastify.log.debug(notice, 'Database notice');
+  };
 
   const queryConnection = postgres(opts.databaseConnectionUrl, connectionConfig);
   const db = drizzle(queryConnection, {
