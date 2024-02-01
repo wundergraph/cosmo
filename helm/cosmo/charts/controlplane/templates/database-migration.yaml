@@ -42,5 +42,26 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: databaseUrl
+            {{- if .Values.configuration.databaseTlsCert }}
+            - name: DB_TLS_CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseTlsCert
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsCa }}
+            - name: DB_TLS_CA
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseTlsCa
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsKey }}
+            - name: DB_TLS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseTlsKey
+            {{- end }}
           args:
             - "/app/dist/bin/db-migrate.js"
