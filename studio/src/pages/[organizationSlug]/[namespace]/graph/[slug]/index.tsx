@@ -88,6 +88,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     isComposable,
     compositionErrors,
     name,
+    namespace,
   } = graphData.graph;
 
   const validGraph = isComposable && !!lastUpdatedAt;
@@ -219,7 +220,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 open={open}
                 setOpen={setOpen}
                 graphName={name}
-                token={graphData.graphToken}
+                namespace={namespace}
                 triggerLabel="Run router locally"
                 triggerClassName="mt-3 w-full"
               />

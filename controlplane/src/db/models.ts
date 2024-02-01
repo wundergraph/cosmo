@@ -31,7 +31,8 @@ export type AuditableType =
   | 'member_role'
   | 'user'
   | 'subscription'
-  | 'namespace';
+  | 'namespace'
+  | 'router_config';
 
 export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'user';
 
@@ -48,7 +49,8 @@ export type AuditLogAction =
   | 'canceled'
   | 'activated'
   | 'upgraded'
-  | 'left';
+  | 'left'
+  | 'fetched';
 
 export type AuditLogFullAction =
   | 'namespace.created'
@@ -87,4 +89,5 @@ export type AuditLogFullAction =
   | 'organization.left'
   | 'organization_invitation.declined'
   | 'organization_member.deleted'
-  | 'member_role.updated';
+  | 'member_role.updated'
+  | 'router_config.fetched';

@@ -190,13 +190,20 @@ describe('Router Config', (ctx) => {
     expect(graph.graph?.isComposable).toBe(true);
     expect(graph.graph?.compositionErrors).toBe('');
 
+    const tokenResp = await client.generateRouterToken({
+      fedGraphName,
+      namespace: 'default',
+    });
+
+    expect(tokenResp.response?.code).toBe(EnumStatusCode.OK);
+
     const resp = await nodeClient.getLatestValidRouterConfig(
       {
         graphName: fedGraphName,
       },
       {
         headers: {
-          Authorization: `Bearer ${graph.graphToken}`,
+          Authorization: `Bearer ${tokenResp.token}`,
         },
       },
     );
@@ -287,13 +294,20 @@ describe('Router Config', (ctx) => {
     );
     expect(graph.graph?.isComposable).toBe(false);
 
+    const tokenResp = await client.generateRouterToken({
+      fedGraphName,
+      namespace: 'default',
+    });
+
+    expect(tokenResp.response?.code).toBe(EnumStatusCode.OK);
+
     let resp = await nodeClient.getLatestValidRouterConfig(
       {
         graphName: fedGraphName,
       },
       {
         headers: {
-          Authorization: `Bearer ${graph.graphToken}`,
+          Authorization: `Bearer ${tokenResp.token}`,
         },
       },
     );
@@ -329,7 +343,7 @@ describe('Router Config', (ctx) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${graph.graphToken}`,
+          Authorization: `Bearer ${tokenResp.token}`,
         },
       },
     );

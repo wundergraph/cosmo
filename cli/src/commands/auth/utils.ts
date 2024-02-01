@@ -14,6 +14,13 @@ export interface KeycloakToken {
   refreshExpiresAt: Date;
 }
 
+export interface GraphToken {
+  iss?: string;
+  iat?: number;
+  federated_graph_id: string;
+  organization_id: string;
+}
+
 export interface DecodedAccessToken {
   iss?: string;
   sub?: string;

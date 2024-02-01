@@ -105,6 +105,7 @@ import {
   RenameNamespaceResponse,
   GetNamespacesResponse,
   MoveGraphResponse,
+  GenerateRouterTokenResponse,
   UpdateAISettingsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
@@ -3170,6 +3171,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
         });
 
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'graph_token.created',
+          action: 'created',
+          actorId: authContext.userId,
+          targetId: migratedGraph.id,
+          targetDisplayName: migratedGraph.name,
+          targetType: 'federated_graph',
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          auditableDisplayName: token.name,
+          auditableType: 'graph_token',
+          targetNamespaceId: migratedGraph.namespaceId,
+          targetNamespaceDisplayName: migratedGraph.namespace,
+        });
+
         opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_SUCCESS, {
           federated_graph: {
             id: migratedGraph.id,
@@ -5051,7 +5068,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!federatedGraph) {
           return {
             subgraphs: [],
-            graphToken: '',
             graphRequestToken: '',
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -5079,7 +5095,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!routerRequestToken) {
           return {
             subgraphs: [],
-            graphToken: '',
             graphRequestToken: '',
             response: {
               code: EnumStatusCode.ERR,
@@ -5088,49 +5103,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const tokens = await fedRepo.getRouterTokens({
-          organizationId: authContext.organizationId,
-          federatedGraphId: federatedGraph.id,
-          limit: 1,
-        });
-
-        let graphToken: GraphApiKeyDTO;
-
-        if (tokens.length === 0) {
-          const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
-            secret: opts.jwtSecret,
-            token: {
-              iss: authContext.userId,
-              federated_graph_id: federatedGraph.id,
-              organization_id: authContext.organizationId,
-            },
-          });
-
-          graphToken = await fedRepo.createToken({
-            token: tokenValue,
-            federatedGraphId: federatedGraph.id,
-            tokenName: federatedGraph.name,
-            organizationId: authContext.organizationId,
-          });
-
-          await auditLogRepo.addAuditLog({
-            organizationId: authContext.organizationId,
-            auditAction: 'graph_token.created',
-            action: 'created',
-            actorId: authContext.userId,
-            targetId: federatedGraph.id,
-            targetType: 'federated_graph',
-            targetDisplayName: federatedGraph.name,
-            auditableType: 'graph_token',
-            actorDisplayName: authContext.userDisplayName,
-            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-            auditableDisplayName: graphToken.name,
-            targetNamespaceId: federatedGraph.namespaceId,
-            targetNamespaceDisplayName: federatedGraph.namespace,
-          });
-        } else {
-          graphToken = tokens[0];
-        }
         return {
           graph: {
             id: federatedGraph.id,
@@ -5156,7 +5128,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionUrl: g.subscriptionUrl,
             namespace: g.namespace,
           })),
-          graphToken: graphToken.token,
           graphRequestToken: routerRequestToken,
           response: {
             code: EnumStatusCode.OK,
@@ -5886,6 +5857,77 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    // generates a temporary router token to fetch the router config only. Should only be used while fetching router config.
+    generateRouterToken: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GenerateRouterTokenResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            token: '',
+          };
+        }
+
+        const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
+
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' not found`,
+            },
+            token: '',
+          };
+        }
+
+        const expTime = Math.floor(Date.now() / 1000) + 5 * 60;
+
+        const token = await signJwt<GraphApiKeyJwtPayload>({
+          secret: opts.jwtSecret,
+          token: {
+            iss: authContext.userId,
+            federated_graph_id: federatedGraph.id,
+            organization_id: authContext.organizationId,
+            exp: expTime,
+          },
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'router_config.fetched',
+          action: 'fetched',
+          actorId: authContext.userId,
+          targetType: 'federated_graph',
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          auditableDisplayName: federatedGraph.name,
+          auditableType: 'router_config',
+          targetNamespaceId: federatedGraph.namespaceId,
+          targetNamespaceDisplayName: federatedGraph.namespace,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          token,
+        };
+      });
+    },
+
     getRouterTokens: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -5897,6 +5939,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            tokens: [],
+          };
+        }
 
         const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
         if (!federatedGraph) {

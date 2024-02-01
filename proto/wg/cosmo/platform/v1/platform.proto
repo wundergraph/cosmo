@@ -238,8 +238,7 @@ message GetFederatedGraphByNameResponse {
   Response response = 1;
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
-  string graphToken = 4;
-  string graphRequestToken = 5;
+  string graphRequestToken = 4;
 }
 
 message GetFederatedGraphSDLByNameRequest {
@@ -770,6 +769,16 @@ message RouterToken {
   string name = 2;
   string token = 3;
   string createdAt = 4;
+}
+
+message GenerateRouterTokenRequest {
+  string fedGraphName = 1;
+  string namespace = 2;
+}
+
+message GenerateRouterTokenResponse {
+  Response response = 1;
+  string token = 2;
 }
 
 message GetRouterTokensRequest {
@@ -1660,6 +1669,8 @@ service PlatformService {
   rpc CheckFederatedGraph(CheckFederatedGraphRequest) returns (CheckFederatedGraphResponse) {}
   // WhoAmI returns the identity of the user currently logged in.
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {}
+  // GenerateRouterToken generates a temporary router token to fetch the router config.
+  rpc GenerateRouterToken(GenerateRouterTokenRequest) returns (GenerateRouterTokenResponse) {}
   // GetRouterTokens returns the router tokens of a federated graph.
   rpc GetRouterTokens(GetRouterTokensRequest) returns (GetRouterTokensResponse) {}
   // DeleteRouterToken deletes the router token of a federated graph.
