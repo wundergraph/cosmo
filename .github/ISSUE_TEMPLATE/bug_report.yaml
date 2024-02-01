@@ -23,10 +23,18 @@ body:
         - graphqlmetrics
         - helm
         - cli
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Component version
+      description: What version did you use? (e.g., `v0.4.0`, `1eb551b`, etc.)
+    validations:
+      required: true
   - type: input
     attributes:
       label: wgc version
-      description: What version of wgc are you using? E.g., 0.39.1. (`wgc --version` to check)
+      description: What version of wgc are you using? E.g., `0.39.1`. (`wgc --version` to check)
     validations:
       required: true
   - type: input
@@ -59,12 +67,6 @@ body:
 
         ## Actual Result
 
-    validations:
-      required: true
-  - type: input
-    attributes:
-      label: Component version
-      description: What version did you use? (e.g., `v0.4.0`, `1eb551b`, etc.)
     validations:
       required: true
   - type: textarea
