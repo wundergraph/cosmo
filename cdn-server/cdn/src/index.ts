@@ -57,7 +57,10 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
     try {
       result = await jwtVerify(token, secretKey);
     } catch (e: any) {
-      if (e instanceof Error && (e.name === 'JWSSignatureVerificationFailed' || e.name === 'JWSInvalid')) {
+      if (
+        e instanceof Error &&
+        (e.name === 'JWSSignatureVerificationFailed' || e.name === 'JWSInvalid' || e.name === 'JWTExpired')
+      ) {
         return c.text('Unauthorized', 401);
       }
       throw e;

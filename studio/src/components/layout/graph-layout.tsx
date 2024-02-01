@@ -57,7 +57,6 @@ const icons: { [key: string]: ReactNode } = {
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
   subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
-  graphToken: string;
   graphRequestToken: string;
 }
 
@@ -85,7 +84,6 @@ export const GraphLayout = ({ children }: LayoutProps) => {
     return {
       graph: data.graph,
       subgraphs: data.subgraphs,
-      graphToken: data.graphToken,
       graphRequestToken: data.graphRequestToken,
     };
   }, [data]);
