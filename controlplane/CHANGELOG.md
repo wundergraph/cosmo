@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.61.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.61.0...controlplane@0.61.1) (2024-02-01)
+
+### Bug Fixes
+
+* support tls when migrate ([#479](https://github.com/wundergraph/cosmo/issues/479)) ([4e1b23c](https://github.com/wundergraph/cosmo/commit/4e1b23c052e99e94f516df334adcefe3bcd8caad)) (@StarpTech)
+
 # [0.61.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.60.0...controlplane@0.61.0) (2024-02-01)
 
 ### Bug Fixes
