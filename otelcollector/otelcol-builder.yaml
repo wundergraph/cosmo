@@ -9,6 +9,8 @@ extensions:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.93.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension v0.93.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.93.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.93.0
+    import: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage
 
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.93.0

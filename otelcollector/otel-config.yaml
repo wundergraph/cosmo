@@ -46,6 +46,10 @@ exporters:
       max_elapsed_time: 300s
 
 extensions:
+  # When persistent queue is enabled, the batches are being buffered using the provided storage extension - filestorage is a popular and safe choice.
+  # If the collector instance is killed while having some items in the persistent queue, on restart the items will be picked and the exporting is continued.
+  file_storage/clickhouse:
+    directory: /var/lib/otelcol/file_storage/clickhouse
   health_check:
     path: /health
     endpoint: 0.0.0.0:13133
@@ -53,7 +57,7 @@ extensions:
     secret: ${OTEL_INGEST_JWT_SECRET}
 
 service:
-  extensions: [health_check, jwt]
+  extensions: [health_check, jwt, file_storage/clickhouse]
   pipelines:
     metrics:
       receivers: [otlp]
