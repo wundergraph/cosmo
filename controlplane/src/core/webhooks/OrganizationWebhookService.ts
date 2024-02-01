@@ -116,9 +116,8 @@ export class OrganizationWebhookService {
 
     switch (eventName) {
       case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {
-        const meta = config.meta.find(
-          (m) => m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-        )?.meta;
+        const meta = config.meta.find((m) => m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED)
+          ?.meta;
 
         if (!meta || meta?.case !== 'federatedGraphSchemaUpdated' || meta.value.graphIds?.length === 0) {
           return true;
@@ -141,7 +140,7 @@ export class OrganizationWebhookService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
+            text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
           },
         },
       ],
@@ -153,7 +152,7 @@ export class OrganizationWebhookService {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name}| here> for more details.`,
+                text: `Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name}| here> for more details.`,
               },
             },
           ],
