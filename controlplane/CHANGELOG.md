@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.61.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.60.0...controlplane@0.61.0) (2024-02-01)
+
+### Bug Fixes
+
+* **deps:** upgrade bullmq ([#471](https://github.com/wundergraph/cosmo/issues/471)) ([90231c9](https://github.com/wundergraph/cosmo/commit/90231c9dd3af469dd0e6f6af05468c8e1112fa83)) (@StarpTech)
+* slack notification link ([#478](https://github.com/wundergraph/cosmo/issues/478)) ([e83dfd8](https://github.com/wundergraph/cosmo/commit/e83dfd810cdbfdd927074b727ebab9435e380269)) (@thisisnithin)
+* upgrade otel collector ([#475](https://github.com/wundergraph/cosmo/issues/475)) ([2d33978](https://github.com/wundergraph/cosmo/commit/2d339786d4cc1727b3fb6498606d11a059233b61)) (@StarpTech)
+
+### Features
+
+* integrate S3 when executing "getLatestValidRouterConfig" from the CLI ([#467](https://github.com/wundergraph/cosmo/issues/467)) ([90b7c8e](https://github.com/wundergraph/cosmo/commit/90b7c8ed01bdd659183c87cc2d94946ab20fe073)) (@JivusAyrus)
+
 # [0.60.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.59.0...controlplane@0.60.0) (2024-01-31)
 
 ### Bug Fixes
