@@ -132,7 +132,7 @@ export function buildColumnsFromNames(
  * @param columnMetadata
  * @param coercedFilters
  * @param filterMapper
- * @param dateRange
+ * @param includeDateFilter
  */
 export function buildCoercedFilterSqlStatement(
   columnMetadata: ColumnMetaData,

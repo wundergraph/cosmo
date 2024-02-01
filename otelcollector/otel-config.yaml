@@ -38,6 +38,7 @@ exporters:
     ttl_days: 30
     sending_queue:
       queue_size: 5000
+      storage: file_storage/clickhouse
     retry_on_failure:
       enabled: true
       initial_interval: 5s

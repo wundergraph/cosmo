@@ -681,7 +681,7 @@ export class AnalyticsRequestViewRepository {
       inputFilters,
       this.baseFilters,
     );
-    coercedQueryParams.limit = opts?.pagination?.limit ?? 30;
+    coercedQueryParams.limit = opts?.pagination?.limit ?? 20;
     coercedQueryParams.offset = opts?.pagination?.offset ?? 0;
     if (opts?.dateRange) {
       coercedQueryParams.startDate = Math.floor(new Date(opts.dateRange.start).getTime() / 1000);
