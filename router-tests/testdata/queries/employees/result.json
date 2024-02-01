@@ -7,7 +7,12 @@
           "details": {
             "forename": "Jens",
             "surname": "Neuse",
-            "location": "GERMANY",
+            "location": {
+              "key": {
+                "name": "Germany"
+              },
+              "language": "German"
+            },
             "hasChildren": true,
             "maritalStatus": "MARRIED",
             "nationality": "GERMAN",
@@ -29,11 +34,11 @@
               "category": "SPORT"
             },
             {
+              "yearsOfExperience": 20,
               "genres": [
                 "FPS"
               ],
-              "name": "Counter Strike",
-              "yearsOfExperience": 20
+              "name": "Counter Strike"
             },
             {
               "name": "WunderGraph"
@@ -46,8 +51,12 @@
             },
             {
               "countriesLived": [
-                "ENGLAND",
-                "GERMANY"
+                {
+                  "language": "English"
+                },
+                {
+                  "language": "German"
+                }
               ]
             }
           ],
@@ -65,7 +74,12 @@
           "details": {
             "forename": "Dustin",
             "surname": "Deus",
-            "location": "GERMANY",
+            "location": {
+              "key": {
+                "name": "Germany"
+              },
+              "language": "German"
+            },
             "hasChildren": false,
             "maritalStatus": "ENGAGED",
             "nationality": "GERMAN",
@@ -86,11 +100,11 @@
               "category": "STRENGTH_TRAINING"
             },
             {
+              "yearsOfExperience": 0.5,
               "genres": [
                 "FPS"
               ],
-              "name": "Counter Strike",
-              "yearsOfExperience": 0.5
+              "name": "Counter Strike"
             },
             {
               "languages": [
@@ -110,7 +124,12 @@
           "details": {
             "forename": "Stefan",
             "surname": "Avram",
-            "location": "AMERICA",
+            "location": {
+              "key": {
+                "name": "America"
+              },
+              "language": "English"
+            },
             "hasChildren": false,
             "maritalStatus": "ENGAGED",
             "nationality": "AMERICAN",
@@ -144,8 +163,12 @@
             },
             {
               "countriesLived": [
-                "AMERICA",
-                "SERBIA"
+                {
+                  "language": "English"
+                },
+                {
+                  "language": null
+                }
               ]
             }
           ],
@@ -160,7 +183,12 @@
           "details": {
             "forename": "Björn",
             "surname": "Schwenzer",
-            "location": "GERMANY",
+            "location": {
+              "key": {
+                "name": "Germany"
+              },
+              "language": "German"
+            },
             "hasChildren": true,
             "maritalStatus": "MARRIED",
             "nationality": "GERMAN",
@@ -214,8 +242,12 @@
             },
             {
               "countriesLived": [
-                "AMERICA",
-                "GERMANY"
+                {
+                  "language": "English"
+                },
+                {
+                  "language": "German"
+                }
               ]
             }
           ],
@@ -231,7 +263,12 @@
           "details": {
             "forename": "Sergiy",
             "surname": "Petrunin",
-            "location": "UKRAINE",
+            "location": {
+              "key": {
+                "name": "Ukraine"
+              },
+              "language": "Ukrainian"
+            },
             "hasChildren": false,
             "maritalStatus": "ENGAGED",
             "nationality": "UKRAINIAN",
@@ -329,7 +366,12 @@
           "details": {
             "forename": "Suvij",
             "surname": "Surya",
-            "location": "INDIA",
+            "location": {
+              "key": {
+                "name": "India"
+              },
+              "language": "Hindi"
+            },
             "hasChildren": false,
             "maritalStatus": null,
             "nationality": "INDIAN",
@@ -346,11 +388,11 @@
           },
           "hobbies": [
             {
+              "yearsOfExperience": 9.5,
               "genres": [
                 "BOARD"
               ],
-              "name": "Chess",
-              "yearsOfExperience": 9.5
+              "name": "Chess"
             },
             {
               "name": "Watching anime"
@@ -367,7 +409,12 @@
           "details": {
             "forename": "Nithin",
             "surname": "Kumar",
-            "location": "INDIA",
+            "location": {
+              "key": {
+                "name": "India"
+              },
+              "language": "Hindi"
+            },
             "hasChildren": false,
             "maritalStatus": null,
             "nationality": "INDIAN",
@@ -387,14 +434,14 @@
               "category": "STRENGTH_TRAINING"
             },
             {
+              "yearsOfExperience": 17,
               "genres": [
                 "ADVENTURE",
                 "RPG",
                 "SIMULATION",
                 "STRATEGY"
               ],
-              "name": "Miscellaneous",
-              "yearsOfExperience": 17
+              "name": "Miscellaneous"
             },
             {
               "name": "Watching anime"
@@ -411,7 +458,12 @@
           "details": {
             "forename": "Eelco",
             "surname": "Wiersma",
-            "location": "NETHERLANDS",
+            "location": {
+              "key": {
+                "name": "Netherlands"
+              },
+              "language": "Dutch"
+            },
             "hasChildren": false,
             "maritalStatus": null,
             "nationality": "DUTCH",
@@ -452,12 +504,24 @@
             },
             {
               "countriesLived": [
-                "GERMANY",
-                "INDONESIA",
-                "NETHERLANDS",
-                "PORTUGAL",
-                "SPAIN",
-                "THAILAND"
+                {
+                  "language": "German"
+                },
+                {
+                  "language": "Indonesian"
+                },
+                {
+                  "language": "Dutch"
+                },
+                {
+                  "language": "Portuguese"
+                },
+                {
+                  "language": "Spanish"
+                },
+                {
+                  "language": "Thai"
+                }
               ]
             }
           ],
@@ -473,7 +537,12 @@
           "details": {
             "forename": "Alexandra",
             "surname": "Neuse",
-            "location": "GERMANY",
+            "location": {
+              "key": {
+                "name": "Germany"
+              },
+              "language": "German"
+            },
             "hasChildren": true,
             "maritalStatus": "MARRIED",
             "nationality": "GERMAN",
@@ -505,7 +574,12 @@
           "details": {
             "forename": "David",
             "surname": "Stutt",
-            "location": "ENGLAND",
+            "location": {
+              "key": {
+                "name": "England"
+              },
+              "language": "English"
+            },
             "hasChildren": false,
             "maritalStatus": "MARRIED",
             "nationality": "ENGLISH",
@@ -540,6 +614,7 @@
               "category": "STRENGTH_TRAINING"
             },
             {
+              "yearsOfExperience": 25.5,
               "genres": [
                 "ADVENTURE",
                 "BOARD",
@@ -549,14 +624,19 @@
                 "SIMULATION",
                 "STRATEGY"
               ],
-              "name": "Miscellaneous",
-              "yearsOfExperience": 25.5
+              "name": "Miscellaneous"
             },
             {
               "countriesLived": [
-                "ENGLAND",
-                "KOREA",
-                "TAIWAN"
+                {
+                  "language": "English"
+                },
+                {
+                  "language": "Korean"
+                },
+                {
+                  "language": "Taiwanese"
+                }
               ]
             }
           ],
@@ -569,4 +649,4 @@
         }
       ]
     }
-  }
+}

@@ -96,10 +96,6 @@ type ComplexityRoot struct {
 		UpdatedAt func(childComplexity int) int
 	}
 
-	EmployeesResponse struct {
-		Employees func(childComplexity int) int
-	}
-
 	Engineer struct {
 		Departments  func(childComplexity int) int
 		Employees    func(childComplexity int) int
@@ -182,7 +178,7 @@ type OperatorResolver interface {
 }
 type QueryResolver interface {
 	Employee(ctx context.Context, id int) (*model.Employee, error)
-	Employees(ctx context.Context) (*model.EmployeesResponse, error)
+	Employees(ctx context.Context) ([]*model.Employee, error)
 	Products(ctx context.Context) ([]model.Products, error)
 	Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error)
 }
@@ -362,13 +358,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Employee.UpdatedAt(childComplexity), true
-
-	case "EmployeesResponse.employees":
-		if e.complexity.EmployeesResponse.Employees == nil {
-			break
-		}
-
-		return e.complexity.EmployeesResponse.Employees(childComplexity), true
 
 	case "Engineer.departments":
 		if e.complexity.Engineer.Departments == nil {
@@ -754,13 +743,9 @@ var sources = []*ast.Source{
 
 type Query {
   employee(id: Int!): Employee
-  employees: EmployeesResponse
+  employees: [Employee!]!
   products: [Products!]!
   teammates(team: Department!): [Employee!]!
-}
-
-type EmployeesResponse {
-  employees: [Employee!]!
 }
 
 type Mutation {
@@ -835,6 +820,8 @@ type City {
   country: Country
 }
 
+# Using a nested key field simply because it can showcase potential bug
+# vectors / Federation capabilities.
 type Country @key(fields: "key { name }", resolvable: false) {
   key: CountryKey!
 }
@@ -2195,66 +2182,6 @@ func (ec *executionContext) fieldContext_Employee_startDate(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _EmployeesResponse_employees(ctx context.Context, field graphql.CollectedField, obj *model.EmployeesResponse) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_EmployeesResponse_employees(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Employees, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Employee)
-	fc.Result = res
-	return ec.marshalNEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeeᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_EmployeesResponse_employees(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "EmployeesResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "details":
-				return ec.fieldContext_Employee_details(ctx, field)
-			case "id":
-				return ec.fieldContext_Employee_id(ctx, field)
-			case "tag":
-				return ec.fieldContext_Employee_tag(ctx, field)
-			case "role":
-				return ec.fieldContext_Employee_role(ctx, field)
-			case "notes":
-				return ec.fieldContext_Employee_notes(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Employee_updatedAt(ctx, field)
-			case "startDate":
-				return ec.fieldContext_Employee_startDate(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Engineer_departments(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Engineer_departments(ctx, field)
 	if err != nil {
@@ -3269,11 +3196,14 @@ func (ec *executionContext) _Query_employees(ctx context.Context, field graphql.
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.EmployeesResponse)
+	res := resTmp.([]*model.Employee)
 	fc.Result = res
-	return ec.marshalOEmployeesResponse2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeesResponse(ctx, field.Selections, res)
+	return ec.marshalNEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeeᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_employees(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3284,10 +3214,22 @@ func (ec *executionContext) fieldContext_Query_employees(ctx context.Context, fi
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "employees":
-				return ec.fieldContext_EmployeesResponse_employees(ctx, field)
+			case "details":
+				return ec.fieldContext_Employee_details(ctx, field)
+			case "id":
+				return ec.fieldContext_Employee_id(ctx, field)
+			case "tag":
+				return ec.fieldContext_Employee_tag(ctx, field)
+			case "role":
+				return ec.fieldContext_Employee_role(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type EmployeesResponse", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
 	}
 	return fc, nil
@@ -6270,45 +6212,6 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var employeesResponseImplementors = []string{"EmployeesResponse"}
-
-func (ec *executionContext) _EmployeesResponse(ctx context.Context, sel ast.SelectionSet, obj *model.EmployeesResponse) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, employeesResponseImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("EmployeesResponse")
-		case "employees":
-			out.Values[i] = ec._EmployeesResponse_employees(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var engineerImplementors = []string{"Engineer", "RoleType"}
 
 func (ec *executionContext) _Engineer(ctx context.Context, sel ast.SelectionSet, obj *model.Engineer) graphql.Marshaler {
@@ -6805,6 +6708,9 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_employees(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -8398,13 +8304,6 @@ func (ec *executionContext) marshalOEmployee2ᚖgithubᚗcomᚋwundergraphᚋcos
 		return graphql.Null
 	}
 	return ec._Employee(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOEmployeesResponse2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeesResponse(ctx context.Context, sel ast.SelectionSet, v *model.EmployeesResponse) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._EmployeesResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

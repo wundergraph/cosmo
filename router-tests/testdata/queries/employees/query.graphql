@@ -9,7 +9,12 @@ query {
       forename
       surname
       # resolved through employees subgraph
-      location
+      location {
+        key {
+          name
+        }
+        language
+      }
       # resolved through family subgraph
       hasChildren
       # maritalStatus can return null
@@ -63,7 +68,9 @@ query {
         languages
       }
       ... on Travelling {
-        countriesLived
+        countriesLived {
+          language
+        }
       }
     }
     # resolved through products subgraph

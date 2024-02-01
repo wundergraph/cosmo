@@ -7,7 +7,9 @@
         "details": {
           "forename": "Jens",
           "surname": "Neuse",
-          "location": "GERMANY",
+          "location": {
+            "language": "German"
+          },
           "hasChildren": true,
           "maritalStatus": "MARRIED",
           "nationality": "GERMAN",
@@ -62,7 +64,9 @@
         "details": {
           "forename": "Dustin",
           "surname": "Deus",
-          "location": "GERMANY",
+          "location": {
+            "language": "German"
+          },
           "hasChildren": false,
           "maritalStatus": "ENGAGED",
           "nationality": "GERMAN",
@@ -105,7 +109,9 @@
         "details": {
           "forename": "Stefan",
           "surname": "Avram",
-          "location": "AMERICA",
+          "location": {
+            "language": "English"
+          },
           "hasChildren": false,
           "maritalStatus": "ENGAGED",
           "nationality": "AMERICAN",
@@ -153,7 +159,9 @@
         "details": {
           "forename": "Björn",
           "surname": "Schwenzer",
-          "location": "GERMANY",
+          "location": {
+            "language": "German"
+          },
           "hasChildren": true,
           "maritalStatus": "MARRIED",
           "nationality": "GERMAN",
@@ -221,7 +229,9 @@
         "details": {
           "forename": "Sergiy",
           "surname": "Petrunin",
-          "location": "UKRAINE",
+          "location": {
+            "language": "Ukrainian"
+          },
           "hasChildren": false,
           "maritalStatus": "ENGAGED",
           "nationality": "UKRAINIAN",
@@ -317,7 +327,9 @@
         "details": {
           "forename": "Suvij",
           "surname": "Surya",
-          "location": "INDIA",
+          "location": {
+            "language": "Hindi"
+          },
           "hasChildren": false,
           "maritalStatus": null,
           "nationality": "INDIAN",
@@ -353,7 +365,9 @@
         "details": {
           "forename": "Nithin",
           "surname": "Kumar",
-          "location": "INDIA",
+          "location": {
+            "language": "Hindi"
+          },
           "hasChildren": false,
           "maritalStatus": null,
           "nationality": "INDIAN",
@@ -395,7 +409,9 @@
         "details": {
           "forename": "Eelco",
           "surname": "Wiersma",
-          "location": "NETHERLANDS",
+          "location": {
+            "language": "Dutch"
+          },
           "hasChildren": false,
           "maritalStatus": null,
           "nationality": "DUTCH",
@@ -455,7 +471,9 @@
         "details": {
           "forename": "Alexandra",
           "surname": "Neuse",
-          "location": "GERMANY",
+          "location": {
+            "language": "German"
+          },
           "hasChildren": true,
           "maritalStatus": "MARRIED",
           "nationality": "GERMAN",
@@ -485,7 +503,9 @@
         "details": {
           "forename": "David",
           "surname": "Stutt",
-          "location": "ENGLAND",
+          "location": {
+            "language": "English"
+          },
           "hasChildren": false,
           "maritalStatus": "MARRIED",
           "nationality": "ENGLISH",
@@ -550,7 +570,9 @@
       "id": 1,
       "details": {
         "forename": "Jens",
-        "location": "GERMANY"
+        "location": {
+          "language": "German"
+        }
       }
     },
     "teammates": [

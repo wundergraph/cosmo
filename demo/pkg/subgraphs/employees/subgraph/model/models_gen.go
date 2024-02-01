@@ -103,10 +103,6 @@ func (this Employee) GetID() int { return this.ID }
 
 func (Employee) IsEntity() {}
 
-type EmployeesResponse struct {
-	Employees []*Employee `json:"employees"`
-}
-
 type Engineer struct {
 	Departments  []Department `json:"departments"`
 	Title        []string     `json:"title"`

@@ -84,7 +84,7 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 }
 
 // Employees is the resolver for the employees field.
-func (r *queryResolver) Employees(ctx context.Context) (*model.EmployeesResponse, error) {
+func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error) {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
@@ -100,9 +100,7 @@ func (r *queryResolver) Employees(ctx context.Context) (*model.EmployeesResponse
 			StartDate: employee.StartDate,
 		}
 	}
-	return &model.EmployeesResponse{
-		Employees: out,
-	}, nil
+	return out, nil
 }
 
 // Products is the resolver for the products field.
