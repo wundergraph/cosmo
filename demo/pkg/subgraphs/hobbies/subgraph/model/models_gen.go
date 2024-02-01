@@ -28,17 +28,9 @@ type CountryKey struct {
 	Name string `json:"name"`
 }
 
-type Details struct {
+type Employee struct {
 	ID      int     `json:"id"`
 	Hobbies []Hobby `json:"hobbies,omitempty"`
-}
-
-func (Details) IsEntity() {}
-
-type Employee struct {
-	ID      int      `json:"id"`
-	Hobbies []Hobby  `json:"hobbies,omitempty"`
-	Details *Details `json:"details"`
 }
 
 func (Employee) IsEntity() {}

@@ -11,11 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies/subgraph/model"
 )
 
-// Details is the resolver for the details field.
-func (r *employeeResolver) Details(ctx context.Context, obj *model.Employee) (*model.Details, error) {
-	return r.Resolver.FindDetailsByID(obj.ID)
-}
-
 // Employees is the resolver for the employees field.
 func (r *exerciseResolver) Employees(ctx context.Context, obj *model.Exercise) ([]*model.Employee, error) {
 	return r.Resolver.Employees(obj)
@@ -46,9 +41,6 @@ func (r *travellingResolver) Employees(ctx context.Context, obj *model.Travellin
 	return r.Resolver.Employees(obj)
 }
 
-// Employee returns generated.EmployeeResolver implementation.
-func (r *Resolver) Employee() generated.EmployeeResolver { return &employeeResolver{r} }
-
 // Exercise returns generated.ExerciseResolver implementation.
 func (r *Resolver) Exercise() generated.ExerciseResolver { return &exerciseResolver{r} }
 
@@ -67,7 +59,6 @@ func (r *Resolver) Programming() generated.ProgrammingResolver { return &program
 // Travelling returns generated.TravellingResolver implementation.
 func (r *Resolver) Travelling() generated.TravellingResolver { return &travellingResolver{r} }
 
-type employeeResolver struct{ *Resolver }
 type exerciseResolver struct{ *Resolver }
 type flyingResolver struct{ *Resolver }
 type gamingResolver struct{ *Resolver }
