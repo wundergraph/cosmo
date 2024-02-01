@@ -23,11 +23,34 @@ body:
         - graphqlmetrics
         - helm
         - cli
+  - type: input
+    attributes:
+      label: wgc version
+      description: What version of wgc are you using? E.g., 0.39.1. (`wgc --version` to check)
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: controlplane version
+      description: What version of the controlplane are you using if self-hosted? E.g., `0.55.0`. If using Cosmo Cloud, please write "cloud".
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: router version
+      description: What version of the router are you using ? E.g., `0.60.0`.
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: What happened?
       description: Please provide as much detail as you reasonably can.
       value: |
+        ## If possible, please create a PR with a failing test to illustrate the issue clearly.
+        ## Otherwise, please attach a minimum reproduction through a GitHub repository that includes
+        ## essential information such as the relevant subgraph SDLs.
+        ## Please also make sure that the instructions for the reproduction are clear, tested, and fully accurate.
+        
         ## Description
 
         ## Steps to Reproduce
@@ -41,7 +64,7 @@ body:
   - type: input
     attributes:
       label: Component version
-      description: What version did you use? (e.g., `v0.4.0`, `1eb551b`, etc)
+      description: What version did you use? (e.g., `v0.4.0`, `1eb551b`, etc.)
     validations:
       required: true
   - type: textarea
