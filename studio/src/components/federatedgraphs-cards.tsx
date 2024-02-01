@@ -262,6 +262,7 @@ export const RunRouterCommand = ({
   open,
   setOpen,
   graphName,
+  namespace,
   token,
   triggerLabel,
   triggerClassName,
@@ -270,7 +271,8 @@ export const RunRouterCommand = ({
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
   graphName: string;
-  token: string;
+  namespace?: string;
+  token?: string;
   triggerLabel?: string;
   triggerClassName?: string;
   hint?: string;
@@ -283,10 +285,40 @@ export const RunRouterCommand = ({
   --platform=linux/amd64 \\
   -e DEV_MODE=true \\
   -e LISTEN_ADDR=0.0.0.0:3002 \\
-  -e GRAPH_API_TOKEN=${token} \\
+  -e GRAPH_API_TOKEN=${token ? token : "<graph-api-token>"} \\
   ghcr.io/wundergraph/cosmo/router:latest`;
 
+  const dockerRunCmdElement = (
+    <div className="flex flex-col">
+      <span>docker run \</span>
+      <span>{`  --name cosmo-router \\`}</span>
+      <span>{`  --rm \\`}</span>
+      <span>{`  -p 3002:3002 \\`}</span>
+      <span>{`  --add-host=host.docker.internal:host-gateway \\`}</span>
+      <span>{`  --platform=linux/amd64 \\`}</span>
+      <span>{`  -e DEV_MODE=true \\`}</span>
+      <span>{`  -e LISTEN_ADDR=0.0.0.0:3002 \\`}</span>
+      <span>
+        <span>{`  -e GRAPH_API_TOKEN=`}</span>
+        <span>
+          {token ? (
+            token
+          ) : (
+            <span className="font-bold text-white">{"<graph-api-token>"}</span>
+          )}{" "}
+          \
+        </span>
+      </span>
+      <span>{`  ghcr.io/wundergraph/cosmo/router:latest`}</span>
+    </div>
+  );
+
+  const createTokenCommand = `npx wgc router token create <name> ${
+    namespace ? `-n ${namespace}` : ""
+  } -g ${graphName}`;
+
   const [copyDockerCommand, setCopyDockerCommand] = useState(false);
+  const [copyTokenCommand, setCopyTokenCommand] = useState(false);
 
   useEffect(() => {
     if (copyDockerCommand) {
@@ -295,6 +327,14 @@ export const RunRouterCommand = ({
       return () => clearTimeout(to);
     }
   }, [dockerRunCommand, copyDockerCommand]);
+
+  useEffect(() => {
+    if (copyTokenCommand) {
+      copy(createTokenCommand);
+      const to = setTimeout(setCopyTokenCommand, 1000, false);
+      return () => clearTimeout(to);
+    }
+  }, [createTokenCommand, copyTokenCommand]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -319,9 +359,49 @@ export const RunRouterCommand = ({
           <DialogTitle>Router Initiation</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-y-4 pt-2">
+          {!token && (
+            <div>
+              <p className="pb-2 text-sm">
+                {`1. Create a Graph API Token using the below command. `}
+                <Link
+                  href={docsBaseURL + "/cli/router/token/create"}
+                  className="text-sm text-primary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Learn more
+                </Link>
+              </p>
+              <div className="flex items-center justify-between rounded border border-input bg-background p-4">
+                <code className="break-word whitespace-pre-wrap rounded font-mono text-xs leading-normal text-muted-foreground">
+                  {`npx wgc router token create `}
+                  <span className="font-bold text-white">{"<name>"}</span>
+                  {` ${namespace ? `-n ${namespace}` : ""} -g ${graphName}`}
+                </code>
+                <Button
+                  asChild={true}
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setCopyTokenCommand(true)}
+                  className="cursor-pointer"
+                >
+                  <div>
+                    {copyTokenCommand ? (
+                      <FiCheck className="text-xs" />
+                    ) : (
+                      <FiCopy className="text-xs" />
+                    )}
+                  </div>
+                </Button>
+              </div>
+            </div>
+          )}
           <div>
             <p className="pb-2 text-sm">
-              Use the below command to initiate the router.{" "}
+              {token
+                ? "Use the below command to initiate the router. "
+                : `2. Pass the token as GRAPH_API_TOKEN and run the below command to initiate the
+              router. `}
               <Link
                 href={docsBaseURL + "/router/deployment"}
                 className="text-sm text-primary"
@@ -333,7 +413,7 @@ export const RunRouterCommand = ({
             </p>
             <div className="flex justify-between rounded border border-input bg-background p-4">
               <code className="whitespace-pre-wrap break-all rounded font-mono text-xs leading-normal text-muted-foreground">
-                {dockerRunCommand}
+                {dockerRunCmdElement}
               </code>
               <Button
                 asChild={true}
