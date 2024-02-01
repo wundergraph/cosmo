@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.58.0](https://github.com/wundergraph/cosmo/compare/studio@0.57.0...studio@0.58.0) (2024-02-01)
+
+### Features
+
+* integrate S3 when executing "getLatestValidRouterConfig" from the CLI ([#467](https://github.com/wundergraph/cosmo/issues/467)) ([90b7c8e](https://github.com/wundergraph/cosmo/commit/90b7c8ed01bdd659183c87cc2d94946ab20fe073)) (@JivusAyrus)
+
 # [0.57.0](https://github.com/wundergraph/cosmo/compare/studio@0.56.0...studio@0.57.0) (2024-01-31)
 
 ### Features
