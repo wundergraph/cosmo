@@ -20,7 +20,9 @@ COPY --from=builder /app/otelcol-dev/otelcol /otelcol
 
 # directory we use for clickhouse data for the file_storage extension
 RUN mkdir -p "/var/lib/otelcol/file_storage/clickhouse" \
-    && chmod -R 755 "/var/lib/otelcol/file_storage/clickhouse"
+    && chmod -R 755 "/var/lib/otelcol/file_storage/clickhouse" \
+
+# smoke test
 RUN /otelcol --version
 
 
