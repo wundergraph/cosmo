@@ -97,8 +97,8 @@ type Details @key(fields: "id") {
 }
 
 type Employee @key(fields: "id") {
-  details: Details! @shareable
   id: Int!
+  details: Details! @shareable
 }
 
 input SearchInput {

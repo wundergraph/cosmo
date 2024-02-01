@@ -1,7 +1,7 @@
 directive @goField(
-	forceResolver: Boolean
-	name: String
-	omittable: Boolean
+  forceResolver: Boolean
+  name: String
+  omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
 enum ExerciseType {
@@ -11,20 +11,20 @@ enum ExerciseType {
   STRENGTH_TRAINING
 }
 
-# type Exercise implements Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   category: ExerciseType!
-# }
+type Exercise implements Hobby {
+  employees: [Employee!]! @goField(forceResolver: true)
+  category: ExerciseType!
+}
 
 interface Experience {
   yearsOfExperience: Float!
 }
 
-# type Flying implements Experience & Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   planeModels: [String!]!
-#   yearsOfExperience: Float!
-# }
+type Flying implements Experience & Hobby {
+  employees: [Employee!]! @goField(forceResolver: true)
+  planeModels: [String!]!
+  yearsOfExperience: Float!
+}
 
 enum GameGenre {
   ADVENTURE
@@ -37,17 +37,17 @@ enum GameGenre {
   STRATEGY
 }
 
-# type Gaming implements Experience & Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   genres: [GameGenre!]!
-#   name: String!
-#   yearsOfExperience: Float!
-# }
+type Gaming implements Experience & Hobby {
+  employees: [Employee!]! @goField(forceResolver: true)
+  genres: [GameGenre!]!
+  name: String!
+  yearsOfExperience: Float!
+}
 
-# type Other implements Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   name: String!
-# }
+type Other implements Hobby {
+  employees: [Employee!]! @goField(forceResolver: true)
+  name: String!
+}
 
 enum ProgrammingLanguage {
   CSHARP
@@ -56,23 +56,35 @@ enum ProgrammingLanguage {
   TYPESCRIPT
 }
 
-# type Programming implements Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   languages: [ProgrammingLanguage!]!
-# }
+type Programming implements Hobby {
+  employees: [Employee!]! @goField(forceResolver: true)
+  languages: [ProgrammingLanguage!]!
+}
 
-# type Country @key(fields: "name", resolvable: false) {
-#   name: String!
-# }
+# Using a nested key field simply because it can showcase potential bug
+# vectors / Federation capabilities.
+type Country @key(fields: "key { name }", resolvable: false) {
+  key: CountryKey!
+}
 
-# type Travelling implements Hobby {
-#   employees: [Employee!]! @goField(forceResolver: true)
-#   countriesLived: [Country!]!
-# }
+type CountryKey {
+  name: String!
+}
 
-type Hobby {
-  type: String!
-  # employees: [Employee!]! @goField(forceResolver: true)
+type Travelling implements Hobby {
+  employees: [Employee!]! @goField(forceResolver: true)
+  countriesLived: [Country!]!
+}
+
+interface Hobby {
+  employees: [Employee!]! @goField(forceResolver: true)
+}
+
+# Hobbies is on both Employee and details because it exposed a bug
+type Employee @key(fields: "id") {
+  id: Int!
+  hobbies: [Hobby!]
+  details: Details! @shareable @goField(forceResolver: true)
 }
 
 type Details @key(fields: "id") {

@@ -13,6 +13,11 @@ import (
 
 // FindDetailsByID is the resolver for the findDetailsByID field.
 func (r *entityResolver) FindDetailsByID(ctx context.Context, id int) (*model.Details, error) {
+	return r.Resolver.FindDetailsByID(id)
+}
+
+// FindEmployeeByID is the resolver for the findEmployeeByID field.
+func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
 	for _, detail := range employees {
 		if id == detail.ID {
 			return detail, nil

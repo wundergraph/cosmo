@@ -100,6 +100,26 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 				list[idx[i]] = entity
 				return nil
 			}
+		case "Employee":
+			resolverName, err := entityResolverNameForEmployee(ctx, rep)
+			if err != nil {
+				return fmt.Errorf(`finding resolver for Entity "Employee": %w`, err)
+			}
+			switch resolverName {
+
+			case "findEmployeeByID":
+				id0, err := ec.unmarshalNInt2int(ctx, rep["id"])
+				if err != nil {
+					return fmt.Errorf(`unmarshalling param 0 for findEmployeeByID(): %w`, err)
+				}
+				entity, err := ec.resolvers.Entity().FindEmployeeByID(ctx, id0)
+				if err != nil {
+					return fmt.Errorf(`resolving Entity "Employee": %w`, err)
+				}
+
+				list[idx[i]] = entity
+				return nil
+			}
 		case "SDK":
 			resolverName, err := entityResolverNameForSDK(ctx, rep)
 			if err != nil {
@@ -204,6 +224,23 @@ func entityResolverNameForDetails(ctx context.Context, rep map[string]interface{
 		return "findDetailsByID", nil
 	}
 	return "", fmt.Errorf("%w for Details", ErrTypeNotFound)
+}
+
+func entityResolverNameForEmployee(ctx context.Context, rep map[string]interface{}) (string, error) {
+	for {
+		var (
+			m   map[string]interface{}
+			val interface{}
+			ok  bool
+		)
+		_ = val
+		m = rep
+		if _, ok = m["id"]; !ok {
+			break
+		}
+		return "findEmployeeByID", nil
+	}
+	return "", fmt.Errorf("%w for Employee", ErrTypeNotFound)
 }
 
 func entityResolverNameForSDK(ctx context.Context, rep map[string]interface{}) (string, error) {

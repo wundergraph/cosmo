@@ -15,8 +15,22 @@ type Resolver struct {
 	NC *nats.Conn
 }
 
-func (r *Resolver) Details(hobby *model.Hobby) ([]*model.Details, error) {
-	var res []*model.Details
+// FindDetailsByID is the resolver for the findDetailsByID field.
+func (r *Resolver) FindDetailsByID(id int) (*model.Details, error) {
+	for _, employee := range employees {
+		if id == employee.ID {
+			return &model.Details{
+				ID:      employee.ID,
+				Hobbies: employee.Hobbies,
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (r *Resolver) Employees(hobby model.Hobby) ([]*model.Employee, error) {
+	var res []*model.Employee
 	for _, employee := range employees {
 		for _, curHobby := range employee.Hobbies {
 			if isSameType(hobby, curHobby) {
