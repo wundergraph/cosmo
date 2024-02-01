@@ -78,8 +78,8 @@ func (this Dog) GetName() string   { return this.Name }
 func (Dog) IsAnimal() {}
 
 type Employee struct {
-	Details *Details `json:"details"`
 	ID      int      `json:"id"`
+	Details *Details `json:"details"`
 }
 
 func (Employee) IsEntity() {}

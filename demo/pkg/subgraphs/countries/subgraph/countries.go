@@ -51,6 +51,12 @@ var countries = []*model.Country{
 	},
 	{
 		Key: &model.CountryKey{
+			Name: "Serbia",
+		},
+		Language: strToPtr("Serbian"),
+	},
+	{
+		Key: &model.CountryKey{
 			Name: "Ukraine",
 		},
 		Language: strToPtr("Ukrainian"),

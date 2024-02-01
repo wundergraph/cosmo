@@ -6,11 +6,11 @@ query {
     details {
       forename
       location {
-        key {
-          name
-        }
         language
       }
+    }
+    hobbies {
+      __typename
     }
   }
   teammates(team: OPERATIONS) {
