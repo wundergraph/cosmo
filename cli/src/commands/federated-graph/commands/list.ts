@@ -78,7 +78,7 @@ export default (opts: BaseCommandOptions) => {
         pc.bold(pc.white('IS_COMPOSABLE')),
         pc.bold(pc.white('UPDATED_AT')),
       ],
-      colAligns: ['left', 'left', 'left', 'center'],
+      colAligns: ['left', 'left', 'left', 'left', 'center', 'left'],
       colWidths: [25, 25, 40, 70, 15, 30],
       wordWrap: true,
     });

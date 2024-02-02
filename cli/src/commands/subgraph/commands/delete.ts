@@ -43,7 +43,7 @@ export default (opts: BaseCommandOptions) => {
           pc.bold(pc.white('NAMESPACE')),
           pc.bold(pc.white('ERROR_MESSAGE')),
         ],
-        colWidths: [30, 120],
+        colWidths: [30, 30, 120],
         wordWrap: true,
       });
 

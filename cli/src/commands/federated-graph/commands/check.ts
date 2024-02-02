@@ -46,7 +46,7 @@ export default (opts: BaseCommandOptions) => {
         pc.bold(pc.white('URL')),
         pc.bold(pc.white('LABELS')),
       ],
-      colWidths: [30, 40, 50],
+      colWidths: [30, 30, 40, 50],
       wordWrap: true,
     });
 
