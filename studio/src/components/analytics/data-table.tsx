@@ -17,7 +17,10 @@ import {
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDownIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
   ColumnFiltersState,
@@ -59,6 +62,13 @@ import { getDataTableFilters } from "./getDataTableFilters";
 import { RefreshInterval, refreshIntervals } from "./refresh-interval";
 import { useApplyParams } from "./use-apply-params";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
+import { HiOutlineCheck } from "react-icons/hi2";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -419,26 +429,59 @@ export function AnalyticsDataTable<T>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  onClick={() => relinkTable(row)}
-                  className={cn("group cursor-pointer hover:bg-secondary/30", {
-                    "bg-secondary/50":
-                      row.original.traceId === router.query.traceID,
-                  })}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    onClick={() => relinkTable(row)}
+                    className={cn(
+                      "group cursor-pointer hover:bg-secondary/30",
+                      {
+                        "bg-secondary/50":
+                          row.original.traceId === router.query.traceID,
+                        "bg-destructive/10":
+                          row.original.statusCode === "STATUS_CODE_ERROR",
+                      },
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      let icon = null;
+
+                      if (cell.column.id === "statusCode") {
+                        if (cell.getValue() === "STATUS_CODE_ERROR") {
+                          icon = (
+                            <TooltipProvider>
+                              <Tooltip delayDuration={300}>
+                                <TooltipTrigger>
+                                  <ExclamationTriangleIcon className="h-4 w-4 text-destructive" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-lg">
+                                  {row.getValue("statusMessage")}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        } else {
+                          icon = <HiOutlineCheck className="h-4 w-4" />;
+                        }
+                      }
+
+                      return (
+                        <TableCell key={cell.id}>
+                          <div className="flex items-center space-x-2">
+                            {icon}
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </div>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })
             ) : isLoading ? (
               <TableRow>
                 <TableCell

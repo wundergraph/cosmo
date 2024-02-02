@@ -66,7 +66,9 @@ const columnConfig: Record<string, Record<string, any>> = {
 const formatColumnData = (data: string | number, type: Unit): ReactNode => {
   if (!data) return "-";
 
-  if (type === Unit.Unspecified) return data;
+  // If the type is unspecified, we just return the data as is in string format
+  // In that way, we format e.g. boolean values as "true" or "false"
+  if (type === Unit.Unspecified) return data.toString();
 
   if (type === Unit.StatusCode) {
     return <span>{mapStatusCode[data]}</span>;
