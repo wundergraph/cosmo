@@ -125,6 +125,14 @@ export class AnalyticsRequestViewRepository {
   };
 
   public baseFilters: BaseFilters = {
+    traceId: {
+      dbField: 'TraceId',
+      dbClause: 'where',
+      columnName: 'traceId',
+      title: 'Trace ID',
+      options: [],
+      customOptions: true,
+    },
     operationName: {
       dbField: 'OperationName',
       dbClause: 'where',
