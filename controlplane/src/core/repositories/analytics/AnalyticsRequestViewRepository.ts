@@ -44,7 +44,7 @@ export class AnalyticsRequestViewRepository {
     },
     statusCode: {
       unit: Unit.StatusCode,
-      title: 'Status Code',
+      title: 'Status',
     },
     statusMessage: {
       title: 'Status Message',
