@@ -72,7 +72,7 @@ export default (opts: BaseCommandOptions) => {
         pc.bold(pc.white('ROUTING_URL')),
         pc.bold(pc.white('UPDATED_AT')),
       ],
-      colWidths: [15, 30, 60, 30],
+      colWidths: [15, 20, 30, 60, 30],
       wordWrap: true,
     });
 
