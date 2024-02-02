@@ -1,0 +1,168 @@
+{
+  "data": {
+    "employees": [
+      {
+        "id": 1,
+        "notes": "Jens notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Gaming"
+          },
+          {
+            "__typename": "Other"
+          },
+          {
+            "__typename": "Programming"
+          },
+          {
+            "__typename": "Travelling"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "notes": "Dustin notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Gaming"
+          },
+          {
+            "__typename": "Programming"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "notes": "Stefan notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Other"
+          },
+          {
+            "__typename": "Travelling"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "notes": "Björn notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Flying"
+          },
+          {
+            "__typename": "Travelling"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "notes": "Sergiy notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Other"
+          },
+          {
+            "__typename": "Other"
+          },
+          {
+            "__typename": "Other"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "notes": "Suvij notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Gaming"
+          },
+          {
+            "__typename": "Other"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "notes": "Nithin notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Gaming"
+          },
+          {
+            "__typename": "Other"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "notes": "Eelco notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Programming"
+          },
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Other"
+          },
+          {
+            "__typename": "Travelling"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "notes": "Alexandra notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Other"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "notes": "David notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Programming"
+          },
+          {
+            "__typename": "Exercise"
+          },
+          {
+            "__typename": "Gaming"
+          },
+          {
+            "__typename": "Travelling"
+          }
+        ]
+      }
+    ]
+  }
+}

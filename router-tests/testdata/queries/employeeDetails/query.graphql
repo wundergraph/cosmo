@@ -1,0 +1,22 @@
+# TODO: This test is failing — the "details" fetch is not running correctly.
+# The call to final call to the employees graph is sending "Employee" as the typename,
+# but then requesting a fragment on Details.
+query {
+  # Fetch from employees subgraph
+  employees {
+    id
+    # Fetch from products subgraph
+    notes
+    # Fetch from hobbies subgraph
+    hobbies {
+      __typename
+      # Fetch from employees subgraph
+      employees {
+        id
+        details {
+          forename
+        }
+      }
+    }
+  }
+}
