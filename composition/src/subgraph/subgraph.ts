@@ -250,6 +250,7 @@ export function walkSubgraphToFederate(
     FieldDefinition: {
       enter(node) {
         const fieldName = node.name.value;
+        // if the field overridden by another graph, do not upsert it
         if (overriddenFieldNames?.has(fieldName)) {
           return false;
         }
