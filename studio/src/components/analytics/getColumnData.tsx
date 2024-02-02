@@ -35,7 +35,7 @@ import { nanoTimestampToTime } from "./charts";
 import { defaultFilterFn } from "./defaultFilterFunction";
 
 export const mapStatusCode: Record<string, string> = {
-  STATUS_CODE_UNSET: "Success",
+  STATUS_CODE_UNSET: "Unset",
   STATUS_CODE_OK: "Success",
   STATUS_CODE_ERROR: "Error",
 };
