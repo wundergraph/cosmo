@@ -1,12 +1,21 @@
-import { DocumentNode, parse, print } from 'graphql';
+import { buildSchema, DocumentNode, GraphQLSchema, lexicographicSortSchema, parse, print } from 'graphql';
 import { Subgraph } from '../../src';
+import { printSchemaWithDirectives } from '@graphql-tools/utils';
 
 export function normalizeString(input: string): string {
   return input.replaceAll(/\n| {2,}/g, '');
 }
 
+export function sortedNormalizedVersionTwoSchemaString(input: string): string {
+  return schemaToSortedNormalizedString(buildSchema(versionTwoPersistedBaseSchema + input));
+}
+
 export function documentNodeToNormalizedString(document: DocumentNode): string {
   return normalizeString(print(document));
+}
+
+export function schemaToSortedNormalizedString(schema: GraphQLSchema): string {
+  return normalizeString(printSchemaWithDirectives(lexicographicSortSchema(schema)));
 }
 
 // The V1 definitions that are required during normalization
@@ -58,6 +67,20 @@ export const versionTwoPersistedBaseSchema =
   
   scalar openfed__Scope
 `;
+
+export const schemaQueryDefinition = `
+schema {
+  query: Query
+}`;
+
+export const versionTwoPersistedDirectiveDefinitions = `
+    directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+    directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+    directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+    directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+`;
+
+export const versionTwoSchemaQueryAndPersistedDirectiveDefinitions = schemaQueryDefinition + versionTwoPersistedDirectiveDefinitions;
 
 export function createSubgraph(name: string, schemaString: string): Subgraph {
   return {

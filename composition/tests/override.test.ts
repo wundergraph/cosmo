@@ -16,11 +16,17 @@ import {
   Subgraph,
   subgraphValidationError,
 } from '../src';
-import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
+import {
+  documentNodeToNormalizedString,
+  schemaToSortedNormalizedString,
+  normalizeString,
+  versionTwoPersistedBaseSchema,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions, sortedNormalizedVersionTwoSchemaString,
+} from './utils/utils';
 import { OVERRIDE } from '../src/utils/string-constants';
 import { invalidOverrideTargetSubgraphNameWarning } from '../src/warnings/warnings';
 
-describe('@override directive Tests', () => {
+describe('@override directive tests', () => {
   test('that a warning is returned if @override targets an unknown subgraph name', () => {
     const { errors, federationResult, warnings } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
@@ -60,98 +66,207 @@ describe('@override directive Tests', () => {
     expect(errors![0]).toStrictEqual(equivalentSourceAndTargetOverrideError('subgraph-q', 'Entity.name'));
   });
 
-  test('that an overridden field does not need to be declared shareable', () => {
+  test('that an overridden field does not need to be declared shareable #1.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(
-        versionTwoPersistedBaseSchema +
-          `
-      type Query {
-        query: Entity!
-      }
-      
-      type Entity {
-        id: ID!
-        age: Int!
-        name: String!
-      }
-    `,
-      ),
-    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
   });
 
-  test('that an overridden field does not need to be declared shareable #1', () => {
+  test('that an overridden field does not need to be declared shareable #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphA]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #2.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(
-        versionTwoPersistedBaseSchema +
-          `
-      type Query {
-        query: Entity!
-      }
-      
-      type Entity {
-        id: ID!
-        age: Int!
-        name: String!
-      }
-    `,
-      ),
-    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
   });
 
-  test('that an overridden field does not need to be declared shareable #2', () => {
+  test('that an overridden field does not need to be declared shareable #2.2', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphI]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(
-        versionTwoPersistedBaseSchema +
-          `
-      type Entity {
-        id: ID!
-        name: String!
-        age: Int!
-      }
-      
-      type Query {
-        query: Entity!
-      }
-    `,
-      ),
-    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
   });
 
-  test('that an overridden field does not need to be declared shareable #3', () => {
+  test('that an overridden field does not need to be declared shareable #3.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ, subgraphK]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(
-        versionTwoPersistedBaseSchema +
-          `
-      type Query {
-        query: Entity!
-      }
-      
-      type Entity {
-        id: ID!
-        age: Int!
-        name: String!
-        number: Int!
-      }
-    `,
-      ),
-    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+          number: Int!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
   });
 
-  test('that an overridden field does not need to be declared shareable #4', () => {
+  test('that an overridden field does not need to be declared shareable #3.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphK, subgraphJ]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+          number: Int!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #3.3', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphI, subgraphK]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+          number: Int!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #3.4', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphK, subgraphI]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+          number: Int!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #3.5', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphK, subgraphI, subgraphJ]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+          number: Int!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #3.6', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphK, subgraphJ, subgraphI]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+          number: Int!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #4.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphL, subgraphM]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(
-        versionTwoPersistedBaseSchema +
-          `
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
        type Entity {
         id: ID!
         name: String!
@@ -160,18 +275,34 @@ describe('@override directive Tests', () => {
       type Query {
         query: Entity!
       }
-    `,
-      ),
-    );
+      
+      scalar openfed__Scope
+    `));
   });
 
-  test('that an overridden field does not need to be declared shareable #5', () => {
+  test('that an overridden field does not need to be declared shareable #4.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphM, subgraphL]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+       type Entity {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        query: Entity!
+      }
+      
+      scalar openfed__Scope
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #5.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphN, subgraphO]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(
-        versionTwoPersistedBaseSchema +
-          `
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
        type Entity {
         id: ID!
         name: String!
@@ -180,18 +311,34 @@ describe('@override directive Tests', () => {
       type Query {
         query: Entity!
       }
-    `,
-      ),
-    );
+
+      scalar openfed__Scope
+    `));
   });
 
-  test('that an overridden field does not need to be declared shareable #6', () => {
+  test('that an overridden field does not need to be declared shareable #5.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphO, subgraphN]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+       type Entity {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        query: Entity!
+      }
+
+      scalar openfed__Scope
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #6.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphP]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(
-        versionTwoPersistedBaseSchema +
-          `
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
         type Entity {
           id: ID!
           name: String!
@@ -200,32 +347,32 @@ describe('@override directive Tests', () => {
         type Query {
           query: Entity!
         }
-    `,
-      ),
-    );
+        
+        scalar openfed__Scope
+    `));
   });
 
-  test('that an overridden field does not need to be declared shareable #7', () => {
+  test('that an overridden field does not need to be declared shareable #6.2', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphP, subgraphE]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(
-        versionTwoPersistedBaseSchema +
-          `
-        type Query {
-          query: Entity!
-        }
-        
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
         type Entity {
           id: ID!
           name: String!
         }
+        
+        type Query {
+          query: Entity!
+        }
+        
+        scalar openfed__Scope
     `,
       ),
     );
   });
 
-  test('that > 1 instance of an un-shareable field returns an error regardless of override', () => {
+  test('that > 1 instance of an un-shareable field returns an error regardless of override #1', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphC, subgraphE]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
@@ -506,6 +653,8 @@ const subgraphM: Subgraph = {
   name: 'subgraph-m',
   url: '',
   definitions: parse(`
+    directive @shareable on FIELD_DEFINITION | OBJECT
+    
     type Entity @key(fields: "id") {
       id: ID!
       name: String!

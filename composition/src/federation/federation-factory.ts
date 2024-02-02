@@ -458,27 +458,6 @@ export class FederationFactory {
     );
   }
 
-  getOverrideTargetSubgraphName(node: FieldDefinitionNode): string {
-    if (!node.directives) {
-      return '';
-    }
-    for (const directive of node.directives) {
-      if (directive.name.value !== OVERRIDE) {
-        continue;
-      }
-      // validation was handled earlier
-      if (!directive.arguments) {
-        return '';
-      }
-      const valueNode = directive.arguments[0].value;
-      if (valueNode.kind !== Kind.STRING) {
-        return '';
-      }
-      return valueNode.value;
-    }
-    return '';
-  }
-
   upsertDirectiveNode(node: DirectiveDefinitionNode) {
     const directiveName = node.name.value;
     const directiveDefinition = this.directiveDefinitions.get(directiveName);
@@ -512,26 +491,19 @@ export class FederationFactory {
     let shareableFields = 0;
     let unshareableFields = 0;
     for (const [subgraphName, isShareable] of fieldContainer.subgraphsByShareable) {
-      if (isShareable) {
-        shareableFields += 1;
-        if (shareableFields && unshareableFields) {
-          return false;
-        }
-        continue;
-      }
+      /*
+        shareability is ignored if:
+        1. the field is external
+        2. the field is overridden by another subgraph (in which case it has not been upserted)
+       */
       if (fieldContainer.subgraphsByExternal.get(subgraphName)) {
         continue;
       }
-      // if the current field is overridden, its shareability doesn't matter
-      if (fieldContainer.overrideTargetSubgraphName === subgraphName) {
-        continue;
-      }
-      // shareability doesn't matter if:
-      // the field has only been seen exactly twice—the target override and the source override
-      if (
-        fieldContainer.subgraphNames.size === 2 &&
-        fieldContainer.subgraphNames.has(fieldContainer.overrideTargetSubgraphName)
-      ) {
+      if (isShareable) {
+        if (unshareableFields) {
+          return false;
+        }
+        shareableFields += 1;
         continue;
       }
       unshareableFields += 1;
@@ -559,12 +531,10 @@ export class FederationFactory {
     const fieldPath = `${this.parentTypeName}.${this.childName}`;
     const fieldRootTypeName = getNamedTypeForChild(fieldPath, node.type);
     const existingFieldContainer = fieldMap.get(this.childName);
-    const targetSubgraph = this.getOverrideTargetSubgraphName(node);
     if (existingFieldContainer) {
       this.extractPersistedDirectives(node.directives || [], existingFieldContainer.directives);
       setLongestDescriptionForNode(existingFieldContainer.node, node.description);
       existingFieldContainer.subgraphNames.add(this.currentSubgraphName);
-      existingFieldContainer.overrideTargetSubgraphName = targetSubgraph;
       existingFieldContainer.subgraphsByShareable.set(this.currentSubgraphName, isFieldShareable);
       existingFieldContainer.subgraphsByExternal.set(this.currentSubgraphName, isFieldExternal);
       const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
@@ -587,7 +557,7 @@ export class FederationFactory {
       /* A field is valid if one of the following is true:
         1. The field is an interface
         2. The field is external
-        3. The existing fields AND the current field are ALL shareable
+        3. Non-external fields are ALL shareable
         4. All other fields besides the current field are external
       */
       if (
@@ -614,7 +584,6 @@ export class FederationFactory {
       isShareable: isFieldShareable,
       node: fieldDefinitionNodeToMutable(node, this.parentTypeName),
       namedTypeName: fieldRootTypeName,
-      overrideTargetSubgraphName: targetSubgraph,
       subgraphNames: new Set<string>([this.currentSubgraphName]),
       subgraphsByShareable: new Map<string, boolean>([[this.currentSubgraphName, isFieldShareable]]),
       subgraphsByExternal: new Map<string, boolean>([[this.currentSubgraphName, isFieldExternal]]),
