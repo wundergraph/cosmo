@@ -201,14 +201,24 @@ export class AnalyticsRequestViewRepository {
       columnName: 'durationInNano',
       options: [
         {
-          operator: AnalyticsViewFilterOperator.GREATER_THAN,
-          label: '> 1s',
-          value: '1000000000',
-        },
-        {
           operator: AnalyticsViewFilterOperator.LESS_THAN,
           label: '< 1s',
           value: '1000000000',
+        },
+        {
+          operator: AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL,
+          label: '>= 1s',
+          value: '1000000000',
+        },
+        {
+          operator: AnalyticsViewFilterOperator.LESS_THAN_OR_EQUAL,
+          label: '< 5s',
+          value: '5000000000',
+        },
+        {
+          operator: AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL,
+          label: '>= 5s',
+          value: '5000000000',
         },
       ],
     },
