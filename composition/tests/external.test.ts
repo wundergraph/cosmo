@@ -9,10 +9,12 @@ import {
 
 describe('External tests', () => {
   test('that @external does not contribute to shareability checks #1.1', () => {
-    const { errors, federationResult} = federateSubgraphs([subgraphA, subgraphB]);
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Entity implements Interface {
         age: Int!
         id: ID!
@@ -38,14 +40,18 @@ describe('External tests', () => {
       }
       
       scalar openfed__Scope
-    `));
+    `,
+      ),
+    );
   });
 
   test('that @external does not contribute to shareability checks #1.2', () => {
-    const { errors, federationResult} = federateSubgraphs([subgraphB, subgraphA]);
+    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphA]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Entity implements Interface {
         age: Int!
         id: ID!
@@ -71,14 +77,18 @@ describe('External tests', () => {
       }
       
       scalar openfed__Scope
-    `));
+    `,
+      ),
+    );
   });
 
   test('that @external does not contribute to shareability checks #2.1', () => {
-    const { errors, federationResult} = federateSubgraphs([subgraphA, subgraphB, subgraphC]);
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB, subgraphC]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -106,14 +116,18 @@ describe('External tests', () => {
       }
       
       scalar openfed__Scope
-    `));
+    `,
+      ),
+    );
   });
 
   test('that @external does not contribute to shareability checks #2.2', () => {
-    const { errors, federationResult} = federateSubgraphs([subgraphA, subgraphC, subgraphB]);
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC, subgraphB]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -141,14 +155,18 @@ describe('External tests', () => {
       }
       
       scalar openfed__Scope
-    `));
+    `,
+      ),
+    );
   });
 
   test('that @external does not contribute to shareability checks #2.3', () => {
-    const { errors, federationResult} = federateSubgraphs([subgraphB, subgraphA, subgraphC]);
+    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphA, subgraphC]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -176,14 +194,18 @@ describe('External tests', () => {
       }
       
       scalar openfed__Scope
-    `));
+    `,
+      ),
+    );
   });
 
   test('that @external does not contribute to shareability checks #2.4', () => {
-    const { errors, federationResult} = federateSubgraphs([subgraphB, subgraphC, subgraphA]);
+    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphC, subgraphA]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -211,14 +233,18 @@ describe('External tests', () => {
       }
       
       scalar openfed__Scope
-    `));
+    `,
+      ),
+    );
   });
 
   test('that @external does not contribute to shareability checks #2.5', () => {
-    const { errors, federationResult} = federateSubgraphs([subgraphC, subgraphA, subgraphB]);
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -246,14 +272,18 @@ describe('External tests', () => {
       }
       
       scalar openfed__Scope
-    `));
+    `,
+      ),
+    );
   });
 
   test('that @external does not contribute to shareability checks #2.6', () => {
-    const { errors, federationResult} = federateSubgraphs([subgraphC, subgraphB, subgraphA]);
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphB, subgraphA]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(versionTwoSchemaQueryAndPersistedDirectiveDefinitions + `
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -281,7 +311,9 @@ describe('External tests', () => {
       }
       
       scalar openfed__Scope
-    `));
+    `,
+      ),
+    );
   });
 });
 
