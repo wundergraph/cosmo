@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/wils0ns/redact"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -40,7 +39,6 @@ type PreHandlerOptions struct {
 	EnableRequestTracing        bool
 	TracerProvider              *sdktrace.TracerProvider
 	FlushTelemetryAfterResponse bool
-	Redactor                    *redact.Inquiry
 	TraceExportVariables        bool
 }
 

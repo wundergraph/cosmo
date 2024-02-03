@@ -30,7 +30,6 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
-	github.com/wils0ns/redact v0.1.0
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.5
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.21.1
