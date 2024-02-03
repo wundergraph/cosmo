@@ -76,15 +76,9 @@ const columnConfig: Record<
     tooltipInfo: (
       <div>
         <ul>
-          <li>
-            <b>OK:</b> The operation completed successfully.
-          </li>
-          <li>
-            <b>Error:</b> The operation contains an error.
-          </li>
-          <li>
-            <b>Unset:</b> The default value. Operation status is not set.
-          </li>
+          <li>OK: The operation was classified as successful.</li>
+          <li>Error: The operation contains an error.</li>
+          <li>Unset: The default value. Operation status was not set.</li>
         </ul>
       </div>
     ),
