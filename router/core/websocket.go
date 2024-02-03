@@ -561,16 +561,30 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
-	operation, err := h.parser.Parse(h.ctx, h.clientInfo, payload, h.logger)
+	parser, err := h.parser.NewParser(payload)
+	defer parser.Free()
 	if err != nil {
 		return nil, nil, err
 	}
-	opContext, err := h.planner.Plan(operation, h.clientInfo, OperationProtocolWS, ParseRequestTraceOptions(h.r))
+
+	if err := parser.Parse(h.ctx, h.clientInfo, h.logger); err != nil {
+		return nil, nil, err
+	}
+
+	if err := parser.Normalize(); err != nil {
+		return nil, nil, err
+	}
+
+	if err := parser.Validate(); err != nil {
+		return nil, nil, err
+	}
+
+	opContext, err := h.planner.Plan(parser.parsedOperation, h.clientInfo, OperationProtocolWS, ParseRequestTraceOptions(h.r))
 	if err != nil {
-		return operation, nil, err
+		return parser.parsedOperation, nil, err
 	}
 	opContext.initialPayload = h.initialPayload
-	return operation, opContext, nil
+	return parser.parsedOperation, opContext, nil
 }
 
 func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, id resolve.SubscriptionIdentifier) {
@@ -579,9 +593,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 
 	_, operationCtx, err := h.parseAndPlan(msg.Payload)
 	if err != nil {
-		werr := h.writeErrorMessage(msg.ID, err)
-		if werr != nil {
-			h.logger.Warn("writing error message", zap.Error(werr))
+		wErr := h.writeErrorMessage(msg.ID, err)
+		if wErr != nil {
+			h.logger.Warn("writing error message", zap.Error(wErr))
 		}
 		return
 	}

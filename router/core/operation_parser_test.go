@@ -64,7 +64,10 @@ func TestOperationParserExtensions(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			_, err := parser.ParseReader(context.Background(), clientInfo, strings.NewReader(tc.Input), log)
+			kit, err := parser.NewParseReader(strings.NewReader(tc.Input))
+			assert.NoError(t, err)
+
+			err = kit.Parse(context.Background(), clientInfo, log)
 			isInputError := errors.As(err, &inputError)
 			if tc.Valid {
 				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)

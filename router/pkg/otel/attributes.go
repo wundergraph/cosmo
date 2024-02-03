@@ -7,6 +7,7 @@ const (
 	WgOperationType               = attribute.Key("wg.operation.type")
 	WgOperationContent            = attribute.Key("wg.operation.content")
 	WgOperationHash               = attribute.Key("wg.operation.hash")
+	WgOperationVariables          = attribute.Key("wg.operation.variables")
 	WgOperationProtocol           = attribute.Key("wg.operation.protocol")
 	WgComponentName               = attribute.Key("wg.component.name")
 	WgClientName                  = attribute.Key("wg.client.name")

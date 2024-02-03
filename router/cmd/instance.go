@@ -179,10 +179,13 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 	}
 
 	return &trace.Config{
-		Enabled:     cfg.Tracing.Enabled,
-		Name:        cfg.ServiceName,
-		Version:     core.Version,
-		Sampler:     cfg.Tracing.SamplingRate,
+		Enabled: cfg.Tracing.Enabled,
+		Name:    cfg.ServiceName,
+		Version: core.Version,
+		Sampler: cfg.Tracing.SamplingRate,
+		ExportGraphQLVariables: trace.ExportGraphQLVariables{
+			Enabled: cfg.Tracing.Compliance.ExportGraphQLVariables,
+		},
 		Exporters:   exporters,
 		Propagators: propagators,
 	}

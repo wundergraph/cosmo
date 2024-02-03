@@ -310,7 +310,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 
 		if r.traceConfig.Enabled {
-			defaultExporter := rtrace.GetDefaultExporter(r.traceConfig)
+			defaultExporter := rtrace.DefaultExporter(r.traceConfig)
 			if defaultExporter != nil {
 				disabledFeatures = append(disabledFeatures, "Cosmo Cloud Tracing")
 				defaultExporter.Disabled = true
@@ -547,7 +547,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
-	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.GetDefaultExporter(r.traceConfig) != nil
+	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
 	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
 
@@ -953,6 +953,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		DevelopmentMode:             r.developmentMode,
 		TracerProvider:              r.tracerProvider,
 		FlushTelemetryAfterResponse: r.awsLambda,
+		TraceExportVariables:        r.traceConfig.ExportGraphQLVariables.Enabled,
 	})
 
 	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{

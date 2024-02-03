@@ -398,11 +398,12 @@ const PlaygroundPortal = () => {
 const PlaygroundPage: NextPageWithLayout = () => {
   const router = useRouter();
   const operation = router.query.operation as string;
+  const variables = router.query.variables as string;
 
   const graphContext = useContext(GraphContext);
 
   const [query, setQuery] = useState<string | undefined>(
-    operation ? atob(operation) : undefined,
+    operation ? decodeURIComponent(operation) : undefined,
   );
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
@@ -548,6 +549,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             showPersistHeadersSettings={false}
             fetcher={fetcher}
             query={query}
+            variables={variables ? decodeURIComponent(variables) : undefined}
             onEditQuery={setQuery}
             headers={headers}
             onEditHeaders={setHeaders}
