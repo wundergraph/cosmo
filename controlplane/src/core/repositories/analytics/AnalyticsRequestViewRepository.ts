@@ -44,7 +44,7 @@ export class AnalyticsRequestViewRepository {
     },
     statusCode: {
       unit: Unit.StatusCode,
-      title: 'Status',
+      title: 'Span Status',
     },
     statusMessage: {
       title: 'Status Message',
@@ -152,7 +152,7 @@ export class AnalyticsRequestViewRepository {
       dbField: 'StatusCode',
       dbClause: 'where',
       columnName: 'statusCode',
-      title: 'Status Code',
+      title: 'Span Status',
       options: [
         {
           operator: AnalyticsViewFilterOperator.EQUALS,
