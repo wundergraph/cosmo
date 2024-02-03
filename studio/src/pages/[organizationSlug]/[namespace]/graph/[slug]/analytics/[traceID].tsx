@@ -91,8 +91,8 @@ export const TracePage: NextPageWithLayout = () => {
       <div className="mb-3 mt-4">
         <div className="mb-1">Operation and Variables</div>
         <div className="text-xs text-muted-foreground">
-          Unless you don't disable variable export in the router, you can see
-          variables here.{" "}
+          Unless you don&apos;t disable variable export in the router, you can
+          see variables here.{" "}
           <a
             target="_blank"
             rel="noreferrer"
