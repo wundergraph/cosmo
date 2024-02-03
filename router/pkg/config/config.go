@@ -38,7 +38,7 @@ type TracingExporter struct {
 	Exporter              otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
 	Endpoint              string              `yaml:"endpoint" validate:"http_url"`
 	HTTPPath              string              `yaml:"path"`
-	Headers               map[string]string   `yaml:"headers" validate:"dive"`
+	Headers               map[string]string   `yaml:"headers"`
 	TracingExporterConfig `yaml:",inline"`
 }
 
