@@ -30,7 +30,7 @@ type TracingExporterConfig struct {
 }
 
 type TracingComplianceConfig struct {
-	ExportGraphQLVariables bool `yaml:"enabled" default:"true" envconfig:"TRACING_COMPLIANCE_EXPORT_GRAPHQL_VARIABLES"`
+	ExportGraphQLVariables bool `yaml:"export_graphql_variables" default:"true" envconfig:"TRACING_COMPLIANCE_EXPORT_GRAPHQL_VARIABLES"`
 }
 
 type TracingExporter struct {
