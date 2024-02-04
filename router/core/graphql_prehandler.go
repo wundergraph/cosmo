@@ -240,17 +240,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		engineValidateSpan.End()
-
-		/**
-		* Plan the operation
-		 */
-
-		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Planning",
-			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
-		)
-
 		if h.enableRequestTracing {
 			if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
 				_, err = jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
@@ -278,6 +267,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if traceOptions.Enable {
 			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
 		}
+
+		engineValidateSpan.End()
+
+		/**
+		* Plan the operation
+		 */
+
+		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Planning",
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
+		)
 
 		opContext, err := h.planner.Plan(parser.parsedOperation, clientInfo, OperationProtocolHTTP, traceOptions)
 

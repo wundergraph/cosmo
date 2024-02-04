@@ -347,7 +347,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	default:
 		return &inputError{
 			message:    "operation type not supported",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusOK,
 		}
 	}
 
