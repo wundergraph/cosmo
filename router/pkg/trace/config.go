@@ -45,7 +45,7 @@ type Config struct {
 	Name string
 	// Version represents the service version for tracing. The default value is dev.
 	Version string
-	// WithNewRoot defines whether to create a new root span for each request. The default value is false.
+	// WithNewRoot specifies that the Span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers.
 	WithNewRoot bool
 	// Sampler represents the sampler for tracing. The default value is 1.
 	Sampler     float64
@@ -76,10 +76,11 @@ func GetDefaultExporter(cfg *Config) *Exporter {
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
-		Enabled: false,
-		Name:    ServerName,
-		Version: serviceVersion,
-		Sampler: 1,
+		Enabled:     false,
+		Name:        ServerName,
+		Version:     serviceVersion,
+		WithNewRoot: false,
+		Sampler:     1,
 		Exporters: []*Exporter{
 			{
 				Disabled:      false,
