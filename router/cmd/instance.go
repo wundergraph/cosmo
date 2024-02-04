@@ -184,7 +184,7 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 		Version: core.Version,
 		Sampler: cfg.Tracing.SamplingRate,
 		ExportGraphQLVariables: trace.ExportGraphQLVariables{
-			Enabled: cfg.Tracing.Compliance.ExportGraphQLVariables,
+			Enabled: cfg.Tracing.ExportGraphQLVariables,
 		},
 		Exporters:   exporters,
 		Propagators: propagators,
