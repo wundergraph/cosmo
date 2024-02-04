@@ -132,6 +132,14 @@ func TestOperationParser(t *testing.T) {
 			Variables:     `{"foo": "bar"}`,
 			ExpectedError: nil,
 		},
+		/**
+		 * Test cases persist operation
+		 */
+		{
+			Input:         `{"operationName": "test", "variables": {"foo": "bar"}, "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}}`,
+			Variables:     `{"foo": "bar"}`,
+			ExpectedError: errors.New("could not resolve persisted query, feature is not configured"),
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc
