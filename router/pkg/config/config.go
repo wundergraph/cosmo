@@ -41,6 +41,7 @@ type TracingExporter struct {
 type Tracing struct {
 	Enabled      bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
 	SamplingRate float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
+	WithNewRoot  bool              `yaml:"with_new_root" default:"false" envconfig:"TRACING_WITH_NEW_ROOT"`
 	Exporters    []TracingExporter `yaml:"exporters"`
 	Propagation  PropagationConfig `yaml:"propagation"`
 }

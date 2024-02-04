@@ -442,6 +442,7 @@ const Trace = ({ spans }: { spans: Span[] }) => {
         span.children = [];
         spanMap.set(span.spanID, span);
 
+        // Figure out the min and max start and end time to draw the timeline
         if (span.timestamp < gStartTimeNano) {
           gStartTimeNano = span.timestamp;
         }
@@ -451,6 +452,7 @@ const Trace = ({ spans }: { spans: Span[] }) => {
         }
       }
 
+      // Add spans to the parent node children array
       for (const span of spans) {
         const parent = spanMap.get(span.parentSpanID);
 

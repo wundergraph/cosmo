@@ -45,6 +45,8 @@ type Config struct {
 	Name string
 	// Version represents the service version for tracing. The default value is dev.
 	Version string
+	// WithNewRoot defines whether to create a new root span for each request. The default value is false.
+	WithNewRoot bool
 	// Sampler represents the sampler for tracing. The default value is 1.
 	Sampler     float64
 	Exporters   []*Exporter

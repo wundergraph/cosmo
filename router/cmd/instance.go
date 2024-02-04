@@ -181,6 +181,7 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 	return &trace.Config{
 		Enabled:     cfg.Tracing.Enabled,
 		Name:        cfg.ServiceName,
+		WithNewRoot: cfg.Tracing.WithNewRoot,
 		Version:     core.Version,
 		Sampler:     cfg.Tracing.SamplingRate,
 		Exporters:   exporters,

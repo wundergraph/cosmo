@@ -47,6 +47,7 @@ export class TraceRepository {
     FROM ${this.client.database}.otel_traces
     WHERE (TraceId = trace_id) AND (Timestamp >= start) AND (Timestamp <= end) AND SpanAttributes['wg.organization.id'] = '${organizationID}'
     ORDER BY Timestamp ASC
+    LIMIT 1000
     `;
 
     const results = await this.client.queryPromise(query);
