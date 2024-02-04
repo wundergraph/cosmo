@@ -44,7 +44,7 @@ export class AnalyticsRequestViewRepository {
     },
     statusCode: {
       unit: Unit.StatusCode,
-      title: 'Span Status',
+      title: 'Status',
     },
     statusMessage: {
       title: 'Status Message',
@@ -63,6 +63,7 @@ export class AnalyticsRequestViewRepository {
     isPersisted: {
       title: 'Persisted',
       type: 'boolean',
+      isHidden: true,
     },
     operationPersistedId: {
       title: 'Operation Persisted ID',
@@ -74,7 +75,7 @@ export class AnalyticsRequestViewRepository {
       unit: Unit.CodeBlock,
     },
     httpStatusCode: {
-      title: 'Http Status Code',
+      title: 'HTTP Status Code',
     },
     httpHost: {
       isHidden: true,
@@ -152,22 +153,12 @@ export class AnalyticsRequestViewRepository {
       dbField: 'StatusCode',
       dbClause: 'where',
       columnName: 'statusCode',
-      title: 'Span Status',
+      title: 'Status',
       options: [
-        {
-          operator: AnalyticsViewFilterOperator.EQUALS,
-          value: 'STATUS_CODE_OK',
-          label: 'Ok',
-        },
         {
           operator: AnalyticsViewFilterOperator.EQUALS,
           value: 'STATUS_CODE_ERROR',
           label: 'Error',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.EQUALS,
-          value: 'STATUS_CODE_UNSET',
-          label: 'Unset',
         },
       ],
     },
@@ -276,7 +267,7 @@ export class AnalyticsRequestViewRepository {
       dbField: 'HttpStatusCode',
       dbClause: 'where',
       columnName: 'httpStatusCode',
-      title: 'Http Status Code',
+      title: 'HTTP Status Code',
       options: [],
     },
   };

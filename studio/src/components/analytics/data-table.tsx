@@ -45,7 +45,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO, subHours } from "date-fns";
 import { useRouter } from "next/router";
-import { useImperativeHandle, useMemo, useState } from "react";
+import { ReactNode, useImperativeHandle, useMemo, useState } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import {
   DatePickerWithRange,
@@ -355,7 +355,7 @@ export function AnalyticsDataTable<T>({
                 value: AnalyticsViewGroupName.Client,
               },
               {
-                label: "Http Status Code",
+                label: "HTTP Status Code",
                 value: AnalyticsViewGroupName.HttpStatusCode,
               },
             ]}
@@ -447,6 +447,7 @@ export function AnalyticsDataTable<T>({
                   >
                     {row.getVisibleCells().map((cell) => {
                       let icon = null;
+                      let text: ReactNode = "";
 
                       if (cell.column.id === "statusCode") {
                         if (cell.getValue() === "STATUS_CODE_ERROR") {
@@ -454,7 +455,7 @@ export function AnalyticsDataTable<T>({
                             <TooltipProvider>
                               <Tooltip delayDuration={300}>
                                 <TooltipTrigger>
-                                  <ExclamationTriangleIcon className="h-4 w-4 text-destructive" />
+                                  <ExclamationTriangleIcon className="h-5 w-5 text-destructive" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-lg">
                                   {row.getValue("statusMessage")}
@@ -463,18 +464,20 @@ export function AnalyticsDataTable<T>({
                             </TooltipProvider>
                           );
                         } else {
-                          icon = <HiOutlineCheck className="h-4 w-4" />;
+                          icon = <HiOutlineCheck className="h-5 w-5" />;
                         }
+                      } else {
+                        text = flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        );
                       }
 
                       return (
                         <TableCell key={cell.id}>
                           <div className="flex items-center space-x-2">
                             {icon}
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            )}
+                            {text}
                           </div>
                         </TableCell>
                       );

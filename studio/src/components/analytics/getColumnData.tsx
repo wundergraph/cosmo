@@ -35,7 +35,7 @@ import { defaultFilterFn } from "./defaultFilterFunction";
 import { InfoTooltip } from "@/components/info-tooltip";
 
 export const mapStatusCode: Record<string, string> = {
-  STATUS_CODE_UNSET: "Unset",
+  STATUS_CODE_UNSET: "OK",
   STATUS_CODE_OK: "OK",
   STATUS_CODE_ERROR: "Error",
 };
@@ -71,17 +71,6 @@ const columnConfig: Record<
     header: {
       className: "w-[100]px",
     },
-  },
-  statusCode: {
-    tooltipInfo: (
-      <div>
-        <ul>
-          <li>OK: The operation was classified as successful.</li>
-          <li>Error: The operation contains an error.</li>
-          <li>Unset: The default value. Operation status was not set.</li>
-        </ul>
-      </div>
-    ),
   },
 };
 
