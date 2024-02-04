@@ -101,7 +101,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 	operationCtx := getOperationContext(r.Context())
 
-	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execution",
+	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
 		trace.WithSpanKind(trace.SpanKindServer),
 	)
 	defer graphqlExecutionSpan.End()

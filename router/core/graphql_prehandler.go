@@ -274,7 +274,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		* Plan the operation
 		 */
 
-		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Planning",
+		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Plan",
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
 		)
