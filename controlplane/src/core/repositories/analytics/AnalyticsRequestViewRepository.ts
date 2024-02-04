@@ -55,7 +55,7 @@ export class AnalyticsRequestViewRepository {
       title: 'Operation Hash',
     },
     operationName: {
-      title: 'Name',
+      title: 'Operation',
     },
     operationType: {
       title: 'Type',
