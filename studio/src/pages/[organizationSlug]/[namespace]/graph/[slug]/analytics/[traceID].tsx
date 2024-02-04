@@ -63,10 +63,18 @@ export const TracePage: NextPageWithLayout = () => {
     if (!data) {
       return;
     }
-    set(
-      data.spans[0].attributes?.operationContent || "",
-      data.spans[0].attributes?.operationVariables || "",
+
+    // Find the operation content and variables span
+    // In that way, we don't rely on the order of the spans
+
+    const routerSpan = data.spans.find(
+      (span) => !!span.attributes?.operationContent,
     );
+
+    set(
+      routerSpan?.attributes?.operationContent || "",
+      routerSpan?.attributes?.operationVariables || "",
+    ).catch((e) => console.error("Error formatting", e));
   }, [data]);
 
   if (isLoading) {
