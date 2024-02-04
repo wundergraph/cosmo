@@ -91,6 +91,14 @@ var (
 	_ InputError = invalidExtensionsTypeError(0)
 )
 
+type OperationParserOptions struct {
+	Executor                *Executor
+	MaxOperationSizeInBytes int64
+	PersistentOpClient      *cdn.PersistentOperationClient
+}
+
+// OperationParser provides shared resources to the parseKit and OperationKit.
+// It should be only instantiated once and shared across requests
 type OperationParser struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
@@ -98,6 +106,7 @@ type OperationParser struct {
 	parseKitPool            *sync.Pool
 }
 
+// parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
 	parser              *astparser.Parser
 	doc                 *ast.Document
@@ -109,13 +118,8 @@ type parseKit struct {
 	variablesValidator  *variablesvalidation.VariablesValidator
 }
 
-type OperationParserOptions struct {
-	Executor                *Executor
-	MaxOperationSizeInBytes int64
-	PersistentOpClient      *cdn.PersistentOperationClient
-}
-
-// OperationKit is a helper struct to parse, normalize and validate operations
+// OperationKit represent the result of parsing, normalizing and validating an operation.
+// It must be created for each request and freed after the request is done.
 type OperationKit struct {
 	data                     []byte
 	operationDefinitionRef   int
@@ -361,14 +365,15 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	replaceOperationName := o.kit.doc.Input.AppendInputBytes(staticOperationName)
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = replaceOperationName
 
-	// Here we create a copy of the original variables. The variables are modified during normalization.
+	// Here we create a copy of the original variables. After parse, the variables can be consumed or modified.
 	variablesCopy := make([]byte, len(o.kit.doc.Input.Variables))
 	copy(variablesCopy, o.kit.doc.Input.Variables)
 
 	o.parsedOperation = &ParsedOperation{
+		ID:                       0,  // will be set after normalization
+		NormalizedRepresentation: "", // will be set after normalization
 		Name:                     string(requestOperationNameBytes),
 		Type:                     requestOperationType,
-		NormalizedRepresentation: o.kit.normalizedOperation.String(),
 		Extensions:               requestExtensions,
 		PersistedID:              string(persistedQuerySha256Hash),
 		Variables:                variablesCopy,
@@ -377,6 +382,8 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	return nil
 }
 
+// Normalize normalizes the operation. After normalization the normalized representation of the operation
+// and variables is available. Also, the final operation ID is generated.
 func (o *OperationKit) Normalize() error {
 	report := &operationreport.Report{}
 	o.kit.normalizer.NormalizeNamedOperation(o.kit.doc, o.operationParser.executor.Definition, staticOperationName, report)
@@ -405,7 +412,7 @@ func (o *OperationKit) Normalize() error {
 	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
-	// This is required because normalization modifies the variables
+	// Here we copy the normalized variables. After normalization, the variables can be consumed or modified.
 	variablesCopy := make([]byte, len(o.kit.doc.Input.Variables))
 	copy(variablesCopy, o.kit.doc.Input.Variables)
 
@@ -414,6 +421,7 @@ func (o *OperationKit) Normalize() error {
 	return nil
 }
 
+// Validate validates the operation variables.
 func (o *OperationKit) Validate() error {
 	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationParser.executor.Definition, o.parsedOperation.Variables)
 	if err != nil {
