@@ -38,7 +38,24 @@ func TestOperationParser(t *testing.T) {
 		Variables     string
 	}{
 		/**
-		 * Test cases parse variables
+		 * Test cases parse simple
+		 */
+		{
+			Input:         `{"query":"query { employees { name } }"`,
+			ExpectedType:  "query",
+			Variables:     `{}`,
+			ExpectedError: nil,
+		},
+		/**
+		 * Test cases parse invalid graphql
+		 */
+		{
+			Input:         `{"query":"invalid", "variables": {"foo": "bar"}}`,
+			Variables:     `{"foo": "bar"}`,
+			ExpectedError: errors.New("unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]"),
+		},
+		/**
+		 * Test cases parse operation types
 		 */
 		{
 			ExpectedType:  "subscription",
@@ -57,14 +74,6 @@ func TestOperationParser(t *testing.T) {
 			Input:         `{"query":"mutation { initialPayload(repeat:3) }", "variables": {"foo": "bar"}}`,
 			Variables:     `{"foo": "bar"}`,
 			ExpectedError: nil,
-		},
-		/**
-		 * Test cases parse operation types
-		 */
-		{
-			Input:         `{"query":"invalid", "variables": {"foo": "bar"}}`,
-			Variables:     `{"foo": "bar"}`,
-			ExpectedError: errors.New("unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]"),
 		},
 		/**
 		 * Test cases parse variables
@@ -94,7 +103,7 @@ func TestOperationParser(t *testing.T) {
 			Variables:     "",
 		},
 		/**
-		 * Test cases parse Operation Name
+		 * Test cases parse operation name
 		 */
 		{
 			Input:         `{"query":"subscription { initialPayload(repeat:3) }", "variables": {"foo": "bar"}, "operationName": "test"}`,
