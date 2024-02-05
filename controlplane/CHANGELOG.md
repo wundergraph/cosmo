@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.62.0...controlplane@0.63.0) (2024-02-05)
+
+### Features
+
+* allow to force root span on the router ([#486](https://github.com/wundergraph/cosmo/issues/486)) ([a1a2f64](https://github.com/wundergraph/cosmo/commit/a1a2f64558815267edc144e32da4297703743a86)) (@StarpTech)
+
 # [0.62.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.61.2...controlplane@0.62.0) (2024-02-05)
 
 ### Bug Fixes
