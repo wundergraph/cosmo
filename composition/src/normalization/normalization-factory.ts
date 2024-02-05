@@ -91,6 +91,7 @@ import {
   EntityContainer,
   EntityContainerByTypeName,
   EntityInterfaceSubgraphData,
+  FieldAuthorizationData,
   getAuthorizationDataToUpdate,
   getEntriesNotInHashSet,
   getOrThrowError,
@@ -98,12 +99,18 @@ import {
   ImplementationErrors,
   InvalidArgument,
   InvalidFieldImplementation,
+  isNodeKindInterface,
   kindToTypeString,
+  maxOrScopes,
+  mergeAuthorizationDataByAND,
   newAuthorizationData,
+  resetAuthorizationData,
+  setAndGetValue,
   subtractSourceSetFromTargetSet,
   upsertAuthorizationData,
   upsertEntityContainer,
   upsertEntityContainerProperties,
+  upsertFieldAuthorizationData,
 } from '../utils/utils';
 import {
   duplicateArgumentsError,
@@ -138,6 +145,7 @@ import {
   noDefinedUnionMembersError,
   noFieldDefinitionsError,
   operationDefinitionError,
+  orScopesLimitError,
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
@@ -251,10 +259,12 @@ export class NormalizationFactory {
   entityContainerByTypeName: EntityContainerByTypeName = new Map<string, EntityContainer>();
   entityInterfaces = new Map<string, EntityInterfaceSubgraphData>();
   extensionContainerByTypeName: ExtensionContainerByTypeName = new Map<string, ExtensionContainer>();
+  interfaceTypeNamesWithAuthorizationDirectives = new Set<string>();
   isCurrentParentExtension = false;
   isCurrentParentRootType = false;
   isSubgraphVersionTwo = false;
   fieldSetContainerByTypeName = new Map<string, FieldSetContainer>();
+  heirFieldAuthorizationDataByTypeName = new Map<string, FieldAuthorizationData[]>();
   handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
@@ -266,6 +276,7 @@ export class NormalizationFactory {
   parentsWithChildArguments = new Set<string>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
+  invalidOrScopesHostPaths = new Set<string>();
   schemaDefinition: SchemaContainer;
   referencedDirectives = new Set<string>();
   referencedTypeNames = new Set<string>();
@@ -343,7 +354,14 @@ export class NormalizationFactory {
   }
 
   extractDirectives(
-    node: EnumValueDefinitionNode | InputObjectTypeNode | InputValueDefinitionNode | SchemaNode | UnionTypeNode,
+    node:
+      | EnumValueDefinitionNode
+      | InputObjectTypeNode
+      | InputValueDefinitionNode
+      | InterfaceTypeNode
+      | ObjectTypeNode
+      | SchemaNode
+      | UnionTypeNode,
     map: Map<string, ConstDirectiveNode[]>,
   ): Map<string, ConstDirectiveNode[]> {
     if (!node.directives) {
@@ -364,8 +382,88 @@ export class NormalizationFactory {
     return map;
   }
 
+  // Note that directive validation errors are handled elsewhere
+  getAuthorizationData(node: InterfaceTypeNode | ObjectTypeNode): AuthorizationData | undefined {
+    let authorizationData = this.authorizationDataByParentTypeName.get(this.parentTypeName);
+    resetAuthorizationData(authorizationData);
+    if (!node.directives) {
+      return authorizationData;
+    }
+    let requiresAuthentication = false;
+    const requiresScopes: ConstDirectiveNode[] = [];
+    for (const directiveNode of node.directives) {
+      const directiveName = directiveNode.name.value;
+      if (directiveName === AUTHENTICATED) {
+        // @authenticated is not repeatable
+        if (requiresAuthentication) {
+          return;
+        }
+        requiresAuthentication = true;
+        continue;
+      }
+      if (directiveName !== REQUIRES_SCOPES) {
+        continue;
+      }
+      // @requiresScopes is not repeatable
+      if (requiresScopes.length > 0) {
+        return;
+      }
+      requiresScopes.push(directiveNode);
+    }
+    if (!requiresAuthentication && requiresScopes.length < 1) {
+      return authorizationData;
+    }
+    if (isNodeKindInterface(node.kind)) {
+      this.interfaceTypeNamesWithAuthorizationDirectives.add(this.parentTypeName);
+    }
+    if (!authorizationData) {
+      authorizationData = setAndGetValue(
+        this.authorizationDataByParentTypeName,
+        this.parentTypeName,
+        newAuthorizationData(this.parentTypeName),
+      );
+    }
+    authorizationData.hasParentLevelAuthorization = true;
+    authorizationData.requiresAuthentication = requiresAuthentication;
+    if (requiresScopes.length !== 1) {
+      return authorizationData;
+    }
+    const directiveNode = requiresScopes[0];
+    if (!directiveNode.arguments || directiveNode.arguments.length !== 1) {
+      return;
+    }
+    const scopesArgument = directiveNode.arguments[0];
+    if (scopesArgument.name.value !== SCOPES || scopesArgument.value.kind !== Kind.LIST) {
+      return;
+    }
+    const orScopes = scopesArgument.value.values;
+    if (orScopes.length < 1) {
+      return authorizationData;
+    }
+    if (orScopes.length > maxOrScopes) {
+      this.invalidOrScopesHostPaths.add(this.parentTypeName);
+      return;
+    }
+    for (const scopes of orScopes) {
+      if (scopes.kind !== Kind.LIST) {
+        return;
+      }
+      const andScopes = new Set<string>();
+      for (const scope of scopes.values) {
+        if (scope.kind !== Kind.STRING) {
+          return;
+        }
+        andScopes.add(scope.value);
+      }
+      if (andScopes.size) {
+        authorizationData.requiredScopes.push(andScopes);
+      }
+    }
+    return authorizationData;
+  }
+
   extractDirectivesAndAuthorization(
-    node: EnumTypeNode | FieldDefinitionNode | InterfaceTypeNode | ObjectTypeNode | ScalarTypeNode,
+    node: EnumTypeNode | FieldDefinitionNode | ScalarTypeNode,
     map: Map<string, ConstDirectiveNode[]>,
   ): Map<string, ConstDirectiveNode[]> {
     if (!node.directives) {
@@ -390,12 +488,7 @@ export class NormalizationFactory {
     if (authorizationDirectives.length < 1) {
       return map;
     }
-    if (
-      node.kind === Kind.ENUM_TYPE_DEFINITION ||
-      node.kind === Kind.ENUM_TYPE_EXTENSION ||
-      node.kind === Kind.SCALAR_TYPE_DEFINITION ||
-      node.kind === Kind.SCALAR_TYPE_EXTENSION
-    ) {
+    if (node.kind !== Kind.FIELD_DEFINITION) {
       this.leafTypeNamesWithAuthorizationDirectives.add(this.parentTypeName);
     }
     const parentAuthorizationData = getValueOrDefault(this.authorizationDataByParentTypeName, this.parentTypeName, () =>
@@ -412,14 +505,15 @@ export class NormalizationFactory {
         break;
       }
       const scopesArgument = directiveNode.arguments[0];
-      if (scopesArgument.name.value !== SCOPES) {
-        break;
-      }
-      if (scopesArgument.value.kind !== Kind.LIST) {
+      if (scopesArgument.name.value !== SCOPES || scopesArgument.value.kind !== Kind.LIST) {
         break;
       }
       const orScopes = scopesArgument.value.values;
       if (orScopes.length < 1) {
+        continue;
+      }
+      if (orScopes.length > maxOrScopes) {
+        this.invalidOrScopesHostPaths.add(this.parentTypeName);
         continue;
       }
       for (const scopes of orScopes) {
@@ -619,13 +713,13 @@ export class NormalizationFactory {
         this.errors.push(incompatibleExtensionKindsError(node, extension.kind));
         return false;
       }
-      this.extractDirectivesAndAuthorization(node, extension.directives);
+      this.extractDirectives(node, extension.directives);
       extractInterfaces(node, extension.interfaces, this.errors);
       return;
     }
     const isEntity = isObjectLikeNodeEntity(node);
     this.extensionContainerByTypeName.set(this.parentTypeName, {
-      directives: this.extractDirectivesAndAuthorization(node, new Map<string, ConstDirectiveNode[]>()),
+      directives: this.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
       fields: new Map<string, FieldContainer>(),
       interfaces: extractInterfaces(node, new Set<string>(), this.errors),
       isEntity,
@@ -1380,7 +1474,7 @@ export class NormalizationFactory {
           const isEntity = isObjectLikeNodeEntity(node);
           factory.parentContainerByTypeName.set(name, {
             description: formatDescription(node.description),
-            directives: factory.extractDirectivesAndAuthorization(node, new Map<string, ConstDirectiveNode[]>()),
+            directives: factory.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
             fields: new Map<string, FieldContainer>(),
             interfaces: extractInterfaces(node, new Set<string>(), factory.errors),
             isEntity,
@@ -1444,7 +1538,7 @@ export class NormalizationFactory {
           const isEntity = isObjectLikeNodeEntity(node);
           factory.parentContainerByTypeName.set(typeName, {
             description: formatDescription(node.description),
-            directives: factory.extractDirectivesAndAuthorization(node, new Map<string, ConstDirectiveNode[]>()),
+            directives: factory.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
             fields: new Map<string, FieldContainer>(),
             interfaces: extractInterfaces(node, new Set<string>(), factory.errors),
             isEntity,
@@ -1885,6 +1979,49 @@ export class NormalizationFactory {
       // this is where keys, provides, and requires are added to the ConfigurationData
       validateAndAddDirectivesWithFieldSetToConfigurationData(this, parentContainer, fieldSetContainers);
     }
+    walkSubgraphToApplyFieldAuthorization(factory, document);
+    for (const interfaceTypeName of this.interfaceTypeNamesWithAuthorizationDirectives) {
+      const interfaceAuthorizationData = factory.authorizationDataByParentTypeName.get(interfaceTypeName);
+      if (!interfaceAuthorizationData) {
+        continue;
+      }
+      const concreteTypeNames = factory.abstractToConcreteTypeNames.get(interfaceTypeName);
+      for (const concreteTypeName of concreteTypeNames || []) {
+        const concreteAuthorizationData = getValueOrDefault(
+          factory.authorizationDataByParentTypeName,
+          concreteTypeName,
+          () => newAuthorizationData(concreteTypeName),
+        );
+        for (const [
+          fieldName,
+          interfaceFieldAuthorizationData,
+        ] of interfaceAuthorizationData.fieldAuthorizationDataByFieldName) {
+          if (
+            !upsertFieldAuthorizationData(
+              concreteAuthorizationData.fieldAuthorizationDataByFieldName,
+              interfaceFieldAuthorizationData,
+            )
+          ) {
+            this.invalidOrScopesHostPaths.add(`${concreteTypeName}.${fieldName}`);
+          }
+        }
+      }
+    }
+    // Apply inherited leaf authorization that was not applied to interface fields of that type earlier
+    for (const [typeName, fieldAuthorizationDatas] of this.heirFieldAuthorizationDataByTypeName) {
+      const authorizationData = this.authorizationDataByParentTypeName.get(typeName);
+      if (!authorizationData) {
+        continue;
+      }
+      for (const fieldAuthorizationData of fieldAuthorizationDatas) {
+        if (!mergeAuthorizationDataByAND(authorizationData, fieldAuthorizationData)) {
+          this.invalidOrScopesHostPaths.add(`${typeName}.${fieldAuthorizationData.fieldName}`);
+        }
+      }
+    }
+    if (this.invalidOrScopesHostPaths.size > 0) {
+      this.errors.push(orScopesLimitError(maxOrScopes, [...this.invalidOrScopesHostPaths]));
+    }
     if (this.errors.length > 0) {
       return { errors: this.errors };
     }
@@ -1892,7 +2029,6 @@ export class NormalizationFactory {
       kind: Kind.DOCUMENT,
       definitions,
     };
-    walkSubgraphToApplyFieldAuthorization(factory, newAST);
     return {
       normalizationResult: {
         authorizationDataByParentTypeName: this.authorizationDataByParentTypeName,
@@ -1926,6 +2062,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   const subgraphNames = new Set<string>();
   const nonUniqueSubgraphNames = new Set<string>();
   const invalidNameErrorMessages: string[] = [];
+  const invalidOrScopesHostPaths = new Set<string>();
   const warnings: string[] = [];
   const validationErrors: Error[] = [];
   // Record the subgraph names first, so that subgraph references can be validated
@@ -1953,7 +2090,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     parentContainerMapsBySubgraphName.set(subgraphName, normalizationResult.parentContainerByTypeName);
 
     for (const authorizationData of normalizationResult.authorizationDataByParentTypeName.values()) {
-      upsertAuthorizationData(authorizationDataByParentTypeName, authorizationData);
+      upsertAuthorizationData(authorizationDataByParentTypeName, authorizationData, invalidOrScopesHostPaths);
     }
     for (const entityContainer of normalizationResult.entityContainerByTypeName.values()) {
       upsertEntityContainer(entityContainerByTypeName, entityContainer);
@@ -2009,6 +2146,9 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     }
   }
   const allErrors: Error[] = [];
+  if (invalidOrScopesHostPaths.size > 0) {
+    allErrors.push(orScopesLimitError(maxOrScopes, [...invalidOrScopesHostPaths]));
+  }
   if (invalidNameErrorMessages.length > 0 || nonUniqueSubgraphNames.size > 0) {
     allErrors.push(invalidSubgraphNamesError([...nonUniqueSubgraphNames], invalidNameErrorMessages));
   }
