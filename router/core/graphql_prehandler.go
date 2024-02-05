@@ -144,7 +144,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		 */
 
 		engineParseCtx, engineParseSpan := h.tracer.Start(r.Context(), "Operation - Parse",
-			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithSpanKind(trace.SpanKindInternal),
 		)
 
 		operationKit, err := h.operationProcessor.NewKit(body)
@@ -192,7 +192,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		 */
 
 		engineNormalizeCtx, engineNormalizeSpan := h.tracer.Start(r.Context(), "Operation - Normalize",
-			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithSpanKind(trace.SpanKindInternal),
 		)
 
 		err = operationKit.Normalize()
@@ -228,7 +228,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		 */
 
 		engineValidateCtx, engineValidateSpan := h.tracer.Start(r.Context(), "Operation - Validate",
-			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithSpanKind(trace.SpanKindInternal),
 		)
 		err = operationKit.Validate()
 		if err != nil {
@@ -276,7 +276,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		 */
 
 		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Plan",
-			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
 		)
 
