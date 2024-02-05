@@ -67,6 +67,7 @@ import {
   noBaseTypeExtensionError,
   noConcreteTypesForAbstractTypeError,
   noQueryRootTypeError,
+  orScopesLimitError,
   shareableFieldDefinitionsError,
   undefinedEntityInterfaceImplementationsError,
   undefinedTypeError,
@@ -123,7 +124,6 @@ import {
   EXTENSIONS,
   FIELD,
   INACCESSIBLE,
-  OVERRIDE,
   PARENTS,
   QUERY,
   REQUIRES_SCOPES,
@@ -132,7 +132,6 @@ import {
   TAG,
 } from '../utils/string-constants';
 import {
-  addAuthorizationDataProperties,
   addIterableValuesToSet,
   AuthorizationData,
   doSetsHaveAnyOverlap,
@@ -151,10 +150,13 @@ import {
   InvalidFieldImplementation,
   InvalidRequiredArgument,
   kindToTypeString,
+  maxOrScopes,
+  newAuthorizationData,
   newEntityInterfaceFederationData,
   subtractSourceSetFromTargetSet,
   upsertAuthorizationConfiguration,
   upsertEntityInterfaceFederationData,
+  upsertFieldAuthorizationData,
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -194,6 +196,7 @@ export class FederationFactory {
   graphEdges = new Set<string>();
   graphPaths = new Map<string, boolean>();
   inputFieldTypeNameSet = new Set<string>();
+  invalidOrScopesHostPaths = new Set<string>();
   isCurrentParentEntity = false;
   isCurrentParentInterface = false;
   isCurrentSubgraphVersionTwo = false;
@@ -1559,7 +1562,19 @@ export class FederationFactory {
       if (!renamedAuthorizationData) {
         this.authorizationDataByParentTypeName.set(renamedTypeName, originalAuthorizationData);
       } else {
-        addAuthorizationDataProperties(originalAuthorizationData, renamedAuthorizationData);
+        for (const [
+          fieldName,
+          incomingFieldAuthorizationData,
+        ] of renamedAuthorizationData.fieldAuthorizationDataByFieldName) {
+          if (
+            !upsertFieldAuthorizationData(
+              originalAuthorizationData.fieldAuthorizationDataByFieldName,
+              incomingFieldAuthorizationData,
+            )
+          ) {
+            this.invalidOrScopesHostPaths.add(`${renamedTypeName}.${fieldName}`);
+          }
+        }
       }
       this.authorizationDataByParentTypeName.delete(originalTypeName);
     }
@@ -1598,15 +1613,33 @@ export class FederationFactory {
         const interfaceObjectConfiguration = getOrThrowError(configurationDataMap, typeName, 'configurationDataMap');
         const keys = interfaceObjectConfiguration.keys;
         if (!keys) {
-          // error TODO no keys
+          // TODO no keys error
           continue;
         }
         interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
         const fieldNames = interfaceObjectConfiguration.fieldNames;
+        const authorizationData = this.authorizationDataByParentTypeName.get(entityInterfaceData.typeName);
         for (const concreteTypeName of concreteTypeNames) {
           if (configurationDataMap.has(concreteTypeName)) {
             // error TODO
             continue;
+          }
+          if (authorizationData) {
+            const concreteAuthorizationData = getValueOrDefault(
+              this.authorizationDataByParentTypeName,
+              concreteTypeName,
+              () => newAuthorizationData(concreteTypeName),
+            );
+            for (const fieldAuthorizationData of authorizationData.fieldAuthorizationDataByFieldName.values()) {
+              if (
+                !upsertFieldAuthorizationData(
+                  concreteAuthorizationData.fieldAuthorizationDataByFieldName,
+                  fieldAuthorizationData,
+                )
+              ) {
+                this.invalidOrScopesHostPaths.add(`${concreteTypeName}.${fieldAuthorizationData.fieldName}`);
+              }
+            }
           }
           const concreteTypeContainer = getOrThrowError(this.parents, concreteTypeName, 'parents');
           if (concreteTypeContainer.kind !== Kind.OBJECT_TYPE_DEFINITION) {
@@ -1640,6 +1673,9 @@ export class FederationFactory {
           configurationDataMap.set(concreteTypeName, configurationData);
         }
       }
+    }
+    if (this.invalidOrScopesHostPaths.size > 0) {
+      this.errors.push(orScopesLimitError(maxOrScopes, [...this.invalidOrScopesHostPaths]));
     }
     const definitions: MutableTypeDefinitionNode[] = [];
     for (const [directiveName, directiveContainer] of this.directiveDefinitions) {

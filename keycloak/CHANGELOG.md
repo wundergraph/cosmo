@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.7](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.6...keycloak@0.8.7) (2024-02-05)
+
+### Bug Fixes
+
+* update password and verify email keycloak templates ([#487](https://github.com/wundergraph/cosmo/issues/487)) ([e3545c9](https://github.com/wundergraph/cosmo/commit/e3545c944e20ad0e67d4cfd8788419c93faf395e)) (@JivusAyrus)
+
 ## [0.8.6](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.5...keycloak@0.8.6) (2024-01-11)
 
 ### Bug Fixes
