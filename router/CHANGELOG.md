@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.61.2](https://github.com/wundergraph/cosmo/compare/router@0.61.1...router@0.61.2) (2024-02-05)
+
+### Bug Fixes
+
+* load schema from CP and sync router playground ([#489](https://github.com/wundergraph/cosmo/issues/489)) ([7bc4d89](https://github.com/wundergraph/cosmo/commit/7bc4d892fd21afc6d22bda07133b261599a7cd3e)) (@thisisnithin)
+* refactor router trace instrumentation ([#485](https://github.com/wundergraph/cosmo/issues/485)) ([889d06c](https://github.com/wundergraph/cosmo/commit/889d06c95651bd44d136b89f0638faa4f25be8e2)) (@StarpTech)
+
 ## [0.61.1](https://github.com/wundergraph/cosmo/compare/router@0.61.0...router@0.61.1) (2024-02-01)
 
 **Note:** Version bump only for package router
