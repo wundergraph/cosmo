@@ -391,13 +391,13 @@ describe('FederationFactory tests', () => {
         
         type EntityFact implements TopSecretFact {
           title: String! @requiresScopes(scopes: [["read:entity"]])
-          description: FactContent! @requiresScopes(scopes: [["read:entity", "read:scalar"], ["read:entity", "read:all"]])
+          description: FactContent! @authenticated @requiresScopes(scopes: [["read:entity", "read:scalar"], ["read:entity", "read:all"]])
           factType: TopSecretFactType @authenticated @requiresScopes(scopes: [["read:entity"]])
         }
         
         type MiscellaneousFact implements TopSecretFact {
           title: String!
-          description: FactContent! @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]])
+          description: FactContent! @authenticated @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]])
           factType: TopSecretFactType @authenticated
         }
       `,
