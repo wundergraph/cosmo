@@ -38,6 +38,10 @@ type Exporter struct {
 	HTTPPath string
 }
 
+type ExportGraphQLVariables struct {
+	Enabled bool
+}
+
 // Config represents the configuration for the agent.
 type Config struct {
 	Enabled bool
@@ -48,12 +52,14 @@ type Config struct {
 	// WithNewRoot specifies that the Span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers.
 	WithNewRoot bool
 	// Sampler represents the sampler for tracing. The default value is 1.
-	Sampler     float64
-	Exporters   []*Exporter
-	Propagators []Propagator
+	Sampler float64
+	// ExportGraphQLVariables defines if and how GraphQL variables should be exported as span attributes.
+	ExportGraphQLVariables ExportGraphQLVariables
+	Exporters              []*Exporter
+	Propagators            []Propagator
 }
 
-func GetDefaultExporter(cfg *Config) *Exporter {
+func DefaultExporter(cfg *Config) *Exporter {
 	for _, exporter := range cfg.Exporters {
 		if exporter.Disabled {
 			continue
@@ -76,11 +82,14 @@ func GetDefaultExporter(cfg *Config) *Exporter {
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
-		Enabled:     false,
-		Name:        ServerName,
-		Version:     serviceVersion,
+		Enabled: false,
+		Name:    ServerName,
+		Version: serviceVersion,
+		Sampler: 1,
 		WithNewRoot: false,
-		Sampler:     1,
+		ExportGraphQLVariables: ExportGraphQLVariables{
+			Enabled: true,
+		},
 		Exporters: []*Exporter{
 			{
 				Disabled:      false,

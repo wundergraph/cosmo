@@ -660,6 +660,23 @@ describe('Router Configuration tests', () => {
         {
           argumentNames: [],
           fieldName: 'description',
+          requiredScopes: [
+            ['read:miscellaneous', 'read:scalar'],
+            ['read:miscellaneous', 'read:all'],
+          ],
+          requiresAuthentication: true,
+          typeName: 'MiscellaneousFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'factType',
+          requiredScopes: [],
+          requiresAuthentication: true,
+          typeName: 'MiscellaneousFact',
+        },
+        {
+          argumentNames: [],
+          fieldName: 'description',
           requiredScopes: [['read:scalar'], ['read:all']],
           requiresAuthentication: true,
           typeName: 'TopSecretFact',
@@ -706,7 +723,7 @@ describe('Router Configuration tests', () => {
             ['read:entity', 'read:scalar'],
             ['read:entity', 'read:all'],
           ],
-          requiresAuthentication: false,
+          requiresAuthentication: true,
           typeName: 'EntityFact',
         },
         {
@@ -715,23 +732,6 @@ describe('Router Configuration tests', () => {
           requiredScopes: [['read:entity']],
           requiresAuthentication: true,
           typeName: 'EntityFact',
-        },
-        {
-          argumentNames: [],
-          fieldName: 'description',
-          requiredScopes: [
-            ['read:miscellaneous', 'read:scalar'],
-            ['read:miscellaneous', 'read:all'],
-          ],
-          requiresAuthentication: false,
-          typeName: 'MiscellaneousFact',
-        },
-        {
-          argumentNames: [],
-          fieldName: 'factType',
-          requiredScopes: [],
-          requiresAuthentication: true,
-          typeName: 'MiscellaneousFact',
         },
         {
           argumentNames: [],

@@ -29,6 +29,11 @@ type TracingExporterConfig struct {
 	ExportTimeout time.Duration `yaml:"export_timeout" default:"30s" validate:"required,min=5s,max=120s"`
 }
 
+type TracingGlobalFeatures struct {
+	ExportGraphQLVariables bool `yaml:"export_graphql_variables" default:"true" envconfig:"TRACING_EXPORT_GRAPHQL_VARIABLES"`
+	WithNewRoot  bool              `yaml:"with_new_root" default:"false" envconfig:"TRACING_WITH_NEW_ROOT"`
+}
+
 type TracingExporter struct {
 	Disabled              bool                `yaml:"disabled"`
 	Exporter              otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
@@ -39,11 +44,11 @@ type TracingExporter struct {
 }
 
 type Tracing struct {
-	Enabled      bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
-	SamplingRate float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
-	WithNewRoot  bool              `yaml:"with_new_root" default:"false" envconfig:"TRACING_WITH_NEW_ROOT"`
-	Exporters    []TracingExporter `yaml:"exporters"`
-	Propagation  PropagationConfig `yaml:"propagation"`
+	Enabled               bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
+	SamplingRate          float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
+	Exporters             []TracingExporter `yaml:"exporters"`
+	Propagation           PropagationConfig `yaml:"propagation"`
+	TracingGlobalFeatures `yaml:",inline"`
 }
 
 type PropagationConfig struct {
