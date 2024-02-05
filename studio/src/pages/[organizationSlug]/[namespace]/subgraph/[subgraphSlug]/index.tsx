@@ -185,6 +185,7 @@ const SubgraphOverviewPage = () => {
           <div className="px-4 py-4">
             <AddSubgraphUsersContent
               subgraphName={subgraph.name}
+              namespace={subgraph.namespace}
               inviteOptions={inviteOptions}
               subgraphMembers={subgraphMembersData?.members || []}
               refetchSubgraphMembers={refetch}

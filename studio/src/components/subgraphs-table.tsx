@@ -103,6 +103,7 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
 
 export const AddSubgraphUsersContent = ({
   subgraphName,
+  namespace,
   setOpen,
   inviteOptions,
   subgraphMembers,
@@ -110,6 +111,7 @@ export const AddSubgraphUsersContent = ({
   refetchSubgraphMembers,
 }: {
   subgraphName: string;
+  namespace: string;
   setOpen?: Dispatch<SetStateAction<boolean>>;
   inviteOptions: string[];
   subgraphMembers: SubgraphMember[];
@@ -139,7 +141,7 @@ export const AddSubgraphUsersContent = ({
   const onSubmit = () => {
     if (inviteeEmail === "Select the member" || inviteeEmail === "") return;
     addMember(
-      { userEmail: inviteeEmail, subgraphName },
+      { userEmail: inviteeEmail, subgraphName, namespace },
       {
         onSuccess: (d) => {
           sendToast(d.response?.details || "Added member successfully.");
@@ -243,7 +245,7 @@ export const AddSubgraphUsersContent = ({
                             isLoading={removingMember}
                             onClick={() => {
                               removeMember(
-                                { subgraphMemberId, subgraphName },
+                                { subgraphMemberId, subgraphName, namespace },
                                 {
                                   onSuccess: (d) => {
                                     sendToast(
@@ -348,6 +350,7 @@ const AddSubgraphUsers = ({
           </DialogHeader>
           <AddSubgraphUsersContent
             subgraphName={subgraphName}
+            namespace={namespace}
             setOpen={setOpen}
             inviteOptions={inviteOptions}
             subgraphMembers={subgraphMembersData?.members || []}
@@ -453,11 +456,7 @@ export const SubgraphsTable = ({
                     )}
                     <Tooltip delayDuration={200}>
                       <TooltipTrigger asChild>
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="icon-sm"
-                        >
+                        <Button asChild variant="ghost" size="icon-sm">
                           <Link href={analyticsPath}>
                             <ChartBarIcon className="h-4 w-4" />
                           </Link>
@@ -467,11 +466,7 @@ export const SubgraphsTable = ({
                     </Tooltip>
                     <Tooltip delayDuration={200}>
                       <TooltipTrigger asChild>
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="icon-sm"
-                        >
+                        <Button asChild variant="ghost" size="icon-sm">
                           <Link href={path}>
                             <EyeIcon className="h-4 w-4" />
                           </Link>

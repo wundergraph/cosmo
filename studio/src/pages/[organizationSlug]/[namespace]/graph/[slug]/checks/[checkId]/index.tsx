@@ -593,6 +593,7 @@ const CheckDetails = ({
                             forceSuccess({
                               checkId: id,
                               graphName: slug,
+                              namespace,
                             })
                           }
                         />
