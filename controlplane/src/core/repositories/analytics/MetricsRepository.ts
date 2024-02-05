@@ -5,6 +5,7 @@ import {
   BaseFilters,
   buildAnalyticsViewFilters,
   buildCoercedFilterSqlStatement,
+  CoercedFilterValues,
   coerceFilterValues,
   getDateRange,
   getGranularity,
@@ -35,7 +36,7 @@ interface GetMetricsProps {
   whereSql?: string;
   organizationId: string;
   graphId: string;
-  queryParams?: Record<string, string | number>;
+  queryParams?: CoercedFilterValues;
 }
 
 export class MetricsRepository {

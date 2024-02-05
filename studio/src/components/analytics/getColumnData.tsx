@@ -13,7 +13,7 @@ import {
 import copy from "copy-to-clipboard";
 import { formatInTimeZone } from "date-fns-tz";
 import compact from "lodash/compact";
-import { ReactNode, useState } from "react";
+import React, { ReactNode, useState } from "react";
 import { CodeViewer } from "../code-viewer";
 import { Button } from "../ui/button";
 import { Dialog2, Dialog2Content, Dialog2Title } from "../ui/dialog2";
@@ -21,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import {
@@ -33,14 +32,26 @@ import {
 import { useToast } from "../ui/use-toast";
 import { nanoTimestampToTime } from "./charts";
 import { defaultFilterFn } from "./defaultFilterFunction";
+import { InfoTooltip } from "@/components/info-tooltip";
 
 export const mapStatusCode: Record<string, string> = {
-  STATUS_CODE_UNSET: "Success",
-  STATUS_CODE_OK: "Success",
+  STATUS_CODE_UNSET: "OK",
+  STATUS_CODE_OK: "OK",
   STATUS_CODE_ERROR: "Error",
 };
 
-const columnConfig: Record<string, Record<string, any>> = {
+const columnConfig: Record<
+  string,
+  {
+    header?: {
+      className?: string;
+    };
+    cell?: {
+      className?: string;
+    };
+    tooltipInfo?: ReactNode;
+  }
+> = {
   traceId: {
     header: {
       className: "w-[80]px",
@@ -66,7 +77,9 @@ const columnConfig: Record<string, Record<string, any>> = {
 const formatColumnData = (data: string | number, type: Unit): ReactNode => {
   if (!data) return "-";
 
-  if (type === Unit.Unspecified) return data;
+  // If the type is unspecified, we just return the data as is in string format
+  // In that way, we format e.g. boolean values as "true" or "false"
+  if (type === Unit.Unspecified) return data.toString();
 
   if (type === Unit.StatusCode) {
     return <span>{mapStatusCode[data]}</span>;
@@ -288,7 +301,14 @@ export const getColumnData = (
                 sortedProps?.className,
               )}
             >
-              <span>{each.title}</span>
+              <span className="flex items-center space-x-1">
+                <span>{each.title}</span>
+                {config.tooltipInfo && (
+                  <span>
+                    <InfoTooltip>{config.tooltipInfo}</InfoTooltip>
+                  </span>
+                )}
+              </span>
 
               <span className="inline-block w-3">
                 {sorted ? (

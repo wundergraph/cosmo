@@ -8,6 +8,7 @@ import {
   BaseFilters,
   buildAnalyticsViewFilters,
   buildCoercedFilterSqlStatement,
+  CoercedFilterValues,
   coerceFilterValues,
   getDateRange,
   getGranularity,
@@ -42,7 +43,7 @@ interface GetSubgraphMetricsProps {
   subgraphId: string;
   subgraphLabels: Label[];
   namespaceId: string;
-  queryParams?: Record<string, string | number>;
+  queryParams?: CoercedFilterValues;
 }
 
 export class SubgraphMetricsRepository {
