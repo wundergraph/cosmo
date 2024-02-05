@@ -17,6 +17,8 @@ import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { CopyButton } from "@/components/ui/copy-button";
 import { useEffect, useState } from "react";
 import graphQLPlugin from "prettier/plugins/graphql";
+import parserBabel from "prettier/plugins/babel";
+import * as prettierPluginEstree from "prettier/plugins/estree";
 import * as prettier from "prettier/standalone";
 import { PlayIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
@@ -25,6 +27,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { docsBaseURL } from "@/lib/constants";
 
 export const TracePage: NextPageWithLayout = () => {
   const { query } = useRouter();
@@ -32,6 +35,7 @@ export const TracePage: NextPageWithLayout = () => {
   const namespace = query.namespace as string;
   const slug = query.slug as string;
   const [content, setContent] = useState("");
+  const [variables, setVariables] = useState("");
 
   const traceID = query.traceID as string;
 
@@ -43,16 +47,34 @@ export const TracePage: NextPageWithLayout = () => {
   });
 
   useEffect(() => {
-    const set = async (source: string) => {
-      const res = await prettier.format(source, {
+    const set = async (content: string, variables: string) => {
+      const formattedContent = await prettier.format(content, {
         parser: "graphql",
         plugins: [graphQLPlugin],
       });
-      setContent(res);
+      setContent(formattedContent);
+      const formattedVariables = await prettier.format(variables, {
+        parser: "json",
+        plugins: [parserBabel, prettierPluginEstree],
+      });
+      setVariables(formattedVariables);
     };
 
-    if (!data) return;
-    set(data.spans[0].attributes?.operationContent || "");
+    if (!data) {
+      return;
+    }
+
+    // Find the operation content and variables span
+    // In that way, we don't rely on the order of the spans
+
+    const routerSpan = data.spans.find(
+      (span) => !!span.attributes?.operationContent,
+    );
+
+    set(
+      routerSpan?.attributes?.operationContent || "",
+      routerSpan?.attributes?.operationVariables || "",
+    ).catch((e) => console.error("Error formatting", e));
   }, [data]);
 
   if (isLoading) {
@@ -74,16 +96,32 @@ export const TracePage: NextPageWithLayout = () => {
   return (
     <div>
       <Trace spans={data.spans} />
-      <div className="scrollbar-custom !mt-6 flex max-h-96 justify-between overflow-auto rounded border">
+      <div className="mb-3 mt-4">
+        <div className="mb-1">Operation and Variables</div>
+        <div className="text-xs text-muted-foreground">
+          Unless you don&apos;t disable variable export in the router, you can
+          see variables here.{" "}
+          <a
+            target="_blank"
+            rel="noreferrer"
+            href={docsBaseURL + "/router/compliance#disable-variables-export"}
+            className="text-primary"
+          >
+            Learn more.
+          </a>
+        </div>
+      </div>
+      <div className="scrollbar-custom flex max-h-96 justify-between overflow-auto rounded border">
         <CodeViewer code={content} disableLinking />
+        <CodeViewer code={variables} language="json" disableLinking />
         <div className="px-2 py-2">
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button variant="outline" size="icon" asChild>
                 <Link
-                  href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${btoa(
+                  href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
                     content || "",
-                  )}`}
+                  )}&variables=${encodeURIComponent(variables || "")}`}
                 >
                   <PlayIcon className="h-5" />
                 </Link>

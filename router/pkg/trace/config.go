@@ -38,6 +38,10 @@ type Exporter struct {
 	HTTPPath string
 }
 
+type ExportGraphQLVariables struct {
+	Enabled bool
+}
+
 // Config represents the configuration for the agent.
 type Config struct {
 	Enabled bool
@@ -46,12 +50,14 @@ type Config struct {
 	// Version represents the service version for tracing. The default value is dev.
 	Version string
 	// Sampler represents the sampler for tracing. The default value is 1.
-	Sampler     float64
-	Exporters   []*Exporter
-	Propagators []Propagator
+	Sampler float64
+	// ExportGraphQLVariables defines if and how GraphQL variables should be exported as span attributes.
+	ExportGraphQLVariables ExportGraphQLVariables
+	Exporters              []*Exporter
+	Propagators            []Propagator
 }
 
-func GetDefaultExporter(cfg *Config) *Exporter {
+func DefaultExporter(cfg *Config) *Exporter {
 	for _, exporter := range cfg.Exporters {
 		if exporter.Disabled {
 			continue
@@ -78,6 +84,9 @@ func DefaultConfig(serviceVersion string) *Config {
 		Name:    ServerName,
 		Version: serviceVersion,
 		Sampler: 1,
+		ExportGraphQLVariables: ExportGraphQLVariables{
+			Enabled: true,
+		},
 		Exporters: []*Exporter{
 			{
 				Disabled:      false,

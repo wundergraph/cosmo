@@ -5,17 +5,19 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
-	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
@@ -29,7 +31,7 @@ type PreHandlerOptions struct {
 	Logger                      *zap.Logger
 	Executor                    *Executor
 	Metrics                     RouterMetrics
-	Parser                      *OperationParser
+	OperationProcessor          *OperationProcessor
 	Planner                     *OperationPlanner
 	AccessController            *AccessController
 	DevelopmentMode             bool
@@ -37,13 +39,14 @@ type PreHandlerOptions struct {
 	EnableRequestTracing        bool
 	TracerProvider              *sdktrace.TracerProvider
 	FlushTelemetryAfterResponse bool
+	TraceExportVariables        bool
 }
 
 type PreHandler struct {
 	log                         *zap.Logger
 	executor                    *Executor
 	metrics                     RouterMetrics
-	parser                      *OperationParser
+	operationProcessor          *OperationProcessor
 	planner                     *OperationPlanner
 	accessController            *AccessController
 	developmentMode             bool
@@ -52,6 +55,7 @@ type PreHandler struct {
 	tracerProvider              *sdktrace.TracerProvider
 	flushTelemetryAfterResponse bool
 	tracer                      trace.Tracer
+	traceExportVariables        bool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -59,7 +63,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		log:                         opts.Logger,
 		executor:                    opts.Executor,
 		metrics:                     opts.Metrics,
-		parser:                      opts.Parser,
+		operationProcessor:          opts.OperationProcessor,
 		planner:                     opts.Planner,
 		accessController:            opts.AccessController,
 		routerPublicKey:             opts.RouterPublicKey,
@@ -67,6 +71,8 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		enableRequestTracing:        opts.EnableRequestTracing,
 		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
 		tracerProvider:              opts.TracerProvider,
+		traceExportVariables:        opts.TraceExportVariables,
+
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -98,8 +104,19 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			tracePlanStart int64
 		)
 
+		routerSpan := trace.SpanFromContext(r.Context())
+
 		clientInfo := NewClientInfoFromRequest(r)
+		baseAttributeValues := []attribute.KeyValue{
+			otel.WgClientName.String(clientInfo.Name),
+			otel.WgClientVersion.String(clientInfo.Version),
+			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
+		}
+
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
+
+		routerSpan.SetAttributes(baseAttributeValues...)
+		metrics.AddAttributes(baseAttributeValues...)
 
 		if h.flushTelemetryAfterResponse {
 			defer h.flushMetrics(r.Context(), requestLogger)
@@ -114,11 +131,113 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
 
-		body, err := h.parser.ReadBody(r.Context(), buf, r.Body)
+		body, err := h.operationProcessor.ReadBody(buf, r.Body)
 		if err != nil {
 			finalErr = err
 			requestLogger.Error(err.Error())
 			writeRequestErrors(r.Context(), http.StatusBadRequest, graphql.RequestErrorsFromError(err), w, requestLogger)
+			return
+		}
+
+		/**
+		* Parse the operation
+		 */
+
+		engineParseCtx, engineParseSpan := h.tracer.Start(r.Context(), "Operation - Parse",
+			trace.WithSpanKind(trace.SpanKindInternal),
+		)
+
+		operationKit, err := h.operationProcessor.NewKit(body)
+		defer operationKit.Free()
+
+		if err != nil {
+			finalErr = err
+
+			rtrace.AttachErrToSpan(engineParseSpan, err)
+			engineParseSpan.End()
+
+			h.writeOperationError(engineParseCtx, w, requestLogger, err)
+			return
+		}
+
+		err = operationKit.Parse(r.Context(), clientInfo, requestLogger)
+		if err != nil {
+			finalErr = err
+
+			rtrace.AttachErrToSpan(engineParseSpan, err)
+			engineParseSpan.End()
+
+			h.writeOperationError(engineParseCtx, w, requestLogger, err)
+			return
+		}
+
+		engineParseSpan.End()
+
+		// Set the router span name after we have the operation name
+		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Name, operationKit.parsedOperation.Type))
+
+		baseAttributeValues = []attribute.KeyValue{
+			otel.WgOperationName.String(operationKit.parsedOperation.Name),
+			otel.WgOperationType.String(operationKit.parsedOperation.Type),
+		}
+		if operationKit.parsedOperation.PersistedID != "" {
+			baseAttributeValues = append(baseAttributeValues, otel.WgOperationPersistedID.String(operationKit.parsedOperation.PersistedID))
+		}
+
+		routerSpan.SetAttributes(baseAttributeValues...)
+		metrics.AddAttributes(baseAttributeValues...)
+
+		/**
+		* Normalize the operation
+		 */
+
+		engineNormalizeCtx, engineNormalizeSpan := h.tracer.Start(r.Context(), "Operation - Normalize",
+			trace.WithSpanKind(trace.SpanKindInternal),
+		)
+
+		err = operationKit.Normalize()
+		if err != nil {
+			finalErr = err
+
+			rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+			engineNormalizeSpan.End()
+
+			h.writeOperationError(engineNormalizeCtx, w, requestLogger, err)
+			return
+		}
+
+		engineNormalizeSpan.End()
+
+		if h.traceExportVariables {
+			// At this stage the variables are normalized
+			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Variables)))
+		}
+
+		baseAttributeValues = []attribute.KeyValue{
+			otel.WgOperationHash.String(strconv.FormatUint(operationKit.parsedOperation.ID, 10)),
+		}
+
+		// Set the normalized operation as soon as we have it
+		routerSpan.SetAttributes(otel.WgOperationContent.String(operationKit.parsedOperation.NormalizedRepresentation))
+		routerSpan.SetAttributes(baseAttributeValues...)
+
+		metrics.AddAttributes(baseAttributeValues...)
+
+		/**
+		* Validate the operation
+		 */
+
+		engineValidateCtx, engineValidateSpan := h.tracer.Start(r.Context(), "Operation - Validate",
+			trace.WithSpanKind(trace.SpanKindInternal),
+		)
+		err = operationKit.Validate()
+		if err != nil {
+			finalErr = err
+
+			rtrace.AttachErrToSpan(engineValidateSpan, err)
+			engineValidateSpan.End()
+
+			h.writeOperationError(engineValidateCtx, w, requestLogger, err)
 			return
 		}
 
@@ -150,6 +269,34 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
 		}
 
+		engineValidateSpan.End()
+
+		/**
+		* Plan the operation
+		 */
+
+		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Plan",
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
+		)
+
+		opContext, err := h.planner.Plan(operationKit.parsedOperation, clientInfo, OperationProtocolHTTP, traceOptions)
+
+		if err != nil {
+			finalErr = err
+
+			rtrace.AttachErrToSpan(enginePlanSpan, err)
+			enginePlanSpan.End()
+
+			requestLogger.Error("failed to plan operation", zap.Error(err))
+			h.writeOperationError(enginePlanSpanCtx, w, requestLogger, err)
+			return
+		}
+
+		enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
+
+		enginePlanSpan.End()
+
 		// If we have authenticators, we try to authenticate the request
 		if len(h.accessController.authenticators) > 0 {
 			authenticateSpanCtx, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
@@ -173,57 +320,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			r = validatedReq
 		}
 
-		engineParseValidateCtx, engineParseValidateSpan := h.tracer.Start(r.Context(), "Operation - Parse and Validate",
-			trace.WithSpanKind(trace.SpanKindServer),
-		)
-
-		operation, err := h.parser.Parse(r.Context(), clientInfo, body, requestLogger)
-		if err != nil {
-			finalErr = err
-
-			rtrace.AttachErrToSpan(engineParseValidateSpan, err)
-			engineParseValidateSpan.End()
-
-			h.writeOperationError(engineParseValidateCtx, w, requestLogger, err)
-			return
-		}
-
-		engineParseValidateSpan.End()
-
 		// If the request has a query parameter wg_trace=true we skip the cache
 		// and always plan the operation
 		// this allows us to "write" to the plan
 		if !traceOptions.ExcludePlannerStats {
 			tracePlanStart = resolve.GetDurationNanoSinceTraceStart(r.Context())
 		}
-
-		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Planning",
-			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
-		)
-
-		opContext, err := h.planner.Plan(operation, clientInfo, OperationProtocolHTTP, traceOptions)
-
-		commonAttributeValues := commonMetricAttributes(opContext)
-		metrics.AddAttributes(commonAttributeValues...)
-
-		// The attributes have to be added on the root router span
-		initializeSpan(r.Context(), operation, commonAttributeValues)
-
-		if err != nil {
-			finalErr = err
-
-			rtrace.AttachErrToSpan(enginePlanSpan, err)
-			enginePlanSpan.End()
-
-			requestLogger.Error("failed to plan operation", zap.Error(err))
-			h.writeOperationError(enginePlanSpanCtx, w, requestLogger, err)
-			return
-		}
-
-		enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
-
-		enginePlanSpan.End()
 
 		if !traceOptions.ExcludePlannerStats {
 			planningTime := resolve.GetDurationNanoSinceTraceStart(r.Context()) - tracePlanStart
@@ -255,9 +357,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		finalErr = requestContext.error
 
 		// Mark the root span of the router as failed, so we can easily identify failed requests
-		span := trace.SpanFromContext(newReq.Context())
+		routerSpan = trace.SpanFromContext(newReq.Context())
 		if finalErr != nil {
-			rtrace.AttachErrToSpan(span, finalErr)
+			rtrace.AttachErrToSpan(routerSpan, finalErr)
 		}
 	})
 }
