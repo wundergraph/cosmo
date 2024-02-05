@@ -12,9 +12,9 @@ const {
   HOST,
   ALLOWED_ORIGINS,
   DB_URL,
-  DB_CERT_PATH,
-  DB_KEY_PATH,
-  DB_CA_PATH,
+  DB_TLS_CERT,
+  DB_TLS_KEY,
+  DB_TLS_CA,
   DEBUG_SQL,
   CLICKHOUSE_DSN,
   AUTH_REDIRECT_URI,
@@ -42,11 +42,19 @@ const {
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
   DEFAULT_PLAN,
+  OPENAI_API_KEY,
+  REDIS_HOST,
+  REDIS_PORT,
+  REDIS_TLS_CA,
+  REDIS_TLS_CERT,
+  REDIS_TLS_KEY,
+  REDIS_PASSWORD,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
   database: {
     url: DB_URL,
+    tls: DB_TLS_CA || DB_TLS_CERT || DB_TLS_KEY ? { ca: DB_TLS_CA, cert: DB_TLS_CERT, key: DB_TLS_KEY } : undefined,
   },
   allowedOrigins: ALLOWED_ORIGINS,
   production: process.env.NODE_ENV === 'production',
@@ -55,6 +63,7 @@ const options: BuildConfig = {
     enabled: true,
     level: LOG_LEVEL as pino.LevelWithSilent,
   },
+  openaiAPIKey: OPENAI_API_KEY,
   keycloak: {
     realm: KC_REALM,
     loginRealm: KC_LOGIN_REALM,
@@ -89,6 +98,19 @@ const options: BuildConfig = {
   s3StorageUrl: S3_STORAGE_URL,
   smtpUsername: SMTP_USERNAME,
   smtpPassword: SMTP_PASSWORD,
+  redis: {
+    host: REDIS_HOST,
+    port: REDIS_PORT,
+    password: REDIS_PASSWORD,
+    tls:
+      REDIS_TLS_CERT || REDIS_TLS_KEY || REDIS_TLS_CA
+        ? {
+            cert: REDIS_TLS_CERT,
+            key: REDIS_TLS_KEY,
+            ca: REDIS_TLS_CA,
+          }
+        : undefined,
+  },
 };
 
 if (STRIPE_SECRET_KEY) {
@@ -103,14 +125,6 @@ if (STRIPE_SECRET_KEY) {
     secret: STRIPE_SECRET_KEY,
     webhookSecret: STRIPE_WEBHOOK_SECRET,
     defaultPlanId: DEFAULT_PLAN,
-  };
-}
-
-if (DB_CERT_PATH || DB_KEY_PATH || DB_CA_PATH) {
-  options.database.ssl = {
-    certPath: DB_CERT_PATH,
-    keyPath: DB_KEY_PATH,
-    caPath: DB_CA_PATH,
   };
 }
 

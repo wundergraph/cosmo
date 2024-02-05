@@ -97,13 +97,13 @@ helm uninstall cosmo
 
 We **_strongly recommend_** that if you want to ship this helm chart to production you either:
 
-- Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/)), Minio ([Minio Cloud](https://min.io/)) or any other S3 compatible storage provider.
-- Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation), [Minio](https://github.com/minio/operator) Kubernetes operator of your choice.
+- Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Redis ([Aiven.io](https://aiven.io/redis)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/)), Minio ([Minio Cloud](https://min.io/)) or any other S3 compatible storage provider.
+- Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator),[Redis](https://artifacthub.io/packages/helm/bitnami/redis), [Keycloak](https://www.keycloak.org/operator/installation), [Minio](https://github.com/minio/operator) Kubernetes operator of your choice.
 - Use [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com/login) ✨
 
 ## Configuration and installation details
 
-By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL, Keycloak and Minio.
+By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL, Redis, Keycloak and Minio.
 After you have provisioned the databases, you can set the right configuration in the `values.yaml` file and do a `helm upgrade` to apply the changes.
 The studio, controlplane, router and collectors are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
 

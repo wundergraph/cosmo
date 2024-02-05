@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import * as tls from 'node:tls';
+import path from 'node:path';
 import fp from 'fastify-plugin';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
@@ -14,48 +15,61 @@ declare module 'fastify' {
   }
 }
 
+export interface DatabaseConnectionConfig {
+  tls?: {
+    // Necessary only if the server uses a self-signed certificate.
+    ca?: string;
+    // Necessary only if the server requires client certificate authentication.
+    key?: string;
+    cert?: string;
+  };
+}
+
 export interface DbPluginOptions {
   databaseConnectionUrl: string;
   debugSQL?: boolean;
   gracefulTimeoutSec?: number;
   runMigration?: boolean;
-  ssl?: {
-    // Necessary only if the server uses a self-signed certificate.
-    caPath?: string;
-    // Necessary only if the server requires client certificate authentication.
-    keyPath?: string;
-    certPath?: string;
-  };
 }
 
-export default fp<DbPluginOptions>(async function (fastify, opts) {
-  const connectionConfig: postgres.Options<any> = {
-    onnotice(notice) {
-      fastify.log.debug(notice);
-    },
-  };
+export const buildDatabaseConnectionConfig = async (
+  opts?: DatabaseConnectionConfig,
+): Promise<postgres.Options<any>> => {
+  const connectionConfig: postgres.Options<any> = {};
 
-  if (opts.ssl) {
+  if (opts?.tls) {
     const sslOptions: tls.TlsOptions = {
       rejectUnauthorized: false,
+      ca: opts.tls.ca,
+      cert: opts.tls.cert,
+      key: opts.tls.key,
     };
 
-    // Necessary only if the server uses a self-signed certificate.
-    if (opts.ssl.caPath) {
-      sslOptions.ca = await readFile(opts.ssl.caPath, 'utf8');
+    // Check if the ca is a file and read it.
+    if (opts.tls.ca && path.extname(opts.tls.ca)) {
+      sslOptions.ca = await readFile(opts.tls.ca, 'utf8');
+    }
+    // Check if the cert is a file and read it.
+    if (opts.tls.cert && path.extname(opts.tls.cert)) {
+      sslOptions.cert = await readFile(opts.tls.cert, 'utf8');
     }
 
-    // Necessary only if the server requires client certificate authentication.
-    if (opts.ssl.certPath) {
-      sslOptions.cert = await readFile(opts.ssl.certPath, 'utf8');
-    }
-
-    if (opts.ssl.keyPath) {
-      sslOptions.key = await readFile(opts.ssl.keyPath, 'utf8');
+    // Check if the key is a file and read it.
+    if (opts.tls.key && path.extname(opts.tls.key)) {
+      sslOptions.key = await readFile(opts.tls.key, 'utf8');
     }
 
     connectionConfig.ssl = sslOptions;
   }
+
+  return connectionConfig;
+};
+
+export default fp<DbPluginOptions & DatabaseConnectionConfig>(async function (fastify, opts) {
+  const connectionConfig = await buildDatabaseConnectionConfig(opts);
+  connectionConfig.onnotice = (notice) => {
+    fastify.log.debug(notice, 'Database notice');
+  };
 
   const queryConnection = postgres(opts.databaseConnectionUrl, connectionConfig);
   const db = drizzle(queryConnection, {

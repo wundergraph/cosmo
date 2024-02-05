@@ -10,9 +10,12 @@ dist
 /build
 /.idea
 /.husky
+/.run
 docs
 demo
 cli
 **/dist
 **/gen
+/aws-lambda-router
 /iac
+studio/.next

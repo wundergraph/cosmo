@@ -31,7 +31,7 @@ const FourOhFour: NextPageWithLayout = () => {
         className="absolute hidden md:block md:scale-50 lg:scale-75"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <g clip-path="url(#clip0_702_186)">
+        <g clipPath="url(#clip0_702_186)">
           <path
             opacity="0.06"
             d="M0.5 261.289H150.146V316.093H213.171V261.289H251.838V208.464H213.171V4.3186H130.66L0.5 209.377V261.289ZM151.364 208.464H66.8739V206.028L148.928 76.173H151.364V208.464Z"

@@ -75,7 +75,6 @@ import {
   GetUserAccessibleResourcesResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
-  IsRBACEnabledResponse,
   LeaveOrganizationResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
@@ -106,8 +105,10 @@ import {
   RenameNamespaceResponse,
   GetNamespacesResponse,
   MoveGraphResponse,
+  GenerateRouterTokenResponse,
+  UpdateAISettingsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
+import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
@@ -174,6 +175,7 @@ import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
 import { SubgraphMetricsRepository } from '../repositories/analytics/SubgraphMetricsRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { PublicError } from '../errors/errors.js';
+import { OpenAIGraphql } from '../openai-graphql/index.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -750,6 +752,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (!isValidUrl(req.routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Routing URL is not a valid URL`,
+            },
+            compositionErrors: [],
+          };
+        }
+
         const count = await fedGraphRepo.count();
 
         const feature = await orgRepo.getFeature({
@@ -908,6 +920,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_INVALID_LABELS,
               details: `One or more labels were found to be invalid`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        if (!isValidUrl(req.routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Routing URL is not a valid URL`,
             },
             compositionErrors: [],
           };
@@ -1210,11 +1232,40 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!process.env.OPENAI_API_KEY) {
+        // Avoid calling OpenAI API if the schema is too big
+        if (req.schema.length > 10_000) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The schema is too big to be fixed automatically`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
+
+        if (!opts.openaiApiKey) {
           return {
             response: {
               code: EnumStatusCode.ERR_OPENAI_DISABLED,
               details: `Env var 'OPENAI_API_KEY' must be set to use this feature`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
+
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'ai',
+        });
+
+        if (!feature?.enabled) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_OPENAI_DISABLED,
+              details: `The organization must enable the AI feature to use this feature`,
             },
             modified: false,
             schema: '',
@@ -1293,7 +1344,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           .join('\n\n');
 
         const ai = new OpenAIGraphql({
-          openAiApiKey: process.env.OPENAI_API_KEY,
+          openAiApiKey: opts.openaiApiKey,
         });
 
         const fixResult = await ai.fixSDL({
@@ -1519,6 +1570,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           targetNamespaceDisplayName: subgraph.namespace,
         });
 
+        if (
+          opts.openaiApiKey &&
+          // Avoid calling OpenAI API if the schema is too big.
+          // Best effort approach. This way of counting tokens is not accurate.
+          subgraph.schemaSDL.length <= 10_000
+        ) {
+          const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+          const feature = await orgRepo.getFeature({
+            organizationId: authContext.organizationId,
+            featureId: 'ai',
+          });
+
+          if (feature?.enabled) {
+            try {
+              await opts.readmeQueue.addJob({
+                organizationId: authContext.organizationId,
+                targetId: subgraph.targetId,
+                type: 'subgraph',
+              });
+            } catch (e) {
+              logger.error(e, `Error adding job to subgraph readme queue`);
+              // Swallow error because this is not critical
+            }
+          }
+        }
+
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -1613,7 +1690,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
@@ -3093,6 +3169,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           federatedGraphId: migratedGraph.id,
           tokenName: migratedGraph.name,
           organizationId: authContext.organizationId,
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'graph_token.created',
+          action: 'created',
+          actorId: authContext.userId,
+          targetId: migratedGraph.id,
+          targetDisplayName: migratedGraph.name,
+          targetType: 'federated_graph',
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          auditableDisplayName: token.name,
+          auditableType: 'graph_token',
+          targetNamespaceId: migratedGraph.namespaceId,
+          targetNamespaceDisplayName: migratedGraph.namespace,
         });
 
         opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_SUCCESS, {
@@ -4976,7 +5068,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!federatedGraph) {
           return {
             subgraphs: [],
-            graphToken: '',
             graphRequestToken: '',
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -5004,7 +5095,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!routerRequestToken) {
           return {
             subgraphs: [],
-            graphToken: '',
             graphRequestToken: '',
             response: {
               code: EnumStatusCode.ERR,
@@ -5013,49 +5103,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const tokens = await fedRepo.getRouterTokens({
-          organizationId: authContext.organizationId,
-          federatedGraphId: federatedGraph.id,
-          limit: 1,
-        });
-
-        let graphToken: GraphApiKeyDTO;
-
-        if (tokens.length === 0) {
-          const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
-            secret: opts.jwtSecret,
-            token: {
-              iss: authContext.userId,
-              federated_graph_id: federatedGraph.id,
-              organization_id: authContext.organizationId,
-            },
-          });
-
-          graphToken = await fedRepo.createToken({
-            token: tokenValue,
-            federatedGraphId: federatedGraph.id,
-            tokenName: federatedGraph.name,
-            organizationId: authContext.organizationId,
-          });
-
-          await auditLogRepo.addAuditLog({
-            organizationId: authContext.organizationId,
-            auditAction: 'graph_token.created',
-            action: 'created',
-            actorId: authContext.userId,
-            targetId: federatedGraph.id,
-            targetType: 'federated_graph',
-            targetDisplayName: federatedGraph.name,
-            auditableType: 'graph_token',
-            actorDisplayName: authContext.userDisplayName,
-            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-            auditableDisplayName: graphToken.name,
-            targetNamespaceId: federatedGraph.namespaceId,
-            targetNamespaceDisplayName: federatedGraph.namespace,
-          });
-        } else {
-          graphToken = tokens[0];
-        }
         return {
           graph: {
             id: federatedGraph.id,
@@ -5081,7 +5128,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionUrl: g.subscriptionUrl,
             namespace: g.namespace,
           })),
-          graphToken: graphToken.token,
           graphRequestToken: routerRequestToken,
           response: {
             code: EnumStatusCode.OK,
@@ -5811,6 +5857,77 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    // generates a temporary router token to fetch the router config only. Should only be used while fetching router config.
+    generateRouterToken: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GenerateRouterTokenResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            token: '',
+          };
+        }
+
+        const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
+
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' not found`,
+            },
+            token: '',
+          };
+        }
+
+        const expTime = Math.floor(Date.now() / 1000) + 5 * 60;
+
+        const token = await signJwt<GraphApiKeyJwtPayload>({
+          secret: opts.jwtSecret,
+          token: {
+            iss: authContext.userId,
+            federated_graph_id: federatedGraph.id,
+            organization_id: authContext.organizationId,
+            exp: expTime,
+          },
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'router_config.fetched',
+          action: 'fetched',
+          actorId: authContext.userId,
+          targetType: 'federated_graph',
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          auditableDisplayName: federatedGraph.name,
+          auditableType: 'router_config',
+          targetNamespaceId: federatedGraph.namespaceId,
+          targetNamespaceDisplayName: federatedGraph.namespace,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          token,
+        };
+      });
+    },
+
     getRouterTokens: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -5822,6 +5939,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            tokens: [],
+          };
+        }
 
         const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
         if (!federatedGraph) {
@@ -6462,17 +6589,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    isRBACEnabled: (req, ctx) => {
+    updateAISettings: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<IsRBACEnabledResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateAISettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
-        const enabled = await orgRepo.isFeatureEnabled(authContext.organizationId, 'rbac');
+        const enabled = await orgRepo.updateFeature({
+          id: 'ai',
+          organizationId: authContext.organizationId,
+          enabled: req.enable,
+        });
 
         return {
           response: {

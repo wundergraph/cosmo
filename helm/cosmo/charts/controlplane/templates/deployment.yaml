@@ -13,6 +13,10 @@ metadata:
     # Support for k14s.io. This annotation will wait for the keycloak deployments to be ready before deploying.
     kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
     {{- end }}
+    {{- if .Values.global.redis.enabled }}
+    # Support for k14s.io. This annotation will wait for the redis deployments to be ready before deploying.
+    kapp.k14s.io/change-rule.redis: "upsert after upserting cosmo.apps.redis.wundergraph.com/deployment"
+    {{- end }}
     # Only deploy the controlplane after the migrations have been applied.
     kapp.k14s.io/change-rule.ch-migration: "upsert after upserting cosmo.apps.controlplane.wundergraph.com/ch-migration"
     kapp.k14s.io/change-rule.db-migration: "upsert after upserting cosmo.apps.controlplane.wundergraph.com/db-migration"
@@ -102,6 +106,27 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: databaseUrl
+            {{- if .Values.configuration.databaseTlsCert }}
+            - name: DB_TLS_CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseTlsCert
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsCa }}
+            - name: DB_TLS_CA
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseTlsCa
+            {{- end }}
+            {{- if .Values.configuration.databaseTlsKey }}
+            - name: DB_TLS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseTlsKey
+            {{- end }}
             - name: CLICKHOUSE_DSN
               valueFrom:
                 secretKeyRef:
@@ -177,21 +202,27 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: githubAppWebhookSecret
+            {{- if .Values.configuration.slackAppClientId }}
             - name: SLACK_APP_CLIENT_ID
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: slackAppClientId
+            {{- end }}
+            {{- if .Values.configuration.slackAppClientSecret }}
             - name: SLACK_APP_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: slackAppClientSecret
+            {{- end }}
+            {{- if .Values.configuration.s3StorageUrl }}
             - name: S3_STORAGE_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: s3StorageUrl
+            {{- end }}
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -202,21 +233,72 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: smtpUsername
+            {{- if .Values.configuration.stripeSecretKey }}
             - name: STRIPE_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: stripeSecretKey
+            {{- end }}
+            {{- if .Values.configuration.stripeWebhookSecret }}
             - name: STRIPE_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: stripeWebhookSecret
+            {{- end }}
+            {{- if .Values.configuration.defaultBillingPlan }}
             - name: DEFAULT_PLAN
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: defaultBillingPlan
+            {{- end }}
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: redisHost
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: redisPort
+            {{- if .Values.configuration.redisPassword }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: redisPassword
+            {{- end }}
+            {{- if .Values.configuration.redisTlsCert }}
+            - name: REDIS_TLS_CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: redisTlsCert
+            {{- end }}
+            {{- if .Values.configuration.redisTlsCa }}
+            - name: REDIS_TLS_CA
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: redisTlsCa
+            {{- end }}
+            {{- if .Values.configuration.redisTlsKey }}
+            - name: REDIS_TLS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: redisTlsKey
+            {{- end }}
+            {{- if .Values.configuration.openAiApiKey }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: openAiApiKey
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

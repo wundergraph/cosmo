@@ -552,6 +552,9 @@ export class SubgraphRepository {
   }
 
   private async getSubgraph(conditions: SQL<unknown>[]): Promise<SubgraphDTO | undefined> {
+    // Ensure all queries are scoped to the organization.
+    conditions.push(eq(schema.targets.organizationId, this.organizationId));
+
     const resp = await this.db
       .select({
         name: schema.targets.name,
@@ -609,20 +612,19 @@ export class SubgraphRepository {
   }
 
   public byTargetId(targetId: string): Promise<SubgraphDTO | undefined> {
-    return this.getSubgraph([
-      eq(schema.targets.id, targetId),
-      eq(schema.targets.organizationId, this.organizationId),
-      eq(schema.targets.type, 'subgraph'),
-    ]);
+    return this.getSubgraph([eq(schema.targets.id, targetId), eq(schema.targets.type, 'subgraph')]);
   }
 
   public byName(name: string, namespace: string): Promise<SubgraphDTO | undefined> {
     return this.getSubgraph([
       eq(schema.targets.name, name),
-      eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
       eq(schema.namespaces.name, namespace),
     ]);
+  }
+
+  public byId(id: string): Promise<SubgraphDTO | undefined> {
+    return this.getSubgraph([eq(schema.subgraphs.id, id)]);
   }
 
   public async checks({
@@ -969,6 +971,13 @@ export class SubgraphRepository {
     }
 
     return accessibleSubgraphs;
+  }
+
+  public updateReadme({ targetId, readme }: { targetId: string; readme: string }) {
+    return this.db
+      .update(targets)
+      .set({ readme })
+      .where(and(eq(targets.id, targetId), eq(schema.targets.organizationId, this.organizationId)));
   }
 
   public async getSubgraphMembers(subgraphId: string): Promise<SubgraphMemberDTO[]> {

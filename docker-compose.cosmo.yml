@@ -1,8 +1,7 @@
 ---
-version: "3.8"
+version: '3.8'
 name: cosmo
 services:
-
   cdn:
     image: ghcr.io/wundergraph/cosmo/cdn:${DC_CDN_VERSION:-latest}
     build:

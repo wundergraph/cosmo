@@ -11,6 +11,8 @@ import { DateRange, TimeFilters } from '../../../types/index.js';
 
 export type ColumnMetaData = Record<string, Partial<PlainMessage<AnalyticsViewColumn>>>;
 
+export type CoercedFilterValues = Record<string, string | number | boolean>;
+
 export type BaseFilters = Record<
   string,
   PlainMessage<AnalyticsViewResultFilter> & {
@@ -132,11 +134,11 @@ export function buildColumnsFromNames(
  * @param columnMetadata
  * @param coercedFilters
  * @param filterMapper
- * @param dateRange
+ * @param includeDateFilter
  */
 export function buildCoercedFilterSqlStatement(
   columnMetadata: ColumnMetaData,
-  coercedFilters: Record<string, string | number>,
+  coercedFilters: CoercedFilterValues,
   filterMapper: Record<
     string,
     {
@@ -189,10 +191,22 @@ export function buildCoercedFilterSqlStatement(
       // https://clickhouse.com/docs/en/interfaces/cli#cli-queries-with-parameters
       // https://clickhouse.com/docs/en/sql-reference/data-types
 
-      if (column.type === 'number') {
-        sql = `${dbField} ${operatorSql} {${id}:Float64}`;
-      } else if (column.type === 'string') {
-        sql = `${dbField} ${operatorSql} {${id}:String}`;
+      switch (column.type) {
+        case 'number': {
+          sql = `${dbField} ${operatorSql} {${id}:Float64}`;
+          break;
+        }
+        case 'string': {
+          sql = `${dbField} ${operatorSql} {${id}:String}`;
+          break;
+        }
+        case 'boolean': {
+          sql = `${dbField} ${operatorSql} {${id}:Boolean}`;
+          break;
+        }
+        default: {
+          throw new Error(`Unknown filter column to translate to clickhouse data type: ${column.type}`);
+        }
       }
     } else {
       sql = `${dbField} ${operatorSql} {${id}:String}`;
@@ -240,8 +254,10 @@ export function buildCoercedFilterSqlStatement(
 
 /**
  * Coerces filter values to the correct type.
+ *
  * @param columnMetadata
  * @param filters
+ * @param baseFilters
  */
 export function coerceFilterValues(
   columnMetadata: ColumnMetaData,
@@ -257,7 +273,7 @@ export function coerceFilterValues(
       dbClause: 'where' | 'having';
     }
   > = {};
-  const result: Record<string, string | number> = {};
+  const result: CoercedFilterValues = {};
 
   for (const [index, filter] of filters.entries()) {
     const column = columnMetadata[filter.field];
@@ -276,10 +292,22 @@ export function coerceFilterValues(
     };
 
     if (column) {
-      if (column.type === 'number') {
-        result[id] = Number.parseFloat(filter.value);
-      } else if (column.type === 'string') {
-        result[id] = filter.value;
+      switch (column.type) {
+        case 'number': {
+          result[id] = Number.parseFloat(filter.value);
+          break;
+        }
+        case 'string': {
+          result[id] = filter.value;
+          break;
+        }
+        case 'boolean': {
+          result[id] = filter.value === 'true';
+          break;
+        }
+        default: {
+          throw new Error(`Unknown column type to coerce: ${column.type}`);
+        }
       }
     } else {
       result[id] = filter.value;

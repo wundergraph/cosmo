@@ -63,7 +63,7 @@ export default (opts: BaseCommandOptions) => {
           pc.bold(pc.white('NAMESPACE')),
           pc.bold(pc.white('ERROR_MESSAGE')),
         ],
-        colWidths: [30, 120],
+        colWidths: [30, 30, 120],
         wordWrap: true,
       });
 
@@ -82,7 +82,7 @@ export default (opts: BaseCommandOptions) => {
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());
     } else {
-      console.log(`Failed to create federated graph ${pc.bold(name)}.`);
+      console.log(pc.red(`Failed to create federated graph ${pc.bold(name)}.`));
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

@@ -4,6 +4,39 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.61.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.61.1...controlplane@0.61.2) (2024-02-02)
+
+**Note:** Version bump only for package controlplane
+
+## [0.61.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.61.0...controlplane@0.61.1) (2024-02-01)
+
+### Bug Fixes
+
+* support tls when migrate ([#479](https://github.com/wundergraph/cosmo/issues/479)) ([4e1b23c](https://github.com/wundergraph/cosmo/commit/4e1b23c052e99e94f516df334adcefe3bcd8caad)) (@StarpTech)
+
+# [0.61.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.60.0...controlplane@0.61.0) (2024-02-01)
+
+### Bug Fixes
+
+* **deps:** upgrade bullmq ([#471](https://github.com/wundergraph/cosmo/issues/471)) ([90231c9](https://github.com/wundergraph/cosmo/commit/90231c9dd3af469dd0e6f6af05468c8e1112fa83)) (@StarpTech)
+* slack notification link ([#478](https://github.com/wundergraph/cosmo/issues/478)) ([e83dfd8](https://github.com/wundergraph/cosmo/commit/e83dfd810cdbfdd927074b727ebab9435e380269)) (@thisisnithin)
+* upgrade otel collector ([#475](https://github.com/wundergraph/cosmo/issues/475)) ([2d33978](https://github.com/wundergraph/cosmo/commit/2d339786d4cc1727b3fb6498606d11a059233b61)) (@StarpTech)
+
+### Features
+
+* integrate S3 when executing "getLatestValidRouterConfig" from the CLI ([#467](https://github.com/wundergraph/cosmo/issues/467)) ([90b7c8e](https://github.com/wundergraph/cosmo/commit/90b7c8ed01bdd659183c87cc2d94946ab20fe073)) (@JivusAyrus)
+
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.59.0...controlplane@0.60.0) (2024-01-31)
+
+### Bug Fixes
+
+* ch migrations ([#468](https://github.com/wundergraph/cosmo/issues/468)) ([5afda68](https://github.com/wundergraph/cosmo/commit/5afda68c8d0d65fa9adf64face1c6532f7d5174e)) (@JivusAyrus)
+* validate routing urls ([#470](https://github.com/wundergraph/cosmo/issues/470)) ([166d9ef](https://github.com/wundergraph/cosmo/commit/166d9efb53f5554b1dcbd49f7dd334f6cc1e4a87)) (@JivusAyrus)
+
+### Features
+
+* cosmo ai, generate docs on publish ([#466](https://github.com/wundergraph/cosmo/issues/466)) ([033ff90](https://github.com/wundergraph/cosmo/commit/033ff9068716935a7d646adebcc0e2b776d0295d)) (@StarpTech)
+
 # [0.59.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.58.0...controlplane@0.59.0) (2024-01-30)
 
 ### Features
