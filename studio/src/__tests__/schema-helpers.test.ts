@@ -1,7 +1,7 @@
 import {
   getDeprecatedTypes,
   getTypeCounts,
-  parseSchema,
+  formatAndParseSchema,
 } from "../lib/schema-helpers";
 import { expect, test } from "vitest";
 
@@ -26,7 +26,7 @@ type Employee {
 `;
 
 test("return the correct types with deprecated fields or args", async () => {
-  const ast = await parseSchema(schema);
+  const ast = await formatAndParseSchema(schema);
 
   expect(ast).not.toBeNull();
 
@@ -40,7 +40,7 @@ test("return the correct types with deprecated fields or args", async () => {
 });
 
 test("returns correct type counts", async () => {
-  const ast = await parseSchema(schema);
+  const ast = await formatAndParseSchema(schema);
 
   expect(ast).not.toBeNull();
 

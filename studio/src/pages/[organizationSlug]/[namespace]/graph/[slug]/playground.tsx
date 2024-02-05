@@ -33,6 +33,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
+import { parseSchema } from "@/lib/schema-helpers";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
@@ -42,6 +43,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getClients,
+  getFederatedGraphSDLByName,
   publishPersistedOperations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -398,11 +400,23 @@ const PlaygroundPortal = () => {
 const PlaygroundPage: NextPageWithLayout = () => {
   const router = useRouter();
   const operation = router.query.operation as string;
+  const variables = router.query.variables as string;
 
   const graphContext = useContext(GraphContext);
 
+  const { data, isLoading } = useQuery(
+    getFederatedGraphSDLByName.useQuery({
+      name: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    }),
+  );
+
+  const schema = useMemo(() => {
+    return parseSchema(data?.sdl);
+  }, [data?.sdl]);
+
   const [query, setQuery] = useState<string | undefined>(
-    operation ? atob(operation) : undefined,
+    operation ? decodeURIComponent(operation) : undefined,
   );
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
@@ -548,6 +562,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             showPersistHeadersSettings={false}
             fetcher={fetcher}
             query={query}
+            variables={variables ? decodeURIComponent(variables) : undefined}
             onEditQuery={setQuery}
             headers={headers}
             onEditHeaders={setHeaders}
@@ -556,6 +571,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
                 showAttribution: false,
               }),
             ]}
+            // null stops introspection and undefined forces introspection if schema is null
+            schema={isLoading ? null : schema ?? undefined}
           />
           {isMounted && <PlaygroundPortal />}
         </div>
