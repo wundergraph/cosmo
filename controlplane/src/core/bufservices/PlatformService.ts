@@ -4605,6 +4605,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         // check if the user to be added exists and if the user is the member of the org
         const user = await userRepo.byEmail(req.userEmail);
         if (!user) {
@@ -4684,6 +4686,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         // check if the subgraph exists
         const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
