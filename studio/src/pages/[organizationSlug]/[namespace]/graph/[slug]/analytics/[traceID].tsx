@@ -104,7 +104,7 @@ export const TracePage: NextPageWithLayout = () => {
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/router/compliance#disable-variables-export"}
+            href={docsBaseURL + "/router/open-telemetry#graphql-variables"}
             className="text-primary"
           >
             Learn more.
