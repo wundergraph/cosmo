@@ -133,7 +133,10 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       },
     ];
 
-    if (plans.data?.plans?.length) {
+    if (
+      plans.data?.plans?.length &&
+      process.env.NEXT_PUBLIC_ENABLE_PAYMENTS === "true"
+    ) {
       navigation.push({
         title: "Billing",
         href: basePath + "/billing",
@@ -165,7 +168,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     );
 
     return navigation;
-  }, [organizationSlug, plans.data?.plans?.length, user?.currentOrganization.slug]);
+  }, [
+    organizationSlug,
+    plans.data?.plans?.length,
+    user?.currentOrganization.slug,
+  ]);
 
   return (
     render && (
