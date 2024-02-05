@@ -144,7 +144,7 @@ func TestOperationParser(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewParseReader(strings.NewReader(tc.Input))
+			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			assert.NoError(t, err)
 
 			err = kit.Parse(context.Background(), clientInfo, log)
@@ -212,7 +212,7 @@ func TestOperationParserExtensions(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewParseReader(strings.NewReader(tc.Input))
+			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
 			assert.NoError(t, err)
 
 			err = kit.Parse(context.Background(), clientInfo, log)

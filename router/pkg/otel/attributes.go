@@ -21,6 +21,7 @@ const (
 	WgOperationPersistedID        = attribute.Key("wg.operation.persisted_id")
 	WgEnginePlanCacheHit          = attribute.Key("wg.engine.plan_cache_hit")
 	WgEngineRequestTracingEnabled = attribute.Key("wg.engine.request_tracing_enabled")
+	WgRouterRootSpan              = attribute.Key("wg.router.root_span")
 )
 
 var (

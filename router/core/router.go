@@ -711,6 +711,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	baseAttributes := []attribute.KeyValue{
 		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 		otel.WgRouterVersion.String(Version),
+		otel.WgRouterRootSpan.Bool(true),
 	}
 
 	if r.graphApiToken != "" {
@@ -945,7 +946,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Logger:                      r.logger,
 		Executor:                    executor,
 		Metrics:                     routerMetrics,
-		Parser:                      operationParser,
+		OperationProcessor:          operationParser,
 		Planner:                     operationPlanner,
 		AccessController:            r.accessController,
 		RouterPublicKey:             publicKey,
@@ -957,7 +958,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	})
 
 	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-		Parser:                     operationParser,
+		OperationProcessor:         operationParser,
 		Planner:                    operationPlanner,
 		GraphQLHandler:             graphqlHandler,
 		Metrics:                    routerMetrics,

@@ -97,9 +97,9 @@ type OperationParserOptions struct {
 	PersistentOpClient      *cdn.PersistentOperationClient
 }
 
-// OperationParser provides shared resources to the parseKit and OperationKit.
+// OperationProcessor provides shared resources to the parseKit and OperationKit.
 // It should be only instantiated once and shared across requests
-type OperationParser struct {
+type OperationProcessor struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
 	cdn                     *cdn.PersistentOperationClient
@@ -118,20 +118,21 @@ type parseKit struct {
 	variablesValidator  *variablesvalidation.VariablesValidator
 }
 
-// OperationKit represent the result of parsing, normalizing and validating an operation.
+// OperationKit provides methods to parse, normalize and validate operations.
+// After each step, the operation is available as a ParsedOperation.
 // It must be created for each request and freed after the request is done.
 type OperationKit struct {
 	data                     []byte
 	operationDefinitionRef   int
 	originalOperationNameRef ast.ByteSliceReference
-	operationParser          *OperationParser
+	operationParser          *OperationProcessor
 	kit                      *parseKit
 	parsedOperation          *ParsedOperation
 }
 
 // NewOperationKit creates a new OperationKit. The kit is used to parse, normalize and validate operations.
 // It allocates resources that need to be freed by calling OperationKit.Free()
-func NewOperationKit(parser *OperationParser, data []byte) *OperationKit {
+func NewOperationKit(parser *OperationProcessor, data []byte) *OperationKit {
 	return &OperationKit{
 		operationParser:        parser,
 		kit:                    parser.getKit(),
@@ -434,8 +435,8 @@ func (o *OperationKit) Validate() error {
 	return nil
 }
 
-func NewOperationParser(opts OperationParserOptions) *OperationParser {
-	return &OperationParser{
+func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
+	return &OperationProcessor{
 		executor:                opts.Executor,
 		maxOperationSizeInBytes: opts.MaxOperationSizeInBytes,
 		cdn:                     opts.PersistentOpClient,
@@ -461,25 +462,25 @@ func NewOperationParser(opts OperationParserOptions) *OperationParser {
 	}
 }
 
-func (p *OperationParser) getKit() *parseKit {
+func (p *OperationProcessor) getKit() *parseKit {
 	return p.parseKitPool.Get().(*parseKit)
 }
 
-func (p *OperationParser) freeKit(kit *parseKit) {
+func (p *OperationProcessor) freeKit(kit *parseKit) {
 	kit.keyGen.Reset()
 	kit.doc.Reset()
 	kit.normalizedOperation.Reset()
 	kit.unescapedDocument = kit.unescapedDocument[:0]
 }
 
-func (p *OperationParser) entityTooLarge() error {
+func (p *OperationProcessor) entityTooLarge() error {
 	return &inputError{
 		message:    "request body too large",
 		statusCode: http.StatusRequestEntityTooLarge,
 	}
 }
 
-func (p *OperationParser) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, error) {
+func (p *OperationProcessor) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, error) {
 	// Use an extra byte for the max size. This way we can check if N became
 	// zero to detect if the request body was too large.
 	limitedReader := &io.LimitedReader{R: r, N: p.maxOperationSizeInBytes + 1}
@@ -494,7 +495,7 @@ func (p *OperationParser) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, erro
 	return buf.Bytes(), nil
 }
 
-func (p *OperationParser) NewParseReader(r io.Reader) (*OperationKit, error) {
+func (p *OperationProcessor) NewKitFromReader(r io.Reader) (*OperationKit, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.PutBytesBuffer(buf)
 	data, err := p.ReadBody(buf, r)
@@ -504,7 +505,7 @@ func (p *OperationParser) NewParseReader(r io.Reader) (*OperationKit, error) {
 	return NewOperationKit(p, data), nil
 }
 
-func (p *OperationParser) NewParser(data []byte) (*OperationKit, error) {
+func (p *OperationProcessor) NewKit(data []byte) (*OperationKit, error) {
 	if len(data) > int(p.maxOperationSizeInBytes) {
 		return nil, p.entityTooLarge()
 	}

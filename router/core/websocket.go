@@ -35,14 +35,14 @@ var (
 )
 
 type WebsocketMiddlewareOptions struct {
-	Parser           *OperationParser
-	Planner          *OperationPlanner
-	GraphQLHandler   *GraphQLHandler
-	Metrics          RouterMetrics
-	AccessController *AccessController
-	Logger           *zap.Logger
-	Stats            WebSocketsStatistics
-	ReadTimeout      time.Duration
+	OperationProcessor *OperationProcessor
+	Planner            *OperationPlanner
+	GraphQLHandler     *GraphQLHandler
+	Metrics            RouterMetrics
+	AccessController   *AccessController
+	Logger             *zap.Logger
+	Stats              WebSocketsStatistics
+	ReadTimeout        time.Duration
 
 	EnableWebSocketEpollKqueue bool
 	EpollKqueuePollTimeout     time.Duration
@@ -52,16 +52,16 @@ type WebsocketMiddlewareOptions struct {
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		handler := &WebsocketHandler{
-			ctx:              ctx,
-			next:             next,
-			parser:           opts.Parser,
-			planner:          opts.Planner,
-			graphqlHandler:   opts.GraphQLHandler,
-			metrics:          opts.Metrics,
-			accessController: opts.AccessController,
-			logger:           opts.Logger,
-			stats:            opts.Stats,
-			readTimeout:      opts.ReadTimeout,
+			ctx:                ctx,
+			next:               next,
+			operationProcessor: opts.OperationProcessor,
+			planner:            opts.Planner,
+			graphqlHandler:     opts.GraphQLHandler,
+			metrics:            opts.Metrics,
+			accessController:   opts.AccessController,
+			logger:             opts.Logger,
+			stats:              opts.Stats,
+			readTimeout:        opts.ReadTimeout,
 		}
 		handler.handlerPool = pond.New(
 			64,
@@ -138,14 +138,14 @@ func (c *wsConnectionWrapper) Close() error {
 }
 
 type WebsocketHandler struct {
-	ctx              context.Context
-	next             http.Handler
-	parser           *OperationParser
-	planner          *OperationPlanner
-	graphqlHandler   *GraphQLHandler
-	metrics          RouterMetrics
-	accessController *AccessController
-	logger           *zap.Logger
+	ctx                context.Context
+	next               http.Handler
+	operationProcessor *OperationProcessor
+	planner            *OperationPlanner
+	graphqlHandler     *GraphQLHandler
+	metrics            RouterMetrics
+	accessController   *AccessController
+	logger             *zap.Logger
 
 	epoll         epoller.Poller
 	connections   map[int]*WebSocketConnectionHandler
@@ -215,19 +215,19 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	handler := NewWebsocketConnectionHandler(h.ctx, WebSocketConnectionHandlerOptions{
-		Parser:         h.parser,
-		Planner:        h.planner,
-		GraphQLHandler: h.graphqlHandler,
-		Metrics:        h.metrics,
-		ResponseWriter: w,
-		Request:        r,
-		Connection:     conn,
-		Protocol:       protocol,
-		Logger:         h.logger,
-		Stats:          h.stats,
-		ConnectionID:   h.connectionIDs.Inc(),
-		ClientInfo:     clientInfo,
-		InitRequestID:  requestID,
+		OperationProcessor: h.operationProcessor,
+		Planner:            h.planner,
+		GraphQLHandler:     h.graphqlHandler,
+		Metrics:            h.metrics,
+		ResponseWriter:     w,
+		Request:            r,
+		Connection:         conn,
+		Protocol:           protocol,
+		Logger:             h.logger,
+		Stats:              h.stats,
+		ConnectionID:       h.connectionIDs.Inc(),
+		ClientInfo:         clientInfo,
+		InitRequestID:      requestID,
 	})
 	err = handler.Initialize()
 	if err != nil {
@@ -484,35 +484,35 @@ type graphqlError struct {
 }
 
 type WebSocketConnectionHandlerOptions struct {
-	Parser         *OperationParser
-	Planner        *OperationPlanner
-	GraphQLHandler *GraphQLHandler
-	Metrics        RouterMetrics
-	ResponseWriter http.ResponseWriter
-	Request        *http.Request
-	Connection     *wsConnectionWrapper
-	Protocol       wsproto.Proto
-	Logger         *zap.Logger
-	Stats          WebSocketsStatistics
-	ConnectionID   int64
-	RequestContext context.Context
-	ClientInfo     *ClientInfo
-	InitRequestID  string
+	OperationProcessor *OperationProcessor
+	Planner            *OperationPlanner
+	GraphQLHandler     *GraphQLHandler
+	Metrics            RouterMetrics
+	ResponseWriter     http.ResponseWriter
+	Request            *http.Request
+	Connection         *wsConnectionWrapper
+	Protocol           wsproto.Proto
+	Logger             *zap.Logger
+	Stats              WebSocketsStatistics
+	ConnectionID       int64
+	RequestContext     context.Context
+	ClientInfo         *ClientInfo
+	InitRequestID      string
 }
 
 type WebSocketConnectionHandler struct {
-	ctx            context.Context
-	parser         *OperationParser
-	planner        *OperationPlanner
-	graphqlHandler *GraphQLHandler
-	metrics        RouterMetrics
-	w              http.ResponseWriter
-	r              *http.Request
-	conn           *wsConnectionWrapper
-	protocol       wsproto.Proto
-	initialPayload json.RawMessage
-	clientInfo     *ClientInfo
-	logger         *zap.Logger
+	ctx                context.Context
+	operationProcessor *OperationProcessor
+	planner            *OperationPlanner
+	graphqlHandler     *GraphQLHandler
+	metrics            RouterMetrics
+	w                  http.ResponseWriter
+	r                  *http.Request
+	conn               *wsConnectionWrapper
+	protocol           wsproto.Proto
+	initialPayload     json.RawMessage
+	clientInfo         *ClientInfo
+	logger             *zap.Logger
 
 	initRequestID   string
 	connectionID    int64
@@ -523,20 +523,20 @@ type WebSocketConnectionHandler struct {
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
 	return &WebSocketConnectionHandler{
-		ctx:            ctx,
-		parser:         opts.Parser,
-		planner:        opts.Planner,
-		graphqlHandler: opts.GraphQLHandler,
-		metrics:        opts.Metrics,
-		w:              opts.ResponseWriter,
-		r:              opts.Request,
-		conn:           opts.Connection,
-		protocol:       opts.Protocol,
-		logger:         opts.Logger,
-		connectionID:   opts.ConnectionID,
-		stats:          opts.Stats,
-		clientInfo:     opts.ClientInfo,
-		initRequestID:  opts.InitRequestID,
+		ctx:                ctx,
+		operationProcessor: opts.OperationProcessor,
+		planner:            opts.Planner,
+		graphqlHandler:     opts.GraphQLHandler,
+		metrics:            opts.Metrics,
+		w:                  opts.ResponseWriter,
+		r:                  opts.Request,
+		conn:               opts.Connection,
+		protocol:           opts.Protocol,
+		logger:             opts.Logger,
+		connectionID:       opts.ConnectionID,
+		stats:              opts.Stats,
+		clientInfo:         opts.ClientInfo,
+		initRequestID:      opts.InitRequestID,
 	}
 }
 
@@ -561,30 +561,30 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
-	parser, err := h.parser.NewParser(payload)
-	defer parser.Free()
+	operationKit, err := h.operationProcessor.NewKit(payload)
+	defer operationKit.Free()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err := parser.Parse(h.ctx, h.clientInfo, h.logger); err != nil {
+	if err := operationKit.Parse(h.ctx, h.clientInfo, h.logger); err != nil {
 		return nil, nil, err
 	}
 
-	if err := parser.Normalize(); err != nil {
+	if err := operationKit.Normalize(); err != nil {
 		return nil, nil, err
 	}
 
-	if err := parser.Validate(); err != nil {
+	if err := operationKit.Validate(); err != nil {
 		return nil, nil, err
 	}
 
-	opContext, err := h.planner.Plan(parser.parsedOperation, h.clientInfo, OperationProtocolWS, ParseRequestTraceOptions(h.r))
+	opContext, err := h.planner.Plan(operationKit.parsedOperation, h.clientInfo, OperationProtocolWS, ParseRequestTraceOptions(h.r))
 	if err != nil {
-		return parser.parsedOperation, nil, err
+		return operationKit.parsedOperation, nil, err
 	}
 	opContext.initialPayload = h.initialPayload
-	return parser.parsedOperation, opContext, nil
+	return operationKit.parsedOperation, opContext, nil
 }
 
 func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, id resolve.SubscriptionIdentifier) {

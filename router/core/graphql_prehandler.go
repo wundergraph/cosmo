@@ -31,7 +31,7 @@ type PreHandlerOptions struct {
 	Logger                      *zap.Logger
 	Executor                    *Executor
 	Metrics                     RouterMetrics
-	Parser                      *OperationParser
+	OperationProcessor          *OperationProcessor
 	Planner                     *OperationPlanner
 	AccessController            *AccessController
 	DevelopmentMode             bool
@@ -46,7 +46,7 @@ type PreHandler struct {
 	log                         *zap.Logger
 	executor                    *Executor
 	metrics                     RouterMetrics
-	parser                      *OperationParser
+	operationProcessor          *OperationProcessor
 	planner                     *OperationPlanner
 	accessController            *AccessController
 	developmentMode             bool
@@ -63,7 +63,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		log:                         opts.Logger,
 		executor:                    opts.Executor,
 		metrics:                     opts.Metrics,
-		parser:                      opts.Parser,
+		operationProcessor:          opts.OperationProcessor,
 		planner:                     opts.Planner,
 		accessController:            opts.AccessController,
 		routerPublicKey:             opts.RouterPublicKey,
@@ -131,7 +131,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
 
-		body, err := h.parser.ReadBody(buf, r.Body)
+		body, err := h.operationProcessor.ReadBody(buf, r.Body)
 		if err != nil {
 			finalErr = err
 			requestLogger.Error(err.Error())
@@ -147,8 +147,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithSpanKind(trace.SpanKindServer),
 		)
 
-		parser, err := h.parser.NewParser(body)
-		defer parser.Free()
+		operationKit, err := h.operationProcessor.NewKit(body)
+		defer operationKit.Free()
 
 		if err != nil {
 			finalErr = err
@@ -160,7 +160,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		err = parser.Parse(r.Context(), clientInfo, requestLogger)
+		err = operationKit.Parse(r.Context(), clientInfo, requestLogger)
 		if err != nil {
 			finalErr = err
 
@@ -173,14 +173,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		engineParseSpan.End()
 
-		routerSpan.SetName(GetSpanName(parser.parsedOperation.Name, parser.parsedOperation.Type))
+		// Set the router span name after we have the operation name
+		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Name, operationKit.parsedOperation.Type))
 
 		baseAttributeValues = []attribute.KeyValue{
-			otel.WgOperationName.String(parser.parsedOperation.Name),
-			otel.WgOperationType.String(parser.parsedOperation.Type),
+			otel.WgOperationName.String(operationKit.parsedOperation.Name),
+			otel.WgOperationType.String(operationKit.parsedOperation.Type),
 		}
-		if parser.parsedOperation.PersistedID != "" {
-			baseAttributeValues = append(baseAttributeValues, otel.WgOperationPersistedID.String(parser.parsedOperation.PersistedID))
+		if operationKit.parsedOperation.PersistedID != "" {
+			baseAttributeValues = append(baseAttributeValues, otel.WgOperationPersistedID.String(operationKit.parsedOperation.PersistedID))
 		}
 
 		routerSpan.SetAttributes(baseAttributeValues...)
@@ -194,7 +195,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithSpanKind(trace.SpanKindServer),
 		)
 
-		err = parser.Normalize()
+		err = operationKit.Normalize()
 		if err != nil {
 			finalErr = err
 
@@ -209,15 +210,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		if h.traceExportVariables {
 			// At this stage the variables are normalized
-			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(parser.parsedOperation.Variables)))
+			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Variables)))
 		}
 
 		baseAttributeValues = []attribute.KeyValue{
-			otel.WgOperationHash.String(strconv.FormatUint(parser.parsedOperation.ID, 10)),
+			otel.WgOperationHash.String(strconv.FormatUint(operationKit.parsedOperation.ID, 10)),
 		}
 
 		// Set the normalized operation as soon as we have it
-		routerSpan.SetAttributes(otel.WgOperationContent.String(parser.parsedOperation.NormalizedRepresentation))
+		routerSpan.SetAttributes(otel.WgOperationContent.String(operationKit.parsedOperation.NormalizedRepresentation))
 		routerSpan.SetAttributes(baseAttributeValues...)
 
 		metrics.AddAttributes(baseAttributeValues...)
@@ -229,7 +230,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		engineValidateCtx, engineValidateSpan := h.tracer.Start(r.Context(), "Operation - Validate",
 			trace.WithSpanKind(trace.SpanKindServer),
 		)
-		err = parser.Validate()
+		err = operationKit.Validate()
 		if err != nil {
 			finalErr = err
 
@@ -279,7 +280,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(traceOptions.Enable)),
 		)
 
-		opContext, err := h.planner.Plan(parser.parsedOperation, clientInfo, OperationProtocolHTTP, traceOptions)
+		opContext, err := h.planner.Plan(operationKit.parsedOperation, clientInfo, OperationProtocolHTTP, traceOptions)
 
 		if err != nil {
 			finalErr = err
