@@ -183,6 +183,7 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 		Name:    cfg.ServiceName,
 		Version: core.Version,
 		Sampler: cfg.Tracing.SamplingRate,
+		WithNewRoot: cfg.Tracing.WithNewRoot,
 		ExportGraphQLVariables: trace.ExportGraphQLVariables{
 			Enabled: cfg.Tracing.ExportGraphQLVariables,
 		},
