@@ -49,6 +49,8 @@ type Config struct {
 	Name string
 	// Version represents the service version for tracing. The default value is dev.
 	Version string
+	// WithNewRoot specifies that the Span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers.
+	WithNewRoot bool
 	// Sampler represents the sampler for tracing. The default value is 1.
 	Sampler float64
 	// ExportGraphQLVariables defines if and how GraphQL variables should be exported as span attributes.
@@ -84,6 +86,7 @@ func DefaultConfig(serviceVersion string) *Config {
 		Name:    ServerName,
 		Version: serviceVersion,
 		Sampler: 1,
+		WithNewRoot: false,
 		ExportGraphQLVariables: ExportGraphQLVariables{
 			Enabled: true,
 		},
