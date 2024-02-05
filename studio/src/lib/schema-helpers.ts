@@ -297,7 +297,20 @@ export const getRootDescription = (name: string) => {
   return getCategoryDescription(noCase(name) as GraphQLTypeCategory);
 };
 
-export const parseSchema = async (schema?: string) => {
+export const parseSchema = (schema?: string) => {
+  if (!schema) return null;
+
+  const doc = parse(schema);
+
+  const ast = buildASTSchema(doc, {
+    assumeValid: true,
+    assumeValidSDL: true,
+  });
+
+  return ast;
+};
+
+export const formatAndParseSchema = async (schema?: string) => {
   if (!schema) {
     return null;
   }
@@ -308,14 +321,7 @@ export const parseSchema = async (schema?: string) => {
       plugins: [graphQLPlugin, estreePlugin, babelPlugin],
     });
 
-    const doc = parse(res);
-
-    const ast = buildASTSchema(doc, {
-      assumeValid: true,
-      assumeValidSDL: true,
-    });
-
-    return ast;
+    return parseSchema(res);
   } catch {
     return null;
   }
@@ -329,7 +335,7 @@ export const useParseSchema = (schema?: string) => {
     let t: NodeJS.Timeout;
     setIsParsing(true);
 
-    parseSchema(schema).then((res) => {
+    formatAndParseSchema(schema).then((res) => {
       setAst(res);
 
       t = setTimeout(() => {
