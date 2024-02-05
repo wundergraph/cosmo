@@ -410,6 +410,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
     }),
   );
 
+  const schema = useMemo(() => {
+    return parseSchema(data?.sdl);
+  }, [data?.sdl]);
+
   const [query, setQuery] = useState<string | undefined>(
     operation ? atob(operation) : undefined,
   );
@@ -565,7 +569,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
                 showAttribution: false,
               }),
             ]}
-            schema={isLoading ? null : parseSchema(data?.sdl) ?? undefined}
+            // null stops introspection and undefined forces introspection if schema is null
+            schema={isLoading ? null : schema ?? undefined}
           />
           {isMounted && <PlaygroundPortal />}
         </div>
