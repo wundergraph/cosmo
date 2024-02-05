@@ -29,10 +29,6 @@ type TracingExporterConfig struct {
 	ExportTimeout time.Duration `yaml:"export_timeout" default:"30s" validate:"required,min=5s,max=120s"`
 }
 
-type TracingGlobalFeatures struct {
-	ExportGraphQLVariables bool `yaml:"export_graphql_variables" default:"true" envconfig:"TRACING_EXPORT_GRAPHQL_VARIABLES"`
-}
-
 type TracingExporter struct {
 	Disabled              bool                `yaml:"disabled"`
 	Exporter              otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
@@ -43,11 +39,10 @@ type TracingExporter struct {
 }
 
 type Tracing struct {
-	Enabled               bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
-	SamplingRate          float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
-	Exporters             []TracingExporter `yaml:"exporters"`
-	Propagation           PropagationConfig `yaml:"propagation"`
-	TracingGlobalFeatures `yaml:",inline"`
+	Enabled      bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
+	SamplingRate float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
+	Exporters    []TracingExporter `yaml:"exporters"`
+	Propagation  PropagationConfig `yaml:"propagation"`
 }
 
 type PropagationConfig struct {
@@ -214,6 +209,28 @@ type AuthorizationConfiguration struct {
 	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" default:"false" envconfig:"REJECT_OPERATION_IF_UNAUTHORIZED"`
 }
 
+type RateLimitConfiguration struct {
+	Enabled        bool                    `yaml:"enabled" default:"true" envconfig:"RATE_LIMIT_ENABLED"`
+	Strategy       string                  `yaml:"strategy" default:"simple" envconfig:"RATE_LIMIT_STRATEGY" validate:"oneof=simple"`
+	SimpleStrategy RateLimitSimpleStrategy `yaml:"simple_strategy"`
+	Storage        RedisConfiguration      `yaml:"storage"`
+	// Debug ensures that retryAfter and resetAfter are set to stable values for testing
+	Debug bool `yaml:"debug" default:"false" envconfig:"RATE_LIMIT_DEBUG"`
+}
+
+type RedisConfiguration struct {
+	Addr      string `yaml:"addr" default:"localhost:6379" envconfig:"REDIS_ADDR" validate:"required"`
+	Password  string `yaml:"password" envconfig:"REDIS_PASSWORD"`
+	KeyPrefix string `yaml:"key_prefix" default:"wg_cosmo_rl" envconfig:"RATE_LIMIT_REDIS_KEY_PREFIX" validate:"required"`
+}
+
+type RateLimitSimpleStrategy struct {
+	Rate                             int           `yaml:"rate" default:"10" envconfig:"RATE_LIMIT_SIMPLE_RATE" validate:"required,min=1"`
+	Burst                            int           `yaml:"burst" default:"10" envconfig:"RATE_LIMIT_SIMPLE_BURST" validate:"required,min=1"`
+	Period                           time.Duration `yaml:"period" default:"1s" envconfig:"RATE_LIMIT_SIMPLE_PERIOD" validate:"required,min=1s"`
+	RejectExceedingRateLimitRequests bool          `yaml:"reject_exceeding_rate_limit_requests" default:"false" envconfig:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_RATE_LIMIT_REQUESTS"`
+}
+
 type CDNConfiguration struct {
 	URL       string      `yaml:"url" validate:"url" envconfig:"CDN_URL" default:"https://cosmo-cdn.wundergraph.com"`
 	CacheSize BytesString `yaml:"cache_size" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
@@ -256,6 +273,7 @@ type Config struct {
 	PlaygroundPath                string                      `yaml:"playground_path" default:"/" validate:"uri" envconfig:"PLAYGROUND_PATH"`
 	Authentication                AuthenticationConfiguration `yaml:"authentication"`
 	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
+	RateLimit                     RateLimitConfiguration      `yaml:"rate_limit"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
 	CDN                           CDNConfiguration            `yaml:"cdn"`
 	DevelopmentMode               bool                        `yaml:"dev_mode" default:"false" envconfig:"DEV_MODE"`

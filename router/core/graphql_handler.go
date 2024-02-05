@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
@@ -61,6 +62,8 @@ type HandlerOptions struct {
 	WebSocketStats                         WebSocketsStatistics
 	TracerProvider                         trace.TracerProvider
 	Authorizer                             *CosmoAuthorizer
+	RateLimiter                            *CosmoRateLimiter
+	RateLimitConfig                        *config.RateLimitConfiguration
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -73,7 +76,9 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 			"wundergraph/cosmo/router/graphql_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		authorizer: opts.Authorizer,
+		authorizer:      opts.Authorizer,
+		rateLimiter:     opts.RateLimiter,
+		rateLimitConfig: opts.RateLimitConfig,
 	}
 	return graphQLHandler
 }
@@ -95,14 +100,17 @@ type GraphQLHandler struct {
 	websocketStats                         WebSocketsStatistics
 	tracer                                 trace.Tracer
 	authorizer                             *CosmoAuthorizer
+
+	rateLimiter     *CosmoRateLimiter
+	rateLimitConfig *config.RateLimitConfiguration
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 	operationCtx := getOperationContext(r.Context())
 
-	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
-		trace.WithSpanKind(trace.SpanKindInternal),
+	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execution",
+		trace.WithSpanKind(trace.SpanKindServer),
 	)
 	defer graphqlExecutionSpan.End()
 
@@ -111,13 +119,14 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Request: resolve.Request{
 			Header: r.Header,
 		},
-		RenameTypeNames:       h.executor.RenameTypeNames,
-		RequestTracingOptions: operationCtx.traceOptions,
-		InitialPayload:        operationCtx.initialPayload,
-		Extensions:            operationCtx.extensions,
+		RenameTypeNames: h.executor.RenameTypeNames,
+		TracingOptions:  operationCtx.traceOptions,
+		InitialPayload:  operationCtx.initialPayload,
+		Extensions:      operationCtx.extensions,
 	}
 	ctx = ctx.WithContext(executionContext)
-	ctx.WithAuthorizer(h.authorizer)
+	ctx.SetAuthorizer(h.authorizer)
+	h.configureRateLimiting(ctx)
 
 	defer propagateSubgraphErrors(ctx)
 
@@ -132,12 +141,18 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			var nErr net.Error
 
-			if errors.Is(err, ErrUnauthorized) {
+			if errors.Is(err, ErrRateLimitExceeded) {
+				writeRequestErrors(executionContext, http.StatusTooManyRequests, graphql.RequestErrorsFromError(err), w, requestLogger)
+				return
+			} else if errors.Is(err, ErrUnauthorized) {
 				writeRequestErrors(executionContext, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
+				return
 			} else if errors.Is(err, context.Canceled) {
 				writeRequestErrors(executionContext, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerCanceled), w, requestLogger)
+				return
 			} else if errors.As(err, &nErr) && nErr.Timeout() {
 				writeRequestErrors(executionContext, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerTimeout), w, requestLogger)
+				return
 			} else {
 				writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 			}
@@ -182,6 +197,31 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		requestLogger.Error("unsupported plan kind")
 		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) {
+	if h.rateLimiter == nil {
+		return
+	}
+	if h.rateLimitConfig == nil {
+		return
+	}
+	if !h.rateLimitConfig.Enabled {
+		return
+	}
+	if h.rateLimitConfig.Strategy != "simple" {
+		return
+	}
+	ctx.SetRateLimiter(h.rateLimiter)
+	ctx.RateLimitOptions = resolve.RateLimitOptions{
+		Enable:                          true,
+		IncludeStatsInResponseExtension: true,
+		Rate:                            h.rateLimitConfig.SimpleStrategy.Rate,
+		Burst:                           h.rateLimitConfig.SimpleStrategy.Burst,
+		Period:                          h.rateLimitConfig.SimpleStrategy.Period,
+		RateLimitKey:                    h.rateLimitConfig.Storage.KeyPrefix,
+		RejectExceedingRequests:         h.rateLimitConfig.SimpleStrategy.RejectExceedingRateLimitRequests,
 	}
 }
 

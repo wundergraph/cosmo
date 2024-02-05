@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -131,6 +132,8 @@ type (
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 
 		authorization *config.AuthorizationConfiguration
+
+		rateLimit *config.RateLimitConfiguration
 	}
 
 	Server interface {
@@ -310,7 +313,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 
 		if r.traceConfig.Enabled {
-			defaultExporter := rtrace.DefaultExporter(r.traceConfig)
+			defaultExporter := rtrace.GetDefaultExporter(r.traceConfig)
 			if defaultExporter != nil {
 				disabledFeatures = append(disabledFeatures, "Cosmo Cloud Tracing")
 				defaultExporter.Disabled = true
@@ -547,7 +550,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
-	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
+	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.GetDefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
 	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
 
@@ -711,7 +714,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	baseAttributes := []attribute.KeyValue{
 		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 		otel.WgRouterVersion.String(Version),
-		otel.WgRouterRootSpan.Bool(true),
 	}
 
 	if r.graphApiToken != "" {
@@ -924,14 +926,31 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		authorizerOptions.RejectOperationIfUnauthorized = r.Config.authorization.RejectOperationIfUnauthorized
 	}
 
-	graphqlHandler := NewGraphQLHandler(HandlerOptions{
+	handlerOpts := HandlerOptions{
 		Executor:                               executor,
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 		WebSocketStats:                         r.WebsocketStats,
 		TracerProvider:                         r.tracerProvider,
 		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
-	})
+	}
+
+	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
+		handlerOpts.RateLimitConfig = r.Config.rateLimit
+		client := redis.NewClient(&redis.Options{
+			Addr:     r.Config.rateLimit.Storage.Addr,
+			Password: r.Config.rateLimit.Storage.Password,
+		})
+		err = client.FlushDB(ctx).Err()
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to redis: %w", err)
+		}
+		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			RedisClient: client,
+		})
+	}
+
+	graphqlHandler := NewGraphQLHandler(handlerOpts)
 
 	var publicKey *ecdsa.PublicKey
 
@@ -946,7 +965,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Logger:                      r.logger,
 		Executor:                    executor,
 		Metrics:                     routerMetrics,
-		OperationProcessor:          operationParser,
+		Parser:                      operationParser,
 		Planner:                     operationPlanner,
 		AccessController:            r.accessController,
 		RouterPublicKey:             publicKey,
@@ -954,11 +973,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		DevelopmentMode:             r.developmentMode,
 		TracerProvider:              r.tracerProvider,
 		FlushTelemetryAfterResponse: r.awsLambda,
-		TraceExportVariables:        r.traceConfig.ExportGraphQLVariables.Enabled,
 	})
 
 	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-		OperationProcessor:         operationParser,
+		Parser:                     operationParser,
 		Planner:                    operationPlanner,
 		GraphQLHandler:             graphqlHandler,
 		Metrics:                    routerMetrics,
@@ -1348,6 +1366,12 @@ func WithAccessController(controller *AccessController) Option {
 func WithAuthorizationConfig(cfg *config.AuthorizationConfiguration) Option {
 	return func(r *Router) {
 		r.Config.authorization = cfg
+	}
+}
+
+func WithRateLimitConfig(cfg *config.RateLimitConfiguration) Option {
+	return func(r *Router) {
+		r.Config.rateLimit = cfg
 	}
 }
 
