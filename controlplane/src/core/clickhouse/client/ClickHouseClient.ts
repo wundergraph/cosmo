@@ -122,7 +122,7 @@ export class ClickHouseClient {
    */
   private _getRequestOptions(
     query: string,
-    queryParams: Record<string, string | number> = {},
+    queryParams: Record<string, string | number | boolean> = {},
     withoutFormat = false,
   ): AxiosRequestConfig<any> {
     if (!withoutFormat) {
@@ -181,7 +181,7 @@ export class ClickHouseClient {
    * Promise based query
    * @private
    */
-  private _queryPromise<T = string>(query: string, params?: Record<string, string | number>) {
+  private _queryPromise<T = string>(query: string, params?: Record<string, string | number | boolean>) {
     return new Promise<T extends string ? string | T[] : T[]>((resolve, reject) => {
       axios
         .request({
@@ -274,7 +274,7 @@ export class ClickHouseClient {
   /**
    * Promise based query
    */
-  public queryPromise<T = any>(query: string, params?: Record<string, string | number>) {
+  public queryPromise<T = any>(query: string, params?: Record<string, string | number | boolean>) {
     this._validateQuery<T>(query);
 
     return this._queryPromise<T>(query, params);
