@@ -11,7 +11,6 @@ import {
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { DateRange } from '../../../types/index.js';
 import {
   BaseFilters,
   ColumnMetaData,
@@ -21,6 +20,7 @@ import {
   buildColumnsFromNames,
   coerceFilterValues,
   fillColumnMetaData,
+  CoercedFilterValues,
 } from './util.js';
 
 /**
@@ -44,8 +44,7 @@ export class AnalyticsRequestViewRepository {
     },
     statusCode: {
       unit: Unit.StatusCode,
-      title: 'Status Code',
-      isHidden: true,
+      title: 'Status',
     },
     statusMessage: {
       title: 'Status Message',
@@ -56,13 +55,15 @@ export class AnalyticsRequestViewRepository {
       title: 'Operation Hash',
     },
     operationName: {
-      title: 'Name',
+      title: 'Operation',
     },
     operationType: {
       title: 'Type',
     },
     isPersisted: {
       title: 'Persisted',
+      type: 'boolean',
+      isHidden: true,
     },
     operationPersistedId: {
       title: 'Operation Persisted ID',
@@ -74,7 +75,7 @@ export class AnalyticsRequestViewRepository {
       unit: Unit.CodeBlock,
     },
     httpStatusCode: {
-      title: 'Status Code',
+      title: 'HTTP Status Code',
     },
     httpHost: {
       isHidden: true,
@@ -125,6 +126,14 @@ export class AnalyticsRequestViewRepository {
   };
 
   public baseFilters: BaseFilters = {
+    traceId: {
+      dbField: 'TraceId',
+      dbClause: 'where',
+      columnName: 'traceId',
+      title: 'Trace ID',
+      options: [],
+      customOptions: true,
+    },
     operationName: {
       dbField: 'OperationName',
       dbClause: 'where',
@@ -139,6 +148,19 @@ export class AnalyticsRequestViewRepository {
       title: 'Operation Hash',
       options: [],
       customOptions: true,
+    },
+    statusCode: {
+      dbField: 'StatusCode',
+      dbClause: 'where',
+      columnName: 'statusCode',
+      title: 'Status',
+      options: [
+        {
+          operator: AnalyticsViewFilterOperator.EQUALS,
+          value: 'STATUS_CODE_ERROR',
+          label: 'Error',
+        },
+      ],
     },
     operationPersistedId: {
       dbField: 'OperationPersistedID',
@@ -178,14 +200,24 @@ export class AnalyticsRequestViewRepository {
       columnName: 'durationInNano',
       options: [
         {
-          operator: AnalyticsViewFilterOperator.GREATER_THAN,
-          label: '> 1s',
-          value: '1000000000',
-        },
-        {
           operator: AnalyticsViewFilterOperator.LESS_THAN,
           label: '< 1s',
           value: '1000000000',
+        },
+        {
+          operator: AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL,
+          label: '>= 1s',
+          value: '1000000000',
+        },
+        {
+          operator: AnalyticsViewFilterOperator.LESS_THAN_OR_EQUAL,
+          label: '< 5s',
+          value: '5000000000',
+        },
+        {
+          operator: AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL,
+          label: '>= 5s',
+          value: '5000000000',
         },
       ],
     },
@@ -235,7 +267,7 @@ export class AnalyticsRequestViewRepository {
       dbField: 'HttpStatusCode',
       dbClause: 'where',
       columnName: 'httpStatusCode',
-      title: 'Http Status Code',
+      title: 'HTTP Status Code',
       options: [],
     },
   };
@@ -245,22 +277,21 @@ export class AnalyticsRequestViewRepository {
     baseWhereSql: string,
     baseHavingSql: string,
     basePaginationSql: string,
-    queryParams: Record<string, string | number>,
+    queryParams: CoercedFilterValues,
     baseOrderSql?: string,
   ) {
     let query = ``;
 
     switch (name) {
+      // Currently, the order of columns in the query defines the order of columns in the Studio table.
       case AnalyticsViewGroupName.None: {
         query = `
           SELECT
             TraceId as traceId,
-            toString(toUnixTimestamp(Timestamp)) as unixTimestamp,
             -- DateTime64 is returned as a string
+            toString(toUnixTimestamp(Timestamp)) as unixTimestamp,
             OperationName as operationName,
-            OperationHash as operationHash,
             OperationType as operationType,
-            OperationPersistedID as operationPersistedId,
             Duration as durationInNano,
             StatusCode as statusCode,
             StatusMessage as statusMessage,
@@ -270,9 +301,11 @@ export class AnalyticsRequestViewRepository {
             HttpUserAgent as httpUserAgent,
             HttpMethod as httpMethod,
             HttpTarget as httpTarget,
+            OperationPersistedID as operationPersistedId,
+            OperationHash as operationHash,
             ClientName as clientName,
             ClientVersion as clientVersion,
-            IF(empty(OperationPersistedID), 'false', 'true') as isPersisted
+            IF(empty(OperationPersistedID), false, true) as isPersisted
           FROM
             ${this.client.database}.traces_mv
           WHERE
@@ -364,7 +397,7 @@ export class AnalyticsRequestViewRepository {
     name: AnalyticsViewGroupName,
     baseWhereSql: string,
     baseHavingSql: string,
-    queryParams: Record<string, string | number>,
+    queryParams: CoercedFilterValues,
   ): Promise<number> {
     let totalCountQuery = ``;
 
@@ -441,7 +474,7 @@ export class AnalyticsRequestViewRepository {
 
   private async getAllOperationNames(
     whereSql: string,
-    queryParams: Record<string, string | number>,
+    queryParams: CoercedFilterValues,
     shouldExecute: boolean,
   ): Promise<string[]> {
     if (!shouldExecute) {
@@ -468,7 +501,7 @@ export class AnalyticsRequestViewRepository {
 
   private async getAllClients(
     whereSql: string,
-    queryParams: Record<string, string | number>,
+    queryParams: CoercedFilterValues,
     shouldExecute: boolean,
   ): Promise<string[]> {
     if (!shouldExecute) {
@@ -496,7 +529,7 @@ export class AnalyticsRequestViewRepository {
   private async getAllClientVersions(
     client: string[],
     whereSql: string,
-    queryParams: Record<string, string | number>,
+    queryParams: CoercedFilterValues,
     shouldExecute: boolean,
   ): Promise<string[]> {
     if (!shouldExecute) {
@@ -531,7 +564,7 @@ export class AnalyticsRequestViewRepository {
 
   private async getAllHttpStatusCodes(
     whereSql: string,
-    queryParams: Record<string, string | number>,
+    queryParams: CoercedFilterValues,
     shouldExecute: boolean,
   ): Promise<string[]> {
     if (!shouldExecute) {
