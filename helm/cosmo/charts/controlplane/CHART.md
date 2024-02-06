@@ -31,6 +31,7 @@ WunderGraph Cosmo Controlplane
 | configuration.githubAppPrivateKey | string | `""` |  |
 | configuration.githubAppWebhookSecret | string | `""` |  |
 | configuration.logLevel | string | `"info"` |  |
+| configuration.openAiApiKey | string | `""` |  |
 | configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | configuration.redisPassword | string | `""` |  |
 | configuration.redisPort | int | `6379` |  |

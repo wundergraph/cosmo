@@ -122,6 +122,7 @@ configuration:
   #customHeadScripts: [{"id": "hello-world", "src": "console.log('hello world')", "inline": true}]
   # -- The publishable key of the stripe account to use for stripe integration
   stripePublishableKey: ""
+  # -- Set to true only when stripe is configured
   enablePayments: ""
 
 #global:
