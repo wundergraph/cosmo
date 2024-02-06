@@ -20,7 +20,7 @@ FROM
 WHERE
     -- Only include router root spans
     SpanAttributes [ 'wg.router.root_span' ] = 'true' OR
-    -- For backwards compatibility
+    -- For backwards compatibility (router < 0.61.2)
     (mapContains(SpanAttributes, 'wg.operation.type') AND
          ResourceAttributes [ 'service.name' ] = 'cosmo-router' AND
          SpanKind = 'SPAN_KIND_SERVER'
