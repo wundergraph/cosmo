@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.63.1](https://github.com/wundergraph/cosmo/compare/router@0.63.0...router@0.63.1) (2024-02-06)
+
+**Note:** Version bump only for package router
+
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/router@0.62.0...router@0.63.0) (2024-02-06)
+
+### Features
+
+* consider only router root spans in the trace list ([#495](https://github.com/wundergraph/cosmo/issues/495)) ([b7639ab](https://github.com/wundergraph/cosmo/commit/b7639abcc4c2f367a651a65ffbc17238a049f635)) (@StarpTech)
+
 # [0.62.0](https://github.com/wundergraph/cosmo/compare/router@0.61.2...router@0.62.0) (2024-02-05)
 
 ### Features

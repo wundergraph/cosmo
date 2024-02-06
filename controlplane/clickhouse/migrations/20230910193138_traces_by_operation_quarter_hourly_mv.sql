@@ -18,8 +18,10 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_by_operation_quarter_hourly_
 FROM
     cosmo.otel_traces
 WHERE
-    -- Only include the root spans
-    empty(ParentSpanId)
+    -- Only include router root spans
+    SpanAttributes [ 'wg.router.root_span' ] = 'true' OR
+    -- For backwards compatibility (router < 0.61.2)
+    SpanAttributes [ 'wg.component.name' ] = 'router-server'
 GROUP BY
     Timestamp,
     FederatedGraphID,
