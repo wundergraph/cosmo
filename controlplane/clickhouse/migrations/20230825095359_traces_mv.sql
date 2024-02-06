@@ -29,7 +29,7 @@ WHERE
     -- Only include router root spans
     SpanAttributes [ 'wg.router.root_span' ] = 'true' OR
     -- For backwards compatibility (router < 0.61.2)
-    (mapContains(SpanAttributes, 'wg.operation.content') AND SpanKind = 'SPAN_KIND_SERVER')
+    SpanAttributes [ 'wg.component.name' ] = 'router-server'
 ORDER BY
     Timestamp DESC;
 

@@ -711,7 +711,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	baseAttributes := []attribute.KeyValue{
 		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 		otel.WgRouterVersion.String(Version),
-		otel.WgRouterRootSpan.Bool(true),
 	}
 
 	if r.graphApiToken != "" {
@@ -729,13 +728,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			oteltrace.WithAttributes(
 				baseAttributes...,
 			),
+			oteltrace.WithAttributes(
+				otel.RouterServerAttribute,
+				otel.WgRouterRootSpan.Bool(true),
+			),
 		}
 
 		if r.traceConfig.WithNewRoot {
 			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
 		}
 
-		traceHandler = rtrace.NewMiddleware(otel.RouterServerAttribute,
+		traceHandler = rtrace.NewMiddleware(
 			otelhttp.WithSpanOptions(spanStartOptions...),
 			otelhttp.WithFilter(rtrace.CommonRequestFilter),
 			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
