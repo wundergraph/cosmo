@@ -38,7 +38,7 @@ func CommonRequestFilter(r *http.Request) bool {
 	if r.URL.Path == "/favicon.ico" {
 		return false
 	}
-	// Ignore other methods that aren't part of GraphQL over HTTP
+	// Ignore other methods that aren't part of GraphQL over HTTP spec
 	if r.Method != "GET" && r.Method != "POST" {
 		return false
 	}
