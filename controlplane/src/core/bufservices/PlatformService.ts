@@ -107,6 +107,7 @@ import {
   MoveGraphResponse,
   GenerateRouterTokenResponse,
   UpdateAISettingsResponse,
+  CreateBillingPortalSessionResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -6783,23 +6784,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const billingRepo = new BillingRepository(opts.db);
         const plans = await billingRepo.listPlans();
 
-        if (!plans?.length) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'No billing plans configured. Please contact support.',
-            },
-          };
-        }
+        if (opts.stripeSecretKey) {
+          if (!plans?.length) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: 'No billing plans configured. Please contact support.',
+              },
+            };
+          }
 
-        // Validate the plan
-        if (plans?.length && !plans.some((plan) => plan.id === req.plan && 'stripePriceId' in plan)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'Invalid plan. Please contact support.',
-            },
-          };
+          // Validate the plan
+          if (plans?.length && !plans.some((plan) => plan.id === req.plan && 'stripePriceId' in plan)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: 'Invalid plan. Please contact support.',
+              },
+            };
+          }
         }
 
         await opts.keycloakClient.authenticateClient();
@@ -6848,11 +6851,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               roles: ['admin'],
             });
 
-            const session = await billingService.createCheckoutSession({
-              organizationId: organization.id,
-              organizationSlug: organization.slug,
-              plan: req.plan,
-            });
+            let sessionId: string | undefined;
+            if (opts.stripeSecretKey) {
+              const session = await billingService.createCheckoutSession({
+                organizationId: organization.id,
+                organizationSlug: organization.slug,
+                plan: req.plan,
+              });
+              sessionId = session.id;
+            }
 
             const namespaceRepo = new NamespaceRepository(tx, organization.id);
             const ns = await namespaceRepo.create({
@@ -6877,7 +6884,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
             return {
               organization,
-              sessionId: session.id,
+              sessionId,
             };
           });
 
@@ -6925,6 +6932,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const billingRepo = new BillingRepository(opts.db);
         const billingService = new BillingService(opts.db, billingRepo);
 
+        if (!opts.stripeSecretKey) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Billing is not enabled. Please contact support.',
+            },
+            sessionId: '',
+          };
+        }
+
         const session = await billingService.createCheckoutSession({
           organizationId: authContext.organizationId,
           organizationSlug: authContext.organizationSlug,
@@ -6951,6 +6968,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const billingRepo = new BillingRepository(opts.db);
         const billingService = new BillingService(opts.db, billingRepo);
         const auditLogRepository = new AuditLogRepository(opts.db);
+
+        if (!opts.stripeSecretKey) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Billing is not enabled. Please contact support.',
+            },
+          };
+        }
 
         const plan = await billingRepo.getPlanById(req.plan);
         if (!plan) {
@@ -6991,10 +7017,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateBillingPortalSessionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const billingRepo = new BillingRepository(opts.db);
         const billingService = new BillingService(opts.db, billingRepo);
+
+        if (!opts.stripeSecretKey) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Billing is not enabled. Please contact support.',
+            },
+            sessionId: '',
+            url: '',
+          };
+        }
 
         const session = await billingService.createBillingPortalSession({
           organizationId: authContext.organizationId,

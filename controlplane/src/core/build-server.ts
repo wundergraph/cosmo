@@ -349,6 +349,7 @@ export default async function build(opts: BuildConfig) {
       billingDefaultPlanId: opts.stripe?.defaultPlanId,
       openaiApiKey: opts.openaiAPIKey,
       readmeQueue,
+      stripeSecretKey: opts.stripe?.secret,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

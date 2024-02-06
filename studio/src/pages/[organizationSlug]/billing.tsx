@@ -10,6 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
+import { Toolbar } from "@/components/ui/toolbar";
 import { useToast } from "@/components/ui/use-toast";
 import { useCurrentPlan } from "@/hooks/use-current-plan";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -194,9 +195,15 @@ const ManagePaymentButton = () => {
   if (!subscription) return null;
 
   return (
-    <Button variant="outline" onClick={() => openPortal()} disabled={isPending}>
-      Manage your payment settings
-    </Button>
+    <Toolbar className="flex-nowrap py-0 lg:w-auto">
+      <Button
+        variant="outline"
+        onClick={() => openPortal()}
+        disabled={isPending}
+      >
+        Manage your payment settings
+      </Button>
+    </Toolbar>
   );
 };
 
@@ -372,6 +379,7 @@ BillingPage.getLayout = (page) => {
     page,
     "Billing",
     <SubscriptionStatus />,
+    undefined,
     <ManagePaymentButton />,
   );
 };
