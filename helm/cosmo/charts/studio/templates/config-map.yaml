@@ -14,3 +14,4 @@ data:
   slackClientId: "{{ .Values.configuration.slackClientId }}"
   customHeadScripts: "{{ .Values.configuration.customHeadScripts }}"
   stripePublishableKey: "{{ .Values.configuration.stripePublishableKey }}"
+  enablePayments: "{{ .Values.configuration.enablePayments }}"

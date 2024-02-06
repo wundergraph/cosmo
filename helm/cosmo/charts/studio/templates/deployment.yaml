@@ -70,6 +70,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "studio.fullname" . }}
                   key: stripePublishableKey
+            - name: NEXT_PUBLIC_ENABLE_PAYMENTS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "studio.fullname" . }}
+                  key: enablePayments
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
