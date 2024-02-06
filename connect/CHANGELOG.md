@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.54.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.53.0...@wundergraph/cosmo-connect@0.54.0) (2024-02-06)
+
+### Features
+
+* add pagination component and validate limit ([#493](https://github.com/wundergraph/cosmo/issues/493)) ([880f1b9](https://github.com/wundergraph/cosmo/commit/880f1b9f64167b70b7f61620ebb5a895d438727a)) (@JivusAyrus)
+
 # [0.53.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.52.0...@wundergraph/cosmo-connect@0.53.0) (2024-02-01)
 
 ### Features
