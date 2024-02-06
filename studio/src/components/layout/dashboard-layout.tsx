@@ -135,7 +135,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
     if (
       plans.data?.plans?.length &&
-      process.env.NEXT_PUBLIC_ENABLE_PAYMENTS === "true"
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
     ) {
       navigation.push({
         title: "Billing",
