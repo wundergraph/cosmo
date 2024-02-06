@@ -9,12 +9,11 @@ import {
 } from 'graphql';
 import {
   EntityInterfaceFederationData,
-  getAllSetDisparities,
   getEntriesNotInHashSet,
   getOrThrowError,
   ImplementationErrorsMap,
-  InvalidEntityInterface,
   InvalidArgument,
+  InvalidEntityInterface,
   InvalidRequiredArgument,
   kindToTypeString,
   numberToOrdinal,
@@ -919,4 +918,15 @@ export function undefinedEntityInterfaceImplementationsError(
     }
   }
   return new Error(message);
+}
+
+export function orScopesLimitError(maxOrScopes: number, hostPaths: string[]): Error {
+  return new Error(
+    `The maximum number of OR scopes that can be defined by @requiresScopes on a single field is ${maxOrScopes}.` +
+      ` However, the following path` +
+      (hostPaths.length > 1 ? 's attempt' : ' attempts') +
+      ` to define more:\n "` +
+      hostPaths.join(QUOTATION_JOIN) +
+      `"\nIf you require more, please contact support.`,
+  );
 }

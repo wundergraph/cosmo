@@ -104,7 +104,7 @@ export const useAnalyticsQueryState = () => {
     return {
       name,
       filters,
-      pagination: { limit, offset },
+      pagination: { limit: limit > 50 ? 50 : limit, offset },
       dateRange,
       range,
       page: query.page,

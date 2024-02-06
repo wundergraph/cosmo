@@ -25,7 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
-import { FiInfo } from "react-icons/fi";
+import { docsBaseURL } from "@/lib/constants";
 
 interface SpanNode extends Span {
   children?: SpanNode[];
@@ -74,7 +74,6 @@ function Node({
   paneWidth: number;
 }) {
   const [showDetails, setShowDetails] = useState(false);
-
   const hasChildren = span.children && span.children.length > 0;
   const parentChildrenCount = parentSpan?.children
     ? parentSpan.children.length
@@ -344,7 +343,7 @@ function Node({
 
 const Trace = ({ spans }: { spans: Span[] }) => {
   const [traceTree, setTraceTree] = useState<SpanNode>();
-
+  const [missingRootSpan, setMissingRootSpan] = useState<boolean>();
   const [globalDuration, setGlobalDuration] = useState(BigInt(0));
   const [globalStartTime, setGlobalStartTime] = useState(BigInt(0));
 
@@ -416,6 +415,7 @@ const Trace = ({ spans }: { spans: Span[] }) => {
         span.children = [];
         spanMap.set(span.spanID, span);
 
+        // Figure out the min and max start and end time to draw the timeline
         if (span.timestamp < gStartTimeNano) {
           gStartTimeNano = span.timestamp;
         }
@@ -425,6 +425,7 @@ const Trace = ({ spans }: { spans: Span[] }) => {
         }
       }
 
+      // Add spans to the parent node children array
       for (const span of spans) {
         const parent = spanMap.get(span.parentSpanID);
 
@@ -433,11 +434,20 @@ const Trace = ({ spans }: { spans: Span[] }) => {
         }
       }
 
+      let rootSpan = null;
+
+      // Spans are already sorted by start time
       const rootSpans = spans.filter((span) => !span.parentSpanID);
-      if (rootSpans.length !== 1) {
-        throw new Error("Invalid spans - multiple root spans");
+
+      // check if there is a root span
+      if (rootSpans.length) {
+        rootSpan = rootSpans[0];
+      } else {
+        // if there is no root span, we assume the first span is the root span
+        rootSpan = spans[0];
       }
-      return rootSpans[0];
+
+      return rootSpan;
     };
 
     if (!spans.length) {
@@ -446,6 +456,11 @@ const Trace = ({ spans }: { spans: Span[] }) => {
 
     const tree = buildSpanTree(spans);
     setTraceTree(tree);
+
+    setMissingRootSpan(
+      !!tree.parentSpanID &&
+        !spans.find((span) => tree.parentSpanID === span.spanID),
+    );
 
     setGlobalDuration(gEndTimeNano - gStartTimeNano);
     setGlobalStartTime(gStartTimeNano);
@@ -471,24 +486,72 @@ const Trace = ({ spans }: { spans: Span[] }) => {
             </Tooltip>
           </TooltipProvider>
         </span>
-        <p className="flex items-center gap-x-3">
-          <span className="w-16">Spans</span>: <span>{spans.length}</span>
-        </p>
-        <div className="flex items-start gap-x-3">
-          <span className="w-16 flex-shrink-0">Services</span>:
-          <div className="flex flex-wrap items-center gap-x-3">
-            {detectedService.map((service) => {
-              return (
-                <span key={service.name} className="flex items-center gap-x-2">
-                  <div
-                    className={"h-4 w-4 rounded-sm bg-sky-300"}
-                    style={{ backgroundColor: service.color }}
-                  />
-                  <span>{service.name}</span>
-                </span>
-              );
-            })}
-          </div>
+        <div>
+          <table className="table-auto">
+            <tbody>
+              <tr>
+                <td className="pr-6">Spans</td>
+                <td>
+                  <div className="flex items-center gap-x-3">
+                    <span>:</span>
+                    <span>{spans.length}</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td className="pr-6">Services</td>
+                <td>
+                  <div className="flex items-center gap-x-3">
+                    <span>:</span>
+                    <div className="flex flex-wrap gap-x-3">
+                      {detectedService.map((service) => {
+                        return (
+                          <span
+                            key={service.name}
+                            className="flex items-center gap-x-2"
+                          >
+                            <div
+                              className={"h-4 w-4 rounded-sm bg-sky-300"}
+                              style={{ backgroundColor: service.color }}
+                            />
+                            <span>{service.name}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td className="pr-6">Info</td>
+                <td>
+                  <div className="flex items-center gap-x-3">
+                    <span>:</span>
+                    {missingRootSpan ? (
+                      <div>
+                        <ExclamationTriangleIcon className="inline h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />{" "}
+                        This trace has no root span. This can have several
+                        causes.{" "}
+                        <a
+                          target="_blank"
+                          rel="noreferrer"
+                          href={
+                            docsBaseURL +
+                            "/router/open-telemetry#why-is-my-trace-incomplete"
+                          }
+                          className="text-primary"
+                        >
+                          Learn more.
+                        </a>
+                      </div>
+                    ) : (
+                      <span>-</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
       {traceTree && (
