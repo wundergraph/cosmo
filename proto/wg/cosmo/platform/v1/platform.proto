@@ -318,8 +318,8 @@ message SchemaCheckGhDetails {
 message GetChecksByFederatedGraphNameResponse {
   Response response = 1;
   repeated SchemaCheck checks = 2;
-  string checksCountBasedOnDateRange = 3;
-  string totalChecksCount = 4;
+  int32 checksCountBasedOnDateRange = 3;
+  int32 totalChecksCount = 4;
 }
 
 message GetCheckSummaryRequest {
@@ -1321,6 +1321,7 @@ message GetCompositionsRequest {
 message GetCompositionsResponse {
   Response response = 1;
   repeated GraphComposition compositions = 2;
+  int32 count = 3;
 }
 
 message GetCompositionDetailsRequest {

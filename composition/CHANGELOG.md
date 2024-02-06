@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.17.1...@wundergraph/composition@0.18.0) (2024-02-05)
+
+### Features
+
+* add authorization directive support for interfaces and interfac… ([#492](https://github.com/wundergraph/cosmo/issues/492)) ([0fc0cac](https://github.com/wundergraph/cosmo/commit/0fc0cac055b708209128c081a4643f85b9936766)) (@Aenimus)
+
 ## [0.17.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.17.0...@wundergraph/composition@0.17.1) (2024-02-02)
 
 ### Bug Fixes

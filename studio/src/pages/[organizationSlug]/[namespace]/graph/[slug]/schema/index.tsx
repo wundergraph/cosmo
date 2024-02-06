@@ -271,7 +271,7 @@ const Fields = (props: {
             {router.query.category === "deprecated" && (
               <TableHead className="w-2/12">Requests</TableHead>
             )}
-            {hasUsage && <TableHead className="w-2/12" />}
+            {hasUsage && <TableHead />}
           </TableRow>
         </TableHeader>
         <TableBody
@@ -411,7 +411,7 @@ const Fields = (props: {
                   </TableCell>
                 )}
                 {hasUsage && (
-                  <TableCell className="w-2/12 flex-shrink-0 text-right align-top">
+                  <TableCell className="flex-shrink-0 text-right align-top">
                     <Button
                       onClick={() => openUsage(field.name)}
                       variant="ghost"

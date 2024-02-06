@@ -4604,6 +4604,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         // check if the user to be added exists and if the user is the member of the org
         const user = await userRepo.byEmail(req.userEmail);
         if (!user) {
@@ -4683,6 +4685,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         // check if the subgraph exists
         const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
@@ -5230,6 +5234,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const federatedGraph = await fedgraphRepo.byName(req.name, req.namespace);
         if (!federatedGraph) {
           return {
@@ -5237,8 +5243,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
             },
             checks: [],
-            checksCountBasedOnDateRange: '0',
-            totalChecksCount: '0',
+            checksCountBasedOnDateRange: 0,
+            totalChecksCount: 0,
           };
         }
 
@@ -5262,8 +5268,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: 'Invalid date range',
             },
             checks: [],
-            checksCountBasedOnDateRange: '0',
-            totalChecksCount: '0',
+            checksCountBasedOnDateRange: 0,
+            totalChecksCount: 0,
+          };
+        }
+
+        // check that the limit is less than the max option provided in the ui
+        if (req.limit > 50) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid limit',
+            },
+            checks: [],
+            checksCountBasedOnDateRange: 0,
+            totalChecksCount: 0,
           };
         }
 
@@ -5281,8 +5300,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           checks: checksData.checks,
-          checksCountBasedOnDateRange: checksData.checksCount.toString(),
-          totalChecksCount: totalChecksCount.toString(),
+          checksCountBasedOnDateRange: checksData.checksCount,
+          totalChecksCount,
         };
       });
     },
@@ -6330,6 +6349,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const graphCompositionRepository = new GraphCompositionRepository(opts.db);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
 
         if (!federatedGraph) {
@@ -6339,6 +6360,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Federated graph '${req.fedGraphName}' does not exist`,
             },
             compositions: [],
+            count: 0,
           };
         }
 
@@ -6362,6 +6384,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: 'Invalid date range',
             },
             compositions: [],
+            count: 0,
+          };
+        }
+
+        // check that the limit is less than the max option provided in the ui
+        if (req.limit > 50) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid limit',
+            },
+            compositions: [],
+            count: 0,
           };
         }
 
@@ -6376,11 +6411,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
         });
 
+        const compositionsCount = await graphCompositionRepository.getGraphCompositionsCount({
+          fedGraphTargetId: federatedGraph.targetId,
+          dateRange: {
+            start: dateRange.start,
+            end: dateRange.end,
+          },
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           compositions,
+          count: compositionsCount,
         };
       });
     },

@@ -146,24 +146,6 @@ function Node({
     });
   };
 
-  let additionalTooltipContent = "";
-
-  if (span.scopeName.startsWith("wundergraph/cosmo/router/")) {
-    if (span.spanName === "Authenticate") {
-      additionalTooltipContent =
-        "Authenticates the request against the configured authentication provider.";
-    } else if (span.spanName === "Operation - Parse and Validate") {
-      additionalTooltipContent =
-        "This is the first step in the query execution. It parses the variables, query and validates it against the schema.";
-    } else if (span.spanName === "Operation - Planning") {
-      additionalTooltipContent =
-        "Describes the process of building the optimized query plan for a given GraphQL query. This includes normalization, validating it against the schema.";
-    } else if (span.spanName === "Operation - Execution") {
-      additionalTooltipContent =
-        "Describes the process of executing the query plan for an operation. This includes fetching data from the subgraphs, aggregating the data and returning it to the client.";
-    }
-  }
-
   return (
     <ul
       style={{
@@ -258,14 +240,6 @@ function Node({
                           span.attributes?.httpMethod || "",
                         )}
                       </div>
-                      {additionalTooltipContent && (
-                        <div className="flex space-x-1">
-                          <div>
-                            <FiInfo className="h-3 w-3" />
-                          </div>
-                          <div>{additionalTooltipContent}</div>
-                        </div>
-                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -442,6 +416,7 @@ const Trace = ({ spans }: { spans: Span[] }) => {
         span.children = [];
         spanMap.set(span.spanID, span);
 
+        // Figure out the min and max start and end time to draw the timeline
         if (span.timestamp < gStartTimeNano) {
           gStartTimeNano = span.timestamp;
         }
@@ -451,6 +426,7 @@ const Trace = ({ spans }: { spans: Span[] }) => {
         }
       }
 
+      // Add spans to the parent node children array
       for (const span of spans) {
         const parent = spanMap.get(span.parentSpanID);
 
