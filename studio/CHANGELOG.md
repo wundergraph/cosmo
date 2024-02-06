@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.62.0](https://github.com/wundergraph/cosmo/compare/studio@0.61.0...studio@0.62.0) (2024-02-06)
+
+### Features
+
+* enable creating orgs without billing ([#491](https://github.com/wundergraph/cosmo/issues/491)) ([dd2a5b9](https://github.com/wundergraph/cosmo/commit/dd2a5b91fb715f20a4adc613b820de9f02220821)) (@JivusAyrus)
+
 # [0.61.0](https://github.com/wundergraph/cosmo/compare/studio@0.60.0...studio@0.61.0) (2024-02-06)
 
 ### Bug Fixes

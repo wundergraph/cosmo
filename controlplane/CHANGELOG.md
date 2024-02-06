@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.65.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.64.0...controlplane@0.65.0) (2024-02-06)
+
+### Bug Fixes
+
+* **traces:** avoid filter on service name when determining root ([ebec309](https://github.com/wundergraph/cosmo/commit/ebec30948e5bdaad2daa813834b34c7bf9c43192)) (@StarpTech)
+
+### Features
+
+* enable creating orgs without billing ([#491](https://github.com/wundergraph/cosmo/issues/491)) ([dd2a5b9](https://github.com/wundergraph/cosmo/commit/dd2a5b91fb715f20a4adc613b820de9f02220821)) (@JivusAyrus)
+
 # [0.64.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.63.0...controlplane@0.64.0) (2024-02-06)
 
 ### Features
