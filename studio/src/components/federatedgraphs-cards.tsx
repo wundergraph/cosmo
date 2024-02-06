@@ -1,12 +1,14 @@
 import { useFireworks } from "@/hooks/use-fireworks";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
+import { formatMetric } from "@/lib/format-metric";
 import { useChartData } from "@/lib/insights-helpers";
 import { checkUserAccess, cn } from "@/lib/utils";
 import {
   ChevronDoubleRightIcon,
   CommandLineIcon,
 } from "@heroicons/react/24/outline";
+import { Component2Icon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -23,6 +25,8 @@ import {
   useState,
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
+import { LuBarChart3 } from "react-icons/lu";
+import { MdErrorOutline } from "react-icons/md";
 import { SiApollographql } from "react-icons/si";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
 import { z } from "zod";
@@ -155,7 +159,7 @@ const MigrationDialog = ({
       <DialogTrigger
         className={cn({
           "flex justify-center": isEmptyState,
-          "h-52": !isEmptyState,
+          "h-58": !isEmptyState,
         })}
       >
         <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
@@ -509,6 +513,16 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
     graph.requestSeries.length > 0 ? graph.requestSeries : fallbackData,
   );
 
+  const totalRequests = graph.requestSeries.reduce(
+    (total, r) => total + r.totalRequests,
+    0,
+  );
+
+  const totalErrors = graph.requestSeries.reduce(
+    (total, r) => total + r.erroredRequests,
+    0,
+  );
+
   const parsedURL = () => {
     try {
       if (!graph.routingURL) {
@@ -554,7 +568,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           <div className="text-base font-semibold">{graph.name}</div>
           <p
             className={cn(
-              "mb-4 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
+              "mb-3 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
               {
                 italic: !graph.routingURL,
               },
@@ -562,6 +576,49 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           >
             {parsedURL()}
           </p>
+          <div className="mb-3 flex items-center gap-x-5">
+            <TooltipProvider>
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger>
+                  <div className="flex items-center gap-x-2">
+                    <Component2Icon className="h-4 w-4 text-[#0284C7]" />
+                    <p className="text-sm">
+                      {formatMetric(graph.connectedSubgraphs)}
+                    </p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>{`${graph.connectedSubgraphs} connected subgraphs`}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger>
+                  <div className="flex items-center gap-x-2">
+                    <LuBarChart3 className="h-4 w-4 text-[#0284C7]" />
+                    <p className="text-sm">{`${formatMetric(
+                      totalRequests,
+                    )} / week`}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>{`${totalRequests} requests this week`}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger>
+                  <div className="flex items-center gap-x-2">
+                    <MdErrorOutline className="h-4 w-4 text-red-500" />
+                    <p className="text-sm">{`${formatMetric(
+                      totalErrors,
+                    )} / week`}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>{`${totalErrors} errors this week`}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <TooltipProvider>
             <Tooltip delayDuration={200}>
               <TooltipTrigger className="mt-auto text-sm">
