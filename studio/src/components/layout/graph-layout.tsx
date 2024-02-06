@@ -114,6 +114,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <FileTextIcon className="h-4 w-4" />,
       },
       {
+        title: "Analytics",
+        href: basePath + "/analytics",
+        matchExact: false,
+        icon: <ChartBarIcon className="h-4 w-4" />,
+      },
+      {
         title: "Compositions",
         href: basePath + "/compositions",
         matchExact: false,
@@ -123,12 +129,6 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         title: "Clients",
         href: basePath + "/clients",
         icon: <PiDevices className="h-4 w-4" />,
-      },
-      {
-        title: "Analytics",
-        href: basePath + "/analytics",
-        matchExact: false,
-        icon: <ChartBarIcon className="h-4 w-4" />,
       },
       {
         title: "Changelog",

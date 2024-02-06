@@ -2550,14 +2550,14 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
   checks: SchemaCheck[] = [];
 
   /**
-   * @generated from field: string checksCountBasedOnDateRange = 3;
+   * @generated from field: int32 checksCountBasedOnDateRange = 3;
    */
-  checksCountBasedOnDateRange = "";
+  checksCountBasedOnDateRange = 0;
 
   /**
-   * @generated from field: string totalChecksCount = 4;
+   * @generated from field: int32 totalChecksCount = 4;
    */
-  totalChecksCount = "";
+  totalChecksCount = 0;
 
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameResponse>) {
     super();
@@ -2569,8 +2569,8 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "checks", kind: "message", T: SchemaCheck, repeated: true },
-    { no: 3, name: "checksCountBasedOnDateRange", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "totalChecksCount", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "checksCountBasedOnDateRange", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "totalChecksCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameResponse {
@@ -10318,6 +10318,11 @@ export class GetCompositionsResponse extends Message<GetCompositionsResponse> {
    */
   compositions: GraphComposition[] = [];
 
+  /**
+   * @generated from field: int32 count = 3;
+   */
+  count = 0;
+
   constructor(data?: PartialMessage<GetCompositionsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10328,6 +10333,7 @@ export class GetCompositionsResponse extends Message<GetCompositionsResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositions", kind: "message", T: GraphComposition, repeated: true },
+    { no: 3, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionsResponse {

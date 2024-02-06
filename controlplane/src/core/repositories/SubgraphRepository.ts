@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import {
@@ -741,10 +741,7 @@ export class SubgraphRepository {
       );
     }
 
-    const checksCount = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(schemaChecks)
-      .where(conditions);
+    const checksCount = await this.db.select({ count: count() }).from(schemaChecks).where(conditions);
 
     if (checksCount.length === 0) {
       return 0;

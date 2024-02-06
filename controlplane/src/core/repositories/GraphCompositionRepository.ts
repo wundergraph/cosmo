@@ -1,5 +1,5 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { desc, eq, gt, lt, and } from 'drizzle-orm';
+import { desc, eq, gt, lt, and, count } from 'drizzle-orm';
 import { JsonValue } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 import { graphCompositionSubgraphs, graphCompositions, schemaVersion, targets, users } from '../../db/schema.js';
@@ -167,5 +167,35 @@ export class GraphCompositionRepository {
     }
 
     return compositions;
+  }
+
+  public async getGraphCompositionsCount({
+    fedGraphTargetId,
+    dateRange,
+  }: {
+    fedGraphTargetId: string;
+    dateRange: DateRange;
+  }): Promise<number> {
+    const compositionsCount = await this.db
+      .select({
+        count: count(),
+      })
+      .from(graphCompositions)
+      .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .leftJoin(users, eq(graphCompositions.createdBy, users.id))
+      .where(
+        and(
+          eq(schemaVersion.targetId, fedGraphTargetId),
+          gt(graphCompositions.createdAt, new Date(dateRange.start)),
+          lt(graphCompositions.createdAt, new Date(dateRange.end)),
+        ),
+      )
+      .execute();
+
+    if (compositionsCount.length === 0) {
+      return 0;
+    }
+
+    return compositionsCount[0].count;
   }
 }

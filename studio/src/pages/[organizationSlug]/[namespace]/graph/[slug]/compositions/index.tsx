@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -37,12 +38,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
-import {
-  createDateRange,
-  createStringifiedDateRange,
-} from "@/lib/insights-helpers";
+import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
@@ -54,13 +51,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getCompositions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  endOfDay,
-  formatDistanceToNow,
-  formatISO,
-  startOfDay,
-  subDays,
-} from "date-fns";
+import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";
@@ -87,23 +78,11 @@ const CompositionsPage: NextPageWithLayout = () => {
     getCompositions.useQuery({
       fedGraphName: router.query.slug as string,
       namespace: router.query.namespace as string,
-      limit: limit,
+      limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
     }),
-  );
-
-  const applyNewParams = useCallback(
-    (newParams: Record<string, string>) => {
-      router.push({
-        query: {
-          ...router.query,
-          ...newParams,
-        },
-      });
-    },
-    [router],
   );
 
   if (isLoading) return <Loader fullscreen />;
@@ -122,10 +101,10 @@ const CompositionsPage: NextPageWithLayout = () => {
 
   if (!data?.compositions || !graphContext?.graph) return null;
 
-  const noOfPages = Math.ceil(data.compositions.length / limit);
+  const noOfPages = Math.ceil(data.count / limit);
 
   return (
-    <div className="flex flex-col gap-y-3">
+    <div className="flex h-full flex-col gap-y-3">
       <TableWrapper>
         <Table>
           <TableHeader>
@@ -207,77 +186,7 @@ const CompositionsPage: NextPageWithLayout = () => {
           </TableBody>
         </Table>
       </TableWrapper>
-      <div className="mr-2 flex justify-end">
-        <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
-          <Select
-            value={`${limit}`}
-            onValueChange={(value) => {
-              applyNewParams({ pageSize: value });
-            }}
-          >
-            <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={`${limit}`} />
-            </SelectTrigger>
-            <SelectContent side="top">
-              {[10, 20, 30, 40, 50].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`}>
-                  {pageSize}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page {noOfPages === 0 ? "0" : pageNumber} of {noOfPages}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => {
-              applyNewParams({ page: "1" });
-            }}
-            disabled={pageNumber === 1}
-          >
-            <span className="sr-only">Go to first page</span>
-            <DoubleArrowLeftIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => {
-              applyNewParams({ page: (pageNumber - 1).toString() });
-            }}
-            disabled={pageNumber === 1}
-          >
-            <span className="sr-only">Go to previous page</span>
-            <ChevronLeftIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => {
-              applyNewParams({ page: (pageNumber + 1).toString() });
-            }}
-            disabled={pageNumber === noOfPages || noOfPages === 0}
-          >
-            <span className="sr-only">Go to next page</span>
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => {
-              applyNewParams({ page: noOfPages.toString() });
-            }}
-            disabled={pageNumber === noOfPages || noOfPages === 0}
-          >
-            <span className="sr-only">Go to last page</span>
-            <DoubleArrowRightIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
     </div>
   );
 };
