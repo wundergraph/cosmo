@@ -43,7 +43,7 @@ func CommonRequestFilter(r *http.Request) bool {
 		return false
 	}
 	// Ignore websocket upgrade requests over GET
-	if r.Method != "GET" && r.Header.Get("Upgrade") != "" {
+	if r.Method == "GET" && r.Header.Get("Upgrade") != "" {
 		return false
 	}
 	return true
