@@ -18,9 +18,9 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_by_operation_quarter_hourly_
 FROM
     cosmo.otel_traces
 WHERE
-    -- Only include router root spans and spans with operation type.
+    -- Only include router root spans
     SpanAttributes [ 'wg.router.root_span' ] = 'true' OR
-    -- For backwards compatibility.
+    -- For backwards compatibility
     (mapContains(SpanAttributes, 'wg.operation.type') AND
          ResourceAttributes [ 'service.name' ] = 'cosmo-router' AND
          SpanKind = 'SPAN_KIND_SERVER'
