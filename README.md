@@ -65,7 +65,7 @@ Password: wunder@123
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose V2](https://docs.docker.com/compose/install/)
-- [NodeJS 18+](https://nodejs.org/en/download/)
+- [NodeJS LTS](https://nodejs.org/en/download/)
 - [PNPM 8+](https://pnpm.io/installation)
 - [Go 1.21+](https://golang.org/doc/install)
 

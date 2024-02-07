@@ -1,4 +1,4 @@
-FROM node:18 as builder
+FROM node:lts as builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN pnpm run --filter=./cdn-server/cdn --filter=./cdn-server build
 # Deploy
 RUN pnpm --filter=./cdn-server --prod deploy pruned
 
-FROM node:18-slim
+FROM node:lts-slim
 
 WORKDIR /app
 
