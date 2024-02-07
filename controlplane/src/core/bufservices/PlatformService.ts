@@ -4657,7 +4657,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditAction: 'subgraph_member.created',
           action: 'created',
           actorId: authContext.userId,
-          auditableType: 'subgraph',
+          auditableType: 'user',
           auditableDisplayName: user.email,
           actorDisplayName: authContext.userDisplayName,
           targetDisplayName: subgraph.name,
@@ -4712,6 +4712,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
+        const member = (await subgraphRepo.getSubgraphMembers(subgraph.id)).find(
+          (sm) => sm.subgraphMemberId === req.subgraphMemberId,
+        );
+
+        if (!member) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `The person is already not a member of the subgraph`,
+            },
+          };
+        }
+
         await subgraphRepo.removeSubgraphMember({ subgraphId: subgraph.id, subgraphMemberId: req.subgraphMemberId });
 
         await auditLogRepo.addAuditLog({
@@ -4719,8 +4732,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditAction: 'subgraph_member.deleted',
           action: 'deleted',
           actorId: authContext.userId,
-          auditableType: 'subgraph',
-          auditableDisplayName: subgraph.name,
+          auditableType: 'user',
+          auditableDisplayName: member.email,
           actorDisplayName: authContext.userDisplayName,
           targetDisplayName: subgraph.name,
           targetId: subgraph.id,
