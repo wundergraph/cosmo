@@ -307,11 +307,11 @@ func ValidateRequiredWithRouterConfigPath(fl validator.FieldLevel) bool {
 }
 
 func LoadConfig(envOverride string) (*Config, error) {
-	godotenv.Load(".env.local")
-	godotenv.Load()
+	_ = godotenv.Load(".env.local")
+	_ = godotenv.Load()
 
 	if envOverride != "" {
-		godotenv.Overload(envOverride)
+		_ = godotenv.Overload(envOverride)
 	}
 
 	var c Config

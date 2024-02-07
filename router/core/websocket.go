@@ -167,7 +167,6 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		subProtocol string
-		statusCode  = 0
 	)
 
 	requestID := middleware.GetReqID(r.Context())
@@ -177,7 +176,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Check access control before upgrading the connection
 	validatedReq, err := h.accessController.Access(w, r)
 	if err != nil {
-		statusCode = http.StatusForbidden
+		statusCode := http.StatusForbidden
 		if errors.Is(err, ErrUnauthorized) {
 			statusCode = http.StatusUnauthorized
 		}

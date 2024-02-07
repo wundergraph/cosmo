@@ -28,8 +28,6 @@ import (
 
 var (
 	errCouldNotResolveResponse = errors.New("could not resolve response")
-	errServerTimeout           = errors.New("server timeout")
-	errServerCanceled          = errors.New("server canceled")
 	errInternalServer          = errors.New("internal server error")
 )
 
