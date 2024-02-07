@@ -25,6 +25,7 @@ echo $token
 echo '---'
 echo 'Please store the token in a secure place. It will not be shown again.'
 echo 'You can use the token to authenticate against the control plane from the routers.'
+echo '---'
 echo ''
 
 export ROUTER_TOKEN=$token

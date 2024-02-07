@@ -50,7 +50,7 @@ They might restart a few times until the database is ready. Creates a small demo
 make full-demo-up
 ```
 
-2. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/graph/production/playground) and query the router. Login with the default credentials:
+2. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/default/graph/mygraph/playground) and query the router. Login with the default credentials:
 
 ```
 Username: foo@wundergraph.com
