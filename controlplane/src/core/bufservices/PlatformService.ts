@@ -113,6 +113,7 @@ import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
+import { subDays } from 'date-fns';
 import {
   DateRange,
   FederatedGraphDTO,
@@ -4870,11 +4871,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespaceId: namespace?.id,
         });
 
-        let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+        const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+
+        const { dateRange } = parseTimeFilters({
+          start: subDays(new Date(), 7).toString(),
+          end: new Date().toString(),
+        });
 
         if (req.includeMetrics && opts.chClient) {
           const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-          requestSeriesList = await analyticsDashRepo.getListView(authContext.organizationId);
+          for (const g of list) {
+            const requestSeries = await analyticsDashRepo.getRequestSeries(g.id, authContext.organizationId, {
+              granule: '60',
+              dateRange,
+            });
+            requestSeriesList[g.id] = [];
+            requestSeriesList[g.id].push(...requestSeries);
+          }
         }
 
         return {
