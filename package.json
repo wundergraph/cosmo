@@ -35,7 +35,7 @@
     "graphql": "16.7.1"
   },
   "engines": {
-    "node": ">=16.0.0",
+    "node": ">=20.0.0",
     "pnpm": "8"
   },
   "lint-staged": {
