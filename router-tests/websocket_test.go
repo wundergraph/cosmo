@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -13,7 +14,10 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -36,6 +40,100 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
+			var complete testenv.WebSocketMessage
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("query with authorization reject", func(t *testing.T) {
+		t.Parallel()
+		authServer, err := jwks.NewServer()
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		authOptions := authentication.JWKSAuthenticatorOptions{
+			Name: jwksName,
+			URL:  authServer.JWKSURL(),
+		}
+		authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil)
+			err = conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id startDate } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
+			var complete testenv.WebSocketMessage
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("query with authorization no-reject", func(t *testing.T) {
+		t.Parallel()
+		authServer, err := jwks.NewServer()
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		authOptions := authentication.JWKSAuthenticatorOptions{
+			Name: jwksName,
+			URL:  authServer.JWKSURL(),
+		}
+		authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: false,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil)
+			err = conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id startDate } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: not authenticated","path":["employees",0,"startDate"]}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)

@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/go-chi/chi/middleware"
@@ -628,7 +629,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
-			return
+			buf := pool.GetBytesBuffer()
+			defer pool.PutBytesBuffer(buf)
+			h.graphqlHandler.respondWithError(resolveCtx, err, p.Response, rw, buf, h.logger)
 		}
 		rw.Flush()
 		rw.Complete()
@@ -636,6 +639,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
+			buf := pool.GetBytesBuffer()
+			defer pool.PutBytesBuffer(buf)
+			h.graphqlHandler.respondWithError(resolveCtx, err, p.Response.Response, rw, buf, h.logger)
 			return
 		}
 	}
