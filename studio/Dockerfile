@@ -1,4 +1,4 @@
-FROM node:18 as builder
+FROM node:lts as builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ RUN pnpm buf generate --template buf.ts.gen.yaml
 
 RUN pnpm run --filter=./connect --filter=./shared --filter=./studio --filter=./composition build
 
-FROM node:18-alpine
+FROM node:lts-alpine
 WORKDIR /app
 
 ENV NODE_ENV production
