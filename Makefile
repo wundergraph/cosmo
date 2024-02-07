@@ -90,7 +90,7 @@ dc-stack-build:
 	docker compose --file docker-compose.cosmo.yml up --build --remove-orphans --detach
 
 full-demo-up:
-	docker compose -f docker-compose.full.yml --profile default up --build --remove-orphans --detach && cd scripts && ./bootstrap.sh
+	docker compose -f docker-compose.full.yml --profile default up --build --remove-orphans --detach && cd scripts && ./setup-fulldemo.sh
 
 full-demo-down:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs down --remove-orphans -v
