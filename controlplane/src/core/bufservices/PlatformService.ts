@@ -120,7 +120,7 @@ import {
   GraphApiKeyJwtPayload,
   PublishedOperationData,
   SubgraphDTO,
-  UpdatedPersistedOperation
+  UpdatedPersistedOperation,
 } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -4892,14 +4892,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         if (req.includeMetrics && opts.chClient) {
           const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-          for (const g of list) {
-            const requestSeries = await analyticsDashRepo.getRequestSeries(g.id, authContext.organizationId, {
-              granule: '5',
-              dateRange,
-            });
-            requestSeriesList[g.id] = [];
-            requestSeriesList[g.id].push(...requestSeries);
-          }
+
+          await Promise.all(
+            list.map(async (g) => {
+              const requestSeries = await analyticsDashRepo.getRequestSeries(g.id, authContext.organizationId, {
+                granule: '5',
+                dateRange,
+              });
+              requestSeriesList[g.id] = [];
+              requestSeriesList[g.id].push(...requestSeries);
+            }),
+          );
         }
 
         return {
