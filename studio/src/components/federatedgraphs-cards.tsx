@@ -159,7 +159,7 @@ const MigrationDialog = ({
       <DialogTrigger
         className={cn({
           "flex justify-center": isEmptyState,
-          "h-58": !isEmptyState,
+          "h-[242px]": !isEmptyState,
         })}
       >
         <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
@@ -540,7 +540,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
       className="project-list-item group"
     >
       <Card className="flex h-full flex-col py-4 transition-all group-hover:border-input-active">
-        <div className="pointer-events-none -mx-1.5 h-20 pb-6">
+        <div className="pointer-events-none -mx-1.5 h-20 pb-4">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <Line
@@ -563,6 +563,9 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <div className="flex w-full justify-end px-2 text-xs text-gray-500 dark:text-gray-400">
+          {`${formatMetric(totalRequests)} requests / week`}
+        </div>
 
         <div className="mt-2 flex flex-1 flex-col items-start px-6">
           <div className="text-base font-semibold">{graph.name}</div>
@@ -577,61 +580,48 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
             {parsedURL()}
           </p>
           <div className="mb-3 flex items-center gap-x-5">
-            <TooltipProvider>
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger>
-                  <div className="flex items-center gap-x-2">
-                    <Component2Icon className="h-4 w-4 text-[#0284C7]" />
-                    <p className="text-sm">
-                      {formatMetric(graph.connectedSubgraphs)}
-                    </p>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>{`${graph.connectedSubgraphs} connected subgraphs`}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger>
-                  <div className="flex items-center gap-x-2">
-                    <LuBarChart3 className="h-4 w-4 text-[#0284C7]" />
-                    <p className="text-sm">{`${formatMetric(
-                      totalRequests,
-                    )} / week`}</p>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>{`${totalRequests} requests this week`}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <div className="flex items-center gap-x-2">
+              <Component2Icon className="h-4 w-4 text-[#0284C7]" />
+              <p className="text-sm">
+                {`${formatMetric(graph.connectedSubgraphs)} ${
+                  graph.connectedSubgraphs === 1 ? "subgraph" : "subgraphs"
+                }`}
+              </p>
+            </div>
 
             <TooltipProvider>
               <Tooltip delayDuration={100}>
                 <TooltipTrigger>
                   <div className="flex items-center gap-x-2">
                     <MdErrorOutline className="h-4 w-4 text-red-500" />
-                    <p className="text-sm">{`${formatMetric(
-                      totalErrors,
-                    )} / week`}</p>
+                    <p className="text-sm">{`${formatMetric(totalErrors)} ${
+                      totalErrors === 1 ? "error" : "errors"
+                    }`}</p>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>{`${totalErrors} errors this week`}</TooltipContent>
+                <TooltipContent>{`${totalErrors} errors in the last 7 days.`}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <TooltipProvider>
             <Tooltip delayDuration={200}>
-              <TooltipTrigger className="mt-auto text-sm">
-                <ComposeStatusBulb
-                  validGraph={graph.isComposable && !!graph.lastUpdatedAt}
-                  emptyGraph={!graph.lastUpdatedAt && !graph.isComposable}
-                />
-                <span className="ml-2">
+              <TooltipTrigger className="mt-auto flex items-center text-xs">
+                <div className="flex h-4 w-4 items-center justify-center">
+                  <ComposeStatusBulb
+                    validGraph={graph.isComposable && !!graph.lastUpdatedAt}
+                    emptyGraph={!graph.lastUpdatedAt && !graph.isComposable}
+                  />
+                </div>
+
+                <span className="ml-1">
                   {graph.lastUpdatedAt ? (
-                    <TimeAgo
-                      date={getTime(parseISO(graph.lastUpdatedAt))}
-                      tooltip={false}
-                    />
+                    <div className="flex gap-x-1 text-muted-foreground">
+                      <p>Schema last updated</p>
+                      <TimeAgo
+                        date={getTime(parseISO(graph.lastUpdatedAt))}
+                        tooltip={false}
+                      />
+                    </div>
                   ) : (
                     "-"
                   )}
