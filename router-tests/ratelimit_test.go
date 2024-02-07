@@ -31,6 +31,26 @@ func TestRateLimit(t *testing.T) {
 			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
 		})
 	})
+	t.Run("disabled should not require redis", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(&config.RateLimitConfiguration{
+					Enabled: false,
+					Storage: config.RedisConfiguration{
+						Addr:      "localhost:1",
+						Password:  "doesntexist",
+						KeyPrefix: "non",
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
+	})
 	t.Run("enabled - below limit", func(t *testing.T) {
 		key := uuid.New().String()
 		t.Cleanup(func() {
@@ -217,7 +237,7 @@ func TestRateLimit(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusTooManyRequests, res.Response.StatusCode)
-			require.Equal(t, `{}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded"}],"data":null,"extensions":{"rateLimit":{"remaining":0,"retryAfterSeconds":0,"resetAfterSeconds":1}}}`, res.Body)
 		})
 	})
 }

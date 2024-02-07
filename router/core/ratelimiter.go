@@ -60,7 +60,7 @@ type RateLimitStats struct {
 	ResetAfterSeconds int `json:"resetAfterSeconds"`
 }
 
-func (c *CosmoRateLimiter) RenderStats(ctx *resolve.Context, out io.Writer) error {
+func (c *CosmoRateLimiter) RenderResponseExtension(ctx *resolve.Context, out io.Writer) error {
 	limit := redis_rate.Limit{
 		Rate:   ctx.RateLimitOptions.Rate,
 		Burst:  ctx.RateLimitOptions.Burst,

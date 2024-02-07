@@ -511,7 +511,11 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 	if request.Header != nil {
 		req.Header = request.Header
 	}
-	resp, err := e.RouterClient.Do(req)
+	client := &http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   time.Second * 5,
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -522,8 +526,9 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 		return nil, err
 	}
 	resp.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
+	body := buf.String()
 	return &TestResponse{
-		Body:     buf.String(),
+		Body:     strings.TrimSpace(body),
 		Response: resp,
 	}, nil
 }
@@ -538,7 +543,11 @@ func (e *Environment) MakeRequest(method, path string, header http.Header, body 
 		return nil, err
 	}
 	req.Header = header
-	return e.RouterClient.Do(req)
+	client := &http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   time.Second * 5,
+	}
+	return client.Do(req)
 
 }
 

@@ -1,7 +1,9 @@
 package core
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net"
 	"net/http"
@@ -109,8 +111,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 	operationCtx := getOperationContext(r.Context())
 
-	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execution",
-		trace.WithSpanKind(trace.SpanKindServer),
+	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
+		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer graphqlExecutionSpan.End()
 
@@ -125,6 +127,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Extensions:      operationCtx.extensions,
 	}
 	ctx = ctx.WithContext(executionContext)
+	ctx = WithAuthorizationExtension(ctx)
 	ctx.SetAuthorizer(h.authorizer)
 	h.configureRateLimiting(ctx)
 
@@ -133,31 +136,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
-
 		executionBuf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(executionBuf)
-
 		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, executionBuf)
 		if err != nil {
-			var nErr net.Error
-
-			if errors.Is(err, ErrRateLimitExceeded) {
-				writeRequestErrors(executionContext, http.StatusTooManyRequests, graphql.RequestErrorsFromError(err), w, requestLogger)
-				return
-			} else if errors.Is(err, ErrUnauthorized) {
-				writeRequestErrors(executionContext, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
-				return
-			} else if errors.Is(err, context.Canceled) {
-				writeRequestErrors(executionContext, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerCanceled), w, requestLogger)
-				return
-			} else if errors.As(err, &nErr) && nErr.Timeout() {
-				writeRequestErrors(executionContext, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerTimeout), w, requestLogger)
-				return
-			} else {
-				writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
-			}
-
-			requestLogger.Error("unable to resolve GraphQL response", zap.Error(err))
+			h.respondWithError(ctx, err, p.Response, w, executionBuf, requestLogger)
 			return
 		}
 		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
@@ -223,6 +206,109 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) {
 		RateLimitKey:                    h.rateLimitConfig.Storage.KeyPrefix,
 		RejectExceedingRequests:         h.rateLimitConfig.SimpleStrategy.RejectExceedingRateLimitRequests,
 	}
+}
+
+type GraphQLErrorResponse struct {
+	Errors     []graphqlError `json:"errors"`
+	Data       any            `json:"data"`
+	Extensions *Extensions    `json:"extensions,omitempty"`
+}
+
+type Extensions struct {
+	RateLimit     json.RawMessage `json:"rateLimit,omitempty"`
+	Authorization json.RawMessage `json:"authorization,omitempty"`
+	Trace         json.RawMessage `json:"trace,omitempty"`
+}
+
+func (h *GraphQLHandler) respondWithError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w http.ResponseWriter, buf *bytes.Buffer, requestLogger *zap.Logger) {
+	addErrorToSpan(ctx.Context(), err)
+	buf.Reset()
+	response := GraphQLErrorResponse{
+		Errors: make([]graphqlError, 1),
+		Data:   nil,
+	}
+	switch h.errorType(err) {
+	case errorTypeRateLimit:
+		response.Errors[0].Message = "Rate limit exceeded"
+		err = h.rateLimiter.RenderResponseExtension(ctx, buf)
+		if err != nil {
+			requestLogger.Error("unable to render rate limit stats", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		response.Extensions = &Extensions{
+			RateLimit: buf.Bytes(),
+		}
+		w.WriteHeader(http.StatusTooManyRequests)
+	case errorTypeUnauthorized:
+		response.Errors[0].Message = "Unauthorized"
+		if h.authorizer.HasResponseExtensionData(ctx) {
+			err = h.authorizer.RenderResponseExtension(ctx, buf)
+			if err != nil {
+				requestLogger.Error("unable to render authorization extension", zap.Error(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			response.Extensions = &Extensions{
+				Authorization: buf.Bytes(),
+			}
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+	case errorTypeContextCanceled:
+		response.Errors[0].Message = "Client disconnected"
+		w.WriteHeader(http.StatusRequestTimeout)
+	case errorTypeContextTimeout:
+		response.Errors[0].Message = "Server timeout"
+		w.WriteHeader(http.StatusRequestTimeout)
+	case errorTypeUnknown:
+		response.Errors[0].Message = "Internal server error"
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
+		traceNode := resolve.GetTrace(ctx.Context(), res.Data)
+		if traceNode != nil {
+			if response.Extensions == nil {
+				response.Extensions = &Extensions{}
+			}
+			response.Extensions.Trace, err = json.Marshal(traceNode)
+			if err != nil {
+				requestLogger.Error("unable to marshal trace node", zap.Error(err))
+			}
+		}
+	}
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		requestLogger.Error("unable to write rate limit response", zap.Error(err))
+	}
+}
+
+type errorType int
+
+const (
+	errorTypeUnknown errorType = iota
+	errorTypeRateLimit
+	errorTypeUnauthorized
+	errorTypeContextCanceled
+	errorTypeContextTimeout
+)
+
+func (h *GraphQLHandler) errorType(err error) errorType {
+	if errors.Is(err, ErrRateLimitExceeded) {
+		return errorTypeRateLimit
+	}
+	if errors.Is(err, ErrUnauthorized) {
+		return errorTypeUnauthorized
+	}
+	if errors.Is(err, context.Canceled) {
+		return errorTypeContextCanceled
+	}
+	var nErr net.Error
+	if errors.As(err, &nErr) {
+		if nErr.Timeout() {
+			return errorTypeContextTimeout
+		}
+	}
+	return errorTypeUnknown
 }
 
 const (

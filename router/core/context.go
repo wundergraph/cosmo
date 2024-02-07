@@ -2,12 +2,13 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/pkg/authentication"
-	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -352,7 +353,7 @@ type operationContext struct {
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan   *planWithMetaData
-	traceOptions   resolve.RequestTraceOptions
+	traceOptions   resolve.TraceOptions
 	planCacheHit   bool
 	initialPayload []byte
 	extensions     []byte
