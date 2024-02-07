@@ -21,5 +21,3 @@ SUBGRAPHS="employees family hobbies products"
 for subgraph in $SUBGRAPHS; do
   wgc subgraph publish $subgraph --namespace default --schema ../demo/pkg/subgraphs/$subgraph/subgraph/schema.graphqls
 done
-
-wgc router token create mytoken --graph-name mygraph --namespace default
