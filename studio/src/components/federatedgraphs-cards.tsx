@@ -158,7 +158,7 @@ const MigrationDialog = ({
       <DialogTrigger
         className={cn({
           "flex justify-center": isEmptyState,
-          "h-[258px]": !isEmptyState,
+          "h-[254px]": !isEmptyState,
         })}
       >
         <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
@@ -578,7 +578,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           >
             {parsedURL()}
           </p>
-          <div className="mb-4 flex items-center gap-x-5">
+          <div className="mb-3 flex items-center gap-x-5">
             <div className="flex items-center gap-x-2">
               <Component2Icon className="h-4 w-4 text-[#0284C7]" />
               <p className="text-sm">
