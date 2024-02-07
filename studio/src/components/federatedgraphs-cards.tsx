@@ -25,8 +25,7 @@ import {
   useState,
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
-import { LuBarChart3 } from "react-icons/lu";
-import { MdErrorOutline } from "react-icons/md";
+import { MdNearbyError } from "react-icons/md";
 import { SiApollographql } from "react-icons/si";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
 import { z } from "zod";
@@ -159,7 +158,7 @@ const MigrationDialog = ({
       <DialogTrigger
         className={cn({
           "flex justify-center": isEmptyState,
-          "h-[242px]": !isEmptyState,
+          "h-[258px]": !isEmptyState,
         })}
       >
         <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
@@ -563,15 +562,15 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex w-full justify-end px-2 text-xs text-gray-500 dark:text-gray-400">
-          {`${formatMetric(totalRequests)} requests / week`}
+        <div className="flex w-full justify-end px-4 font-mono text-xs text-muted-foreground">
+          {`${formatMetric(totalRequests / (6 * 60))} RPM`}
         </div>
 
-        <div className="mt-2 flex flex-1 flex-col items-start px-6">
+        <div className="mt-3 flex flex-1 flex-col items-start px-6">
           <div className="text-base font-semibold">{graph.name}</div>
           <p
             className={cn(
-              "mb-3 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
+              "mb-5 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
               {
                 italic: !graph.routingURL,
               },
@@ -579,7 +578,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           >
             {parsedURL()}
           </p>
-          <div className="mb-3 flex items-center gap-x-5">
+          <div className="mb-4 flex items-center gap-x-5">
             <div className="flex items-center gap-x-2">
               <Component2Icon className="h-4 w-4 text-[#0284C7]" />
               <p className="text-sm">
@@ -593,13 +592,13 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
               <Tooltip delayDuration={100}>
                 <TooltipTrigger>
                   <div className="flex items-center gap-x-2">
-                    <MdErrorOutline className="h-4 w-4 text-red-500" />
+                    <MdNearbyError className="h-4 w-4 text-red-500" />
                     <p className="text-sm">{`${formatMetric(totalErrors)} ${
                       totalErrors === 1 ? "error" : "errors"
                     }`}</p>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>{`${totalErrors} errors in the last 7 days.`}</TooltipContent>
+                <TooltipContent>{`${totalErrors} errors in the last 6 hours.`}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -613,9 +612,9 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                   />
                 </div>
 
-                <span className="ml-1">
+                <span className="ml-1 text-muted-foreground">
                   {graph.lastUpdatedAt ? (
-                    <div className="flex gap-x-1 text-muted-foreground">
+                    <div className="flex gap-x-1 ">
                       <p>Schema last updated</p>
                       <TimeAgo
                         date={getTime(parseISO(graph.lastUpdatedAt))}
@@ -623,7 +622,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                       />
                     </div>
                   ) : (
-                    "-"
+                    "Not ready"
                   )}
                 </span>
               </TooltipTrigger>
