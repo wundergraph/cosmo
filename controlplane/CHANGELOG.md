@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.65.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.64.0...controlplane@0.65.0) (2024-02-06)
+
+### Bug Fixes
+
+* **traces:** avoid filter on service name when determining root ([ebec309](https://github.com/wundergraph/cosmo/commit/ebec30948e5bdaad2daa813834b34c7bf9c43192)) (@StarpTech)
+
+### Features
+
+* enable creating orgs without billing ([#491](https://github.com/wundergraph/cosmo/issues/491)) ([dd2a5b9](https://github.com/wundergraph/cosmo/commit/dd2a5b91fb715f20a4adc613b820de9f02220821)) (@JivusAyrus)
+
+# [0.64.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.63.0...controlplane@0.64.0) (2024-02-06)
+
+### Features
+
+* add pagination component and validate limit ([#493](https://github.com/wundergraph/cosmo/issues/493)) ([880f1b9](https://github.com/wundergraph/cosmo/commit/880f1b9f64167b70b7f61620ebb5a895d438727a)) (@JivusAyrus)
+* consider only router root spans in the trace list ([#495](https://github.com/wundergraph/cosmo/issues/495)) ([b7639ab](https://github.com/wundergraph/cosmo/commit/b7639abcc4c2f367a651a65ffbc17238a049f635)) (@StarpTech)
+
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.62.0...controlplane@0.63.0) (2024-02-05)
+
+### Features
+
+* allow to force root span on the router ([#486](https://github.com/wundergraph/cosmo/issues/486)) ([a1a2f64](https://github.com/wundergraph/cosmo/commit/a1a2f64558815267edc144e32da4297703743a86)) (@StarpTech)
+
 # [0.62.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.61.2...controlplane@0.62.0) (2024-02-05)
 
 ### Bug Fixes

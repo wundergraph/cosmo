@@ -15,7 +15,11 @@ SELECT
     toDateTime(MAX(Timestamp), 'UTC') as LastCalled
 FROM
     cosmo.otel_traces
-WHERE empty(ParentSpanId)
+WHERE
+    -- Only include router root spans
+    SpanAttributes [ 'wg.router.root_span' ] = 'true' OR
+    -- For backwards compatibility (router < 0.61.2)
+    SpanAttributes [ 'wg.component.name' ] = 'router-server'
 GROUP BY
     Timestamp,
     HttpStatusCode,

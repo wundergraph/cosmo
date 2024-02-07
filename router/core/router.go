@@ -727,12 +727,22 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	recoveryHandler := recoveryhandler.New(recoveryhandler.WithLogger(r.logger), recoveryhandler.WithPrintStack())
 	var traceHandler *rtrace.Middleware
 	if r.traceConfig.Enabled {
-		traceHandler = rtrace.NewMiddleware(otel.RouterServerAttribute,
-			otelhttp.WithSpanOptions(
-				oteltrace.WithAttributes(
-					baseAttributes...,
-				),
+		spanStartOptions := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(
+				baseAttributes...,
 			),
+			oteltrace.WithAttributes(
+				otel.RouterServerAttribute,
+				otel.WgRouterRootSpan.Bool(true),
+			),
+		}
+
+		if r.traceConfig.WithNewRoot {
+			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
+		}
+
+		traceHandler = rtrace.NewMiddleware(
+			otelhttp.WithSpanOptions(spanStartOptions...),
 			otelhttp.WithFilter(rtrace.CommonRequestFilter),
 			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
 				[]string{r.healthCheckPath, r.readinessCheckPath, r.livenessCheckPath}),

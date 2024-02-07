@@ -26,8 +26,10 @@ SELECT
 FROM
     cosmo.otel_traces
 WHERE
-    -- only include the root spans
-    empty(ParentSpanId)
+    -- Only include router root spans
+    SpanAttributes [ 'wg.router.root_span' ] = 'true' OR
+    -- For backwards compatibility (router < 0.61.2)
+    SpanAttributes [ 'wg.component.name' ] = 'router-server'
 ORDER BY
     Timestamp DESC;
 

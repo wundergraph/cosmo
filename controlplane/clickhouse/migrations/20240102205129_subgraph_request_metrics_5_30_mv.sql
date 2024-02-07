@@ -19,7 +19,8 @@ SELECT
     mapContains(Attributes, 'wg.subscription') AS IsSubscription
 FROM
     cosmo.otel_metrics_sum
-WHERE ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND IsMonotonic = true AND MetricName = 'router.http.requests' AND SubgraphID != '' AND OrganizationID != '' AND FederatedGraphID != ''
+WHERE
+    ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND IsMonotonic = true AND MetricName = 'router.http.requests' AND SubgraphID != '' AND OrganizationID != '' AND FederatedGraphID != ''
 GROUP BY
     SubgraphID,
     FederatedGraphID,
