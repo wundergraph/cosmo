@@ -1,12 +1,14 @@
 import { useFireworks } from "@/hooks/use-fireworks";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
+import { formatMetric } from "@/lib/format-metric";
 import { useChartData } from "@/lib/insights-helpers";
 import { checkUserAccess, cn } from "@/lib/utils";
 import {
   ChevronDoubleRightIcon,
   CommandLineIcon,
 } from "@heroicons/react/24/outline";
+import { Component2Icon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -23,6 +25,7 @@ import {
   useState,
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
+import { MdNearbyError } from "react-icons/md";
 import { SiApollographql } from "react-icons/si";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
 import { z } from "zod";
@@ -155,7 +158,7 @@ const MigrationDialog = ({
       <DialogTrigger
         className={cn({
           "flex justify-center": isEmptyState,
-          "h-52": !isEmptyState,
+          "h-[254px]": !isEmptyState,
         })}
       >
         <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
@@ -509,6 +512,16 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
     graph.requestSeries.length > 0 ? graph.requestSeries : fallbackData,
   );
 
+  const totalRequests = graph.requestSeries.reduce(
+    (total, r) => total + r.totalRequests,
+    0,
+  );
+
+  const totalErrors = graph.requestSeries.reduce(
+    (total, r) => total + r.erroredRequests,
+    0,
+  );
+
   const parsedURL = () => {
     try {
       if (!graph.routingURL) {
@@ -526,7 +539,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
       className="project-list-item group"
     >
       <Card className="flex h-full flex-col py-4 transition-all group-hover:border-input-active">
-        <div className="pointer-events-none -mx-1.5 h-20 pb-6">
+        <div className="pointer-events-none -mx-1.5 h-20 pb-4">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <Line
@@ -549,12 +562,15 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <div className="flex w-full justify-end px-4 font-mono text-xs text-muted-foreground">
+          {`${formatMetric(totalRequests / (6 * 60))} RPM`}
+        </div>
 
-        <div className="mt-2 flex flex-1 flex-col items-start px-6">
+        <div className="mt-3 flex flex-1 flex-col items-start px-6">
           <div className="text-base font-semibold">{graph.name}</div>
           <p
             className={cn(
-              "mb-4 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
+              "mb-5 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
               {
                 italic: !graph.routingURL,
               },
@@ -562,21 +578,51 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           >
             {parsedURL()}
           </p>
+          <div className="mb-3 flex items-center gap-x-5">
+            <div className="flex items-center gap-x-2">
+              <Component2Icon className="h-4 w-4 text-[#0284C7]" />
+              <p className="text-sm">
+                {`${formatMetric(graph.connectedSubgraphs)} ${
+                  graph.connectedSubgraphs === 1 ? "subgraph" : "subgraphs"
+                }`}
+              </p>
+            </div>
+
+            <TooltipProvider>
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger>
+                  <div className="flex items-center gap-x-2">
+                    <MdNearbyError className="h-4 w-4 text-red-500" />
+                    <p className="text-sm">{`${formatMetric(totalErrors)} ${
+                      totalErrors === 1 ? "error" : "errors"
+                    }`}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>{`${totalErrors} errors in the last 6 hours.`}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <TooltipProvider>
             <Tooltip delayDuration={200}>
-              <TooltipTrigger className="mt-auto text-sm">
-                <ComposeStatusBulb
-                  validGraph={graph.isComposable && !!graph.lastUpdatedAt}
-                  emptyGraph={!graph.lastUpdatedAt && !graph.isComposable}
-                />
-                <span className="ml-2">
+              <TooltipTrigger className="mt-auto flex items-center text-xs">
+                <div className="flex h-4 w-4 items-center justify-center">
+                  <ComposeStatusBulb
+                    validGraph={graph.isComposable && !!graph.lastUpdatedAt}
+                    emptyGraph={!graph.lastUpdatedAt && !graph.isComposable}
+                  />
+                </div>
+
+                <span className="ml-1 text-muted-foreground">
                   {graph.lastUpdatedAt ? (
-                    <TimeAgo
-                      date={getTime(parseISO(graph.lastUpdatedAt))}
-                      tooltip={false}
-                    />
+                    <div className="flex gap-x-1 ">
+                      <p>Schema last updated</p>
+                      <TimeAgo
+                        date={getTime(parseISO(graph.lastUpdatedAt))}
+                        tooltip={false}
+                      />
+                    </div>
                   ) : (
-                    "-"
+                    "Not ready"
                   )}
                 </span>
               </TooltipTrigger>
