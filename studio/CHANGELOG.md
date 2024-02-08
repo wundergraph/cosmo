@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.63.1](https://github.com/wundergraph/cosmo/compare/studio@0.63.0...studio@0.63.1) (2024-02-08)
+
+### Bug Fixes
+
+* rpm calculation in the graph overview page ([#507](https://github.com/wundergraph/cosmo/issues/507)) ([307e203](https://github.com/wundergraph/cosmo/commit/307e203b053ebe9b90a10d0ac10734adbdf398fc)) (@JivusAyrus)
+
 # [0.63.0](https://github.com/wundergraph/cosmo/compare/studio@0.62.0...studio@0.63.0) (2024-02-08)
 
 ### Features

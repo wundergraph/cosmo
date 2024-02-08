@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.66.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.66.1...controlplane@0.66.2) (2024-02-08)
+
+### Bug Fixes
+
+* prepend ch queries correctly with database name ([#508](https://github.com/wundergraph/cosmo/issues/508)) ([f774638](https://github.com/wundergraph/cosmo/commit/f774638deee6e7d3c6c768fd7ad82ec48e398487)) (@StarpTech)
+* rpm calculation in the graph overview page ([#507](https://github.com/wundergraph/cosmo/issues/507)) ([307e203](https://github.com/wundergraph/cosmo/commit/307e203b053ebe9b90a10d0ac10734adbdf398fc)) (@JivusAyrus)
+
 ## [0.66.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.66.0...controlplane@0.66.1) (2024-02-08)
 
 ### Bug Fixes
