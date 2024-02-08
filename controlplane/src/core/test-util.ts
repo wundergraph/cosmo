@@ -33,9 +33,9 @@ export async function beforeAllSetup(): Promise<string> {
 }
 
 export async function afterAllSetup(dbname: string) {
-  const sql = postgres('postgresql://postgres:changeme@localhost:5432/postgres');
-  await sql`DROP DATABASE "${sql.unsafe(dbname)}";`;
-  await sql.end({ timeout: 3 });
+  const sql = postgres('postgresql://postgres:changeme@localhost:5432/postgres', { max: 1 });
+  await sql`DROP DATABASE "${sql.unsafe(dbname)}"`;
+  await sql.end({ timeout: 1 });
 }
 
 export function genID(prefix = 'prefix') {
@@ -95,7 +95,7 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
   }
 
   await queryConnection.end({
-    timeout: 3,
+    timeout: 1,
   });
 }
 
