@@ -21,7 +21,7 @@ WunderGraph Cosmo router.
 | configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |
 | configuration.otelCollectorUrl | string | `""` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set. |
 | deploymentStrategy | object | `{}` |  |
-| existingConfigmap | string | `""` | Optionally name of existing ConfigMap with Router configuration. The key config.yaml is required. |
+| existingConfigmap | string | `""` | The name of the configmap to use for the router configuration. The key "config.yaml" is required. |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container |
 | extraEnvVarsCM | string | `""` | Name of existing ConfigMap containing extra env vars |
 | extraEnvVarsSecret | string | `""` | Name of existing Secret containing extra env vars |
