@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.66.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.65.0...controlplane@0.66.0) (2024-02-08)
+
+### Bug Fixes
+
+* audit log for subgraph member addition and removal ([#498](https://github.com/wundergraph/cosmo/issues/498)) ([bd2a211](https://github.com/wundergraph/cosmo/commit/bd2a211b87594fcc43a1b893740d25fbff1b1729)) (@thisisnithin)
+* wait until db is closed in close server hook ([#502](https://github.com/wundergraph/cosmo/issues/502)) ([8bb8686](https://github.com/wundergraph/cosmo/commit/8bb868651d39ceee1ecb4c62dd3b4ef3a143469f)) (@StarpTech)
+
+### Features
+
+* improve federated graph lists overview ([#497](https://github.com/wundergraph/cosmo/issues/497)) ([d7f383a](https://github.com/wundergraph/cosmo/commit/d7f383ad074a9dde06e96fd90459478a29b2cf79)) (@JivusAyrus)
+* upgrade to active lts node images ([#501](https://github.com/wundergraph/cosmo/issues/501)) ([684f89f](https://github.com/wundergraph/cosmo/commit/684f89f8b6c46a3b24117c221cab41a5b60dd534)) (@StarpTech)
+
 # [0.65.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.64.0...controlplane@0.65.0) (2024-02-06)
 
 ### Bug Fixes
