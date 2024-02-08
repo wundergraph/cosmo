@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 echo ""
 echo "Setting up keycloak and seeding the database ..."
@@ -9,6 +8,8 @@ while true; do
         break
     fi
 done
+
+set -e
 
 echo "The database was seeded successfully."
 echo "Creating federated graph and subgraphs ..."
