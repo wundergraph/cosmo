@@ -42,7 +42,7 @@ That's it, migrate over with a single click!
 - [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
 
 Running cosmo is as easy as running a single command. It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
-They might restart a few times until the database is ready. You can check the status of the services by running `make full-demo-status`. Once this command returns no services you can proceed with the next step.
+They might restart a few times until the database is ready. Creates a small demo project and starts the router and subgraphs:
 
 1. Start the platform:
 
@@ -50,30 +50,14 @@ They might restart a few times until the database is ready. You can check the st
 make full-demo-up
 ```
 
-2. Now, you can create a small demo project and start the router and subgraphs:
-
-```shell
-# Create the demo project
-make create-cli-demo
-
-# Copy the Router token from the previous log output and set it as environment variables
-export ROUTER_TOKEN="<token>"
-export OTEL_AUTH_TOKEN="<token>"
-
-# Start the subgraphs + router
-make dc-federation-demo
-```
-
-Run `make full-demo-status` once more to see if all subgraphs and your router are up and running.
-
-3. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/graph/production/playground) and query the router. Login with the default credentials:
+2. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/default/graph/mygraph/playground) and query the router. Login with the default credentials:
 
 ```
 Username: foo@wundergraph.com
 Password: wunder@123
 ```
 
-4. If you are done, you can clean up the demo by running `make full-demo-down`.
+3. If you are done, you can clean up the demo by running `make full-demo-down`.
 
 ## Local Development
 
