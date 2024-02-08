@@ -24,7 +24,7 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Cache Next.js build
         with:
           path: |

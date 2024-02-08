@@ -33,7 +33,7 @@ jobs:
         run: helm repo add bitnami https://charts.bitnami.com/bitnami
 
       - name: Setup Carvel tools
-        uses: carvel-dev/setup-action@v1.3.0
+        uses: carvel-dev/setup-action@v2
         with:
           only: kapp, kbld
           token: ${{ secrets.GITHUB_TOKEN }}
