@@ -33,9 +33,6 @@ extraVolumes: []
 # -- Optionally specify extra list of additional volumeMounts for Router container's
 extraVolumeMounts: []
 
-# -- Optionally name of existing ConfigMap with Router configuration. The key config.yaml is required.
-existingConfigmap: ""
-
 # -- Name of existing ConfigMap containing extra env vars
 extraEnvVarsCM: ""
 
@@ -142,9 +139,13 @@ probes:
 
 global:
   helmTests: false
+
 #############################
 # Application configuration #
 #############################
+
+# --The name of the configmap to use for the router configuration. The key "config.yaml" is required.
+existingConfigmap: ""
 
 configuration:
   # -- The router token is used to authenticate the router against the controlplane (required)
