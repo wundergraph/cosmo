@@ -91,10 +91,10 @@ export default fp<DbPluginOptions & DatabaseConnectionConfig>(async function (fa
       throw new Error('Database connection healthcheck failed');
     }
   });
-  fastify.addHook('onClose', () => {
+  fastify.addHook('onClose', async () => {
     fastify.log.debug('Closing database connection ...');
 
-    queryConnection.end({
+    await queryConnection.end({
       timeout: opts.gracefulTimeoutSec ?? 5,
     });
 
