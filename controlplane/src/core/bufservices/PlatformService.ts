@@ -4895,7 +4895,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
 
         const { dateRange } = parseTimeFilters({
-          start: subHours(new Date(), 6).toString(),
+          start: subHours(new Date(), 4).toString(),
           end: new Date().toString(),
         });
 
