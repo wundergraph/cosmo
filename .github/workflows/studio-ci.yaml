@@ -18,13 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - uses: ./.github/actions/node
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Cache Next.js build
         with:
           path: |

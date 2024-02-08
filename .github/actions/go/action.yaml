@@ -11,7 +11,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.go-version }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
