@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/cdn@0.5.0...cdn@0.6.0) (2024-02-08)
+
+### Features
+
+* upgrade to active lts node images ([#501](https://github.com/wundergraph/cosmo/issues/501)) ([684f89f](https://github.com/wundergraph/cosmo/commit/684f89f8b6c46a3b24117c221cab41a5b60dd534)) (@StarpTech)
+
 # [0.5.0](https://github.com/wundergraph/cosmo/compare/cdn@0.4.2...cdn@0.5.0) (2024-02-01)
 
 ### Features
