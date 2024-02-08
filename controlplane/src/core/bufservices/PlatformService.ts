@@ -4079,10 +4079,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.updateIntegrationConfig({
+        const updatedIntegration = await orgRepo.updateIntegrationConfig({
           organizationId: authContext.organizationId,
           ...req,
         });
+
+        if (!updatedIntegration) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Could not update configuration.`,
+            },
+          };
+        }
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,

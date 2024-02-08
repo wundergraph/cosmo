@@ -894,14 +894,14 @@ export class OrganizationRepository {
     });
   }
 
-  public async updateIntegrationConfig(input: {
+  public updateIntegrationConfig(input: {
     id: string;
     organizationId: string;
     endpoint: string;
     events: string[];
     eventsMeta: EventMeta[];
   }) {
-    await this.db.transaction(async (tx) => {
+    return this.db.transaction(async (tx) => {
       const integration = await tx
         .update(organizationIntegrations)
         .set({
@@ -910,6 +910,10 @@ export class OrganizationRepository {
         .where(eq(organizationIntegrations.id, input.id))
         .returning();
 
+      if (integration.length === 0) {
+        return;
+      }
+
       switch (integration[0].type) {
         case 'slack': {
           const slackIntegrationConfig = await tx
@@ -917,6 +921,7 @@ export class OrganizationRepository {
             .set({
               endpoint: input.endpoint,
             })
+            .where(eq(slackIntegrationConfigs.integrationId, integration[0].id))
             .returning()
             .execute();
 
@@ -952,6 +957,8 @@ export class OrganizationRepository {
           }
         }
       }
+
+      return integration;
     });
   }
 
