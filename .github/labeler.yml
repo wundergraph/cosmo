@@ -1,47 +1,21 @@
 studio:
-  - changed-files:
-    - any-glob-to-any-file:
-      - 'studio/**/*'
-
+  - "studio/**/*"
 monorepo:
-  - changed-files:
-    - any-glob-to-any-file:
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "package.json"
-      - "Makefile"
-
+  - "pnpm-lock.yaml"
+  - "pnpm-workspace.yaml"
+  - "package.json"
+  - "Makefile"
 cli:
-  - changed-files:
-    - any-glob-to-any-file:
-      - "cli/**/*"
-
+  - "cli/**/*"
 router:
-  - changed-files:
-    - any-glob-to-any-file:
-      - "router/**/*"
-
+  - "router/**/*"
 connect:
-  - changed-files:
-    - any-glob-to-any-file:
-      - "connect/**/*"
-
+  - "connect/**/*"
 protocol:
-  - changed-files:
-    - any-glob-to-any-file:
-      - "proto/**/*"
-
+  - "proto/**/*"
 controlplane:
-  - changed-files:
-    - any-glob-to-any-file:
-      - "controlplane/**/*"
-
+  - "controlplane/**/*"
 graphqlmetrics:
-  - changed-files:
-    - any-glob-to-any-file:
-      - "graphqlmetrics/**/*"
-
+  - "graphqlmetrics/**/*"
 aws-lambda-router:
-  - changed-files:
-    - any-glob-to-any-file:
-      - "aws-lambda-router/**/*"
+  - "aws-lambda-router/**/*"
