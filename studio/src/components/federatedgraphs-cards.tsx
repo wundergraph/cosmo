@@ -508,7 +508,7 @@ export const Empty = ({
 const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
   const user = useContext(UserContext);
   const { data, ticks, domain, timeFormatter } = useChartData(
-    7 * 24,
+    4,
     graph.requestSeries.length > 0 ? graph.requestSeries : fallbackData,
   );
 
@@ -563,7 +563,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           </ResponsiveContainer>
         </div>
         <div className="flex w-full justify-end px-4 font-mono text-xs text-muted-foreground">
-          {`${formatMetric(totalRequests / (6 * 60))} RPM`}
+          {`${formatMetric(totalRequests / (4 * 60))} RPM`}
         </div>
 
         <div className="mt-3 flex flex-1 flex-col items-start px-6">
@@ -598,7 +598,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                     }`}</p>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>{`${totalErrors} errors in the last 6 hours.`}</TooltipContent>
+                <TooltipContent>{`${totalErrors} errors in the last 4 hours.`}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
