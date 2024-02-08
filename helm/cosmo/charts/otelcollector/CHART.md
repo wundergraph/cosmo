@@ -15,9 +15,9 @@ WunderGraph Cosmo Open Telemetry Collector.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
-| collectorConfigOverride | string | `nil` |  |
 | configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | deploymentStrategy | object | `{}` |  |
+| existingConfigmap | string | `nil` | The name of the configmap to use for the otelcollector configuration. The key must be "otel-config.yaml". |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
