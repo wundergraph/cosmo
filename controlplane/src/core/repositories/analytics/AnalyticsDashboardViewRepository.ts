@@ -98,53 +98,6 @@ export class AnalyticsDashboardViewRepository {
     return [];
   }
 
-  private async getAllWeeklyRequestSeries(
-    organizationId: string,
-  ): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
-    const query = `
-        SELECT
-          toString(toUnixTimestamp(toDate(toStartOfDay(Timestamp))) * 1000) as timestamp,
-          sum(TotalRequests) as totalRequests,
-          sum(TotalErrors) as erroredRequests,
-          FederatedGraphID as graphId
-        FROM ${this.client.database}.operation_request_metrics_5_30_mv
-        WHERE Timestamp >= toDate(now()) - interval 6 day
-          AND OrganizationID = '${organizationId}'
-        GROUP BY FederatedGraphID, timestamp
-        ORDER BY
-          timestamp DESC
-    `;
-
-    const seriesResWithGraphId = await this.client.queryPromise(query);
-
-    if (Array.isArray(seriesResWithGraphId)) {
-      const transformed: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
-
-      for (const item of seriesResWithGraphId) {
-        const { graphId, ...rest } = item;
-
-        if (!transformed[graphId]) {
-          transformed[graphId] = [];
-        }
-
-        transformed[graphId].push(rest);
-      }
-
-      for (const key in transformed) {
-        const padded = padMissingDatesForCurrentWeek(transformed[key]);
-        transformed[key] = padded;
-        for (const item of padded) {
-          item.totalRequests = Number(item.totalRequests);
-          item.erroredRequests = Number(item.erroredRequests);
-        }
-      }
-
-      return transformed;
-    }
-
-    return {};
-  }
-
   private async getMostRequestedOperations(
     federatedGraphId: string,
     organizationId: string,
@@ -173,10 +126,6 @@ export class AnalyticsDashboardViewRepository {
     }
 
     return [];
-  }
-
-  public getListView(organizationId: string): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
-    return this.getAllWeeklyRequestSeries(organizationId);
   }
 
   private async getFederatedGraphRates(
