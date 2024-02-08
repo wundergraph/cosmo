@@ -1,4 +1,4 @@
-FROM node:18 as builder
+FROM node:lts as builder
 
 WORKDIR /app
 
@@ -28,7 +28,7 @@ RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/relea
 # Deploy
 RUN pnpm --filter=./controlplane --prod deploy pruned
 
-FROM node:18-alpine
+FROM node:lts-alpine
 
 WORKDIR /app
 
