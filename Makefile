@@ -36,16 +36,16 @@ seed:
 	pnpm -r run --filter './controlplane' seed
 
 create-cli-demo:
-	cd scripts && ./create-cli-demo.sh
+	./scripts/create-cli-demo.sh
 
 create-docker-demo:
-	cd scripts && ./create-docker-demo.sh
+	./scripts/create-docker-demo.sh
 
 create-demo:
-	cd scripts && ./create-local-demo.sh
+	./scripts/create-local-demo.sh
 
 delete-demo:
-	cd scripts && ./delete-local-demo.sh
+	./scripts/delete-local-demo.sh
 
 dev-setup: prerequisites
 	pnpm install
@@ -90,7 +90,7 @@ dc-stack-build:
 	docker compose --file docker-compose.cosmo.yml up --build --remove-orphans --detach
 
 full-demo-up:
-	docker compose -f docker-compose.full.yml --profile default up --build --remove-orphans --detach && cd scripts && ./setup-fulldemo.sh
+	docker compose -f docker-compose.full.yml --profile default up --build --remove-orphans --detach && ./scripts/setup-fulldemo.sh
 
 full-demo-down:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs down --remove-orphans -v
