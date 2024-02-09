@@ -19,7 +19,7 @@ WunderGraph Cosmo GraphQL Metrics Collector
 | configuration.listenAddr | string | `"0.0.0.0:4005"` |  |
 | configuration.logLevel | string | `"info"` |  |
 | deploymentStrategy | object | `{}` |  |
-| extraEnvVars | list | `[]` | Allows to set additional environment variables on the container |
+| extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
