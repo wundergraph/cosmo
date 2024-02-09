@@ -48,6 +48,7 @@ WunderGraph Cosmo Controlplane
 | configuration.webhookSecret | string | `""` |  |
 | configuration.webhookUrl | string | `""` |  |
 | deploymentStrategy | object | `{}` |  |
+| extraEnvVars | list | `[]` | Allows to set additional environment variables on the container |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |

@@ -56,6 +56,9 @@ spec:
               containerPort: 13133
               protocol: TCP
           env:
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
             - name: CLICKHOUSE_ENDPOINT
               valueFrom:
                 secretKeyRef:
