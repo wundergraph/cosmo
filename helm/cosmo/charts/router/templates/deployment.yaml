@@ -102,6 +102,20 @@ spec:
                   name: {{ include "router.fullname" . }}
                   key: otelCollectorUrl
             {{- end }}
+            {{ if .Values.configuration.cdnUrl }}
+            - name: CDN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: cdnUrl
+            {{- end }}
+            {{ if .Values.configuration.routerConfigPath }}
+            - name: ROUTER_CONFIG_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: routerConfigPath
+            {{- end }}
             {{ if .Values.configuration.graphApiToken }}
             - name: GRAPH_API_TOKEN
               valueFrom:
@@ -131,6 +145,10 @@ spec:
             - name: router-config
               mountPath: /config.yaml
               subPath: config.yaml
+            {{- else if .Values.commonConfiguration }}
+            - name: router-config
+              mountPath: /config.yaml
+              subPath: config.yaml
             {{- end }}
             {{ if .Values.configuration.executionConfig }}
             - name: execution-config
@@ -152,6 +170,10 @@ spec:
         - name: router-config
           configMap:
             name: {{ .Values.existingConfigmap }}
+        {{- else if .Values.commonConfiguration }}
+        - name: router-config
+          configMap:
+            name: {{ include "router.fullname" . }}
         {{- end }}
         {{- if .Values.extraVolumes }}
         {{- .Values.extraVolumes | nindent 8 }}

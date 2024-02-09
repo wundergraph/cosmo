@@ -127,6 +127,8 @@ router:
     otelCollectorUrl: 'http://cosmo-otelcollector:4318'
     # -- The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster.
     graphqlMetricsCollectorUrl: 'http://cosmo-graphqlmetrics:4005'
+    # -- The URL of the Cosmo CDN. Should be internal to the cluster.
+    cdnUrl: 'http://cosmo-cdn:8787'
 
 # Cosmo Open Telemetry Collector. For more options, please refer to the CHART.md
 otelcollector:

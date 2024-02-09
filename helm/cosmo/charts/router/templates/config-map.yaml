@@ -9,9 +9,16 @@ metadata:
   labels:
     {{- include "router.labels" . | nindent 4 }}
 data:
+  config.yaml: |-
+    # User-supplied common configuration:
+    {{- if .Values.commonConfiguration }}
+    {{- .Values.commonConfiguration | nindent 4 }}
+    {{- end }}
   logLevel: "{{ .Values.configuration.logLevel }}"
   devMode: "{{ .Values.configuration.devMode }}"
   listenAddress: "0.0.0.0:{{ .Values.service.port }}"
   controlplaneUrl: "{{ .Values.configuration.controlplaneUrl }}"
   otelCollectorUrl: "{{ .Values.configuration.otelCollectorUrl }}"
   graphqlMetricsCollectorUrl: "{{ .Values.configuration.graphqlMetricsCollectorUrl }}"
+  cdnUrl: "{{ .Values.configuration.cdnUrl }}"
+  routerConfigPath: "{{ .Values.configuration.routerConfigPath }}"
