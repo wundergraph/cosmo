@@ -25,7 +25,6 @@ const (
 )
 
 func TestAuthentication(t *testing.T) {
-	t.Parallel()
 
 	authServer, err := jwks.NewServer()
 	require.NoError(t, err)
