@@ -556,7 +556,6 @@ func TestAuthentication(t *testing.T) {
 }
 
 func TestAuthenticationWithCustomHeaders(t *testing.T) {
-	t.Parallel()
 
 	const (
 		headerName        = "X-My-Header"
@@ -610,7 +609,6 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 }
 
 func TestAuthorization(t *testing.T) {
-	t.Parallel()
 
 	authServer, err := jwks.NewServer()
 	require.NoError(t, err)
@@ -688,7 +686,7 @@ func TestAuthorization(t *testing.T) {
 }
 
 func TestAuthenticationMultipleProviders(t *testing.T) {
-	t.Parallel()
+
 	authServer1, err := jwks.NewServer()
 	require.NoError(t, err)
 	t.Cleanup(authServer1.Close)
