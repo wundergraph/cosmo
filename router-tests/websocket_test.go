@@ -3,7 +3,6 @@ package integration_test
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -97,7 +96,6 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("query with authorization no-reject", func(t *testing.T) {
-		t.Parallel()
 		authServer, err := jwks.NewServer()
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
@@ -144,7 +142,6 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("subscription with authorization no-reject", func(t *testing.T) {
-		t.Parallel()
 		authServer, err := jwks.NewServer()
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
@@ -177,22 +174,17 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 			go func() {
-				fmt.Println("test:waiting:for:subscription")
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				fmt.Println("test:count:1")
 				// Trigger the subscription via NATS
 				subject := "employeeUpdated.3"
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err = xEnv.NC.Publish(subject, message)
+				err := xEnv.NC.Publish(subject, message)
 				require.NoError(t, err)
 				err = xEnv.NC.Flush()
 				require.NoError(t, err)
-				fmt.Printf("test:sent:update:%s:%s:%s\n", xEnv.NC.ConnectedUrl(), subject, string(message))
 			}()
 			var res testenv.WebSocketMessage
-			fmt.Println("test:read:start")
 			err = conn.ReadJSON(&res)
-			fmt.Println("test:read:done")
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
