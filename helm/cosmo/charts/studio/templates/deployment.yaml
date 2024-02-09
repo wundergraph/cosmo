@@ -43,6 +43,9 @@ spec:
           image: "{{ include "studio.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
             - name: HOSTNAME
               value: "0.0.0.0"
             - name: NEXT_PUBLIC_COSMO_CP_URL

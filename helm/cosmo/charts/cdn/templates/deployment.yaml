@@ -50,6 +50,9 @@ spec:
           image: "{{ include "cdn.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
             - name: PORT
               valueFrom:
                 configMapKeyRef:

@@ -53,6 +53,9 @@ spec:
               containerPort: {{ .Values.service.port }}
               protocol: TCP
           env:
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
             - name: CLICKHOUSE_DSN
               valueFrom:
                 secretKeyRef:
