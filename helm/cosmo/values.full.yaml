@@ -118,7 +118,7 @@ router:
       maxUnavailable: 0
   configuration:
     # You need to run `wgc federated-graph create-token mygraph --namespace default` to generate a token
-    graphApiToken: 'replace-me'
+    graphApiToken: ''
     # -- Log level of the router
     logLevel: 'info'
     # -- The URL of the Cosmo Controlplane. Should be internal to the cluster.
