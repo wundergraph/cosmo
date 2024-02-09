@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -138,7 +139,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer pool.PutBytesBuffer(executionBuf)
 		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, executionBuf)
 		if err != nil {
-			h.respondWithError(ctx, err, p.Response, w, executionBuf, requestLogger)
+			h.WriteError(ctx, err, p.Response, w, executionBuf)
 			return
 		}
 		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
@@ -159,8 +160,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		h.websocketStats.SynchronousSubscriptionsInc()
-		defer h.websocketStats.SynchronousSubscriptionsDec()
+		h.websocketStats.ConnectionsInc()
+		defer h.websocketStats.ConnectionsDec()
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		if err != nil {
 			if errors.Is(err, ErrUnauthorized) {
@@ -218,7 +219,9 @@ type Extensions struct {
 	Trace         json.RawMessage `json:"trace,omitempty"`
 }
 
-func (h *GraphQLHandler) respondWithError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w http.ResponseWriter, buf *bytes.Buffer, requestLogger *zap.Logger) {
+func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, buf *bytes.Buffer) {
+	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(ctx.Context())))
+	httpWriter, isHttpResponseWriter := w.(http.ResponseWriter)
 	addErrorToSpan(ctx.Context(), err)
 	buf.Reset()
 	response := GraphQLErrorResponse{
@@ -231,36 +234,50 @@ func (h *GraphQLHandler) respondWithError(ctx *resolve.Context, err error, res *
 		err = h.rateLimiter.RenderResponseExtension(ctx, buf)
 		if err != nil {
 			requestLogger.Error("unable to render rate limit stats", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
+			if isHttpResponseWriter {
+				httpWriter.WriteHeader(http.StatusInternalServerError)
+			}
 			return
 		}
 		response.Extensions = &Extensions{
 			RateLimit: buf.Bytes(),
 		}
-		w.WriteHeader(http.StatusTooManyRequests)
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusTooManyRequests)
+		}
 	case errorTypeUnauthorized:
 		response.Errors[0].Message = "Unauthorized"
 		if h.authorizer.HasResponseExtensionData(ctx) {
 			err = h.authorizer.RenderResponseExtension(ctx, buf)
 			if err != nil {
 				requestLogger.Error("unable to render authorization extension", zap.Error(err))
-				w.WriteHeader(http.StatusInternalServerError)
+				if isHttpResponseWriter {
+					httpWriter.WriteHeader(http.StatusInternalServerError)
+				}
 				return
 			}
 			response.Extensions = &Extensions{
 				Authorization: buf.Bytes(),
 			}
 		}
-		w.WriteHeader(http.StatusUnauthorized)
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusUnauthorized)
+		}
 	case errorTypeContextCanceled:
 		response.Errors[0].Message = "Client disconnected"
-		w.WriteHeader(http.StatusRequestTimeout)
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusRequestTimeout)
+		}
 	case errorTypeContextTimeout:
 		response.Errors[0].Message = "Server timeout"
-		w.WriteHeader(http.StatusRequestTimeout)
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusRequestTimeout)
+		}
 	case errorTypeUnknown:
 		response.Errors[0].Message = "Internal server error"
-		w.WriteHeader(http.StatusInternalServerError)
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusInternalServerError)
+		}
 	}
 	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
 		traceNode := resolve.GetTrace(ctx.Context(), res.Data)
@@ -277,6 +294,9 @@ func (h *GraphQLHandler) respondWithError(ctx *resolve.Context, err error, res *
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		requestLogger.Error("unable to write rate limit response", zap.Error(err))
+	}
+	if flushWriter, ok := w.(http.Flusher); ok {
+		flushWriter.Flush()
 	}
 }
 

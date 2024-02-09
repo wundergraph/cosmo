@@ -961,6 +961,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
+	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
 
 	var publicKey *ecdsa.PublicKey
 

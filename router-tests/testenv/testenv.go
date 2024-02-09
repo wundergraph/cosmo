@@ -688,6 +688,7 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 				return
 			}
 			if report.Subscriptions == desiredCount {
+				time.Sleep(100 * time.Millisecond) // Give NATS some time to have the subscription set up
 				return
 			}
 		}

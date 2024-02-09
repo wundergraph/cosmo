@@ -432,7 +432,6 @@ func (rw *websocketResponseWriter) WriteHeader(statusCode int) {
 
 func (rw *websocketResponseWriter) Complete() {
 	err := rw.protocol.Done(rw.id)
-	defer rw.stats.SubscriptionsDec()
 	if err != nil {
 		rw.logger.Debug("Sending complete message", zap.Error(err))
 	}
@@ -616,8 +615,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 	resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
 	h.graphqlHandler.configureRateLimiting(resolveCtx)
 
-	h.stats.SubscriptionsInc()
-
 	// Put in a closure to evaluate err after the defer
 	defer func() {
 		// StatusCode has no meaning here. We set it to 0 but set the error.
@@ -631,7 +628,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			buf := pool.GetBytesBuffer()
 			defer pool.PutBytesBuffer(buf)
-			h.graphqlHandler.respondWithError(resolveCtx, err, p.Response, rw, buf, h.logger)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw, buf)
 		}
 		rw.Flush()
 		rw.Complete()
@@ -641,7 +638,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
 			buf := pool.GetBytesBuffer()
 			defer pool.PutBytesBuffer(buf)
-			h.graphqlHandler.respondWithError(resolveCtx, err, p.Response.Response, rw, buf, h.logger)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw, buf)
 			return
 		}
 	}

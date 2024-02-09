@@ -3,6 +3,7 @@ package integration_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -134,6 +135,125 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: not authenticated","path":["employees",0,"startDate"]}]`, string(res.Payload))
+			var complete testenv.WebSocketMessage
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with authorization no-reject", func(t *testing.T) {
+		t.Parallel()
+		authServer, err := jwks.NewServer()
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		authOptions := authentication.JWKSAuthenticatorOptions{
+			Name: jwksName,
+			URL:  authServer.JWKSURL(),
+		}
+		authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: false,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil)
+			err = conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
+			})
+			require.NoError(t, err)
+			go func() {
+				fmt.Println("test:waiting:for:subscription")
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+				fmt.Println("test:count:1")
+				// Trigger the subscription via NATS
+				subject := "employeeUpdated.3"
+				message := []byte(`{"id":3,"__typename": "Employee"}`)
+				err = xEnv.NC.Publish(subject, message)
+				require.NoError(t, err)
+				err = xEnv.NC.Flush()
+				require.NoError(t, err)
+				fmt.Printf("test:sent:update:%s:%s:%s\n", xEnv.NC.ConnectedUrl(), subject, string(message))
+			}()
+			var res testenv.WebSocketMessage
+			fmt.Println("test:read:start")
+			err = conn.ReadJSON(&res)
+			fmt.Println("test:read:done")
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate'. Reason: not authenticated","path":["employeeUpdated","startDate"]}]`, string(res.Payload))
+			var complete testenv.WebSocketMessage
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with authorization reject", func(t *testing.T) {
+		t.Parallel()
+		authServer, err := jwks.NewServer()
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		authOptions := authentication.JWKSAuthenticatorOptions{
+			Name: jwksName,
+			URL:  authServer.JWKSURL(),
+		}
+		authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+					RejectOperationIfUnauthorized: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil)
+			err = conn.WriteJSON(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
+			})
+			require.NoError(t, err)
+			go func() {
+				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+				// Trigger the subscription via NATS
+				subject := "employeeUpdated.3"
+				message := []byte(`{"id":3,"__typename": "Employee"}`)
+				err := xEnv.NC.Publish(subject, message)
+				require.NoError(t, err)
+				err = xEnv.NC.Flush()
+				require.NoError(t, err)
+			}()
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)

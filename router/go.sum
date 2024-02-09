@@ -276,6 +276,8 @@ github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.5 h1:gma91S7qXoAPGalSnLWx49
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.5/go.mod h1:dYjlFOaVap9Gz7XyHxBbU8ww0z7++KO+0E4XwmX5Mjg=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.6 h1:/puhOFzxJGeIQQsUX03d6hiHM12AQynwD80OWDqGfhs=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.6/go.mod h1:dYjlFOaVap9Gz7XyHxBbU8ww0z7++KO+0E4XwmX5Mjg=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.7 h1:zKCbjsUToR3xmJIbWGPgaFvh9l4ToqD6hfIW8D5XVaI=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.7/go.mod h1:dYjlFOaVap9Gz7XyHxBbU8ww0z7++KO+0E4XwmX5Mjg=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1/go.mod h1:sEGXWArGqc3tVa+ekntsN65DmVbVeW+7lTKTjZF3/Fo=
 go.opentelemetry.io/contrib/propagators/b3 v1.21.1 h1:WPYiUgmw3+b7b3sQ1bFBFAf0q+Di9dvNc3AtYfnT4RQ=
