@@ -17,6 +17,7 @@ WunderGraph Cosmo CDN
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | configuration | string | `nil` |  |
 | deploymentStrategy | object | `{}` |  |
+| extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |

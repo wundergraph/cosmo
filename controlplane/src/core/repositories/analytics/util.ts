@@ -321,6 +321,7 @@ export function padMissingDatesForCurrentWeek(data: PlainMessage<RequestSeriesIt
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
+    d.setUTCHours(0, 0, 0, 0);
     return d.getTime().toString();
   });
 
