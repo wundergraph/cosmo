@@ -295,8 +295,8 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 	if err != nil {
 		requestLogger.Error("unable to write rate limit response", zap.Error(err))
 	}
-	if flushWriter, ok := w.(http.Flusher); ok {
-		flushWriter.Flush()
+	if wsRw, ok := w.(*websocketResponseWriter); ok {
+		wsRw.Flush()
 	}
 }
 
