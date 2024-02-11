@@ -126,9 +126,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Extensions:      operationCtx.extensions,
 	}
 	ctx = ctx.WithContext(executionContext)
-	ctx = WithAuthorizationExtension(ctx)
-	ctx.SetAuthorizer(h.authorizer)
-	h.configureRateLimiting(ctx)
+	if h.authorizer != nil {
+		ctx = WithAuthorizationExtension(ctx)
+		ctx.SetAuthorizer(h.authorizer)
+	}
+	ctx = h.configureRateLimiting(ctx)
 
 	defer propagateSubgraphErrors(ctx)
 
@@ -182,18 +184,18 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) {
+func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Context {
 	if h.rateLimiter == nil {
-		return
+		return ctx
 	}
 	if h.rateLimitConfig == nil {
-		return
+		return ctx
 	}
 	if !h.rateLimitConfig.Enabled {
-		return
+		return ctx
 	}
 	if h.rateLimitConfig.Strategy != "simple" {
-		return
+		return ctx
 	}
 	ctx.SetRateLimiter(h.rateLimiter)
 	ctx.RateLimitOptions = resolve.RateLimitOptions{
@@ -205,6 +207,7 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) {
 		RateLimitKey:                    h.rateLimitConfig.Storage.KeyPrefix,
 		RejectExceedingRequests:         h.rateLimitConfig.SimpleStrategy.RejectExceedingRateLimitRequests,
 	}
+	return WithRateLimiterStats(ctx)
 }
 
 type GraphQLErrorResponse struct {

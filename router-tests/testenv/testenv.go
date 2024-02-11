@@ -296,7 +296,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		moodServer.Close()
 	}
 
-	return &Environment{
+	e := &Environment{
 		t:                    t,
 		graphQLPath:          graphQLPath,
 		Context:              ctx,
@@ -317,7 +317,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			availabilityServer,
 			moodServer,
 		},
-	}, nil
+	}
+	e.waitForRouterConnection(ctx)
+	return e, nil
 }
 
 func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, nats *natsserver.Server) (*core.Router, error) {
@@ -492,6 +494,27 @@ type GraphQLRequest struct {
 type TestResponse struct {
 	Body     string
 	Response *http.Response
+}
+
+func (e *Environment) waitForRouterConnection(ctx context.Context) {
+	// Wait for the router to be ready
+	client := &http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   time.Millisecond * 100,
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			e.t.Fatalf("timed out waiting for router to be ready")
+		default:
+			resp, err := client.Get(e.RouterURL)
+			if err == nil {
+				_ = resp.Body.Close()
+				return
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
 }
 
 func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse {

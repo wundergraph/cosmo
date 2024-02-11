@@ -957,7 +957,16 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			RedisClient: client,
+			Debug:       r.Config.rateLimit.Debug,
 		})
+		r.logger.Info("Rate limiting enabled",
+			zap.Int("rate", r.Config.rateLimit.SimpleStrategy.Rate),
+			zap.Int("burst", r.Config.rateLimit.SimpleStrategy.Burst),
+			zap.Duration("duration", r.Config.rateLimit.SimpleStrategy.Period),
+			zap.Bool("rejectExceeding", r.Config.rateLimit.SimpleStrategy.RejectExceedingRateLimitRequests),
+		)
+	} else {
+		r.logger.Info("Rate limiting disabled")
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)

@@ -216,7 +216,7 @@ type AuthorizationConfiguration struct {
 }
 
 type RateLimitConfiguration struct {
-	Enabled        bool                    `yaml:"enabled" default:"true" envconfig:"RATE_LIMIT_ENABLED"`
+	Enabled        bool                    `yaml:"enabled" default:"false" envconfig:"RATE_LIMIT_ENABLED"`
 	Strategy       string                  `yaml:"strategy" default:"simple" envconfig:"RATE_LIMIT_STRATEGY" validate:"oneof=simple"`
 	SimpleStrategy RateLimitSimpleStrategy `yaml:"simple_strategy"`
 	Storage        RedisConfiguration      `yaml:"storage"`
@@ -227,7 +227,7 @@ type RateLimitConfiguration struct {
 type RedisConfiguration struct {
 	Addr      string `yaml:"addr" default:"localhost:6379" envconfig:"REDIS_ADDR" validate:"required"`
 	Password  string `yaml:"password" envconfig:"REDIS_PASSWORD"`
-	KeyPrefix string `yaml:"key_prefix" default:"wg_cosmo_rl" envconfig:"RATE_LIMIT_REDIS_KEY_PREFIX" validate:"required"`
+	KeyPrefix string `yaml:"key_prefix" default:"cosmo_rate_limit" envconfig:"RATE_LIMIT_REDIS_KEY_PREFIX" validate:"required"`
 }
 
 type RateLimitSimpleStrategy struct {
@@ -263,7 +263,7 @@ type Config struct {
 	Headers        HeaderRules            `yaml:"headers"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping"`
 
-	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3003" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"required,uri"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`

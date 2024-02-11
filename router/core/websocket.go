@@ -611,9 +611,11 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		Extensions:      operationCtx.extensions,
 	}
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, h.r, operationCtx, h.logger)))
-	resolveCtx = WithAuthorizationExtension(resolveCtx)
-	resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
-	h.graphqlHandler.configureRateLimiting(resolveCtx)
+	if h.graphqlHandler.authorizer != nil {
+		resolveCtx = WithAuthorizationExtension(resolveCtx)
+		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
+	}
+	resolveCtx = h.graphqlHandler.configureRateLimiting(resolveCtx)
 
 	// Put in a closure to evaluate err after the defer
 	defer func() {
