@@ -343,7 +343,8 @@ func TestWebSockets(t *testing.T) {
 				Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
 			})
 			require.NoError(t, err)
-			conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+			err = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)

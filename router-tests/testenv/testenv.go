@@ -469,7 +469,10 @@ func (e *Environment) Shutdown() {
 	// Gracefully shutdown router
 	ctx, cancel := context.WithTimeout(e.Context, 5*time.Second)
 	defer cancel()
-	e.Router.Shutdown(ctx)
+	err := e.Router.Shutdown(ctx)
+	if err != nil {
+		e.t.Errorf("could not shutdown router: %s", err)
+	}
 }
 
 type SubgraphRequestCount struct {
@@ -667,7 +670,10 @@ func (e *Environment) close() {
 	defer cancel()
 
 	// Gracefully shutdown router
-	e.Router.Shutdown(ctx)
+	err := e.Router.Shutdown(ctx)
+	if err != nil {
+		e.t.Errorf("could not shutdown router: %s", err)
+	}
 
 	// Terminate test server resources
 	e.cancel(errors.New("test environment closed"))
