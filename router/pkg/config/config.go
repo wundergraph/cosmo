@@ -80,8 +80,9 @@ type Metrics struct {
 }
 
 type MetricsOTLP struct {
-	Enabled   bool                  `yaml:"enabled" default:"true" envconfig:"METRICS_OTLP_ENABLED"`
-	Exporters []MetricsOTLPExporter `yaml:"exporters"`
+	Enabled       bool                  `yaml:"enabled" default:"true" envconfig:"METRICS_OTLP_ENABLED"`
+	RouterRuntime bool                  `yaml:"router_runtime" default:"true" envconfig:"METRICS_OTLP_ROUTER_RUNTIME"`
+	Exporters     []MetricsOTLPExporter `yaml:"exporters"`
 }
 
 type Telemetry struct {
@@ -229,13 +230,19 @@ type EventsConfiguration struct {
 	Sources []EventSource `yaml:"sources"`
 }
 
+type Cluster struct {
+	Name string `yaml:"name" envconfig:"CLUSTER_NAME"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
+	InstanceID     string         `yaml:"instance_id" envconfig:"INSTANCE_ID"`
 	Graph          Graph          `yaml:"graph"`
 	Telemetry      Telemetry      `yaml:"telemetry"`
 	GraphqlMetrics GraphqlMetrics `yaml:"graphql_metrics"`
 	CORS           CORS           `yaml:"cors"`
+	Cluster        Cluster        `yaml:"cluster"`
 
 	Modules        map[string]interface{} `yaml:"modules"`
 	Headers        HeaderRules            `yaml:"headers"`

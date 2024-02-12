@@ -108,6 +108,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			Enabled:           cfg.GraphqlMetrics.Enabled,
 			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
 		}),
+		core.WithClusterName(cfg.Cluster.Name),
+		core.WithInstanceID(cfg.InstanceID),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
@@ -179,10 +181,10 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 	}
 
 	return &trace.Config{
-		Enabled: cfg.Tracing.Enabled,
-		Name:    cfg.ServiceName,
-		Version: core.Version,
-		Sampler: cfg.Tracing.SamplingRate,
+		Enabled:     cfg.Tracing.Enabled,
+		Name:        cfg.ServiceName,
+		Version:     core.Version,
+		Sampler:     cfg.Tracing.SamplingRate,
 		WithNewRoot: cfg.Tracing.WithNewRoot,
 		ExportGraphQLVariables: trace.ExportGraphQLVariables{
 			Enabled: cfg.Tracing.ExportGraphQLVariables,
@@ -208,8 +210,9 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 		Name:    cfg.ServiceName,
 		Version: core.Version,
 		OpenTelemetry: metric.OpenTelemetry{
-			Enabled:   cfg.Metrics.OTLP.Enabled,
-			Exporters: openTelemetryExporters,
+			Enabled:       cfg.Metrics.OTLP.Enabled,
+			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
+			Exporters:     openTelemetryExporters,
 		},
 		Prometheus: metric.Prometheus{
 			Enabled:             cfg.Metrics.Prometheus.Enabled,

@@ -20,7 +20,7 @@ var defaultExcludedOtelKeys = []attribute.Key{
 	otel.WgOperationHash,
 }
 
-func ServePrometheus(logger *zap.Logger, listenAddr string, path string, registry *prometheus.Registry) *http.Server {
+func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, registry *prometheus.Registry) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
