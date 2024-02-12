@@ -155,7 +155,7 @@ func (r *RuntimeMetrics) Start() error {
 	}
 
 	if goroutinesCount, err = r.meter.Int64ObservableUpDownCounter(
-		"process.runtime.go.goroutines",
+		"process.runtime.go.goroutines.count",
 		otelmetric.WithDescription("Number of goroutines that currently exist"),
 	); err != nil {
 		return err
