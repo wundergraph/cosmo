@@ -36,8 +36,8 @@ import (
 	brotli "go.withmatt.com/connect-brotli"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/mitchellh/mapstructure"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
