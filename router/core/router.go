@@ -1150,7 +1150,7 @@ func (r *server) Shutdown(ctx context.Context) error {
 
 	err := r.metricStore.Flush(ctx)
 	if err != nil {
-		r.logger.Error("Failed to flush metrics", zap.Error(err))
+		r.logger.Error("Failed to flush metric store", zap.Error(err))
 	}
 
 	r.rootContextCancel()

@@ -222,7 +222,6 @@ const RouterPage: React.FC<any> = () => {
 const RoutersPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
-  const isFetching = useIsFetching();
   const [open, setOpen] = useState(false);
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
@@ -469,7 +468,7 @@ const RoutersPage: NextPageWithLayout = () => {
                         )}
                       >
                         {row.getVisibleCells().map((cell) => {
-                          let customCell = (
+                          let customCell: React.JSX.Element | String = (
                             <div className="flex items-center space-x-2">
                               {flexRender(
                                 cell.column.columnDef.cell,
@@ -495,6 +494,8 @@ const RoutersPage: NextPageWithLayout = () => {
                                 </div>
                               </>
                             );
+                          } else if (cell.column.id === "clusterName") {
+                            customCell = cell.row.original.clusterName || "-";
                           } else if (cell.column.id === "status") {
                             customCell = (
                               <MdCheckCircle className="h-5 w-5 text-green-600" />
