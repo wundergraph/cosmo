@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/go-chi/chi/middleware"
@@ -167,7 +168,6 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		subProtocol string
-		statusCode  = 0
 	)
 
 	requestID := middleware.GetReqID(r.Context())
@@ -177,7 +177,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Check access control before upgrading the connection
 	validatedReq, err := h.accessController.Access(w, r)
 	if err != nil {
-		statusCode = http.StatusForbidden
+		statusCode := http.StatusForbidden
 		if errors.Is(err, ErrUnauthorized) {
 			statusCode = http.StatusUnauthorized
 		}
@@ -432,7 +432,6 @@ func (rw *websocketResponseWriter) WriteHeader(statusCode int) {
 
 func (rw *websocketResponseWriter) Complete() {
 	err := rw.protocol.Done(rw.id)
-	defer rw.stats.SubscriptionsDec()
 	if err != nil {
 		rw.logger.Debug("Sending complete message", zap.Error(err))
 	}
@@ -606,15 +605,17 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			Header: h.r.Header.Clone(),
 			ID:     h.initRequestID,
 		},
-		RenameTypeNames:       h.graphqlHandler.executor.RenameTypeNames,
-		RequestTracingOptions: operationCtx.traceOptions,
-		InitialPayload:        operationCtx.initialPayload,
-		Extensions:            operationCtx.extensions,
+		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
+		TracingOptions:  operationCtx.traceOptions,
+		InitialPayload:  operationCtx.initialPayload,
+		Extensions:      operationCtx.extensions,
 	}
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, h.r, operationCtx, h.logger)))
-	resolveCtx.WithAuthorizer(h.graphqlHandler.authorizer)
-
-	h.stats.SubscriptionsInc()
+	if h.graphqlHandler.authorizer != nil {
+		resolveCtx = WithAuthorizationExtension(resolveCtx)
+		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
+	}
+	resolveCtx = h.graphqlHandler.configureRateLimiting(resolveCtx)
 
 	// Put in a closure to evaluate err after the defer
 	defer func() {
@@ -627,7 +628,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
-			return
+			buf := pool.GetBytesBuffer()
+			defer pool.PutBytesBuffer(buf)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw, buf)
 		}
 		rw.Flush()
 		rw.Complete()
@@ -635,6 +638,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
+			buf := pool.GetBytesBuffer()
+			defer pool.PutBytesBuffer(buf)
+			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw, buf)
 			return
 		}
 	}

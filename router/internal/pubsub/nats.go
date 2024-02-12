@@ -52,21 +52,18 @@ func (p *natsPubSub) Subscribe(ctx context.Context, topic string, updater resolv
 	if err := p.ensureConn(); err != nil {
 		return err
 	}
-	ch := make(chan *nats.Msg)
-	sub, err := p.conn.ChanSubscribe(topic, ch)
+	sub, err := p.conn.SubscribeSync(topic)
 	if err != nil {
 		return fmt.Errorf("error subscribing to NATS topic %s: %w", topic, err)
 	}
 	go func() {
 		for {
-			select {
-			case <-ctx.Done():
+			msg, err := sub.NextMsgWithContext(ctx)
+			if err != nil {
 				_ = sub.Unsubscribe()
-				close(ch)
 				return
-			case msg := <-ch:
-				updater.Update(msg.Data)
 			}
+			updater.Update(msg.Data)
 		}
 	}()
 	return nil
