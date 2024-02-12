@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.64.0](https://github.com/wundergraph/cosmo/compare/router@0.63.1...router@0.64.0) (2024-02-12)
+
+### Features
+
+* distributed rate limiting ([#499](https://github.com/wundergraph/cosmo/issues/499)) ([1d82cd1](https://github.com/wundergraph/cosmo/commit/1d82cd1abf985c3867ba31f78e05381f7ba40670)) (@jensneuse)
+
 ## [0.63.1](https://github.com/wundergraph/cosmo/compare/router@0.63.0...router@0.63.1) (2024-02-06)
 
 **Note:** Version bump only for package router
