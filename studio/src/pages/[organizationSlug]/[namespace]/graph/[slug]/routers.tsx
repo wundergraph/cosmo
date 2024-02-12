@@ -219,7 +219,19 @@ const RouterSheet: React.FC<any> = (props) => {
 };
 
 const RouterPage: React.FC<any> = () => {
-  return <></>;
+  return (
+    <>
+      <b>Coming soon!</b> Do you have any ideas?{" "}
+      <a
+        target="_blank"
+        rel="noreferrer"
+        href={"https://wundergraph.com/discord"}
+        className="text-primary"
+      >
+        Let us know in Discord!
+      </a>
+    </>
+  );
 };
 
 const RoutersPage: NextPageWithLayout = () => {
@@ -362,7 +374,8 @@ const RoutersPage: NextPageWithLayout = () => {
     <div className="space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">
-          Track and monitor your router fleet of your graph.{" "}
+          Track and monitor your router fleet of your graph. This view will
+          update itself.{" "}
           <Link
             href={docsBaseURL + "/router/fleet-management"}
             className="text-primary"
