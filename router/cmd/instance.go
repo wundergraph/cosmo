@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
@@ -144,6 +145,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
 		core.WithCDN(cfg.CDN),
 		core.WithEvents(cfg.Events),
+		core.WithRateLimitConfig(&cfg.RateLimit),
 	}
 
 	options = append(options, additionalOptions...)

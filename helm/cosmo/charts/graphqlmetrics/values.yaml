@@ -135,3 +135,6 @@ configuration:
   clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
   logLevel: "info"
   listenAddr: "0.0.0.0:4005"
+
+# -- Existing secret in the same namespace containing the graphqlmetrics Secrets - clickhouseDsn,jwtSecret. The secret keys have to match with current secret.
+existingSecret: ""

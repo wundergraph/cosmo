@@ -21,6 +21,12 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      redis:
+        # Docker Hub image
+        image: redis:7
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v4
         with:

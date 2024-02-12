@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -134,6 +135,8 @@ type (
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 
 		authorization *config.AuthorizationConfiguration
+
+		rateLimit *config.RateLimitConfiguration
 	}
 
 	Server interface {
@@ -939,14 +942,41 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		authorizerOptions.RejectOperationIfUnauthorized = r.Config.authorization.RejectOperationIfUnauthorized
 	}
 
-	graphqlHandler := NewGraphQLHandler(HandlerOptions{
+	handlerOpts := HandlerOptions{
 		Executor:                               executor,
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 		WebSocketStats:                         r.WebsocketStats,
 		TracerProvider:                         r.tracerProvider,
 		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
-	})
+	}
+
+	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
+		handlerOpts.RateLimitConfig = r.Config.rateLimit
+		client := redis.NewClient(&redis.Options{
+			Addr:     r.Config.rateLimit.Storage.Addr,
+			Password: r.Config.rateLimit.Storage.Password,
+		})
+		err = client.FlushDB(ctx).Err()
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to redis: %w", err)
+		}
+		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			RedisClient: client,
+			Debug:       r.Config.rateLimit.Debug,
+		})
+		r.logger.Info("Rate limiting enabled",
+			zap.Int("rate", r.Config.rateLimit.SimpleStrategy.Rate),
+			zap.Int("burst", r.Config.rateLimit.SimpleStrategy.Burst),
+			zap.Duration("duration", r.Config.rateLimit.SimpleStrategy.Period),
+			zap.Bool("rejectExceeding", r.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
+		)
+	} else {
+		r.logger.Info("Rate limiting disabled")
+	}
+
+	graphqlHandler := NewGraphQLHandler(handlerOpts)
+	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
 
 	var publicKey *ecdsa.PublicKey
 
@@ -1392,6 +1422,12 @@ func WithAccessController(controller *AccessController) Option {
 func WithAuthorizationConfig(cfg *config.AuthorizationConfiguration) Option {
 	return func(r *Router) {
 		r.Config.authorization = cfg
+	}
+}
+
+func WithRateLimitConfig(cfg *config.RateLimitConfiguration) Option {
+	return func(r *Router) {
+		r.Config.rateLimit = cfg
 	}
 }
 
