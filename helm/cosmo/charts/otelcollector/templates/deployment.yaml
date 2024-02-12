@@ -62,12 +62,12 @@ spec:
             - name: CLICKHOUSE_ENDPOINT
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}
+                  name: {{ include "otelcollector.secretName" . }}
                   key: clickhouseDsn
             - name: OTEL_INGEST_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}
+                  name: {{ include "otelcollector.secretName" . }}
                   key: authJwtSecret
           {{- if .Values.existingConfigmap }}
           volumeMounts:
