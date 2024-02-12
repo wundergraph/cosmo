@@ -16,7 +16,11 @@ import (
 )
 
 func TestRateLimit(t *testing.T) {
+	t.Parallel()
+
 	t.Run("disabled", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRateLimitConfig(&config.RateLimitConfiguration{
@@ -32,6 +36,8 @@ func TestRateLimit(t *testing.T) {
 		})
 	})
 	t.Run("disabled should not require redis", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRateLimitConfig(&config.RateLimitConfiguration{
@@ -52,6 +58,8 @@ func TestRateLimit(t *testing.T) {
 		})
 	})
 	t.Run("enabled - below limit", func(t *testing.T) {
+		t.Parallel()
+
 		key := uuid.New().String()
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
@@ -86,6 +94,8 @@ func TestRateLimit(t *testing.T) {
 		})
 	})
 	t.Run("enabled - above limit", func(t *testing.T) {
+		t.Parallel()
+
 		key := uuid.New().String()
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
@@ -140,6 +150,8 @@ func TestRateLimit(t *testing.T) {
 		})
 	})
 	t.Run("enabled - below limit with nesting", func(t *testing.T) {
+		t.Parallel()
+
 		key := uuid.New().String()
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
@@ -173,6 +185,8 @@ func TestRateLimit(t *testing.T) {
 		})
 	})
 	t.Run("enabled - above limit with nesting", func(t *testing.T) {
+		t.Parallel()
+
 		key := uuid.New().String()
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
@@ -206,6 +220,8 @@ func TestRateLimit(t *testing.T) {
 		})
 	})
 	t.Run("enabled - above limit with nesting and reject", func(t *testing.T) {
+		t.Parallel()
+
 		key := uuid.New().String()
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})

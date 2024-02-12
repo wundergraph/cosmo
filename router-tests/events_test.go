@@ -18,8 +18,11 @@ import (
 )
 
 func TestEventsNew(t *testing.T) {
+	t.Parallel()
 
 	t.Run("subscribe async", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			var subscription struct {
@@ -86,6 +89,8 @@ func TestEventsNew(t *testing.T) {
 	})
 
 	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
@@ -156,6 +161,8 @@ func TestEventsNew(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
@@ -220,6 +227,8 @@ func TestEventsNew(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse client close", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
@@ -277,6 +286,8 @@ func TestEventsNew(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			sub, err := xEnv.NC.Subscribe("getEmployee.3", func(msg *nats.Msg) {
@@ -301,6 +312,8 @@ func TestEventsNew(t *testing.T) {
 	})
 
 	t.Run("publish", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			done := make(chan struct{})

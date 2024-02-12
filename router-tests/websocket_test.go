@@ -50,7 +50,8 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("query with authorization reject", func(t *testing.T) {
 		t.Parallel()
-		authServer, err := jwks.NewServer()
+
+		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 		authOptions := authentication.JWKSAuthenticatorOptions{
@@ -96,7 +97,9 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("query with authorization no-reject", func(t *testing.T) {
-		authServer, err := jwks.NewServer()
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 		authOptions := authentication.JWKSAuthenticatorOptions{
@@ -142,7 +145,9 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("subscription with authorization no-reject", func(t *testing.T) {
-		authServer, err := jwks.NewServer()
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 		authOptions := authentication.JWKSAuthenticatorOptions{
@@ -199,7 +204,7 @@ func TestWebSockets(t *testing.T) {
 	})
 	t.Run("subscription with authorization reject", func(t *testing.T) {
 		t.Parallel()
-		authServer, err := jwks.NewServer()
+		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 		authOptions := authentication.JWKSAuthenticatorOptions{
@@ -352,6 +357,7 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 	t.Run("subscription with library", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				CurrentTime struct {
