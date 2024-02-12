@@ -231,10 +231,10 @@ type RedisConfiguration struct {
 }
 
 type RateLimitSimpleStrategy struct {
-	Rate                             int           `yaml:"rate" default:"10" envconfig:"RATE_LIMIT_SIMPLE_RATE" validate:"required,min=1"`
-	Burst                            int           `yaml:"burst" default:"10" envconfig:"RATE_LIMIT_SIMPLE_BURST" validate:"required,min=1"`
-	Period                           time.Duration `yaml:"period" default:"1s" envconfig:"RATE_LIMIT_SIMPLE_PERIOD" validate:"required,min=1s"`
-	RejectExceedingRateLimitRequests bool          `yaml:"reject_exceeding_rate_limit_requests" default:"false" envconfig:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_RATE_LIMIT_REQUESTS"`
+	Rate                    int           `yaml:"rate" default:"10" envconfig:"RATE_LIMIT_SIMPLE_RATE" validate:"required,min=1"`
+	Burst                   int           `yaml:"burst" default:"10" envconfig:"RATE_LIMIT_SIMPLE_BURST" validate:"required,min=1"`
+	Period                  time.Duration `yaml:"period" default:"1s" envconfig:"RATE_LIMIT_SIMPLE_PERIOD" validate:"required,min=1s"`
+	RejectExceedingRequests bool          `yaml:"reject_exceeding_requests" default:"false" envconfig:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
 }
 
 type CDNConfiguration struct {

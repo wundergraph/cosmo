@@ -205,7 +205,7 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 		Burst:                           h.rateLimitConfig.SimpleStrategy.Burst,
 		Period:                          h.rateLimitConfig.SimpleStrategy.Period,
 		RateLimitKey:                    h.rateLimitConfig.Storage.KeyPrefix,
-		RejectExceedingRequests:         h.rateLimitConfig.SimpleStrategy.RejectExceedingRateLimitRequests,
+		RejectExceedingRequests:         h.rateLimitConfig.SimpleStrategy.RejectExceedingRequests,
 	}
 	return WithRateLimiterStats(ctx)
 }
@@ -246,7 +246,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 			RateLimit: buf.Bytes(),
 		}
 		if isHttpResponseWriter {
-			httpWriter.WriteHeader(http.StatusTooManyRequests)
+			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
 		}
 	case errorTypeUnauthorized:
 		response.Errors[0].Message = "Unauthorized"
@@ -264,7 +264,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 			}
 		}
 		if isHttpResponseWriter {
-			httpWriter.WriteHeader(http.StatusUnauthorized)
+			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
 		}
 	case errorTypeContextCanceled:
 		response.Errors[0].Message = "Client disconnected"

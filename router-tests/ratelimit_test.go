@@ -72,10 +72,10 @@ func TestRateLimit(t *testing.T) {
 					Enabled:  true,
 					Strategy: "simple",
 					SimpleStrategy: config.RateLimitSimpleStrategy{
-						Rate:                             1,
-						Burst:                            1,
-						Period:                           time.Second * 2,
-						RejectExceedingRateLimitRequests: false,
+						Rate:                    1,
+						Burst:                   1,
+						Period:                  time.Second * 2,
+						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
 						Addr:      "localhost:6379",
@@ -108,10 +108,10 @@ func TestRateLimit(t *testing.T) {
 					Enabled:  true,
 					Strategy: "simple",
 					SimpleStrategy: config.RateLimitSimpleStrategy{
-						Rate:                             2,
-						Burst:                            2,
-						Period:                           time.Second * 2,
-						RejectExceedingRateLimitRequests: false,
+						Rate:                    2,
+						Burst:                   2,
+						Period:                  time.Second * 2,
+						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
 						Addr:      "localhost:6379",
@@ -164,10 +164,10 @@ func TestRateLimit(t *testing.T) {
 					Enabled:  true,
 					Strategy: "simple",
 					SimpleStrategy: config.RateLimitSimpleStrategy{
-						Rate:                             4,
-						Burst:                            4,
-						Period:                           time.Second * 2,
-						RejectExceedingRateLimitRequests: false,
+						Rate:                    4,
+						Burst:                   4,
+						Period:                  time.Second * 2,
+						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
 						Addr:      "localhost:6379",
@@ -199,10 +199,10 @@ func TestRateLimit(t *testing.T) {
 					Enabled:  true,
 					Strategy: "simple",
 					SimpleStrategy: config.RateLimitSimpleStrategy{
-						Rate:                             1,
-						Burst:                            1,
-						Period:                           time.Second * 2,
-						RejectExceedingRateLimitRequests: false,
+						Rate:                    1,
+						Burst:                   1,
+						Period:                  time.Second * 2,
+						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
 						Addr:      "localhost:6379",
@@ -234,10 +234,10 @@ func TestRateLimit(t *testing.T) {
 					Enabled:  true,
 					Strategy: "simple",
 					SimpleStrategy: config.RateLimitSimpleStrategy{
-						Rate:                             1,
-						Burst:                            1,
-						Period:                           time.Second * 2,
-						RejectExceedingRateLimitRequests: true,
+						Rate:                    1,
+						Burst:                   1,
+						Period:                  time.Second * 2,
+						RejectExceedingRequests: true,
 					},
 					Storage: config.RedisConfiguration{
 						Addr:      "localhost:6379",
@@ -252,7 +252,7 @@ func TestRateLimit(t *testing.T) {
 				Query: bigNestedQuery,
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusTooManyRequests, res.Response.StatusCode)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded"}],"data":null,"extensions":{"rateLimit":{"requestRate":2,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
 		})
 	})
