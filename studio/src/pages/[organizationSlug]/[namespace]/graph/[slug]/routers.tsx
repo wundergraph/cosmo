@@ -17,14 +17,15 @@ import { Button } from "@/components/ui/button";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   FiArrowDown,
+  FiArrowRight,
   FiArrowUp,
   FiChevronDown,
   FiChevronUp,
 } from "react-icons/fi";
-import { useIsFetching, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getRouters } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useRouter } from "next/router";
+import { Router, useRouter } from "next/router";
 import React, { useContext, useState } from "react";
 import {
   Table,
@@ -56,6 +57,7 @@ import { docsBaseURL } from "@/lib/constants";
 import { InfoTooltip } from "@/components/info-tooltip";
 import Link from "next/link";
 import {
+  ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -234,7 +236,7 @@ const RoutersPage: NextPageWithLayout = () => {
     refetchInterval: 15_000,
   });
 
-  const columns = [
+  const columns: ColumnDef<Router, any>[] = [
     {
       accessorKey: "serviceName",
       header: () => <div>Name</div>,
@@ -444,7 +446,7 @@ const RoutersPage: NextPageWithLayout = () => {
                           x: -100,
                           transition: { duration: 0.5, ease: easeInOut },
                         }}
-                        key={row.id}
+                        key={row.original.serviceInstanceId}
                         data-state={row.getIsSelected() && "selected"}
                         onClick={() => {
                           router.push({
@@ -547,8 +549,12 @@ const RoutersPage: NextPageWithLayout = () => {
                               </>
                             );
                           } else if (cell.column.id === "memCpu") {
-                            let memBadge = null;
-                            let cpuBadge = null;
+                            let memBadge = (
+                              <FiArrowRight className="h-4 w-4 text-muted-foreground" />
+                            );
+                            let cpuBadge = (
+                              <FiArrowRight className="h-4 w-4 text-muted-foreground" />
+                            );
                             if (
                               cell.row.original.memoryUsageChangePercent > 0
                             ) {

@@ -20,6 +20,8 @@ const (
 	cosmoRouterRuntimeMeterName        = "cosmo.router.runtime"
 	cosmoRouterRuntimeMeterVersion     = "0.0.1"
 	DefaultMinimumReadMemStatsInterval = 15 * time.Second
+
+	AttributeGoInfoVersion = attribute.Key("version")
 )
 
 type RuntimeMetrics struct {
@@ -55,6 +57,8 @@ func (r *RuntimeMetrics) Start() error {
 		heapReleased    otelmetric.Int64ObservableUpDownCounter
 		heapSys         otelmetric.Int64ObservableUpDownCounter
 		liveObjects     otelmetric.Int64ObservableUpDownCounter
+		goroutinesCount otelmetric.Int64ObservableUpDownCounter
+		goVersion       otelmetric.Int64ObservableUpDownCounter
 
 		gcCount      otelmetric.Int64ObservableCounter
 		pauseTotalNs otelmetric.Int64ObservableCounter
@@ -150,6 +154,20 @@ func (r *RuntimeMetrics) Start() error {
 		return err
 	}
 
+	if goroutinesCount, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.goroutines",
+		otelmetric.WithDescription("Number of goroutines that currently exist"),
+	); err != nil {
+		return err
+	}
+
+	if goVersion, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.info",
+		otelmetric.WithDescription("Information about the Go runtime environment"),
+	); err != nil {
+		return err
+	}
+
 	// Note that the following could be derived as a sum of
 	// individual pauses, but we may lose individual pauses if the
 	// observation interval is too slow.
@@ -211,7 +229,17 @@ func (r *RuntimeMetrics) Start() error {
 			)
 
 			/**
-			* Go runtimeMetrics memory stats
+			* Go runtime metrics
+			 */
+
+			o.ObserveInt64(goVersion, 1,
+				otelmetric.WithAttributes(AttributeGoInfoVersion.String(goruntime.Version())),
+				otelmetric.WithAttributes(r.baseAttributes...),
+			)
+			o.ObserveInt64(goroutinesCount, int64(goruntime.NumGoroutine()), otelmetric.WithAttributes(r.baseAttributes...))
+
+			/**
+			* Go runtime memory stats
 			 */
 
 			now := time.Now()
@@ -243,6 +271,8 @@ func (r *RuntimeMetrics) Start() error {
 		heapReleased,
 		heapSys,
 		liveObjects,
+		goroutinesCount,
+		goVersion,
 
 		gcCount,
 		pauseTotalNs,
