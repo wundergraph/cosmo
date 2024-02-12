@@ -71,3 +71,15 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+
+{{/*
+Get the name of the secret to use
+*/}}
+{{- define "cdn.secretName" -}}
+{{- if .Values.existingSecret -}}
+    {{- .Values.existingSecret -}}
+{{- else }}
+    {{- printf "%s-secret" (include "cdn.fullname" .) -}}
+{{- end -}}
+{{- end -}}

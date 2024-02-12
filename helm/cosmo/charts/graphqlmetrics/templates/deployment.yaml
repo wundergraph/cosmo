@@ -59,12 +59,12 @@ spec:
             - name: CLICKHOUSE_DSN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "graphqlmetrics.fullname" . }}
+                  name: {{ include "graphqlmetrics.secretName" . }}
                   key: clickhouseDsn
             - name: INGEST_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "graphqlmetrics.fullname" . }}
+                  name: {{ include "graphqlmetrics.secretName" . }}
                   key: jwtSecret
             - name: LISTEN_ADDR
               valueFrom:

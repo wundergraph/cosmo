@@ -154,6 +154,10 @@ global:
 # -- If this is set, the commonConfiguration section is ignored.
 existingConfigmap: ""
 
+# -- Existing secret in the same namespace containing the graphApiToken. The secret key has to match with current secret.
+existingSecret: ""
+
+# Use this section to pass the graphApiToken or to configure simple settings.
 # -- You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section.
 # -- For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration
 commonConfiguration: |-

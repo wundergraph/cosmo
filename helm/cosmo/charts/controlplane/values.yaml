@@ -188,3 +188,6 @@ configuration:
   # -- The default billing plan, eg `developer@1`
   defaultBillingPlan: ''
   openAiApiKey: ''
+
+# -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
+existingSecret: ""

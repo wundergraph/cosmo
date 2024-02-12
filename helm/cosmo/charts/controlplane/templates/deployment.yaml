@@ -102,38 +102,38 @@ spec:
             - name: AUTH_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: jwtSessionSecret
             - name: DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: databaseUrl
             {{- if .Values.configuration.databaseTlsCert }}
             - name: DB_TLS_CERT
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: databaseTlsCert
             {{- end }}
             {{- if .Values.configuration.databaseTlsCa }}
             - name: DB_TLS_CA
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: databaseTlsCa
             {{- end }}
             {{- if .Values.configuration.databaseTlsKey }}
             - name: DB_TLS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: databaseTlsKey
             {{- end }}
             - name: CLICKHOUSE_DSN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: clickhouseDsn
             - name: KC_REALM
               valueFrom:
@@ -148,12 +148,12 @@ spec:
             - name: KC_ADMIN_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: keycloakAdminUser
             - name: KC_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: keycloakAdminPassword
             - name: KC_API_URL
               valueFrom:
@@ -178,7 +178,7 @@ spec:
             - name: WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: webhookSecret
             - name: GITHUB_APP_CLIENT_ID
               valueFrom:
@@ -193,17 +193,17 @@ spec:
             - name: GITHUB_APP_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: githubAppClientSecret
             - name: GITHUB_APP_PRIVATE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: githubAppPrivateKey
             - name: GITHUB_APP_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: githubAppWebhookSecret
             {{- if .Values.configuration.slackAppClientId }}
             - name: SLACK_APP_CLIENT_ID
@@ -216,38 +216,38 @@ spec:
             - name: SLACK_APP_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: slackAppClientSecret
             {{- end }}
             {{- if .Values.configuration.s3StorageUrl }}
             - name: S3_STORAGE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: s3StorageUrl
             {{- end }}
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: smtpPassword
             - name: SMTP_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: smtpUsername
             {{- if .Values.configuration.stripeSecretKey }}
             - name: STRIPE_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: stripeSecretKey
             {{- end }}
             {{- if .Values.configuration.stripeWebhookSecret }}
             - name: STRIPE_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: stripeWebhookSecret
             {{- end }}
             {{- if .Values.configuration.defaultBillingPlan }}
@@ -271,35 +271,35 @@ spec:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: redisPassword
             {{- end }}
             {{- if .Values.configuration.redisTlsCert }}
             - name: REDIS_TLS_CERT
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: redisTlsCert
             {{- end }}
             {{- if .Values.configuration.redisTlsCa }}
             - name: REDIS_TLS_CA
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: redisTlsCa
             {{- end }}
             {{- if .Values.configuration.redisTlsKey }}
             - name: REDIS_TLS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: redisTlsKey
             {{- end }}
             {{- if .Values.configuration.openAiApiKey }}
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: openAiApiKey
             {{- end }}
           ports:

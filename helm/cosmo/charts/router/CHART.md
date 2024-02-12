@@ -25,6 +25,7 @@ WunderGraph Cosmo router.
 | configuration.routerConfigPath | string | `""` | A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled. |
 | deploymentStrategy | object | `{}` |  |
 | existingConfigmap | string | `""` | If this is set, the commonConfiguration section is ignored. |
+| existingSecret | string | `""` | Existing secret in the same namespace containing the graphApiToken. The secret key has to match with current secret. |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container |
 | extraEnvVarsCM | string | `""` | Name of existing ConfigMap containing extra env vars |
 | extraEnvVarsSecret | string | `""` | Name of existing Secret containing extra env vars |
