@@ -24,8 +24,9 @@ import {
 } from "react-icons/fi";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { Router } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { getRouters } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { Router, useRouter } from "next/router";
+import { useRouter } from "next/router";
 import React, { useContext, useState } from "react";
 import {
   Table,
