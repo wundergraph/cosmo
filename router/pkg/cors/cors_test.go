@@ -2,12 +2,13 @@ package cors
 
 import (
 	"context"
-	"github.com/go-chi/chi"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-chi/chi"
 
 	"github.com/stretchr/testify/assert"
 )

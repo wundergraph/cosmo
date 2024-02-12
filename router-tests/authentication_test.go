@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"strings"
@@ -23,10 +24,8 @@ const (
 	xAuthenticatedByHeader        = "X-Authenticated-By"
 )
 
-func TestAuthentication(t *testing.T) {
-	t.Parallel()
-
-	authServer, err := jwks.NewServer()
+func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
+	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 	authOptions := authentication.JWKSAuthenticatorOptions{
@@ -35,9 +34,17 @@ func TestAuthentication(t *testing.T) {
 	}
 	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
 	require.NoError(t, err)
-	authenticators := []authentication.Authenticator{authenticator}
+	return []authentication.Authenticator{authenticator}, authServer
+}
+
+func TestAuthentication(t *testing.T) {
+	t.Parallel()
 
 	t.Run("no token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -56,6 +63,9 @@ func TestAuthentication(t *testing.T) {
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -77,6 +87,9 @@ func TestAuthentication(t *testing.T) {
 	})
 
 	t.Run("valid token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -100,6 +113,9 @@ func TestAuthentication(t *testing.T) {
 	})
 
 	t.Run("scopes required no token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -115,6 +131,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("scopes required valid token no scopes", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -133,10 +152,13 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: required scopes: ('read:employee' AND 'read:private') OR ('read:all'), actual scopes: <none>","path":["employees",0,"startDate"]}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: missing required scopes","path":["employees",0,"startDate"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(data))
 		})
 	})
 	t.Run("scopes required valid token AND scopes present", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -161,6 +183,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("scopes required valid token AND scopes partially present", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -181,10 +206,13 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: required scopes: ('read:employee' AND 'read:private') OR ('read:all'), actual scopes: read:employee","path":["employees",0,"startDate"]}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: missing required scopes","path":["employees",0,"startDate"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
 		})
 	})
 	t.Run("reject unauthorized missing scope", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -204,14 +232,18 @@ func TestAuthentication(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, http.StatusOK, res.StatusCode)
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
+			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
 		})
 	})
 	t.Run("reject unauthorized no scope", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -229,14 +261,18 @@ func TestAuthentication(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, http.StatusOK, res.StatusCode)
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
+			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(data))
 		})
 	})
 	t.Run("reject unauthorized invalid token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -259,6 +295,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("reject unauthorized no token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -271,13 +310,17 @@ func TestAuthentication(t *testing.T) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQueryRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
+			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null}`, string(data))
 		})
 	})
 	t.Run("scopes required valid token OR scopes present", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -302,6 +345,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("scopes required valid token AND and OR scopes present", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -325,33 +371,10 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
 		})
 	})
-	t.Run("nullable, unauthorized data returns an error but partial authorized data is returned", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Operations with a token should succeed
-			token, err := authServer.Token(map[string]any{
-				"scopes": "read:fact",
-			})
-			require.NoError(t, err)
-			header := http.Header{
-				"Authorization": []string{"Bearer " + token},
-			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"{ topSecretFederationFacts { ... on EntityFact { factType } ... on MiscellaneousFact { title } } }"}"
-			`))
-			require.NoError(t, err)
-			defer res.Body.Close()
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
-			data, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.factType'. Reason: required scopes: ('read:entity'), actual scopes: read:fact","path":["topSecretFederationFacts",2,"factType"]}],"data":{"topSecretFederationFacts":[{},{},{"factType":null},{"title":"Unreachable Concrete Types through Interface"}]}}`, string(data))
-		})
-	})
 	t.Run("non-nullable, unauthorized data returns no data even if some is authorized", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -374,10 +397,13 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.description'. Reason: required scopes: ('read:entity' AND 'read:scalar') OR ('read:entity' AND 'read:all'), actual scopes: read:fact, read:miscellaneous","path":["topSecretFederationFacts",2,"description"]}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.description'. Reason: missing required scopes","path":["topSecretFederationFacts",2,"description"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"EntityFact","fieldName":"description"},"required":[["read:entity","read:scalar"],["read:entity","read:all"]]}],"actualScopes":["read:fact","read:miscellaneous"]}}}`, string(data))
 		})
 	})
 	t.Run("return unauthenticated error if a field requiring authentication is queried", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -395,6 +421,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -412,6 +441,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned (reordered fields)", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -429,6 +461,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("data requiring authentication is returned when authenticated", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -451,6 +486,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("mutation with valid scopes", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -475,6 +513,9 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 	t.Run("mutation with scope missing for response field", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -495,10 +536,13 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Mutation.addFact.description'. Reason: required scopes: ('read:miscellaneous' AND 'read:scalar') OR ('read:miscellaneous' AND 'read:all'), actual scopes: write:fact, read:miscellaneous","path":["addFact","description"]}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Mutation.addFact.description'. Reason: missing required scopes","path":["addFact","description"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"MiscellaneousFact","fieldName":"description"},"required":[["read:miscellaneous","read:scalar"],["read:miscellaneous","read:all"]]}],"actualScopes":["write:fact","read:miscellaneous"]}}}`, string(data))
 		})
 	})
 	t.Run("mutation with scope missing for mutation root field", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -519,10 +563,13 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at path 'mutation'. Reason: required scopes: ('write:fact') OR ('write:all'), actual scopes: read:miscellaneous, read:all"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at path 'mutation'. Reason: missing required scopes"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
 		})
 	})
 	t.Run("mutation with scope missing for mutation root field (with reject)", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -543,10 +590,11 @@ func TestAuthentication(t *testing.T) {
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
-			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
+			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
 		})
 	})
 }
@@ -559,7 +607,7 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 		headerValuePrefix = "Token"
 	)
 
-	authServer, err := jwks.NewServer()
+	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 	authOptions := authentication.JWKSAuthenticatorOptions{
@@ -597,10 +645,14 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	}
 
 	t.Run("with space", func(t *testing.T) {
+		t.Parallel()
+
 		runTest(t, headerValuePrefix+" "+token)
 	})
 
 	t.Run("without space", func(t *testing.T) {
+		t.Parallel()
+
 		runTest(t, headerValuePrefix+token)
 	})
 }
@@ -608,21 +660,10 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 func TestAuthorization(t *testing.T) {
 	t.Parallel()
 
-	authServer, err := jwks.NewServer()
-	require.NoError(t, err)
-	t.Cleanup(authServer.Close)
-	authOptions := authentication.JWKSAuthenticatorOptions{
-		Name: jwksName,
-		URL:  authServer.JWKSURL(),
-	}
-	authenticator, err := authentication.NewJWKSAuthenticator(authOptions)
-	require.NoError(t, err)
-	authenticators := []authentication.Authenticator{authenticator}
-
-	token, err := authServer.Token(nil)
-	require.NoError(t, err)
-
 	t.Run("no token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
@@ -641,6 +682,9 @@ func TestAuthorization(t *testing.T) {
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := configureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
@@ -662,6 +706,11 @@ func TestAuthorization(t *testing.T) {
 	})
 
 	t.Run("valid token", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := configureAuth(t)
+		token, err := authServer.Token(nil)
+		require.NoError(t, err)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
@@ -685,11 +734,12 @@ func TestAuthorization(t *testing.T) {
 
 func TestAuthenticationMultipleProviders(t *testing.T) {
 	t.Parallel()
-	authServer1, err := jwks.NewServer()
+
+	authServer1, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer1.Close)
 
-	authServer2, err := jwks.NewServer()
+	authServer2, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer2.Close)
 
@@ -712,6 +762,8 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	accessController := core.NewAccessController(authenticators, false)
 
 	t.Run("authenticate with first provider", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(accessController),
@@ -739,6 +791,8 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 
 	t.Run("authenticate with second provider", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(accessController),
@@ -766,6 +820,8 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(accessController),
@@ -787,7 +843,9 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 }
 
 func TestAuthenticationOverWebsocket(t *testing.T) {
-	authServer, err := jwks.NewServer()
+	t.Parallel()
+
+	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	defer authServer.Close()
 

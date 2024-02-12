@@ -5,6 +5,11 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -12,10 +17,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
-	"strconv"
-	"sync"
-	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
@@ -100,7 +101,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			finalErr       error
 			writtenBytes   int
 			statusCode     = http.StatusOK
-			traceOptions   = resolve.RequestTraceOptions{}
+			traceOptions   = resolve.TraceOptions{}
 			tracePlanStart int64
 		)
 

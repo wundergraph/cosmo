@@ -69,6 +69,8 @@ func normalizeJSON(tb testing.TB, data []byte) string {
 }
 
 func TestIntegration(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { employees { id } }`,
@@ -78,6 +80,8 @@ func TestIntegration(t *testing.T) {
 }
 
 func TestPlayground(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeRequest(http.MethodGet, "/", http.Header{
 			"Accept": []string{"text/html"},
@@ -92,6 +96,8 @@ func TestPlayground(t *testing.T) {
 }
 
 func TestExecutionPlanCache(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
@@ -122,6 +128,8 @@ func TestExecutionPlanCache(t *testing.T) {
 }
 
 func TestExecutionPlanCacheDisabled(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.ExecutionPlanCacheSize = 0
@@ -156,6 +164,8 @@ func TestExecutionPlanCacheDisabled(t *testing.T) {
 }
 
 func TestVariables(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Run("correct validation", func(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -244,6 +254,7 @@ func TestVariables(t *testing.T) {
 
 func TestAnonymousQuery(t *testing.T) {
 	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id } }`,
@@ -254,6 +265,7 @@ func TestAnonymousQuery(t *testing.T) {
 
 func TestTracing(t *testing.T) {
 	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.EnableRequestTracing = true
@@ -318,6 +330,7 @@ func TestOperationSelection(t *testing.T) {
 
 	t.Run("anonymous query", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -328,6 +341,7 @@ func TestOperationSelection(t *testing.T) {
 
 	t.Run("multiple anonymous queries", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } } { employees { id } }`,
@@ -338,6 +352,7 @@ func TestOperationSelection(t *testing.T) {
 
 	t.Run("operation name null returns data", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:         `{ employees { id } }`,
@@ -349,6 +364,7 @@ func TestOperationSelection(t *testing.T) {
 
 	t.Run("operation name wrong on anonymous operation", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:         `{ employees { id } }`,
@@ -360,6 +376,7 @@ func TestOperationSelection(t *testing.T) {
 
 	t.Run("operation name wrong on named operation", func(t *testing.T) {
 		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:         `query Exists { employees { id } }`,
@@ -370,6 +387,7 @@ func TestOperationSelection(t *testing.T) {
 
 		t.Run("multiple named operations", func(t *testing.T) {
 			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
@@ -381,6 +399,7 @@ func TestOperationSelection(t *testing.T) {
 
 		t.Run("multiple named operations B", func(t *testing.T) {
 			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
@@ -392,6 +411,7 @@ func TestOperationSelection(t *testing.T) {
 
 		t.Run("multiple named operations B", func(t *testing.T) {
 			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
@@ -405,6 +425,7 @@ func TestOperationSelection(t *testing.T) {
 
 func TestTestdataQueries(t *testing.T) {
 	t.Parallel()
+
 	queries := filepath.Join("testdata", "queries")
 	entries, err := os.ReadDir(queries)
 	require.NoError(t, err)
@@ -442,6 +463,7 @@ func TestTestdataQueries(t *testing.T) {
 
 func TestIntegrationWithUndefinedField(t *testing.T) {
 	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id notDefined } }`,
@@ -452,6 +474,7 @@ func TestIntegrationWithUndefinedField(t *testing.T) {
 
 func TestParallel(t *testing.T) {
 	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
 		trigger := make(chan struct{})

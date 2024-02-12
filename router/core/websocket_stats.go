@@ -15,10 +15,8 @@ type WebSocketsStatistics interface {
 	SubscriptionUpdateSent()
 	ConnectionsInc()
 	ConnectionsDec()
-	SubscriptionsInc()
-	SubscriptionsDec()
-	SynchronousSubscriptionsInc()
-	SynchronousSubscriptionsDec()
+	SubscriptionCountInc(count int)
+	SubscriptionCountDec(count int)
 }
 
 type WebSocketStats struct {
@@ -121,25 +119,13 @@ func (s *WebSocketStats) ConnectionsDec() {
 	s.publish()
 }
 
-func (s *WebSocketStats) SubscriptionsInc() {
-	s.subscriptions.Inc()
+func (s *WebSocketStats) SubscriptionCountInc(count int) {
+	s.subscriptions.Add(uint64(count))
 	s.publish()
 }
 
-func (s *WebSocketStats) SubscriptionsDec() {
-	s.subscriptions.Dec()
-	s.publish()
-}
-
-func (s *WebSocketStats) SynchronousSubscriptionsInc() {
-	s.subscriptions.Inc()
-	s.connections.Inc()
-	s.publish()
-}
-
-func (s *WebSocketStats) SynchronousSubscriptionsDec() {
-	s.subscriptions.Dec()
-	s.connections.Dec()
+func (s *WebSocketStats) SubscriptionCountDec(count int) {
+	s.subscriptions.Sub(uint64(count))
 	s.publish()
 }
 
@@ -163,9 +149,9 @@ func (s *NoopWebSocketStats) ConnectionsInc() {}
 
 func (s *NoopWebSocketStats) ConnectionsDec() {}
 
-func (s *NoopWebSocketStats) SubscriptionsInc() {}
+func (s *NoopWebSocketStats) SubscriptionCountInc(_ int) {}
 
-func (s *NoopWebSocketStats) SubscriptionsDec() {}
+func (s *NoopWebSocketStats) SubscriptionCountDec(_ int) {}
 
 func (s *NoopWebSocketStats) SynchronousSubscriptionsInc() {}
 

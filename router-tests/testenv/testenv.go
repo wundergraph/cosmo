@@ -296,7 +296,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		moodServer.Close()
 	}
 
-	return &Environment{
+	e := &Environment{
 		t:                    t,
 		graphQLPath:          graphQLPath,
 		Context:              ctx,
@@ -317,7 +317,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			availabilityServer,
 			moodServer,
 		},
-	}, nil
+	}
+	e.waitForRouterConnection(ctx)
+	return e, nil
 }
 
 func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, nats *natsserver.Server) (*core.Router, error) {
@@ -467,7 +469,10 @@ func (e *Environment) Shutdown() {
 	// Gracefully shutdown router
 	ctx, cancel := context.WithTimeout(e.Context, 5*time.Second)
 	defer cancel()
-	e.Router.Shutdown(ctx)
+	err := e.Router.Shutdown(ctx)
+	if err != nil {
+		e.t.Errorf("could not shutdown router: %s", err)
+	}
 }
 
 type SubgraphRequestCount struct {
@@ -494,6 +499,27 @@ type TestResponse struct {
 	Response *http.Response
 }
 
+func (e *Environment) waitForRouterConnection(ctx context.Context) {
+	// Wait for the router to be ready
+	client := &http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   time.Millisecond * 100,
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			e.t.Fatalf("timed out waiting for router to be ready")
+		default:
+			resp, err := client.Get(e.RouterURL)
+			if err == nil {
+				_ = resp.Body.Close()
+				return
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+}
+
 func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse {
 	resp, err := e.MakeGraphQLRequest(request)
 	require.NoError(e.t, err)
@@ -511,7 +537,11 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 	if request.Header != nil {
 		req.Header = request.Header
 	}
-	resp, err := e.RouterClient.Do(req)
+	client := &http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   time.Second * 5,
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -522,8 +552,9 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 		return nil, err
 	}
 	resp.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
+	body := buf.String()
 	return &TestResponse{
-		Body:     buf.String(),
+		Body:     strings.TrimSpace(body),
 		Response: resp,
 	}, nil
 }
@@ -538,7 +569,11 @@ func (e *Environment) MakeRequest(method, path string, header http.Header, body 
 		return nil, err
 	}
 	req.Header = header
-	return e.RouterClient.Do(req)
+	client := &http.Client{
+		Transport: http.DefaultTransport,
+		Timeout:   time.Second * 5,
+	}
+	return client.Do(req)
 
 }
 
@@ -635,7 +670,10 @@ func (e *Environment) close() {
 	defer cancel()
 
 	// Gracefully shutdown router
-	e.Router.Shutdown(ctx)
+	err := e.Router.Shutdown(ctx)
+	if err != nil {
+		e.t.Errorf("could not shutdown router: %s", err)
+	}
 
 	// Terminate test server resources
 	e.cancel(errors.New("test environment closed"))
@@ -679,6 +717,7 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 				return
 			}
 			if report.Subscriptions == desiredCount {
+				time.Sleep(100 * time.Millisecond) // Give NATS some time to have the subscription set up
 				return
 			}
 		}

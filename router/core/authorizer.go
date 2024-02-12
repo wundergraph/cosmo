@@ -3,8 +3,9 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"slices"
-	"strings"
+	"sync"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -28,6 +29,24 @@ type CosmoAuthorizer struct {
 	rejectUnauthorized  bool
 }
 
+func (a *CosmoAuthorizer) HasResponseExtensionData(ctx *resolve.Context) bool {
+	extension := a.getAuthorizationExtension(ctx)
+	return extension != nil && len(extension.MissingScopes) > 0
+}
+
+func (a *CosmoAuthorizer) RenderResponseExtension(ctx *resolve.Context, out io.Writer) error {
+	extension := a.getAuthorizationExtension(ctx)
+	if extension == nil {
+		return nil
+	}
+	data, err := json.Marshal(extension)
+	if err != nil {
+		return err
+	}
+	_, err = out.Write(data)
+	return err
+}
+
 func (a *CosmoAuthorizer) getAuth(ctx context.Context) (isAuthenticated bool, scopes []string) {
 	auth := authentication.FromContext(ctx)
 	if auth == nil {
@@ -49,16 +68,16 @@ func (a *CosmoAuthorizer) handleRejectUnauthorized(result *resolve.Authorization
 func (a *CosmoAuthorizer) AuthorizePreFetch(ctx *resolve.Context, dataSourceID string, input json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
-	return a.handleRejectUnauthorized(a.validateScopes(required, isAuthenticated, actual))
+	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
 }
 
 func (a *CosmoAuthorizer) AuthorizeObjectField(ctx *resolve.Context, dataSourceID string, object json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
 	isAuthenticated, actual := a.getAuth(ctx.Context())
 	required := a.requiredScopesForField(coordinate)
-	return a.handleRejectUnauthorized(a.validateScopes(required, isAuthenticated, actual))
+	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
 }
 
-func (a *CosmoAuthorizer) validateScopes(requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny) {
+func (a *CosmoAuthorizer) validateScopes(ctx *resolve.Context, coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny) {
 	if !isAuthenticated {
 		return &resolve.AuthorizationDeny{
 			Reason: "not authenticated",
@@ -76,40 +95,79 @@ WithNext:
 		}
 		return nil
 	}
+	a.addMissingScopes(ctx, coordinate, requiredOrScopes, actual)
 	return &resolve.AuthorizationDeny{
-		Reason: a.renderReason(requiredOrScopes, actual),
+		Reason: "missing required scopes",
 	}
 }
 
-func (a *CosmoAuthorizer) renderReason(requiredOrScopes []*nodev1.Scopes, actual []string) string {
-	builder := strings.Builder{}
-	builder.WriteString("required scopes: ")
+func (a *CosmoAuthorizer) addMissingScopes(ctx *resolve.Context, coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes, actual []string) {
+	extensionCtx := ctx.Context().Value(authorizationExtensionKey{})
+	if extensionCtx == nil {
+		return
+	}
+	extension := extensionCtx.(*authorizationExtensionCtx)
+	extension.mux.Lock()
+	if extension.extension.ActualScopes == nil {
+		if len(actual) == 0 {
+			extension.extension.ActualScopes = make([]string, 0)
+		} else {
+			extension.extension.ActualScopes = actual
+		}
+	}
+	extension.extension.MissingScopes = append(extension.extension.MissingScopes, a.missingScopesError(coordinate, requiredOrScopes))
+	extension.mux.Unlock()
+}
+
+func (a *CosmoAuthorizer) getAuthorizationExtension(ctx *resolve.Context) *AuthorizationExtension {
+	extensionCtx := ctx.Context().Value(authorizationExtensionKey{})
+	if extensionCtx == nil {
+		return nil
+	}
+	extension := extensionCtx.(*authorizationExtensionCtx)
+	return &extension.extension
+}
+
+type authorizationExtensionCtx struct {
+	extension AuthorizationExtension
+	mux       sync.Mutex
+}
+
+type authorizationExtensionKey struct{}
+
+func WithAuthorizationExtension(ctx *resolve.Context) *resolve.Context {
+	withAuthorization := context.WithValue(ctx.Context(), authorizationExtensionKey{}, &authorizationExtensionCtx{})
+	return ctx.WithContext(withAuthorization)
+}
+
+type AuthorizationExtension struct {
+	MissingScopes []MissingScopesError `json:"missingScopes,omitempty"`
+	ActualScopes  []string             `json:"actualScopes"`
+}
+
+type MissingScopesError struct {
+	Coordinate       resolve.GraphCoordinate `json:"coordinate"`
+	RequiredOrScopes [][]string              `json:"required"`
+}
+
+type RequiredAndScopes struct {
+	RequiredAndScopes []string `json:"and"`
+}
+
+func (a *CosmoAuthorizer) missingScopesError(coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes) MissingScopesError {
+	out := MissingScopesError{
+		Coordinate:       coordinate,
+		RequiredOrScopes: a.requiredAndScopes(requiredOrScopes),
+	}
+	return out
+}
+
+func (a *CosmoAuthorizer) requiredAndScopes(requiredOrScopes []*nodev1.Scopes) [][]string {
+	var result [][]string
 	for i := range requiredOrScopes {
-		if i > 0 {
-			builder.WriteString(" OR ")
-		}
-		builder.WriteString("(")
-		for j := range requiredOrScopes[i].RequiredAndScopes {
-			if j > 0 {
-				builder.WriteString(" AND ")
-			}
-			builder.WriteString("'")
-			builder.WriteString(requiredOrScopes[i].RequiredAndScopes[j])
-			builder.WriteString("'")
-		}
-		builder.WriteString(")")
+		result = append(result, requiredOrScopes[i].RequiredAndScopes)
 	}
-	builder.WriteString(", actual scopes: ")
-	if len(actual) == 0 {
-		builder.WriteString("<none>")
-	}
-	for i := range actual {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(actual[i])
-	}
-	return builder.String()
+	return result
 }
 
 func (a *CosmoAuthorizer) requiredScopesForField(coordinate resolve.GraphCoordinate) []*nodev1.Scopes {
