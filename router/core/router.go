@@ -93,6 +93,7 @@ type (
 		gracePeriod              time.Duration
 		awsLambda                bool
 		shutdown                 bool
+		bootstrapped             bool
 		listenAddr               string
 		baseURL                  string
 		graphqlWebURL            string
@@ -556,8 +557,14 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 }
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
-// It should only be called once for a Router instance.
+// It should only be called once for a Router instance. Not safe for concurrent use.
 func (r *Router) bootstrap(ctx context.Context) error {
+	if r.bootstrapped {
+		return fmt.Errorf("router is already bootstrapped")
+	}
+
+	r.bootstrapped = true
+
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
 	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
@@ -656,6 +663,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 // Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
+// Not safe for concurrent use.
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
@@ -704,7 +712,7 @@ func (r *Router) Start(ctx context.Context) error {
 }
 
 // newServer creates a new server instance.
-// All stateful data is copied from the Router over to the new server instance.
+// All stateful data is copied from the Router over to the new server instance. Not safe for concurrent use.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
 	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
 	if err != nil {
