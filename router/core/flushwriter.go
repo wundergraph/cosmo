@@ -28,6 +28,9 @@ type HttpFlushWriter struct {
 }
 
 func (f *HttpFlushWriter) Complete() {
+	if f.ctx.Err() != nil {
+		return
+	}
 	if f.sse {
 		_, _ = f.writer.Write([]byte("event: complete"))
 	}
@@ -35,14 +38,23 @@ func (f *HttpFlushWriter) Complete() {
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
+	if err = f.ctx.Err(); err != nil {
+		return
+	}
 	return f.buf.Write(p)
 }
 
 func (f *HttpFlushWriter) Close() {
+	if f.ctx.Err() != nil {
+		return
+	}
 	f.cancel()
 }
 
 func (f *HttpFlushWriter) Flush() {
+	if f.ctx.Err() != nil {
+		return
+	}
 
 	f.mux.Lock()
 	defer f.mux.Unlock()
