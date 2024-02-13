@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.64.0](https://github.com/wundergraph/cosmo/compare/studio@0.63.1...studio@0.64.0) (2024-02-13)
+
+### Features
+
+* router fleet management ([#515](https://github.com/wundergraph/cosmo/issues/515)) ([7f0deae](https://github.com/wundergraph/cosmo/commit/7f0deae98a2f58bd46927bdb2be8d615613b908f)) (@StarpTech)
+
 ## [0.63.1](https://github.com/wundergraph/cosmo/compare/studio@0.63.0...studio@0.63.1) (2024-02-08)
 
 ### Bug Fixes
