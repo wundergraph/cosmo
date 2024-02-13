@@ -119,6 +119,7 @@ export class SchemaCheckRepository {
     changes: { id: string; changeType: string | null; path: string | null }[];
     inspectorResultsByChangeId: Map<string, InspectorOperationResult[]>;
     federatedGraphId: string;
+    namespaceId: string;
   }) {
     let hasUnsafeClientTraffic = false;
 
@@ -143,11 +144,9 @@ export class SchemaCheckRepository {
     for (const [hash, changes] of changeActionsByOperationHash) {
       const incomingChanges = `array[${changes.map((c) => `('${c.changeType}'::schema_change_type, '${c.path}'::text)`)}]`;
       const storedChanges = `array_agg(distinct (${schema.schemaCheckChangeAction.changeType.name}, ${schema.schemaCheckChangeAction.path.name}))`;
-      const ignoreSql = `bool_or(${schema.operationOverrides.ignoreAll.name})`;
 
       const res = await this.db
         .select({
-          ignoreAll: sql.raw(ignoreSql).mapWith(Boolean),
           unsafeChanges: sql
             .raw(`array(select unnest(${incomingChanges}) except select unnest(${storedChanges}))`)
             .mapWith({
@@ -176,15 +175,22 @@ export class SchemaCheckRepository {
           ),
         )
         .groupBy(schema.operationOverrides.hash)
-        .having(or(sql.raw(`${storedChanges} @> ${incomingChanges}`), sql.raw(ignoreSql)));
+        .having(sql.raw(`${storedChanges} @> ${incomingChanges}`));
 
-      if (res.length === 0) {
+      const ignoreAll = await this.db.query.operationIgnoreAllOverrides.findFirst({
+        where: and(
+          eq(schema.operationIgnoreAllOverrides.hash, hash),
+          eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
+        ),
+      });
+
+      if (res.length === 0 && !ignoreAll) {
         // If no safe overrides are found, then mark traffic as unsafe
         hasUnsafeClientTraffic = true;
         continue;
       }
 
-      const safeChanges = res[0].ignoreAll ? changes : res[0].safeChanges;
+      const safeChanges = ignoreAll ? changes : res[0].safeChanges;
 
       for (const safeChange of safeChanges) {
         const change = changes.find((c) => c.changeType === safeChange.changeType && c.path === safeChange.path);
@@ -200,7 +206,7 @@ export class SchemaCheckRepository {
         op.isSafeOverride = true;
       }
 
-      if (!res[0].ignoreAll && res[0].unsafeChanges.length > 0) {
+      if (!ignoreAll && res[0].unsafeChanges.length > 0) {
         hasUnsafeClientTraffic = true;
       }
     }

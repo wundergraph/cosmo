@@ -23,6 +23,7 @@ import {
   CreateIntegrationResponse,
   CreateNamespaceResponse,
   CreateOIDCProviderResponse,
+  CreateOperationIgnoreAllOverrideResponse,
   CreateOperationOverrideResponse,
   CreateOrganizationResponse,
   CreateOrganizationWebhookConfigResponse,
@@ -1164,6 +1165,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 changes: storedBreakingChanges,
                 inspectorResultsByChangeId: result,
                 federatedGraphId: composition.id,
+                namespaceId: composition.namespaceId,
               });
 
               hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
@@ -1733,7 +1735,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespaceId: graph.namespaceId,
           checkId: req.checkId,
           operationHash: req.operationHash,
-          ignoreAll: req.ignoreAll,
           actorId: authContext.userId,
         });
 
@@ -1748,7 +1749,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'operation_override.updated',
+          auditAction: 'operation_override.created',
           action: 'updated',
           actorId: authContext.userId,
           auditableType: 'operation_override',
@@ -1821,7 +1822,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'Could not remove overrride for this operation.',
+              details: 'Could not remove override for this operation.',
             },
           };
         }
@@ -1880,10 +1881,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const operationsRepo = new OperationsRepository(opts.db, graph.id);
 
-        const affectedChanges = await operationsRepo.removeIgnoreOverride({
+        const affectedChanges = await operationsRepo.removeIgnoreAllOverride({
           namespaceId: graph.namespaceId,
           operationHash: req.operationHash,
-          actorId: authContext.userId,
         });
 
         if (affectedChanges.length === 0) {
@@ -1897,7 +1897,76 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
-          auditAction: 'operation_override.updated',
+          auditAction: 'operation_ignore_all_override.deleted',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'operation_override',
+          auditableDisplayName: req.operationHash,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: graph.namespaceId,
+          targetNamespaceDisplayName: graph.namespace,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    createOperationIgnoreAllOverride: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateOperationIgnoreAllOverrideResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+          };
+        }
+
+        const operationsRepo = new OperationsRepository(opts.db, graph.id);
+
+        const affectedChanges = await operationsRepo.createIgnoreAllOverride({
+          namespaceId: graph.namespaceId,
+          operationHash: req.operationHash,
+          actorId: authContext.userId,
+        });
+
+        if (affectedChanges.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Could not create ignore override for this operation',
+            },
+          };
+        }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'operation_ignore_all_override.created',
           action: 'updated',
           actorId: authContext.userId,
           auditableType: 'operation_override',
@@ -1956,12 +2025,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           operationHash: req.operationHash,
         });
 
+        const ignoreAll = await operationsRepo.hasIgnoreAllOverride({
+          operationHash: req.operationHash,
+          namespaceId: graph.namespaceId,
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           overrides,
-          ignoreAll: overrides.some((o) => o.ignoreAll),
+          ignoreAll,
         };
       });
     },

@@ -1,5 +1,5 @@
 {
-  "id": "b2acda83-7492-4536-8966-cc634d0d7b60",
+  "id": "1c1af65b-5bae-4759-aac7-5fa3f5e85857",
   "prevId": "5242d157-8c5b-4022-9142-f609e18651c5",
   "version": "5",
   "dialect": "pg",
@@ -1472,8 +1472,8 @@
         }
       }
     },
-    "operation_overrides": {
-      "name": "operation_overrides",
+    "operation_ignore_all_overrides": {
+      "name": "operation_ignore_all_overrides",
       "schema": "",
       "columns": {
         "id": {
@@ -1482,12 +1482,6 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
-        },
-        "schema_check_id": {
-          "name": "schema_check_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
         },
         "hash": {
           "name": "hash",
@@ -1501,12 +1495,76 @@
           "primaryKey": false,
           "notNull": true
         },
-        "ignore_all": {
-          "name": "ignore_all",
-          "type": "boolean",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": false
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "hash_namespace_ignore_idx": {
+          "name": "hash_namespace_ignore_idx",
+          "columns": [
+            "hash",
+            "namespace_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "operation_ignore_all_overrides_created_by_users_id_fk": {
+          "name": "operation_ignore_all_overrides_created_by_users_id_fk",
+          "tableFrom": "operation_ignore_all_overrides",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "operation_overrides": {
+      "name": "operation_overrides",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "namespace_id": {
+          "name": "namespace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_check_id": {
+          "name": "schema_check_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -1520,18 +1578,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -1540,15 +1586,6 @@
           "columns": [
             "hash",
             "schema_check_id"
-          ],
-          "isUnique": true
-        },
-        "hash_ignore_idx": {
-          "name": "hash_ignore_idx",
-          "columns": [
-            "hash",
-            "namespace_id",
-            "ignore_all"
           ],
           "isUnique": true
         }
@@ -1578,19 +1615,6 @@
             "id"
           ],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "operation_overrides_updated_by_users_id_fk": {
-          "name": "operation_overrides_updated_by_users_id_fk",
-          "tableFrom": "operation_overrides",
-          "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },

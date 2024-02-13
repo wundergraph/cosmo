@@ -535,26 +535,39 @@ export const operationOverrides = pgTable(
   'operation_overrides',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    hash: text('hash').notNull(),
+    namespaceId: text('namespace_id').notNull(),
     schemaCheckId: uuid('schema_check_id')
       .notNull()
       .references(() => schemaChecks.id, {
         onDelete: 'cascade',
       }),
-    hash: text('hash').notNull(),
-    namespaceId: text('namespace_id').notNull(),
-    ignoreAll: boolean('ignore_all').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
-    }),
-    updatedAt: timestamp('updated_at', { withTimezone: true }),
-    updatedBy: uuid('updated_by').references(() => users.id, {
-      onDelete: 'cascade',
     }),
   },
   (t) => {
     return {
       hashIndex: uniqueIndex('hash_check_idx').on(t.hash, t.schemaCheckId),
+    };
+  },
+);
+
+export const operationIgnoreAllOverrides = pgTable(
+  'operation_ignore_all_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hash: text('hash').notNull(),
+    namespaceId: text('namespace_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      hashIndex: uniqueIndex('hash_namespace_ignore_idx').on(t.hash, t.namespaceId),
     };
   },
 );

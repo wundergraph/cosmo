@@ -1,7 +1,7 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { and, desc, eq, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
 import { ClientDTO, PersistedOperationDTO, UpdatedPersistedOperation } from '../../types/index.js';
@@ -146,7 +146,6 @@ export class OperationsRepository {
     checkId: string;
     namespaceId: string;
     operationHash: string;
-    ignoreAll: boolean;
     actorId: string;
   }) {
     return this.db
@@ -155,16 +154,7 @@ export class OperationsRepository {
         schemaCheckId: data.checkId,
         namespaceId: data.namespaceId,
         hash: data.operationHash,
-        ignoreAll: data.ignoreAll,
         createdBy: data.actorId,
-      })
-      .onConflictDoUpdate({
-        target: [schema.operationOverrides.hash, schema.operationOverrides.schemaCheckId],
-        set: {
-          updatedAt: new Date(),
-          updatedBy: data.actorId,
-          ignoreAll: data.ignoreAll,
-        },
       })
       .returning();
   }
@@ -181,22 +171,41 @@ export class OperationsRepository {
       .returning();
   }
 
-  public removeIgnoreOverride(data: { operationHash: string; namespaceId: string; actorId: string }) {
+  public createIgnoreAllOverride(data: { namespaceId: string; operationHash: string; actorId: string }) {
     return this.db
-      .update(schema.operationOverrides)
-      .set({
-        ignoreAll: false,
-        updatedAt: new Date(),
-        updatedBy: data.actorId,
+      .insert(schema.operationIgnoreAllOverrides)
+      .values({
+        namespaceId: data.namespaceId,
+        hash: data.operationHash,
+        createdBy: data.actorId,
       })
+      .returning();
+  }
+
+  public removeIgnoreAllOverride(data: { operationHash: string; namespaceId: string }) {
+    return this.db
+      .delete(schema.operationIgnoreAllOverrides)
       .where(
         and(
-          eq(schema.operationOverrides.namespaceId, data.namespaceId),
-          eq(schema.operationOverrides.hash, data.operationHash),
-          eq(schema.operationOverrides.ignoreAll, true),
+          eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
+          eq(schema.operationIgnoreAllOverrides.hash, data.operationHash),
         ),
       )
       .returning();
+  }
+
+  public async hasIgnoreAllOverride(data: { operationHash: string; namespaceId: string }) {
+    const res = await this.db.query.operationIgnoreAllOverrides.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(
+        eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
+        eq(schema.operationIgnoreAllOverrides.hash, data.operationHash),
+      ),
+    });
+
+    return !!res;
   }
 
   public async getOperationOverrides(data: { operationHash: string }) {
@@ -204,8 +213,6 @@ export class OperationsRepository {
       .select({
         checkId: schema.schemaCheckChangeAction.schemaCheckId,
         createdAt: schema.operationOverrides.createdAt,
-        updatedAt: schema.operationOverrides.updatedAt,
-        ignoreAll: schema.operationOverrides.ignoreAll,
         changes: sql
           .raw(
             `json_agg(distinct jsonb_build_object(
@@ -242,13 +249,12 @@ export class OperationsRepository {
           eq(schema.schemaCheckChangeAction.isBreaking, true),
         ),
       )
-      .groupBy(({ checkId, createdAt, updatedAt, ignoreAll }) => [checkId, createdAt, updatedAt, ignoreAll])
-      .orderBy(desc(schema.operationOverrides.createdAt), desc(schema.operationOverrides.updatedAt));
+      .groupBy(({ checkId, createdAt }) => [checkId, createdAt])
+      .orderBy(desc(schema.operationOverrides.createdAt));
 
     return res.map((r) => ({
       ...r,
       createdAt: r.createdAt.toISOString(),
-      updatedAt: r.updatedAt?.toISOString() || '',
     }));
   }
 }

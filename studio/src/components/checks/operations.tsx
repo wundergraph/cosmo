@@ -45,6 +45,7 @@ import {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
+  createOperationIgnoreAllOverride,
   createOperationOverride,
   getCheckOperations,
   getOperationContent,
@@ -68,14 +69,12 @@ const Override = ({
   checkId,
   changes,
   createdAt,
-  updatedAt,
   refresh,
   operationHash,
 }: {
   checkId: string;
   changes: SchemaChange[];
   createdAt: string;
-  updatedAt: string;
   operationHash: string;
   refresh: () => void;
 }) => {
@@ -122,7 +121,7 @@ const Override = ({
             >
               {checkId.slice(0, 6)}
             </Link>
-            . Last updated at {formatDateTime(new Date(updatedAt || createdAt))}
+            . Created at {formatDateTime(new Date(createdAt))}
           </p>
           <Button
             isLoading={isPending}
@@ -214,6 +213,28 @@ const ConfigureOverride = ({
     },
   });
 
+  const { mutate: createIgnoreAll, isPending: ignoring } = useMutation({
+    ...createOperationIgnoreAllOverride.useMutation(),
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        refetch();
+      } else {
+        toast({
+          description:
+            d.response?.details ??
+            "Could not create ignore all override. Please try again.",
+          duration: 3000,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        description: "Could not create ignore all override. Please try again.",
+        duration: 3000,
+      });
+    },
+  });
+
   let content;
 
   if (isLoading) {
@@ -234,7 +255,7 @@ const ConfigureOverride = ({
       <div className="relative flex flex-1 flex-col">
         {data.ignoreAll && (
           <div className="absolute flex h-full w-full items-center justify-center">
-            <div className="absolute inset-0 z-40 bg-background/80 backdrop-blur-sm"></div>
+            <div className="absolute inset-0 z-40 bg-background/80 backdrop-blur-lg"></div>
             <EmptyState
               className="z-50 -mt-24"
               icon={<InformationCircleIcon />}
@@ -328,7 +349,6 @@ const ConfigureOverride = ({
                     createOverride({
                       checkId,
                       operationHash,
-                      ignoreAll: false,
                       graphName: graphContext?.graph?.name,
                       namespace: graphContext?.graph?.namespace,
                     })
@@ -339,12 +359,10 @@ const ConfigureOverride = ({
               )}
               <Button
                 variant="secondary"
-                isLoading={isPending}
+                isLoading={ignoring}
                 onClick={() =>
-                  createOverride({
-                    checkId,
+                  createIgnoreAll({
                     operationHash,
-                    ignoreAll: true,
                     graphName: graphContext?.graph?.name,
                     namespace: graphContext?.graph?.namespace,
                   })
