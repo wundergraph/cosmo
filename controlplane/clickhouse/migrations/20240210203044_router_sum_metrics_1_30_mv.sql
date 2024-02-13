@@ -13,7 +13,7 @@ SELECT
     toLowCardinality(ResourceAttributes[ 'service.version' ]) as ServiceVersion,
     ResourceAttributes[ 'service.instance.id' ] as ServiceInstanceID,
     toLowCardinality(Attributes[ 'wg.router.cluster.name' ]) as ClusterName,
-    ResourceAttributes[ 'host.name' ] as Hostname,
+    toLowCardinality(ResourceAttributes[ 'host.name' ]) as Hostname,
     MetricName as MetricName,
     sum(Value) as MetricValue
 FROM

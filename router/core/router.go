@@ -121,6 +121,7 @@ type (
 		routerTrafficConfig      *config.RouterTrafficConfiguration
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
+		processStartTime         time.Time
 		developmentMode          bool
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
@@ -193,6 +194,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.instanceID == "" {
 		r.instanceID = nuid.Next()
 	}
+
+	r.processStartTime = time.Now()
 
 	// Create noop tracer and meter to avoid nil pointer panics and to avoid checking for nil everywhere
 
@@ -846,6 +849,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			rmetric.WithPromMeterProvider(r.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(r.otlpMeterProvider),
 			rmetric.WithLogger(r.logger),
+			rmetric.WithProcessStartTime(r.processStartTime),
 			rmetric.WithAttributes(
 				baseAttributes...,
 			),

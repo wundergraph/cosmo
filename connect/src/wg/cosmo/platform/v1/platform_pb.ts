@@ -11316,37 +11316,42 @@ export class Router extends Message<Router> {
   uptimeSeconds = "";
 
   /**
-   * @generated from field: string compositionId = 7;
+   * @generated from field: string serverUptimeSeconds = 7;
+   */
+  serverUptimeSeconds = "";
+
+  /**
+   * @generated from field: string compositionId = 8;
    */
   compositionId = "";
 
   /**
-   * @generated from field: bool onLatestComposition = 8;
+   * @generated from field: bool onLatestComposition = 9;
    */
   onLatestComposition = false;
 
   /**
-   * @generated from field: string processId = 9;
+   * @generated from field: string processId = 10;
    */
   processId = "";
 
   /**
-   * @generated from field: float memoryUsageMb = 10;
+   * @generated from field: float memoryUsageMb = 11;
    */
   memoryUsageMb = 0;
 
   /**
-   * @generated from field: float memoryUsageChangePercent = 11;
+   * @generated from field: float memoryUsageChangePercent = 12;
    */
   memoryUsageChangePercent = 0;
 
   /**
-   * @generated from field: float cpuUsagePercent = 12;
+   * @generated from field: float cpuUsagePercent = 13;
    */
   cpuUsagePercent = 0;
 
   /**
-   * @generated from field: float cpuUsageChangePercent = 13;
+   * @generated from field: float cpuUsageChangePercent = 14;
    */
   cpuUsageChangePercent = 0;
 
@@ -11364,13 +11369,14 @@ export class Router extends Message<Router> {
     { no: 4, name: "serviceVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "serviceInstanceId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "uptimeSeconds", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "onLatestComposition", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 9, name: "processId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "memoryUsageMb", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 11, name: "memoryUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 12, name: "cpuUsagePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 13, name: "cpuUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 7, name: "serverUptimeSeconds", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "onLatestComposition", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "processId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "memoryUsageMb", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 12, name: "memoryUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 13, name: "cpuUsagePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 14, name: "cpuUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Router {
