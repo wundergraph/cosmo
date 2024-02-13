@@ -83,6 +83,8 @@ const RouterSheet: React.FC<any> = (props) => {
     (r: any) => r.serviceInstanceId === serviceInstanceId,
   );
 
+  const routerData = props.data[index];
+
   const [size, setSize] = useState<keyof typeof sizes>("default");
 
   const nextServer = () => {
@@ -212,25 +214,143 @@ const RouterSheet: React.FC<any> = (props) => {
             </TooltipContent>
           </Tooltip>
         </SheetHeader>
-        {serviceInstanceId && <RouterPage />}
+        {serviceInstanceId && <RouterPage router={routerData} />}
       </SheetContent>
     </Sheet>
   );
 };
 
-const RouterPage: React.FC<any> = () => {
+const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
   return (
-    <>
-      <b>Coming soon!</b> Do you have any ideas?{" "}
-      <a
-        target="_blank"
-        rel="noreferrer"
-        href={"https://wundergraph.com/discord"}
-        className="text-primary"
-      >
-        Let us know in Discord!
-      </a>
-    </>
+    <div className="grid auto-cols-fr grid-flow-col grid-rows-2 gap-4 md:grid-rows-none">
+      <div className="rounded border p-4">
+        <div className="font-bold">General</div>
+        <div>
+          <ul className="divide-y">
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">Uptime</div>
+              <div>
+                {formatDistanceToNow(
+                  subSeconds(new Date(), parseInt(router.uptimeSeconds)),
+                )}
+              </div>
+            </li>
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">ID</div>
+              <div>{router.serviceInstanceId}</div>
+            </li>
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">
+                Service Name
+              </div>
+              <div>{router.serviceName}</div>
+            </li>
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">
+                Service Version
+              </div>
+              <div>{router.serviceVersion}</div>
+            </li>
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">
+                Cluster Name
+              </div>
+              <div>{router.clusterName || "-"}</div>
+            </li>
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">
+                Hostname
+              </div>
+              <div>{router.hostname}</div>
+            </li>
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">
+                Process ID
+              </div>
+              <div>{router.processId}</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="rounded border p-4">
+        <div className="font-bold">Utilization</div>
+        <div>
+          <ul className="divide-y">
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">
+                Memory Usage
+              </div>
+              <div>
+                {prettyBytes(router.memoryUsageMb * 1024 * 1024, {
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+            </li>
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">CPU %</div>
+              <div>{router.cpuUsagePercent.toFixed(2)}</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="relative rounded border">
+        <div className="absolute z-10 h-full w-full py-8 text-center font-bold">
+          <span>Can&apos;t find what you&apos;re looking for?</span>
+          <div>
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={"https://wundergraph.com/discord"}
+              className="text-primary"
+            >
+              Let us know in Discord!
+            </a>
+          </div>
+        </div>
+        {/* Dummy */}
+        <div className="p-4 blur">
+          <div className="font-bold">General</div>
+          <div>
+            <ul className="divide-y">
+              <li className="flex justify-between py-4 text-sm">
+                <div className="font-semibold text-muted-foreground">
+                  Service Name
+                </div>
+                <div>Service Name</div>
+              </li>
+              <li className="flex justify-between py-4 text-sm">
+                <div className="font-semibold text-muted-foreground">
+                  Service Version
+                </div>
+                <div>Service Version</div>
+              </li>
+              <li className="flex justify-between py-4 text-sm">
+                <div className="font-semibold text-muted-foreground">ID</div>
+                <div>serviceInstanceId</div>
+              </li>
+              <li className="flex justify-between py-4 text-sm">
+                <div className="font-semibold text-muted-foreground">
+                  Cluster Name
+                </div>
+                <div> Cluster Name</div>
+              </li>
+              <li className="flex justify-between py-4 text-sm">
+                <div className="font-semibold text-muted-foreground">
+                  Hostname
+                </div>
+                <div>Hostname</div>
+              </li>
+              <li className="flex justify-between py-4 text-sm">
+                <div className="font-semibold text-muted-foreground">
+                  Process ID
+                </div>
+                <div>232332</div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

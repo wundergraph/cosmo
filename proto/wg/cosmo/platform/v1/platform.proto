@@ -1437,11 +1437,13 @@ message Router {
   string serviceInstanceId = 5;
   string uptimeSeconds = 6;
   string compositionId = 7;
-  float memoryUsageMb = 8;
-  float memoryUsageChangePercent = 9;
-  float cpuUsagePercent = 10;
-  float cpuUsageChangePercent = 11;
-  bool onLatestComposition = 12;
+  bool onLatestComposition = 8;
+  string processId = 9;
+
+  float memoryUsageMb = 10;
+  float memoryUsageChangePercent = 11;
+  float cpuUsagePercent = 12;
+  float cpuUsageChangePercent = 13;
 }
 
 message GetRoutersRequest {

@@ -11321,29 +11321,34 @@ export class Router extends Message<Router> {
   compositionId = "";
 
   /**
-   * @generated from field: float memoryUsageMb = 8;
+   * @generated from field: bool onLatestComposition = 8;
+   */
+  onLatestComposition = false;
+
+  /**
+   * @generated from field: string processId = 9;
+   */
+  processId = "";
+
+  /**
+   * @generated from field: float memoryUsageMb = 10;
    */
   memoryUsageMb = 0;
 
   /**
-   * @generated from field: float memoryUsageChangePercent = 9;
+   * @generated from field: float memoryUsageChangePercent = 11;
    */
   memoryUsageChangePercent = 0;
 
   /**
-   * @generated from field: float cpuUsagePercent = 10;
+   * @generated from field: float cpuUsagePercent = 12;
    */
   cpuUsagePercent = 0;
 
   /**
-   * @generated from field: float cpuUsageChangePercent = 11;
+   * @generated from field: float cpuUsageChangePercent = 13;
    */
   cpuUsageChangePercent = 0;
-
-  /**
-   * @generated from field: bool onLatestComposition = 12;
-   */
-  onLatestComposition = false;
 
   constructor(data?: PartialMessage<Router>) {
     super();
@@ -11360,11 +11365,12 @@ export class Router extends Message<Router> {
     { no: 5, name: "serviceInstanceId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "uptimeSeconds", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "memoryUsageMb", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 9, name: "memoryUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 10, name: "cpuUsagePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 11, name: "cpuUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 12, name: "onLatestComposition", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "onLatestComposition", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 9, name: "processId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "memoryUsageMb", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 11, name: "memoryUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 12, name: "cpuUsagePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 13, name: "cpuUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Router {

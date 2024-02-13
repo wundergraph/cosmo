@@ -126,18 +126,18 @@ export class RouterMetricsRepository {
         select
            toString(argMax(UptimeSeconds, Timestamp)) as uptimeSeconds,
            Hostname as hostname,
-           ProcessID as processId,
            ClusterName as clusterName,
            ConfigVersionID as configVersionId,
            ServiceName as serviceName,
            ServiceVersion as serviceVersion,
            ServiceInstanceID as serviceInstanceId,
-           ClusterName as clusterName
+           ClusterName as clusterName,
+           argMax(ProcessID, Timestamp) as processId
            from ${this.client.database}.router_uptime_1_30_mv
         where Timestamp >= now() - interval 60 second AND
             FederatedGraphID = '${input.federatedGraphId}' AND
             OrganizationID = '${input.organizationId}'
-        group by Hostname, ProcessID, ClusterName, ConfigVersionID, ServiceName, ServiceVersion, ServiceInstanceID
+        group by Hostname, ClusterName, ConfigVersionID, ServiceName, ServiceVersion, ServiceInstanceID
         order by uptimeSeconds desc
     `;
 

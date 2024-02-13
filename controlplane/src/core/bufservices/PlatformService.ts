@@ -6353,15 +6353,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             hostname: routerDTO.hostname,
             clusterName: routerDTO.clusterName,
             compositionId: composition?.id ?? '',
-            cpuUsagePercent: runtimeMetrics.cpuUsage.currentPercent ?? 0,
-            cpuUsageChangePercent: runtimeMetrics.cpuUsage.changePercent,
-            memoryUsageMb: runtimeMetrics.memoryUsage.currentMb ?? 0,
-            memoryUsageChangePercent: runtimeMetrics.memoryUsage.changePercent ?? 0,
             serviceName: routerDTO.serviceName,
             serviceVersion: routerDTO.serviceVersion,
             serviceInstanceId: routerDTO.serviceInstanceId,
             uptimeSeconds: routerDTO.uptimeSeconds,
             onLatestComposition: composition?.isLatestValid ?? false,
+            processId: routerDTO.processId,
+            cpuUsagePercent: runtimeMetrics.cpuUsage.currentPercent ?? 0,
+            cpuUsageChangePercent: runtimeMetrics.cpuUsage.changePercent,
+            memoryUsageMb: runtimeMetrics.memoryUsage.currentMb ?? 0,
+            memoryUsageChangePercent: runtimeMetrics.memoryUsage.changePercent ?? 0,
           });
         }
 
