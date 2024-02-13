@@ -1883,6 +1883,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const affectedChanges = await operationsRepo.removeIgnoreOverride({
           namespaceId: graph.namespaceId,
           operationHash: req.operationHash,
+          actorId: authContext.userId,
         });
 
         if (affectedChanges.length === 0) {

@@ -181,11 +181,13 @@ export class OperationsRepository {
       .returning();
   }
 
-  public removeIgnoreOverride(data: { operationHash: string; namespaceId: string }) {
+  public removeIgnoreOverride(data: { operationHash: string; namespaceId: string; actorId: string }) {
     return this.db
       .update(schema.operationOverrides)
       .set({
         ignoreAll: false,
+        updatedAt: new Date(),
+        updatedBy: data.actorId,
       })
       .where(
         and(
