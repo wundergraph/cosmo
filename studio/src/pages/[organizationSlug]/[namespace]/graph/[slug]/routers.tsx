@@ -474,7 +474,7 @@ const RoutersPage: NextPageWithLayout = () => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/router/fleet-management"}
+              href={docsBaseURL + "/router/cluster-management"}
               className="text-primary"
             >
               Learn more.
@@ -503,10 +503,9 @@ const RoutersPage: NextPageWithLayout = () => {
     <div className="space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">
-          Track and monitor your router fleet of your graph. This view will
-          update itself.{" "}
+          Track and monitor your router cluster. This view will update itself.{" "}
           <Link
-            href={docsBaseURL + "/router/fleet-management"}
+            href={docsBaseURL + "/router/cluster-management"}
             className="text-primary"
             target="_blank"
             rel="noreferrer"

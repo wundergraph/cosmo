@@ -1,5 +1,8 @@
 -- migrate:up
 
+-- This table is used to store metrics for the router service
+-- The metrics are inserted by multiple materialized views
+
 CREATE TABLE IF NOT EXISTS cosmo.router_metrics_30 (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),
    ProcessID String CODEC(ZSTD(3)),
@@ -10,8 +13,8 @@ CREATE TABLE IF NOT EXISTS cosmo.router_metrics_30 (
    ServiceVersion LowCardinality(String) CODEC(ZSTD(3)),
    ServiceInstanceID String CODEC(ZSTD(3)),
    ClusterName LowCardinality(String) CODEC(ZSTD(3)),
-   Hostname String CODEC(ZSTD(3)),
-   MetricName String CODEC(ZSTD(3)),
+   Hostname LowCardinality(String) CODEC(ZSTD(3)),
+   MetricName LowCardinality(String) CODEC(ZSTD(3)),
    MetricValue Float64 CODEC(ZSTD(3))
 ) ENGINE = MergeTree
 PARTITION BY toDate(Timestamp)

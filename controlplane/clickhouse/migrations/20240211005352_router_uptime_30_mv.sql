@@ -1,9 +1,10 @@
 -- migrate:up
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.router_uptime_1_30_mv TO cosmo.router_uptime_1_30 AS
+-- This view is used to forward the data from the otel_metrics_sum table to the router_uptime_30 table
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.router_uptime_30_mv TO cosmo.router_uptime_30 AS
 SELECT
-    -- Round to the nearest 15 seconds to align with the 15s scrape interval
-    toDateTime(intDiv(toUInt32(TimeUnix), 15) * 15) as Timestamp,
+    maxSimpleState(TimeUnix) as Timestamp,
     ResourceAttributes[ 'process.pid' ] as ProcessID,
     toLowCardinality(Attributes [ 'wg.router.config.version' ]) as ConfigVersionID,
     toLowCardinality(Attributes [ 'wg.organization.id' ]) as OrganizationID,
@@ -13,13 +14,12 @@ SELECT
     ResourceAttributes[ 'service.instance.id' ] as ServiceInstanceID,
     toLowCardinality(Attributes[ 'wg.router.cluster.name' ]) as ClusterName,
     ResourceAttributes[ 'host.name' ] as Hostname,
-    max(Value) as UptimeSeconds
+    maxSimpleState(Value) as UptimeSeconds
 FROM
     cosmo.otel_metrics_sum
 WHERE
     ScopeName = 'cosmo.router.runtime' AND MetricName = 'runtime.uptime'
 GROUP BY
-    Timestamp,
     ProcessID,
     ConfigVersionID,
     OrganizationID,
@@ -34,4 +34,4 @@ ORDER BY
 
 -- migrate:down
 
-DROP VIEW IF EXISTS cosmo.router_uptime_1_30_mv
+DROP VIEW IF EXISTS cosmo.router_uptime_30_mv

@@ -1,5 +1,7 @@
 -- migrate:up
 
+-- This view is used to forward the sum metrics from the otel_metrics_gauge table to the router_metrics_30 table
+
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.router_sum_metrics_1_30_mv TO cosmo.router_metrics_30 AS
 SELECT
     toStartOfMinute(TimeUnix) as Timestamp,
