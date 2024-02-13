@@ -9,17 +9,21 @@ import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
   AddSubgraphMemberResponse,
+  AuditLog,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
+  CreateBillingPortalSessionResponse,
   CreateCheckoutSessionResponse,
   CreateDiscussionResponse,
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
   CreateIntegrationResponse,
+  CreateNamespaceResponse,
   CreateOIDCProviderResponse,
+  CreateOperationOverrideResponse,
   CreateOrganizationResponse,
   CreateOrganizationWebhookConfigResponse,
   DateRange as DateRangeProto,
@@ -28,14 +32,17 @@ import {
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   DeleteIntegrationResponse,
+  DeleteNamespaceResponse,
   DeleteOIDCProviderResponse,
   DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
+  GenerateRouterTokenResponse,
   GetAPIKeysResponse,
   GetAllDiscussionsResponse,
   GetAnalyticsViewResponse,
+  GetAuditLogsResponse,
   GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckOperationsResponse,
@@ -58,8 +65,10 @@ import {
   GetLatestSubgraphSDLByNameResponse,
   GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
+  GetNamespacesResponse,
   GetOIDCProviderResponse,
   GetOperationContentResponse,
+  GetOperationOverridesResponse,
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationRequestsCountResponse,
@@ -70,6 +79,8 @@ import {
   GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
   GetSubgraphMembersResponse,
+  GetSubgraphMetricsErrorRateResponse,
+  GetSubgraphMetricsResponse,
   GetSubgraphsResponse,
   GetTraceResponse,
   GetUserAccessibleResourcesResponse,
@@ -77,15 +88,20 @@ import {
   IsGitHubAppInstalledResponse,
   LeaveOrganizationResponse,
   MigrateFromApolloResponse,
+  MoveGraphResponse,
   PublishFederatedSubgraphResponse,
   PublishPersistedOperationsResponse,
   PublishedOperation,
   PublishedOperationStatus,
   RemoveInvitationResponse,
+  RemoveOperationIgnoreAllOverrideResponse,
+  RemoveOperationOverrideResponse,
   RemoveSubgraphMemberResponse,
+  RenameNamespaceResponse,
   ReplyToDiscussionResponse,
   RequestSeriesItem,
   SetDiscussionResolutionResponse,
+  UpdateAISettingsResponse,
   UpdateDiscussionCommentResponse,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
@@ -96,31 +112,15 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
-  GetAuditLogsResponse,
-  AuditLog,
-  GetSubgraphMetricsResponse,
-  GetSubgraphMetricsErrorRateResponse,
-  CreateNamespaceResponse,
-  DeleteNamespaceResponse,
-  RenameNamespaceResponse,
-  GetNamespacesResponse,
-  MoveGraphResponse,
-  GenerateRouterTokenResponse,
-  UpdateAISettingsResponse,
-  CreateBillingPortalSessionResponse,
-  CreateOperationOverrideResponse,
-  RemoveOperationOverrideResponse,
-  RemoveOperationIgnoreAllOverrideResponse,
-  GetOperationOverridesResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { subHours } from 'date-fns';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
 import {
   DateRange,
   FederatedGraphDTO,
-  GraphApiKeyDTO,
   GraphApiKeyJwtPayload,
   PublishedOperationData,
   SubgraphDTO,
@@ -130,12 +130,16 @@ import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { signJwt } from '../crypto/jwt.js';
+import { PublicError } from '../errors/errors.js';
+import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
+import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
 import { DiscussionRepository } from '../repositories/DiscussionRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import { OperationsRepository } from '../repositories/OperationsRepository.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
@@ -148,6 +152,7 @@ import { AnalyticsDashboardViewRepository } from '../repositories/analytics/Anal
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
 import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
 import { MonthlyRequestViewRepository } from '../repositories/analytics/MonthlyRequestViewRepository.js';
+import { SubgraphMetricsRepository } from '../repositories/analytics/SubgraphMetricsRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { parseTimeFilters } from '../repositories/analytics/util.js';
@@ -176,11 +181,6 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
-import { SubgraphMetricsRepository } from '../repositories/analytics/SubgraphMetricsRepository.js';
-import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
-import { PublicError } from '../errors/errors.js';
-import { OpenAIGraphql } from '../openai-graphql/index.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -4362,10 +4362,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.updateIntegrationConfig({
+        const updatedIntegration = await orgRepo.updateIntegrationConfig({
           organizationId: authContext.organizationId,
           ...req,
         });
+
+        if (!updatedIntegration) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Could not update configuration.`,
+            },
+          };
+        }
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
@@ -4940,7 +4949,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditAction: 'subgraph_member.created',
           action: 'created',
           actorId: authContext.userId,
-          auditableType: 'subgraph',
+          auditableType: 'user',
           auditableDisplayName: user.email,
           actorDisplayName: authContext.userDisplayName,
           targetDisplayName: subgraph.name,
@@ -4995,6 +5004,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
+        const member = (await subgraphRepo.getSubgraphMembers(subgraph.id)).find(
+          (sm) => sm.subgraphMemberId === req.subgraphMemberId,
+        );
+
+        if (!member) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `The person is already not a member of the subgraph`,
+            },
+          };
+        }
+
         await subgraphRepo.removeSubgraphMember({ subgraphId: subgraph.id, subgraphMemberId: req.subgraphMemberId });
 
         await auditLogRepo.addAuditLog({
@@ -5002,8 +5024,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           auditAction: 'subgraph_member.deleted',
           action: 'deleted',
           actorId: authContext.userId,
-          auditableType: 'subgraph',
-          auditableDisplayName: subgraph.name,
+          auditableType: 'user',
+          auditableDisplayName: member.email,
           actorDisplayName: authContext.userDisplayName,
           targetDisplayName: subgraph.name,
           targetId: subgraph.id,
@@ -5153,11 +5175,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespaceId: namespace?.id,
         });
 
-        let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+        const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+
+        const { dateRange } = parseTimeFilters({
+          start: subHours(new Date(), 4).toString(),
+          end: new Date().toString(),
+        });
 
         if (req.includeMetrics && opts.chClient) {
           const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-          requestSeriesList = await analyticsDashRepo.getListView(authContext.organizationId);
+
+          await Promise.all(
+            list.map(async (g) => {
+              const requestSeries = await analyticsDashRepo.getRequestSeries(g.id, authContext.organizationId, {
+                granule: '5',
+                dateRange,
+              });
+              requestSeriesList[g.id] = [];
+              requestSeriesList[g.id].push(...requestSeries);
+            }),
+          );
         }
 
         return {

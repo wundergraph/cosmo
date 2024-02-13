@@ -13,6 +13,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-chi/chi v1.5.4
 	github.com/go-playground/validator/v10 v10.15.5
+	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.3.1
 	github.com/goccy/go-yaml v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.0.0
@@ -27,10 +28,11 @@ require (
 	github.com/nats-io/nats.go v1.31.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
+	github.com/redis/go-redis/v9 v9.4.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.5
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.7
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.21.1
 	go.opentelemetry.io/contrib/propagators/jaeger v1.21.1
@@ -62,6 +64,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect

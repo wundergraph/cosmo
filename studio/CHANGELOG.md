@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.63.1](https://github.com/wundergraph/cosmo/compare/studio@0.63.0...studio@0.63.1) (2024-02-08)
+
+### Bug Fixes
+
+* rpm calculation in the graph overview page ([#507](https://github.com/wundergraph/cosmo/issues/507)) ([307e203](https://github.com/wundergraph/cosmo/commit/307e203b053ebe9b90a10d0ac10734adbdf398fc)) (@JivusAyrus)
+
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/studio@0.62.0...studio@0.63.0) (2024-02-08)
+
+### Features
+
+* improve federated graph lists overview ([#497](https://github.com/wundergraph/cosmo/issues/497)) ([d7f383a](https://github.com/wundergraph/cosmo/commit/d7f383ad074a9dde06e96fd90459478a29b2cf79)) (@JivusAyrus)
+* upgrade to active lts node images ([#501](https://github.com/wundergraph/cosmo/issues/501)) ([684f89f](https://github.com/wundergraph/cosmo/commit/684f89f8b6c46a3b24117c221cab41a5b60dd534)) (@StarpTech)
+
 # [0.62.0](https://github.com/wundergraph/cosmo/compare/studio@0.61.0...studio@0.62.0) (2024-02-06)
 
 ### Features

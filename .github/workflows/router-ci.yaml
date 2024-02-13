@@ -21,12 +21,18 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      redis:
+        # Docker Hub image
+        image: redis:7
+        ports:
+          - 6379:6379
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cache/go-build

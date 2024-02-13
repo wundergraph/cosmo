@@ -21,6 +21,12 @@ nameOverride: ''
 # -- String to fully override common.names.fullname template
 fullnameOverride: ''
 
+# -- Allows to set additional environment variables on the container. Useful for global application non-specific settings.
+extraEnvVars: []
+#extraEnvVars:
+#  - name: NODE_OPTIONS
+#    value: "--max-old-space-size=1536"
+
 serviceAccount:
   # -- Specifies whether a service account should be created
   create: true
@@ -182,3 +188,6 @@ configuration:
   # -- The default billing plan, eg `developer@1`
   defaultBillingPlan: ''
   openAiApiKey: ''
+
+# -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
+existingSecret: ""

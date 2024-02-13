@@ -50,6 +50,9 @@ spec:
           image: "{{ include "cdn.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
             - name: PORT
               valueFrom:
                 configMapKeyRef:
@@ -59,13 +62,13 @@ spec:
             - name: S3_STORAGE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "cdn.fullname" . }}-secret
+                  name: {{ include "cdn.secretName" . }}
                   key: s3StorageUrl
 
             - name: AUTH_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "cdn.fullname" . }}-secret
+                  name: {{ include "cdn.secretName" . }}
                   key: authJwtSecret
 
           ports:

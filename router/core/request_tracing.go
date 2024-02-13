@@ -19,7 +19,7 @@ const (
 	requestTraceOptionEnablePredictableDebugTimings = "enable_predictable_debug_timings"
 )
 
-func ParseRequestTraceOptions(r *http.Request) (options resolve.RequestTraceOptions) {
+func ParseRequestTraceOptions(r *http.Request) (options resolve.TraceOptions) {
 	var (
 		values []string
 	)
