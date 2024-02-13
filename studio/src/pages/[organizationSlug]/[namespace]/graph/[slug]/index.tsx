@@ -221,7 +221,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 setOpen={setOpen}
                 graphName={name}
                 namespace={namespace}
-                triggerLabel="Run router locally"
+                triggerLabel="Run Router locally"
                 triggerClassName="mt-3 w-full"
               />
             </CardFooter>

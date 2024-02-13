@@ -16,7 +16,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/internal/epoller"
 
 	"github.com/alitto/pond"

@@ -50,7 +50,40 @@ const (
 	defaultExportInterval = 15 * time.Second
 )
 
-func NewPrometheusMeterProvider(ctx context.Context, c *Config) (*sdkmetric.MeterProvider, *prometheus.Registry, error) {
+var (
+	//
+	// Short story about when we choose delta and when we choose cumulative temporality:
+	//
+	// Delta temporalities are reported as completed intervals. They don't build upon each other.
+	// This makes them easier to query and aggregate because we don't have to think about resets.
+	// See here for more information: https://opentelemetry.io/docs/specs/otel/metrics/data-model/#resets-and-gaps
+	//
+	// The downside is that missing data points will result in data loss and can't be averaged from the previous value.
+	// Delta temporality is more memory efficient for synchronous instruments because we don't have to store the last value.
+	// On the other hand, delta temporality is more expensive for asynchronous instruments because we have to store the last
+	// value of every permutation to calculate the delta.
+	//
+	// We choose delta temporality for synchronous instruments because we can easily sum the values over a time range.
+	// We choose cumulative temporality for asynchronous instruments because we can query the last cumulative value without extra work.
+	// See https://opentelemetry.io/docs/specs/otel/metrics/supplementary-guidelines/#aggregation-temporality for more information.
+	//
+	temporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+		switch kind {
+		case sdkmetric.InstrumentKindCounter,
+			sdkmetric.InstrumentKindUpDownCounter,
+			sdkmetric.InstrumentKindHistogram:
+			return metricdata.DeltaTemporality
+		case
+			sdkmetric.InstrumentKindObservableGauge,
+			sdkmetric.InstrumentKindObservableCounter,
+			sdkmetric.InstrumentKindObservableUpDownCounter:
+			return metricdata.CumulativeTemporality
+		}
+		panic("unknown instrument kind")
+	}
+)
+
+func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceID string) (*sdkmetric.MeterProvider, *prometheus.Registry, error) {
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collectors.NewGoCollector())
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
@@ -68,6 +101,7 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config) (*sdkmetric.Mete
 		ctx,
 		c.Name,
 		c.Version,
+		serviceInstanceID,
 		c.Prometheus.ExcludeMetrics,
 		c.Prometheus.ExcludeMetricLabels,
 	)
@@ -86,23 +120,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	if err != nil {
 		return nil, fmt.Errorf("invalid OpenTelemetry endpoint %q: %w", exp.Endpoint, err)
 	}
-	// Use delta temporalities for otlpCounters, gauge and otlpHistograms
-	// Delta temporalities are reported as completed intervals. They don't build upon each other.
-	// This makes queries easier and reduce the amount of data to be transferred because the SDK
-	// client will aggregate the data before sending it to the collector.
-	temporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
-		switch kind {
-		case sdkmetric.InstrumentKindCounter,
-			sdkmetric.InstrumentKindHistogram,
-			sdkmetric.InstrumentKindObservableGauge,
-			sdkmetric.InstrumentKindObservableCounter:
-			return metricdata.DeltaTemporality
-		case sdkmetric.InstrumentKindUpDownCounter,
-			sdkmetric.InstrumentKindObservableUpDownCounter:
-			return metricdata.DeltaTemporality
-		}
-		panic("unknown instrument kind")
-	}
+
 	var exporter sdkmetric.Exporter
 	switch exp.Exporter {
 	case otelconfig.ExporterDefault, otelconfig.ExporterOLTPHTTP:
@@ -161,8 +179,8 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	return exporter, nil
 }
 
-func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
-	opts, err := defaultOtlpMetricOptions(ctx, c.Name, c.Version)
+func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, serviceInstanceID string) (*sdkmetric.MeterProvider, error) {
+	opts, err := defaultOtlpMetricOptions(ctx, c.Name, c.Version, serviceInstanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -195,10 +213,11 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdk
 	return mp, nil
 }
 
-func getResource(ctx context.Context, serviceName, serviceVersion string) (*resource.Resource, error) {
+func getResource(ctx context.Context, serviceName, serviceVersion string, serviceInstanceID string) (*resource.Resource, error) {
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(serviceName)),
 		resource.WithAttributes(semconv.ServiceVersionKey.String(serviceVersion)),
+		resource.WithAttributes(semconv.ServiceInstanceID(serviceInstanceID)),
 		resource.WithProcessPID(),
 		resource.WithTelemetrySDK(),
 		resource.WithHost(),
@@ -210,8 +229,8 @@ func getResource(ctx context.Context, serviceName, serviceVersion string) (*reso
 	return r, nil
 }
 
-func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVersion string, excludeMetrics, excludeMetricAttributes []*regexp.Regexp) ([]sdkmetric.Option, error) {
-	r, err := getResource(ctx, serviceName, serviceVersion)
+func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVersion string, serviceInstanceID string, excludeMetrics, excludeMetricAttributes []*regexp.Regexp) ([]sdkmetric.Option, error) {
+	r, err := getResource(ctx, serviceName, serviceVersion, serviceInstanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -276,8 +295,8 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVer
 	return opts, nil
 }
 
-func defaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion string) ([]sdkmetric.Option, error) {
-	r, err := getResource(ctx, serviceName, serviceVersion)
+func defaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion string, serviceInstanceID string) ([]sdkmetric.Option, error) {
+	r, err := getResource(ctx, serviceName, serviceVersion, serviceInstanceID)
 	if err != nil {
 		return nil, err
 	}

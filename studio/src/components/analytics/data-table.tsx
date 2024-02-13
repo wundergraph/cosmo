@@ -297,7 +297,7 @@ export function AnalyticsDataTable<T>({
 
     switch (selectedGroup) {
       case AnalyticsViewGroupName.None: {
-        // Save the current route in sessionStorage so we can go back to it
+        // Save the current route in sessionStorage, so we can go back to it
         setRouteCache(router.query);
 
         applyNewParams({

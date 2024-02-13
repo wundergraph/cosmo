@@ -19,8 +19,6 @@ type Option func(cp *selfRegister)
 type SelfRegister interface {
 	// Register registers the router with the controlplane and returns the registration info
 	Register(ctx context.Context) (*nodev1.RegistrationInfo, error)
-	// Stop stops the config poller. After calling stop, the config poller cannot be used again.
-	Stop(ctx context.Context) error
 }
 
 type selfRegister struct {
@@ -63,10 +61,6 @@ func New(endpoint, token string, opts ...Option) SelfRegister {
 	)
 
 	return c
-}
-
-func (c *selfRegister) Stop(_ context.Context) error {
-	return nil
 }
 
 func (c *selfRegister) Register(ctx context.Context) (*nodev1.RegistrationInfo, error) {

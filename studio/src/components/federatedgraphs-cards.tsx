@@ -344,7 +344,6 @@ export const RunRouterCommand = ({
       {triggerLabel && (
         <DialogTrigger className={triggerClassName} asChild={true}>
           <Button
-            className="w-full"
             onClick={() => {
               setOpen(true);
             }}

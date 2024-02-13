@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import {
   ChartBarIcon,
+  ServerStackIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import {
@@ -118,6 +119,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/analytics",
         matchExact: false,
         icon: <ChartBarIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Routers",
+        href: basePath + "/routers",
+        matchExact: false,
+        icon: <ServerStackIcon className="h-4 w-4" />,
       },
       {
         title: "Compositions",

@@ -34,8 +34,9 @@ type OpenTelemetryExporter struct {
 }
 
 type OpenTelemetry struct {
-	Enabled   bool
-	Exporters []*OpenTelemetryExporter
+	Enabled       bool
+	RouterRuntime bool
+	Exporters     []*OpenTelemetryExporter
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
@@ -81,7 +82,8 @@ func DefaultConfig(serviceVersion string) *Config {
 		Name:    DefaultServerName,
 		Version: serviceVersion,
 		OpenTelemetry: OpenTelemetry{
-			Enabled: false,
+			Enabled:       false,
+			RouterRuntime: true,
 			Exporters: []*OpenTelemetryExporter{
 				{
 					Disabled: false,

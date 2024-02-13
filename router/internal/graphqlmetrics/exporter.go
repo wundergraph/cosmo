@@ -322,7 +322,7 @@ func (e *Exporter) ForceFlush(ctx context.Context) error {
 
 	select {
 	case <-flushed:
-		// Processed any items in queue prior to ForceFlush being called
+		// Processed any items in queue prior to Shutdown being called
 	case <-ctx.Done():
 		return ctx.Err()
 	}

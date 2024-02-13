@@ -14,7 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hashicorp/go-multierror"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"

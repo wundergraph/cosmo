@@ -1,8 +1,8 @@
 package metric
 
 import (
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -20,7 +20,7 @@ var defaultExcludedOtelKeys = []attribute.Key{
 	otel.WgOperationHash,
 }
 
-func ServePrometheus(logger *zap.Logger, listenAddr string, path string, registry *prometheus.Registry) *http.Server {
+func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, registry *prometheus.Registry) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
