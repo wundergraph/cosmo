@@ -143,7 +143,7 @@ func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time
 	h.promRequestMetrics.MeasureLatency(ctx, requestStartTime, attr...)
 }
 
-// Shutdown stops the metrics collection and flushes the metrics to the backend.
+// Flush flushes the metrics to the backend synchronously.
 func (h *Metrics) Flush(ctx context.Context) error {
 
 	var err error

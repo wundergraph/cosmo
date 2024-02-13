@@ -1071,19 +1071,19 @@ func (r *server) listenAndServe() error {
 	return nil
 }
 
-// Shutdown gracefully shuts down the router.
+// Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
+// If the router is already shutdown, the method returns immediately without error. Not safe for concurrent use.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
+
+	if r.shutdown {
+		return nil
+	}
+
 	r.shutdown = true
 
 	if r.configPoller != nil {
 		if subErr := r.configPoller.Stop(ctx); subErr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to stop config poller: %w", subErr))
-		}
-	}
-
-	if r.selfRegister != nil {
-		if subErr := r.selfRegister.Stop(ctx); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to stop self registration: %w", subErr))
 		}
 	}
 
