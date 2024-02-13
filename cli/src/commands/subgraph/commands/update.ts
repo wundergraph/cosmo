@@ -32,7 +32,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
 
