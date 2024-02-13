@@ -1,6 +1,6 @@
 type Query {
   employee(id: Int!): Employee
-  employees: [Employee]
+  employees: [Employee!]!
   products: [Products!]!
   teammates(team: Department!): [Employee!]!
 }
@@ -80,7 +80,7 @@ type Employee implements Identifiable @key(fields: "id") {
   details: Details! @shareable
   id: Int!
   tag: String!
-  role: RoleType
+  role: RoleType!
   notes: String
   updatedAt: String!
   startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
