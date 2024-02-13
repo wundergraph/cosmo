@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.65.0](https://github.com/wundergraph/cosmo/compare/router@0.64.0...router@0.65.0) (2024-02-13)
+
+### Features
+
+* implement graphql over sse ([#519](https://github.com/wundergraph/cosmo/issues/519)) ([4429d68](https://github.com/wundergraph/cosmo/commit/4429d688440d2315fca425a1f4238727da831c32)) (@jensneuse)
+
 # [0.64.0](https://github.com/wundergraph/cosmo/compare/router@0.63.1...router@0.64.0) (2024-02-12)
 
 ### Features
