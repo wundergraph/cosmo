@@ -15,14 +15,14 @@ CREATE TABLE IF NOT EXISTS cosmo.router_uptime_30 (
    ServiceInstanceID String CODEC(ZSTD(3)),
    ClusterName LowCardinality(String) CODEC(ZSTD(3)),
    Hostname LowCardinality(String) CODEC(ZSTD(3)),
-   UptimeSeconds SimpleAggregateFunction(max, BIGINT) CODEC(ZSTD(3))
+   ProcessUptimeSeconds SimpleAggregateFunction(max, BIGINT) CODEC(ZSTD(3))
 ) ENGINE = AggregatingMergeTree
 PARTITION BY toDate(Timestamp)
 -- This allows us to fetch traces by federated graph in the most efficient way
 ORDER BY (
     -- A router is identified by the following fields. ServiceInstanceID must be unique.
     -- Set it to a stable value to group the uptime of the same service instance across restarts.
-    FederatedGraphID, OrganizationID, ServiceInstanceID
+    FederatedGraphID, OrganizationID, ConfigVersionID,  ServiceInstanceID
 )
 TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 

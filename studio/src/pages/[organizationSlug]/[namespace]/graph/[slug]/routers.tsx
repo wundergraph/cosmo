@@ -235,10 +235,22 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
         <div>
           <ul className="divide-y">
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">Uptime</div>
+              <div className="font-semibold text-muted-foreground">
+                Process Uptime
+              </div>
               <div>
                 {formatDistanceToNow(
                   subSeconds(new Date(), parseInt(router.uptimeSeconds)),
+                )}
+              </div>
+            </li>
+            <li className="flex justify-between py-4 text-sm">
+              <div className="font-semibold text-muted-foreground">
+                Server Uptime
+              </div>
+              <div>
+                {formatDistanceToNow(
+                  subSeconds(new Date(), parseInt(router.serverUptimeSeconds)),
                 )}
               </div>
             </li>
@@ -454,7 +466,7 @@ const RoutersPage: NextPageWithLayout = () => {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve changelog"
+        title="Could not retrieve routers"
         description={
           data?.response?.details || error?.message || "Please try again"
         }
@@ -474,7 +486,7 @@ const RoutersPage: NextPageWithLayout = () => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/router/cluster-management"}
+              href={docsBaseURL + "/studio/cluster-management"}
               className="text-primary"
             >
               Learn more.
@@ -505,7 +517,7 @@ const RoutersPage: NextPageWithLayout = () => {
         <p className="text-sm text-muted-foreground">
           Track and monitor your router cluster. This view will update itself.{" "}
           <Link
-            href={docsBaseURL + "/router/cluster-management"}
+            href={docsBaseURL + "/studio/cluster-management"}
             className="text-primary"
             target="_blank"
             rel="noreferrer"
@@ -585,7 +597,6 @@ const RoutersPage: NextPageWithLayout = () => {
                           transition: { duration: 1, ease: easeInOut },
                         }}
                         exit={{
-                          x: -100,
                           transition: { duration: 0.5, ease: easeInOut },
                         }}
                         key={row.original.serviceInstanceId}

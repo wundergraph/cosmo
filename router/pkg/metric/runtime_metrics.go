@@ -28,19 +28,21 @@ type RuntimeMetrics struct {
 	meter                   otelmetric.Meter
 	baseAttributes          []attribute.KeyValue
 	instrumentRegistrations []otelmetric.Registration
+	processStartTime        time.Time
 	logger                  *zap.Logger
 }
 
-func NewRuntimeMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue) *RuntimeMetrics {
+func NewRuntimeMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue, processStartTime time.Time) *RuntimeMetrics {
 	// Used to export metrics to OpenTelemetry backend.
 	meter := meterProvider.Meter(cosmoRouterRuntimeMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterRuntimeMeterVersion),
 	)
 
 	return &RuntimeMetrics{
-		meter:          meter,
-		baseAttributes: baseAttributes,
-		logger:         logger,
+		meter:            meter,
+		baseAttributes:   baseAttributes,
+		logger:           logger,
+		processStartTime: processStartTime,
 	}
 }
 
@@ -72,10 +74,19 @@ func (r *RuntimeMetrics) Start() error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	uptime, err := r.meter.Int64ObservableCounter(
+	runtimeUptime, err := r.meter.Int64ObservableCounter(
 		"runtime.uptime",
 		otelmetric.WithUnit("s"),
 		otelmetric.WithDescription("Seconds since application was initialized"),
+	)
+	if err != nil {
+		return err
+	}
+
+	serverUptime, err := r.meter.Int64ObservableCounter(
+		"server.uptime",
+		otelmetric.WithUnit("s"),
+		otelmetric.WithDescription("Seconds since the server started. Resets between router config changes."),
 	)
 	if err != nil {
 		return err
@@ -222,9 +233,18 @@ func (r *RuntimeMetrics) Start() error {
 			}
 
 			/*
-			* Runtime uptime
+			* Process uptime
 			 */
-			o.ObserveInt64(uptime, int64(time.Since(now).Seconds()),
+			o.ObserveInt64(runtimeUptime, int64(time.Since(r.processStartTime).Seconds()),
+				otelmetric.WithAttributes(r.baseAttributes...),
+			)
+
+			/**
+			* Server uptime. Everytime the store is reloaded, the server uptime is reset.
+			 */
+
+			o.ObserveInt64(serverUptime,
+				int64(time.Since(now).Seconds()),
 				otelmetric.WithAttributes(r.baseAttributes...),
 			)
 
@@ -278,7 +298,8 @@ func (r *RuntimeMetrics) Start() error {
 		pauseTotalNs,
 
 		processCPUUsage,
-		uptime,
+		serverUptime,
+		runtimeUptime,
 	)
 
 	if err != nil {

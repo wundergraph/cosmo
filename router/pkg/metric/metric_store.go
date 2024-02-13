@@ -58,7 +58,8 @@ type (
 		otelMeterProvider *metric.MeterProvider
 		promMeterProvider *metric.MeterProvider
 
-		runtimeMetrics *RuntimeMetrics
+		runtimeMetrics   *RuntimeMetrics
+		processStartTime time.Time
 
 		otlpRequestMetrics Store
 		promRequestMetrics Store
@@ -87,7 +88,7 @@ func NewStore(opts ...Option) (Store, error) {
 	}
 
 	// Create runtime metrics exported to OTEL
-	h.runtimeMetrics = NewRuntimeMetrics(h.logger, h.otelMeterProvider, h.baseAttributes)
+	h.runtimeMetrics = NewRuntimeMetrics(h.logger, h.otelMeterProvider, h.baseAttributes, h.processStartTime)
 
 	// Start runtime metrics
 	if err := h.runtimeMetrics.Start(); err != nil {
@@ -183,5 +184,11 @@ func WithOtlpMeterProvider(otelMeterProvider *metric.MeterProvider) Option {
 func WithPromMeterProvider(promMeterProvider *metric.MeterProvider) Option {
 	return func(h *Metrics) {
 		h.promMeterProvider = promMeterProvider
+	}
+}
+
+func WithProcessStartTime(processStartTime time.Time) Option {
+	return func(h *Metrics) {
+		h.processStartTime = processStartTime
 	}
 }

@@ -5,13 +5,14 @@ export interface RouterDTO {
   processId: string;
   clusterName: string;
   configVersionId: string;
-  uptimeSeconds: string;
+  processUptimeSeconds: string;
   serviceName: string;
   serviceVersion: string;
   serviceInstanceId: string;
 }
 
 export interface RouterRuntimeDTO {
+  serverUptimeSeconds: string;
   cpuUsage: {
     currentPercent: number;
     changePercent: number;
@@ -42,7 +43,8 @@ export class RouterMetricsRepository {
                where
                  FederatedGraphID = '${input.federatedGraphId}' AND
                  OrganizationID = '${input.organizationId}' AND
-                 ServiceInstanceID = '${input.serviceInstanceId}'
+                 ServiceInstanceID = '${input.serviceInstanceId}' AND
+                 MetricName in ('server.uptime', 'process.runtime.go.mem.heap_alloc', 'process.cpu.usage')
                order by Timestamp desc
                )
         group by MetricName
@@ -57,8 +59,17 @@ export class RouterMetricsRepository {
     let memoryChangePercent = 0;
     let cpuUsagePercent = 0;
     let cpuChangePercent = 0;
+    let serverUptimeSeconds = '';
 
     if (Array.isArray(res)) {
+      /**
+       * Server uptime.
+       */
+      const serverUptimeMetric = res.find((p) => p.metricName === 'server.uptime');
+      if (serverUptimeMetric && serverUptimeMetric.metricValue.length > 0) {
+        serverUptimeSeconds = serverUptimeMetric.metricValue[0].toString();
+      }
+
       /**
        * Memory usage from heap_alloc metric. Converting bytes to megabytes.
        */
@@ -98,6 +109,7 @@ export class RouterMetricsRepository {
       }
 
       return {
+        serverUptimeSeconds,
         cpuUsage: {
           currentPercent: cpuUsagePercent,
           changePercent: cpuChangePercent,
@@ -110,6 +122,7 @@ export class RouterMetricsRepository {
     }
 
     return {
+      serverUptimeSeconds: '',
       cpuUsage: {
         currentPercent: 0,
         changePercent: 0,
@@ -123,22 +136,35 @@ export class RouterMetricsRepository {
 
   public async getActiveRouters(input: { federatedGraphId: string; organizationId: string }): Promise<RouterDTO[]> {
     const query = `
-        select
-           toString(argMax(UptimeSeconds, Timestamp)) as uptimeSeconds,
-           Hostname as hostname,
-           ClusterName as clusterName,
-           ConfigVersionID as configVersionId,
-           ServiceName as serviceName,
-           ServiceVersion as serviceVersion,
-           ServiceInstanceID as serviceInstanceId,
-           ClusterName as clusterName,
-           argMax(ProcessID, Timestamp) as processId
-           from ${this.client.database}.router_uptime_30_mv
-        where Timestamp >= now() - interval 45 second AND
-            FederatedGraphID = '${input.federatedGraphId}' AND
-            OrganizationID = '${input.organizationId}'
-        group by Hostname, ClusterName, ConfigVersionID, ServiceName, ServiceVersion, ServiceInstanceID
-        order by uptimeSeconds desc
+      select
+        first_value(Timestamp) as timestamp,
+        toString(first_value(ProcessUptimeSeconds)) as processUptimeSeconds,
+        first_value(Hostname) as hostname,
+        first_value(ClusterName) as clusterName,
+        first_value(ConfigVersionID) as configVersionId,
+        first_value(ServiceName) as serviceName,
+        first_value(ServiceVersion) as serviceVersion,
+        ServiceInstanceID as serviceInstanceId,
+        first_value(ClusterName) as clusterName,
+        first_value(ProcessID) as processId
+      from (
+         select Timestamp,
+                ProcessUptimeSeconds,
+                Hostname,
+                ClusterName,
+                ConfigVersionID,
+                ServiceName,
+                ServiceVersion,
+                ServiceInstanceID,
+                ClusterName,
+                ProcessID
+         from cosmo.router_uptime_30_mv
+         where Timestamp >= now() - interval 45 second AND
+           FederatedGraphID = '${input.federatedGraphId}' AND
+           OrganizationID = '${input.organizationId}'
+         order by Timestamp desc
+      )
+      group by ServiceInstanceID
     `;
 
     const res = await this.client.queryPromise(query);
@@ -152,7 +178,7 @@ export class RouterMetricsRepository {
         processId: p.processId,
         clusterName: p.clusterName,
         configVersionId: p.configVersionId,
-        uptimeSeconds: p.uptimeSeconds,
+        processUptimeSeconds: p.processUptimeSeconds,
       }));
     }
 
