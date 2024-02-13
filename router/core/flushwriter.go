@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 )
 
 const (
@@ -25,7 +24,6 @@ type HttpFlushWriter struct {
 	sse           bool
 	buf           *bytes.Buffer
 	variables     []byte
-	logger        *zap.Logger
 	mux           sync.Mutex
 }
 
