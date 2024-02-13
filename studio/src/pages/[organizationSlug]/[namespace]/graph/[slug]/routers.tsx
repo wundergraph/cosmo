@@ -27,7 +27,7 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { Router } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { getRouters } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -76,6 +76,7 @@ const sizes = {
 
 const RouterSheet: React.FC<any> = (props) => {
   const router = useRouter();
+  const [size, setSize] = useState<keyof typeof sizes>("default");
 
   const serviceInstanceId = router.query.serviceInstanceId as string;
 
@@ -85,7 +86,16 @@ const RouterSheet: React.FC<any> = (props) => {
 
   const routerData = props.data[index];
 
-  const [size, setSize] = useState<keyof typeof sizes>("default");
+  useEffect(() => {
+    if (index === -1) {
+      delete router.query["serviceInstanceId"];
+      router.push({
+        query: {
+          ...router.query,
+        },
+      });
+    }
+  }, [index, router]);
 
   const nextServer = () => {
     if (index + 1 < props.data.length) {
@@ -188,10 +198,7 @@ const RouterSheet: React.FC<any> = (props) => {
             <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">
               {serviceInstanceId}
             </code>
-            <CopyButton
-              tooltip="Copy instance id"
-              value={router.query.serverName?.toString() || ""}
-            />
+            <CopyButton tooltip="Copy instance id" value={serviceInstanceId} />
           </SheetTitle>
 
           <Spacer />
@@ -214,7 +221,7 @@ const RouterSheet: React.FC<any> = (props) => {
             </TooltipContent>
           </Tooltip>
         </SheetHeader>
-        {serviceInstanceId && <RouterPage router={routerData} />}
+        {routerData && <RouterPage router={routerData} />}
       </SheetContent>
     </Sheet>
   );
@@ -222,7 +229,7 @@ const RouterSheet: React.FC<any> = (props) => {
 
 const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
   return (
-    <div className="grid auto-cols-fr grid-flow-col grid-rows-2 gap-4 md:grid-rows-none">
+    <div className="grid auto-cols-fr grid-flow-row auto-rows-max gap-4 lg:grid-flow-col lg:grid-rows-none">
       <div className="rounded border p-4">
         <div className="font-bold">General</div>
         <div>
@@ -294,16 +301,18 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
         </div>
       </div>
       <div className="relative rounded border">
-        <div className="absolute z-10 h-full w-full py-8 text-center font-bold">
+        <div className="absolute z-10 h-full w-full py-12 text-center font-bold">
           <span>Can&apos;t find what you&apos;re looking for?</span>
           <div>
             <a
               target="_blank"
               rel="noreferrer"
-              href={"https://wundergraph.com/discord"}
+              href={
+                "https://github.com/wundergraph/cosmo/issues/new?assignees=&labels=enhancement%2Cneeds+triage&projects=&template=feature_request.yaml"
+              }
               className="text-primary"
             >
-              Let us know in Discord!
+              Open an issue on GitHub
             </a>
           </div>
         </div>
