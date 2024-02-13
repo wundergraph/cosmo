@@ -20,12 +20,7 @@ import {
   TableRow,
   TableWrapper,
 } from "../ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";
 
 export const ChangesTable = ({
@@ -33,11 +28,15 @@ export const ChangesTable = ({
   caption,
   trafficCheckDays,
   createdAt,
+  hideActions,
+  hideHeaders,
 }: {
   changes: SchemaChange[];
-  caption: React.ReactNode;
-  trafficCheckDays: number;
-  createdAt: string;
+  caption?: React.ReactNode;
+  trafficCheckDays?: number;
+  createdAt?: string;
+  hideActions?: boolean;
+  hideHeaders?: boolean;
 }) => {
   const router = useRouter();
   const { toast } = useToast();
@@ -66,7 +65,7 @@ export const ChangesTable = ({
       query.showUsage = path.split(".")[0];
     }
 
-    if (trafficCheckDays) {
+    if (trafficCheckDays && createdAt) {
       query.dateRange = JSON.stringify({
         start: formatISO(subHours(new Date(createdAt), 24 * trafficCheckDays)),
         end: formatISO(new Date(createdAt)),
@@ -86,11 +85,13 @@ export const ChangesTable = ({
     <div>
       <TableWrapper>
         <Table>
-          <TableHeader>
+          <TableHeader className={cn(hideHeaders && "hidden")}>
             <TableRow>
               <TableHead className="w-[200px]">Change</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
+              {!hideActions && (
+                <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -116,11 +117,11 @@ export const ChangesTable = ({
                     </div>
                   </TableCell>
                   <TableCell>{message}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-x-2">
-                      <TooltipProvider>
+                  {!hideActions && (
+                    <TableCell>
+                      <div className="flex items-center gap-x-2">
                         <Tooltip delayDuration={100}>
-                          <TooltipTrigger>
+                          <TooltipTrigger asChild>
                             <Button
                               disabled={!path}
                               variant="ghost"
@@ -154,10 +155,9 @@ export const ChangesTable = ({
                               : "Cannot open in explorer. Path to type unavailable"}
                           </TooltipContent>
                         </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
+
                         <Tooltip delayDuration={100}>
-                          <TooltipTrigger>
+                          <TooltipTrigger asChild>
                             <Button
                               onClick={() => openUsage(changeType, path)}
                               variant="ghost"
@@ -169,14 +169,14 @@ export const ChangesTable = ({
                           </TooltipTrigger>
                           <TooltipContent>View Usage</TooltipContent>
                         </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </TableCell>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
           </TableBody>
-          <TableCaption>{caption}</TableCaption>
+          {caption && <TableCaption>{caption}</TableCaption>}
         </Table>
       </TableWrapper>
     </div>

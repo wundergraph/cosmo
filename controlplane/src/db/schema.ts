@@ -468,7 +468,21 @@ export const schemaCheckChangeActionOperationUsage = pgTable('schema_check_chang
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+  federatedGraphId: uuid('federated_graph_id').references(() => federatedGraphs.id, {
+    onDelete: 'cascade',
+  }),
+  isSafeOverride: boolean('is_safe_override').default(false),
 });
+
+export const schemaCheckChangeActionOperationUsageRelations = relations(
+  schemaCheckChangeActionOperationUsage,
+  ({ one }) => ({
+    changeAction: one(schemaCheckChangeAction, {
+      fields: [schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId],
+      references: [schemaCheckChangeAction.id],
+    }),
+  }),
+);
 
 export const schemaCheckFederatedGraphs = pgTable('schema_check_federated_graphs', {
   checkId: uuid('check_id')
@@ -509,9 +523,41 @@ export const schemaCheckChangeAction = pgTable('schema_check_change_action', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const schemaCheckChangeActionRelations = relations(schemaCheckChangeAction, ({ many }) => ({
+export const schemaCheckChangeActionRelations = relations(schemaCheckChangeAction, ({ one, many }) => ({
+  check: one(schemaChecks, {
+    fields: [schemaCheckChangeAction.schemaCheckId],
+    references: [schemaChecks.id],
+  }),
   operationUsage: many(schemaCheckChangeActionOperationUsage),
 }));
+
+export const operationOverrides = pgTable(
+  'operation_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .notNull()
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      }),
+    hash: text('hash').notNull(),
+    namespaceId: text('namespace_id').notNull(),
+    ignoreAll: boolean('ignore_all').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    updatedBy: uuid('updated_by').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => {
+    return {
+      hashIndex: uniqueIndex('hash_check_idx').on(t.hash, t.schemaCheckId),
+    };
+  },
+);
 
 export const schemaCheckComposition = pgTable('schema_check_composition', {
   id: uuid('id').primaryKey().defaultRandom(),

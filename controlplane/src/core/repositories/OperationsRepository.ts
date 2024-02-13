@@ -1,5 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { PlainMessage } from '@bufbuild/protobuf';
+import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
 import { ClientDTO, PersistedOperationDTO, UpdatedPersistedOperation } from '../../types/index.js';
@@ -138,5 +140,113 @@ export class OperationsRepository {
     }
 
     return clients;
+  }
+
+  public createOperationOverride(data: {
+    checkId: string;
+    namespaceId: string;
+    operationHash: string;
+    ignoreAll: boolean;
+    actorId: string;
+  }) {
+    return this.db
+      .insert(schema.operationOverrides)
+      .values({
+        schemaCheckId: data.checkId,
+        namespaceId: data.namespaceId,
+        hash: data.operationHash,
+        ignoreAll: data.ignoreAll,
+        createdBy: data.actorId,
+      })
+      .onConflictDoUpdate({
+        target: [schema.operationOverrides.hash, schema.operationOverrides.schemaCheckId],
+        set: {
+          updatedAt: new Date(),
+          updatedBy: data.actorId,
+          ignoreAll: data.ignoreAll,
+        },
+      })
+      .returning();
+  }
+
+  public removeOperationOverride(data: { checkId: string; operationHash: string }) {
+    return this.db
+      .delete(schema.operationOverrides)
+      .where(
+        and(
+          eq(schema.operationOverrides.hash, data.operationHash),
+          eq(schema.operationOverrides.schemaCheckId, data.checkId),
+        ),
+      )
+      .returning();
+  }
+
+  public removeIgnoreOverride(data: { operationHash: string; namespaceId: string }) {
+    return this.db
+      .update(schema.operationOverrides)
+      .set({
+        ignoreAll: false,
+      })
+      .where(
+        and(
+          eq(schema.operationOverrides.namespaceId, data.namespaceId),
+          eq(schema.operationOverrides.hash, data.operationHash),
+          eq(schema.operationOverrides.ignoreAll, true),
+        ),
+      )
+      .returning();
+  }
+
+  public async getOperationOverrides(data: { operationHash: string }) {
+    const res = await this.db
+      .select({
+        checkId: schema.schemaCheckChangeAction.schemaCheckId,
+        createdAt: schema.operationOverrides.createdAt,
+        updatedAt: schema.operationOverrides.updatedAt,
+        ignoreAll: schema.operationOverrides.ignoreAll,
+        changes: sql
+          .raw(
+            `json_agg(distinct jsonb_build_object(
+              'changeType', ${schema.schemaCheckChangeAction.changeType.name}, 
+              'path', ${schema.schemaCheckChangeAction.path.name}, 
+              'message', ${schema.schemaCheckChangeAction.changeMessage.name}, 
+              'isBreaking', ${schema.schemaCheckChangeAction.isBreaking.name}
+            ))`,
+          )
+          .mapWith({
+            mapFromDriverValue(value) {
+              return value as PlainMessage<SchemaChange>[];
+            },
+          }),
+      })
+      .from(schema.operationOverrides)
+      .innerJoin(
+        schema.schemaCheckChangeAction,
+        eq(schema.schemaCheckChangeAction.schemaCheckId, schema.operationOverrides.schemaCheckId),
+      )
+      .innerJoin(
+        schema.schemaCheckChangeActionOperationUsage,
+        eq(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, schema.schemaCheckChangeAction.id),
+      )
+      .innerJoin(
+        schema.schemaCheckFederatedGraphs,
+        eq(schema.schemaCheckFederatedGraphs.checkId, schema.operationOverrides.schemaCheckId),
+      )
+      .where(
+        and(
+          eq(schema.operationOverrides.hash, data.operationHash),
+          eq(schema.schemaCheckChangeActionOperationUsage.hash, data.operationHash),
+          eq(schema.schemaCheckFederatedGraphs.federatedGraphId, this.federatedGraphId),
+          eq(schema.schemaCheckChangeAction.isBreaking, true),
+        ),
+      )
+      .groupBy(({ checkId, createdAt, updatedAt, ignoreAll }) => [checkId, createdAt, updatedAt, ignoreAll])
+      .orderBy(desc(schema.operationOverrides.createdAt), desc(schema.operationOverrides.updatedAt));
+
+    return res.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt?.toISOString() || '',
+    }));
   }
 }

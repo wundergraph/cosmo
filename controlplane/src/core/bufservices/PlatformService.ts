@@ -108,6 +108,10 @@ import {
   GenerateRouterTokenResponse,
   UpdateAISettingsResponse,
   CreateBillingPortalSessionResponse,
+  CreateOperationOverrideResponse,
+  RemoveOperationOverrideResponse,
+  RemoveOperationIgnoreAllOverrideResponse,
+  GetOperationOverridesResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -1156,15 +1160,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             });
 
             if (result.size > 0) {
-              // If we have at least one operation with traffic, we consider this schema change as breaking
-              // and skip the rest of the federated graphs
-              hasClientTraffic = true;
+              const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
+                changes: storedBreakingChanges,
+                inspectorResultsByChangeId: result,
+                federatedGraphId: composition.id,
+              });
+
+              hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
 
               // Store operation usage
-              await schemaCheckRepo.createOperationUsage(result);
+              await schemaCheckRepo.createOperationUsage(overrideCheck.result, composition.id);
 
               // Collect all inspected operations for later aggregation
-              for (const resultElement of result.values()) {
+              for (const resultElement of overrideCheck.result.values()) {
                 inspectedOperations.push(...resultElement);
               }
             }
@@ -1634,8 +1642,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR,
               details: `The user doesnt have the permissions to perform this operation`,
             },
-            changes: [],
-            compositionErrors: [],
           };
         }
 
@@ -1647,8 +1653,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: 'Requested graph does not exist',
             },
-            changes: [],
-            compositionErrors: [],
           };
         }
 
@@ -1660,8 +1664,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: 'Requested check does not exist',
             },
-            changes: [],
-            compositionErrors: [],
           };
         }
 
@@ -1678,6 +1680,287 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    createOperationOverride: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateOperationOverrideResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+          };
+        }
+
+        const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
+
+        if (!check) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check does not exist',
+            },
+          };
+        }
+
+        const operationsRepo = new OperationsRepository(opts.db, graph.id);
+
+        const affectedChanges = await operationsRepo.createOperationOverride({
+          namespaceId: graph.namespaceId,
+          checkId: req.checkId,
+          operationHash: req.operationHash,
+          ignoreAll: req.ignoreAll,
+          actorId: authContext.userId,
+        });
+
+        if (affectedChanges.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Could not create override for this operation.',
+            },
+          };
+        }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'operation_override.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'operation_override',
+          auditableDisplayName: req.operationHash,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: graph.namespaceId,
+          targetNamespaceDisplayName: graph.namespace,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    removeOperationOverride: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<RemoveOperationOverrideResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+          };
+        }
+
+        const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
+
+        if (!check) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check does not exist',
+            },
+          };
+        }
+
+        const operationsRepo = new OperationsRepository(opts.db, graph.id);
+
+        const affectedChanges = await operationsRepo.removeOperationOverride({
+          checkId: req.checkId,
+          operationHash: req.operationHash,
+        });
+
+        if (affectedChanges.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Could not remove overrride for this operation.',
+            },
+          };
+        }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'operation_override.deleted',
+          action: 'deleted',
+          actorId: authContext.userId,
+          auditableType: 'operation_override',
+          auditableDisplayName: req.operationHash,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: graph.namespaceId,
+          targetNamespaceDisplayName: graph.namespace,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    removeOperationIgnoreAllOverride: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<RemoveOperationIgnoreAllOverrideResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+          };
+        }
+
+        const operationsRepo = new OperationsRepository(opts.db, graph.id);
+
+        const affectedChanges = await operationsRepo.removeIgnoreOverride({
+          namespaceId: graph.namespaceId,
+          operationHash: req.operationHash,
+        });
+
+        if (affectedChanges.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Could not remove ignore override for this operation',
+            },
+          };
+        }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'operation_override.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'operation_override',
+          auditableDisplayName: req.operationHash,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: graph.namespaceId,
+          targetNamespaceDisplayName: graph.namespace,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getOperationOverrides: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOperationOverridesResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+            overrides: [],
+            ignoreAll: false,
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            overrides: [],
+            ignoreAll: false,
+          };
+        }
+
+        const operationsRepo = new OperationsRepository(opts.db, graph.id);
+
+        const overrides = await operationsRepo.getOperationOverrides({
+          operationHash: req.operationHash,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          overrides,
+          ignoreAll: overrides.some((o) => o.ignoreAll),
         };
       });
     },
@@ -5420,6 +5703,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             firstSeenAt: operation.firstSeenAt.toUTCString(),
             lastSeenAt: operation.lastSeenAt.toUTCString(),
             impactingChanges: checkDetails.changes.filter(({ id }) => operation.schemaChangeIds.includes(id)),
+            isSafe: operation.isSafe,
           })),
           trafficCheckDays,
           createdAt: check.timestamp,

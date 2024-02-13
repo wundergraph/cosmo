@@ -290,7 +290,7 @@ const ClientOperations = () => {
                       ? op.operationNames.length > 1
                         ? `[ ${op.operationNames.join(", ")} ]`
                         : op.operationNames[0]
-                      : "unnamed Operation"}
+                      : "unnamed operation"}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="mt-2 px-2">

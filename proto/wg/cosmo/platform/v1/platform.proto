@@ -131,6 +131,7 @@ message CheckOperationUsageStats {
   uint32 totalOperations = 1;
   string firstSeenAt = 2;
   string lastSeenAt = 3;
+  uint32 safeOperations = 4;
 }
 
 message CheckSubgraphSchemaResponse {
@@ -362,6 +363,7 @@ message GetCheckOperationsResponse {
     string first_seen_at = 4;
     string last_seen_at = 5;
     repeated SchemaChange impacting_changes = 6;
+    bool is_safe = 7;
   }
 
   Response response = 1;
@@ -1187,6 +1189,58 @@ message ForceCheckSuccessResponse {
   Response response = 1;
 }
 
+message CreateOperationOverrideRequest {
+  string check_id = 1;
+  string graph_name = 2;
+  string namespace = 3;
+  string operation_hash = 4;
+  bool ignore_all = 5;
+}
+
+message CreateOperationOverrideResponse {
+  Response response = 1;
+}
+
+message RemoveOperationOverrideRequest {
+  string check_id = 1;
+  string graph_name = 2;
+  string namespace = 3;
+  string operation_hash = 4;
+}
+
+message RemoveOperationOverrideResponse {
+  Response response = 1;
+}
+
+message RemoveOperationIgnoreAllOverrideRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+}
+
+message RemoveOperationIgnoreAllOverrideResponse {
+  Response response = 1;
+}
+
+message GetOperationOverridesRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+}
+
+message OperationOverride {
+  string check_id  = 1;
+  string created_at = 2;
+  string updated_at = 3;
+  repeated SchemaChange changes = 4;  
+}
+
+message GetOperationOverridesResponse {
+  Response response = 1;
+  repeated OperationOverride overrides = 2;
+  bool ignore_all = 3;
+}
+
 message IsGitHubAppInstalledRequest {
   GitInfo git_info = 1;
 }
@@ -1710,6 +1764,14 @@ service PlatformService {
   rpc GetCheckOperations(GetCheckOperationsRequest) returns (GetCheckOperationsResponse) {}
   // ForceCheckSuccess forces a failed check to be marked as successful
   rpc ForceCheckSuccess(ForceCheckSuccessRequest) returns (ForceCheckSuccessResponse) {}
+  // CreateOperationOverride marks if the given set of changes from a check should be considered safe for an operation
+  rpc CreateOperationOverride(CreateOperationOverrideRequest) returns (CreateOperationOverrideResponse) {}
+  // RemoveOperationOverride removes changes for a check which were earlier marked as safe
+  rpc RemoveOperationOverride(RemoveOperationOverrideRequest) returns (RemoveOperationOverrideResponse) {}
+  // RemoveOperationIgnoreAllOverride removes the ignore all override for the operartion
+  rpc RemoveOperationIgnoreAllOverride(RemoveOperationIgnoreAllOverrideRequest) returns (RemoveOperationIgnoreAllOverrideResponse) {}
+  // GetOperationOverrides retireves all overrides for an operation hash
+  rpc GetOperationOverrides(GetOperationOverridesRequest) returns (GetOperationOverridesResponse) {}
 
   // GetOperationContent returns the operation body by searching using the hash
   rpc GetOperationContent(GetOperationContentRequest) returns (GetOperationContentResponse) {}
