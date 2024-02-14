@@ -429,6 +429,7 @@ export const CheckOperations = () => {
                                         namespace:
                                           graphContext?.graph?.namespace,
                                         operationHash: hash,
+                                        operationName: name,
                                         changes: impactingChanges,
                                       });
                                 }}
@@ -449,6 +450,7 @@ export const CheckOperations = () => {
                                 onClick={() => {
                                   createIgnoreAll({
                                     operationHash: hash,
+                                    operationName: name,
                                     graphName: graphContext?.graph?.name,
                                     namespace: graphContext?.graph?.namespace,
                                   });
@@ -468,6 +470,7 @@ export const CheckOperations = () => {
                     </div>
                     <ChangesTable
                       operationHash={hash}
+                      operationName={name}
                       changes={impactingChanges}
                       hasIgnoreAll={hasIgnoreAllOverride}
                       caption={

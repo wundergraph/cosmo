@@ -536,6 +536,7 @@ export const operationChangeOverrides = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     hash: text('hash').notNull(),
+    name: text('name').notNull(),
     namespaceId: text('namespace_id').notNull(),
     changeType: schemaChangeTypeEnum('change_type').notNull(),
     path: text('path'),
@@ -556,6 +557,7 @@ export const operationIgnoreAllOverrides = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     hash: text('hash').notNull(),
+    name: text('name').notNull(),
     namespaceId: text('namespace_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid('created_by').references(() => users.id, {

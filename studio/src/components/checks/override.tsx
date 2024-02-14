@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOperationIgnoreAllOverride,
+  getAllOverrides,
   getCheckOperations,
   getOperationOverrides,
   removeOperationIgnoreAllOverride,
@@ -138,8 +139,8 @@ export const ConfigureOverride = () => {
     enabled: !!operationHash,
   });
 
-  const invalidateCheckOperations = () => {
-    const key = getCheckOperations.getQueryKey();
+  const invalidateOverrides = () => {
+    const key = getAllOverrides.getQueryKey();
     client.invalidateQueries({
       queryKey: key,
     });
@@ -150,6 +151,7 @@ export const ConfigureOverride = () => {
     onSuccess: (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
         refetch();
+        invalidateOverrides();
       } else {
         toast({
           description:
@@ -172,6 +174,7 @@ export const ConfigureOverride = () => {
     onSuccess: (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
         refetch();
+        invalidateOverrides();
       } else {
         toast({
           description:
@@ -229,6 +232,7 @@ export const ConfigureOverride = () => {
                   })
                 : createIgnoreAll({
                     operationHash,
+                    operationName,
                     graphName: graphContext?.graph?.name,
                     namespace: graphContext?.graph?.namespace,
                   })
@@ -270,7 +274,7 @@ export const ConfigureOverride = () => {
                       operationHash={operationHash}
                       refresh={() => {
                         refetch();
-                        invalidateCheckOperations();
+                        invalidateOverrides();
                       }}
                     />
                   ))}

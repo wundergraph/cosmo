@@ -146,6 +146,7 @@ export class OperationsRepository {
     changes: OverrideChange[];
     namespaceId: string;
     operationHash: string;
+    operationName: string;
     actorId: string;
   }) {
     return this.db
@@ -154,6 +155,7 @@ export class OperationsRepository {
         data.changes.map((c) => ({
           namespaceId: data.namespaceId,
           hash: data.operationHash,
+          name: data.operationName,
           changeType: c.changeType as SchemaChangeType,
           path: c.path,
           createdBy: data.actorId,
@@ -169,6 +171,7 @@ export class OperationsRepository {
         set: {
           namespaceId: data.namespaceId,
           hash: data.operationHash,
+          name: data.operationName,
         },
       })
       .returning();
@@ -198,13 +201,27 @@ export class OperationsRepository {
     });
   }
 
-  public createIgnoreAllOverride(data: { namespaceId: string; operationHash: string; actorId: string }) {
+  public createIgnoreAllOverride(data: {
+    namespaceId: string;
+    operationHash: string;
+    operationName: string;
+    actorId: string;
+  }) {
     return this.db
       .insert(schema.operationIgnoreAllOverrides)
       .values({
         namespaceId: data.namespaceId,
         hash: data.operationHash,
+        name: data.operationName,
         createdBy: data.actorId,
+      })
+      .onConflictDoUpdate({
+        target: [schema.operationIgnoreAllOverrides.hash, schema.operationIgnoreAllOverrides.namespaceId],
+        set: {
+          namespaceId: data.namespaceId,
+          hash: data.operationHash,
+          name: data.operationName,
+        },
       })
       .returning();
   }
@@ -277,6 +294,7 @@ export class OperationsRepository {
     const change = this.db
       .select({
         hash: schema.operationChangeOverrides.hash,
+        name: sql`max(${schema.operationChangeOverrides.name})`.as('change_operation_name'),
         namespaceId: schema.operationChangeOverrides.namespaceId,
         created_at: sql`max(${schema.operationChangeOverrides.createdAt})`.as('change_created_at'),
       })
@@ -288,6 +306,7 @@ export class OperationsRepository {
     const ignore = this.db
       .select({
         hash: schema.operationIgnoreAllOverrides.hash,
+        name: sql`max(${schema.operationIgnoreAllOverrides.name})`.as('ignore_operation_name'),
         namespaceId: schema.operationIgnoreAllOverrides.namespaceId,
         created_at: sql`max(${schema.operationIgnoreAllOverrides.createdAt})`.as('ignore_created_at'),
       })
@@ -315,18 +334,19 @@ export class OperationsRepository {
     const res = await this.db
       .select({
         hash: sql<string>`coalesce(${change.hash}, ${ignore.hash})`,
-        lastUpdated: sql<Date>`greatest(coalesce(${change.created_at}, '2000-01-01'::timestamp), coalesce(${ignore.created_at}, '2000-01-01'::timestamp))`,
+        name: sql<string>`coalesce(${change.name}, ${ignore.name})`,
+        updatedAt: sql<Date>`greatest(${change.created_at},${ignore.created_at})`,
         hasIgnoreAllOverride: sql<boolean>`case when ${ignore.hash} is not null then true else false end`,
-        changesOverrideCount: sql<number>`coalesce(${changeCounts.change_count}, 0)`,
+        changesOverrideCount: sql<number>`cast(coalesce(${changeCounts.change_count}, 0) as int)`,
       })
       .from(change)
-      .innerJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
+      .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
       .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
-      .orderBy();
+      .orderBy(({ updatedAt }) => desc(updatedAt));
 
     return res.map((r) => ({
       ...r,
-      lastUpdated: r.lastUpdated.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
     }));
   }
 }

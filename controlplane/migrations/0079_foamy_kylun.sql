@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS "operation_change_overrides" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"hash" text NOT NULL,
+	"name" text NOT NULL,
 	"namespace_id" text NOT NULL,
 	"change_type" "schema_change_type" NOT NULL,
 	"path" text,
@@ -11,6 +12,7 @@ CREATE TABLE IF NOT EXISTS "operation_change_overrides" (
 CREATE TABLE IF NOT EXISTS "operation_ignore_all_overrides" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"hash" text NOT NULL,
+	"name" text NOT NULL,
 	"namespace_id" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid

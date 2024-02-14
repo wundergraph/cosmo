@@ -39,6 +39,7 @@ export const ChangesTable = ({
   trafficCheckDays,
   createdAt,
   operationHash,
+  operationName,
   hasIgnoreAll,
 }: {
   changes: SchemaChange[];
@@ -46,6 +47,7 @@ export const ChangesTable = ({
   trafficCheckDays?: number;
   createdAt?: string;
   operationHash?: string;
+  operationName?: string;
   hasIgnoreAll?: boolean;
 }) => {
   const router = useRouter();
@@ -109,6 +111,7 @@ export const ChangesTable = ({
               {...c}
               hasIgnoreAll={hasIgnoreAll}
               operationHash={operationHash}
+              operationName={operationName}
               openUsage={openUsage}
             />
           ))}
@@ -127,6 +130,7 @@ const Row = ({
   hasOverride,
   hasIgnoreAll,
   operationHash,
+  operationName,
   openUsage,
 }: {
   changeType: string;
@@ -136,6 +140,7 @@ const Row = ({
   hasOverride?: boolean;
   hasIgnoreAll?: boolean;
   operationHash?: string;
+  operationName?: string;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
   const router = useRouter();
@@ -243,6 +248,7 @@ const Row = ({
                             graphName: graphContext?.graph?.name,
                             namespace: graphContext?.graph?.namespace,
                             operationHash,
+                            operationName,
                             changes: [
                               {
                                 changeType,

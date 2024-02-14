@@ -1,5 +1,5 @@
 {
-  "id": "faee1c91-2b1f-4f6e-a2e5-f4de303277d8",
+  "id": "6538b679-75a5-44bd-9ef6-7636847a4c28",
   "prevId": "5242d157-8c5b-4022-9142-f609e18651c5",
   "version": "5",
   "dialect": "pg",
@@ -1489,6 +1489,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "namespace_id": {
           "name": "namespace_id",
           "type": "text",
@@ -1564,6 +1570,12 @@
         },
         "hash": {
           "name": "hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true

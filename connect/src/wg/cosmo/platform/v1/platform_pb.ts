@@ -9295,7 +9295,12 @@ export class CreateOperationOverridesRequest extends Message<CreateOperationOver
   operationHash = "";
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OverrideChange changes = 4;
+   * @generated from field: string operation_name = 4;
+   */
+  operationName = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.OverrideChange changes = 5;
    */
   changes: OverrideChange[] = [];
 
@@ -9310,7 +9315,8 @@ export class CreateOperationOverridesRequest extends Message<CreateOperationOver
     { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "operation_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "changes", kind: "message", T: OverrideChange, repeated: true },
+    { no: 4, name: "operation_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "changes", kind: "message", T: OverrideChange, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOperationOverridesRequest {
@@ -9372,19 +9378,24 @@ export class CreateOperationOverridesResponse extends Message<CreateOperationOve
  */
 export class CreateOperationIgnoreAllOverrideRequest extends Message<CreateOperationIgnoreAllOverrideRequest> {
   /**
-   * @generated from field: string graph_name = 2;
+   * @generated from field: string graph_name = 1;
    */
   graphName = "";
 
   /**
-   * @generated from field: string namespace = 3;
+   * @generated from field: string namespace = 2;
    */
   namespace = "";
 
   /**
-   * @generated from field: string operation_hash = 4;
+   * @generated from field: string operation_hash = 3;
    */
   operationHash = "";
+
+  /**
+   * @generated from field: string operation_name = 4;
+   */
+  operationName = "";
 
   constructor(data?: PartialMessage<CreateOperationIgnoreAllOverrideRequest>) {
     super();
@@ -9394,9 +9405,10 @@ export class CreateOperationIgnoreAllOverrideRequest extends Message<CreateOpera
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "operation_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operation_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operation_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOperationIgnoreAllOverrideRequest {
@@ -9825,17 +9837,22 @@ export class GetAllOverridesResponse_Override extends Message<GetAllOverridesRes
   hash = "";
 
   /**
-   * @generated from field: string changesOverrideCount = 2;
+   * @generated from field: string name = 2;
    */
-  changesOverrideCount = "";
+  name = "";
 
   /**
-   * @generated from field: string hasIgnoreAllOverride = 3;
+   * @generated from field: uint32 changesOverrideCount = 3;
    */
-  hasIgnoreAllOverride = "";
+  changesOverrideCount = 0;
 
   /**
-   * @generated from field: string updated_at = 4;
+   * @generated from field: bool hasIgnoreAllOverride = 4;
+   */
+  hasIgnoreAllOverride = false;
+
+  /**
+   * @generated from field: string updated_at = 5;
    */
   updatedAt = "";
 
@@ -9848,9 +9865,10 @@ export class GetAllOverridesResponse_Override extends Message<GetAllOverridesRes
   static readonly typeName = "wg.cosmo.platform.v1.GetAllOverridesResponse.Override";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "changesOverrideCount", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "hasIgnoreAllOverride", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "updated_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "changesOverrideCount", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
+    { no: 4, name: "hasIgnoreAllOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "updated_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAllOverridesResponse_Override {

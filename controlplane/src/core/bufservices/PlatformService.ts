@@ -1724,6 +1724,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const affectedChanges = await operationsRepo.createOperationOverrides({
           namespaceId: graph.namespaceId,
           operationHash: req.operationHash,
+          operationName: req.operationName,
           changes: req.changes,
           actorId: authContext.userId,
         });
@@ -1922,6 +1923,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const affectedChanges = await operationsRepo.createIgnoreAllOverride({
           namespaceId: graph.namespaceId,
           operationHash: req.operationHash,
+          operationName: req.operationName,
           actorId: authContext.userId,
         });
 
@@ -2014,64 +2016,52 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    // getAllOverrides: (req, ctx) => {
-    //   const logger = opts.logger.child({
-    //     service: ctx.service.typeName,
-    //     method: ctx.method.name,
-    //   });
+    getAllOverrides: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
 
-    //   return handleError<PlainMessage<GetAllOverridesResponse>>(logger, async () => {
-    //     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-    //     const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+      return handleError<PlainMessage<GetAllOverridesResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-    //     if (!authContext.hasWriteAccess) {
-    //       return {
-    //         response: {
-    //           code: EnumStatusCode.ERR,
-    //           details: `The user does not have permissions to perform this operation`,
-    //         },
-    //         changes: [],
-    //         ignoreAll: false,
-    //       };
-    //     }
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user does not have permissions to perform this operation`,
+            },
+            overrides: [],
+          };
+        }
 
-    //     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+        const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
-    //     if (!graph) {
-    //       return {
-    //         response: {
-    //           code: EnumStatusCode.ERR_NOT_FOUND,
-    //           details: 'Requested graph does not exist',
-    //         },
-    //         changes: [],
-    //         ignoreAll: false,
-    //       };
-    //     }
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            overrides: [],
+          };
+        }
 
-    //     const operationsRepo = new OperationsRepository(opts.db, graph.id);
+        const operationsRepo = new OperationsRepository(opts.db, graph.id);
 
-    //     const overrides = await operationsRepo.getOperationOverrides({
-    //       operationHashes: [req.operationHash],
-    //       namespaceId: graph.namespaceId,
-    //     });
+        const overrides = await operationsRepo.getConsolidatedOverridesView({
+          namespaceId: graph.namespaceId,
+        });
 
-    //     const ignoreAll = await operationsRepo.hasIgnoreAllOverride({
-    //       operationHash: req.operationHash,
-    //       namespaceId: graph.namespaceId,
-    //     });
-
-    //     return {
-    //       response: {
-    //         code: EnumStatusCode.OK,
-    //       },
-    //       changes: overrides.map((o) => ({
-    //         changeType: o.changeType,
-    //         path: o.path ?? undefined,
-    //       })),
-    //       ignoreAll,
-    //     };
-    //   });
-    // },
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          overrides,
+        };
+      });
+    },
 
     deleteFederatedGraph: (req, ctx) => {
       const logger = opts.logger.child({

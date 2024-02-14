@@ -1200,7 +1200,8 @@ message CreateOperationOverridesRequest {
   string graph_name = 1;
   string namespace = 2;
   string operation_hash = 3;
-  repeated OverrideChange changes = 4;
+  string operation_name = 4;
+  repeated OverrideChange changes = 5;
 }
 
 message CreateOperationOverridesResponse {
@@ -1208,9 +1209,10 @@ message CreateOperationOverridesResponse {
 }
 
 message CreateOperationIgnoreAllOverrideRequest {
-  string graph_name = 2;
-  string namespace = 3;
-  string operation_hash = 4;
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+  string operation_name = 4;
 }
 
 message CreateOperationIgnoreAllOverrideResponse {
@@ -1258,9 +1260,10 @@ message GetAllOverridesRequest {
 message GetAllOverridesResponse {
   message Override {
     string hash = 1;
-    string changesOverrideCount = 2;
-    string hasIgnoreAllOverride = 3;
-    string updated_at = 4;
+    string name = 2;
+    uint32 changesOverrideCount = 3;
+    bool hasIgnoreAllOverride = 4;
+    string updated_at = 5;
   }
 
   Response response = 1;
