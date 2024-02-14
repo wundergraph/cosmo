@@ -1,5 +1,6 @@
 import { MultiGraph } from 'graphology';
 import {
+  BREAK,
   buildASTSchema,
   ConstDirectiveNode,
   ConstValueNode,
@@ -14,6 +15,7 @@ import {
   ObjectTypeExtensionNode,
   TypeDefinitionNode,
   TypeNode,
+  visit,
 } from 'graphql';
 import {
   ConstValueNodeWithValue,
@@ -83,7 +85,7 @@ import {
   getMostRestrictiveMergedTypeNode,
   getNamedTypeForChild,
   isTypeRequired,
-} from '../type-merging/type-merging';
+} from '../schema-building/type-merging';
 import {
   ArgumentContainer,
   ArgumentMap,
@@ -166,12 +168,8 @@ import {
 } from '../router-configuration/router-configuration';
 import { BASE_SCALARS, SCOPE_SCALAR_DEFINITION } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
-import {
-  getNormalizedFieldSet,
-  isNodeQuery,
-  ObjectLikeContainer as NormalizationObjectLikeContainer,
-} from '../normalization/utils';
-import { BREAK, visit } from 'graphql/index';
+import { getNormalizedFieldSet, isNodeQuery } from '../normalization/utils';
+import { ParentWithFieldsData as NormalizationObjectLikeData } from '../schema-building/type-definition-data';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -1407,8 +1405,8 @@ export class FederationFactory {
       this.currentSubgraphName,
       'internalSubgraphBySubgraphName',
     );
-    const parentContainerByTypeName = internalSubgraph.parentContainerByTypeName;
-    const extensionContainerByTypeName = internalSubgraph.extensionContainerByTypeName;
+    const parentContainerByTypeName = internalSubgraph.parentDataByTypeName;
+    const extensionContainerByTypeName = internalSubgraph.parentExtensionDataByTypeName;
     const implicitEntityContainer =
       parentContainerByTypeName.get(entityContainer.typeName) ||
       extensionContainerByTypeName.get(entityContainer.typeName);
@@ -1438,7 +1436,7 @@ export class FederationFactory {
         // This would be caught as an error elsewhere
         continue;
       }
-      const parentContainers: NormalizationObjectLikeContainer[] = [implicitEntityContainer];
+      const parentContainers: NormalizationObjectLikeData[] = [implicitEntityContainer];
       const definedFields: Set<string>[] = [];
       let currentDepth = -1;
       let shouldDefineSelectionSet = true;
@@ -1455,7 +1453,7 @@ export class FederationFactory {
         Field: {
           enter(node) {
             const parentContainer = parentContainers[currentDepth];
-            const parentTypeName = parentContainer.name.value;
+            const parentTypeName = parentContainer.typeName;
             // If an object-like was just visited, a selection set should have been entered
             if (shouldDefineSelectionSet) {
               shouldAddKeyFieldSet = false;
@@ -1463,9 +1461,9 @@ export class FederationFactory {
             }
             const fieldName = node.name.value;
             const fieldPath = `${parentTypeName}.${fieldName}`;
-            const fieldContainer = parentContainer.fields.get(fieldName);
+            const fieldContainer = parentContainer.fieldDataByFieldName.get(fieldName);
             // undefined if the field does not exist on the parent
-            if (!fieldContainer || fieldContainer.arguments.size || definedFields[currentDepth].has(fieldName)) {
+            if (!fieldContainer || fieldContainer.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }

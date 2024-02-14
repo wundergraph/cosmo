@@ -73,6 +73,13 @@ schema {
   query: Query
 }`;
 
+export const versionOnePersistedDirectiveDefinitions = `
+    directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+`;
+
+export const versionOneSchemaQueryAndPersistedDirectiveDefinitions =
+  schemaQueryDefinition + versionOnePersistedDirectiveDefinitions;
+
 export const versionTwoPersistedDirectiveDefinitions = `
     directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
     directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION

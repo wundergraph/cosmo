@@ -39,6 +39,7 @@ export const LINK = 'link';
 export const KEY = 'key';
 export const MUTATION = 'Mutation';
 export const MUTATION_UPPER = 'MUTATION';
+export const N_A = 'N/A';
 export const NAME = 'name';
 export const OPERATION_TO_DEFAULT = 'operationTypeNodeToDefaultType';
 export const OBJECT_UPPER = 'OBJECT';
@@ -74,3 +75,4 @@ export const URL_LOWER = 'url';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
 
 export const ROOT_TYPES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
+export const IGNORED_PARENT_DIRECTIVES = new Set<string>([AUTHENTICATED, EXTENDS, REQUIRES_SCOPES]);

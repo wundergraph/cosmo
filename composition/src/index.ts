@@ -6,5 +6,7 @@ export * from './federation/utils';
 export * from './normalization/normalization-factory';
 export * from './router-configuration/router-configuration';
 export * from './subgraph/subgraph';
-export * from './type-merging/type-merging';
+export * from './schema-building/ast';
+export * from './schema-building/type-definition-data';
+export * from './schema-building/type-merging';
 export * from './utils/utils';
