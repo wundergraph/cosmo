@@ -67,13 +67,20 @@ export function normalizeLabels(labels: Label[]): Label[] {
 }
 
 /**
- * Both key and value must be 63 characters or less (cannot be empty).
+ * Both key and value must be 63 characters or fewer (cannot be empty).
  * Must begin and end with an alphanumeric character ([a-z0-9A-Z]).
  * Could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
  */
 export function isValidLabels(labels: Label[]): boolean {
   for (const label of labels) {
     const { key, value } = label;
+
+    // key and value cannot be empty
+    if (!key || !value) {
+      return false;
+    }
+
+    // key and value must follow a specific pattern
     if (!labelRegex.test(key) || !labelRegex.test(value)) {
       return false;
     }
@@ -82,7 +89,7 @@ export function isValidLabels(labels: Label[]): boolean {
   return true;
 }
 
-export function isValidLabelMatchers(labelMatchers: string[]): boolean {
+export function areValidLabelMatchers(labelMatchers: string[]): boolean {
   for (const lm of labelMatchers) {
     const labels = lm.split(',').map((l) => splitLabel(l));
     if (!isValidLabels(labels)) {
@@ -102,7 +109,8 @@ export function normalizeLabelMatchers(labelMatchers: string[]): string[] {
     normalizedMatchers.push(normalizedLabels.map((nl) => joinLabel(nl)).join(','));
   }
 
-  return normalizedMatchers;
+  // We previously deduplicate and sort the labels. Now we deduplicate the matchers.
+  return [...new Set(normalizedMatchers)];
 }
 
 export function base64URLEncode(str: Buffer) {

@@ -172,7 +172,7 @@ import {
   formatSubscriptionProtocol,
   getHighestPriorityRole,
   handleError,
-  isValidLabelMatchers,
+  areValidLabelMatchers,
   isValidLabels,
   isValidNamespaceName,
   isValidOrganizationName,
@@ -747,7 +747,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!isValidLabelMatchers(req.labelMatchers)) {
+        if (!areValidLabelMatchers(req.labelMatchers)) {
           return {
             response: {
               code: EnumStatusCode.ERR_INVALID_LABELS,
@@ -1970,7 +1970,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
-        if (!isValidLabelMatchers(req.labelMatchers)) {
+        if (!areValidLabelMatchers(req.labelMatchers)) {
           return {
             response: {
               code: EnumStatusCode.ERR_INVALID_LABELS,
@@ -2216,7 +2216,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!isValidLabelMatchers(req.labelMatchers)) {
+        if (!areValidLabelMatchers(req.labelMatchers)) {
           return {
             response: {
               code: EnumStatusCode.ERR_INVALID_LABELS,
