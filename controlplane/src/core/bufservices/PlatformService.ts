@@ -6342,8 +6342,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         for await (const routerDTO of routersDTOs) {
           let composition: GraphCompositionDTO | undefined;
 
-          // Might be empty when the router failed to fetch the composition or
-          // when starting with a local composed config that has no config version id
+          // Might be empty when starting with a local composed config that has no config version id
           if (routerDTO.configVersionId) {
             composition = await graphCompositionRepository.getGraphCompositionBySchemaVersion({
               organizationId: authContext.organizationId,
