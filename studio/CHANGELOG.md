@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.64.2](https://github.com/wundergraph/cosmo/compare/studio@0.64.1...studio@0.64.2) (2024-02-14)
+
+### Bug Fixes
+
+* link to composition from routers page ([#522](https://github.com/wundergraph/cosmo/issues/522)) ([c3c476e](https://github.com/wundergraph/cosmo/commit/c3c476eaf0977e6a55c100af9d259ec3d2e57259)) (@StarpTech)
+
 ## [0.64.1](https://github.com/wundergraph/cosmo/compare/studio@0.64.0...studio@0.64.1) (2024-02-13)
 
 ### Bug Fixes

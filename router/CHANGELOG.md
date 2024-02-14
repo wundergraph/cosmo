@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.66.2](https://github.com/wundergraph/cosmo/compare/router@0.66.1...router@0.66.2) (2024-02-14)
+
+### Bug Fixes
+
+* don't panic when config is nil ([#524](https://github.com/wundergraph/cosmo/issues/524)) ([bf9ee9e](https://github.com/wundergraph/cosmo/commit/bf9ee9ec3728212186511e8d9826c2276a54f55a)) (@StarpTech)
+
 ## [0.66.1](https://github.com/wundergraph/cosmo/compare/router@0.66.0...router@0.66.1) (2024-02-13)
 
 ### Bug Fixes
