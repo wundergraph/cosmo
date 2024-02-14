@@ -120,6 +120,7 @@ import {
   DateRange,
   FederatedGraphDTO,
   GraphApiKeyJwtPayload,
+  GraphCompositionDTO,
   PublishedOperationData,
   SubgraphDTO,
   UpdatedPersistedOperation,
@@ -6339,10 +6340,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const graphCompositionRepository = new GraphCompositionRepository(opts.db);
 
         for await (const routerDTO of routersDTOs) {
-          const composition = await graphCompositionRepository.getGraphCompositionBySchemaVersion({
-            organizationId: authContext.organizationId,
-            schemaVersionId: routerDTO.configVersionId,
-          });
+          let composition: GraphCompositionDTO | undefined;
+
+          // Might be empty when the router failed to fetch the composition or
+          // when starting with a local composed config that has no config version id
+          if (routerDTO.configVersionId) {
+            composition = await graphCompositionRepository.getGraphCompositionBySchemaVersion({
+              organizationId: authContext.organizationId,
+              schemaVersionId: routerDTO.configVersionId,
+            });
+          }
+
           const runtimeMetrics = await routerRepo.getRouterRuntime({
             organizationId: authContext.organizationId,
             federatedGraphId: federatedGraph.id,
