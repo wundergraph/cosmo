@@ -6,7 +6,6 @@ import { FieldConfiguration, FederationResult } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
-import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
@@ -56,11 +55,17 @@ export interface ComposedFederatedGraph {
   fieldConfigurations: FieldConfiguration[];
 }
 
+export type MockCompositionInput = {
+  federatedGraph: FederatedGraphDTO;
+  userId: string;
+  organizationId: string;
+  blobStorage: BlobStorage;
+};
+
 export class Composer {
   constructor(
     private federatedGraphRepo: FederatedGraphRepository,
     private subgraphRepo: SubgraphRepository,
-    private compositionRepo: GraphCompositionRepository,
   ) {}
 
   /**
@@ -120,7 +125,7 @@ export class Composer {
       routerConfig: routerConfigJson,
       composedBy,
       schemaVersionId: federatedSchemaVersionId,
-      // passing the path only when there exists a previous valid version or when the compostion passes.
+      // passing the path only when there exists a previous valid version or when the composition passes.
       routerConfigPath: prevValidFederatedSDL || (!hasCompositionErrors && composedGraph.composedSchema) ? path : null,
     });
 
@@ -276,6 +281,44 @@ export class Composer {
       }
 
       return [filteredSubgraphs, subgraphsToBeComposed];
+    });
+  }
+
+  public async deployMockComposition(input: MockCompositionInput): Promise<Error[] | undefined> {
+    const dummySchema = `
+    type Query {
+      """
+      This field is not implemented and only exist to start the router without publishing subgraphs first
+      """
+      hello: Boolean
+    }`;
+
+    const dummySubgraph = {
+      name: '_wg_unimplemented',
+      url: 'http://localhost:1000',
+      definitions: parse(dummySchema),
+    };
+
+    const { errors, federationResult: result } = composeSubgraphs([dummySubgraph]);
+
+    if (errors && errors.length > 0) {
+      return errors;
+    }
+
+    await this.deployComposition({
+      composedGraph: {
+        id: input.federatedGraph.id,
+        name: input.federatedGraph.name,
+        namespace: input.federatedGraph.namespace,
+        targetID: input.federatedGraph.targetId,
+        composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
+        fieldConfigurations: result?.fieldConfigurations || [],
+        errors: [],
+        subgraphs: [],
+      },
+      composedBy: input.userId,
+      blobStorage: input.blobStorage,
+      organizationId: input.organizationId,
     });
   }
 }

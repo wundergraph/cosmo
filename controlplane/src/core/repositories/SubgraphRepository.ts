@@ -176,8 +176,7 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(tx);
-      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+      const composer = new Composer(fedGraphRepo, subgraphRepo);
       let subgraphChanged = false;
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
@@ -350,7 +349,6 @@ export class SubgraphRepository {
     await this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(tx);
 
       updatedFederatedGraphs.push(
         ...(await fedGraphRepo.bySubgraphLabels({ labels: data.subgraphLabels, namespaceId: data.currentNamespaceId })),
@@ -383,7 +381,7 @@ export class SubgraphRepository {
           .execute();
       }
 
-      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+      const composer = new Composer(fedGraphRepo, subgraphRepo);
       for (const federatedGraph of updatedFederatedGraphs) {
         const composition = await composer.composeFederatedGraph(federatedGraph);
 

@@ -143,7 +143,6 @@ export class FederatedGraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(tx);
 
       const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
       if (!federatedGraph) {
@@ -209,7 +208,7 @@ export class FederatedGraphRepository {
             .execute();
         }
 
-        const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
         const composedGraph = await composer.composeFederatedGraph(federatedGraph);
 
         await composer.deployComposition({
@@ -236,10 +235,8 @@ export class FederatedGraphRepository {
     blobStorage: BlobStorage,
   ) {
     return this.db.transaction(async (tx) => {
-      const namespaceRepo = new NamespaceRepository(tx, this.organizationId);
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(tx);
 
       await tx.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
 
@@ -267,7 +264,7 @@ export class FederatedGraphRepository {
           .execute();
       }
 
-      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+      const composer = new Composer(fedGraphRepo, subgraphRepo);
       const composedGraph = await composer.composeFederatedGraph(data.federatedGraph);
 
       await composer.deployComposition({

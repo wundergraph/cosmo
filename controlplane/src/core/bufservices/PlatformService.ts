@@ -828,9 +828,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           published: true,
         });
 
-        // If there are no subgraphs, we don't need to compose anything
-        // and avoid producing a version with a composition error
+        // If there are no subgraphs, we deploy a dummy composition that is mocked by the router
+        // This improves the onboarding experience for users who deploy a federated graph for the first time
+        // to validate the router configuration
         if (subgraphs.length === 0) {
+          const compChecker = new Composer(fedGraphRepo, subgraphRepo);
+
+          const errors = await compChecker.deployMockComposition({
+            federatedGraph,
+            organizationId: authContext.organizationId,
+            blobStorage: opts.blobStorage,
+            userId: authContext.userId,
+          });
+
+          if (errors) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
+              },
+              compositionErrors: errors.map((e) => ({
+                federatedGraphName: federatedGraph.name,
+                namespace: federatedGraph.namespace,
+                message: e.message,
+              })),
+            };
+          }
+
           return {
             response: {
               code: EnumStatusCode.OK,
@@ -844,8 +867,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const compositionRepo = new GraphCompositionRepository(tx);
-          const compChecker = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+          const compChecker = new Composer(fedGraphRepo, subgraphRepo);
           const composition = await compChecker.composeFederatedGraph(federatedGraph);
 
           compositionErrors.push(
@@ -1017,7 +1039,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-        const compositionRepo = new GraphCompositionRepository(opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -1095,7 +1116,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           schemaCheckID,
         });
 
-        const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
 
         const result = req.delete
           ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
@@ -1218,8 +1239,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const compositionRepo = new GraphCompositionRepository(opts.db);
-        const compChecker = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+        const compChecker = new Composer(fedGraphRepo, subgraphRepo);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -1812,9 +1832,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const compositionRepo = new GraphCompositionRepository(tx);
           const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
-          const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+          const composer = new Composer(fedGraphRepo, subgraphRepo);
           const auditLogRepo = new AuditLogRepository(tx);
 
           // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
@@ -3076,8 +3095,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const compositionRepo = new GraphCompositionRepository(tx);
-          const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+          const composer = new Composer(fedGraphRepo, subgraphRepo);
 
           const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
             fedGraph: {

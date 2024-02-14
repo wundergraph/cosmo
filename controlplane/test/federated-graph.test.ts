@@ -1,27 +1,8 @@
-import { createPromiseClient } from '@connectrpc/connect';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { createConnectTransport } from '@connectrpc/connect-node';
-import Fastify from 'fastify';
-import { pino } from 'pino';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import database from '../src/core/plugins/database.js';
-import routes from '../src/core/routes.js';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  createTestAuthenticator,
-  genID,
-  genUniqueLabel,
-  seedTest,
-} from '../src/core/test-util.js';
-import Keycloak from '../src/core/services/Keycloak.js';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
-import Mailer from '../src/core/services/Mailer.js';
-import { Authorization } from '../src/core/services/Authorization.js';
-import { InMemoryBlobStorage, SetupTest } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -166,8 +147,11 @@ describe('Federated Graph', (ctx) => {
       namespace: 'default',
     });
 
-    expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(graph.sdl).not.toBeDefined();
+    // A dummy schema is returned that is mocked by the router.
+    // The schema is overridden by the next publication of any subgraph
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.sdl).toBeDefined();
+    expect(graph.sdl).toContain('hello');
 
     await server.close();
   });
@@ -207,12 +191,16 @@ describe('Federated Graph', (ctx) => {
 
     expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
 
-    // fetching schema before publishing the subgraphs
     let graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
       namespace: 'default',
     });
-    expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+
+    // A dummy schema is returned that is mocked by the router.
+    // The schema is overridden by the next publication of any subgraph
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.sdl).toBeDefined();
+    expect(graph.sdl).toContain('hello');
 
     let publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
@@ -291,7 +279,10 @@ describe('Federated Graph', (ctx) => {
       name: fedGraphName,
       namespace: 'default',
     });
-    expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+
+    // A dummy schema is returned that is mocked by the router.
+    // The schema is overridden by the next publication of any subgraph
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
 
     let publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,

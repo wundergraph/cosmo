@@ -312,8 +312,10 @@ describe('Router Config', (ctx) => {
       },
     );
 
-    expect(resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(resp.config).toBeUndefined();
+    // A config is available because we publish a dummy schema that is mocked the router to improve the
+    // onboarding experience
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.config).toBeDefined();
 
     // This will fix the schema
 
