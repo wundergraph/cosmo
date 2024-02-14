@@ -5849,10 +5849,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespaceId: graph.namespaceId,
         });
 
-        operationsRepo.getOverridesSummary({
-          namespaceId: graph.namespaceId,
-        });
-
         return {
           response: {
             code: EnumStatusCode.OK,
