@@ -90,12 +90,16 @@ func (c *configPoller) Stop(_ context.Context) error {
 	return c.poller.Stop()
 }
 
-func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersions string) error) {
+func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, _ string) error) {
 
 	c.poller.Subscribe(ctx, func() {
 		cfg, err := c.getRouterConfig(ctx)
-		// both being nil indicates that no new router config available
-		if cfg == nil && err == nil {
+		if err != nil {
+			c.logger.Sugar().Errorf("Could not fetch for config update. Trying again in %s", c.pollInterval.String())
+			return
+		}
+
+		if cfg == nil {
 			c.logger.Sugar().Debugf("No new router config available. Trying again in %s", c.pollInterval.String())
 			return
 		}
