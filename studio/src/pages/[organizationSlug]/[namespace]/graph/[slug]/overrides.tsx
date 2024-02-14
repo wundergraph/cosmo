@@ -79,8 +79,8 @@ const OverridesPage: NextPageWithLayout = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Hash</TableHead>
-              <TableHead>Changes Count</TableHead>
-              <TableHead>Ignore All</TableHead>
+              <TableHead>Change Overrides</TableHead>
+              <TableHead>Ignore Override</TableHead>
               <TableHead>Updated At</TableHead>
               <TableHead className="w-24"></TableHead>
             </TableRow>
@@ -106,8 +106,13 @@ const OverridesPage: NextPageWithLayout = () => {
                     {o.name || "unnamed operation"}
                   </TableCell>
                   <TableCell>{o.hash}</TableCell>
-                  <TableCell>{o.changesOverrideCount}</TableCell>
-                  <TableCell>{`${o.hasIgnoreAllOverride}`}</TableCell>
+                  <TableCell>
+                    {o.changesOverrideCount}{" "}
+                    {o.changesOverrideCount === 1 ? "change" : "changes"}
+                  </TableCell>
+                  <TableCell>
+                    {o.hasIgnoreAllOverride ? "Active" : "No"}
+                  </TableCell>
                   <TableCell>
                     {formatDistanceToNow(new Date(o.updatedAt))}
                   </TableCell>
