@@ -22,11 +22,17 @@ jobs:
       redis:
         # Docker Hub image
         image: ghcr.io/wundergraph/cosmo/redis/redis:7
+        credentials:
+          username: USERNAME
+          password: ${{ github.token }}
         ports:
           - 6379:6379
       postgres:
         # Docker Hub image
         image: ghcr.io/wundergraph/cosmo/redis/redis:15
+        credentials:
+          username: USERNAME
+          password: ${{ github.token }}
         ports:
           - 5432:5432
         env:
