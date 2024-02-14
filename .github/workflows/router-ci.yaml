@@ -25,6 +25,9 @@ jobs:
       redis:
         # Docker Hub image
         image: redis:7
+        credentials:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
         ports:
           - 6379:6379
     steps:

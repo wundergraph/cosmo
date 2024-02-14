@@ -22,11 +22,17 @@ jobs:
       redis:
         # Docker Hub image
         image: redis:7
+        credentials:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
         ports:
           - 6379:6379
       postgres:
         # Docker Hub image
         image: postgres:15
+        credentials:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
         ports:
           - 5432:5432
         env:
