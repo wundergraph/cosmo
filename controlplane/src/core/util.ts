@@ -89,7 +89,7 @@ export function isValidLabels(labels: Label[]): boolean {
   return true;
 }
 
-export function areValidLabelMatchers(labelMatchers: string[]): boolean {
+export function isValidLabelMatchers(labelMatchers: string[]): boolean {
   for (const lm of labelMatchers) {
     const labels = lm.split(',').map((l) => splitLabel(l));
     if (!isValidLabels(labels)) {
