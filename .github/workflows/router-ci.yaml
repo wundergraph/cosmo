@@ -24,7 +24,7 @@ jobs:
     services:
       redis:
         # Docker Hub image
-        image: redis:7
+        image: ghcr.io/wundergraph/cosmo/redis/redis:7
         ports:
           - 6379:6379
     steps:
