@@ -4,6 +4,7 @@ import {
   getGraphLayout,
   GraphContext,
 } from "@/components/layout/graph-layout";
+import Link from "next/link";
 import { ArrowRightIcon, SizeIcon } from "@radix-ui/react-icons";
 import { motion, AnimatePresence, easeInOut } from "framer-motion";
 import prettyBytes from "pretty-bytes";
@@ -56,7 +57,6 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Spacer } from "@/components/ui/spacer";
 import { docsBaseURL } from "@/lib/constants";
 import { InfoTooltip } from "@/components/info-tooltip";
-import Link from "next/link";
 import {
   ColumnDef,
   flexRender,
@@ -85,17 +85,6 @@ const RouterSheet: React.FC<any> = (props) => {
   );
 
   const routerData = props.data[index];
-
-  useEffect(() => {
-    if (index === -1) {
-      delete router.query["serviceInstanceId"];
-      router.push({
-        query: {
-          ...router.query,
-        },
-      });
-    }
-  }, [index, router]);
 
   const nextServer = () => {
     if (index + 1 < props.data.length) {
@@ -660,10 +649,11 @@ const RoutersPage: NextPageWithLayout = () => {
                               <div className="whitespace-nowrap">
                                 <Button
                                   variant="link"
+                                  asChild
                                   className="px-0 hover:no-underline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push({
+                                >
+                                  <Link
+                                    href={{
                                       pathname:
                                         "/[organizationSlug]/[namespace]/graph/[slug]/compositions/[compositionId]/",
                                       query: {
@@ -671,14 +661,17 @@ const RoutersPage: NextPageWithLayout = () => {
                                         compositionId:
                                           cell.row.original.compositionId,
                                       },
-                                    });
-                                  }}
-                                >
-                                  {
-                                    cell.row.original.compositionId.split(
-                                      "-",
-                                    )[0]
-                                  }{" "}
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    {
+                                      cell.row.original.compositionId.split(
+                                        "-",
+                                      )[0]
+                                    }{" "}
+                                  </Link>
                                 </Button>
                                 <span className="whitespace-nowrap text-muted-foreground">
                                   {" "}
