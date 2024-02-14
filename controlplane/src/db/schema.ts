@@ -531,17 +531,14 @@ export const schemaCheckChangeActionRelations = relations(schemaCheckChangeActio
   operationUsage: many(schemaCheckChangeActionOperationUsage),
 }));
 
-export const operationOverrides = pgTable(
-  'operation_overrides',
+export const operationChangeOverrides = pgTable(
+  'operation_change_overrides',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     hash: text('hash').notNull(),
     namespaceId: text('namespace_id').notNull(),
-    schemaCheckId: uuid('schema_check_id')
-      .notNull()
-      .references(() => schemaChecks.id, {
-        onDelete: 'cascade',
-      }),
+    changeType: schemaChangeTypeEnum('change_type').notNull(),
+    path: text('path'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
@@ -549,7 +546,7 @@ export const operationOverrides = pgTable(
   },
   (t) => {
     return {
-      hashIndex: uniqueIndex('hash_check_idx').on(t.hash, t.schemaCheckId),
+      hashIndex: uniqueIndex('hash_change_idx').on(t.hash, t.namespaceId, t.changeType, t.path),
     };
   },
 );

@@ -119,6 +119,7 @@ message SchemaChange{
   string changeType = 2;
   optional string path = 3;
   bool isBreaking = 4;
+  optional bool hasOverride = 5;
 }
 
 message CompositionError{
@@ -1189,14 +1190,19 @@ message ForceCheckSuccessResponse {
   Response response = 1;
 }
 
-message CreateOperationOverrideRequest {
-  string check_id = 1;
-  string graph_name = 2;
-  string namespace = 3;
-  string operation_hash = 4;
+message OverrideChange {
+  string changeType = 1;
+  optional string path = 2;
 }
 
-message CreateOperationOverrideResponse {
+message CreateOperationOverridesRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+  repeated OverrideChange changes = 4;
+}
+
+message CreateOperationOverridesResponse {
   Response response = 1;
 }
 
@@ -1210,14 +1216,14 @@ message CreateOperationIgnoreAllOverrideResponse {
   Response response = 1;
 }
 
-message RemoveOperationOverrideRequest {
-  string check_id = 1;
-  string graph_name = 2;
-  string namespace = 3;
-  string operation_hash = 4;
+message RemoveOperationOverridesRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+  repeated OverrideChange changes = 4;
 }
 
-message RemoveOperationOverrideResponse {
+message RemoveOperationOverridesResponse {
   Response response = 1;
 }
 
@@ -1237,15 +1243,9 @@ message GetOperationOverridesRequest {
   string operation_hash = 3;
 }
 
-message OperationOverride {
-  string check_id  = 1;
-  string created_at = 2;
-  repeated SchemaChange changes = 4;  
-}
-
 message GetOperationOverridesResponse {
   Response response = 1;
-  repeated OperationOverride overrides = 2;
+  repeated OverrideChange changes = 2;
   bool ignore_all = 3;
 }
 
@@ -1772,10 +1772,10 @@ service PlatformService {
   rpc GetCheckOperations(GetCheckOperationsRequest) returns (GetCheckOperationsResponse) {}
   // ForceCheckSuccess forces a failed check to be marked as successful
   rpc ForceCheckSuccess(ForceCheckSuccessRequest) returns (ForceCheckSuccessResponse) {}
-  // CreateOperationOverride marks if the given set of changes from a check should be considered safe for an operation
-  rpc CreateOperationOverride(CreateOperationOverrideRequest) returns (CreateOperationOverrideResponse) {}
-  // RemoveOperationOverride removes changes for a check which were earlier marked as safe
-  rpc RemoveOperationOverride(RemoveOperationOverrideRequest) returns (RemoveOperationOverrideResponse) {}
+  // CreateOperationOverrides marks if the given set of changes as safe for an operation
+  rpc CreateOperationOverrides(CreateOperationOverridesRequest) returns (CreateOperationOverridesResponse) {}
+  // RemoveOperationOverride removes a change from the safelist for an operation
+  rpc RemoveOperationOverrides(RemoveOperationOverridesRequest) returns (RemoveOperationOverridesResponse) {}
   // CreateOperationIgnoreAllOverride adds an ignore all override for the operation
   rpc CreateOperationIgnoreAllOverride(CreateOperationIgnoreAllOverrideRequest) returns (CreateOperationIgnoreAllOverrideResponse) {}
   // RemoveOperationIgnoreAllOverride removes the ignore all override for the operartion

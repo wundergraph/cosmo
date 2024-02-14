@@ -33,7 +33,7 @@ export type AuditableType =
   | 'subscription'
   | 'namespace'
   | 'router_config'
-  | 'operation_override'
+  | 'operation_change_override'
   | 'operation_ignore_all_override';
 
 export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'user';
@@ -93,7 +93,7 @@ export type AuditLogFullAction =
   | 'organization_member.deleted'
   | 'member_role.updated'
   | 'router_config.fetched'
-  | 'operation_override.created'
-  | 'operation_override.deleted'
+  | 'operation_change_override.created'
+  | 'operation_change_override.deleted'
   | 'operation_ignore_all_override.created'
   | 'operation_ignore_all_override.deleted';

@@ -1,5 +1,5 @@
 {
-  "id": "1c1af65b-5bae-4759-aac7-5fa3f5e85857",
+  "id": "faee1c91-2b1f-4f6e-a2e5-f4de303277d8",
   "prevId": "5242d157-8c5b-4022-9142-f609e18651c5",
   "version": "5",
   "dialect": "pg",
@@ -1472,6 +1472,85 @@
         }
       }
     },
+    "operation_change_overrides": {
+      "name": "operation_change_overrides",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "namespace_id": {
+          "name": "namespace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "change_type": {
+          "name": "change_type",
+          "type": "schema_change_type",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "hash_change_idx": {
+          "name": "hash_change_idx",
+          "columns": [
+            "hash",
+            "namespace_id",
+            "change_type",
+            "path"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "operation_change_overrides_created_by_users_id_fk": {
+          "name": "operation_change_overrides_created_by_users_id_fk",
+          "tableFrom": "operation_change_overrides",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "operation_ignore_all_overrides": {
       "name": "operation_ignore_all_overrides",
       "schema": "",
@@ -1523,90 +1602,6 @@
         "operation_ignore_all_overrides_created_by_users_id_fk": {
           "name": "operation_ignore_all_overrides_created_by_users_id_fk",
           "tableFrom": "operation_ignore_all_overrides",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "operation_overrides": {
-      "name": "operation_overrides",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "hash": {
-          "name": "hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "namespace_id": {
-          "name": "namespace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "schema_check_id": {
-          "name": "schema_check_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "hash_check_idx": {
-          "name": "hash_check_idx",
-          "columns": [
-            "hash",
-            "schema_check_id"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "operation_overrides_schema_check_id_schema_checks_id_fk": {
-          "name": "operation_overrides_schema_check_id_schema_checks_id_fk",
-          "tableFrom": "operation_overrides",
-          "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "operation_overrides_created_by_users_id_fk": {
-          "name": "operation_overrides_created_by_users_id_fk",
-          "tableFrom": "operation_overrides",
           "tableTo": "users",
           "columnsFrom": [
             "created_by"

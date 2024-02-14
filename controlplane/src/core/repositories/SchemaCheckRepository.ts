@@ -118,7 +118,6 @@ export class SchemaCheckRepository {
   public async checkClientTrafficAgainstOverrides(data: {
     changes: { id: string; changeType: string | null; path: string | null }[];
     inspectorResultsByChangeId: Map<string, InspectorOperationResult[]>;
-    federatedGraphId: string;
     namespaceId: string;
   }) {
     let hasUnsafeClientTraffic = false;
@@ -143,8 +142,11 @@ export class SchemaCheckRepository {
 
     for (const [hash, changes] of changeActionsByOperationHash) {
       const incomingChanges = `array[${changes.map((c) => `('${c.changeType}'::schema_change_type, '${c.path}'::text)`)}]`;
-      const storedChanges = `array_agg(distinct (${schema.schemaCheckChangeAction.changeType.name}, ${schema.schemaCheckChangeAction.path.name}))`;
+      const storedChanges = `array_agg(distinct (${schema.operationChangeOverrides.changeType.name}, ${schema.operationChangeOverrides.path.name}))`;
 
+      // Incoming changes are new breaking changes detected in the current check run
+      // Stored changes are a a list of changes that have been marked as safe (override) by the user
+      // Here except tells us the incoming changes that are not safe and an intersect tells us the incoming changes that are safe
       const res = await this.db
         .select({
           unsafeChanges: sql
@@ -158,24 +160,14 @@ export class SchemaCheckRepository {
               mapFromDriverValue: this.mapChangesFromDriverValue,
             }),
         })
-        .from(schema.schemaCheckChangeAction)
-        .leftJoin(
-          schema.operationOverrides,
-          eq(schema.schemaCheckChangeAction.schemaCheckId, schema.operationOverrides.schemaCheckId),
-        )
-        .leftJoin(
-          schema.schemaCheckFederatedGraphs,
-          eq(schema.schemaCheckChangeAction.schemaCheckId, schema.schemaCheckFederatedGraphs.checkId),
-        )
+        .from(schema.operationChangeOverrides)
         .where(
           and(
-            eq(schema.operationOverrides.hash, hash),
-            eq(schema.schemaCheckFederatedGraphs.federatedGraphId, data.federatedGraphId),
-            eq(schema.schemaCheckChangeAction.isBreaking, true),
+            eq(schema.operationChangeOverrides.hash, hash),
+            eq(schema.operationChangeOverrides.namespaceId, data.namespaceId),
           ),
         )
-        .groupBy(schema.operationOverrides.hash)
-        .having(sql.raw(`${storedChanges} @> ${incomingChanges}`));
+        .groupBy(schema.operationChangeOverrides.hash);
 
       const ignoreAll = await this.db.query.operationIgnoreAllOverrides.findFirst({
         where: and(
