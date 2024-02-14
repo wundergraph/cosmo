@@ -365,6 +365,7 @@ message GetCheckOperationsResponse {
     string last_seen_at = 5;
     repeated SchemaChange impacting_changes = 6;
     bool is_safe = 7;
+    bool hasIgnoreAllOverride = 8;
   }
 
   Response response = 1;
@@ -1249,6 +1250,23 @@ message GetOperationOverridesResponse {
   bool ignore_all = 3;
 }
 
+message GetAllOverridesRequest {
+  string graph_name = 1;
+  string namespace = 2;
+}
+
+message GetAllOverridesResponse {
+  message Override {
+    string hash = 1;
+    string changesOverrideCount = 2;
+    string hasIgnoreAllOverride = 3;
+    string updated_at = 4;
+  }
+
+  Response response = 1;
+  repeated Override overrides = 2;
+}
+
 message IsGitHubAppInstalledRequest {
   GitInfo git_info = 1;
 }
@@ -1782,6 +1800,8 @@ service PlatformService {
   rpc RemoveOperationIgnoreAllOverride(RemoveOperationIgnoreAllOverrideRequest) returns (RemoveOperationIgnoreAllOverrideResponse) {}
   // GetOperationOverrides retireves all overrides for an operation hash
   rpc GetOperationOverrides(GetOperationOverridesRequest) returns (GetOperationOverridesResponse) {}
+  // GetAllOverrides returns all overrides for operations within a namespace
+  rpc GetAllOverrides(GetAllOverridesRequest) returns (GetAllOverridesResponse) {}
 
   // GetOperationContent returns the operation body by searching using the hash
   rpc GetOperationContent(GetOperationContentRequest) returns (GetOperationContentResponse) {}

@@ -235,10 +235,10 @@ export class OperationsRepository {
     return !!res;
   }
 
-  public async getOperationOverrides(data: { operationHashes: string[]; namespaceId: string }) {
+  public async getChangeOverridesByOperationHash(data: { operationHash: string; namespaceId: string }) {
     const res = await this.db.query.operationChangeOverrides.findMany({
       where: and(
-        inArray(schema.operationChangeOverrides.hash, data.operationHashes),
+        eq(schema.operationChangeOverrides.hash, data.operationHash),
         eq(schema.operationChangeOverrides.namespaceId, data.namespaceId),
       ),
       orderBy: desc(schema.operationChangeOverrides.createdAt),
@@ -247,6 +247,86 @@ export class OperationsRepository {
     return res.map((r) => ({
       ...r,
       createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  public async getChangeOverrides(data: { namespaceId: string }) {
+    const res = await this.db.query.operationChangeOverrides.findMany({
+      where: eq(schema.operationChangeOverrides.namespaceId, data.namespaceId),
+      orderBy: desc(schema.operationChangeOverrides.createdAt),
+    });
+
+    return res.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  public async getIgnoreAllOverrides(data: { namespaceId: string }) {
+    const res = await this.db.query.operationIgnoreAllOverrides.findMany({
+      where: eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
+    });
+
+    return res.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  public async getConsolidatedOverridesView(data: { namespaceId: string }) {
+    const change = this.db
+      .select({
+        hash: schema.operationChangeOverrides.hash,
+        namespaceId: schema.operationChangeOverrides.namespaceId,
+        created_at: sql`max(${schema.operationChangeOverrides.createdAt})`.as('change_created_at'),
+      })
+      .from(schema.operationChangeOverrides)
+      .where(eq(schema.operationChangeOverrides.namespaceId, data.namespaceId))
+      .groupBy(({ hash, namespaceId }) => [hash, namespaceId])
+      .as('change');
+
+    const ignore = this.db
+      .select({
+        hash: schema.operationIgnoreAllOverrides.hash,
+        namespaceId: schema.operationIgnoreAllOverrides.namespaceId,
+        created_at: sql`max(${schema.operationIgnoreAllOverrides.createdAt})`.as('ignore_created_at'),
+      })
+      .from(schema.operationIgnoreAllOverrides)
+      .where(eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId))
+      .groupBy(({ hash, namespaceId }) => [hash, namespaceId])
+      .as('ignore');
+
+    const changeCounts = this.db
+      .select({
+        hash: schema.operationChangeOverrides.hash,
+        namespaceId: schema.operationChangeOverrides.namespaceId,
+        change_count: sql`count(*)`.as('change_count'),
+      })
+      .from(schema.operationChangeOverrides)
+      .where(eq(schema.operationChangeOverrides.namespaceId, data.namespaceId))
+      .groupBy(({ hash, namespaceId }) => [hash, namespaceId])
+      .as('change_counts');
+
+    // One table stores ignore all override for an operation
+    // The other table stores the specific changes that are overridden for an operation
+    // We need to retrieve a consolidated view of overrides from both tables.
+    // There is no guarantee that an entry for hash exists in both.
+
+    const res = await this.db
+      .select({
+        hash: sql<string>`coalesce(${change.hash}, ${ignore.hash})`,
+        lastUpdated: sql<Date>`greatest(coalesce(${change.created_at}, '2000-01-01'::timestamp), coalesce(${ignore.created_at}, '2000-01-01'::timestamp))`,
+        hasIgnoreAllOverride: sql<boolean>`case when ${ignore.hash} is not null then true else false end`,
+        changesOverrideCount: sql<number>`coalesce(${changeCounts.change_count}, 0)`,
+      })
+      .from(change)
+      .innerJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
+      .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
+      .orderBy();
+
+    return res.map((r) => ({
+      ...r,
+      lastUpdated: r.lastUpdated.toISOString(),
     }));
   }
 }

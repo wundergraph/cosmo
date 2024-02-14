@@ -42,6 +42,7 @@ import {
   GenerateRouterTokenResponse,
   GetAPIKeysResponse,
   GetAllDiscussionsResponse,
+  GetAllOverridesResponse,
   GetAnalyticsViewResponse,
   GetAuditLogsResponse,
   GetBillingPlansResponse,
@@ -1990,8 +1991,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const operationsRepo = new OperationsRepository(opts.db, graph.id);
 
-        const overrides = await operationsRepo.getOperationOverrides({
-          operationHashes: [req.operationHash],
+        const overrides = await operationsRepo.getChangeOverridesByOperationHash({
+          operationHash: req.operationHash,
           namespaceId: graph.namespaceId,
         });
 
@@ -2012,6 +2013,65 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         };
       });
     },
+
+    // getAllOverrides: (req, ctx) => {
+    //   const logger = opts.logger.child({
+    //     service: ctx.service.typeName,
+    //     method: ctx.method.name,
+    //   });
+
+    //   return handleError<PlainMessage<GetAllOverridesResponse>>(logger, async () => {
+    //     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+    //     const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+    //     if (!authContext.hasWriteAccess) {
+    //       return {
+    //         response: {
+    //           code: EnumStatusCode.ERR,
+    //           details: `The user does not have permissions to perform this operation`,
+    //         },
+    //         changes: [],
+    //         ignoreAll: false,
+    //       };
+    //     }
+
+    //     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
+
+    //     if (!graph) {
+    //       return {
+    //         response: {
+    //           code: EnumStatusCode.ERR_NOT_FOUND,
+    //           details: 'Requested graph does not exist',
+    //         },
+    //         changes: [],
+    //         ignoreAll: false,
+    //       };
+    //     }
+
+    //     const operationsRepo = new OperationsRepository(opts.db, graph.id);
+
+    //     const overrides = await operationsRepo.getOperationOverrides({
+    //       operationHashes: [req.operationHash],
+    //       namespaceId: graph.namespaceId,
+    //     });
+
+    //     const ignoreAll = await operationsRepo.hasIgnoreAllOverride({
+    //       operationHash: req.operationHash,
+    //       namespaceId: graph.namespaceId,
+    //     });
+
+    //     return {
+    //       response: {
+    //         code: EnumStatusCode.OK,
+    //       },
+    //       changes: overrides.map((o) => ({
+    //         changeType: o.changeType,
+    //         path: o.path ?? undefined,
+    //       })),
+    //       ignoreAll,
+    //     };
+    //   });
+    // },
 
     deleteFederatedGraph: (req, ctx) => {
       const logger = opts.logger.child({
@@ -5781,8 +5841,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const operationsRepo = new OperationsRepository(opts.db, graph.id);
 
-        const overrides = await operationsRepo.getOperationOverrides({
-          operationHashes: affectedOperations.map((o) => o.hash),
+        const overrides = await operationsRepo.getChangeOverrides({
+          namespaceId: graph.namespaceId,
+        });
+
+        const ignoreAllOverrides = await operationsRepo.getIgnoreAllOverrides({
+          namespaceId: graph.namespaceId,
+        });
+
+        operationsRepo.getOverridesSummary({
           namespaceId: graph.namespaceId,
         });
 
@@ -5802,6 +5869,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   (o) => o.hash === operation.hash && o.changeType === c.changeType && o.path === c.path,
                 ),
               })),
+            hasIgnoreAllOverride: ignoreAllOverrides.some((io) => io.hash === operation.hash),
             isSafe: operation.isSafe,
           })),
           trafficCheckDays,

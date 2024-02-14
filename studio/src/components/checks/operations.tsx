@@ -47,6 +47,8 @@ import {
   getCheckOperations,
   getOperationContent,
   removeOperationOverrides,
+  removeOperationIgnoreAllOverride,
+  createOperationIgnoreAllOverride,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import copy from "copy-to-clipboard";
 import Fuse from "fuse.js";
@@ -57,6 +59,7 @@ import { useContext, useEffect, useState } from "react";
 import { PiBracketsCurly } from "react-icons/pi";
 import { useApplyParams } from "../analytics/use-apply-params";
 import { ConfigureOverride } from "./override";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 const OperationContent = ({
   hash,
@@ -119,11 +122,16 @@ const OperationContentDialog = ({ hash }: { hash: string }) => {
 
   return (
     <Dialog open={open} onOpenChange={(val) => setOpen(val)}>
-      <DialogTrigger asChild>
-        <Button size="icon-sm" variant="secondary">
-          <PiBracketsCurly />
-        </Button>
-      </DialogTrigger>
+      <Tooltip delayDuration={100}>
+        <DialogTrigger asChild>
+          <TooltipTrigger asChild>
+            <Button size="icon-sm" variant="secondary">
+              <PiBracketsCurly />
+            </Button>
+          </TooltipTrigger>
+        </DialogTrigger>
+        <TooltipContent>View operation content</TooltipContent>
+      </Tooltip>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Operation Content</DialogTitle>
@@ -173,6 +181,50 @@ export const CheckOperations = () => {
       },
     },
   );
+
+  const { mutate: removeIgnoreAll, isPending: removing } = useMutation({
+    ...removeOperationIgnoreAllOverride.useMutation(),
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        refetch();
+      } else {
+        toast({
+          description:
+            d.response?.details ??
+            "Could not remove ignore all override. Please try again.",
+          duration: 3000,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        description: "Could not remove ignore all override. Please try again.",
+        duration: 3000,
+      });
+    },
+  });
+
+  const { mutate: createIgnoreAll, isPending: ignoring } = useMutation({
+    ...createOperationIgnoreAllOverride.useMutation(),
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        refetch();
+      } else {
+        toast({
+          description:
+            d.response?.details ??
+            "Could not create ignore all override. Please try again.",
+          duration: 3000,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        description: "Could not create ignore all override. Please try again.",
+        duration: 3000,
+      });
+    },
+  });
 
   const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(
     {
@@ -277,6 +329,7 @@ export const CheckOperations = () => {
             firstSeenAt,
             lastSeenAt,
             impactingChanges,
+            hasIgnoreAllOverride,
             isSafe,
           }) => {
             const doAllChangesHaveOverrides = !impactingChanges.some(
@@ -321,70 +374,102 @@ export const CheckOperations = () => {
                         and last seen at {formatDateTime(new Date(lastSeenAt))}
                       </p>
                       <div className="flex items-center gap-x-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              Configure Override
-                              <ChevronDownIcon className="ml-2" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem
-                              disabled={removingOverrides || creatingOverrides}
-                              onClick={() => {
-                                doAllChangesHaveOverrides
-                                  ? removeOverrides({
-                                      graphName: graphContext?.graph?.name,
-                                      namespace: graphContext?.graph?.namespace,
-                                      operationHash: hash,
-                                      changes: impactingChanges,
-                                    })
-                                  : createOverrides({
-                                      graphName: graphContext?.graph?.name,
-                                      namespace: graphContext?.graph?.namespace,
-                                      operationHash: hash,
-                                      changes: impactingChanges,
-                                    });
-                              }}
-                              className="flex-col items-start gap-1"
-                            >
-                              {doAllChangesHaveOverrides
-                                ? "Mark all changes as unsafe"
-                                : "Mark all changes as safe"}
-                              <p className="max-w-xs text-xs text-muted-foreground">
-                                Future checks will ignore the listed changes for
-                                this operation
-                              </p>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => {
-                                applyParams({
-                                  override: hash,
-                                });
-                              }}
-                              className="flex-col items-start gap-1"
-                            >
-                              Fine tune
-                              <p className="max-w-xs text-xs text-muted-foreground">
-                                Manage existing overrides for this operation
-                              </p>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                         <OperationContentDialog hash={hash} />
-                        <Button
-                          size="icon-sm"
-                          variant="secondary"
-                          onClick={() => copyLink(hash)}
-                        >
-                          <Share1Icon />
-                        </Button>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon-sm"
+                              variant="secondary"
+                              onClick={() => copyLink(hash)}
+                            >
+                              <Share1Icon />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy link</TooltipContent>
+                        </Tooltip>
+                        {hasIgnoreAllOverride ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            isLoading={removing}
+                            onClick={() =>
+                              removeIgnoreAll({
+                                graphName: graphContext?.graph?.name,
+                                namespace: graphContext?.graph?.namespace,
+                                operationHash: hash,
+                              })
+                            }
+                          >
+                            Remove Ignore All Override
+                          </Button>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="secondary">
+                                Configure Override
+                                <ChevronDownIcon className="ml-2" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem
+                                disabled={
+                                  removingOverrides || creatingOverrides
+                                }
+                                onClick={() => {
+                                  doAllChangesHaveOverrides
+                                    ? removeOverrides({
+                                        graphName: graphContext?.graph?.name,
+                                        namespace:
+                                          graphContext?.graph?.namespace,
+                                        operationHash: hash,
+                                        changes: impactingChanges,
+                                      })
+                                    : createOverrides({
+                                        graphName: graphContext?.graph?.name,
+                                        namespace:
+                                          graphContext?.graph?.namespace,
+                                        operationHash: hash,
+                                        changes: impactingChanges,
+                                      });
+                                }}
+                                className="flex-col items-start gap-1"
+                              >
+                                {doAllChangesHaveOverrides
+                                  ? "Toggle all changes as unsafe"
+                                  : "Toggle all changes as safe"}
+                                <p className="max-w-xs text-xs text-muted-foreground">
+                                  {doAllChangesHaveOverrides
+                                    ? "New checks will break if the current changes appear again for this operation"
+                                    : "New checks will ignore the current breaking changes for this operation"}
+                                </p>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                disabled={ignoring}
+                                onClick={() => {
+                                  createIgnoreAll({
+                                    operationHash: hash,
+                                    graphName: graphContext?.graph?.name,
+                                    namespace: graphContext?.graph?.namespace,
+                                  });
+                                }}
+                                className="flex-col items-start gap-1"
+                              >
+                                Ignore All
+                                <p className="max-w-xs text-xs text-muted-foreground">
+                                  New checks will ignore all current and future
+                                  breaking changes for this operation
+                                </p>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </div>
                     <ChangesTable
                       operationHash={hash}
                       changes={impactingChanges}
+                      hasIgnoreAll={hasIgnoreAllOverride}
                       caption={
                         <>
                           {impactingChanges.length} Impacting Change
@@ -402,7 +487,6 @@ export const CheckOperations = () => {
         )}
       </Accordion>
       <FieldUsageSheet />
-      <ConfigureOverride />
     </div>
   );
 };

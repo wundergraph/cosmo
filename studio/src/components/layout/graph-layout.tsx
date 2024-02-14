@@ -21,8 +21,14 @@ import {
   GetFederatedGraphByNameResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import { Fragment, ReactNode, createContext, useMemo } from "react";
-import { PiChat, PiCubeFocus, PiDevices, PiGitBranch } from "react-icons/pi";
+import { Fragment, createContext, useMemo } from "react";
+import {
+  PiChat,
+  PiCubeFocus,
+  PiDevices,
+  PiGitBranch,
+  PiToggleRight,
+} from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -40,19 +46,6 @@ import {
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
-
-const icons: { [key: string]: ReactNode } = {
-  Overview: <HomeIcon />,
-  Subgraphs: <Component2Icon />,
-  Explorer: <PlayIcon />,
-  Schema: <FileTextIcon />,
-  Compositions: <PiCubeFocus />,
-  Changelog: <PiGitBranch />,
-  Checks: <CheckCircledIcon />,
-  Analytics: <ChartBarIcon className="h-4 w-4" />,
-  Clients: <PiDevices className="h-4 w-4" />,
-  Discussions: <PiChat className="h-4 w-4" />,
-};
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -140,6 +133,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/checks",
         matchExact: false,
         icon: <CheckCircledIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Overrides",
+        href: basePath + "/overrides",
+        matchExact: true,
+        icon: <PiToggleRight className="h-4 w-4" />,
       },
       {
         title: "Discussions",

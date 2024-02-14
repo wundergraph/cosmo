@@ -39,12 +39,14 @@ export const ChangesTable = ({
   trafficCheckDays,
   createdAt,
   operationHash,
+  hasIgnoreAll,
 }: {
   changes: SchemaChange[];
   caption?: React.ReactNode;
   trafficCheckDays?: number;
   createdAt?: string;
   operationHash?: string;
+  hasIgnoreAll?: boolean;
 }) => {
   const router = useRouter();
   const { toast } = useToast();
@@ -96,9 +98,7 @@ export const ChangesTable = ({
           <TableRow>
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
-            {operationHash && (
-              <TableHead className="lg:w-28 2xl:w-40">Override</TableHead>
-            )}
+            {operationHash && <TableHead>Override</TableHead>}
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -107,6 +107,7 @@ export const ChangesTable = ({
             <Row
               key={i}
               {...c}
+              hasIgnoreAll={hasIgnoreAll}
               operationHash={operationHash}
               openUsage={openUsage}
             />
@@ -124,6 +125,7 @@ const Row = ({
   isBreaking,
   path,
   hasOverride,
+  hasIgnoreAll,
   operationHash,
   openUsage,
 }: {
@@ -132,6 +134,7 @@ const Row = ({
   isBreaking: boolean;
   path?: string;
   hasOverride?: boolean;
+  hasIgnoreAll?: boolean;
   operationHash?: string;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
@@ -216,35 +219,49 @@ const Row = ({
       <TableCell>{message}</TableCell>
       {operationHash && (
         <TableCell>
-          <Switch
-            checked={hasOverride}
-            disabled={creatingOverrides || removingOverrides}
-            onCheckedChange={() =>
-              hasOverride
-                ? removeOverrides({
-                    graphName: graphContext?.graph?.name,
-                    namespace: graphContext?.graph?.namespace,
-                    operationHash,
-                    changes: [
-                      {
-                        changeType,
-                        path,
-                      },
-                    ],
-                  })
-                : createOverrides({
-                    graphName: graphContext?.graph?.name,
-                    namespace: graphContext?.graph?.namespace,
-                    operationHash,
-                    changes: [
-                      {
-                        changeType,
-                        path,
-                      },
-                    ],
-                  })
-            }
-          />
+          {!hasIgnoreAll ? (
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <div>
+                  <Switch
+                    checked={hasOverride}
+                    disabled={creatingOverrides || removingOverrides}
+                    onCheckedChange={() =>
+                      hasOverride
+                        ? removeOverrides({
+                            graphName: graphContext?.graph?.name,
+                            namespace: graphContext?.graph?.namespace,
+                            operationHash,
+                            changes: [
+                              {
+                                changeType,
+                                path,
+                              },
+                            ],
+                          })
+                        : createOverrides({
+                            graphName: graphContext?.graph?.name,
+                            namespace: graphContext?.graph?.namespace,
+                            operationHash,
+                            changes: [
+                              {
+                                changeType,
+                                path,
+                              },
+                            ],
+                          })
+                    }
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                Mark this change to {path} as {hasOverride ? "unsafe" : "safe"}{" "}
+                for future checks
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <span>Ignore All</span>
+          )}
         </TableCell>
       )}
       <TableCell>
