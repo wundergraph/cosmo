@@ -1,7 +1,7 @@
 package trace
 
 import (
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"net/http"
 	"net/http/httptest"

@@ -535,7 +535,8 @@ func TestWebSockets(t *testing.T) {
 			xEnv.Shutdown()
 			_, _, err = conn.NextReader()
 			// Check that the WS client error indicates the connection was unexpectedly closed
-			closeError, ok := err.(*websocket.CloseError)
+			var closeError *websocket.CloseError
+			ok := errors.As(err, &closeError)
 			require.True(t, ok)
 			require.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
 		})
