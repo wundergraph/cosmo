@@ -141,3 +141,6 @@ probes:
 #############################
 
 configuration:
+
+# -- Existing secret in the same namespace containing the authJwtSecret and s3StorageUrl. The secret keys have to match with current secret.
+existingSecret: ""

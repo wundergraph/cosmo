@@ -108,6 +108,8 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
+  GetRoutersResponse,
+  Router,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
@@ -118,6 +120,7 @@ import {
   DateRange,
   FederatedGraphDTO,
   GraphApiKeyJwtPayload,
+  GraphCompositionDTO,
   PublishedOperationData,
   SubgraphDTO,
   UpdatedPersistedOperation,
@@ -177,6 +180,7 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { RouterMetricsRepository } from '../repositories/analytics/RouterMetricsRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -5103,7 +5107,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const auditLogRepo = new AuditLogRepository(opts.db);
 
         const federatedGraph = await fedRepo.byName(req.name, req.namespace);
 
@@ -5126,7 +5129,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const list = await subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: federatedGraph.targetId,
-          published: true,
+          published: false,
         });
 
         const routerRequestToken = await fedRepo.getGraphSignedToken({
@@ -6291,6 +6294,91 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             ...op,
             id: op.operationId,
           })),
+        };
+      });
+    },
+
+    getRouters: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetRoutersResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            routers: [],
+          };
+        }
+
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
+
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' does not exist`,
+            },
+            routers: [],
+          };
+        }
+
+        const routers: PlainMessage<Router>[] = [];
+
+        const routerRepo = new RouterMetricsRepository(opts.chClient);
+        const routersDTOs = await routerRepo.getActiveRouters({
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+        });
+
+        const graphCompositionRepository = new GraphCompositionRepository(opts.db);
+
+        for await (const routerDTO of routersDTOs) {
+          let composition: GraphCompositionDTO | undefined;
+
+          // Might be empty when starting with a local composed config that has no config version id
+          if (routerDTO.configVersionId) {
+            composition = await graphCompositionRepository.getGraphCompositionBySchemaVersion({
+              organizationId: authContext.organizationId,
+              schemaVersionId: routerDTO.configVersionId,
+            });
+          }
+
+          const runtimeMetrics = await routerRepo.getRouterRuntime({
+            organizationId: authContext.organizationId,
+            federatedGraphId: federatedGraph.id,
+            serviceInstanceId: routerDTO.serviceInstanceId,
+          });
+
+          routers.push({
+            hostname: routerDTO.hostname,
+            clusterName: routerDTO.clusterName,
+            compositionId: composition?.id ?? '',
+            serviceName: routerDTO.serviceName,
+            serviceVersion: routerDTO.serviceVersion,
+            serviceInstanceId: routerDTO.serviceInstanceId,
+            uptimeSeconds: routerDTO.processUptimeSeconds,
+            serverUptimeSeconds: runtimeMetrics.serverUptimeSeconds,
+            onLatestComposition: composition?.isLatestValid ?? false,
+            processId: routerDTO.processId,
+            cpuUsagePercent: runtimeMetrics.cpuUsage.currentPercent ?? 0,
+            cpuUsageChangePercent: runtimeMetrics.cpuUsage.changePercent,
+            memoryUsageMb: runtimeMetrics.memoryUsage.currentMb ?? 0,
+            memoryUsageChangePercent: runtimeMetrics.memoryUsage.changePercent ?? 0,
+          });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          routers,
         };
       });
     },
