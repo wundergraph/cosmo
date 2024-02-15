@@ -106,7 +106,7 @@ const Override = ({
       </TableCell>
       <TableCell>{path}</TableCell>
       <TableCell>
-        <div className="flex items-center gap-x-2">
+        <div className="flex items-center justify-end gap-x-2">
           <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
               <Button
@@ -337,7 +337,7 @@ export const ConfigureOverride = () => {
                   <TableRow>
                     <TableHead className="w-[200px]">Change</TableHead>
                     <TableHead>Schema Path</TableHead>
-                    <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
