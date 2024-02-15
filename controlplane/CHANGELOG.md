@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.67.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.67.2...controlplane@0.67.3) (2024-02-15)
+
+### Bug Fixes
+
+* label matcher validation ([#529](https://github.com/wundergraph/cosmo/issues/529)) ([1472cbd](https://github.com/wundergraph/cosmo/commit/1472cbd0a4244fc835ab45d4a91fda64d984785d)) (@StarpTech)
+* show subgraphs in the graph view after the creation itself ([#514](https://github.com/wundergraph/cosmo/issues/514)) ([d10b5b9](https://github.com/wundergraph/cosmo/commit/d10b5b973a1788f757249b441d08acbbda6b3f66)) (@JivusAyrus)
+
 ## [0.67.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.67.1...controlplane@0.67.2) (2024-02-14)
 
 ### Bug Fixes
