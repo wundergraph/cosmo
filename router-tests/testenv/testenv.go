@@ -664,6 +664,53 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initial
 	return conn
 }
 
+func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
+	dialer := websocket.Dialer{
+		Subprotocols: []string{"absinthe"},
+	}
+
+	waitBetweenRetriesInMs := rand.Intn(10)
+	timeToSleep := time.Duration(waitBetweenRetriesInMs) * time.Millisecond
+
+	var err error
+
+	for i := 0; i < maxSocketRetries; i++ {
+		url := e.GraphQLSubscriptionURL()
+		conn, resp, err := dialer.Dial(url, header)
+
+		if resp != nil && err == nil {
+			return conn, resp, err
+		}
+
+		if errors.Is(err, websocket.ErrBadHandshake) {
+			return conn, resp, err
+		}
+
+		// Make sure that on the final attempt we won't wait
+		if i != maxSocketRetries {
+			time.Sleep(timeToSleep)
+			timeToSleep *= 2
+		}
+	}
+
+	return nil, nil, err
+}
+
+func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initialPayload json.RawMessage) *websocket.Conn {
+	conn, _, err := e.AbsintheWebsocketDialWithRetry(header)
+	require.NoError(e.t, err)
+	e.t.Cleanup(func() {
+		_ = conn.Close()
+	})
+	err = conn.WriteJSON(initialPayload)
+	require.NoError(e.t, err)
+	var ack json.RawMessage
+	err = conn.ReadJSON(&ack)
+	require.NoError(e.t, err)
+	require.Equal(e.t, string(ack), `["1","1","__absinthe__:control","phx_reply",{"status":"ok","response":{}}]`)
+	return conn
+}
+
 func (e *Environment) close() {
 	// Give the router some time to shut down
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -45,6 +45,7 @@ func Subprotocols() []string {
 	return []string{
 		graphQLWSSubprotocol,
 		subscriptionsTransportWSSubprotocol,
+		absintheWSSubProtocol,
 	}
 }
 
@@ -63,6 +64,8 @@ func NewProtocol(subProtocol string, conn JSONConn) (Proto, error) {
 		return newGraphQLWSProtocol(conn), nil
 	case subscriptionsTransportWSSubprotocol:
 		return newSubscriptionsTransportWSProtocol(conn), nil
+	case absintheWSSubProtocol:
+		return newAbsintheWSProtocol(conn), nil
 	}
 	return nil, fmt.Errorf("could not find a suitable websocket subprotocol, supported ones are: %s", strings.Join(Subprotocols(), ", "))
 }
