@@ -1,3 +1,6 @@
+import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { ConfigureOverride } from "@/components/checks/override";
 import { EmptyState } from "@/components/empty-state";
 import {
   GraphContext,
@@ -7,15 +10,6 @@ import {
 import { PageHeader } from "@/components/layout/head";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
-import { NextPageWithLayout } from "@/lib/page";
-import {
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getAllOverrides } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useContext } from "react";
 import {
   Table,
   TableBody,
@@ -26,21 +20,38 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { ConfigureOverride } from "@/components/checks/override";
-import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { docsBaseURL } from "@/lib/constants";
+import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
+import {
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline";
+import { useQuery } from "@tanstack/react-query";
+import {
+  ColumnDef,
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { getAllOverrides } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { GetAllOverridesResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { useContext } from "react";
 import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
-import { docsBaseURL } from "@/lib/constants";
 
 const OverridesPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
@@ -76,6 +87,104 @@ const OverridesPage: NextPageWithLayout = () => {
   });
 
   const applyParams = useApplyParams();
+
+  const columnHelper =
+    createColumnHelper<GetAllOverridesResponse["overrides"][number]>();
+
+  const columns = [
+    columnHelper.accessor("name", {
+      header: () => <div>Name</div>,
+      cell: (ctx) => (
+        <span
+          className={cn("font-medium", {
+            "italic text-muted-foreground": !ctx.getValue(),
+          })}
+        >
+          {ctx.getValue() || "unnamed operation"}
+        </span>
+      ),
+    }),
+    columnHelper.accessor("hash", {
+      header: () => <div>Hash</div>,
+    }),
+    columnHelper.accessor("changesOverrideCount", {
+      header: () => <div>Change Override</div>,
+      cell: (ctx) => {
+        const count = ctx.getValue();
+        return `${count} ${count === 1 ? "change" : "changes"}`;
+      },
+    }),
+    columnHelper.accessor("hasIgnoreAllOverride", {
+      header: () => <div>Ignore Override</div>,
+      cell: (ctx) => {
+        const hasIgnoreOverride = ctx.getValue();
+        return hasIgnoreOverride ? "Active" : "No";
+      },
+    }),
+    columnHelper.accessor("updatedAt", {
+      header: () => <div>Last updated</div>,
+      cell: (ctx) => formatDistanceToNow(new Date(ctx.getValue())),
+    }),
+    columnHelper.display({
+      id: "actions",
+      cell: (ctx) => {
+        const hash = ctx.row.getValue<string>("hash");
+        const name = ctx.row.getValue<string>("name");
+        return (
+          <div className="flex items-center justify-end gap-x-2">
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger>
+                <Button variant="ghost" size="icon-sm" asChild>
+                  <Link
+                    href={constructLink(name, hash, "metrics")}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <BiAnalyse className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Metrics</TooltipContent>
+            </Tooltip>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger>
+                <Button variant="ghost" size="icon-sm" asChild>
+                  <Link
+                    href={constructLink(name, hash, "traces")}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <IoBarcodeSharp className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Traces</TooltipContent>
+            </Tooltip>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="table-action"
+              onClick={() => {
+                applyParams({
+                  override: hash,
+                  overrideName: name,
+                });
+              }}
+            >
+              Configure
+            </Button>
+          </div>
+        );
+      },
+    }),
+  ];
+
+  const table = useReactTable({
+    data: data?.overrides ?? [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -132,95 +241,53 @@ const OverridesPage: NextPageWithLayout = () => {
       <TableWrapper>
         <Table>
           <TableCaption>
-            Found {data.overrides.length} operations with overrides
+            Found {table.getRowModel().rows?.length} operations with overrides
           </TableCaption>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Hash</TableHead>
-              <TableHead>Change Overrides</TableHead>
-              <TableHead>Ignore Override</TableHead>
-              <TableHead>Last updated</TableHead>
-              <TableHead className="w-52"></TableHead>
-            </TableRow>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
           </TableHeader>
           <TableBody>
-            {data.overrides.map((o) => {
-              return (
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
                 <TableRow
-                  onClick={() => {
-                    applyParams({
-                      override: o.hash,
-                      overrideName: o.name,
-                    });
-                  }}
-                  className="group cursor-pointer hover:bg-secondary/30"
-                  key={o.hash}
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
                 >
-                  <TableCell
-                    className={cn("font-medium", {
-                      "italic text-muted-foreground": !o.name,
-                    })}
-                  >
-                    {o.name || "unnamed operation"}
-                  </TableCell>
-                  <TableCell>{o.hash}</TableCell>
-                  <TableCell>
-                    {o.changesOverrideCount}{" "}
-                    {o.changesOverrideCount === 1 ? "change" : "changes"}
-                  </TableCell>
-                  <TableCell>
-                    {o.hasIgnoreAllOverride ? "Active" : "No"}
-                  </TableCell>
-                  <TableCell>
-                    {formatDistanceToNow(new Date(o.updatedAt))}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-x-2">
-                      <Tooltip delayDuration={0}>
-                        <TooltipTrigger>
-                          <Button variant="ghost" size="icon-sm" asChild>
-                            <Link
-                              href={constructLink(o.name, o.hash, "metrics")}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <BiAnalyse className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Metrics</TooltipContent>
-                      </Tooltip>
-                      <Tooltip delayDuration={0}>
-                        <TooltipTrigger>
-                          <Button variant="ghost" size="icon-sm" asChild>
-                            <Link
-                              href={constructLink(o.name, o.hash, "traces")}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <IoBarcodeSharp className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Traces</TooltipContent>
-                      </Tooltip>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="table-action"
-                        onClick={() => {
-                          applyParams({
-                            override: o.hash,
-                            overrideName: o.name,
-                          });
-                        }}
-                      >
-                        Configure
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
                 </TableRow>
-              );
-            })}
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableWrapper>
