@@ -152,12 +152,12 @@ const OverridesPage: NextPageWithLayout = () => {
                     <div className="flex items-center justify-end gap-x-2">
                       <Tooltip delayDuration={0}>
                         <TooltipTrigger>
-                          <Button variant="ghost" size="icon" asChild>
+                          <Button variant="ghost" size="icon-sm" asChild>
                             <Link
                               href={constructLink(o.name, o.hash, "metrics")}
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <BiAnalyse className="h-5 w-5" />
+                              <BiAnalyse className="h-4 w-4" />
                             </Link>
                           </Button>
                         </TooltipTrigger>
@@ -165,12 +165,12 @@ const OverridesPage: NextPageWithLayout = () => {
                       </Tooltip>
                       <Tooltip delayDuration={0}>
                         <TooltipTrigger>
-                          <Button variant="ghost" size="icon" asChild>
+                          <Button variant="ghost" size="icon-sm" asChild>
                             <Link
                               href={constructLink(o.name, o.hash, "traces")}
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <IoBarcodeSharp className="h-5 w-5" />
+                              <IoBarcodeSharp className="h-4 w-4" />
                             </Link>
                           </Button>
                         </TooltipTrigger>
