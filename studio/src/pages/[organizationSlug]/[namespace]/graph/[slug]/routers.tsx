@@ -451,6 +451,10 @@ const RoutersPage: NextPageWithLayout = () => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  if (isLoading) {
+    return <Loader fullscreen />;
+  }
+
   if (!data || error || data.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
