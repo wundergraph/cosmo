@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
+import { docsBaseURL } from "@/lib/constants";
 
 const OverridesPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
@@ -101,7 +102,21 @@ const OverridesPage: NextPageWithLayout = () => {
   }
 
   return (
-    <>
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-muted-foreground">
+          Overrides for operations that you add from schema checks will appear
+          here.{" "}
+          <Link
+            href={docsBaseURL + "/studio/overrides"}
+            className="text-primary"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Learn more
+          </Link>
+        </p>
+      </div>
       <TableWrapper>
         <Table>
           <TableCaption>
@@ -198,7 +213,7 @@ const OverridesPage: NextPageWithLayout = () => {
         </Table>
       </TableWrapper>
       <ConfigureOverride />
-    </>
+    </div>
   );
 };
 
