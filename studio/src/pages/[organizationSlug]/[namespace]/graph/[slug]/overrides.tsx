@@ -266,6 +266,13 @@ const OverridesPage: NextPageWithLayout = () => {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
+                  onClick={() => {
+                    applyParams({
+                      override: row.getValue("hash"),
+                      overrideName: row.getValue("name"),
+                    });
+                  }}
+                  className="group cursor-pointer hover:bg-secondary/30"
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
