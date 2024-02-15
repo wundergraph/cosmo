@@ -290,7 +290,7 @@ export class OperationsRepository {
     }));
   }
 
-  public async getConsolidatedOverridesView(data: { namespaceId: string }) {
+  public getConsolidatedOverridesView(data: { namespaceId: string }) {
     const change = this.db
       .select({
         hash: schema.operationChangeOverrides.hash,
@@ -331,11 +331,13 @@ export class OperationsRepository {
     // We need to retrieve a consolidated view of overrides from both tables.
     // There is no guarantee that an entry for hash exists in both.
 
-    const res = await this.db
+    return this.db
       .select({
         hash: sql<string>`coalesce(${change.hash}, ${ignore.hash})`,
         name: sql<string>`coalesce(${change.name}, ${ignore.name})`,
-        updatedAt: sql<Date>`greatest(${change.created_at},${ignore.created_at})`,
+        updatedAt: sql`greatest(${change.created_at},${ignore.created_at})`.mapWith({
+          mapFromDriverValue: (value) => new Date(value).toISOString(),
+        }),
         hasIgnoreAllOverride: sql<boolean>`case when ${ignore.hash} is not null then true else false end`,
         changesOverrideCount: sql<number>`cast(coalesce(${changeCounts.change_count}, 0) as int)`,
       })
@@ -343,10 +345,5 @@ export class OperationsRepository {
       .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
       .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
       .orderBy(({ updatedAt }) => desc(updatedAt));
-
-    return res.map((r) => ({
-      ...r,
-      updatedAt: r.updatedAt.toISOString(),
-    }));
   }
 }
