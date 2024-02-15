@@ -4,12 +4,12 @@ go 1.21
 
 require (
 	connectrpc.com/connect v1.11.1
-	github.com/ClickHouse/clickhouse-go/v2 v2.15.0
+	github.com/ClickHouse/clickhouse-go/v2 v2.18.0
 	github.com/alitto/pond v1.8.3
-	github.com/amacneil/dbmate/v2 v2.6.0
+	github.com/amacneil/dbmate/v2 v2.12.0
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/go-playground/validator/v10 v10.15.5
-	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
