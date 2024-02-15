@@ -1,4 +1,8 @@
-import { AnalyticsFilter, AnalyticsViewFilterOperator, CustomOptions } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  AnalyticsFilter,
+  AnalyticsViewFilterOperator,
+  CustomOptions,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange, Label } from '../../../types/index.js';
