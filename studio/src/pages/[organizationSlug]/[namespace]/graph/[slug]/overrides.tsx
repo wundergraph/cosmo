@@ -113,7 +113,7 @@ const OverridesPage: NextPageWithLayout = () => {
               <TableHead>Hash</TableHead>
               <TableHead>Change Overrides</TableHead>
               <TableHead>Ignore Override</TableHead>
-              <TableHead>Updated At</TableHead>
+              <TableHead>Last updated</TableHead>
               <TableHead className="w-52"></TableHead>
             </TableRow>
           </TableHeader>

@@ -14,8 +14,9 @@ import { cn } from "@/lib/utils";
 import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
-import { ClipboardCopyIcon } from "@radix-ui/react-icons";
+import { ClipboardCopyIcon, GlobeIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -26,9 +27,20 @@ import {
   removeOperationOverrides,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import copy from "copy-to-clipboard";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
@@ -41,18 +53,8 @@ import {
   TableRow,
   TableWrapper,
 } from "../ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { OperationContentDialog } from "./operation-content";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../ui/alert-dialog";
 
 const Override = ({
   changeType,
@@ -62,7 +64,7 @@ const Override = ({
 }: {
   changeType: string;
   path?: string;
-  operationHash?: string;
+  operationHash: string;
   refresh?: () => void;
 }) => {
   const router = useRouter();
@@ -103,13 +105,57 @@ const Override = ({
         </div>
       </TableCell>
       <TableCell>{path}</TableCell>
-      {operationHash && (
-        <TableCell>
+      <TableCell>
+        <div className="flex items-center gap-x-2">
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <Button
+                disabled={!path}
+                variant="ghost"
+                className="table-action"
+                size="icon-sm"
+                asChild
+              >
+                <Link
+                  href={
+                    path
+                      ? {
+                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                          query: {
+                            organizationSlug: router.query.organizationSlug,
+                            namespace: router.query.namespace,
+                            slug: router.query.slug,
+                            typename: path?.split(".")?.[0],
+                          },
+                        }
+                      : "#"
+                  }
+                >
+                  <GlobeIcon />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {path
+                ? "Open in Explorer"
+                : "Cannot open in explorer. Path to type unavailable"}
+            </TooltipContent>
+          </Tooltip>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline">Remove</Button>
+              <Button
+                variant="ghost"
+                className="table-action text-destructive"
+                size="icon-sm"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent
+              onEscapeKeyDown={(event) => {
+                event.preventDefault();
+              }}
+            >
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -119,7 +165,8 @@ const Override = ({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
+                <Button
+                  variant="destructive"
                   onClick={() => {
                     removeOverrides({
                       graphName: graphContext?.graph?.name,
@@ -134,13 +181,13 @@ const Override = ({
                     });
                   }}
                 >
-                  Continue
-                </AlertDialogAction>
+                  Confirm
+                </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </TableCell>
-      )}
+        </div>
+      </TableCell>
     </TableRow>
   );
 };
