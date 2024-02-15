@@ -11302,6 +11302,207 @@ export class AddReadmeResponse extends Message<AddReadmeResponse> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.Router
+ */
+export class Router extends Message<Router> {
+  /**
+   * @generated from field: string hostname = 1;
+   */
+  hostname = "";
+
+  /**
+   * @generated from field: string clusterName = 2;
+   */
+  clusterName = "";
+
+  /**
+   * @generated from field: string serviceName = 3;
+   */
+  serviceName = "";
+
+  /**
+   * @generated from field: string serviceVersion = 4;
+   */
+  serviceVersion = "";
+
+  /**
+   * @generated from field: string serviceInstanceId = 5;
+   */
+  serviceInstanceId = "";
+
+  /**
+   * @generated from field: string uptimeSeconds = 6;
+   */
+  uptimeSeconds = "";
+
+  /**
+   * @generated from field: string serverUptimeSeconds = 7;
+   */
+  serverUptimeSeconds = "";
+
+  /**
+   * @generated from field: string compositionId = 8;
+   */
+  compositionId = "";
+
+  /**
+   * @generated from field: bool onLatestComposition = 9;
+   */
+  onLatestComposition = false;
+
+  /**
+   * @generated from field: string processId = 10;
+   */
+  processId = "";
+
+  /**
+   * @generated from field: float memoryUsageMb = 11;
+   */
+  memoryUsageMb = 0;
+
+  /**
+   * @generated from field: float memoryUsageChangePercent = 12;
+   */
+  memoryUsageChangePercent = 0;
+
+  /**
+   * @generated from field: float cpuUsagePercent = 13;
+   */
+  cpuUsagePercent = 0;
+
+  /**
+   * @generated from field: float cpuUsageChangePercent = 14;
+   */
+  cpuUsageChangePercent = 0;
+
+  constructor(data?: PartialMessage<Router>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Router";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "hostname", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "clusterName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "serviceName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "serviceVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "serviceInstanceId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "uptimeSeconds", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "serverUptimeSeconds", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "onLatestComposition", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "processId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "memoryUsageMb", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 12, name: "memoryUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 13, name: "cpuUsagePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 14, name: "cpuUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Router {
+    return new Router().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Router {
+    return new Router().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Router {
+    return new Router().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Router | PlainMessage<Router> | undefined, b: Router | PlainMessage<Router> | undefined): boolean {
+    return proto3.util.equals(Router, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetRoutersRequest
+ */
+export class GetRoutersRequest extends Message<GetRoutersRequest> {
+  /**
+   * @generated from field: string fedGraphName = 1;
+   */
+  fedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetRoutersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetRoutersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRoutersRequest {
+    return new GetRoutersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRoutersRequest {
+    return new GetRoutersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRoutersRequest {
+    return new GetRoutersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRoutersRequest | PlainMessage<GetRoutersRequest> | undefined, b: GetRoutersRequest | PlainMessage<GetRoutersRequest> | undefined): boolean {
+    return proto3.util.equals(GetRoutersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetRoutersResponse
+ */
+export class GetRoutersResponse extends Message<GetRoutersResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Router routers = 2;
+   */
+  routers: Router[] = [];
+
+  constructor(data?: PartialMessage<GetRoutersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetRoutersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "routers", kind: "message", T: Router, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRoutersResponse {
+    return new GetRoutersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRoutersResponse {
+    return new GetRoutersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRoutersResponse {
+    return new GetRoutersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRoutersResponse | PlainMessage<GetRoutersResponse> | undefined, b: GetRoutersResponse | PlainMessage<GetRoutersResponse> | undefined): boolean {
+    return proto3.util.equals(GetRoutersResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.ClientInfo
  */
 export class ClientInfo extends Message<ClientInfo> {

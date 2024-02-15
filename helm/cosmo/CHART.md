@@ -20,7 +20,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 |  | otelcollector | ^0 |
 |  | router | ^0 |
 |  | studio | ^0 |
-| https://charts.bitnami.com/bitnami | clickhouse | ^4.1.5 |
+| https://charts.bitnami.com/bitnami | clickhouse | ^5.0.2 |
 | https://charts.bitnami.com/bitnami | keycloak | ^17.3.1 |
 | https://charts.bitnami.com/bitnami | minio | 12.10.0 |
 | https://charts.bitnami.com/bitnami | postgresql | 12.8.0 |

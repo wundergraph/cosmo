@@ -11,6 +11,8 @@ import (
 )
 
 func TestPersistedOperationNotFound(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
@@ -22,6 +24,8 @@ func TestPersistedOperationNotFound(t *testing.T) {
 }
 
 func TestPersistedOperation(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
@@ -36,6 +40,7 @@ func TestPersistedOperation(t *testing.T) {
 }
 
 func TestPersistedOperationsCache(t *testing.T) {
+	t.Parallel()
 
 	sendTwoRequests := func(t *testing.T, xEnv *testenv.Environment) {
 		header := make(http.Header)
@@ -65,6 +70,8 @@ func TestPersistedOperationsCache(t *testing.T) {
 	}
 
 	t.Run("with cache", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			sendTwoRequests(t, xEnv)
 			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
@@ -73,6 +80,8 @@ func TestPersistedOperationsCache(t *testing.T) {
 	})
 
 	t.Run("without cache", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyCDNConfig: func(cfg *config.CDNConfiguration) {
 				cfg.CacheSize = 0

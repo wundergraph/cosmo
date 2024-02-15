@@ -18,6 +18,7 @@ WunderGraph Cosmo Open Telemetry Collector.
 | configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
 | deploymentStrategy | object | `{}` |  |
 | existingConfigmap | string | `nil` | The name of the configmap to use for the otelcollector configuration. The key must be "otel-config.yaml". |
+| existingSecret | string | `""` | Existing secret in the same namespace containing the otelcollector Secrets - clickhouseDsn,authJwtSecret. The secret keys have to match with current secret. |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |

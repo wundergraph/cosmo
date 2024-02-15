@@ -33,7 +33,7 @@ export interface Input {
  *
  * ws: Negotiates an appropriate protocol over websockets. Both https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md and https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md are supported
  * sse: Uses the Server-Sent Events protocol with a GET request
- * sse-post: Uses the Server-Sent Events protocol with a POST request
+ * sse_post: Uses the Server-Sent Events protocol with a POST request
  */
 export type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -59,7 +59,7 @@ export const internString = (config: EngineConfiguration, str: string): Interned
   });
 };
 
-export const parseGraphQLSubscriptionProtocol = (protocolName: string): GraphQLSubscriptionProtocol => {
+export const parseGraphQLSubscriptionProtocol = (protocolName: SubscriptionProtocol): GraphQLSubscriptionProtocol => {
   switch (protocolName) {
     case 'ws': {
       return GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS;
@@ -67,7 +67,7 @@ export const parseGraphQLSubscriptionProtocol = (protocolName: string): GraphQLS
     case 'sse': {
       return GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE;
     }
-    case 'sse-post': {
+    case 'sse_post': {
       return GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST;
     }
   }

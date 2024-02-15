@@ -5,6 +5,11 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -12,12 +17,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
-	"strconv"
-	"sync"
-	"time"
 
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
@@ -100,7 +101,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			finalErr       error
 			writtenBytes   int
 			statusCode     = http.StatusOK
-			traceOptions   = resolve.RequestTraceOptions{}
+			traceOptions   = resolve.TraceOptions{}
 			tracePlanStart int64
 		)
 
@@ -381,7 +382,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := h.metrics.MetricStore().ForceFlush(ctx); err != nil {
+		if err := h.metrics.MetricStore().Flush(ctx); err != nil {
 			requestLogger.Error("Failed to flush OTEL metrics", zap.Error(err))
 		}
 	}()
