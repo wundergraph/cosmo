@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.64.3](https://github.com/wundergraph/cosmo/compare/studio@0.64.2...studio@0.64.3) (2024-02-15)
+
+### Bug Fixes
+
+* show loader on routers page ([#533](https://github.com/wundergraph/cosmo/issues/533)) ([5884641](https://github.com/wundergraph/cosmo/commit/5884641b630549a98189530955f5be9e732c33fb)) (@StarpTech)
+* show subgraphs in the graph view after the creation itself ([#514](https://github.com/wundergraph/cosmo/issues/514)) ([d10b5b9](https://github.com/wundergraph/cosmo/commit/d10b5b973a1788f757249b441d08acbbda6b3f66)) (@JivusAyrus)
+
 ## [0.64.2](https://github.com/wundergraph/cosmo/compare/studio@0.64.1...studio@0.64.2) (2024-02-14)
 
 ### Bug Fixes
