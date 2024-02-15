@@ -182,6 +182,10 @@ export function buildCoercedFilterSqlStatement(
         operatorSql = '<';
         break;
       }
+      case AnalyticsViewFilterOperator.LESS_THAN_OR_EQUAL: {
+        operatorSql = '<=';
+        break;
+      }
       default: {
         throw new Error(`Unknown operator: ${filter.operator}`);
       }
@@ -225,12 +229,17 @@ export function buildCoercedFilterSqlStatement(
   let whereSql = '';
   let havingSql = '';
 
-  for (const item of Object.values(groupedFilterStatements)) {
-    const orStatement = '( ' + item.statements.join(' OR ') + ' )';
+  for (const [name, item] of Object.entries(groupedFilterStatements)) {
+    let condition = ' OR ';
+    if (name === 'durationInNano') {
+      condition = ' AND ';
+    }
+
+    const statement = '( ' + item.statements.join(condition) + ' )';
     if (item.dbClause === 'where') {
-      whereFilterSqlStatement.push(orStatement);
+      whereFilterSqlStatement.push(statement);
     } else if (item.dbClause === 'having') {
-      havingFilterSqlStatement.push(orStatement);
+      havingFilterSqlStatement.push(statement);
     }
   }
 

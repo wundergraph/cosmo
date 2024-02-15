@@ -4,6 +4,7 @@ import { ColumnFiltersState } from "@tanstack/react-table";
 import { Button } from "../ui/button";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import React from "react";
+import { CustomOptions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 
 export interface AnalyticsFilter {
   id: string;
@@ -14,7 +15,7 @@ export interface AnalyticsFilter {
     label: string;
     value: string;
   }>;
-  customOptions: boolean;
+  customOptions?: CustomOptions;
 }
 
 export interface AnalyticsFiltersProps {

@@ -519,11 +519,16 @@ message AnalyticsViewColumn {
   optional bool is_cta = 6;
 }
 
+enum CustomOptions {
+  Text = 0;
+  Range = 1;
+}
+
 message AnalyticsViewResultFilter {
   string columnName = 1;
   string title = 2;
   repeated AnalyticsViewResultFilterOption options = 3;
-  optional bool custom_options = 4;
+  optional CustomOptions custom_options = 4;
 }
 
 message AnalyticsViewResultFilterOption {

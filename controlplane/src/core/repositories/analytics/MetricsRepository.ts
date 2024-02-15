@@ -1,4 +1,4 @@
-import { AnalyticsFilter, AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { AnalyticsFilter, AnalyticsViewFilterOperator, CustomOptions } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange } from '../../../types/index.js';
 import {
@@ -554,7 +554,7 @@ export class MetricsRepository {
       columnName: 'operationHash',
       title: 'Operation Hash',
       options: [],
-      customOptions: true,
+      customOptions: CustomOptions.Text,
     },
     operationPersistedId: {
       dbField: 'OperationPersistedID',
@@ -562,7 +562,7 @@ export class MetricsRepository {
       columnName: 'operationPersistedId',
       title: 'Operation Persisted ID',
       options: [],
-      customOptions: true,
+      customOptions: CustomOptions.Text,
     },
     clientName: {
       dbField: 'ClientName',

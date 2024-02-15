@@ -19,8 +19,12 @@ import { cn } from "@/lib/utils";
 import { PlusCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 import { Column } from "@tanstack/react-table";
-import { ComponentType, useState } from "react";
+import {
+  CustomOptions
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { ComponentType, useEffect, useState } from "react";
 import { Input } from "../ui/input";
+import { Slider } from "../ui/slider";
 import { AnalyticsFilter } from "./filters";
 
 interface DataTableFacetedFilter<TData, TValue> {
@@ -34,7 +38,7 @@ interface DataTableFacetedFilter<TData, TValue> {
     value: string;
     icon?: ComponentType<{ className?: string }>;
   }[];
-  customOptions: boolean;
+  customOptions?: CustomOptions;
 }
 
 export function DataTableFilterCommands<TData, TValue>({
@@ -45,70 +49,64 @@ export function DataTableFilterCommands<TData, TValue>({
   customOptions,
 }: DataTableFacetedFilter<TData, TValue>) {
   const selectedValues = new Set(selectedOptions);
-
   const [input, setInput] = useState("");
+  const [range, setRange] = useState<{ start: number; end: number }>({
+    start: 0,
+    end: 10,
+  });
+  let content: React.ReactNode;
 
-  return (
-    <Command className="w-64">
-      {!customOptions && (
-        <>
-          <CommandInput placeholder={title} />
-          <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup>
-              {options.map((option, index) => {
-                const isSelected = selectedValues.has(option.value);
-                return (
-                  <CommandItem
-                    key={option.value}
-                    onSelect={() => {
-                      if (isSelected) {
-                        selectedValues.delete(option.value);
-                      } else {
-                        selectedValues.add(option.value);
-                      }
-                      const filterValues = Array.from(selectedValues);
-                      onSelect?.(
-                        filterValues.length ? filterValues : undefined,
-                      );
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50 [&_svg]:invisible",
-                      )}
-                    >
-                      <CheckIcon className={cn("h-4 w-4")} />
-                    </div>
-                    {option.icon && (
-                      <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="hidden">{index}</span>
-                    <span className="truncate">{option.label}</span>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            {selectedValues.size > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => onSelect?.(undefined)}
-                    className="justify-center text-center"
-                  >
-                    Clear filters
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
-        </>
-      )}
-      {customOptions && (
+  useEffect(() => {
+    if (
+      !selectedOptions ||
+      selectedOptions.length !== 2 ||
+      title !== "Duration"
+    )
+      return;
+    const option1 = JSON.parse(selectedOptions[0]).value;
+    const option2 = JSON.parse(selectedOptions[1]).value;
+
+    const time1 = option1 / 10 ** 9;
+    const time2 = option2 / 10 ** 9;
+    console.log(time1, JSON.parse(selectedOptions[0]));
+    if (time1 >= time2) {
+      setRange({ start: time2, end: time1 });
+    } else {
+      setRange({ start: time1, end: time2 });
+    }
+  }, [selectedOptions, title]);
+
+  const updateRangeFilters = ({
+    rangeValue,
+  }: {
+    rangeValue: { start: number; end: number };
+  }) => {
+    selectedValues.clear();
+    setRange({
+      start: rangeValue.start,
+      end: rangeValue.end,
+    });
+    selectedValues.add(
+      JSON.stringify({
+        label: (rangeValue.start * 10 ** 9).toString(),
+        value: (rangeValue.start * 10 ** 9).toString(),
+        operator: 4,
+      }),
+    );
+    selectedValues.add(
+      JSON.stringify({
+        label: (rangeValue.end * 10 ** 9).toString(),
+        value: (rangeValue.end * 10 ** 9).toString(),
+        operator: 5,
+      }),
+    );
+    const filterValues = Array.from(selectedValues);
+    onSelect?.(filterValues);
+  };
+
+  switch (customOptions) {
+    case CustomOptions.Text:
+      content = (
         <div className="flex flex-col py-2">
           <p className="px-2 text-xs text-muted-foreground">Custom Input</p>
           <div className="flex items-center gap-x-2 px-2">
@@ -186,7 +184,152 @@ export function DataTableFilterCommands<TData, TValue>({
             </>
           )}
         </div>
+      );
+      break;
+    case CustomOptions.Range:
+      content = (
+        <div className="flex flex-col py-2">
+          <p className="px-2 text-xs text-muted-foreground">{`Select ${title} (secs)`}</p>
+          <div className="flex flex-col gap-y-5 px-2 pt-5">
+            <Slider
+              defaultValue={[range.start, range.end]}
+              key={`slider-${range.start}-${range.end}`}
+              max={60}
+              min={0}
+              step={1}
+              onValueCommit={(v) =>
+                updateRangeFilters({
+                  rangeValue: {
+                    start: v[0],
+                    end: v[1],
+                  },
+                })
+              }
+            />
+            <div className="flex gap-x-2">
+              <Input
+                value={range.start}
+                type="number"
+                onChange={(e) => {
+                  if (Number(e.target.value) > range.end) {
+                    updateRangeFilters({
+                      rangeValue: {
+                        start: range.end,
+                        end:
+                          Number(e.target.value) > 60
+                            ? 60
+                            : Number(e.target.value),
+                      },
+                    });
+                  } else {
+                    updateRangeFilters({
+                      rangeValue: {
+                        ...range,
+                        start: Number(e.target.value),
+                      },
+                    });
+                  }
+                }}
+              />
+              <Input
+                value={range.end}
+                type="number"
+                onChange={(e) =>
+                  updateRangeFilters({
+                    rangeValue: {
+                      ...range,
+                      end:
+                        Number(e.target.value) > 60
+                          ? 60
+                          : Number(e.target.value),
+                    },
+                  })
+                }
+              />
+            </div>
+          </div>
+          {selectedValues.size > 0 && (
+            <Button
+              className="mx-1 mt-2"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onSelect?.(undefined);
+                setInput("");
+              }}
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      );
+      break;
+    default:
+      content = <></>;
+      break;
+  }
+
+  return (
+    <Command className="w-64">
+      {customOptions === undefined && (
+        <>
+          <CommandInput placeholder={title} />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((option, index) => {
+                const isSelected = selectedValues.has(option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => {
+                      if (isSelected) {
+                        selectedValues.delete(option.value);
+                      } else {
+                        selectedValues.add(option.value);
+                      }
+                      const filterValues = Array.from(selectedValues);
+                      onSelect?.(
+                        filterValues.length ? filterValues : undefined,
+                      );
+                    }}
+                  >
+                    <div
+                      className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible",
+                      )}
+                    >
+                      <CheckIcon className={cn("h-4 w-4")} />
+                    </div>
+                    {option.icon && (
+                      <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="hidden">{index}</span>
+                    <span className="truncate">{option.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+            {selectedValues.size > 0 && (
+              <>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItem
+                    onSelect={() => onSelect?.(undefined)}
+                    className="justify-center text-center"
+                  >
+                    Clear filters
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </>
       )}
+      {customOptions !== undefined && <>{content}</>}
     </Command>
   );
 }
