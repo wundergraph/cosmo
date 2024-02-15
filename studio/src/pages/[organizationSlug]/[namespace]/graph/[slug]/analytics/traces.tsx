@@ -37,12 +37,6 @@ import { Spacer } from "@/components/ui/spacer";
 import { cn } from "@/lib/utils";
 import { ArrowRightIcon, SizeIcon } from "@radix-ui/react-icons";
 
-export type OperationAnalytics = {
-  name: string;
-  content: string;
-  operationType: number;
-};
-
 // For the network call we read purely from the query with useAnalyticsQueryState
 // The data table should only set url params and not the state for filters and pagination
 // The useSyncTableWithQuery is responsible to read from the query and set local state

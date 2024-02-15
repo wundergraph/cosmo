@@ -48,6 +48,7 @@ WunderGraph Cosmo Controlplane
 | configuration.webhookSecret | string | `""` |  |
 | configuration.webhookUrl | string | `""` |  |
 | deploymentStrategy | object | `{}` |  |
+| existingSecret | string | `""` | Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret. |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |

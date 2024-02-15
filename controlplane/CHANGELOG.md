@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.67.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.67.1...controlplane@0.67.2) (2024-02-14)
+
+### Bug Fixes
+
+* check for config version id when fetching router composition ([#525](https://github.com/wundergraph/cosmo/issues/525)) ([e86a794](https://github.com/wundergraph/cosmo/commit/e86a7945928826d16dbb461c16e301c51f8d345b)) (@StarpTech)
+
+## [0.67.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.67.0...controlplane@0.67.1) (2024-02-13)
+
+### Bug Fixes
+
+* distinguish between server and process uptime, fix uptime ch query ([#520](https://github.com/wundergraph/cosmo/issues/520)) ([6fc2b72](https://github.com/wundergraph/cosmo/commit/6fc2b7237cd029127f6913199c40dd61bb16a22b)) (@StarpTech)
+
+# [0.67.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.66.3...controlplane@0.67.0) (2024-02-13)
+
+### Features
+
+* router fleet management ([#515](https://github.com/wundergraph/cosmo/issues/515)) ([7f0deae](https://github.com/wundergraph/cosmo/commit/7f0deae98a2f58bd46927bdb2be8d615613b908f)) (@StarpTech)
+
+## [0.66.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.66.2...controlplane@0.66.3) (2024-02-13)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.66.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.66.1...controlplane@0.66.2) (2024-02-08)
 
 ### Bug Fixes

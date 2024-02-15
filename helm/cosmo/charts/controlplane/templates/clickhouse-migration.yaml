@@ -45,7 +45,7 @@ spec:
             - name: CLICKHOUSE_DSN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
                   key: clickhouseMigrationDsn
           args:
             - "/app/dist/bin/ch-migrate.js"

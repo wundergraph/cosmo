@@ -14,6 +14,8 @@ import (
 )
 
 func TestSingleFlight(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			GlobalDelay: time.Millisecond * 100,
@@ -43,6 +45,8 @@ func TestSingleFlight(t *testing.T) {
 }
 
 func TestSingleFlightWithMaxConcurrency(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			GlobalDelay: time.Millisecond * 100,
@@ -79,6 +83,8 @@ func TestSingleFlightWithMaxConcurrency(t *testing.T) {
 }
 
 func TestSingleFlightWithMaxConcurrencyHigh(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			GlobalDelay: time.Millisecond * 100,
@@ -115,6 +121,8 @@ func TestSingleFlightWithMaxConcurrencyHigh(t *testing.T) {
 }
 
 func TestSingleFlightWithMaxConcurrencyZero(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			GlobalDelay: time.Millisecond * 100,
@@ -151,6 +159,8 @@ func TestSingleFlightWithMaxConcurrencyZero(t *testing.T) {
 }
 
 func TestSingleFlightMutations(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			GlobalDelay: time.Millisecond * 100,
@@ -180,6 +190,8 @@ func TestSingleFlightMutations(t *testing.T) {
 }
 
 func TestSingleFlightDifferentHeaders(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			GlobalDelay: time.Millisecond * 100,
@@ -225,6 +237,8 @@ func TestSingleFlightDifferentHeaders(t *testing.T) {
 }
 
 func TestSingleFlightSameHeaders(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			GlobalDelay: time.Millisecond * 100,

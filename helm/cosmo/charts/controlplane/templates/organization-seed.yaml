@@ -54,12 +54,14 @@ spec:
             - name: KC_ADMIN_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
+
                   key: keycloakAdminUser
             - name: KC_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
+
                   key: keycloakAdminPassword
             - name: KC_CLIENT_ID
               valueFrom:
@@ -71,7 +73,8 @@ spec:
             - name: DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                  name: {{ include "controlplane.secretName" . }}
+
                   key: databaseUrl
             - name: USER_EMAIL
               value: "{{ .Values.global.seed.userEmail }}"

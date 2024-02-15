@@ -1429,6 +1429,34 @@ message AddReadmeResponse {
   Response response = 1;
 }
 
+message Router {
+  string hostname = 1;
+  string clusterName = 2;
+  string serviceName = 3;
+  string serviceVersion = 4;
+  string serviceInstanceId = 5;
+  string uptimeSeconds = 6;
+  string serverUptimeSeconds = 7;
+  string compositionId = 8;
+  bool onLatestComposition = 9;
+  string processId = 10;
+
+  float memoryUsageMb = 11;
+  float memoryUsageChangePercent = 12;
+  float cpuUsagePercent = 13;
+  float cpuUsageChangePercent = 14;
+}
+
+message GetRoutersRequest {
+  string fedGraphName = 1;
+  string namespace = 2;
+}
+
+message GetRoutersResponse {
+  Response response = 1;
+  repeated Router routers = 2;
+}
+
 message ClientInfo{
   string name = 1;
   string id = 2;
@@ -1754,7 +1782,7 @@ service PlatformService {
   rpc GetOrganizationIntegrations(GetOrganizationIntegrationsRequest) returns (GetOrganizationIntegrationsResponse) {}
   // UpdateIntegrationConfig updates an existing integration of the organization
   rpc UpdateIntegrationConfig(UpdateIntegrationConfigRequest) returns (UpdateIntegrationConfigResponse) {}
-  // DeleteIntegration deletes an organization webhintegrationook
+  // DeleteIntegration deletes an organization web integration hook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
   // DeleteOrganization deletes an organization 
@@ -1777,7 +1805,9 @@ service PlatformService {
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
   // GetClients returns all the clients of the federated graph
   rpc GetClients(GetClientsRequest) returns (GetClientsResponse) {}
-  // GetInvitations returns all the invitations a user has recieved
+  // GetRouters returns all active routers of the federated graph
+  rpc GetRouters(GetRoutersRequest) returns (GetRoutersResponse) {}
+  // GetInvitations returns all the invitations a user has received
   rpc GetInvitations(GetInvitationsRequest) returns (GetInvitationsResponse) {}
   // AcceptOrDeclineInvitation accepts or declines the invitation
   rpc AcceptOrDeclineInvitation(AcceptOrDeclineInvitationRequest) returns (AcceptOrDeclineInvitationResponse) {}

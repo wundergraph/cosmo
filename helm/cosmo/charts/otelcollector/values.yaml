@@ -134,5 +134,8 @@ probes:
 # -- The name of the configmap to use for the otelcollector configuration. The key must be "otel-config.yaml".
 existingConfigmap:
 
+# -- Existing secret in the same namespace containing the otelcollector Secrets - clickhouseDsn,authJwtSecret. The secret keys have to match with current secret.
+existingSecret: ""
+
 configuration:
   clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
