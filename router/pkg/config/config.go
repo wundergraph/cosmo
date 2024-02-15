@@ -30,7 +30,7 @@ type TracingExporterConfig struct {
 }
 
 type TracingGlobalFeatures struct {
-	ExportGraphQLVariables bool `yaml:"export_graphql_variables" default:"true" envconfig:"TRACING_EXPORT_GRAPHQL_VARIABLES"`
+	ExportGraphQLVariables bool `yaml:"export_graphql_variables" default:"false" envconfig:"TRACING_EXPORT_GRAPHQL_VARIABLES"`
 	WithNewRoot            bool `yaml:"with_new_root" default:"false" envconfig:"TRACING_WITH_NEW_ROOT"`
 }
 
