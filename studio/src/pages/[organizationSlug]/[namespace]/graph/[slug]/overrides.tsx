@@ -91,7 +91,7 @@ const OverridesPage: NextPageWithLayout = () => {
       />
     );
 
-  if (data.overrides.length !== 0) {
+  if (data.overrides.length === 0) {
     return (
       <EmptyState
         icon={<InformationCircleIcon />}
