@@ -1,5 +1,6 @@
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import { ThreadSheet } from "@/components/discussions/thread";
+import { EmptyState } from "@/components/empty-state";
 import {
   GraphContext,
   GraphPageLayout,
@@ -12,6 +13,7 @@ import {
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
 import { SchemaToolbar } from "@/components/schema/toolbar";
+import { CLISteps } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -23,10 +25,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getFederatedGraphSDLByName,
   getLatestValidSubgraphSDLByName,
@@ -35,6 +40,72 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
+
+const Empty = ({
+  subgraphName,
+}: {
+  subgraphName?: string;
+}) => {
+  const router = useRouter();
+
+  return (
+    <EmptyState
+      icon={<CommandLineIcon />}
+      title={
+        subgraphName
+          ? "Publish subgraph using CLI"
+          : "Create and Publish subgraph using CLI"
+      }
+      description={
+        subgraphName ? (
+          <>
+            Use the CLI tool to publish the subgraph.{" "}
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={docsBaseURL + "/cli/subgraphs/publish"}
+              className="text-primary"
+            >
+              Learn more.
+            </a>
+          </>
+        ) : (
+          <>
+            No subgraphs found. Use the CLI tool to create and publish one.{" "}
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={docsBaseURL + "/cli/subgraphs/publish"}
+              className="text-primary"
+            >
+              Learn more.
+            </a>
+          </>
+        )
+      }
+      actions={
+        <CLISteps
+          steps={
+            subgraphName
+              ? [
+                  {
+                    description: "Publish a subgraph.",
+                    command: `npx wgc subgraph publish ${subgraphName} --namespace ${router.query.namespace} --schema <path-to-schema>`,
+                  },
+                ]
+              : [
+                  {
+                    description:
+                      "Publish a subgraph. If the subgraph does not exist, it will be created.",
+                    command: `npx wgc subgraph publish <subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema> --label <labels> --routing-url <routing-url>`,
+                  },
+                ]
+          }
+        />
+      }
+    />
+  );
+};
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -55,7 +126,7 @@ const SDLPage: NextPageWithLayout = () => {
 
   const graphData = useContext(GraphContext);
 
-  const validGraph =
+  let validGraph =
     graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
   const { data: subgraphSdl, isLoading: loadingSubgraphSDL } = useQuery({
@@ -100,6 +171,57 @@ const SDLPage: NextPageWithLayout = () => {
       };
 
   const isLoading = loadingGraphSDL || loadingSubgraphSDL;
+
+  let content: React.ReactNode;
+
+  if (isLoading) {
+    content = <Loader fullscreen />;
+  } else if (
+    activeSubgraph &&
+    subgraphSdl?.response &&
+    subgraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND
+  ) {
+    content = <Empty subgraphName={activeSubgraph} />;
+  } else if (
+    federatedGraphSdl?.response &&
+    federatedGraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND
+  ) {
+    validGraph = true;
+    content = (
+      <Empty
+        subgraphName={graphData?.subgraphs?.[0]?.name || undefined}
+      />
+    );
+  } else {
+    content = (
+      <div className="flex h-full flex-col-reverse md:flex-col">
+        <SDLViewer
+          sdl={activeGraphWithSDL.sdl ?? ""}
+          targetId={activeGraphWithSDL?.targetId}
+          versionId={activeGraphWithSDL.versionId ?? ""}
+        />
+        <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
+          <p className="flex items-center gap-x-1">
+            Routing URL :
+            <Link
+              className="hover:underline"
+              target="_blank"
+              rel="noreferrer"
+              href={activeGraphWithSDL.routingUrl}
+            >
+              {activeGraphWithSDL.routingUrl}
+            </Link>
+          </p>
+          {activeGraphWithSDL.time && (
+            <p className="flex items-center gap-x-1">
+              Last updated :
+              <span>{formatDateTime(new Date(activeGraphWithSDL.time))}</span>
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <PageHeader title="SDL | Studio">
@@ -156,37 +278,7 @@ const SDLPage: NextPageWithLayout = () => {
             className="mx-4 mt-4"
           />
         )}
-        {isLoading && <Loader fullscreen />}
-        {!isLoading && (
-          <div className="flex h-full flex-col-reverse md:flex-col">
-            <SDLViewer
-              sdl={activeGraphWithSDL.sdl ?? ""}
-              targetId={activeGraphWithSDL?.targetId}
-              versionId={activeGraphWithSDL.versionId ?? ""}
-            />
-            <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
-              <p className="flex items-center gap-x-1">
-                Routing URL :
-                <Link
-                  className="hover:underline"
-                  target="_blank"
-                  rel="noreferrer"
-                  href={activeGraphWithSDL.routingUrl}
-                >
-                  {activeGraphWithSDL.routingUrl}
-                </Link>
-              </p>
-              {activeGraphWithSDL.time && (
-                <p className="flex items-center gap-x-1">
-                  Last updated :
-                  <span>
-                    {formatDateTime(new Date(activeGraphWithSDL.time))}
-                  </span>
-                </p>
-              )}
-            </div>
-          </div>
-        )}
+        {content}
         <ThreadSheet schemaVersionId={activeGraphWithSDL.versionId ?? ""} />
       </GraphPageLayout>
     </PageHeader>
