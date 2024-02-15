@@ -91,12 +91,24 @@ const OverridesPage: NextPageWithLayout = () => {
       />
     );
 
-  if (data.overrides.length === 0) {
+  if (data.overrides.length !== 0) {
     return (
       <EmptyState
         icon={<InformationCircleIcon />}
         title="No overrides found"
-        description="Overrides that you add from schema checks will appear here"
+        description={
+          <>
+            Overrides that you add from schema checks will appear here.{" "}
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={docsBaseURL + "/studio/overrides"}
+              className="text-primary"
+            >
+              Learn more.
+            </a>
+          </>
+        }
       />
     );
   }
