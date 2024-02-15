@@ -317,7 +317,7 @@ export const CheckOperations = () => {
                                 <ChevronDownIcon className="ml-2" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent>
+                            <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 disabled={
                                   removingOverrides || creatingOverrides
@@ -340,7 +340,7 @@ export const CheckOperations = () => {
                                         changes: impactingChanges,
                                       });
                                 }}
-                                className="flex-col items-start gap-1"
+                                className="cursor-pointer flex-col items-start gap-1"
                               >
                                 {doAllChangesHaveOverrides
                                   ? "Toggle all changes as unsafe"
@@ -362,7 +362,7 @@ export const CheckOperations = () => {
                                     namespace: graphContext?.graph?.namespace,
                                   });
                                 }}
-                                className="flex-col items-start gap-1"
+                                className="cursor-pointer flex-col items-start gap-1"
                               >
                                 Ignore All
                                 <p className="max-w-xs text-xs text-muted-foreground">
