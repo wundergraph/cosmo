@@ -251,6 +251,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
+	// Create new modifier for incoming request
+	fReqID := NewForwardRequestIDHeader()
+	// Save it
+	r.preOriginHandlers = append(r.preOriginHandlers, fReqID.OnOriginRequest)
+
 	hr, err := NewHeaderTransformer(r.headerRules)
 	if err != nil {
 		return nil, err
