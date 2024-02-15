@@ -5510,7 +5510,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const list = await subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: federatedGraph.targetId,
-          published: true,
+          published: false,
         });
 
         const routerRequestToken = await fedRepo.getGraphSignedToken({
