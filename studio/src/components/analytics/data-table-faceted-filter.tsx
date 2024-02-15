@@ -68,7 +68,6 @@ export function DataTableFilterCommands<TData, TValue>({
 
     const time1 = option1 / 10 ** 9;
     const time2 = option2 / 10 ** 9;
-    console.log(time1, JSON.parse(selectedOptions[0]));
     if (time1 >= time2) {
       setRange({ start: time2, end: time1 });
     } else {
@@ -357,7 +356,9 @@ export function DataTableFacetedFilter<TData, TValue>({
                 variant="muted"
                 className="rounded-sm px-1 font-normal lg:hidden"
               >
-                {selectedValues.size}
+                {title === "Duration"
+                  ? selectedValues.size / 2
+                  : selectedValues.size}
               </Badge>
               <div className="hidden space-x-1 lg:flex">
                 {selectedValues.size > 1 ? (
@@ -365,7 +366,10 @@ export function DataTableFacetedFilter<TData, TValue>({
                     variant="muted"
                     className="rounded-sm px-1 font-normal"
                   >
-                    {selectedValues.size} selected
+                    {title === "Duration"
+                      ? selectedValues.size / 2
+                      : selectedValues.size}{" "}
+                    selected
                   </Badge>
                 ) : (
                   <Badge
