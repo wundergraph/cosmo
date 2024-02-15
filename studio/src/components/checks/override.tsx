@@ -15,20 +15,20 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { ClipboardCopyIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOperationIgnoreAllOverride,
   getAllOverrides,
-  getCheckOperations,
   getOperationOverrides,
   removeOperationIgnoreAllOverride,
   removeOperationOverrides,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import copy from "copy-to-clipboard";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
-import { CopyButton } from "../ui/copy-button";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
@@ -41,6 +41,18 @@ import {
   TableRow,
   TableWrapper,
 } from "../ui/table";
+import { OperationContentDialog } from "./operation-content";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 
 const Override = ({
   changeType,
@@ -93,25 +105,40 @@ const Override = ({
       <TableCell>{path}</TableCell>
       {operationHash && (
         <TableCell>
-          <Button
-            variant="outline"
-            isLoading={removingOverrides}
-            onClick={() =>
-              removeOverrides({
-                graphName: graphContext?.graph?.name,
-                namespace: graphContext?.graph?.namespace,
-                operationHash,
-                changes: [
-                  {
-                    changeType,
-                    path,
-                  },
-                ],
-              })
-            }
-          >
-            Remove
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline">Remove</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Future checks will fail if this breaking change is detected
+                  for this operation.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    removeOverrides({
+                      graphName: graphContext?.graph?.name,
+                      namespace: graphContext?.graph?.namespace,
+                      operationHash,
+                      changes: [
+                        {
+                          changeType,
+                          path,
+                        },
+                      ],
+                    });
+                  }}
+                >
+                  Continue
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TableCell>
       )}
     </TableRow>
@@ -313,7 +340,29 @@ export const ConfigureOverride = () => {
           </SheetTitle>
           <SheetDescription>
             Configure override for the operation with hash {operationHash}{" "}
-            <CopyButton value={operationHash} tooltip="Copy operation hash" />
+            <div className="mt-4 flex w-full items-center gap-2">
+              <Button
+                variant="secondary"
+                className=""
+                onClick={() => {
+                  copy(operationHash);
+                  toast({
+                    description: "Copied operation hash",
+                  });
+                }}
+              >
+                <ClipboardCopyIcon className="mr-3" />
+                Copy Hash
+              </Button>
+              <OperationContentDialog
+                hash={operationHash}
+                trigger={
+                  <Button className="w-max" variant="secondary">
+                    View Operation Content
+                  </Button>
+                }
+              />
+            </div>
           </SheetDescription>
         </SheetHeader>
         {content}

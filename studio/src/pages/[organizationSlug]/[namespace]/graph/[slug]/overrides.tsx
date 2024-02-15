@@ -30,9 +30,41 @@ import { cn } from "@/lib/utils";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { ConfigureOverride } from "@/components/checks/override";
 import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { BiAnalyse } from "react-icons/bi";
+import { IoBarcodeSharp } from "react-icons/io5";
 
 const OverridesPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
+  const router = useRouter();
+
+  const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
+  const slug = router.query.slug as string;
+
+  const constructLink = (
+    name: string,
+    hash: string,
+    mode: "metrics" | "traces",
+  ) => {
+    const filterState = createFilterState({
+      operationName: name,
+      operationHash: hash,
+    });
+
+    if (mode === "metrics") {
+      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${filterState}`;
+    }
+
+    return `/${organizationSlug}/${namespace}/graph/${slug}/analytics/traces?filterState=${filterState}`;
+  };
 
   const { data, isLoading, error, refetch } = useQuery({
     ...getAllOverrides.useQuery({
@@ -82,7 +114,7 @@ const OverridesPage: NextPageWithLayout = () => {
               <TableHead>Change Overrides</TableHead>
               <TableHead>Ignore Override</TableHead>
               <TableHead>Updated At</TableHead>
-              <TableHead className="w-24"></TableHead>
+              <TableHead className="w-52"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -117,19 +149,47 @@ const OverridesPage: NextPageWithLayout = () => {
                     {formatDistanceToNow(new Date(o.updatedAt))}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="table-action"
-                      onClick={() => {
-                        applyParams({
-                          override: o.hash,
-                          overrideName: o.name,
-                        });
-                      }}
-                    >
-                      View
-                    </Button>
+                    <div className="flex items-center justify-end gap-x-2">
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger>
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link
+                              href={constructLink(o.name, o.hash, "metrics")}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <BiAnalyse className="h-5 w-5" />
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Metrics</TooltipContent>
+                      </Tooltip>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger>
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link
+                              href={constructLink(o.name, o.hash, "traces")}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <IoBarcodeSharp className="h-5 w-5" />
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Traces</TooltipContent>
+                      </Tooltip>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="table-action"
+                        onClick={() => {
+                          applyParams({
+                            override: o.hash,
+                            overrideName: o.name,
+                          });
+                        }}
+                      >
+                        Configure
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

@@ -1,6 +1,6 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { OverrideChange, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
@@ -344,6 +344,6 @@ export class OperationsRepository {
       .from(change)
       .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
       .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
-      .orderBy(({ updatedAt }) => desc(updatedAt));
+      .orderBy(({ name, hash }) => [asc(name), asc(hash)]);
   }
 }

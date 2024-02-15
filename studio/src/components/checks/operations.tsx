@@ -1,6 +1,5 @@
 import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import { ChangesTable } from "@/components/checks/changes-table";
-import { CodeViewer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import { GraphContext } from "@/components/layout/graph-layout";
 import {
@@ -11,13 +10,6 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,104 +35,19 @@ import {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
+  createOperationIgnoreAllOverride,
   createOperationOverrides,
   getCheckOperations,
-  getOperationContent,
-  removeOperationOverrides,
   removeOperationIgnoreAllOverride,
-  createOperationIgnoreAllOverride,
+  removeOperationOverrides,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import copy from "copy-to-clipboard";
 import Fuse from "fuse.js";
 import { useRouter } from "next/router";
-import graphQLPlugin from "prettier/plugins/graphql";
-import * as prettier from "prettier/standalone";
-import { useContext, useEffect, useState } from "react";
-import { PiBracketsCurly } from "react-icons/pi";
+import { useContext, useState } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
-import { ConfigureOverride } from "./override";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-
-const OperationContent = ({
-  hash,
-  enabled,
-}: {
-  hash: string;
-  enabled: boolean;
-}) => {
-  const [content, setContent] = useState("");
-
-  const { data, error, isLoading, refetch } = useQuery({
-    ...getOperationContent.useQuery({
-      hash,
-    }),
-    enabled,
-  });
-
-  useEffect(() => {
-    const set = async (source: string) => {
-      const res = await prettier.format(source, {
-        parser: "graphql",
-        plugins: [graphQLPlugin],
-      });
-      setContent(res);
-    };
-
-    if (!data) return;
-    set(data.operationContent);
-  }, [data]);
-
-  if (isLoading) {
-    return (
-      <div className="h-96">
-        <Loader fullscreen />
-      </div>
-    );
-  }
-
-  if (error)
-    return (
-      <EmptyState
-        icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve content"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
-        actions={<Button onClick={() => refetch()}>Retry</Button>}
-      />
-    );
-
-  return (
-    <div className="scrollbar-custom h-[50vh] overflow-auto rounded border">
-      <CodeViewer code={content} disableLinking />
-    </div>
-  );
-};
-
-const OperationContentDialog = ({ hash }: { hash: string }) => {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Dialog open={open} onOpenChange={(val) => setOpen(val)}>
-      <Tooltip delayDuration={100}>
-        <DialogTrigger asChild>
-          <TooltipTrigger asChild>
-            <Button size="icon-sm" variant="secondary">
-              <PiBracketsCurly />
-            </Button>
-          </TooltipTrigger>
-        </DialogTrigger>
-        <TooltipContent>View operation content</TooltipContent>
-      </Tooltip>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Operation Content</DialogTitle>
-        </DialogHeader>
-        <OperationContent hash={hash} enabled={open} />
-      </DialogContent>
-    </Dialog>
-  );
-};
+import { OperationContentDialog } from "./operation-content";
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
@@ -440,8 +347,8 @@ export const CheckOperations = () => {
                                   : "Toggle all changes as safe"}
                                 <p className="max-w-xs text-xs text-muted-foreground">
                                   {doAllChangesHaveOverrides
-                                    ? "New checks will break if the current changes appear again for this operation"
-                                    : "New checks will ignore the current breaking changes for this operation"}
+                                    ? "Future checks will break if the current changes appear again for this operation"
+                                    : "Future checks will ignore the current breaking changes for this operation"}
                                 </p>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -459,7 +366,7 @@ export const CheckOperations = () => {
                               >
                                 Ignore All
                                 <p className="max-w-xs text-xs text-muted-foreground">
-                                  New checks will ignore all current and future
+                                  Future checks will ignore all current and new
                                   breaking changes for this operation
                                 </p>
                               </DropdownMenuItem>
