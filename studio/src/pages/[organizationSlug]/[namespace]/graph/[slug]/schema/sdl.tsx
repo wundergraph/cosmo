@@ -41,7 +41,7 @@ import { useRouter } from "next/router";
 import { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
 
-export const Empty = ({
+const Empty = ({
   subgraphName,
 }: {
   subgraphName?: string;
