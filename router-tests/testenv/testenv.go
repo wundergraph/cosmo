@@ -69,6 +69,7 @@ type Config struct {
 	Subgraphs                          SubgraphsConfig
 	RouterOptions                      []core.Option
 	OverrideGraphQLPath                string
+	OverrideAbsinthePath               string
 	ModifyRouterConfig                 func(routerConfig *nodev1.RouterConfig)
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
@@ -274,6 +275,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		graphQLPath = cfg.OverrideGraphQLPath
 	}
 
+	absinthePath := "/absinthe/socket"
+	if cfg.OverrideAbsinthePath != "" {
+		absinthePath = cfg.OverrideAbsinthePath
+	}
+
 	if cfg.Subgraphs.Employees.CloseOnStart {
 		employeesServer.Close()
 	}
@@ -299,6 +305,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	e := &Environment{
 		t:                    t,
 		graphQLPath:          graphQLPath,
+		absinthePath:         absinthePath,
 		Context:              ctx,
 		cancel:               cancel,
 		Router:               rr,
@@ -447,8 +454,9 @@ func gqlURL(srv *httptest.Server) string {
 }
 
 type Environment struct {
-	t           testing.TB
-	graphQLPath string
+	t            testing.TB
+	graphQLPath  string
+	absinthePath string
 
 	Context              context.Context
 	cancel               context.CancelCauseFunc
@@ -590,6 +598,15 @@ func (e *Environment) GraphQLSubscriptionURL() string {
 	return u.String()
 }
 
+func (e *Environment) AbsintheSubscriptionURL() string {
+	joined, err := url.JoinPath(e.RouterURL, e.absinthePath)
+	require.NoError(e.t, err)
+	u, err := url.Parse(joined)
+	require.NoError(e.t, err)
+	u.Scheme = "ws"
+	return u.String()
+}
+
 func (e *Environment) GraphQLServeSentEventsURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
@@ -666,7 +683,7 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initial
 
 func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
-		Subprotocols: []string{"absinthe"},
+		// Subprotocols: []string{"absinthe"}, explicitly removed as this needs to be added by the absinthe handler
 	}
 
 	waitBetweenRetriesInMs := rand.Intn(10)
@@ -675,8 +692,9 @@ func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*webso
 	var err error
 
 	for i := 0; i < maxSocketRetries; i++ {
-		url := e.GraphQLSubscriptionURL()
-		conn, resp, err := dialer.Dial(url, header)
+		u := e.AbsintheSubscriptionURL()
+
+		conn, resp, err := dialer.Dial(u, header)
 
 		if resp != nil && err == nil {
 			return conn, resp, err

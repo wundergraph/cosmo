@@ -735,6 +735,12 @@ func TestWebSockets(t *testing.T) {
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
+			RouterOptions: []core.Option{
+				core.WithAbsintheConfiguration(&config.AbsintheConfiguration{
+					WebsocketHandlerEnabled: true,
+					WebsocketHandlerPath:    "/absinthe/socket",
+				}),
+			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			type currentTimePayload struct {
@@ -781,7 +787,6 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, 5, len(data))
 			err = json.Unmarshal(data[4], &payload)
 			require.NoError(t, err)
-			fmt.Printf("PAYLOaD: %v\n", payload)
 
 			unix2 := payload.Result.Data.CurrentTime.UnixTime
 			require.Equal(t, unix1+1, unix2)
@@ -799,8 +804,7 @@ func TestWebSockets(t *testing.T) {
 
 			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			require.NoError(t, err)
-			typ, d, err := conn.ReadMessage()
-			fmt.Printf("typ: %d, d: %s, err: %v\n", typ, d, err)
+			_, _, err = conn.ReadMessage()
 			require.Error(t, err)
 			var netErr net.Error
 			if errors.As(err, &netErr) {

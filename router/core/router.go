@@ -5,12 +5,13 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/nats-io/nuid"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/nats-io/nuid"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
@@ -139,6 +140,8 @@ type (
 		authorization *config.AuthorizationConfiguration
 
 		rateLimit *config.RateLimitConfiguration
+
+		absintheConfiguration *config.AbsintheConfiguration
 	}
 
 	Server interface {
@@ -1026,6 +1029,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
 		EpollKqueuePollTimeout:     r.engineExecutionConfiguration.EpollKqueuePollTimeout,
 		EpollKqueueConnBufferSize:  r.engineExecutionConfiguration.EpollKqueueConnBufferSize,
+		AbsintheConfiguration:      r.absintheConfiguration,
 	})
 
 	graphqlChiRouter := chi.NewRouter()
@@ -1050,6 +1054,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
+
+	if r.absintheConfiguration != nil && r.absintheConfiguration.WebsocketHandlerEnabled {
+		httpRouter.Mount(r.absintheConfiguration.WebsocketHandlerPath, graphqlChiRouter)
+	}
 
 	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
 	if err != nil {
@@ -1497,6 +1505,12 @@ func WithClusterName(name string) Option {
 func WithInstanceID(id string) Option {
 	return func(r *Router) {
 		r.instanceID = id
+	}
+}
+
+func WithAbsintheConfiguration(cfg *config.AbsintheConfiguration) Option {
+	return func(r *Router) {
+		r.Config.absintheConfiguration = cfg
 	}
 }
 

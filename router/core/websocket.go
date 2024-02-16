@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/pool"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -48,6 +49,8 @@ type WebsocketMiddlewareOptions struct {
 	EnableWebSocketEpollKqueue bool
 	EpollKqueuePollTimeout     time.Duration
 	EpollKqueueConnBufferSize  int
+
+	AbsintheConfiguration *config.AbsintheConfiguration
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -63,6 +66,10 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			logger:             opts.Logger,
 			stats:              opts.Stats,
 			readTimeout:        opts.ReadTimeout,
+		}
+		if opts.AbsintheConfiguration != nil {
+			handler.absintheHandlerEnabled = true
+			handler.absintheHandlerPath = opts.AbsintheConfiguration.WebsocketHandlerPath
 		}
 		handler.handlerPool = pond.New(
 			64,
@@ -158,6 +165,9 @@ type WebsocketHandler struct {
 	stats WebSocketsStatistics
 
 	readTimeout time.Duration
+
+	absintheHandlerEnabled bool
+	absintheHandlerPath    string
 }
 
 func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -165,7 +175,15 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.next.ServeHTTP(w, r)
 		return
 	}
+	if h.absintheHandlerEnabled && r.URL.Path == h.absintheHandlerPath {
+		// we do this because legacy absinthe clients just rely on the existence of the path
+		// we cannot change them or teach them how to set the required SubProtocol header
+		r.Header.Set("Sec-WebSocket-Protocol", "absinthe")
+	}
+	h.handleUpgradeRequest(w, r)
+}
 
+func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
 	var (
 		subProtocol string
 	)

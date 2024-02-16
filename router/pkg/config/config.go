@@ -256,6 +256,11 @@ type Cluster struct {
 	Name string `yaml:"name" envconfig:"CLUSTER_NAME"`
 }
 
+type AbsintheConfiguration struct {
+	WebsocketHandlerEnabled bool   `yaml:"websocket_handler_enabled" default:"true" envconfig:"ABSINTHE_WEBSOCKET_HANDLER_ENABLED"`
+	WebsocketHandlerPath    string `yaml:"websocket_handler_path" default:"/absinthe/websocket" envconfig:"ABSINTHE_WEBSOCKET_HANDLER_PATH"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
@@ -299,6 +304,8 @@ type Config struct {
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
+
+	AbsintheConfiguration AbsintheConfiguration `yaml:"absinthe"`
 }
 
 // ValidateRequiredWithRouterConfigPath validates that either the field or the router config path is set
