@@ -468,6 +468,12 @@ type Environment struct {
 	Nats                 *natsserver.Server
 	NC                   *nats.Conn
 	SubgraphRequestCount *SubgraphRequestCount
+
+	extraURLQueryValues url.Values
+}
+
+func (e *Environment) SetExtraURLQueryValues(values url.Values) {
+	e.extraURLQueryValues = values
 }
 
 func (e *Environment) Shutdown() {
@@ -586,9 +592,15 @@ func (e *Environment) MakeRequest(method, path string, header http.Header, body 
 }
 
 func (e *Environment) GraphQLRequestURL() string {
-	u, err := url.JoinPath(e.RouterURL, e.graphQLPath)
+	urlStr, err := url.JoinPath(e.RouterURL, e.graphQLPath)
 	require.NoError(e.t, err)
-	return u
+	if e.extraURLQueryValues != nil {
+		u, err := url.Parse(urlStr)
+		require.NoError(e.t, err)
+		u.RawQuery = e.extraURLQueryValues.Encode()
+		urlStr = u.String()
+	}
+	return urlStr
 }
 
 func (e *Environment) GraphQLSubscriptionURL() string {
@@ -642,8 +654,8 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websoc
 	var err error
 
 	for i := 0; i < maxSocketRetries; i++ {
-		url := e.GraphQLSubscriptionURL()
-		conn, resp, err := dialer.Dial(url, header)
+		urlStr := e.GraphQLSubscriptionURL()
+		conn, resp, err := dialer.Dial(urlStr, header)
 
 		if resp != nil && err == nil {
 			return conn, resp, err

@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/buger/jsonparser"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -735,6 +736,22 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 		h.logger.Error("Initializing websocket connection", zap.Error(err))
 		_ = h.requestError(fmt.Errorf("error initializing session"))
 		return err
+	}
+	query := h.r.URL.Query()
+	if query != nil && len(query) != 0 {
+		queryData, err := json.Marshal(query)
+		if err != nil {
+			h.logger.Error("Parsing query parameters", zap.Error(err))
+			return err
+		}
+		if h.initialPayload == nil {
+			h.initialPayload = json.RawMessage("{}")
+		}
+		h.initialPayload, err = jsonparser.Set(h.initialPayload, queryData, "upgrade_query_parameters")
+		if err != nil {
+			h.logger.Error("Setting query parameters", zap.Error(err))
+			return err
+		}
 	}
 	return nil
 }

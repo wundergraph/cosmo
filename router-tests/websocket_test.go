@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"testing"
 	"time"
@@ -445,6 +446,70 @@ func TestWebSockets(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 			require.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
+		})
+	})
+	t.Run("forward query params via initial payload", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make sure sending two simultaneous subscriptions with different extensions
+			// triggers two subscriptions to the upstream
+
+			xEnv.SetExtraURLQueryValues(url.Values{
+				"Authorization": []string{"token 123"},
+			})
+
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			var err error
+			err = conn1.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"456"}}`),
+			})
+			require.NoError(t, err)
+
+			var msg testenv.WebSocketMessage
+			var payload struct {
+				Data struct {
+					InitialPayload json.RawMessage `json:"initialPayload"`
+				} `json:"data"`
+			}
+			err = conn1.ReadJSON(&msg)
+			require.NoError(t, err)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, `{"extensions":{"token":"456"},"upgrade_query_parameters":{"Authorization":["token 123"]}}`, string(payload.Data.InitialPayload))
+		})
+	})
+	t.Run("forward query params via initial payload alongside existing", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make sure sending two simultaneous subscriptions with different extensions
+			// triggers two subscriptions to the upstream
+
+			xEnv.SetExtraURLQueryValues(url.Values{
+				"Authorization": []string{"token 123"},
+			})
+
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			var err error
+			err = conn1.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+			})
+			require.NoError(t, err)
+
+			var msg testenv.WebSocketMessage
+			var payload struct {
+				Data struct {
+					InitialPayload json.RawMessage `json:"initialPayload"`
+				} `json:"data"`
+			}
+			err = conn1.ReadJSON(&msg)
+			require.NoError(t, err)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, `{"upgrade_query_parameters":{"Authorization":["token 123"]}}`, string(payload.Data.InitialPayload))
 		})
 	})
 	t.Run("same graphql path as playground", func(t *testing.T) {
