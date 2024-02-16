@@ -17,7 +17,7 @@ const (
 	absintheMessageEventTypeHeartbeat        = absintheMessageEventType("heartbeat")
 	absintheMessageEventTypeSubscriptionData = absintheMessageEventType("subscription:data")
 
-	absintheWSSubProtocol = "absinthe"
+	AbsintheWSSubProtocol = "absinthe"
 )
 
 var (
@@ -100,7 +100,7 @@ func newAbsintheWSProtocol(conn JSONConn) *absintheWSProtocol {
 }
 
 func (p *absintheWSProtocol) Subprotocol() string {
-	return graphQLWSSubprotocol
+	return GraphQLWSSubprotocol
 }
 
 func (p *absintheWSProtocol) Initialize() (json.RawMessage, error) {

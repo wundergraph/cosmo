@@ -175,11 +175,6 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.next.ServeHTTP(w, r)
 		return
 	}
-	if h.absintheHandlerEnabled && r.URL.Path == h.absintheHandlerPath {
-		// we do this because legacy absinthe clients just rely on the existence of the path
-		// we cannot change them or teach them how to set the required SubProtocol header
-		r.Header.Set("Sec-WebSocket-Protocol", "absinthe")
-	}
 	h.handleUpgradeRequest(w, r)
 }
 
@@ -219,6 +214,12 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		requestLogger.Warn("Websocket upgrade", zap.Error(err))
 		_ = c.Close()
 		return
+	}
+
+	// legacy absinthe clients don't set the Sec-WebSocket-Protocol header (Subprotocol)
+	// so we need to check the path to determine if it's an absinthe client and set the subprotocol manually
+	if subProtocol == "" && h.absintheHandlerEnabled && r.URL.Path == h.absintheHandlerPath {
+		subProtocol = wsproto.AbsintheWSSubProtocol
 	}
 
 	// After successful upgrade, we can't write to the response writer anymore

@@ -43,9 +43,9 @@ type Message struct {
 
 func Subprotocols() []string {
 	return []string{
-		graphQLWSSubprotocol,
-		subscriptionsTransportWSSubprotocol,
-		absintheWSSubProtocol,
+		GraphQLWSSubprotocol,
+		SubscriptionsTransportWSSubprotocol,
+		AbsintheWSSubProtocol,
 	}
 }
 
@@ -60,11 +60,11 @@ func IsSupportedSubprotocol(subProtocol string) bool {
 
 func NewProtocol(subProtocol string, conn JSONConn) (Proto, error) {
 	switch subProtocol {
-	case graphQLWSSubprotocol:
+	case GraphQLWSSubprotocol:
 		return newGraphQLWSProtocol(conn), nil
-	case subscriptionsTransportWSSubprotocol:
+	case SubscriptionsTransportWSSubprotocol:
 		return newSubscriptionsTransportWSProtocol(conn), nil
-	case absintheWSSubProtocol:
+	case AbsintheWSSubProtocol:
 		return newAbsintheWSProtocol(conn), nil
 	}
 	return nil, fmt.Errorf("could not find a suitable websocket subprotocol, supported ones are: %s", strings.Join(Subprotocols(), ", "))
