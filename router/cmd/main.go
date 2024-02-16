@@ -18,16 +18,23 @@ import (
 )
 
 var (
-	overrideEnv = flag.String("override-env", "", "env file name to override env variables")
+	overrideEnvFlag = flag.String("override-env", "", "env file name to override env variables")
+	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "path to config file")
 )
 
 func Main() {
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
-	profile := profile.Start()
+	profiler := profile.Start()
 
-	cfg, err := config.LoadConfig(*overrideEnv)
+	var configPath = config.DefaultConfigPath
+
+	if *configPathFlag != "" {
+		configPath = *configPathFlag
+	}
+
+	cfg, err := config.LoadConfig(configPath, *overrideEnvFlag)
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
@@ -52,6 +59,13 @@ func Main() {
 			zap.String("component", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
 		)
+
+	if configPath != "" {
+		logger.Info(
+			"Loaded config from file. Values in the config file has higher priority than environment variables",
+			zap.String("config_file", configPath),
+		)
+	}
 
 	router, err := NewRouter(Params{
 		Config: cfg,
@@ -82,7 +96,8 @@ func Main() {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
 
-	profile.Finish()
+	profiler.Finish()
+
 	logger.Debug("Server exiting")
 	os.Exit(0)
 }

@@ -1,0 +1,890 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "The version of the configuration file. This is used to ensure that the configuration file is compatible.",
+      "enum": ["1"]
+    },
+    "instance_id": {
+      "type": "string",
+      "description": "The unique identifier of the instance. This is used to identify the instance in the control plane and in the metrics."
+    },
+    "graph": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "The token used to authenticate with other component from Cosmo. Can be ommitted if the router is started with a static execution config."
+        }
+      }
+    },
+    "graphql_metrics": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the collection of the GraphQL metrics. The default value is true."
+        },
+        "collector_endpoint": {
+          "type": "string",
+          "description": "The endpoint to which the GraphQL metrics are collected. The endpoint is specified as a string with the format 'scheme://host:port'.",
+          "format": "http-url"
+        }
+      }
+    },
+    "dev_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs."
+    },
+    "telemetry": {
+      "type": "object",
+      "description": "The configuration for the telemetry. The telemetry is used to collect and export the traces and metrics.",
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "default": "cosmo-router"
+        },
+        "tracing": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "sampling_rate": {
+              "type": "number",
+              "description": "The sampling rate for the traces. The value must be between 0 and 1. If the value is 0, no traces will be sampled. If the value is 1, all traces will be sampled. The default value is 1.",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "exporters": {
+              "type": "array",
+              "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "exporter": {
+                    "type": "string",
+                    "description": "The exporter to use for the traces. The supported exporters are 'http' and 'grpc'.",
+                    "enum": ["http", "grpc"]
+                  },
+                  "endpoint": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "The path to which the traces are exported.",
+                    "format": "uri"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "batch_timeout": {
+                    "type": "string",
+                    "description": "The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "duration": {
+                      "minimum": "5s",
+                      "maximum": "2m"
+                    }
+                  },
+                  "export_timeout": {
+                    "type": "string",
+                    "description": "The maximum time to wait for the export to complete. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "duration": {
+                      "minimum": "5s",
+                      "maximum": "2m"
+                    }
+                  }
+                }
+              }
+            },
+            "propagation": {
+              "type": "object",
+              "properties": {
+                "trace_context": {
+                  "type": "boolean",
+                  "description": "Enable the trace context propagation. See https://www.w3.org/TR/trace-context/ for more information."
+                },
+                "jaeger": {
+                  "type": "boolean",
+                  "description": "Enable the Jaeger propagation. See https://www.jaegertracing.io/ (compliant with opentracing) for more information."
+                },
+                "b3": {
+                  "type": "boolean",
+                  "description": "Enable the B3 propagation. See https://github.com/openzipkin/b3-propagation (zipkin) for more information."
+                },
+                "baggage": {
+                  "type": "boolean",
+                  "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
+                }
+              }
+            },
+            "export_graphql_variables": {
+              "type": "boolean",
+              "description": "Enable the export of the GraphQL variables. The GraphQL variables are exported with the traces."
+            },
+            "with_new_root": {
+              "type": "boolean"
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "description": "The configuration for the collection and export of metrics. The metrics are collected and exported using the OpenTelemetry protocol (OTLP) and Prometheus.",
+          "properties": {
+            "otlp": {
+              "type": "object",
+              "description": "The configuration for the OpenTelemetry protocol (OTLP). The OTLP is used to collect and export the metrics.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable the collection of metrics."
+                },
+                "router_runtime": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable the collection of metrics for the router runtime."
+                },
+                "exporters": {
+                  "type": "array",
+                  "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "disabled": {
+                        "type": "boolean"
+                      },
+                      "exporter": {
+                        "type": "string",
+                        "description": "The exporter protocol to use to export metrics. The supported exporters are 'http' and 'grpc'.",
+                        "enum": ["http", "grpc"]
+                      },
+                      "endpoint": {
+                        "type": "string",
+                        "description": "The endpoint to which the metrics are exported."
+                      },
+                      "path": {
+                        "type": "string",
+                        "description": "The path to which the metrics are exported.",
+                        "format": "uri"
+                      },
+                      "headers": {
+                        "type": "object",
+                        "description": "The headers to send with the request. Use this to set the authentication headers.",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["exporter", "endpoint"]
+                  }
+                }
+              }
+            },
+            "prometheus": {
+              "type": "object",
+              "description": "The configuration for the Prometheus metrics. The Prometheus metrics are used to collect and export the metrics.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path to which the metrics are served.",
+                  "format": "x-uri",
+                  "default": "/metrics"
+                },
+                "listen_addr": {
+                  "type": "string",
+                  "description": "The address on which the metrics are served.",
+                  "format": "hostname-port",
+                  "default": "localhost:8088"
+                },
+                "exclude_metrics": {
+                  "type": "array",
+                  "description": "The metrics to exclude from the Prometheus metrics. Accepts a list of regular expressions.",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "exclude_metric_labels": {
+                  "type": "array",
+                  "description": "The metric labels to exclude from the Prometheus metrics. Accepts a list of regular expressions.",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "cors": {
+      "type": "object",
+      "properties": {
+        "allow_origins": {
+          "type": "array",
+          "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
+          "default": ["*"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "allow_methods": {
+          "type": "array",
+          "default": ["GET", "POST", "HEAD"],
+          "description": "The allowed HTTP methods. The default value is to allow the methods 'GET', 'POST', and 'HEAD'.",
+          "items": {
+            "type": "string",
+            "enum": ["GET", "POST", "HEAD", "PUT", "DELETE", "PATCH", "OPTIONS"]
+          }
+        },
+        "allow_headers": {
+          "type": "array",
+          "description": "The allowed HTTP headers. The default value is to allow all headers. Default headers are always appended to the list of allowed headers.",
+          "default": [
+            "Origin",
+            "Content-Length",
+            "Content-Type",
+            "Authorization",
+            "Origin",
+            "Content-Length",
+            "Content-Type",
+            "Graphql-Client-Name",
+            "Graphql-Client-Version",
+            "Apollo-Graphql-Client-Name",
+            "Apollo-Graphql-Client-Version",
+            "x-wg-trace",
+            "x-wg-token",
+            "traceparent",
+            "tracestate"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "allow_credentials": {
+          "type": "boolean",
+          "default": true,
+          "description": "The allowed credentials. The default value is to allow credentials. This allows the browser to send cookies and authentication headers."
+        },
+        "max_age": {
+          "type": "string",
+          "duration": {
+            "minimum": "5m"
+          },
+          "default": "5m",
+          "description": "The maximum age of the preflight request. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        }
+      }
+    },
+    "cluster": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the cluster. This is used to identify the cluster in the control plane and in the metrics."
+        }
+      }
+    },
+    "listen_addr": {
+      "type": "string",
+      "description": "The address on which the router listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+      "default": "localhost:3003",
+      "format": "hostname-port"
+    },
+    "controlplane_url": {
+      "type": "string",
+      "description": "The URL of the control plane. The URL is used to register the router in the control plane. The URL is specified as a string with the format 'scheme://host:port'.",
+      "default": "https://cosmo-cp.wundergraph.com",
+      "format": "http-url"
+    },
+    "playground_enabled": {
+      "type": "boolean",
+      "description": "Enable the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is true. If the value is false, the GraphQL Playground is disabled.",
+      "default": true
+    },
+    "introspection_enabled": {
+      "type": "boolean",
+      "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
+      "default": true
+    },
+    "log_level": {
+      "type": "string",
+      "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
+      "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
+      "default": "info"
+    },
+    "json_log": {
+      "type": "boolean",
+      "description": "Enable the JSON log format. The JSON log format is used to log the logs in JSON format. The default value is true. If the value is false, the logs are logged a human friendly text format.",
+      "default": true
+    },
+    "shutdown_delay": {
+      "type": "string",
+      "duration": {
+        "minimum": "15s"
+      },
+      "description": "The delay before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+      "default": "60s"
+    },
+    "grace_period": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "The grace period before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+      "default": "20s"
+    },
+    "poll_interval": {
+      "type": "string",
+      "description": "The interval at which the router polls the CDN for updates. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+      "default": "10s",
+      "duration": {
+        "minimum": "5s"
+      }
+    },
+    "health_check_path": {
+      "type": "string",
+      "default": "/health",
+      "format": "x-uri",
+      "description": "The path of the health check endpoint. The health check endpoint is used to check the health of the router. The default value is '/health'."
+    },
+    "readiness_check_path": {
+      "type": "string",
+      "default": "/health/ready",
+      "format": "x-uri",
+      "description": "The path of the readiness check endpoint. The readiness check endpoint is used to check the readiness of the router. The default value is '/health/ready'."
+    },
+    "liveness_check_path": {
+      "type": "string",
+      "default": "/health/live",
+      "format": "x-uri",
+      "description": "The path of the liveness check endpoint. The liveness check endpoint is used to check the liveness of the router. The default value is '/health/live'."
+    },
+    "graphql_path": {
+      "type": "string",
+      "default": "/graphql",
+      "format": "x-uri",
+      "description": "The path of the GraphQL endpoint. The GraphQL endpoint is used to send the GraphQL queries, subscriptions and mutations. The default value is '/graphql'."
+    },
+    "playground_path": {
+      "type": "string",
+      "format": "x-uri",
+      "default": "/",
+      "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'."
+    },
+    "traffic_shaping": {
+      "type": "object",
+      "description": "The configuration for the traffic shaping. Configure rules for traffic shaping like maximum request body size, timeouts, retry behavior, etc. See https://cosmo-docs.wundergraph.com/router/traffic-shaping for more information.",
+      "properties": {
+        "router": {
+          "type": "object",
+          "properties": {
+            "max_request_body_size": {
+              "type": "string",
+              "bytes": {
+                "minimum": "1MB"
+              },
+              "description": "The maximum request body size. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+            }
+          }
+        },
+        "all": {
+          "type": "object",
+          "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+          "properties": {
+            "request_timeout": {
+              "type": "string",
+              "duration": {
+                "minimum": "1s"
+              },
+              "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "dial_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "tls_handshake_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "response_header_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "expect_continue_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "keep_alive_idle_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "keep_alive_probe_interval": {
+              "type": "string",
+              "duration": {
+                "minimum": "5s"
+              },
+              "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "retry": {
+              "type": "object",
+              "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "algorithm": {
+                  "type": "string",
+                  "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
+                  "enum": ["backoff_jitter"]
+                },
+                "max_attempts": {
+                  "type": "integer",
+                  "default": 5,
+                  "minimum": 1,
+                  "description": "The maximum number of attempts. The default value is 5."
+                },
+                "interval": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "default": "3s",
+                  "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+                },
+                "max_duration": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "default": "10s",
+                  "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "headers": {
+      "type": "object",
+      "description": "The configuration for the headers. The headers rules are used to modify the headers of the incoming requests and how they are propagated to your subgraphs. See https://cosmo-docs.wundergraph.com/router/proxy-capabilities#forward-http-headers-to-subgraphs for more information.",
+      "additionalProperties": {
+        "$ref": "#/definitions/traffic_shaping_header_rule"
+      },
+      "properties": {
+        "all": {
+          "$ref": "#/definitions/traffic_shaping_header_rule"
+        }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "description": "The configuration for the modules. The modules are used to extend the functionality of the router. The modules are specified as a map of module names to module configurations. It needs to match with the name of the module and the configuration of the module. See https://cosmo-docs.wundergraph.com/router/custom-modules for more information.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "The configuration for the module. The key is the name of the module specified in the code.",
+        "additionalProperties": true
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "description": "The configuration for the authentication. The authentication is used to authenticate the incoming requests. We currently support JWK (JSON Web Key) authentication.",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The name of the authentication provider. The name is used to identify the provider in the configuration."
+              },
+              "jwks": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
+                    "format": "http-url"
+                  },
+                  "header_names": {
+                    "type": "array",
+                    "description": "The names of the headers. The headers are used to extract the token from the request. The default value is 'Authorization'",
+                    "default": ["Authorization"],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "header_value_prefixes": {
+                    "type": "array",
+                    "description": "The prefixes of the header values. The prefixes are used to extract the token from the header value. The default value is 'Bearer'",
+                    "default": ["Bearer"],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "refresh_interval": {
+                    "type": "string",
+                    "duration": {
+                      "minimum": "5s"
+                    },
+                    "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "default": "1m"
+                  }
+                },
+                "required": ["url"]
+              }
+            },
+            "required": ["name"]
+          }
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "properties": {
+        "require_authentication": {
+          "type": "boolean",
+          "description": "Ensure that the request is authenticated. If the value is true, the request must be authenticated. If the value is false, the request does not need to be authenticated."
+        },
+        "reject_operation_if_unauthorized": {
+          "type": "boolean",
+          "description": "Reject the operation if the request is not authorized. If the value is true, the operation is rejected if the request is not authorized."
+        }
+      }
+    },
+    "rate_limit": {
+      "type": "object",
+      "description": "The configuration for the rate limit. The rate limit is used to limit the number of requests that can be made to the router.",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "strategy": {
+          "type": "string",
+          "enum": ["simple"],
+          "description": "The strategy used to enforce the rate limit. The supported strategies are 'simple'."
+        },
+        "simple_strategy": {
+          "type": "object",
+          "properties": {
+            "rate": {
+              "type": "integer",
+              "description": "The rate at which the requests are allowed. The rate is specified as a number of requests per second.",
+              "minimum": 1
+            },
+            "burst": {
+              "type": "integer",
+              "description": "The maximum number of requests that are allowed to exceed the rate. The burst is specified as a number of requests.",
+              "minimum": 1
+            },
+            "period": {
+              "type": "string",
+              "description": "The period of time over which the rate limit is enforced. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "reject_exceeding_requests": {
+              "type": "boolean",
+              "description": "Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected."
+            }
+          },
+          "required": ["rate", "burst", "period"]
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "addr": {
+              "type": "string",
+              "description": "The url of the redis server. The url is specified as a string with the format 'scheme://host:port'.",
+              "format": "url",
+              "default": "localhost:6379"
+            },
+            "password": {
+              "type": "string",
+              "description": "The password of the redis server."
+            },
+            "key_prefix": {
+              "type": "string",
+              "description": "The prefix of the keys used to store the rate limit data.",
+              "default": "cosmo_rate_limit"
+            }
+          }
+        },
+        "debug": {
+          "type": "boolean",
+          "description": "Enable the debug mode for the rate limit."
+        }
+      }
+    },
+    "localhost_fallback_inside_docker": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable the localhost fallback inside Docker. The localhost fallback is used to resolve the localhost address when running the router inside a Docker container. This should be only enabled for development and testing."
+    },
+    "cdn": {
+      "type": "object",
+      "description": "The configuration for the CDN. The CDN is used to fetch the schema and configurations from the CDN.",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "http-url",
+          "description": "The URL of the CDN. The URL is used to fetch the schema and the configuration from the CDN. The URL is specified as a string with the format 'scheme://host:port'."
+        },
+        "cache_size": {
+          "type": "string",
+          "default": "100MB",
+          "bytes": {
+            "minimum": "10MB"
+          },
+          "format": "bytes-string",
+          "description": "The size of the cache used. The default value is 100MB."
+        }
+      }
+    },
+    "events": {
+      "type": "object",
+      "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "description": "The provider of the events. The supported providers are 'NATS'.",
+                "enum": ["NATS"]
+              },
+              "url": {
+                "type": "string",
+                "description": "The provider URL. The URL is used to connect to the provider.",
+                "format": "url"
+              }
+            },
+            "required": ["provider", "url"]
+          }
+        }
+      }
+    },
+    "config_path": {
+      "type": "string",
+      "format": "file-path",
+      "description": "The path of the router configuration file. The path is specified as a string with the format 'path/to/file'."
+    },
+    "router_config_path": {
+      "type": "string",
+      "format": "file-path",
+      "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
+    },
+    "router_registration": {
+      "type": "boolean",
+      "description": "Enable the router registration. The router registration is used to register the router in the control plane. The default value is true. This should not be modified unless you know what you are doing."
+    },
+    "override_routing_url": {
+      "type": "object",
+      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs.",
+      "properties": {
+        "subgraphs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
+            "format": "http-url"
+          }
+        }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "description": "The configuration for the engine. The engine is used to execute the GraphQL queries, mutations and subscriptions. Only modify this if you know what you are doing.",
+      "properties": {
+        "debug": {
+          "type": "object",
+          "description": "The debug configuration. The debug configuration is used to enable the debug mode for the engine.",
+          "properties": {
+            "print_operation_transformations": {
+              "type": "boolean",
+              "description": "Print the operation transformations."
+            },
+            "print_operation_enable_ast_refs": {
+              "type": "boolean",
+              "description": "Print the operation enable AST refs."
+            },
+            "print_planning_paths": {
+              "type": "boolean",
+              "description": "Print the planning paths."
+            },
+            "print_query_plans": {
+              "type": "boolean",
+              "description": "Print the query plans."
+            },
+            "print_node_suggestions": {
+              "type": "boolean",
+              "description": "Print the node suggestions."
+            },
+            "configuration_visitor": {
+              "type": "boolean",
+              "description": "Print the configuration visitor."
+            },
+            "planning_visitor": {
+              "type": "boolean",
+              "description": "Print the planning visitor."
+            },
+            "datasource_visitor": {
+              "type": "boolean",
+              "description": "Print the datasource visitor."
+            },
+            "report_websocket_connections": {
+              "type": "boolean",
+              "description": "Print the websocket connections."
+            },
+            "report_memory_usage": {
+              "type": "boolean",
+              "description": "Print the memory usage."
+            }
+          }
+        },
+        "enable_single_flight": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the single flight. The single flight is used to deduplicate the requests to the same subgraphs."
+        },
+        "enable_request_tracing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information."
+        },
+        "enable_execution_plan_cache_response_header": {
+          "type": "boolean",
+          "description": "Enable the execution plan cache response header. The execution plan cache response header is used to cache the execution plan in the client."
+        },
+        "max_concurrent_resolvers": {
+          "type": "integer",
+          "description": "The maximum number of concurrent resolvers.",
+          "default": 1024
+        },
+        "enable_websocket_epoll_kqueue": {
+          "type": "boolean",
+          "description": "Enable the websocket epoll kqueue. The websocket epoll kqueue is used to optimize the websocket connections. Only available on Linux and MacOS.",
+          "default": true
+        },
+        "epoll_kqueue_poll_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "1s",
+          "description": "The timeout for the epoll kqueue poll. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "epoll_kqueue_conn_buffer_size": {
+          "type": "integer",
+          "default": 128,
+          "description": "The buffer size for the epoll kqueue connection."
+        },
+        "websocket_read_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "5s",
+          "description": "The timeout for the websocket read. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "execution_plan_cache_size": {
+          "type": "integer",
+          "default": 10000,
+          "description": "The size of the execution plan cache."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "traffic_shaping_header_rule": {
+      "type": "object",
+      "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+      "properties": {
+        "request_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "dial_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "tls_handshake_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "response_header_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "expect_continue_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "keep_alive_idle_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "keep_alive_probe_interval": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "retry": {
+          "type": "object",
+          "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "algorithm": {
+              "type": "string",
+              "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
+              "enum": ["backoff_jitter"]
+            },
+            "max_attempts": {
+              "type": "integer",
+              "default": 5,
+              "description": "The maximum number of attempts. The default value is 5."
+            },
+            "interval": {
+              "type": "string",
+              "duration": {
+                "minimum": "100ms"
+              },
+              "default": "3s",
+              "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "max_duration": {
+              "type": "string",
+              "duration": {
+                "minimum": "1s"
+              },
+              "default": "10s",
+              "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            }
+          }
+        }
+      }
+    }
+  }
+}

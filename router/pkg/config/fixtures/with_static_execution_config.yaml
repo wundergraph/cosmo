@@ -1,0 +1,3 @@
+version: "1"
+
+router_config_path: "config.json"
