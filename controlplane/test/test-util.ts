@@ -8,18 +8,19 @@ import Fastify from 'fastify';
 import { pino } from 'pino';
 import { expect, TestContext } from 'vitest';
 import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage/index.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import database from '../src/core/plugins/database.js';
+import fastifyRedis from '../src/core/plugins/redis.js';
 import routes from '../src/core/routes.js';
+import { Authorization } from '../src/core/services/Authorization.js';
 import Keycloak from '../src/core/services/Keycloak.js';
 import Mailer from '../src/core/services/Mailer.js';
 import { createTestAuthenticator, seedTest } from '../src/core/test-util.js';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
-import { Label } from '../src/types/index.js';
-import { Authorization } from '../src/core/services/Authorization.js';
-import fastifyRedis from '../src/core/plugins/redis.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
+import { Label } from '../src/types/index.js';
 
-export const SetupTest = async function (testContext: TestContext, dbname: string) {
+export const SetupTest = async function (testContext: TestContext, dbname: string, chClient?: ClickHouseClient) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
   const server = Fastify({
@@ -67,6 +68,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
     routes: routes({
+      chClient,
       db: server.db,
       logger: pino(),
       authenticator,

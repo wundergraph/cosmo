@@ -1,14 +1,50 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { SchemaCheckRepository } from '../src/core/repositories/SchemaCheckRepository.js';
-import { InspectorOperationResult } from '../src/core/services/SchemaUsageTrafficInspector.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, Mock } from 'vitest';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
+const initSchema = `
+type Query {
+  employees: [Employee!]!
+}
+
+type Employee {
+  id: Int!
+}
+`;
+
+const modifiedSchema = `
+type Query {
+  employees: [Employee]
+}
+
+type Employee {
+  id: Int!
+}
+`;
+
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Overrides', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -18,9 +54,10 @@ describe('Overrides', (ctx) => {
   });
 
   test('Should be able to detect overrides', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest(testContext, dbname, chClient);
 
     const fedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
     const label = genUniqueLabel();
 
     const createFedGraphRes = await client.createFederatedGraph({
@@ -29,17 +66,56 @@ describe('Overrides', (ctx) => {
       routingUrl: 'http://localhost:8081',
       labelMatchers: [joinLabel(label)],
     });
-
     expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const createSubgraphRes = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createSubgraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const publishResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: Buffer.from(initSchema),
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+    (chClient.queryPromise as Mock).mockResolvedValue([
+      {
+        operationHash: 'hash1',
+        operationName: 'op1',
+        operationType: 'query',
+        firstSeen: Date.now() / 1000,
+        lastSeen: Date.now() / 1000,
+      },
+      {
+        operationHash: 'hash2',
+        operationName: 'op2',
+        operationType: 'query',
+        firstSeen: Date.now() / 1000,
+        lastSeen: Date.now() / 1000,
+      },
+    ]);
+
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Buffer.from(modifiedSchema),
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.breakingChanges.length).toBe(1);
+    expect(checkResp.operationUsageStats?.totalOperations).toBe(2);
+    expect(checkResp.operationUsageStats?.safeOperations).toBe(0);
 
     const graphRes = await client.getFederatedGraphByName({
       name: fedGraphName,
       namespace: 'default',
     });
-
     const namespacesRes = await client.getNamespaces({});
     const namespace = namespacesRes.namespaces.find((n) => n.name === graphRes.graph?.namespace);
-
     expect(namespace).toBeDefined();
     expect(graphRes.response?.code).toBe(EnumStatusCode.OK);
 
@@ -48,54 +124,19 @@ describe('Overrides', (ctx) => {
       namespace: graphRes.graph?.namespace,
       operationHash: 'hash1',
       operationName: 'op1',
-      changes: [
-        {
-          changeType: 'FIELD_TYPE_CHANGED',
-          path: 'A.field',
-        },
-      ],
+      changes: checkResp.breakingChanges,
     });
     expect(createOverrideRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const schemaCheckRepo = new SchemaCheckRepository(server.db);
-
-    const inspectorResult = new Map<string, InspectorOperationResult[]>();
-    inspectorResult.set('1', [
-      {
-        schemaChangeId: '1',
-        hash: 'hash1',
-        name: 'op1',
-        type: 'query',
-        lastSeenAt: new Date(),
-        firstSeenAt: new Date(),
-        isSafeOverride: false,
-      },
-      {
-        schemaChangeId: '1',
-        hash: 'hash2',
-        name: 'op2',
-        type: 'query',
-        lastSeenAt: new Date(),
-        firstSeenAt: new Date(),
-        isSafeOverride: false,
-      },
-    ]);
-
-    const overrideCheckResult = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
-      changes: [
-        {
-          id: '1',
-          changeType: 'FIELD_TYPE_CHANGED',
-          path: 'A.field',
-        },
-      ],
-      inspectorResultsByChangeId: inspectorResult,
-      namespaceId: namespace?.id ?? '',
+    const checkResp2 = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Buffer.from(modifiedSchema),
     });
-
-    expect(overrideCheckResult.hasUnsafeClientTraffic).toBe(true);
-    expect(overrideCheckResult.result.get('1')?.find((op) => op.hash === 'hash1')?.isSafeOverride).toBe(true);
-    expect(overrideCheckResult.result.get('1')?.find((op) => op.hash === 'hash2')?.isSafeOverride).toBe(false);
+    expect(checkResp2.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp2.breakingChanges.length).toBe(1);
+    expect(checkResp2.operationUsageStats?.totalOperations).toBe(2);
+    expect(checkResp2.operationUsageStats?.safeOperations).toBe(1);
 
     const createIgnoreOverrideRes = await client.createOperationIgnoreAllOverride({
       graphName: graphRes.graph?.name,
@@ -105,50 +146,33 @@ describe('Overrides', (ctx) => {
     });
     expect(createIgnoreOverrideRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const overrideCheckResult2 = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
-      changes: [
-        {
-          id: '1',
-          changeType: 'FIELD_TYPE_CHANGED',
-          path: 'A.field',
-        },
-      ],
-      inspectorResultsByChangeId: inspectorResult,
-      namespaceId: namespace?.id ?? '',
+    const checkResp3 = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Buffer.from(modifiedSchema),
     });
-
-    expect(overrideCheckResult2.hasUnsafeClientTraffic).toBe(false);
-    expect(overrideCheckResult2.result.get('1')?.find((op) => op.hash === 'hash1')?.isSafeOverride).toBe(true);
-    expect(overrideCheckResult2.result.get('1')?.find((op) => op.hash === 'hash2')?.isSafeOverride).toBe(true);
+    expect(checkResp3.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp3.breakingChanges.length).toBe(1);
+    expect(checkResp3.operationUsageStats?.totalOperations).toBe(2);
+    expect(checkResp3.operationUsageStats?.safeOperations).toBe(2);
 
     const removeOverrideRes = await client.removeOperationOverrides({
       graphName: graphRes.graph?.name,
       namespace: graphRes.graph?.namespace,
       operationHash: 'hash1',
-      changes: [
-        {
-          changeType: 'FIELD_TYPE_CHANGED',
-          path: 'A.field',
-        },
-      ],
+      changes: checkResp.breakingChanges,
     });
     expect(removeOverrideRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const overrideCheckResult3 = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
-      changes: [
-        {
-          id: '1',
-          changeType: 'FIELD_TYPE_CHANGED',
-          path: 'A.field',
-        },
-      ],
-      inspectorResultsByChangeId: inspectorResult,
-      namespaceId: namespace?.id ?? '',
+    const checkResp4 = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Buffer.from(modifiedSchema),
     });
-
-    expect(overrideCheckResult3.hasUnsafeClientTraffic).toBe(true);
-    expect(overrideCheckResult3.result.get('1')?.find((op) => op.hash === 'hash1')?.isSafeOverride).toBe(false);
-    expect(overrideCheckResult3.result.get('1')?.find((op) => op.hash === 'hash2')?.isSafeOverride).toBe(true);
+    expect(checkResp4.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp4.breakingChanges.length).toBe(1);
+    expect(checkResp4.operationUsageStats?.totalOperations).toBe(2);
+    expect(checkResp4.operationUsageStats?.safeOperations).toBe(1);
 
     await server.close();
   });
