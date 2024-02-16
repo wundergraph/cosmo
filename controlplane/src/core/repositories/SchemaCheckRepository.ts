@@ -1,5 +1,5 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { NewSchemaChangeOperationUsage } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
