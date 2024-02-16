@@ -123,6 +123,13 @@ export default (opts: BaseCommandOptions) => {
             success = resp.compositionErrors.length === 0;
             console.log(`No operations were affected by this schema change.`);
             finalStatement = `This schema change didn't affect any operations from existing client traffic.`;
+          } else if (resp.operationUsageStats.totalOperations === resp.operationUsageStats.safeOperations) {
+            // This is also a success because changes to these operations were marked as safe
+            success = resp.compositionErrors.length === 0;
+            console.log(
+              `${resp.operationUsageStats.totalOperations} operations were considered safe due to overrides.`,
+            );
+            finalStatement = `This schema change affected operations with safe overrides.`;
           } else {
             // Composition and breaking errors are considered failures because operations were affected by the change
             success = resp.breakingChanges.length === 0 && resp.compositionErrors.length === 0;
@@ -130,8 +137,12 @@ export default (opts: BaseCommandOptions) => {
             console.log(
               logSymbols.warning +
                 ` Compared ${pc.bold(resp.breakingChanges.length)} breaking change's impacting ${pc.bold(
-                  resp.operationUsageStats.totalOperations,
-                )} operations.\nFound client activity between ` +
+                  resp.operationUsageStats.totalOperations - resp.operationUsageStats.safeOperations,
+                )} operations. ${
+                  resp.operationUsageStats.safeOperations > 0
+                    ? `Also, ${resp.operationUsageStats.safeOperations} operations marked safe due to overrides.`
+                    : ''
+                } \nFound client activity between ` +
                 pc.underline(new Date(resp.operationUsageStats.firstSeenAt).toLocaleString()) +
                 ` and ` +
                 pc.underline(new Date(resp.operationUsageStats.lastSeenAt).toLocaleString()),

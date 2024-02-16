@@ -468,7 +468,21 @@ export const schemaCheckChangeActionOperationUsage = pgTable('schema_check_chang
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+  federatedGraphId: uuid('federated_graph_id').references(() => federatedGraphs.id, {
+    onDelete: 'cascade',
+  }),
+  isSafeOverride: boolean('is_safe_override').default(false),
 });
+
+export const schemaCheckChangeActionOperationUsageRelations = relations(
+  schemaCheckChangeActionOperationUsage,
+  ({ one }) => ({
+    changeAction: one(schemaCheckChangeAction, {
+      fields: [schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId],
+      references: [schemaCheckChangeAction.id],
+    }),
+  }),
+);
 
 export const schemaCheckFederatedGraphs = pgTable('schema_check_federated_graphs', {
   checkId: uuid('check_id')
@@ -509,9 +523,53 @@ export const schemaCheckChangeAction = pgTable('schema_check_change_action', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const schemaCheckChangeActionRelations = relations(schemaCheckChangeAction, ({ many }) => ({
+export const schemaCheckChangeActionRelations = relations(schemaCheckChangeAction, ({ one, many }) => ({
+  check: one(schemaChecks, {
+    fields: [schemaCheckChangeAction.schemaCheckId],
+    references: [schemaChecks.id],
+  }),
   operationUsage: many(schemaCheckChangeActionOperationUsage),
 }));
+
+export const operationChangeOverrides = pgTable(
+  'operation_change_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hash: text('hash').notNull(),
+    name: text('name').notNull(),
+    namespaceId: text('namespace_id').notNull(),
+    changeType: schemaChangeTypeEnum('change_type').notNull(),
+    path: text('path'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      hashIndex: uniqueIndex('hash_change_idx').on(t.hash, t.namespaceId, t.changeType, t.path),
+    };
+  },
+);
+
+export const operationIgnoreAllOverrides = pgTable(
+  'operation_ignore_all_overrides',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hash: text('hash').notNull(),
+    name: text('name').notNull(),
+    namespaceId: text('namespace_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      hashIndex: uniqueIndex('hash_namespace_ignore_idx').on(t.hash, t.namespaceId),
+    };
+  },
+);
 
 export const schemaCheckComposition = pgTable('schema_check_composition', {
   id: uuid('id').primaryKey().defaultRandom(),

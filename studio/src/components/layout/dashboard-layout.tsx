@@ -182,7 +182,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         )}
         <div
           className={cn(
-            "flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_1fr] lg:divide-x",
+            "flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x",
             {
               "min-h-[calc(100vh-32px)]": disableStarBanner === "false",
               "min-h-screen": disableStarBanner !== "false",

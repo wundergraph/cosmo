@@ -290,7 +290,7 @@ const ClientOperations = () => {
                       ? op.operationNames.length > 1
                         ? `[ ${op.operationNames.join(", ")} ]`
                         : op.operationNames[0]
-                      : "unnamed Operation"}
+                      : "unnamed operation"}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="mt-2 px-2">
@@ -700,12 +700,12 @@ const ClientsPage: NextPageWithLayout = () => {
                             View Operations
                           </Button>
                         </TableCell>
-                        <TableCell className="flex items-center gap-x-3 pr-8">
+                        <TableCell className="flex items-center gap-x-2 pr-8">
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger>
                               <Button variant="ghost" size="icon" asChild>
                                 <Link href={constructLink(name, "metrics")}>
-                                  <BiAnalyse className="h-5 w-5" />
+                                  <BiAnalyse className="h-4 w-4" />
                                 </Link>
                               </Button>
                             </TooltipTrigger>
@@ -715,7 +715,7 @@ const ClientsPage: NextPageWithLayout = () => {
                             <TooltipTrigger>
                               <Button variant="ghost" size="icon" asChild>
                                 <Link href={constructLink(name, "traces")}>
-                                  <IoBarcodeSharp className="h-5 w-5" />
+                                  <IoBarcodeSharp className="h-4 w-4" />
                                 </Link>
                               </Button>
                             </TooltipTrigger>

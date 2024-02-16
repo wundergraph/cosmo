@@ -50,6 +50,7 @@ export interface ComposedFederatedGraph {
   targetID: string;
   name: string;
   namespace: string;
+  namespaceId: string;
   composedSchema?: string;
   errors: Error[];
   subgraphs: ComposedSubgraph[];
@@ -165,6 +166,7 @@ export class Composer {
         id: federatedGraph.id,
         name: federatedGraph.name,
         namespace: federatedGraph.namespace,
+        namespaceId: federatedGraph.namespaceId,
         targetID: federatedGraph.targetId,
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
@@ -176,6 +178,7 @@ export class Composer {
         id: federatedGraph.id,
         name: federatedGraph.name,
         namespace: federatedGraph.namespace,
+        namespaceId: federatedGraph.namespaceId,
         targetID: federatedGraph.targetId,
         fieldConfigurations: [],
         errors: [e],
@@ -204,6 +207,7 @@ export class Composer {
           id: graph.id,
           name: graph.name,
           namespace: graph.namespace,
+          namespaceId: graph.namespaceId,
           targetID: graph.targetId,
           fieldConfigurations: result?.fieldConfigurations || [],
           composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
@@ -215,6 +219,7 @@ export class Composer {
           id: graph.id,
           name: graph.name,
           namespace: graph.namespace,
+          namespaceId: graph.namespaceId,
           targetID: graph.targetId,
           fieldConfigurations: [],
           errors: [e],
