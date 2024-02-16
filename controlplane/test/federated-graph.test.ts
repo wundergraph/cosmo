@@ -35,7 +35,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to create a federated graph from subgraphs with matching labels', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ testContext, dbname });
 
     const subgraph1Name = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -81,7 +81,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to add subgraphs to an existing Federated Graph based on matching labels', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ testContext, dbname });
 
     const subgraph1Name = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -127,7 +127,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Subgraphs should not be composed into a federated graph until it is published', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ testContext, dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -173,7 +173,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to fetch federated schema after publishing one of the two subgraphs, and after publishing both the subgraphs', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ testContext, dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -252,7 +252,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should not be able to fetch federated schema before publishing the subgraphs and after publishing, deleting the subgraphs', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ testContext, dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -354,7 +354,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to create a federated graph with a readme', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ testContext, dbname });
 
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -384,7 +384,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to create a federated graph with a readme and update the readme later', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ testContext, dbname });
 
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();

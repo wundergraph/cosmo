@@ -20,7 +20,15 @@ import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhook
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { Label } from '../src/types/index.js';
 
-export const SetupTest = async function (testContext: TestContext, dbname: string, chClient?: ClickHouseClient) {
+export const SetupTest = async function ({
+  testContext,
+  dbname,
+  chClient,
+}: {
+  testContext: TestContext;
+  dbname: string;
+  chClient?: ClickHouseClient;
+}) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
   const server = Fastify({
