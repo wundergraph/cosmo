@@ -766,7 +766,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 		return err
 	}
 	query := h.r.URL.Query()
-	if query != nil && len(query) != 0 {
+	if len(query) != 0 {
 		queryData, err := json.Marshal(query)
 		if err != nil {
 			h.logger.Error("Parsing query parameters", zap.Error(err))
