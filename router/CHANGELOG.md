@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.66.3](https://github.com/wundergraph/cosmo/compare/router@0.66.2...router@0.66.3) (2024-02-16)
+
+### Bug Fixes
+
+* disable variable export by default ([#536](https://github.com/wundergraph/cosmo/issues/536)) ([a100591](https://github.com/wundergraph/cosmo/commit/a1005919a28ee8c9e9c3b87c730e47db336bceec)) (@StarpTech)
+
 ## [0.66.2](https://github.com/wundergraph/cosmo/compare/router@0.66.1...router@0.66.2) (2024-02-14)
 
 ### Bug Fixes
