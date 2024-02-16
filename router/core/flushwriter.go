@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"net/http"
-	"sync"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -24,7 +23,6 @@ type HttpFlushWriter struct {
 	sse           bool
 	buf           *bytes.Buffer
 	variables     []byte
-	mux           sync.Mutex
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -55,9 +53,6 @@ func (f *HttpFlushWriter) Flush() {
 	if f.ctx.Err() != nil {
 		return
 	}
-
-	f.mux.Lock()
-	defer f.mux.Unlock()
 
 	resp := f.buf.Bytes()
 	f.buf.Reset()
