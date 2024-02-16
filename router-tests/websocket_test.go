@@ -477,7 +477,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, `{"extensions":{"token":"456"},"upgrade_query_parameters":{"Authorization":["token 123"]}}`, string(payload.Data.InitialPayload))
+			require.Equal(t, `{"extensions":{"token":"456","upgrade_query_parameters":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
 		})
 	})
 	t.Run("forward query params via initial payload alongside existing", func(t *testing.T) {
@@ -509,7 +509,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, `{"upgrade_query_parameters":{"Authorization":["token 123"]}}`, string(payload.Data.InitialPayload))
+			require.Equal(t, `{"extensions":{"upgrade_query_parameters":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
 		})
 	})
 	t.Run("same graphql path as playground", func(t *testing.T) {

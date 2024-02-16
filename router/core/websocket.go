@@ -13,20 +13,19 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/buger/jsonparser"
-	"github.com/wundergraph/cosmo/router/internal/pool"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/wundergraph/cosmo/router/internal/epoller"
-
 	"github.com/alitto/pond"
+	"github.com/buger/jsonparser"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
+	"github.com/wundergraph/cosmo/router/internal/epoller"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/atomic"
@@ -530,6 +529,7 @@ type WebSocketConnectionHandler struct {
 	conn               *wsConnectionWrapper
 	protocol           wsproto.Proto
 	initialPayload     json.RawMessage
+	extraExtensions    json.RawMessage
 	clientInfo         *ClientInfo
 	logger             *zap.Logger
 
@@ -617,6 +617,34 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			h.logger.Warn("writing error message", zap.Error(wErr))
 		}
 		return
+	}
+
+	if h.extraExtensions != nil {
+		if operationCtx.extensions == nil {
+			operationCtx.extensions = h.extraExtensions
+		} else {
+			js := astjson.Pool.Get()
+			defer astjson.Pool.Put(js)
+			err = js.ParseObject(operationCtx.extensions)
+			if err != nil {
+				_ = h.writeErrorMessage(msg.ID, err)
+				return
+			}
+			extra, err := js.AppendObject(h.extraExtensions)
+			if err != nil {
+				_ = h.writeErrorMessage(msg.ID, err)
+				return
+			}
+			merged := js.MergeNodes(js.RootNode, extra)
+			buf := pool.GetBytesBuffer()
+			defer pool.PutBytesBuffer(buf)
+			err = js.PrintNode(js.Nodes[merged], buf)
+			if err != nil {
+				_ = h.writeErrorMessage(msg.ID, err)
+				return
+			}
+			operationCtx.extensions = buf.Bytes()
+		}
 	}
 
 	resolveCtx := &resolve.Context{
@@ -744,10 +772,10 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 			h.logger.Error("Parsing query parameters", zap.Error(err))
 			return err
 		}
-		if h.initialPayload == nil {
-			h.initialPayload = json.RawMessage("{}")
+		if h.extraExtensions == nil {
+			h.extraExtensions = json.RawMessage("{}")
 		}
-		h.initialPayload, err = jsonparser.Set(h.initialPayload, queryData, "upgrade_query_parameters")
+		h.extraExtensions, err = jsonparser.Set(h.extraExtensions, queryData, "upgrade_query_parameters")
 		if err != nil {
 			h.logger.Error("Setting query parameters", zap.Error(err))
 			return err
