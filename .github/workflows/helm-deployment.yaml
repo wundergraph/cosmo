@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: ./.github/actions/go
@@ -33,7 +33,7 @@ jobs:
         run: helm repo add bitnami https://charts.bitnami.com/bitnami
 
       - name: Setup Carvel tools
-        uses: carvel-dev/setup-action@v1.3.0
+        uses: carvel-dev/setup-action@v2
         with:
           only: kapp, kbld
           token: ${{ secrets.GITHUB_TOKEN }}

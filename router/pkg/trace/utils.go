@@ -34,11 +34,16 @@ func PrefixRequestFilter(prefixes []string) func(r *http.Request) bool {
 }
 
 func CommonRequestFilter(r *http.Request) bool {
-	if r.URL.Path == "/favicon.ico" || r.Method == "OPTIONS" {
+	// Ignore favicon requests
+	if r.URL.Path == "/favicon.ico" {
 		return false
 	}
-	// Ignore websocket connections
-	if r.Header.Get("Upgrade") != "" {
+	// Ignore other methods that aren't part of GraphQL over HTTP spec
+	if r.Method != "GET" && r.Method != "POST" {
+		return false
+	}
+	// Ignore websocket upgrade requests over GET
+	if r.Method == "GET" && r.Header.Get("Upgrade") != "" {
 		return false
 	}
 	return true

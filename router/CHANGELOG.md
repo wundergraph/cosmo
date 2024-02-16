@@ -4,6 +4,65 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.66.3](https://github.com/wundergraph/cosmo/compare/router@0.66.2...router@0.66.3) (2024-02-16)
+
+### Bug Fixes
+
+* disable variable export by default ([#536](https://github.com/wundergraph/cosmo/issues/536)) ([a100591](https://github.com/wundergraph/cosmo/commit/a1005919a28ee8c9e9c3b87c730e47db336bceec)) (@StarpTech)
+
+## [0.66.2](https://github.com/wundergraph/cosmo/compare/router@0.66.1...router@0.66.2) (2024-02-14)
+
+### Bug Fixes
+
+* don't panic when config is nil ([#524](https://github.com/wundergraph/cosmo/issues/524)) ([bf9ee9e](https://github.com/wundergraph/cosmo/commit/bf9ee9ec3728212186511e8d9826c2276a54f55a)) (@StarpTech)
+
+## [0.66.1](https://github.com/wundergraph/cosmo/compare/router@0.66.0...router@0.66.1) (2024-02-13)
+
+### Bug Fixes
+
+* distinguish between server and process uptime, fix uptime ch query ([#520](https://github.com/wundergraph/cosmo/issues/520)) ([6fc2b72](https://github.com/wundergraph/cosmo/commit/6fc2b7237cd029127f6913199c40dd61bb16a22b)) (@StarpTech)
+
+# [0.66.0](https://github.com/wundergraph/cosmo/compare/router@0.65.0...router@0.66.0) (2024-02-13)
+
+### Features
+
+* router fleet management ([#515](https://github.com/wundergraph/cosmo/issues/515)) ([7f0deae](https://github.com/wundergraph/cosmo/commit/7f0deae98a2f58bd46927bdb2be8d615613b908f)) (@StarpTech)
+
+# [0.65.0](https://github.com/wundergraph/cosmo/compare/router@0.64.0...router@0.65.0) (2024-02-13)
+
+### Features
+
+* implement graphql over sse ([#519](https://github.com/wundergraph/cosmo/issues/519)) ([4429d68](https://github.com/wundergraph/cosmo/commit/4429d688440d2315fca425a1f4238727da831c32)) (@jensneuse)
+
+# [0.64.0](https://github.com/wundergraph/cosmo/compare/router@0.63.1...router@0.64.0) (2024-02-12)
+
+### Features
+
+* distributed rate limiting ([#499](https://github.com/wundergraph/cosmo/issues/499)) ([1d82cd1](https://github.com/wundergraph/cosmo/commit/1d82cd1abf985c3867ba31f78e05381f7ba40670)) (@jensneuse)
+
+## [0.63.1](https://github.com/wundergraph/cosmo/compare/router@0.63.0...router@0.63.1) (2024-02-06)
+
+**Note:** Version bump only for package router
+
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/router@0.62.0...router@0.63.0) (2024-02-06)
+
+### Features
+
+* consider only router root spans in the trace list ([#495](https://github.com/wundergraph/cosmo/issues/495)) ([b7639ab](https://github.com/wundergraph/cosmo/commit/b7639abcc4c2f367a651a65ffbc17238a049f635)) (@StarpTech)
+
+# [0.62.0](https://github.com/wundergraph/cosmo/compare/router@0.61.2...router@0.62.0) (2024-02-05)
+
+### Features
+
+* allow to force root span on the router ([#486](https://github.com/wundergraph/cosmo/issues/486)) ([a1a2f64](https://github.com/wundergraph/cosmo/commit/a1a2f64558815267edc144e32da4297703743a86)) (@StarpTech)
+
+## [0.61.2](https://github.com/wundergraph/cosmo/compare/router@0.61.1...router@0.61.2) (2024-02-05)
+
+### Bug Fixes
+
+* load schema from CP and sync router playground ([#489](https://github.com/wundergraph/cosmo/issues/489)) ([7bc4d89](https://github.com/wundergraph/cosmo/commit/7bc4d892fd21afc6d22bda07133b261599a7cd3e)) (@thisisnithin)
+* refactor router trace instrumentation ([#485](https://github.com/wundergraph/cosmo/issues/485)) ([889d06c](https://github.com/wundergraph/cosmo/commit/889d06c95651bd44d136b89f0638faa4f25be8e2)) (@StarpTech)
+
 ## [0.61.1](https://github.com/wundergraph/cosmo/compare/router@0.61.0...router@0.61.1) (2024-02-01)
 
 **Note:** Version bump only for package router

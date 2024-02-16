@@ -32,7 +32,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
 
@@ -87,7 +87,7 @@ export default (opts: BaseCommandOptions) => {
           pc.bold(pc.white('NAMESPACE')),
           pc.bold(pc.white('ERROR_MESSAGE')),
         ],
-        colWidths: [30, 120],
+        colWidths: [30, 30, 120],
         wordWrap: true,
       });
 

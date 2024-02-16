@@ -67,6 +67,7 @@ import {
   noBaseTypeExtensionError,
   noConcreteTypesForAbstractTypeError,
   noQueryRootTypeError,
+  orScopesLimitError,
   shareableFieldDefinitionsError,
   undefinedEntityInterfaceImplementationsError,
   undefinedTypeError,
@@ -123,7 +124,6 @@ import {
   EXTENSIONS,
   FIELD,
   INACCESSIBLE,
-  OVERRIDE,
   PARENTS,
   QUERY,
   REQUIRES_SCOPES,
@@ -132,7 +132,6 @@ import {
   TAG,
 } from '../utils/string-constants';
 import {
-  addAuthorizationDataProperties,
   addIterableValuesToSet,
   AuthorizationData,
   doSetsHaveAnyOverlap,
@@ -151,10 +150,13 @@ import {
   InvalidFieldImplementation,
   InvalidRequiredArgument,
   kindToTypeString,
+  maxOrScopes,
+  newAuthorizationData,
   newEntityInterfaceFederationData,
   subtractSourceSetFromTargetSet,
   upsertAuthorizationConfiguration,
   upsertEntityInterfaceFederationData,
+  upsertFieldAuthorizationData,
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
@@ -194,6 +196,7 @@ export class FederationFactory {
   graphEdges = new Set<string>();
   graphPaths = new Map<string, boolean>();
   inputFieldTypeNameSet = new Set<string>();
+  invalidOrScopesHostPaths = new Set<string>();
   isCurrentParentEntity = false;
   isCurrentParentInterface = false;
   isCurrentSubgraphVersionTwo = false;
@@ -458,27 +461,6 @@ export class FederationFactory {
     );
   }
 
-  getOverrideTargetSubgraphName(node: FieldDefinitionNode): string {
-    if (!node.directives) {
-      return '';
-    }
-    for (const directive of node.directives) {
-      if (directive.name.value !== OVERRIDE) {
-        continue;
-      }
-      // validation was handled earlier
-      if (!directive.arguments) {
-        return '';
-      }
-      const valueNode = directive.arguments[0].value;
-      if (valueNode.kind !== Kind.STRING) {
-        return '';
-      }
-      return valueNode.value;
-    }
-    return '';
-  }
-
   upsertDirectiveNode(node: DirectiveDefinitionNode) {
     const directiveName = node.name.value;
     const directiveDefinition = this.directiveDefinitions.get(directiveName);
@@ -512,26 +494,19 @@ export class FederationFactory {
     let shareableFields = 0;
     let unshareableFields = 0;
     for (const [subgraphName, isShareable] of fieldContainer.subgraphsByShareable) {
-      if (isShareable) {
-        shareableFields += 1;
-        if (shareableFields && unshareableFields) {
-          return false;
-        }
-        continue;
-      }
+      /*
+        shareability is ignored if:
+        1. the field is external
+        2. the field is overridden by another subgraph (in which case it has not been upserted)
+       */
       if (fieldContainer.subgraphsByExternal.get(subgraphName)) {
         continue;
       }
-      // if the current field is overridden, its shareability doesn't matter
-      if (fieldContainer.overrideTargetSubgraphName === subgraphName) {
-        continue;
-      }
-      // shareability doesn't matter if:
-      // the field has only been seen exactly twice—the target override and the source override
-      if (
-        fieldContainer.subgraphNames.size === 2 &&
-        fieldContainer.subgraphNames.has(fieldContainer.overrideTargetSubgraphName)
-      ) {
+      if (isShareable) {
+        if (unshareableFields) {
+          return false;
+        }
+        shareableFields += 1;
         continue;
       }
       unshareableFields += 1;
@@ -559,12 +534,10 @@ export class FederationFactory {
     const fieldPath = `${this.parentTypeName}.${this.childName}`;
     const fieldRootTypeName = getNamedTypeForChild(fieldPath, node.type);
     const existingFieldContainer = fieldMap.get(this.childName);
-    const targetSubgraph = this.getOverrideTargetSubgraphName(node);
     if (existingFieldContainer) {
       this.extractPersistedDirectives(node.directives || [], existingFieldContainer.directives);
       setLongestDescriptionForNode(existingFieldContainer.node, node.description);
       existingFieldContainer.subgraphNames.add(this.currentSubgraphName);
-      existingFieldContainer.overrideTargetSubgraphName = targetSubgraph;
       existingFieldContainer.subgraphsByShareable.set(this.currentSubgraphName, isFieldShareable);
       existingFieldContainer.subgraphsByExternal.set(this.currentSubgraphName, isFieldExternal);
       const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
@@ -587,7 +560,7 @@ export class FederationFactory {
       /* A field is valid if one of the following is true:
         1. The field is an interface
         2. The field is external
-        3. The existing fields AND the current field are ALL shareable
+        3. Non-external fields are ALL shareable
         4. All other fields besides the current field are external
       */
       if (
@@ -614,7 +587,6 @@ export class FederationFactory {
       isShareable: isFieldShareable,
       node: fieldDefinitionNodeToMutable(node, this.parentTypeName),
       namedTypeName: fieldRootTypeName,
-      overrideTargetSubgraphName: targetSubgraph,
       subgraphNames: new Set<string>([this.currentSubgraphName]),
       subgraphsByShareable: new Map<string, boolean>([[this.currentSubgraphName, isFieldShareable]]),
       subgraphsByExternal: new Map<string, boolean>([[this.currentSubgraphName, isFieldExternal]]),
@@ -1590,7 +1562,19 @@ export class FederationFactory {
       if (!renamedAuthorizationData) {
         this.authorizationDataByParentTypeName.set(renamedTypeName, originalAuthorizationData);
       } else {
-        addAuthorizationDataProperties(originalAuthorizationData, renamedAuthorizationData);
+        for (const [
+          fieldName,
+          incomingFieldAuthorizationData,
+        ] of renamedAuthorizationData.fieldAuthorizationDataByFieldName) {
+          if (
+            !upsertFieldAuthorizationData(
+              originalAuthorizationData.fieldAuthorizationDataByFieldName,
+              incomingFieldAuthorizationData,
+            )
+          ) {
+            this.invalidOrScopesHostPaths.add(`${renamedTypeName}.${fieldName}`);
+          }
+        }
       }
       this.authorizationDataByParentTypeName.delete(originalTypeName);
     }
@@ -1629,15 +1613,33 @@ export class FederationFactory {
         const interfaceObjectConfiguration = getOrThrowError(configurationDataMap, typeName, 'configurationDataMap');
         const keys = interfaceObjectConfiguration.keys;
         if (!keys) {
-          // error TODO no keys
+          // TODO no keys error
           continue;
         }
         interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
         const fieldNames = interfaceObjectConfiguration.fieldNames;
+        const authorizationData = this.authorizationDataByParentTypeName.get(entityInterfaceData.typeName);
         for (const concreteTypeName of concreteTypeNames) {
           if (configurationDataMap.has(concreteTypeName)) {
             // error TODO
             continue;
+          }
+          if (authorizationData) {
+            const concreteAuthorizationData = getValueOrDefault(
+              this.authorizationDataByParentTypeName,
+              concreteTypeName,
+              () => newAuthorizationData(concreteTypeName),
+            );
+            for (const fieldAuthorizationData of authorizationData.fieldAuthorizationDataByFieldName.values()) {
+              if (
+                !upsertFieldAuthorizationData(
+                  concreteAuthorizationData.fieldAuthorizationDataByFieldName,
+                  fieldAuthorizationData,
+                )
+              ) {
+                this.invalidOrScopesHostPaths.add(`${concreteTypeName}.${fieldAuthorizationData.fieldName}`);
+              }
+            }
           }
           const concreteTypeContainer = getOrThrowError(this.parents, concreteTypeName, 'parents');
           if (concreteTypeContainer.kind !== Kind.OBJECT_TYPE_DEFINITION) {
@@ -1671,6 +1673,9 @@ export class FederationFactory {
           configurationDataMap.set(concreteTypeName, configurationData);
         }
       }
+    }
+    if (this.invalidOrScopesHostPaths.size > 0) {
+      this.errors.push(orScopesLimitError(maxOrScopes, [...this.invalidOrScopesHostPaths]));
     }
     const definitions: MutableTypeDefinitionNode[] = [];
     for (const [directiveName, directiveContainer] of this.directiveDefinitions) {

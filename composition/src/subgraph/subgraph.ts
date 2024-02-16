@@ -66,6 +66,7 @@ export function recordSubgraphName(
 
 export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFactory, definitions: DocumentNode) {
   let parentAuthorizationData: AuthorizationData | undefined;
+  let isInterfaceKind = false;
   visit(definitions, {
     FieldDefinition: {
       enter(node) {
@@ -90,13 +91,28 @@ export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFact
           factory.childName,
           () => newFieldAuthorizationData(factory.childName),
         );
-        mergeAuthorizationDataByAND(parentAuthorizationData, fieldAuthorizationData);
+        if (!mergeAuthorizationDataByAND(parentAuthorizationData, fieldAuthorizationData)) {
+          factory.invalidOrScopesHostPaths.add(`${factory.parentTypeName}.${factory.childName}`);
+          return false;
+        }
         if (!inheritsAuthorization) {
           return false;
         }
+        if (isInterfaceKind) {
+          /* Collect the inherited leaf authorization to apply later. This is to avoid duplication of inherited
+             authorization applied to interface and concrete types. */
+          getValueOrDefault(factory.heirFieldAuthorizationDataByTypeName, typeName, () => []).push(
+            fieldAuthorizationData,
+          );
+          return false;
+        }
         const definitionAuthorizationData = factory.authorizationDataByParentTypeName.get(typeName);
-        if (definitionAuthorizationData && definitionAuthorizationData.hasParentLevelAuthorization) {
-          mergeAuthorizationDataByAND(definitionAuthorizationData, fieldAuthorizationData);
+        if (
+          definitionAuthorizationData &&
+          definitionAuthorizationData.hasParentLevelAuthorization &&
+          !mergeAuthorizationDataByAND(definitionAuthorizationData, fieldAuthorizationData)
+        ) {
+          factory.invalidOrScopesHostPaths.add(`${factory.parentTypeName}.${factory.childName}`);
         }
         return false;
       },
@@ -107,17 +123,31 @@ export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFact
     InterfaceTypeDefinition: {
       enter(node) {
         factory.parentTypeName = node.name.value;
-        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
+        parentAuthorizationData = factory.getAuthorizationData(node);
+        isInterfaceKind = true;
       },
       leave() {
         factory.parentTypeName = '';
         parentAuthorizationData = undefined;
+        isInterfaceKind = false;
+      },
+    },
+    InterfaceTypeExtension: {
+      enter(node) {
+        factory.parentTypeName = node.name.value;
+        parentAuthorizationData = factory.getAuthorizationData(node);
+        isInterfaceKind = true;
+      },
+      leave() {
+        factory.parentTypeName = '';
+        parentAuthorizationData = undefined;
+        isInterfaceKind = false;
       },
     },
     ObjectTypeDefinition: {
       enter(node) {
         factory.parentTypeName = node.name.value;
-        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
+        parentAuthorizationData = factory.getAuthorizationData(node);
       },
       leave() {
         factory.parentTypeName = '';
@@ -127,7 +157,7 @@ export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFact
     ObjectTypeExtension: {
       enter(node) {
         factory.parentTypeName = node.name.value;
-        parentAuthorizationData = factory.authorizationDataByParentTypeName.get(factory.parentTypeName);
+        parentAuthorizationData = factory.getAuthorizationData(node);
       },
       leave() {
         factory.parentTypeName = '';
@@ -250,6 +280,7 @@ export function walkSubgraphToFederate(
     FieldDefinition: {
       enter(node) {
         const fieldName = node.name.value;
+        // if the field overridden by another graph, do not upsert it
         if (overriddenFieldNames?.has(fieldName)) {
           return false;
         }

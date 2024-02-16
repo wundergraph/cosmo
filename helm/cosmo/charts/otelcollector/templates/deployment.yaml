@@ -56,20 +56,23 @@ spec:
               containerPort: 13133
               protocol: TCP
           env:
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
             - name: CLICKHOUSE_ENDPOINT
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}
+                  name: {{ include "otelcollector.secretName" . }}
                   key: clickhouseDsn
             - name: OTEL_INGEST_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}
+                  name: {{ include "otelcollector.secretName" . }}
                   key: authJwtSecret
-          {{- if .Values.collectorConfigOverride }}
+          {{- if .Values.existingConfigmap }}
           volumeMounts:
             - mountPath: /etc/otel-config.yaml
-              name: {{ .Values.collectorConfigOverride }}
+              name: {{ .Values.existingConfigmap }}
               subPath: otel-config.yaml
               readOnly: true
           {{ end }}
@@ -89,11 +92,11 @@ spec:
             {{ end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if .Values.collectorConfigOverride }}
+      {{- if .Values.existingConfigmap }}
       volumes:
         - name: otelcollector-config-volume
           configMap:
-            name: {{ .Values.collectorConfigOverride }}
+            name: {{ .Values.existingConfigmap }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

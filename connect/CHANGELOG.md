@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.56.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.55.1...@wundergraph/cosmo-connect@0.56.0) (2024-02-16)
+
+### Features
+
+* operation check overrides ([#516](https://github.com/wundergraph/cosmo/issues/516)) ([651ff8e](https://github.com/wundergraph/cosmo/commit/651ff8ed88cd542d56cf11d11086f659fc3f5d4e)) (@thisisnithin)
+
+## [0.55.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.55.0...@wundergraph/cosmo-connect@0.55.1) (2024-02-13)
+
+### Bug Fixes
+
+* distinguish between server and process uptime, fix uptime ch query ([#520](https://github.com/wundergraph/cosmo/issues/520)) ([6fc2b72](https://github.com/wundergraph/cosmo/commit/6fc2b7237cd029127f6913199c40dd61bb16a22b)) (@StarpTech)
+
+# [0.55.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.54.0...@wundergraph/cosmo-connect@0.55.0) (2024-02-13)
+
+### Features
+
+* router fleet management ([#515](https://github.com/wundergraph/cosmo/issues/515)) ([7f0deae](https://github.com/wundergraph/cosmo/commit/7f0deae98a2f58bd46927bdb2be8d615613b908f)) (@StarpTech)
+
+# [0.54.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.53.0...@wundergraph/cosmo-connect@0.54.0) (2024-02-06)
+
+### Features
+
+* add pagination component and validate limit ([#493](https://github.com/wundergraph/cosmo/issues/493)) ([880f1b9](https://github.com/wundergraph/cosmo/commit/880f1b9f64167b70b7f61620ebb5a895d438727a)) (@JivusAyrus)
+
 # [0.53.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.52.0...@wundergraph/cosmo-connect@0.53.0) (2024-02-01)
 
 ### Features

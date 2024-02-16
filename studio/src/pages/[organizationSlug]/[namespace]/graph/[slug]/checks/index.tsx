@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -96,23 +97,11 @@ const ChecksPage: NextPageWithLayout = () => {
     getChecksByFederatedGraphName.useQuery({
       name: router.query.slug as string,
       namespace: router.query.namespace as string,
-      limit: limit,
+      limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
     }),
-  );
-
-  const applyNewParams = useCallback(
-    (newParams: Record<string, string>) => {
-      router.push({
-        query: {
-          ...router.query,
-          ...newParams,
-        },
-      });
-    },
-    [router],
   );
 
   if (isLoading) return <Loader fullscreen />;
@@ -131,7 +120,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   if (!data?.checks || !graphContext?.graph) return null;
 
-  if (parseInt(data.totalChecksCount) === 0)
+  if (data.totalChecksCount === 0)
     return (
       <EmptyState
         icon={<CommandLineIcon />}
@@ -157,12 +146,10 @@ const ChecksPage: NextPageWithLayout = () => {
       />
     );
 
-  const noOfPages = Math.ceil(
-    parseInt(data.checksCountBasedOnDateRange) / limit,
-  );
+  const noOfPages = Math.ceil(data.checksCountBasedOnDateRange / limit);
 
   return (
-    <div className="flex flex-col gap-y-3">
+    <div className="flex h-full flex-col gap-y-3">
       <TableWrapper>
         <Table>
           <TableHeader>
@@ -230,7 +217,7 @@ const ChecksPage: NextPageWithLayout = () => {
                       </TableCell>
                       <TableCell>{subgraphName}</TableCell>
                       <TableCell>
-                        <div className="flex items-start gap-2">
+                        <div className="flex flex-wrap items-start gap-2">
                           <Badge variant="outline" className="gap-2 py-1.5">
                             {getCheckIcon(isComposable)} <span>Composes</span>
                           </Badge>
@@ -302,77 +289,7 @@ const ChecksPage: NextPageWithLayout = () => {
           </TableBody>
         </Table>
       </TableWrapper>
-      <div className="mr-2 flex justify-end">
-        <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
-          <Select
-            value={`${limit}`}
-            onValueChange={(value) => {
-              applyNewParams({ pageSize: value });
-            }}
-          >
-            <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={`${limit}`} />
-            </SelectTrigger>
-            <SelectContent side="top">
-              {[10, 20, 30, 40, 50].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`}>
-                  {pageSize}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page {noOfPages === 0 ? "0" : pageNumber} of {noOfPages}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => {
-              applyNewParams({ page: "1" });
-            }}
-            disabled={pageNumber === 1}
-          >
-            <span className="sr-only">Go to first page</span>
-            <DoubleArrowLeftIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => {
-              applyNewParams({ page: (pageNumber - 1).toString() });
-            }}
-            disabled={pageNumber === 1}
-          >
-            <span className="sr-only">Go to previous page</span>
-            <ChevronLeftIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => {
-              applyNewParams({ page: (pageNumber + 1).toString() });
-            }}
-            disabled={pageNumber === noOfPages || noOfPages === 0}
-          >
-            <span className="sr-only">Go to next page</span>
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => {
-              applyNewParams({ page: noOfPages.toString() });
-            }}
-            disabled={pageNumber === noOfPages || noOfPages === 0}
-          >
-            <span className="sr-only">Go to last page</span>
-            <DoubleArrowRightIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
     </div>
   );
 };

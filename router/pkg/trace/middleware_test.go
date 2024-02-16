@@ -1,8 +1,7 @@
 package trace
 
 import (
-	"github.com/go-chi/chi"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/go-chi/chi/v5"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +19,7 @@ func TestWrapHttpHandler(t *testing.T) {
 
 	t.Run("create a span for every request", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
-		h := NewMiddleware(otel.WgComponentName.String("test"))
+		h := NewMiddleware()
 
 		router := chi.NewRouter()
 
@@ -40,14 +39,13 @@ func TestWrapHttpHandler(t *testing.T) {
 		assert.Equal(t, "", sn[0].Name())
 		assert.Equal(t, trace.SpanKindServer, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-		assert.Len(t, sn[0].Attributes(), 10)
+		assert.Len(t, sn[0].Attributes(), 9)
 
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPMethodKey.String("GET"))
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPScheme("http"))
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPFlavorKey.String("1.1"))
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPTarget("/test?a=b"))
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPStatusCode(200))
-		assert.Contains(t, sn[0].Attributes(), otel.WgComponentName.String("test"))
 		assert.Contains(t, sn[0].Attributes(), semconv12.HTTPHostKey.String("example.com"))
 	})
 
@@ -69,7 +67,7 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		for _, test := range statusCodeTests {
 			router := chi.NewRouter()
-			h := NewMiddleware(otel.WgComponentName.String("test"))
+			h := NewMiddleware()
 
 			statusCode := test.statusCode
 
@@ -97,7 +95,6 @@ func TestWrapHttpHandler(t *testing.T) {
 			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPFlavorKey.String("1.1"))
 			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPTarget("/test?a=b"))
 			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPStatusCode(statusCode))
-			assert.Contains(t, sn[0].Attributes(), otel.WgComponentName.String("test"))
 
 			exporter.Reset()
 		}

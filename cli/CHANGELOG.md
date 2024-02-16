@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.41.0](https://github.com/wundergraph/cosmo/compare/wgc@0.40.6...wgc@0.41.0) (2024-02-16)
+
+### Features
+
+* operation check overrides ([#516](https://github.com/wundergraph/cosmo/issues/516)) ([651ff8e](https://github.com/wundergraph/cosmo/commit/651ff8ed88cd542d56cf11d11086f659fc3f5d4e)) (@thisisnithin)
+
+## [0.40.6](https://github.com/wundergraph/cosmo/compare/wgc@0.40.5...wgc@0.40.6) (2024-02-13)
+
+**Note:** Version bump only for package wgc
+
+## [0.40.5](https://github.com/wundergraph/cosmo/compare/wgc@0.40.4...wgc@0.40.5) (2024-02-13)
+
+**Note:** Version bump only for package wgc
+
+## [0.40.4](https://github.com/wundergraph/cosmo/compare/wgc@0.40.3...wgc@0.40.4) (2024-02-13)
+
+### Bug Fixes
+
+* update subscription protocol ([#517](https://github.com/wundergraph/cosmo/issues/517)) ([5f21022](https://github.com/wundergraph/cosmo/commit/5f210225f2bbe81bd396151dd3e33d2c9074d6df)) (@thisisnithin)
+
+## [0.40.3](https://github.com/wundergraph/cosmo/compare/wgc@0.40.2...wgc@0.40.3) (2024-02-06)
+
+**Note:** Version bump only for package wgc
+
+## [0.40.2](https://github.com/wundergraph/cosmo/compare/wgc@0.40.1...wgc@0.40.2) (2024-02-05)
+
+**Note:** Version bump only for package wgc
+
+## [0.40.1](https://github.com/wundergraph/cosmo/compare/wgc@0.40.0...wgc@0.40.1) (2024-02-02)
+
+### Bug Fixes
+
+* cli tables ui ([#482](https://github.com/wundergraph/cosmo/issues/482)) ([a1dcdb3](https://github.com/wundergraph/cosmo/commit/a1dcdb3772f2c1bda2795cefd19e698de29b579b)) (@JivusAyrus)
+
 # [0.40.0](https://github.com/wundergraph/cosmo/compare/wgc@0.39.2...wgc@0.40.0) (2024-02-01)
 
 ### Features

@@ -56,7 +56,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
   const [open, setOpen] = useState(false);
   const applyParams = useApplyParams();
   const client = useQueryClient();
-  const { range, dateRange, refreshInterval } = useAnalyticsQueryState();
+  const { range, dateRange, refreshInterval } = useAnalyticsQueryState(4);
   const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
   const getView = getDashboardAnalyticsView.useQuery({
@@ -221,7 +221,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 setOpen={setOpen}
                 graphName={name}
                 namespace={namespace}
-                triggerLabel="Run router locally"
+                triggerLabel="Run Router locally"
                 triggerClassName="mt-3 w-full"
               />
             </CardFooter>

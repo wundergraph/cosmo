@@ -7,6 +7,7 @@ const (
 	WgOperationType               = attribute.Key("wg.operation.type")
 	WgOperationContent            = attribute.Key("wg.operation.content")
 	WgOperationHash               = attribute.Key("wg.operation.hash")
+	WgOperationVariables          = attribute.Key("wg.operation.variables")
 	WgOperationProtocol           = attribute.Key("wg.operation.protocol")
 	WgComponentName               = attribute.Key("wg.component.name")
 	WgClientName                  = attribute.Key("wg.client.name")
@@ -20,6 +21,9 @@ const (
 	WgOperationPersistedID        = attribute.Key("wg.operation.persisted_id")
 	WgEnginePlanCacheHit          = attribute.Key("wg.engine.plan_cache_hit")
 	WgEngineRequestTracingEnabled = attribute.Key("wg.engine.request_tracing_enabled")
+	WgRouterRootSpan              = attribute.Key("wg.router.root_span")
+	WgRouterClusterName           = attribute.Key("wg.router.cluster.name")
+	WgRouterInstanceID            = attribute.Key("wg.router.instance.id")
 )
 
 var (

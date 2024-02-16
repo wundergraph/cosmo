@@ -17,7 +17,10 @@ import {
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDownIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
   ColumnFiltersState,
@@ -42,7 +45,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO, subHours } from "date-fns";
 import { useRouter } from "next/router";
-import { useImperativeHandle, useMemo, useState } from "react";
+import { ReactNode, useImperativeHandle, useMemo, useState } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import {
   DatePickerWithRange,
@@ -59,6 +62,13 @@ import { getDataTableFilters } from "./getDataTableFilters";
 import { RefreshInterval, refreshIntervals } from "./refresh-interval";
 import { useApplyParams } from "./use-apply-params";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
+import { HiOutlineCheck } from "react-icons/hi2";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -287,7 +297,7 @@ export function AnalyticsDataTable<T>({
 
     switch (selectedGroup) {
       case AnalyticsViewGroupName.None: {
-        // Save the current route in sessionStorage so we can go back to it
+        // Save the current route in sessionStorage, so we can go back to it
         setRouteCache(router.query);
 
         applyNewParams({
@@ -345,7 +355,7 @@ export function AnalyticsDataTable<T>({
                 value: AnalyticsViewGroupName.Client,
               },
               {
-                label: "Http Status Code",
+                label: "HTTP Status Code",
                 value: AnalyticsViewGroupName.HttpStatusCode,
               },
             ]}
@@ -419,26 +429,62 @@ export function AnalyticsDataTable<T>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  onClick={() => relinkTable(row)}
-                  className={cn("group cursor-pointer hover:bg-secondary/30", {
-                    "bg-secondary/50":
-                      row.original.traceId === router.query.traceID,
-                  })}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    onClick={() => relinkTable(row)}
+                    className={cn(
+                      "group cursor-pointer hover:bg-secondary/30",
+                      {
+                        "bg-secondary/50":
+                          row.original.traceId === router.query.traceID,
+                        "bg-destructive/10":
+                          row.original.statusCode === "STATUS_CODE_ERROR",
+                      },
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      let icon = null;
+                      let text: ReactNode = "";
+
+                      if (cell.column.id === "statusCode") {
+                        if (cell.getValue() === "STATUS_CODE_ERROR") {
+                          icon = (
+                            <TooltipProvider>
+                              <Tooltip delayDuration={300}>
+                                <TooltipTrigger>
+                                  <ExclamationTriangleIcon className="h-5 w-5 text-destructive" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-lg">
+                                  {row.getValue("statusMessage")}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        } else {
+                          icon = <HiOutlineCheck className="h-5 w-5" />;
+                        }
+                      } else {
+                        text = flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        );
+                      }
+
+                      return (
+                        <TableCell key={cell.id}>
+                          <div className="flex items-center space-x-2">
+                            {icon}
+                            {text}
+                          </div>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })
             ) : isLoading ? (
               <TableRow>
                 <TableCell

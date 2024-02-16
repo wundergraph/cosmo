@@ -31,6 +31,7 @@ WunderGraph Cosmo Controlplane
 | configuration.githubAppPrivateKey | string | `""` |  |
 | configuration.githubAppWebhookSecret | string | `""` |  |
 | configuration.logLevel | string | `"info"` |  |
+| configuration.openAiApiKey | string | `""` |  |
 | configuration.redisHost | string | `"cosmo-redis-master"` |  |
 | configuration.redisPassword | string | `""` |  |
 | configuration.redisPort | int | `6379` |  |
@@ -47,6 +48,8 @@ WunderGraph Cosmo Controlplane
 | configuration.webhookSecret | string | `""` |  |
 | configuration.webhookUrl | string | `""` |  |
 | deploymentStrategy | object | `{}` |  |
+| existingSecret | string | `""` | Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret. |
+| extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
