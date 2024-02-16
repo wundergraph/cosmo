@@ -257,7 +257,7 @@ type Cluster struct {
 }
 
 type AbsintheConfiguration struct {
-	WebsocketHandlerEnabled bool   `yaml:"websocket_handler_enabled" default:"true" envconfig:"ABSINTHE_WEBSOCKET_HANDLER_ENABLED"`
+	WebsocketHandlerEnabled bool   `yaml:"websocket_handler_enabled" default:"false" envconfig:"ABSINTHE_WEBSOCKET_HANDLER_ENABLED"`
 	WebsocketHandlerPath    string `yaml:"websocket_handler_path" default:"/absinthe/websocket" envconfig:"ABSINTHE_WEBSOCKET_HANDLER_PATH"`
 }
 
