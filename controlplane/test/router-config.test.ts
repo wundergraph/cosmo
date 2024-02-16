@@ -17,7 +17,7 @@ describe('Router Config', (ctx) => {
   });
 
   test('Should return routerConfig after federating a valid graph', async (testContext) => {
-    const { client, server, nodeClient } = await SetupTest({ testContext, dbname });
+    const { client, server, nodeClient } = await SetupTest({ dbname });
 
     const inventorySubgraph = genID('inventory');
     const pandasSubgraph = genID('pandas');
@@ -215,7 +215,7 @@ describe('Router Config', (ctx) => {
   });
 
   test('Should not return routerConfig if an invalid schema version is available', async (testContext) => {
-    const { client, nodeClient, server } = await SetupTest({ testContext, dbname });
+    const { client, nodeClient, server } = await SetupTest({ dbname });
 
     const pandasSubgraph = genID('pandas');
     const usersSubgraph = genID('users');

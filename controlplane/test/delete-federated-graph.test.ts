@@ -16,7 +16,7 @@ describe('DeleteFederatedGraph', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema, create a federated graph and then delete a federated graph', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');

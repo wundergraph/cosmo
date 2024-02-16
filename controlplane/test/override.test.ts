@@ -54,7 +54,7 @@ describe('Overrides', (ctx) => {
   });
 
   test('Should be able to detect overrides', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname, chClient });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const fedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -178,7 +178,7 @@ describe('Overrides', (ctx) => {
   });
 
   test('Should get correct consolidated view', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();

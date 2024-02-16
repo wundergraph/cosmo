@@ -18,7 +18,7 @@ describe('Subgraph', (ctx) => {
   });
 
   test('Should be able to create a subgraph and publish the schema', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -44,7 +44,7 @@ describe('Subgraph', (ctx) => {
   });
 
   test('Should create a subgraph when subgraph did not exist before on publish', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
 
@@ -83,7 +83,7 @@ describe('Subgraph', (ctx) => {
   });
 
   test('Should update subgraph when subgraph already exists on publish', async (testContext) => {
-    const { client, nodeClient, server } = await SetupTest({ testContext, dbname });
+    const { client, nodeClient, server } = await SetupTest({ dbname });
 
     const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
 
@@ -150,7 +150,7 @@ describe('Subgraph', (ctx) => {
   });
 
   test('Should be able to create a subgraph with a readme', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -180,7 +180,7 @@ describe('Subgraph', (ctx) => {
   });
 
   test('Should be able to create a subgraph with a readme and update it later.', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();

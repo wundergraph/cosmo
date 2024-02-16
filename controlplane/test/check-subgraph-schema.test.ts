@@ -17,7 +17,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema and then check with new schema', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -65,7 +65,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a federated graph,subgraph, publish the schema and then check the new schema for composition errors', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -111,7 +111,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a federated graph,subgraph and then perform the check operation on the subgragh with valid schema ', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');

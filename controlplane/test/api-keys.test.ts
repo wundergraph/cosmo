@@ -17,7 +17,7 @@ describe('API Keys', (ctx) => {
   });
 
   test('Should be able to create and delete a api key', async (testContext) => {
-    const { client, userTestData, server } = await SetupTest({ testContext, dbname });
+    const { client, userTestData, server } = await SetupTest({ dbname });
 
     let response: CreateAPIKeyResponse;
     response = await client.createAPIKey({ name: uid(8), expires: ExpiresAt.NEVER, userID: userTestData.userId });

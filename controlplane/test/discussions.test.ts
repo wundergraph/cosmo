@@ -7,7 +7,7 @@ import { SetupTest } from './test-util.js';
 let dbname = '';
 
 const seed = async (testContext: TestContext) => {
-  const { client, server } = await SetupTest({ testContext, dbname });
+  const { client, server } = await SetupTest({ dbname });
 
   const subgraphName = genID('subgraph1');
   const fedGraphName = genID('fedGraph');

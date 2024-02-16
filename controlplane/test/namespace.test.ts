@@ -22,7 +22,7 @@ describe('Namespaces', (ctx) => {
   });
 
   test('Creates graphs in the correct namespace', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -66,7 +66,7 @@ describe('Namespaces', (ctx) => {
   });
 
   test('Ensure no duplicate graph exist in same namespace', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -112,7 +112,7 @@ describe('Namespaces', (ctx) => {
   });
 
   test('Ensure duplicates can exist across namespaces', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -163,7 +163,7 @@ describe('Namespaces', (ctx) => {
   });
 
   test('Deleting namespace should delete all graphs in it', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest({ testContext, dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -217,7 +217,7 @@ describe('Namespaces', (ctx) => {
   });
 
   test('Move federated graph to different namespace', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -297,7 +297,7 @@ describe('Namespaces', (ctx) => {
   });
 
   test('Move subgraph to different namespace', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');

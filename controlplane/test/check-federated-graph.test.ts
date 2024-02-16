@@ -17,7 +17,7 @@ describe('CheckFederatedGraph', (ctx) => {
   });
 
   test('Should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const federatedGraphName = genID('fedGraph');
 

@@ -19,7 +19,7 @@ describe('ComposeFederationV1Graphs', (ctx) => {
   });
 
   test('Compose these federation v1 subgraph schemas', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
     const productsSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));

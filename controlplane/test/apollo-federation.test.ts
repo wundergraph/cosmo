@@ -16,7 +16,7 @@ describe('Apollo Federated Graph', (ctx) => {
   });
 
   test('Should be able to create a Apollo Federated Graph', async (testContext) => {
-    const { client, server } = await SetupTest({ testContext, dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const inventorySubgraph = genID('inventory');
     const pandasSubgraph = genID('pandas');
