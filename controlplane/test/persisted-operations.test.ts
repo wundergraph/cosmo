@@ -51,7 +51,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should be able to publish persisted operations', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ dbname });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -68,7 +68,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should not publish persisted operations without a client ID', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ dbname });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -84,7 +84,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should not publish persisted operations with invalid queries', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ dbname });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -100,7 +100,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should not publish persisted operations with an invalid federated graph name', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ dbname });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -116,7 +116,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should store persisted operations in blob storage', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest(testContext, dbname);
+    const { client, server, blobStorage } = await SetupTest({ dbname });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -146,7 +146,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should delete persisted operations from blob storage when the federated graph is deleted', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest(testContext, dbname);
+    const { client, server, blobStorage } = await SetupTest({ dbname });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 

@@ -26,6 +26,7 @@ export interface InspectorOperationResult {
   type: string;
   lastSeenAt: Date;
   firstSeenAt: Date;
+  isSafeOverride: boolean;
 }
 
 export class SchemaUsageTrafficInspector {
@@ -99,6 +100,7 @@ export class SchemaUsageTrafficInspector {
           type: r.operationType,
           lastSeenAt: new Date(r.lastSeen * 1000),
           firstSeenAt: new Date(r.firstSeen * 1000),
+          isSafeOverride: false,
         }));
 
         if (ops.length > 0) {
@@ -148,15 +150,18 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
     }
   }
 
+  const totalOperations = inspectedOperations.length;
+  const safeOperations = inspectedOperations.filter((op) => op.isSafeOverride).length;
+
   if (inspectedOperations.length === 0) {
     return {
-      totalOperations: 0,
+      totalOperations,
+      safeOperations,
       firstSeenAt: new Date().toUTCString(),
       lastSeenAt: new Date().toUTCString(),
     };
   }
 
-  const totalOperations = inspectedOperations.length;
   let firstSeenAt = new Date(inspectedOperations[0].firstSeenAt);
   let lastSeenAt = new Date(inspectedOperations[0].lastSeenAt);
 
@@ -175,6 +180,7 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
 
   return {
     totalOperations,
+    safeOperations,
     firstSeenAt: firstSeenAt.toUTCString(),
     lastSeenAt: lastSeenAt.toUTCString(),
   };

@@ -5,7 +5,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateDiscussionRequest, CreateDiscussionResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteDiscussionCommentRequest, DeleteDiscussionCommentResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllDiscussionsRequest, GetAllDiscussionsResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetConfigRequest, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetDiscussionRequest, GetDiscussionResponse, GetDiscussionSchemasRequest, GetDiscussionSchemasResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLByNameRequest, GetLatestSubgraphSDLByNameResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, ReplyToDiscussionRequest, ReplyToDiscussionResponse, SetDiscussionResolutionRequest, SetDiscussionResolutionResponse, UpdateAISettingsRequest, UpdateAISettingsResponse, UpdateDiscussionCommentRequest, UpdateDiscussionCommentResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateRBACSettingsRequest, UpdateRBACSettingsResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateDiscussionRequest, CreateDiscussionResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteDiscussionCommentRequest, DeleteDiscussionCommentResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllDiscussionsRequest, GetAllDiscussionsResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetConfigRequest, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetDiscussionRequest, GetDiscussionResponse, GetDiscussionSchemasRequest, GetDiscussionSchemasResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLByNameRequest, GetLatestSubgraphSDLByNameResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, ReplyToDiscussionRequest, ReplyToDiscussionResponse, SetDiscussionResolutionRequest, SetDiscussionResolutionResponse, UpdateAISettingsRequest, UpdateAISettingsResponse, UpdateDiscussionCommentRequest, UpdateDiscussionCommentResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateRBACSettingsRequest, UpdateRBACSettingsResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { GetConfigResponse } from "../../node/v1/node_pb.js";
 import { createQueryService, createUnaryHooks, UnaryFunctionsWithHooks } from "@connectrpc/connect-query";
@@ -389,6 +389,72 @@ export const PlatformService = {
       name: "ForceCheckSuccess",
       I: ForceCheckSuccessRequest,
       O: ForceCheckSuccessResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * CreateOperationOverrides marks if the given set of changes as safe for an operation
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOperationOverrides
+     */
+    createOperationOverrides: {
+      name: "CreateOperationOverrides",
+      I: CreateOperationOverridesRequest,
+      O: CreateOperationOverridesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * RemoveOperationOverride removes a change from the safelist for an operation
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides
+     */
+    removeOperationOverrides: {
+      name: "RemoveOperationOverrides",
+      I: RemoveOperationOverridesRequest,
+      O: RemoveOperationOverridesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * CreateOperationIgnoreAllOverride adds an ignore all override for the operation
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOperationIgnoreAllOverride
+     */
+    createOperationIgnoreAllOverride: {
+      name: "CreateOperationIgnoreAllOverride",
+      I: CreateOperationIgnoreAllOverrideRequest,
+      O: CreateOperationIgnoreAllOverrideResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * RemoveOperationIgnoreAllOverride removes the ignore all override for the operartion
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride
+     */
+    removeOperationIgnoreAllOverride: {
+      name: "RemoveOperationIgnoreAllOverride",
+      I: RemoveOperationIgnoreAllOverrideRequest,
+      O: RemoveOperationIgnoreAllOverrideResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetOperationOverrides retireves all overrides for an operation hash
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationOverrides
+     */
+    getOperationOverrides: {
+      name: "GetOperationOverrides",
+      I: GetOperationOverridesRequest,
+      O: GetOperationOverridesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetAllOverrides returns all overrides for operations within a namespace
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAllOverrides
+     */
+    getAllOverrides: {
+      name: "GetAllOverrides",
+      I: GetAllOverridesRequest,
+      O: GetAllOverridesResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -1346,6 +1412,48 @@ export const getCheckOperations: UnaryFunctionsWithHooks<GetCheckOperationsReque
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ForceCheckSuccess
  */
 export const forceCheckSuccess: UnaryFunctionsWithHooks<ForceCheckSuccessRequest, ForceCheckSuccessResponse> = {   ...$queryService.forceCheckSuccess,  ...createUnaryHooks($queryService.forceCheckSuccess)};
+
+/**
+ * CreateOperationOverrides marks if the given set of changes as safe for an operation
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOperationOverrides
+ */
+export const createOperationOverrides: UnaryFunctionsWithHooks<CreateOperationOverridesRequest, CreateOperationOverridesResponse> = {   ...$queryService.createOperationOverrides,  ...createUnaryHooks($queryService.createOperationOverrides)};
+
+/**
+ * RemoveOperationOverride removes a change from the safelist for an operation
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides
+ */
+export const removeOperationOverrides: UnaryFunctionsWithHooks<RemoveOperationOverridesRequest, RemoveOperationOverridesResponse> = {   ...$queryService.removeOperationOverrides,  ...createUnaryHooks($queryService.removeOperationOverrides)};
+
+/**
+ * CreateOperationIgnoreAllOverride adds an ignore all override for the operation
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOperationIgnoreAllOverride
+ */
+export const createOperationIgnoreAllOverride: UnaryFunctionsWithHooks<CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse> = {   ...$queryService.createOperationIgnoreAllOverride,  ...createUnaryHooks($queryService.createOperationIgnoreAllOverride)};
+
+/**
+ * RemoveOperationIgnoreAllOverride removes the ignore all override for the operartion
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride
+ */
+export const removeOperationIgnoreAllOverride: UnaryFunctionsWithHooks<RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse> = {   ...$queryService.removeOperationIgnoreAllOverride,  ...createUnaryHooks($queryService.removeOperationIgnoreAllOverride)};
+
+/**
+ * GetOperationOverrides retireves all overrides for an operation hash
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationOverrides
+ */
+export const getOperationOverrides: UnaryFunctionsWithHooks<GetOperationOverridesRequest, GetOperationOverridesResponse> = {   ...$queryService.getOperationOverrides,  ...createUnaryHooks($queryService.getOperationOverrides)};
+
+/**
+ * GetAllOverrides returns all overrides for operations within a namespace
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAllOverrides
+ */
+export const getAllOverrides: UnaryFunctionsWithHooks<GetAllOverridesRequest, GetAllOverridesResponse> = {   ...$queryService.getAllOverrides,  ...createUnaryHooks($queryService.getAllOverrides)};
 
 /**
  * GetOperationContent returns the operation body by searching using the hash

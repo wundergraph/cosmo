@@ -217,7 +217,7 @@ const ChecksPage: NextPageWithLayout = () => {
                       </TableCell>
                       <TableCell>{subgraphName}</TableCell>
                       <TableCell>
-                        <div className="flex items-start gap-2">
+                        <div className="flex flex-wrap items-start gap-2">
                           <Badge variant="outline" className="gap-2 py-1.5">
                             {getCheckIcon(isComposable)} <span>Composes</span>
                           </Badge>
