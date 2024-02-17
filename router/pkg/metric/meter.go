@@ -219,6 +219,7 @@ func getResource(ctx context.Context, serviceName, serviceVersion string, servic
 		resource.WithAttributes(semconv.ServiceVersionKey.String(serviceVersion)),
 		resource.WithAttributes(semconv.ServiceInstanceID(serviceInstanceID)),
 		resource.WithProcessPID(),
+		resource.WithHostID(),
 		resource.WithOSType(),
 		resource.WithTelemetrySDK(),
 		resource.WithHost(),
