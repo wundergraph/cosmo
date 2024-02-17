@@ -149,7 +149,7 @@ function Node({
     <ul
       style={{
         marginLeft: `${16}px`,
-        minWidth: `${1200 - level * 32}px`,
+        minWidth: `${1024 - level * 32}px`,
       }}
       className={clsx(
         `trace-ul relative before:-top-4 before:h-[34px] lg:max-w-none`,

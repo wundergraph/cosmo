@@ -27,36 +27,36 @@ describe('Schema Change converter', (ctx) => {
           typeName: 'Query',
         },
       ]);
+    });
 
-      test('Add a new required argument nested', async () => {
-        const a = buildSchema(/* GraphQL */ `
-          type Rocket {
-            details: String
-          }
-          type Query {
-            a(b: Boolean!): Rocket
-          }
-        `);
-        const b = buildSchema(/* GraphQL */ `
-          type Rocket {
-            details(all: Boolean!): String
-          }
-          type Query {
-            a(b: Boolean!): Rocket
-          }
-        `);
+    test('Add a new required argument nested', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        type Rocket {
+          details: String
+        }
+        type Query {
+          a(b: Boolean!): Rocket
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        type Rocket {
+          details(all: Boolean!): String
+        }
+        type Query {
+          a(b: Boolean!): Rocket
+        }
+      `);
 
-        const changes = await getBreakingChanges(a, b);
+      const changes = await getBreakingChanges(a, b);
 
-        expect(changes).toEqual<InspectorSchemaChange[]>([
-          {
-            isArgument: true,
-            path: ['details', 'all'],
-            schemaChangeId: '0',
-            typeName: 'Rocket',
-          },
-        ]);
-      });
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          isArgument: true,
+          path: ['details', 'all'],
+          schemaChangeId: '0',
+          typeName: 'Rocket',
+        },
+      ]);
     });
   });
 

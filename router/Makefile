@@ -1,6 +1,9 @@
 dev:
 	go run cmd/router/main.go
 
+update-snapshot:
+	UPDATE_SNAPS=true go test -race ./...
+
 test:
 	go test -race ./...
 

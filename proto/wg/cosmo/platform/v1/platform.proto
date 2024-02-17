@@ -119,6 +119,7 @@ message SchemaChange{
   string changeType = 2;
   optional string path = 3;
   bool isBreaking = 4;
+  optional bool hasOverride = 5;
 }
 
 message CompositionError{
@@ -131,6 +132,7 @@ message CheckOperationUsageStats {
   uint32 totalOperations = 1;
   string firstSeenAt = 2;
   string lastSeenAt = 3;
+  uint32 safeOperations = 4;
 }
 
 message CheckSubgraphSchemaResponse {
@@ -362,6 +364,8 @@ message GetCheckOperationsResponse {
     string first_seen_at = 4;
     string last_seen_at = 5;
     repeated SchemaChange impacting_changes = 6;
+    bool is_safe = 7;
+    bool hasIgnoreAllOverride = 8;
   }
 
   Response response = 1;
@@ -1192,6 +1196,85 @@ message ForceCheckSuccessResponse {
   Response response = 1;
 }
 
+message OverrideChange {
+  string changeType = 1;
+  optional string path = 2;
+}
+
+message CreateOperationOverridesRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+  string operation_name = 4;
+  repeated OverrideChange changes = 5;
+}
+
+message CreateOperationOverridesResponse {
+  Response response = 1;
+}
+
+message CreateOperationIgnoreAllOverrideRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+  string operation_name = 4;
+}
+
+message CreateOperationIgnoreAllOverrideResponse {
+  Response response = 1;
+}
+
+message RemoveOperationOverridesRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+  repeated OverrideChange changes = 4;
+}
+
+message RemoveOperationOverridesResponse {
+  Response response = 1;
+}
+
+message RemoveOperationIgnoreAllOverrideRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+}
+
+message RemoveOperationIgnoreAllOverrideResponse {
+  Response response = 1;
+}
+
+message GetOperationOverridesRequest {
+  string graph_name = 1;
+  string namespace = 2;
+  string operation_hash = 3;
+}
+
+message GetOperationOverridesResponse {
+  Response response = 1;
+  repeated OverrideChange changes = 2;
+  bool ignore_all = 3;
+}
+
+message GetAllOverridesRequest {
+  string graph_name = 1;
+  string namespace = 2;
+}
+
+message GetAllOverridesResponse {
+  message Override {
+    string hash = 1;
+    string name = 2;
+    uint32 changesOverrideCount = 3;
+    bool hasIgnoreAllOverride = 4;
+    string updated_at = 5;
+  }
+
+  Response response = 1;
+  repeated Override overrides = 2;
+}
+
 message IsGitHubAppInstalledRequest {
   GitInfo git_info = 1;
 }
@@ -1743,6 +1826,18 @@ service PlatformService {
   rpc GetCheckOperations(GetCheckOperationsRequest) returns (GetCheckOperationsResponse) {}
   // ForceCheckSuccess forces a failed check to be marked as successful
   rpc ForceCheckSuccess(ForceCheckSuccessRequest) returns (ForceCheckSuccessResponse) {}
+  // CreateOperationOverrides marks if the given set of changes as safe for an operation
+  rpc CreateOperationOverrides(CreateOperationOverridesRequest) returns (CreateOperationOverridesResponse) {}
+  // RemoveOperationOverride removes a change from the safelist for an operation
+  rpc RemoveOperationOverrides(RemoveOperationOverridesRequest) returns (RemoveOperationOverridesResponse) {}
+  // CreateOperationIgnoreAllOverride adds an ignore all override for the operation
+  rpc CreateOperationIgnoreAllOverride(CreateOperationIgnoreAllOverrideRequest) returns (CreateOperationIgnoreAllOverrideResponse) {}
+  // RemoveOperationIgnoreAllOverride removes the ignore all override for the operartion
+  rpc RemoveOperationIgnoreAllOverride(RemoveOperationIgnoreAllOverrideRequest) returns (RemoveOperationIgnoreAllOverrideResponse) {}
+  // GetOperationOverrides retireves all overrides for an operation hash
+  rpc GetOperationOverrides(GetOperationOverridesRequest) returns (GetOperationOverridesResponse) {}
+  // GetAllOverrides returns all overrides for operations within a namespace
+  rpc GetAllOverrides(GetAllOverridesRequest) returns (GetAllOverridesResponse) {}
 
   // GetOperationContent returns the operation body by searching using the hash
   rpc GetOperationContent(GetOperationContentRequest) returns (GetOperationContentResponse) {}

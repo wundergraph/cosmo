@@ -5,12 +5,13 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/nats-io/nuid"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/nats-io/nuid"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
@@ -139,6 +140,8 @@ type (
 		authorization *config.AuthorizationConfiguration
 
 		rateLimit *config.RateLimitConfiguration
+
+		webSocketConfiguration *config.WebSocketConfiguration
 	}
 
 	Server interface {
@@ -1014,31 +1017,37 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		TraceExportVariables:        r.traceConfig.ExportGraphQLVariables.Enabled,
 	})
 
-	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-		OperationProcessor:         operationParser,
-		Planner:                    operationPlanner,
-		GraphQLHandler:             graphqlHandler,
-		Metrics:                    routerMetrics,
-		AccessController:           r.accessController,
-		Logger:                     r.logger,
-		Stats:                      r.WebsocketStats,
-		ReadTimeout:                r.engineExecutionConfiguration.WebSocketReadTimeout,
-		EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
-		EpollKqueuePollTimeout:     r.engineExecutionConfiguration.EpollKqueuePollTimeout,
-		EpollKqueueConnBufferSize:  r.engineExecutionConfiguration.EpollKqueueConnBufferSize,
-	})
-
 	graphqlChiRouter := chi.NewRouter()
 
-	// When the playground path is equal to the graphql path, we need to handle
-	// ws upgrades and html requests on the same route.
-	if r.playground && r.graphqlPath == r.playgroundPath {
-		graphqlChiRouter.Use(graphqlPlaygroundHandler, wsMiddleware)
+	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
+		wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
+			OperationProcessor:         operationParser,
+			Planner:                    operationPlanner,
+			GraphQLHandler:             graphqlHandler,
+			Metrics:                    routerMetrics,
+			AccessController:           r.accessController,
+			Logger:                     r.logger,
+			Stats:                      r.WebsocketStats,
+			ReadTimeout:                r.engineExecutionConfiguration.WebSocketReadTimeout,
+			EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
+			EpollKqueuePollTimeout:     r.engineExecutionConfiguration.EpollKqueuePollTimeout,
+			EpollKqueueConnBufferSize:  r.engineExecutionConfiguration.EpollKqueueConnBufferSize,
+			WebSocketConfiguration:     r.webSocketConfiguration,
+		})
+		// When the playground path is equal to the graphql path, we need to handle
+		// ws upgrades and html requests on the same route.
+		if r.playground && r.graphqlPath == r.playgroundPath {
+			graphqlChiRouter.Use(graphqlPlaygroundHandler, wsMiddleware)
+		} else {
+			if r.playground {
+				httpRouter.Get(r.playgroundPath, graphqlPlaygroundHandler(nil).ServeHTTP)
+			}
+			graphqlChiRouter.Use(wsMiddleware)
+		}
 	} else {
 		if r.playground {
 			httpRouter.Get(r.playgroundPath, graphqlPlaygroundHandler(nil).ServeHTTP)
 		}
-		graphqlChiRouter.Use(wsMiddleware)
 	}
 
 	graphqlChiRouter.Use(graphqlPreHandler.Handler)
@@ -1050,6 +1059,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
+
+	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
+		// Mount the Absinthe protocol handler for WebSockets
+		httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, graphqlChiRouter)
+	}
 
 	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
 	if err != nil {
@@ -1497,6 +1511,12 @@ func WithClusterName(name string) Option {
 func WithInstanceID(id string) Option {
 	return func(r *Router) {
 		r.instanceID = id
+	}
+}
+
+func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
+	return func(r *Router) {
+		r.Config.webSocketConfiguration = cfg
 	}
 }
 
