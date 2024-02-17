@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=./pkg/config/config.schema.json
 
-# See pkg/config/config.go for the full list of configuration options.
+# Ensure you have YAML Language Server installed in your editor to get the best experience with this file.
 # Please keep this file empty if you don't want to override the defaults.
 
 version: '1'
