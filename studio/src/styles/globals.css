@@ -137,6 +137,13 @@
   .table-action {
     @apply border border-transparent group-hover:border group-hover:border-border group-hover:bg-background data-[state=open]:border data-[state=open]:border-border data-[state=open]:bg-background group-hover:hover:bg-accent/50;
   }
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number'] {
+    -webkit-appearance: none;
+    margin: 0;
+    -moz-appearance: textfield !important;
+  }
 }
 
 .animation {

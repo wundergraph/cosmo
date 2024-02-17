@@ -19,9 +19,7 @@ import { cn } from "@/lib/utils";
 import { PlusCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 import { Column } from "@tanstack/react-table";
-import {
-  CustomOptions
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { CustomOptions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { ComponentType, useEffect, useState } from "react";
 import { Input } from "../ui/input";
 import { Slider } from "../ui/slider";
@@ -40,6 +38,110 @@ interface DataTableFacetedFilter<TData, TValue> {
   }[];
   customOptions?: CustomOptions;
 }
+
+const SliderWithOptions = ({
+  defaultRange,
+  onValueChange,
+}: {
+  defaultRange: { start: number; end: number };
+  onValueChange: ({
+    rangeValue,
+  }: {
+    rangeValue: { start: number; end: number };
+  }) => void;
+}) => {
+  const [range, setRange] = useState<{ start: number; end: number }>(
+    defaultRange,
+  );
+
+  return (
+    <div className="flex flex-col gap-y-5 px-2 pt-5">
+      <Slider
+        defaultValue={[range.start, range.end]}
+        key={`slider-${range.start}-${range.end}`}
+        max={60}
+        min={0}
+        step={1}
+        onValueCommit={(v) => {
+          setRange({
+            start: v[0],
+            end: v[1],
+          });
+          onValueChange({
+            rangeValue: {
+              start: v[0],
+              end: v[1],
+            },
+          });
+        }}
+      />
+      <div className="flex gap-x-2">
+        <Input
+          defaultValue={range.start}
+          type="number"
+          onBlur={(e) => {
+            if (Number(e.target.value) > range.end) {
+              setRange({
+                start: range.end,
+                end: Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+              });
+              onValueChange({
+                rangeValue: {
+                  start: range.end,
+                  end:
+                    Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+                },
+              });
+            } else {
+              setRange({
+                ...range,
+                start: Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+              });
+              onValueChange({
+                rangeValue: {
+                  ...range,
+                  start:
+                    Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                },
+              });
+            }
+          }}
+        />
+        <Input
+          value={range.end}
+          type="number"
+          onBlur={(e) => {
+            if (Number(e.target.value) > range.start) {
+              setRange({
+                ...range,
+                end: Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+              });
+              onValueChange({
+                rangeValue: {
+                  ...range,
+                  end:
+                    Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+                },
+              });
+            } else {
+              setRange({
+                start: Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                end: range.start,
+              });
+              onValueChange({
+                rangeValue: {
+                  start:
+                    Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                  end: range.start,
+                },
+              });
+            }
+          }}
+        />
+      </div>
+    </div>
+  );
+};
 
 export function DataTableFilterCommands<TData, TValue>({
   onSelect,
@@ -189,64 +291,11 @@ export function DataTableFilterCommands<TData, TValue>({
       content = (
         <div className="flex flex-col py-2">
           <p className="px-2 text-xs text-muted-foreground">{`Select ${title} (secs)`}</p>
-          <div className="flex flex-col gap-y-5 px-2 pt-5">
-            <Slider
-              defaultValue={[range.start, range.end]}
-              key={`slider-${range.start}-${range.end}`}
-              max={60}
-              min={0}
-              step={1}
-              onValueCommit={(v) =>
-                updateRangeFilters({
-                  rangeValue: {
-                    start: v[0],
-                    end: v[1],
-                  },
-                })
-              }
-            />
-            <div className="flex gap-x-2">
-              <Input
-                value={range.start}
-                type="number"
-                onChange={(e) => {
-                  if (Number(e.target.value) > range.end) {
-                    updateRangeFilters({
-                      rangeValue: {
-                        start: range.end,
-                        end:
-                          Number(e.target.value) > 60
-                            ? 60
-                            : Number(e.target.value),
-                      },
-                    });
-                  } else {
-                    updateRangeFilters({
-                      rangeValue: {
-                        ...range,
-                        start: Number(e.target.value),
-                      },
-                    });
-                  }
-                }}
-              />
-              <Input
-                value={range.end}
-                type="number"
-                onChange={(e) =>
-                  updateRangeFilters({
-                    rangeValue: {
-                      ...range,
-                      end:
-                        Number(e.target.value) > 60
-                          ? 60
-                          : Number(e.target.value),
-                    },
-                  })
-                }
-              />
-            </div>
-          </div>
+          <SliderWithOptions
+            key={`slider-${range.start}-${range.end}`}
+            defaultRange={range}
+            onValueChange={updateRangeFilters}
+          />
           {selectedValues.size > 0 && (
             <Button
               className="mx-1 mt-2"
