@@ -49,26 +49,36 @@ func (f *HttpFlushWriter) Close() {
 	f.cancel()
 }
 
-func (f *HttpFlushWriter) Flush() {
-	if f.ctx.Err() != nil {
-		return
+func (f *HttpFlushWriter) Flush() (err error) {
+	if err = f.ctx.Err(); err != nil {
+		return err
 	}
 
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
 	if f.sse {
-		_, _ = f.writer.Write([]byte("event: next\ndata: "))
+		_, err = f.writer.Write([]byte("event: next\ndata: "))
+		if err != nil {
+			return err
+		}
 	}
-	_, _ = f.writer.Write(resp)
+	_, err = f.writer.Write(resp)
+	if err != nil {
+		return err
+	}
 
 	if f.subscribeOnce {
 		f.flusher.Flush()
 		f.cancel()
 		return
 	}
-	_, _ = f.writer.Write([]byte("\n\n"))
+	_, err = f.writer.Write([]byte("\n\n"))
+	if err != nil {
+		return err
+	}
 	f.flusher.Flush()
+	return nil
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {

@@ -256,6 +256,29 @@ type Cluster struct {
 	Name string `yaml:"name" envconfig:"CLUSTER_NAME"`
 }
 
+type AbsintheProtocolConfiguration struct {
+	// Enabled true if the Router should accept Requests over WebSockets using the Absinthe Protocol (Phoenix) Handler
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"WEBSOCKETS_ABSINTHE_ENABLED"`
+	// HandlerPath is the path where the Absinthe Protocol Handler is mounted
+	// On this specific path, the Router will accept WebSocket Requests using the Absinthe Protocol
+	// even if the Subprotocol is not set to "absinthe"
+	// Legacy clients might not set the Subprotocol Header, so this is a fallback
+	HandlerPath string `yaml:"handler_path" default:"/absinthe/socket" envconfig:"WEBSOCKETS_ABSINTHE_HANDLER_PATH"`
+}
+
+type WebSocketConfiguration struct {
+	// Enabled true if the Router should accept Requests over WebSockets
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"WEBSOCKETS_ENABLED"`
+	// AbsintheProtocol configuration for the Absinthe Protocol
+	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol"`
+	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
+	ForwardUpgradeHeaders bool `yaml:"forward_upgrade_headers" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_HEADERS"`
+	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph
+	ForwardUpgradeQueryParams bool `yaml:"forward_upgrade_query_params" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_QUERY_PARAMS"`
+	// ForwardInitialPayload true if the Router should forward the initial payload of a Subscription Request to the Subgraph
+	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
@@ -299,6 +322,8 @@ type Config struct {
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
+
+	WebSocket WebSocketConfiguration `yaml:"websocket"`
 }
 
 // ValidateRequiredWithRouterConfigPath validates that either the field or the router config path is set
