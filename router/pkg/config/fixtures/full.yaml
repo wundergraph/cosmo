@@ -214,6 +214,7 @@ override_routing_url:
 websocket:
   enabled: true
   absinthe_protocol:
+    enabled: true
     handler_path: /absinthe/socket
   forward_initial_payload: true
   forward_upgrade_headers: true

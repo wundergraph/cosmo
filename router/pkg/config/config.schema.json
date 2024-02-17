@@ -64,7 +64,7 @@
             "handler_path": {
               "type": "string",
               "default": "/absinthe/socket",
-              "description": "The path to the WebSocket handler. The default value is '/absinthe/socket'."
+              "description": "The path to mount the Absinthe Protocol Handler on. The default value is '/absinthe/socket'."
             }
           }
         },
