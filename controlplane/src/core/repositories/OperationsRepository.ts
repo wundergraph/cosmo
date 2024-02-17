@@ -1,8 +1,10 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { PlainMessage } from '@bufbuild/protobuf';
+import { OverrideChange, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
-import { ClientDTO, PersistedOperationDTO, UpdatedPersistedOperation } from '../../types/index.js';
+import { ClientDTO, PersistedOperationDTO, SchemaChangeType, UpdatedPersistedOperation } from '../../types/index.js';
 
 export class OperationsRepository {
   constructor(
@@ -138,5 +140,210 @@ export class OperationsRepository {
     }
 
     return clients;
+  }
+
+  public createOperationOverrides(data: {
+    changes: OverrideChange[];
+    namespaceId: string;
+    operationHash: string;
+    operationName: string;
+    actorId: string;
+  }) {
+    return this.db
+      .insert(schema.operationChangeOverrides)
+      .values(
+        data.changes.map((c) => ({
+          namespaceId: data.namespaceId,
+          hash: data.operationHash,
+          name: data.operationName,
+          changeType: c.changeType as SchemaChangeType,
+          path: c.path,
+          createdBy: data.actorId,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [
+          schema.operationChangeOverrides.hash,
+          schema.operationChangeOverrides.namespaceId,
+          schema.operationChangeOverrides.changeType,
+          schema.operationChangeOverrides.path,
+        ],
+        set: {
+          namespaceId: data.namespaceId,
+          hash: data.operationHash,
+          name: data.operationName,
+        },
+      })
+      .returning();
+  }
+
+  public async removeOperationOverrides(data: {
+    operationHash: string;
+    namespaceId: string;
+    changes: OverrideChange[];
+  }) {
+    await this.db.transaction(async (tx) => {
+      for (const change of data.changes) {
+        await tx
+          .delete(schema.operationChangeOverrides)
+          .where(
+            and(
+              eq(schema.operationChangeOverrides.hash, data.operationHash),
+              eq(schema.operationChangeOverrides.namespaceId, data.namespaceId),
+              eq(schema.operationChangeOverrides.changeType, change.changeType as SchemaChangeType),
+              change.path
+                ? eq(schema.operationChangeOverrides.path, change.path)
+                : isNull(schema.operationChangeOverrides.path),
+            ),
+          )
+          .returning();
+      }
+    });
+  }
+
+  public createIgnoreAllOverride(data: {
+    namespaceId: string;
+    operationHash: string;
+    operationName: string;
+    actorId: string;
+  }) {
+    return this.db
+      .insert(schema.operationIgnoreAllOverrides)
+      .values({
+        namespaceId: data.namespaceId,
+        hash: data.operationHash,
+        name: data.operationName,
+        createdBy: data.actorId,
+      })
+      .onConflictDoUpdate({
+        target: [schema.operationIgnoreAllOverrides.hash, schema.operationIgnoreAllOverrides.namespaceId],
+        set: {
+          namespaceId: data.namespaceId,
+          hash: data.operationHash,
+          name: data.operationName,
+        },
+      })
+      .returning();
+  }
+
+  public removeIgnoreAllOverride(data: { operationHash: string; namespaceId: string }) {
+    return this.db
+      .delete(schema.operationIgnoreAllOverrides)
+      .where(
+        and(
+          eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
+          eq(schema.operationIgnoreAllOverrides.hash, data.operationHash),
+        ),
+      )
+      .returning();
+  }
+
+  public async hasIgnoreAllOverride(data: { operationHash: string; namespaceId: string }) {
+    const res = await this.db.query.operationIgnoreAllOverrides.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(
+        eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
+        eq(schema.operationIgnoreAllOverrides.hash, data.operationHash),
+      ),
+    });
+
+    return !!res;
+  }
+
+  public async getChangeOverridesByOperationHash(data: { operationHash: string; namespaceId: string }) {
+    const res = await this.db.query.operationChangeOverrides.findMany({
+      where: and(
+        eq(schema.operationChangeOverrides.hash, data.operationHash),
+        eq(schema.operationChangeOverrides.namespaceId, data.namespaceId),
+      ),
+      orderBy: desc(schema.operationChangeOverrides.createdAt),
+    });
+
+    return res.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  public async getChangeOverrides(data: { namespaceId: string }) {
+    const res = await this.db.query.operationChangeOverrides.findMany({
+      where: eq(schema.operationChangeOverrides.namespaceId, data.namespaceId),
+      orderBy: desc(schema.operationChangeOverrides.createdAt),
+    });
+
+    return res.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  public async getIgnoreAllOverrides(data: { namespaceId: string }) {
+    const res = await this.db.query.operationIgnoreAllOverrides.findMany({
+      where: eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
+    });
+
+    return res.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  public getConsolidatedOverridesView(data: { namespaceId: string }) {
+    const change = this.db
+      .select({
+        hash: schema.operationChangeOverrides.hash,
+        name: sql`max(${schema.operationChangeOverrides.name})`.as('change_operation_name'),
+        namespaceId: schema.operationChangeOverrides.namespaceId,
+        created_at: sql`max(${schema.operationChangeOverrides.createdAt})`.as('change_created_at'),
+      })
+      .from(schema.operationChangeOverrides)
+      .where(eq(schema.operationChangeOverrides.namespaceId, data.namespaceId))
+      .groupBy(({ hash, namespaceId }) => [hash, namespaceId])
+      .as('change');
+
+    const ignore = this.db
+      .select({
+        hash: schema.operationIgnoreAllOverrides.hash,
+        name: sql`max(${schema.operationIgnoreAllOverrides.name})`.as('ignore_operation_name'),
+        namespaceId: schema.operationIgnoreAllOverrides.namespaceId,
+        created_at: sql`max(${schema.operationIgnoreAllOverrides.createdAt})`.as('ignore_created_at'),
+      })
+      .from(schema.operationIgnoreAllOverrides)
+      .where(eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId))
+      .groupBy(({ hash, namespaceId }) => [hash, namespaceId])
+      .as('ignore');
+
+    const changeCounts = this.db
+      .select({
+        hash: schema.operationChangeOverrides.hash,
+        namespaceId: schema.operationChangeOverrides.namespaceId,
+        change_count: sql`count(*)`.as('change_count'),
+      })
+      .from(schema.operationChangeOverrides)
+      .where(eq(schema.operationChangeOverrides.namespaceId, data.namespaceId))
+      .groupBy(({ hash, namespaceId }) => [hash, namespaceId])
+      .as('change_counts');
+
+    // One table stores ignore all override for an operation
+    // The other table stores the specific changes that are overridden for an operation
+    // We need to retrieve a consolidated view of overrides from both tables.
+    // There is no guarantee that an entry for hash exists in both.
+
+    return this.db
+      .select({
+        hash: sql<string>`coalesce(${change.hash}, ${ignore.hash})`,
+        name: sql<string>`coalesce(${change.name}, ${ignore.name})`,
+        updatedAt: sql`greatest(${change.created_at},${ignore.created_at})`.mapWith({
+          mapFromDriverValue: (value) => new Date(value).toISOString(),
+        }),
+        hasIgnoreAllOverride: sql<boolean>`case when ${ignore.hash} is not null then true else false end`,
+        changesOverrideCount: sql<number>`cast(coalesce(${changeCounts.change_count}, 0) as int)`,
+      })
+      .from(change)
+      .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
+      .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
+      .orderBy(({ name, hash }) => [asc(name), asc(hash)]);
   }
 }

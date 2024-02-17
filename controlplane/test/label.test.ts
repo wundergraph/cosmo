@@ -17,7 +17,7 @@ describe('Labels', (ctx) => {
   });
 
   test('Changing labels of federated should reassign subgraphs', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -70,7 +70,7 @@ describe('Labels', (ctx) => {
   });
 
   test('Changing labels of subgraph should affect federated graphs', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ dbname });
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -178,7 +178,7 @@ describe('Labels', (ctx) => {
   });
 
   test('Assign graphs with multiple label matchers correctly', async (testContext) => {
-    const { client, server } = await SetupTest(testContext, dbname);
+    const { client, server } = await SetupTest({ dbname });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
