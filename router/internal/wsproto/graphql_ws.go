@@ -20,7 +20,7 @@ const (
 	graphQLWSMessageTypeComplete       = graphQLWSMessageType("complete")
 
 	// This might seem confusing, but the protocol is called graphql-ws and uses "graphql-transport-ws" as subprotocol
-	graphQLWSSubprotocol = "graphql-transport-ws"
+	GraphQLWSSubprotocol = "graphql-transport-ws"
 )
 
 var _ Proto = (*graphQLWSProtocol)(nil)
@@ -43,7 +43,7 @@ func newGraphQLWSProtocol(conn JSONConn) *graphQLWSProtocol {
 }
 
 func (p *graphQLWSProtocol) Subprotocol() string {
-	return graphQLWSSubprotocol
+	return GraphQLWSSubprotocol
 }
 
 func (p *graphQLWSProtocol) Initialize() (json.RawMessage, error) {
