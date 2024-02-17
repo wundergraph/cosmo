@@ -876,18 +876,22 @@
         "op": {
           "type": "string",
           "enum": ["propagate"],
+          "examples": ["propagate"],
           "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
         },
         "matching": {
           "type": "string",
+          "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
         "named": {
           "type": "string",
+          "examples": ["X-Test-Header"],
           "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
         },
         "default": {
           "type": "string",
+          "examples": ["default-value"],
           "description": "The default value of the header in case it is not present in the request."
         }
       },
