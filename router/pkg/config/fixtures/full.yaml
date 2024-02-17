@@ -4,7 +4,7 @@ version: "1"
 
 # General router options
 graph:
-  token: ""
+  token: "mytoken"
 
 log_level: "info"
 listen_addr: "localhost:3002"
@@ -46,7 +46,6 @@ telemetry:
   tracing:
     enabled: true
     sampling_rate: 1
-    batch_timeout: '10s'
     export_graphql_variables: true
     with_new_root: false
     propagation:
@@ -154,8 +153,11 @@ authentication:
     - name: My Auth Provider # Optional, used for error messages and diagnostics
       jwks: # JWKS provider configuration
         url: https://example.com/.well-known/jwks.json # URL to load the JWKS from
-        header_name: Authorization # Optional
-        header_value_prefix: Bearer # Optional
+        refresh_interval: 1m
+        header_names:
+          - Authorization # Optional
+        header_value_prefixes:
+          - Bearer # Optional
 
 authorization:
   require_authentication: false # Set to true to disable requests without authentication

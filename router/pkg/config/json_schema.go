@@ -200,7 +200,7 @@ func (durationCompiler) Compile(ctx jsonschema.CompilerContext, m map[string]int
 	return nil, nil
 }
 
-func ValidateMarshalConfig(yamlData []byte, schema string) (*Config, error) {
+func ValidateConfig(yamlData []byte, schema string) error {
 	var v interface{}
 	if err := yaml.Unmarshal(yamlData, &v); err != nil {
 		log.Fatal(err)
@@ -220,25 +220,20 @@ func ValidateMarshalConfig(yamlData []byte, schema string) (*Config, error) {
 
 	err := c.AddResource("config.schema.json", strings.NewReader(schema))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	sch, err := c.Compile("config.schema.json")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = sch.Validate(v)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var config Config
-	if err := yaml.Unmarshal(yamlData, &config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
+	return nil
 }
 
 // isGoDuration is the validation function for validating if the current field's value is a valid Go duration.

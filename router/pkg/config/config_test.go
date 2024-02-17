@@ -1,8 +1,10 @@
 package config
 
 import (
+	"github.com/gkampitakis/go-snaps/snaps"
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 	"time"
 )
@@ -28,6 +30,67 @@ func TestCustomBytesExtension(t *testing.T) {
 	require.Equal(t, js.Causes[0].Message, "must be greater or equal than 1.0 MB, given 1.0 kB")
 }
 
+func TestVariableExpansion(t *testing.T) {
+	require.NoError(t, os.Setenv("TEST_POLL_INTERVAL", "20s"))
+
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("TEST_POLL_INTERVAL"))
+	})
+
+	cfg, err := LoadConfig("./fixtures/variable_expansion.yaml", "")
+
+	require.NoError(t, err)
+
+	require.Equal(t, cfg.Config.PollInterval, time.Second*20)
+}
+
+func TestConfigHasPrecedence(t *testing.T) {
+	require.NoError(t, os.Setenv("POLL_INTERVAL", "22s"))
+
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("POLL_INTERVAL"))
+	})
+
+	cfg, err := LoadConfig("./fixtures/config_precedence.yaml", "")
+
+	require.NoError(t, err)
+
+	require.Equal(t, cfg.Config.PollInterval, time.Second*11)
+}
+
+func TestErrorWhenConfigNotExists(t *testing.T) {
+	_, err := LoadConfig("./fixtures/not_exists.yaml", "")
+
+	require.Error(t, err)
+	require.ErrorContains(t, err, "could not read custom config file ./fixtures/not_exists.yaml: open ./fixtures/not_exists.yaml: no such file or directory")
+}
+
+func TestErrorWhenEnvVariableConfigNotExists(t *testing.T) {
+	require.NoError(t, os.Setenv("CONFIG_PATH", "not_exists.yaml"))
+
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("CONFIG_PATH"))
+	})
+
+	_, err := LoadConfig("", "")
+
+	require.Error(t, err)
+	require.ErrorContains(t, err, "could not read custom config file not_exists.yaml: open not_exists.yaml: no such file or directory")
+}
+
+func TestConfigIsOptional(t *testing.T) {
+
+	require.NoError(t, os.Setenv("GRAPH_API_TOKEN", "XXX"))
+
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("GRAPH_API_TOKEN"))
+	})
+
+	_, err := LoadConfig("", "")
+
+	require.NoError(t, err)
+}
+
 func TestCustomGoDurationExtension(t *testing.T) {
 	_, err := LoadConfig("./fixtures/min_duration_error.yaml", "")
 
@@ -45,159 +108,18 @@ func TestCustomGoDurationExtension(t *testing.T) {
 	require.Equal(t, js.Causes[0].Message, "must be less oe equal than 2m0s, given 5m0s")
 }
 
+func TestLoadFullConfig(t *testing.T) {
+	cfg, err := LoadConfig("./fixtures/full.yaml", "")
+	require.NoError(t, err)
+
+	snaps.MatchJSON(t, cfg.Config)
+}
+
 func TestDefaults(t *testing.T) {
 	cfg, err := LoadConfig("./fixtures/minimal.yaml", "")
 
 	require.NoError(t, err)
 
-	require.Equal(t, cfg.Graph.Token, "token")
-	require.Equal(t, cfg.LogLevel, "info")
-	require.Equal(t, cfg.ListenAddr, "localhost:3003")
-	require.Equal(t, cfg.ControlplaneURL, "https://cosmo-cp.wundergraph.com")
-	require.Equal(t, cfg.PlaygroundEnabled, true)
-	require.Equal(t, cfg.PlaygroundPath, "/")
-	require.Equal(t, cfg.IntrospectionEnabled, true)
-	require.Equal(t, cfg.JSONLog, true)
-	require.Equal(t, cfg.InstanceID, "")
-	require.Equal(t, cfg.Cluster.Name, "")
-	require.Equal(t, cfg.ShutdownDelay, time.Duration(60)*time.Second)
-	require.Equal(t, cfg.GracePeriod, time.Duration(20)*time.Second)
-	require.Equal(t, cfg.PollInterval, time.Duration(10)*time.Second)
-	require.Equal(t, cfg.HealthCheckPath, "/health")
-	require.Equal(t, cfg.ReadinessCheckPath, "/health/ready")
-	require.Equal(t, cfg.LivenessCheckPath, "/health/live")
-	require.Equal(t, cfg.RouterConfigPath, "")
-	require.Equal(t, cfg.DevelopmentMode, false)
-
-	// OverrideRoutingURL
-
-	require.Equal(t, cfg.OverrideRoutingURL, OverrideRoutingURLConfiguration{
-		Subgraphs: map[string]string{},
-	})
-
-	// Events
-
-	require.Equal(t, cfg.Events, EventsConfiguration{
-		Sources: nil,
-	})
-
-	// GraphqlMetrics
-
-	require.Equal(t, cfg.GraphqlMetrics, GraphqlMetrics{
-		Enabled:           true,
-		CollectorEndpoint: "https://cosmo-metrics.wundergraph.com",
-	})
-
-	// CDN
-
-	require.Equal(t, cfg.CDN, CDNConfiguration{
-		URL:       "https://cosmo-cdn.wundergraph.com",
-		CacheSize: 100000000,
-	})
-
-	// EngineExecutionConfiguration
-
-	require.Equal(t, cfg.EngineExecutionConfiguration, EngineExecutionConfiguration{
-		Debug: EngineDebugConfiguration{
-			PrintOperationTransformations: false,
-			PrintOperationEnableASTRefs:   false,
-			PrintPlanningPaths:            false,
-			PrintQueryPlans:               false,
-			PrintNodeSuggestions:          false,
-			ConfigurationVisitor:          false,
-			PlanningVisitor:               false,
-			DatasourceVisitor:             false,
-			ReportWebSocketConnections:    false,
-			ReportMemoryUsage:             false,
-		},
-		EnableSingleFlight:                     true,
-		EnableRequestTracing:                   true,
-		EnableExecutionPlanCacheResponseHeader: false,
-		MaxConcurrentResolvers:                 1024,
-		EnableWebSocketEpollKqueue:             true,
-		EpollKqueuePollTimeout:                 time.Duration(1) * time.Second,
-		EpollKqueueConnBufferSize:              128,
-		WebSocketReadTimeout:                   time.Duration(5) * time.Second,
-		ExecutionPlanCacheSize:                 10000,
-	})
-
-	// Authorization
-
-	require.Equal(t, cfg.Authorization, AuthorizationConfiguration{
-		RejectOperationIfUnauthorized: false,
-		RequireAuthentication:         false,
-	})
-
-	// Authentication
-
-	require.Equal(t, cfg.Authentication, AuthenticationConfiguration{
-		Providers: nil,
-	})
-
-	// CORS
-
-	require.Equal(t, cfg.CORS, CORS{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"HEAD", "GET", "POST"},
-		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type"},
-		AllowCredentials: true,
-		MaxAge:           time.Duration(5) * time.Minute,
-	})
-
-	// Headers
-	require.Equal(t, cfg.Headers, HeaderRules{})
-
-	// Traffic shaping
-	require.Equal(t, cfg.TrafficShaping, TrafficShapingRules{
-		Router: RouterTrafficConfiguration{
-			MaxRequestBodyBytes: 5000000,
-		},
-		All: GlobalSubgraphRequestRule{
-			BackoffJitterRetry: BackoffJitterRetry{
-				Enabled:     true,
-				Algorithm:   "backoff_jitter",
-				MaxAttempts: 5,
-				MaxDuration: time.Duration(10) * time.Second,
-				Interval:    time.Duration(3) * time.Second,
-			},
-			RequestTimeout:         time.Duration(60) * time.Second,
-			DialTimeout:            time.Duration(30) * time.Second,
-			ResponseHeaderTimeout:  0,
-			ExpectContinueTimeout:  0,
-			TLSHandshakeTimeout:    time.Duration(10) * time.Second,
-			KeepAliveIdleTimeout:   0,
-			KeepAliveProbeInterval: time.Duration(30) * time.Second,
-		},
-	})
-
-	// Rate limit
-
-	require.Equal(t, cfg.RateLimit.Enabled, false)
-	require.Equal(t, cfg.RateLimit.Debug, false)
-	require.Equal(t, cfg.RateLimit.SimpleStrategy.Rate, 10)
-	require.Equal(t, cfg.RateLimit.SimpleStrategy.Burst, 10)
-	require.Equal(t, cfg.RateLimit.SimpleStrategy.Period, time.Duration(1)*time.Second)
-	require.Equal(t, cfg.RateLimit.SimpleStrategy.RejectExceedingRequests, false)
-
-	// Telemetry
-
-	require.Equal(t, cfg.Telemetry.ServiceName, "cosmo-router")
-	require.Equal(t, cfg.Telemetry.Metrics, Metrics{
-		OTLP: MetricsOTLP{
-			Enabled:       true,
-			RouterRuntime: true,
-			Exporters:     []MetricsOTLPExporter{},
-		},
-		Prometheus: Prometheus{
-			Enabled:             true,
-			ExcludeMetrics:      nil,
-			ExcludeMetricLabels: nil,
-			ListenAddr:          "127.0.0.1:8088",
-			Path:                "/metrics",
-		},
-	})
-	require.Equal(t, cfg.Telemetry.Tracing.Propagation, PropagationConfig{
-		TraceContext: true,
-	})
+	snaps.MatchJSON(t, cfg.Config)
 
 }

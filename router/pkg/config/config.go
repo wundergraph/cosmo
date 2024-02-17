@@ -2,14 +2,13 @@ package config
 
 import (
 	"fmt"
+	"github.com/goccy/go-yaml"
 	"os"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
-
-	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
 const (
@@ -297,7 +296,12 @@ type Config struct {
 	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
 }
 
-func LoadConfig(configFilePath string, envOverride string) (*Config, error) {
+type LoadResult struct {
+	Config        Config
+	DefaultLoaded bool
+}
+
+func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) {
 	_ = godotenv.Load(".env.local")
 	_ = godotenv.Load()
 
@@ -305,65 +309,80 @@ func LoadConfig(configFilePath string, envOverride string) (*Config, error) {
 		_ = godotenv.Overload(envOverride)
 	}
 
-	var c Config
+	cfg := &LoadResult{
+		Config:        Config{},
+		DefaultLoaded: true,
+	}
 
 	// Try to load the environment variables into the config
 
-	err := envconfig.Process("", &c)
+	err := envconfig.Process("", &cfg.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	if configFilePath == "" {
-		configFilePath = DefaultConfigPath
-	}
-
 	// Read the custom config file
 
-	configBytes, err := os.ReadFile(configFilePath)
+	var configFileBytes []byte
+
+	if configFilePath == "" {
+		configFilePath = os.Getenv("CONFIG_PATH")
+		if configFilePath == "" {
+			configFilePath = DefaultConfigPath
+		}
+	}
+
+	isDefaultConfigPath := configFilePath == DefaultConfigPath
+	configFileBytes, err = os.ReadFile(configFilePath)
 
 	if err != nil {
-		return nil, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err)
+		if isDefaultConfigPath {
+			cfg.DefaultLoaded = false
+		} else {
+			return nil, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err)
+		}
 	}
 
 	// Expand environment variables in the config file
 	// and unmarshal it into the config struct
 
-	configYamlData := os.ExpandEnv(string(configBytes))
-	if err := yaml.Unmarshal([]byte(configYamlData), &c); err != nil {
+	configYamlData := os.ExpandEnv(string(configFileBytes))
+	if err := yaml.Unmarshal([]byte(configYamlData), &cfg.Config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 	}
 
-	if c.DevelopmentMode {
-		c.JSONLog = false
-	}
+	// Marshal the config back to yaml to respect default values, expansion and
+	// to create a YAML representing only the values that are actually set
 
-	// Marshal the config back to yaml to respect the environment variable injection, expanded variables
-	// as well as default values
-
-	cBytes, err := yaml.Marshal(c)
+	configFileBytes, err = yaml.Marshal(cfg.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal router config: %w", err)
 	}
 
-	// Validate the config against the schema and return the validated config
+	// Validate the config against the JSON schema
 
-	finalConfig, err := ValidateMarshalConfig(cBytes, JSONSchema)
+	err = ValidateConfig(configFileBytes, JSONSchema)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate router config: %w", err)
 	}
 
-	// In development mode, disable JSON logging
+	// Unmarshal the final config
 
-	if finalConfig.DevelopmentMode {
-		finalConfig.JSONLog = false
+	if err := yaml.Unmarshal(configFileBytes, &cfg.Config); err != nil {
+		return nil, err
 	}
 
 	// Custom validation for the config
 
-	if finalConfig.RouterConfigPath == "" && finalConfig.Graph.Token == "" {
+	if cfg.Config.RouterConfigPath == "" && cfg.Config.Graph.Token == "" {
 		return nil, fmt.Errorf("either router config path or graph token must be provided")
 	}
 
-	return finalConfig, nil
+	// Post-process the config
+
+	if cfg.Config.DevelopmentMode {
+		cfg.Config.JSONLog = false
+	}
+
+	return cfg, nil
 }

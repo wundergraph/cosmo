@@ -192,7 +192,7 @@
                         "type": "string",
                         "description": "The path to which the metrics are exported.",
                         "default": "/v1/metrics",
-                        "format": "uri"
+                        "format": "x-uri"
                       },
                       "headers": {
                         "type": "object",

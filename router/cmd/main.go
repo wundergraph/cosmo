@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	overrideEnvFlag = flag.String("override-env", "", "env file name to override env variables")
+	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "env file name to override env variables")
 	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "path to config file")
 )
 
@@ -27,13 +27,7 @@ func Main() {
 
 	profiler := profile.Start()
 
-	var configPath = config.DefaultConfigPath
-
-	if *configPathFlag != "" {
-		configPath = *configPathFlag
-	}
-
-	cfg, err := config.LoadConfig(configPath, *overrideEnvFlag)
+	result, err := config.LoadConfig(*configPathFlag, *overrideEnvFlag)
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
@@ -48,26 +42,30 @@ func Main() {
 	)
 	defer stop()
 
-	logLevel, err := logging.ZapLogLevelFromString(cfg.LogLevel)
+	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
 	if err != nil {
 		log.Fatal("Could not parse log level", zap.Error(err))
 	}
 
-	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
+	logger := logging.New(!result.Config.JSONLog, result.Config.LogLevel == "debug", logLevel).
 		With(
 			zap.String("component", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
 		)
 
-	if configPath != "" {
+	if *configPathFlag != "" {
 		logger.Info(
-			"Loaded config from file. Values in the config file has higher priority than environment variables",
-			zap.String("config_file", configPath),
+			"Config file path provided. Values in the config file have higher priority than environment variables",
+			zap.String("config_file", *configPathFlag),
+		)
+	} else if result.DefaultLoaded {
+		logger.Info("Found default config file. Values in the config file have higher priority than environment variables",
+			zap.String("config_file", config.DefaultConfigPath),
 		)
 	}
 
 	router, err := NewRouter(Params{
-		Config: cfg,
+		Config: &result.Config,
 		Logger: logger,
 	})
 
@@ -85,10 +83,10 @@ func Main() {
 
 	<-ctx.Done()
 
-	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", cfg.ShutdownDelay.String()))
+	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
 	// Enforce a maximum shutdown delay to avoid waiting forever
 	// Don't use the parent context that is canceled by the signal handler
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), result.Config.ShutdownDelay)
 	defer cancel()
 
 	if err := router.Shutdown(shutdownCtx); err != nil {
