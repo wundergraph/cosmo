@@ -116,6 +116,9 @@ func TestLoadFullConfig(t *testing.T) {
 }
 
 func TestDefaults(t *testing.T) {
+	// Set in the CI to false. We need to unset it to test the default values
+	_ = os.Unsetenv("ROUTER_REGISTRATION")
+
 	cfg, err := LoadConfig("./fixtures/minimal.yaml", "")
 
 	require.NoError(t, err)

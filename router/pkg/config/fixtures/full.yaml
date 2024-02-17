@@ -20,6 +20,15 @@ health_check_path: "/health"
 readiness_check_path: "/health/ready"
 liveness_check_path: "/health/live"
 router_config_path: ""
+router_registration: true
+graphql_path: /graphql
+config_path: /config.json
+dev_mode: false
+instance_id: ""
+graphql_metrics:
+  enabled: true
+  collector_endpoint: "https://cosmo-metrics.wundergraph.com"
+localhost_fallback_inside_docker: true
 
 # Cross-Origin Resource Sharing (CORS)
 cors:

@@ -748,6 +748,7 @@
     },
     "router_registration": {
       "type": "boolean",
+      "default": true,
       "description": "Enable the router registration. The router registration is used to register the router in the control plane. The default value is true. This should not be modified unless you know what you are doing."
     },
     "override_routing_url": {

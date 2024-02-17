@@ -15,6 +15,7 @@ concurrency:
 
 env:
   CI: true
+  ROUTER_REGISTRATION: false
 
 jobs:
   build_test:
@@ -78,8 +79,6 @@ jobs:
       - name: Run Integration tests
         working-directory: ./router-tests
         run: make test
-        env:
-          ROUTER_REGISTRATION: false
 
       - name: Build
         working-directory: ./router
