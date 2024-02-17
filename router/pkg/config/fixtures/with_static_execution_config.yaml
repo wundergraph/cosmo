@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=../config.schema.json
+
+version: "1"
+
+router_config_path: "config.json"

@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=../config.schema.json
+
+version: "1"
+
+graph:
+  token: "token"
+
+poll_interval: 11s

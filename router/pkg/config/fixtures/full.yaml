@@ -1,0 +1,221 @@
+# yaml-language-server: $schema=../config.schema.json
+
+version: "1"
+
+# General router options
+graph:
+  token: "mytoken"
+
+log_level: "info"
+listen_addr: "localhost:3002"
+controlplane_url: "https://cosmo-cp.wundergraph.com"
+playground_enabled: true
+playground_path: "/"
+introspection_enabled: true
+json_log: true
+shutdown_delay: 15s
+grace_period: 20s
+poll_interval: 10s
+health_check_path: "/health"
+readiness_check_path: "/health/ready"
+liveness_check_path: "/health/live"
+router_config_path: ""
+router_registration: true
+graphql_path: /graphql
+config_path: /config.json
+dev_mode: false
+instance_id: ""
+graphql_metrics:
+  enabled: true
+  collector_endpoint: "https://cosmo-metrics.wundergraph.com"
+localhost_fallback_inside_docker: true
+
+# Cross-Origin Resource Sharing (CORS)
+cors:
+  allow_origins: ["*"]
+  allow_methods:
+    - HEAD
+    - GET
+    - POST
+  allow_headers:
+    - Origin
+    - Content-Length
+    - Content-Type
+  allow_credentials: true
+  max_age: 5m
+
+# Config for custom modules
+# See "https://cosmo-docs.wundergraph.com/router/metrics-and-monitoring" for more information
+telemetry:
+  # Common options
+  service_name: "cosmo-router"
+  # uses https://cosmo-otel.wundergraph.com for tracing and metrics
+
+  # OpenTelemetry Tracing
+  tracing:
+    enabled: true
+    sampling_rate: 1
+    export_graphql_variables: true
+    with_new_root: false
+    propagation:
+      # https://www.w3.org/TR/trace-context/
+      trace_context: true
+      # https://www.w3.org/TR/baggage/
+      baggage: false
+      # https://www.jaegertracing.io/ (compliant with opentracing)
+      jaeger: false
+      # https://github.com/openzipkin/b3-propagation (zipkin)
+      b3: false
+    exporters:
+      # If no exporters are defined, the default one is used
+      - exporter: http # or grpc
+        disabled: false
+        endpoint: https://my-otel-collector.example.com
+        # headers: {Authorization: Bearer <my-token>}
+        batch_timeout: 10s
+        export_timeout: 30s
+        path: "/v1/traces"
+        headers: {}
+
+  # OpenTelemetry Metrics
+  metrics:
+    otlp:
+      enabled: true
+      router_runtime: true
+      # If no exporters are defined, the default one is used
+      exporters:
+        - exporter: http # or grpc
+          disabled: false
+          headers: {}
+          path: "/v1/metrics"
+          endpoint: https://my-otel-collector.example.com
+          # headers: {Authorization: Bearer <my-token>}
+
+    # Expose OpenTelemetry metrics for scraping
+    prometheus:
+      enabled: true
+      path: "/metrics"
+      listen_addr: "127.0.0.1:8088"
+      exclude_metrics: []
+      exclude_metric_labels: []
+
+# Config for custom modules
+# See "https://cosmo-docs.wundergraph.com/router/custom-modules" for more information
+modules:
+  myModule:
+    # Arbitrary values, unmarshalled by the module
+    value: 1
+
+cluster:
+  name: "my-cluster"
+
+# Traffic configuration
+# See "https://cosmo-docs.wundergraph.com/router/traffic-shaping" for more information
+traffic_shaping:
+  # Apply to all requests from clients to the router
+  router:
+    # Is the maximum size of the request body in MB, mib
+    max_request_body_size: 5MB
+  all: # Rules are applied to all subgraph requests.
+    # Subgraphs transport options
+    request_timeout: 60s
+    dial_timeout: 30s
+    tls_handshake_timeout: 0s
+    response_header_timeout: 0s
+    expect_continue_timeout: 0s
+    keep_alive_idle_timeout: 0s
+    keep_alive_probe_interval: 30s
+    # Retry
+    retry: # Rule is only applied to GraphQL operations of type "query"
+      enabled: true
+      algorithm: "backoff_jitter"
+      max_attempts: 5
+      interval: 3s
+      max_duration: 10s
+
+# Header manipulation
+# See "https://cosmo-docs.wundergraph.com/router/proxy-capabilities" for more information
+headers:
+  all: # Header rules for all subgraph requests.
+    request:
+      - op: "propagate"            # Forward a client header
+        named: X-Test-Header       # Exact match (Use the canonical version)
+
+      - op: "propagate"
+        matching: (?i)^X-Custom-.* # Regex match (Case insensitive)
+
+      - op: "propagate"
+        named: "X-User-Id"
+        default: "123"             # Set the value when the header was not set
+
+  subgraphs:
+    specific-subgraph: # Will only affect this subgraph
+      request:
+        - op: "propagate"
+          named: Subgraph-Secret
+          default: "some-secret"
+
+# Authentication and Authorization
+# See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
+authentication:
+  providers:
+    - name: My Auth Provider # Optional, used for error messages and diagnostics
+      jwks: # JWKS provider configuration
+        url: https://example.com/.well-known/jwks.json # URL to load the JWKS from
+        refresh_interval: 1m
+        header_names:
+          - Authorization # Optional
+        header_value_prefixes:
+          - Bearer # Optional
+
+authorization:
+  require_authentication: false # Set to true to disable requests without authentication
+
+cdn:
+  url: https://cosmo-cdn.wundergraph.com
+  cache_size: 100MB
+
+events:
+  sources:
+    - provider: NATS
+      url: "nats://localhost:4222"
+
+engine:
+  enable_single_flight: true
+  enable_request_tracing: true
+  enable_execution_plan_cache_response_header: false
+  max_concurrent_resolvers: 1024
+  enable_websocket_epoll_kqueue: true
+  epoll_kqueue_poll_timeout: "1s"
+  epoll_kqueue_conn_buffer_size: 128
+  websocket_read_timeout: "1s"
+  execution_plan_cache_size: 10000
+  debug:
+    report_websocket_connections: false
+    report_memory_usage: false
+
+rate_limit:
+  enabled: true
+  strategy: "simple"
+  storage:
+    addr: "localhost:6379"
+    password: "test"
+    key_prefix: "cosmo_rate_limit"
+  simple_strategy:
+    rate: 60
+    burst: 60
+    period: "60s"
+    reject_exceeding_requests: true
+
+override_routing_url:
+  subgraphs:
+    some-subgraph: http://router:3002/graphql
+
+websocket:
+  enabled: true
+  absinthe_protocol:
+    enabled: true
+    handler_path: /absinthe/socket
+  forward_initial_payload: true
+  forward_upgrade_headers: true
+  forward_upgrade_query_params: true

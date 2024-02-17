@@ -1,26 +1,12 @@
 package config
 
 import (
-	b64 "encoding/base64"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/dustin/go-humanize"
 )
-
-type Base64Decoder []byte
-
-func (ipd *Base64Decoder) Decode(value string) error {
-	decoded, err := b64.StdEncoding.DecodeString(value)
-	if err != nil {
-		return fmt.Errorf("could not decode base64 string: %w", err)
-	}
-
-	*ipd = decoded
-
-	return nil
-}
 
 type RegExArray []*regexp.Regexp
 
@@ -50,6 +36,15 @@ func (b *RegExArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return b.Decode(strings.Join(s, ","))
 }
 
+func (b RegExArray) MarshalYAML() (interface{}, error) {
+	var s []string
+	for _, reg := range b {
+		s = append(s, reg.String())
+	}
+	return s, nil
+
+}
+
 type BytesString uint64
 
 func (b BytesString) Uint64() uint64 {
@@ -73,4 +68,8 @@ func (b *BytesString) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	return b.Decode(s)
+}
+
+func (b BytesString) MarshalYAML() (interface{}, error) {
+	return humanize.Bytes(uint64(b)), nil
 }

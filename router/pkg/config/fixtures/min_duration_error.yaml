@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../config.schema.json
+
+version: "1"
+
+graph:
+  token: "token"
+
+telemetry:
+  tracing:
+    exporters:
+      - endpoint: https://my-otel-collector.example.com
+        export_timeout: 1s
