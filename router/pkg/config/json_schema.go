@@ -31,15 +31,33 @@ var (
 	goDurationSchema = jsonschema.MustCompileString("goDuration.json", `{
 	"properties" : {
 		"duration": {
-			"type": "string"
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"minimum": {
+					"type": "string"
+				},	
+				"minimum": {
+					"type": "string"
+				}
+			}
 		}
 	}
 }`)
 
 	humanBytesSchema = jsonschema.MustCompileString("humanBytes.json", `{
 	"properties" : {
-		"duration": {
-			"type": "string"
+		"bytes": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"minimum": {
+					"type": "number"
+				},	
+				"minimum": {
+					"type": "number"
+				}
+			}
 		}
 	}
 }`)
@@ -64,7 +82,6 @@ func (d humanBytes) Validate(ctx jsonschema.ValidationContext, v interface{}) er
 
 	if d.min > 0 {
 		if bytes < d.min {
-
 			return ctx.Error("bytes", "must be greater or equal than %s, given %s", humanize.Bytes(d.min), val)
 		}
 	}

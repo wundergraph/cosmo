@@ -126,12 +126,24 @@ traffic_shaping:
 # Header manipulation
 # See "https://cosmo-docs.wundergraph.com/router/proxy-capabilities" for more information
 headers:
-  all: # Header rules for all origin requests.
+  all: # Header rules for all subgraph requests.
     request:
+      - op: "propagate"            # Forward a client header
+        named: X-Test-Header       # Exact match (Use the canonical version)
+
       - op: "propagate"
-        named: X-Test-Header
+        matching: (?i)^X-Custom-.* # Regex match (Case insensitive)
+
       - op: "propagate"
-        matching: (?i)^x-deprecated-.*
+        named: "X-User-Id"
+        default: "123"             # Set the value when the header was not set
+
+  subgraphs:
+    specific-subgraph: # Will only affect this subgraph
+      request:
+        - op: "propagate"
+          named: Subgraph-Secret
+          default: "some-secret"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information

@@ -1,0 +1,8 @@
+version: "1"
+
+graph:
+  token: "token"
+
+traffic_shaping:
+  router:
+    max_request_body_size: 1KB

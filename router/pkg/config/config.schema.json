@@ -65,6 +65,7 @@
               "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
               "items": {
                 "type": "object",
+                "required": ["endpoint"],
                 "properties": {
                   "disabled": {
                     "type": "boolean"
@@ -72,6 +73,7 @@
                   "exporter": {
                     "type": "string",
                     "description": "The exporter to use for the traces. The supported exporters are 'http' and 'grpc'.",
+                    "default": "http",
                     "enum": ["http", "grpc"]
                   },
                   "endpoint": {
@@ -80,7 +82,8 @@
                   "path": {
                     "type": "string",
                     "description": "The path to which the traces are exported.",
-                    "format": "uri"
+                    "default": "/v1/traces",
+                    "format": "x-uri"
                   },
                   "headers": {
                     "type": "object",
@@ -91,6 +94,7 @@
                   "batch_timeout": {
                     "type": "string",
                     "description": "The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "default": "10s",
                     "duration": {
                       "minimum": "5s",
                       "maximum": "2m"
@@ -99,6 +103,7 @@
                   "export_timeout": {
                     "type": "string",
                     "description": "The maximum time to wait for the export to complete. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "default": "30s",
                     "duration": {
                       "minimum": "5s",
                       "maximum": "2m"
@@ -167,6 +172,7 @@
                       "exporter": {
                         "type": "string",
                         "description": "The exporter protocol to use to export metrics. The supported exporters are 'http' and 'grpc'.",
+                        "default": "http",
                         "enum": ["http", "grpc"]
                       },
                       "endpoint": {
@@ -176,6 +182,7 @@
                       "path": {
                         "type": "string",
                         "description": "The path to which the metrics are exported.",
+                        "default": "/v1/metrics",
                         "format": "uri"
                       },
                       "headers": {
@@ -482,12 +489,30 @@
     "headers": {
       "type": "object",
       "description": "The configuration for the headers. The headers rules are used to modify the headers of the incoming requests and how they are propagated to your subgraphs. See https://cosmo-docs.wundergraph.com/router/proxy-capabilities#forward-http-headers-to-subgraphs for more information.",
-      "additionalProperties": {
-        "$ref": "#/definitions/traffic_shaping_header_rule"
-      },
       "properties": {
         "all": {
-          "$ref": "#/definitions/traffic_shaping_header_rule"
+          "properties": {
+            "request": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/traffic_shaping_header_rule"
+              }
+            }
+          }
+        },
+        "subgraphs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "request": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/traffic_shaping_header_rule"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -814,77 +839,25 @@
       "type": "object",
       "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
       "properties": {
-        "request_timeout": {
+        "op": {
           "type": "string",
-          "format": "go-duration",
-          "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "enum": ["propagate"],
+          "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
         },
-        "dial_timeout": {
+        "matching": {
           "type": "string",
-          "format": "go-duration",
-          "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
-        "tls_handshake_timeout": {
+        "named": {
           "type": "string",
-          "format": "go-duration",
-          "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
         },
-        "response_header_timeout": {
+        "default": {
           "type": "string",
-          "format": "go-duration",
-          "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
-        "expect_continue_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
-        "keep_alive_idle_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
-        "keep_alive_probe_interval": {
-          "type": "string",
-          "format": "go-duration",
-          "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
-        "retry": {
-          "type": "object",
-          "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "algorithm": {
-              "type": "string",
-              "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
-              "enum": ["backoff_jitter"]
-            },
-            "max_attempts": {
-              "type": "integer",
-              "default": 5,
-              "description": "The maximum number of attempts. The default value is 5."
-            },
-            "interval": {
-              "type": "string",
-              "duration": {
-                "minimum": "100ms"
-              },
-              "default": "3s",
-              "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "max_duration": {
-              "type": "string",
-              "duration": {
-                "minimum": "1s"
-              },
-              "default": "10s",
-              "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            }
-          }
+          "description": "The default value of the header in case it is not present in the request."
         }
-      }
+      },
+      "required": ["op"]
     }
   }
 }

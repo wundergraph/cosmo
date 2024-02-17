@@ -28,7 +28,7 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 	var exporter sdktrace.SpanExporter
 	// Just support OTLP and gRPC for now. Jaeger has native OTLP support.
 	switch exp.Exporter {
-	case otelconfig.ExporterDefault, otelconfig.ExporterOLTPHTTP:
+	case otelconfig.ExporterOLTPHTTP:
 		opts := []otlptracehttp.Option{
 			// Includes host and port
 			otlptracehttp.WithEndpoint(u.Host),
@@ -129,6 +129,11 @@ func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdktra
 		for _, exp := range c.Exporters {
 			if exp.Disabled {
 				continue
+			}
+
+			// Default to OLTP HTTP
+			if exp.Exporter == "" {
+				exp.Exporter = otelconfig.ExporterOLTPHTTP
 			}
 
 			exporter, err := createExporter(log, exp)

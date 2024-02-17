@@ -22,8 +22,8 @@ type Graph struct {
 }
 
 type TracingExporterConfig struct {
-	BatchTimeout  time.Duration `yaml:"batch_timeout" default:"10s"`
-	ExportTimeout time.Duration `yaml:"export_timeout" default:"30s"`
+	BatchTimeout  time.Duration `yaml:"batch_timeout,omitempty" default:"10s"`
+	ExportTimeout time.Duration `yaml:"export_timeout,omitempty" default:"30s"`
 }
 
 type TracingGlobalFeatures struct {
@@ -33,10 +33,10 @@ type TracingGlobalFeatures struct {
 
 type TracingExporter struct {
 	Disabled              bool                `yaml:"disabled"`
-	Exporter              otelconfig.Exporter `yaml:"exporter"`
-	Endpoint              string              `yaml:"endpoint"`
-	HTTPPath              string              `yaml:"path"`
-	Headers               map[string]string   `yaml:"headers"`
+	Exporter              otelconfig.Exporter `yaml:"exporter,omitempty"`
+	Endpoint              string              `yaml:"endpoint,omitempty"`
+	HTTPPath              string              `yaml:"path,omitempty" default:"/v1/traces"`
+	Headers               map[string]string   `yaml:"headers,omitempty"`
 	TracingExporterConfig `yaml:",inline"`
 }
 
@@ -65,9 +65,9 @@ type Prometheus struct {
 
 type MetricsOTLPExporter struct {
 	Disabled bool                `yaml:"disabled"`
-	Exporter otelconfig.Exporter `yaml:"exporter"`
+	Exporter otelconfig.Exporter `yaml:"exporter" default:"http"`
 	Endpoint string              `yaml:"endpoint"`
-	HTTPPath string              `yaml:"path"`
+	HTTPPath string              `yaml:"path" default:"/v1/metrics"`
 	Headers  map[string]string   `yaml:"headers"`
 }
 
@@ -135,13 +135,13 @@ type BackoffJitterRetry struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All       GlobalHeaderRule            `yaml:"all"`
-	Subgraphs map[string]GlobalHeaderRule `yaml:"subgraphs"`
+	All       GlobalHeaderRule            `yaml:"all,omitempty"`
+	Subgraphs map[string]GlobalHeaderRule `yaml:"subgraphs,omitempty"`
 }
 
 type GlobalHeaderRule struct {
 	// Request is a set of rules that apply to requests
-	Request []RequestHeaderRule `yaml:"request"`
+	Request []RequestHeaderRule `yaml:"request,omitempty"`
 }
 
 type HeaderRuleOperation string
@@ -338,16 +338,17 @@ func LoadConfig(configFilePath string, envOverride string) (*Config, error) {
 		c.JSONLog = false
 	}
 
-	// Marshal the config back to yaml to respect the environment variable expansion
+	// Marshal the config back to yaml to respect the environment variable injection, expanded variables
+	// as well as default values
 
-	c2, err := yaml.Marshal(c)
+	cBytes, err := yaml.Marshal(c)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal router config: %w", err)
 	}
 
 	// Validate the config against the schema and return the validated config
 
-	finalConfig, err := ValidateMarshalConfig(c2, JSONSchema)
+	finalConfig, err := ValidateMarshalConfig(cBytes, JSONSchema)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate router config: %w", err)
 	}
