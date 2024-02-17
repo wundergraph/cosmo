@@ -143,7 +143,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithAuthorizationConfig(&cfg.Authorization),
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
-		core.WithAbsintheConfiguration(&cfg.AbsintheConfiguration),
+		core.WithWebSocketConfiguration(&cfg.WebSocket),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
 		core.WithCDN(cfg.CDN),
 		core.WithEvents(cfg.Events),

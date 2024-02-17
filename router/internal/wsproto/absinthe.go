@@ -51,7 +51,10 @@ func (r *absintheMessage) UnmarshalJSON(data []byte) error {
 	}
 
 	if rawID := incoming[0]; rawID != nil {
-		json.Unmarshal(*rawID, &r.ID)
+		err := json.Unmarshal(*rawID, &r.ID)
+		if err != nil {
+			return err
+		}
 	}
 
 	if incoming[1] == nil {

@@ -73,6 +73,7 @@ type Config struct {
 	ModifyRouterConfig                 func(routerConfig *nodev1.RouterConfig)
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
+	DisableWebSockets                  bool
 }
 
 type SubgraphsConfig struct {
@@ -400,6 +401,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
 	if testConfig.OverrideGraphQLPath != "" {
 		routerOpts = append(routerOpts, core.WithGraphQLPath(testConfig.OverrideGraphQLPath))
+	}
+	if !testConfig.DisableWebSockets {
+		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
+			Enabled: true,
+			AbsintheProtocol: config.AbsintheProtocolConfiguration{
+				Enabled:     true,
+				HandlerPath: "/absinthe/socket",
+			},
+			ForwardUpgradeHeaders:     true,
+			ForwardUpgradeQueryParams: true,
+			ForwardInitialPayload:     true,
+		}))
 	}
 	return core.NewRouter(routerOpts...)
 }

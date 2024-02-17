@@ -25,7 +25,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/atomic"
@@ -50,7 +49,7 @@ type WebsocketMiddlewareOptions struct {
 	EpollKqueuePollTimeout     time.Duration
 	EpollKqueueConnBufferSize  int
 
-	AbsintheConfiguration *config.AbsintheConfiguration
+	WebSocketConfiguration *config.WebSocketConfiguration
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -66,10 +65,11 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			logger:             opts.Logger,
 			stats:              opts.Stats,
 			readTimeout:        opts.ReadTimeout,
+			config:             opts.WebSocketConfiguration,
 		}
-		if opts.AbsintheConfiguration != nil {
+		if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 			handler.absintheHandlerEnabled = true
-			handler.absintheHandlerPath = opts.AbsintheConfiguration.WebsocketHandlerPath
+			handler.absintheHandlerPath = opts.WebSocketConfiguration.AbsintheProtocol.HandlerPath
 		}
 		handler.handlerPool = pond.New(
 			64,
@@ -147,6 +147,7 @@ func (c *wsConnectionWrapper) Close() error {
 
 type WebsocketHandler struct {
 	ctx                context.Context
+	config             *config.WebSocketConfiguration
 	next               http.Handler
 	operationProcessor *OperationProcessor
 	planner            *OperationPlanner
@@ -247,6 +248,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		ConnectionID:       h.connectionIDs.Inc(),
 		ClientInfo:         clientInfo,
 		InitRequestID:      requestID,
+		Config:             h.config,
 	})
 	err = handler.Initialize()
 	if err != nil {
@@ -397,9 +399,6 @@ func (h *WebsocketHandler) runPoller() {
 
 				msg, err := handler.protocol.ReadMessage()
 				if err != nil {
-					if isReadTimeout(err) {
-						continue
-					}
 					h.logger.Debug("Client closed connection")
 					h.removeConnection(conn, handler, fd)
 					continue
@@ -461,7 +460,7 @@ func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
 	return rw.buf.Write(data)
 }
 
-func (rw *websocketResponseWriter) Flush() {
+func (rw *websocketResponseWriter) Flush() error {
 	if rw.buf.Len() > 0 {
 		rw.logger.Debug("flushing", zap.Int("bytes", rw.buf.Len()))
 		payload := rw.buf.Bytes()
@@ -473,6 +472,7 @@ func (rw *websocketResponseWriter) Flush() {
 			})
 			if err != nil {
 				rw.logger.Warn("Serializing response headers", zap.Error(err))
+				return err
 			}
 		}
 
@@ -483,14 +483,12 @@ func (rw *websocketResponseWriter) Flush() {
 		} else {
 			err = rw.protocol.WriteGraphQLData(rw.id, payload, extensions)
 		}
-
-		// if err is websocket.ErrCloseSent, it means we got a Complete from
-		// the client, and we closed the WS from a different goroutine
-		if err != nil && !errors.Is(err, websocket.ErrCloseSent) {
-			rw.logger.Warn("Sending response on websocket flush", zap.Error(err))
-		}
 		rw.buf.Reset()
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (rw *websocketResponseWriter) SubscriptionResponseWriter() resolve.SubscriptionResponseWriter {
@@ -502,6 +500,7 @@ type graphqlError struct {
 }
 
 type WebSocketConnectionHandlerOptions struct {
+	Config             *config.WebSocketConfiguration
 	OperationProcessor *OperationProcessor
 	Planner            *OperationPlanner
 	GraphQLHandler     *GraphQLHandler
@@ -528,34 +527,43 @@ type WebSocketConnectionHandler struct {
 	r                  *http.Request
 	conn               *wsConnectionWrapper
 	protocol           wsproto.Proto
-	initialPayload     json.RawMessage
-	extraExtensions    json.RawMessage
 	clientInfo         *ClientInfo
 	logger             *zap.Logger
+
+	initialPayload            json.RawMessage
+	upgradeRequestHeaders     json.RawMessage
+	upgradeRequestQueryParams json.RawMessage
 
 	initRequestID   string
 	connectionID    int64
 	subscriptionIDs atomic.Int64
 	subscriptions   sync.Map
 	stats           WebSocketsStatistics
+
+	forwardUpgradeRequestHeaders     bool
+	forwardUpgradeRequestQueryParams bool
+	forwardInitialPayload            bool
 }
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
 	return &WebSocketConnectionHandler{
-		ctx:                ctx,
-		operationProcessor: opts.OperationProcessor,
-		planner:            opts.Planner,
-		graphqlHandler:     opts.GraphQLHandler,
-		metrics:            opts.Metrics,
-		w:                  opts.ResponseWriter,
-		r:                  opts.Request,
-		conn:               opts.Connection,
-		protocol:           opts.Protocol,
-		logger:             opts.Logger,
-		connectionID:       opts.ConnectionID,
-		stats:              opts.Stats,
-		clientInfo:         opts.ClientInfo,
-		initRequestID:      opts.InitRequestID,
+		ctx:                              ctx,
+		operationProcessor:               opts.OperationProcessor,
+		planner:                          opts.Planner,
+		graphqlHandler:                   opts.GraphQLHandler,
+		metrics:                          opts.Metrics,
+		w:                                opts.ResponseWriter,
+		r:                                opts.Request,
+		conn:                             opts.Connection,
+		protocol:                         opts.Protocol,
+		logger:                           opts.Logger,
+		connectionID:                     opts.ConnectionID,
+		stats:                            opts.Stats,
+		clientInfo:                       opts.ClientInfo,
+		initRequestID:                    opts.InitRequestID,
+		forwardUpgradeRequestHeaders:     opts.Config != nil && opts.Config.ForwardUpgradeHeaders,
+		forwardUpgradeRequestQueryParams: opts.Config != nil && opts.Config.ForwardUpgradeQueryParams,
+		forwardInitialPayload:            opts.Config != nil && opts.Config.ForwardInitialPayload,
 	}
 }
 
@@ -619,31 +627,38 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		return
 	}
 
-	if h.extraExtensions != nil {
+	if h.forwardUpgradeRequestHeaders && h.upgradeRequestHeaders != nil {
 		if operationCtx.extensions == nil {
-			operationCtx.extensions = h.extraExtensions
-		} else {
-			js := astjson.Pool.Get()
-			defer astjson.Pool.Put(js)
-			err = js.ParseObject(operationCtx.extensions)
-			if err != nil {
-				_ = h.writeErrorMessage(msg.ID, err)
-				return
-			}
-			extra, err := js.AppendObject(h.extraExtensions)
-			if err != nil {
-				_ = h.writeErrorMessage(msg.ID, err)
-				return
-			}
-			merged := js.MergeNodes(js.RootNode, extra)
-			buf := pool.GetBytesBuffer()
-			defer pool.PutBytesBuffer(buf)
-			err = js.PrintNode(js.Nodes[merged], buf)
-			if err != nil {
-				_ = h.writeErrorMessage(msg.ID, err)
-				return
-			}
-			operationCtx.extensions = buf.Bytes()
+			operationCtx.extensions = json.RawMessage("{}")
+		}
+		operationCtx.extensions, err = jsonparser.Set(operationCtx.extensions, h.upgradeRequestHeaders, "upgradeHeaders")
+		if err != nil {
+			h.logger.Warn("Setting upgrade request data", zap.Error(err))
+			_ = h.writeErrorMessage(msg.ID, err)
+			return
+		}
+	}
+	if h.forwardUpgradeRequestQueryParams && h.upgradeRequestQueryParams != nil {
+		if operationCtx.extensions == nil {
+			operationCtx.extensions = json.RawMessage("{}")
+		}
+		operationCtx.extensions, err = jsonparser.Set(operationCtx.extensions, h.upgradeRequestQueryParams, "upgradeQueryParams")
+		if err != nil {
+			h.logger.Warn("Setting upgrade request data", zap.Error(err))
+			_ = h.writeErrorMessage(msg.ID, err)
+			return
+		}
+
+	}
+	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
+		if operationCtx.extensions == nil {
+			operationCtx.extensions = json.RawMessage("{}")
+		}
+		operationCtx.extensions, err = jsonparser.Set(operationCtx.extensions, operationCtx.initialPayload, "initialPayload")
+		if err != nil {
+			h.logger.Warn("Setting initial payload", zap.Error(err))
+			_ = h.writeErrorMessage(msg.ID, err)
+			return
 		}
 	}
 
@@ -655,7 +670,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		},
 		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
 		TracingOptions:  operationCtx.traceOptions,
-		InitialPayload:  operationCtx.initialPayload,
 		Extensions:      operationCtx.extensions,
 	}
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, h.r, operationCtx, h.logger)))
@@ -680,7 +694,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			defer pool.PutBytesBuffer(buf)
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw, buf)
 		}
-		rw.Flush()
+		_ = rw.Flush()
 		rw.Complete()
 	case *plan.SubscriptionResponsePlan:
 		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
@@ -758,30 +772,53 @@ func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, ms
 
 func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	h.logger.Debug("Websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
-
 	h.initialPayload, err = h.protocol.Initialize()
 	if err != nil {
 		h.logger.Error("Initializing websocket connection", zap.Error(err))
 		_ = h.requestError(fmt.Errorf("error initializing session"))
 		return err
 	}
-	query := h.r.URL.Query()
-	if len(query) != 0 {
-		queryData, err := json.Marshal(query)
-		if err != nil {
-			h.logger.Error("Parsing query parameters", zap.Error(err))
-			return err
+	if h.forwardUpgradeRequestQueryParams {
+		query := h.r.URL.Query()
+		if len(query) != 0 {
+			h.upgradeRequestQueryParams, err = json.Marshal(query)
+			if err != nil {
+				return err
+			}
 		}
-		if h.extraExtensions == nil {
-			h.extraExtensions = json.RawMessage("{}")
+	}
+	if h.forwardUpgradeRequestHeaders {
+		header := make(http.Header, len(h.r.Header))
+		for k, v := range h.r.Header {
+			if h.ignoreHeader(k) {
+				continue
+			}
+			header[k] = v
 		}
-		h.extraExtensions, err = jsonparser.Set(h.extraExtensions, queryData, "upgrade_query_parameters")
+		h.upgradeRequestHeaders, err = json.Marshal(header)
 		if err != nil {
-			h.logger.Error("Setting query parameters", zap.Error(err))
 			return err
 		}
 	}
 	return nil
+}
+
+func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
+	switch k {
+	case "Sec-Websocket-Protocol",
+		"Sec-Websocket-Version",
+		"Sec-Websocket-Key",
+		"Sec-Websocket-Extensions",
+		"Upgrade",
+		"Connection",
+		"Host",
+		"Origin",
+		"Pragma",
+		"Cache-Control",
+		"Accept-Encoding":
+		return true
+	}
+	return false
 }
 
 func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
@@ -790,7 +827,7 @@ func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 	if err != nil {
 		return
 	}
-	rw.Flush()
+	_ = rw.Flush()
 }
 
 func (h *WebSocketConnectionHandler) Close() {
