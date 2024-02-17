@@ -253,7 +253,7 @@ type Cluster struct {
 }
 
 type Config struct {
-	Version string `yaml:"version,omitempty"`
+	Version string `yaml:"version,omitempty" ignored:"true"`
 
 	InstanceID     string         `yaml:"instance_id,omitempty" envconfig:"INSTANCE_ID"`
 	Graph          Graph          `yaml:"graph,omitempty"`

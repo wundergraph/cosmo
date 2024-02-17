@@ -86,9 +86,10 @@ func TestConfigIsOptional(t *testing.T) {
 		require.NoError(t, os.Unsetenv("GRAPH_API_TOKEN"))
 	})
 
-	_, err := LoadConfig("", "")
+	result, err := LoadConfig("", "")
 
 	require.NoError(t, err)
+	require.False(t, result.DefaultLoaded)
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {
