@@ -12,6 +12,8 @@ import (
 )
 
 func TestForwardHeaders(t *testing.T) {
+	t.Parallel()
+
 	const (
 		// Make sure you copy these to the struct tag in the subscription test
 		headerNameInGlobalRule   = "foo"
@@ -45,6 +47,8 @@ func TestForwardHeaders(t *testing.T) {
 	}
 
 	t.Run("HTTP", func(t *testing.T) {
+		t.Parallel()
+
 		cases := []struct {
 			headerName string
 			testName   string
@@ -77,6 +81,8 @@ func TestForwardHeaders(t *testing.T) {
 	})
 
 	t.Run("HTTP with client extension", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.WebSocketReadTimeout = time.Millisecond * 10
@@ -94,6 +100,8 @@ func TestForwardHeaders(t *testing.T) {
 	})
 
 	t.Run("ws", func(t *testing.T) {
+		t.Parallel()
+
 		cases := []struct {
 			headerName string
 			payload    string
@@ -133,6 +141,8 @@ func TestForwardHeaders(t *testing.T) {
 	})
 
 	t.Run("ws with client extension", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.WebSocketReadTimeout = time.Millisecond * 10
@@ -151,7 +161,7 @@ func TestForwardHeaders(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.JSONEq(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123"}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123","upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}}`, string(msg.Payload))
 		})
 	})
 

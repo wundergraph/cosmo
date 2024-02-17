@@ -30,7 +30,7 @@ type TracingExporterConfig struct {
 }
 
 type TracingGlobalFeatures struct {
-	ExportGraphQLVariables bool `yaml:"export_graphql_variables" default:"true" envconfig:"TRACING_EXPORT_GRAPHQL_VARIABLES"`
+	ExportGraphQLVariables bool `yaml:"export_graphql_variables" default:"false" envconfig:"TRACING_EXPORT_GRAPHQL_VARIABLES"`
 	WithNewRoot            bool `yaml:"with_new_root" default:"false" envconfig:"TRACING_WITH_NEW_ROOT"`
 }
 
@@ -80,8 +80,9 @@ type Metrics struct {
 }
 
 type MetricsOTLP struct {
-	Enabled   bool                  `yaml:"enabled" default:"true" envconfig:"METRICS_OTLP_ENABLED"`
-	Exporters []MetricsOTLPExporter `yaml:"exporters"`
+	Enabled       bool                  `yaml:"enabled" default:"true" envconfig:"METRICS_OTLP_ENABLED"`
+	RouterRuntime bool                  `yaml:"router_runtime" default:"true" envconfig:"METRICS_OTLP_ROUTER_RUNTIME"`
+	Exporters     []MetricsOTLPExporter `yaml:"exporters"`
 }
 
 type Telemetry struct {
@@ -215,6 +216,28 @@ type AuthorizationConfiguration struct {
 	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" default:"false" envconfig:"REJECT_OPERATION_IF_UNAUTHORIZED"`
 }
 
+type RateLimitConfiguration struct {
+	Enabled        bool                    `yaml:"enabled" default:"false" envconfig:"RATE_LIMIT_ENABLED"`
+	Strategy       string                  `yaml:"strategy" default:"simple" envconfig:"RATE_LIMIT_STRATEGY" validate:"oneof=simple"`
+	SimpleStrategy RateLimitSimpleStrategy `yaml:"simple_strategy"`
+	Storage        RedisConfiguration      `yaml:"storage"`
+	// Debug ensures that retryAfter and resetAfter are set to stable values for testing
+	Debug bool `yaml:"debug" default:"false" envconfig:"RATE_LIMIT_DEBUG"`
+}
+
+type RedisConfiguration struct {
+	Addr      string `yaml:"addr" default:"localhost:6379" envconfig:"REDIS_ADDR" validate:"required"`
+	Password  string `yaml:"password" envconfig:"REDIS_PASSWORD"`
+	KeyPrefix string `yaml:"key_prefix" default:"cosmo_rate_limit" envconfig:"RATE_LIMIT_REDIS_KEY_PREFIX" validate:"required"`
+}
+
+type RateLimitSimpleStrategy struct {
+	Rate                    int           `yaml:"rate" default:"10" envconfig:"RATE_LIMIT_SIMPLE_RATE" validate:"required,min=1"`
+	Burst                   int           `yaml:"burst" default:"10" envconfig:"RATE_LIMIT_SIMPLE_BURST" validate:"required,min=1"`
+	Period                  time.Duration `yaml:"period" default:"1s" envconfig:"RATE_LIMIT_SIMPLE_PERIOD" validate:"required,min=1s"`
+	RejectExceedingRequests bool          `yaml:"reject_exceeding_requests" default:"false" envconfig:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
+}
+
 type CDNConfiguration struct {
 	URL       string      `yaml:"url" validate:"url" envconfig:"CDN_URL" default:"https://cosmo-cdn.wundergraph.com"`
 	CacheSize BytesString `yaml:"cache_size" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
@@ -229,19 +252,48 @@ type EventsConfiguration struct {
 	Sources []EventSource `yaml:"sources"`
 }
 
+type Cluster struct {
+	Name string `yaml:"name" envconfig:"CLUSTER_NAME"`
+}
+
+type AbsintheProtocolConfiguration struct {
+	// Enabled true if the Router should accept Requests over WebSockets using the Absinthe Protocol (Phoenix) Handler
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"WEBSOCKETS_ABSINTHE_ENABLED"`
+	// HandlerPath is the path where the Absinthe Protocol Handler is mounted
+	// On this specific path, the Router will accept WebSocket Requests using the Absinthe Protocol
+	// even if the Subprotocol is not set to "absinthe"
+	// Legacy clients might not set the Subprotocol Header, so this is a fallback
+	HandlerPath string `yaml:"handler_path" default:"/absinthe/socket" envconfig:"WEBSOCKETS_ABSINTHE_HANDLER_PATH"`
+}
+
+type WebSocketConfiguration struct {
+	// Enabled true if the Router should accept Requests over WebSockets
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"WEBSOCKETS_ENABLED"`
+	// AbsintheProtocol configuration for the Absinthe Protocol
+	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol"`
+	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
+	ForwardUpgradeHeaders bool `yaml:"forward_upgrade_headers" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_HEADERS"`
+	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph
+	ForwardUpgradeQueryParams bool `yaml:"forward_upgrade_query_params" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_QUERY_PARAMS"`
+	// ForwardInitialPayload true if the Router should forward the initial payload of a Subscription Request to the Subgraph
+	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
+	InstanceID     string         `yaml:"instance_id" envconfig:"INSTANCE_ID"`
 	Graph          Graph          `yaml:"graph"`
 	Telemetry      Telemetry      `yaml:"telemetry"`
 	GraphqlMetrics GraphqlMetrics `yaml:"graphql_metrics"`
 	CORS           CORS           `yaml:"cors"`
+	Cluster        Cluster        `yaml:"cluster"`
 
 	Modules        map[string]interface{} `yaml:"modules"`
 	Headers        HeaderRules            `yaml:"headers"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping"`
 
-	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3003" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"required,uri"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
@@ -257,6 +309,7 @@ type Config struct {
 	PlaygroundPath                string                      `yaml:"playground_path" default:"/" validate:"uri" envconfig:"PLAYGROUND_PATH"`
 	Authentication                AuthenticationConfiguration `yaml:"authentication"`
 	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
+	RateLimit                     RateLimitConfiguration      `yaml:"rate_limit"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
 	CDN                           CDNConfiguration            `yaml:"cdn"`
 	DevelopmentMode               bool                        `yaml:"dev_mode" default:"false" envconfig:"DEV_MODE"`
@@ -269,6 +322,8 @@ type Config struct {
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
+
+	WebSocket WebSocketConfiguration `yaml:"websocket"`
 }
 
 // ValidateRequiredWithRouterConfigPath validates that either the field or the router config path is set
@@ -284,11 +339,11 @@ func ValidateRequiredWithRouterConfigPath(fl validator.FieldLevel) bool {
 }
 
 func LoadConfig(envOverride string) (*Config, error) {
-	godotenv.Load(".env.local")
-	godotenv.Load()
+	_ = godotenv.Load(".env.local")
+	_ = godotenv.Load()
 
 	if envOverride != "" {
-		godotenv.Overload(envOverride)
+		_ = godotenv.Overload(envOverride)
 	}
 
 	var c Config

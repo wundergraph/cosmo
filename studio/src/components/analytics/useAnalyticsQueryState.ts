@@ -13,13 +13,13 @@ const parse = (value: string, fallback: any) => {
   }
 };
 
-export const useDateRangeQueryState = () => {
+export const useDateRangeQueryState = (customDefaultRange?: Range) => {
   const { query } = useRouter();
 
   return useMemo(() => {
     let range: Range | undefined = undefined;
 
-    const parsedRange = getRange(query.range?.toString());
+    const parsedRange = getRange(query.range?.toString() || customDefaultRange);
 
     let dateRange = {
       start: subHours(new Date(), parsedRange),
@@ -44,12 +44,12 @@ export const useDateRangeQueryState = () => {
       dateRange,
       range,
     };
-  }, [query.dateRange, query.range]);
+  }, [customDefaultRange, query.dateRange, query.range]);
 };
 
-export const useAnalyticsQueryState = () => {
+export const useAnalyticsQueryState = (customDefaultRange?: Range) => {
   const { query } = useRouter();
-  const { range, dateRange } = useDateRangeQueryState();
+  const { range, dateRange } = useDateRangeQueryState(customDefaultRange);
 
   return useMemo(() => {
     let filterStateObject = parse(query.filterState as string, []);

@@ -36,6 +36,7 @@ export interface RouterOptions {
   billingDefaultPlanId?: string;
   openaiApiKey?: string;
   readmeQueue: AIGraphReadmeQueue;
+  stripeSecretKey?: string;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

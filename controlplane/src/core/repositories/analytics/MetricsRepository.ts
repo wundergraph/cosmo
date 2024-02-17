@@ -40,7 +40,7 @@ interface GetMetricsProps {
 }
 
 export class MetricsRepository {
-  constructor(private chClient: ClickHouseClient) {}
+  constructor(private client: ClickHouseClient) {}
 
   /**
    * Get request rate metrics
@@ -60,14 +60,14 @@ export class MetricsRepository {
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number | null }>(
+      return this.client.queryPromise<{ value: number | null }>(
         `
         SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
         SELECT
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate,
           sum(TotalRequests) AS total
-        FROM operation_request_metrics_5_30_mv
+        FROM ${this.client.database}.operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
@@ -83,7 +83,7 @@ export class MetricsRepository {
     const prevRequestRate = queryRate(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.chClient.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
+    const top5 = this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
       `
       WITH
         toDateTime('${dateRange.start}') AS startDate,
@@ -95,7 +95,7 @@ export class MetricsRepository {
           OperationName as name,
           IF(empty(OperationPersistedID), false, true) as isPersisted,
           sum(TotalRequests) as total
-        FROM operation_request_metrics_5_30_mv
+        FROM ${this.client.database}.operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
@@ -108,7 +108,7 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const querySeries = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<{ value: number | null }[]>(
         `
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
@@ -116,7 +116,7 @@ export class MetricsRepository {
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           round(sum(TotalRequests) / ${granule}, 4) AS value
-      FROM operation_request_metrics_5_30_mv
+      FROM ${this.client.database}.operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
         AND FederatedGraphID = '${graphId}'
@@ -172,7 +172,7 @@ export class MetricsRepository {
     queryParams,
   }: GetMetricsProps) {
     const queryLatency = (quantile: string, start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number }>(
+      return this.client.queryPromise<{ value: number }>(
         `
         WITH
           toDateTime('${start}') AS startDate,
@@ -189,7 +189,7 @@ export class MetricsRepository {
 
           -- Histogram aggregations
           sumForEachMerge(BucketCounts) as BucketCounts
-        FROM operation_latency_metrics_5_30_mv
+        FROM ${this.client.database}.operation_latency_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
@@ -204,7 +204,7 @@ export class MetricsRepository {
 
     // get top 5 operations in last [range] hours
     const queryTop5 = (quantile: string, start: number, end: number) => {
-      return this.chClient.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
+      return this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
         `
         WITH
           toDateTime('${start}') AS startDate,
@@ -224,7 +224,7 @@ export class MetricsRepository {
 
           -- Histogram aggregations
           sumForEachMerge(BucketCounts) as BucketCounts
-        FROM operation_latency_metrics_5_30_mv
+        FROM ${this.client.database}.operation_latency_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
@@ -239,7 +239,7 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const querySeries = (quantile: string, start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<{ value: number | null }[]>(
         `
         WITH
           toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
@@ -257,7 +257,7 @@ export class MetricsRepository {
 
             -- Histogram aggregations
             sumForEachMerge(BucketCounts) as BucketCounts
-        FROM operation_latency_metrics_5_30_mv
+        FROM ${this.client.database}.operation_latency_metrics_5_30_mv
         WHERE timestamp >= startDate AND timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
@@ -314,7 +314,7 @@ export class MetricsRepository {
   }: GetMetricsProps) {
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ errorPercentage: number }>(
+      return this.client.queryPromise<{ errorPercentage: number }>(
         `
       WITH
         toDateTime('${start}') AS startDate,
@@ -327,7 +327,7 @@ export class MetricsRepository {
           SELECT
             sum(TotalRequests) as totalRequests,
             sum(TotalErrors) as totalErrors
-          FROM operation_request_metrics_5_30_mv
+          FROM ${this.client.database}.operation_request_metrics_5_30_mv
           WHERE Timestamp >= startDate AND Timestamp <= endDate
             AND OrganizationID = '${organizationId}'
             AND FederatedGraphID = '${graphId}'
@@ -343,7 +343,7 @@ export class MetricsRepository {
     const prevValue = queryPercentage(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.chClient.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
+    const top5 = this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
       `
       WITH
         toDateTime('${dateRange.start}') AS startDate,
@@ -362,7 +362,7 @@ export class MetricsRepository {
           sum(TotalErrors) as totalErrors,
           if(totalErrors > 0, round(totalErrors / totalRequests * 100, 2), 0) AS errorPercentage,
           IF(empty(OperationPersistedID), false, true) as isPersisted
-        FROM operation_request_metrics_5_30_mv
+        FROM ${this.client.database}.operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
@@ -375,7 +375,7 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const getSeries = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<{ value: number | null }[]>(
         `
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
@@ -385,7 +385,7 @@ export class MetricsRepository {
           sum(TotalErrors) AS errors,
           sum(TotalRequests) AS requests,
           if(errors > 0, round(errors / requests * 100, 2), 0) AS value
-      FROM operation_request_metrics_5_30_mv
+      FROM ${this.client.database}.operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
         AND FederatedGraphID = '${graphId}'
@@ -439,7 +439,7 @@ export class MetricsRepository {
     queryParams,
   }: GetMetricsProps) {
     // get requests in last [range] hours in series of [step]
-    const series = await this.chClient.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
+    const series = await this.client.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
       WITH
         toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE) AS startDate,
@@ -448,7 +448,7 @@ export class MetricsRepository {
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           round(sum(TotalRequests) / ${granule}, 4) AS requestRate,
           round(sum(TotalErrors) / ${granule}, 4) AS errorRate
-      FROM operation_request_metrics_5_30_mv
+      FROM ${this.client.database}.operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
         AND FederatedGraphID = '${graphId}'
@@ -591,14 +591,14 @@ export class MetricsRepository {
         OperationName as operationName,
         ClientName as clientName,
         ClientVersion as clientVersion
-      FROM operation_request_metrics_5_30_mv
+      FROM ${this.client.database}.operation_request_metrics_5_30_mv
       WHERE Timestamp >= startDate AND Timestamp <= endDate
         AND OrganizationID = '${organizationId}'
         AND FederatedGraphID = '${graphId}'
       GROUP BY OperationName, ClientName, ClientVersion
     `;
 
-    const res = await this.chClient.queryPromise(query);
+    const res = await this.client.queryPromise(query);
 
     const addFilterOption = (filter: string, option: string) => {
       if (!filters[filter].options) {

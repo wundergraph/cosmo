@@ -84,7 +84,9 @@ export const useChartData = (
     previousValue: Number.parseFloat(t.previousValue) || 0,
     // We use millisecond timestamp everywhere
     timestamp:
-      t.timestamp instanceof Date || typeof t.timestamp === "string"
+      t.timestamp instanceof Date
+        ? new Date(t.timestamp).getTime()
+        : typeof t.timestamp === "string"
         ? Number.parseInt(t.timestamp)
         : t.timestamp,
   }));

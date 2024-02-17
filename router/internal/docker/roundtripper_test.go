@@ -62,7 +62,8 @@ func TestLocalhostFallbackRoundTripper(t *testing.T) {
 		}
 		resp, err := json.Marshal(response)
 		require.NoError(t, err)
-		w.Write(resp)
+		_, err = w.Write(resp)
+		require.NoError(t, err)
 	}))
 	server.Listener = l
 	server.Start()

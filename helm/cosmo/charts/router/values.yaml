@@ -33,9 +33,6 @@ extraVolumes: []
 # -- Optionally specify extra list of additional volumeMounts for Router container's
 extraVolumeMounts: []
 
-# -- Optionally name of existing ConfigMap with Router configuration. The key config.yaml is required.
-existingConfigmap: ""
-
 # -- Name of existing ConfigMap containing extra env vars
 extraEnvVarsCM: ""
 
@@ -142,14 +139,37 @@ probes:
 
 global:
   helmTests: false
+
 #############################
 # Application configuration #
 #############################
 
+# You have two options to configure the router:
+# 1. Use the existingConfigmap to provide the router configuration via a configmap.
+# 2. Use the commonConfiguration to provide the router configuration via yaml.
+# The configuration section should be used for simple use-cases and to pass sensitive information like the graphApiToken.
+# Only in that way, we guarantee that sensitive information are stored as secrets in the cluster.
+
+# -- The name of the configmap to use for the router configuration. The key "config.yaml" is required in the configmap.
+# -- If this is set, the commonConfiguration section is ignored.
+existingConfigmap: ""
+
+# -- Existing secret in the same namespace containing the graphApiToken. The secret key has to match with current secret.
+existingSecret: ""
+
+# Use this section to pass the graphApiToken or to configure simple settings.
+# -- You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section.
+# -- For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration
+commonConfiguration: |-
+  version: "1"
+  log_level: "info"
+
+# Use this section to pass the graphApiToken or to configure simple settings.
 configuration:
   # -- The router token is used to authenticate the router against the controlplane (required)
   graphApiToken: "replace-me"
-  # -- The execution config file to statically configure the router (If no pulling of the config is desired)
+  # -- The execution config file to statically configure the router. If set, polling of the config is disabled.
+  # -- If your config exceeds 1MB (Kubernetes limit), you have to mount it as a file and set the path in routerConfigPath instead
   executionConfig: ""
   # -- The log level of the router. Default to info if not set.
   logLevel: "info"
@@ -161,3 +181,8 @@ configuration:
   graphqlMetricsCollectorUrl: ""
   # -- Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground
   devMode: false
+  #-- The URL of the Cosmo CDN. Should be internal to the cluster. Default to cloud if not set.
+  cdnUrl: ""
+  # -- The path to the router execution config file. Before, you have to mount the file as a volume and set the path here.
+  # -- A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled.
+  routerConfigPath: ""

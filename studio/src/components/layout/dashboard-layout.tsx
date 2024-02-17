@@ -133,7 +133,10 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       },
     ];
 
-    if (plans.data?.plans?.length) {
+    if (
+      plans.data?.plans?.length &&
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    ) {
       navigation.push({
         title: "Billing",
         href: basePath + "/billing",
@@ -165,7 +168,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     );
 
     return navigation;
-  }, [organizationSlug, plans.data?.plans?.length, user?.currentOrganization.slug]);
+  }, [
+    organizationSlug,
+    plans.data?.plans?.length,
+    user?.currentOrganization.slug,
+  ]);
 
   return (
     render && (
@@ -175,7 +182,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         )}
         <div
           className={cn(
-            "flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_1fr] lg:divide-x",
+            "flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x",
             {
               "min-h-[calc(100vh-32px)]": disableStarBanner === "false",
               "min-h-screen": disableStarBanner !== "false",

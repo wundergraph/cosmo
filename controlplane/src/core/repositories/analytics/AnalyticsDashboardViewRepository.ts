@@ -98,53 +98,6 @@ export class AnalyticsDashboardViewRepository {
     return [];
   }
 
-  private async getAllWeeklyRequestSeries(
-    organizationId: string,
-  ): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
-    const query = `
-        SELECT
-          toString(toUnixTimestamp(toDate(toStartOfDay(Timestamp))) * 1000) as timestamp,
-          sum(TotalRequests) as totalRequests,
-          sum(TotalErrors) as erroredRequests,
-          FederatedGraphID as graphId
-        FROM ${this.client.database}.operation_request_metrics_5_30_mv
-        WHERE Timestamp >= toDate(now()) - interval 6 day
-          AND OrganizationID = '${organizationId}'
-        GROUP BY FederatedGraphID, timestamp
-        ORDER BY
-          timestamp DESC
-    `;
-
-    const seriesResWithGraphId = await this.client.queryPromise(query);
-
-    if (Array.isArray(seriesResWithGraphId)) {
-      const transformed: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
-
-      for (const item of seriesResWithGraphId) {
-        const { graphId, ...rest } = item;
-
-        if (!transformed[graphId]) {
-          transformed[graphId] = [];
-        }
-
-        transformed[graphId].push(rest);
-      }
-
-      for (const key in transformed) {
-        const padded = padMissingDatesForCurrentWeek(transformed[key]);
-        transformed[key] = padded;
-        for (const item of padded) {
-          item.totalRequests = Number(item.totalRequests);
-          item.erroredRequests = Number(item.erroredRequests);
-        }
-      }
-
-      return transformed;
-    }
-
-    return {};
-  }
-
   private async getMostRequestedOperations(
     federatedGraphId: string,
     organizationId: string,
@@ -175,20 +128,20 @@ export class AnalyticsDashboardViewRepository {
     return [];
   }
 
-  public getListView(organizationId: string): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
-    return this.getAllWeeklyRequestSeries(organizationId);
-  }
-
   private async getFederatedGraphRates(
     federatedGraphId: string,
     organizationId: string,
     dateRange: DateRange<number>,
+    rangeInHours: number,
   ): Promise<FederatedGraphRequestRateResult[]> {
+    // to minutes
+    const multiplier = rangeInHours * 60;
+
     const query = `
       SELECT
         FederatedGraphID as federatedGraphID,
-        round(sum(TotalRequests) / 60, 3) AS requestRate,
-        round(sum(TotalErrors) / 60, 3) AS errorRate
+        round(sum(TotalRequests) / ${multiplier}, 3) AS requestRate,
+        round(sum(TotalErrors) / ${multiplier}, 3) AS errorRate
       FROM ${this.client.database}.operation_request_metrics_5_30_mv
       WHERE Timestamp >= toDateTime('${dateRange.start}')
       AND Timestamp <= toDateTime('${dateRange.end}')
@@ -214,9 +167,10 @@ export class AnalyticsDashboardViewRepository {
     federatedGraphId: string,
     organizationId: string,
     dateRange: DateRange<number>,
+    rangeInHours: number,
   ): Promise<PlainMessage<FederatedGraphMetrics>> {
     const [requestRates] = await Promise.all([
-      this.getFederatedGraphRates(federatedGraphId, organizationId, dateRange),
+      this.getFederatedGraphRates(federatedGraphId, organizationId, dateRange, rangeInHours),
     ]);
 
     return {
@@ -232,12 +186,16 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
+    rangeInHours: number,
   ): Promise<SubgraphRequestRateResult[]> {
+    // to minutes
+    const multiplier = rangeInHours * 60;
+
     const query = `
       SELECT
         SubgraphID as subgraphID,
-        round(sum(TotalRequests) / 60, 3) AS requestRate,
-        round(sum(TotalErrors) / 60, 3) AS errorRate
+        round(sum(TotalRequests) / ${multiplier}, 3) AS requestRate,
+        round(sum(TotalErrors) / ${multiplier}, 3) AS errorRate
       FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
       WHERE Timestamp >= toDateTime('${dateRange.start}')
         AND Timestamp <= toDateTime('${dateRange.end}')
@@ -308,6 +266,7 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
+    rangeInHours: number,
   ): Promise<PlainMessage<SubgraphMetrics>[]> {
     const metrics: PlainMessage<SubgraphMetrics>[] = [];
 
@@ -316,7 +275,7 @@ export class AnalyticsDashboardViewRepository {
     }
 
     const [requestRates, latency] = await Promise.all([
-      this.getSubgraphRates(federatedGraphId, organizationId, dateRange, subgraphs),
+      this.getSubgraphRates(federatedGraphId, organizationId, dateRange, subgraphs, rangeInHours),
       this.getSubgraphLatency(federatedGraphId, organizationId, dateRange, subgraphs),
     ]);
 
@@ -351,11 +310,14 @@ export class AnalyticsDashboardViewRepository {
     filter: TimeFilters,
     subgraphs: SubgraphDTO[],
   ) {
+    // date range has the time in secs, so dividing it by 60 twice will give us the diff in hours
+    const rangeInHours = (filter.dateRange.end - filter.dateRange.start) / 60 / 60;
+
     const [requestSeries, mostRequestedOperations, subgraphMetrics, graphMetrics] = await Promise.all([
       this.getRequestSeries(federatedGraphId, organizationId, filter),
       this.getMostRequestedOperations(federatedGraphId, organizationId, filter.dateRange),
-      this.getSubgraphMetricsView(federatedGraphId, organizationId, filter.dateRange, subgraphs),
-      this.getFederatedGraphMetricsView(federatedGraphId, organizationId, filter.dateRange),
+      this.getSubgraphMetricsView(federatedGraphId, organizationId, filter.dateRange, subgraphs, rangeInHours),
+      this.getFederatedGraphMetricsView(federatedGraphId, organizationId, filter.dateRange, rangeInHours),
     ]);
 
     return {

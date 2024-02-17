@@ -3,18 +3,13 @@ package core
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"net/http"
-	"sync"
 
-	"github.com/mattbaird/jsonpatch"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 )
 
 const (
 	WgPrefix             = "wg_"
-	WgJsonPatchParam     = WgPrefix + "json_patch"
 	WgSseParam           = WgPrefix + "sse"
 	WgSubscribeOnceParam = WgPrefix + "subscribe_once"
 )
@@ -26,81 +21,64 @@ type HttpFlushWriter struct {
 	flusher       http.Flusher
 	subscribeOnce bool
 	sse           bool
-	useJsonPatch  bool
 	buf           *bytes.Buffer
-	lastMessage   *bytes.Buffer
 	variables     []byte
-	logger        *zap.Logger
-	mux           sync.Mutex
 }
 
 func (f *HttpFlushWriter) Complete() {
+	if f.ctx.Err() != nil {
+		return
+	}
+	if f.sse {
+		_, _ = f.writer.Write([]byte("event: complete"))
+	}
 	f.Close()
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
+	if err = f.ctx.Err(); err != nil {
+		return
+	}
 	return f.buf.Write(p)
 }
 
 func (f *HttpFlushWriter) Close() {
+	if f.ctx.Err() != nil {
+		return
+	}
 	f.cancel()
 }
 
-func (f *HttpFlushWriter) Flush() {
-
-	f.mux.Lock()
-	defer f.mux.Unlock()
+func (f *HttpFlushWriter) Flush() (err error) {
+	if err = f.ctx.Err(); err != nil {
+		return err
+	}
 
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
-	if f.useJsonPatch && f.lastMessage.Len() != 0 {
-		last := f.lastMessage.Bytes()
-		patch, err := jsonpatch.CreatePatch(last, resp)
+	if f.sse {
+		_, err = f.writer.Write([]byte("event: next\ndata: "))
 		if err != nil {
-			if f.logger != nil {
-				f.logger.Error("subscription json patch", zap.Error(err))
-			}
-			return
-		}
-		if len(patch) == 0 {
-			// no changes
-			return
-		}
-		patchData, err := json.Marshal(patch)
-		if err != nil {
-			if f.logger != nil {
-				f.logger.Error("subscription json patch", zap.Error(err))
-			}
-			return
-		}
-		if f.sse {
-			_, _ = f.writer.Write([]byte("data: "))
-		}
-		if len(patchData) < len(resp) {
-			_, _ = f.writer.Write(patchData)
-		} else {
-			_, _ = f.writer.Write(resp)
+			return err
 		}
 	}
-
-	if f.lastMessage.Len() == 0 || !f.useJsonPatch {
-		if f.sse {
-			_, _ = f.writer.Write([]byte("data: "))
-		}
-		_, _ = f.writer.Write(resp)
+	_, err = f.writer.Write(resp)
+	if err != nil {
+		return err
 	}
-
-	f.lastMessage.Reset()
-	_, _ = f.lastMessage.Write(resp)
 
 	if f.subscribeOnce {
 		f.flusher.Flush()
 		f.cancel()
 		return
 	}
-	_, _ = f.writer.Write([]byte("\n\n"))
+	_, err = f.writer.Write([]byte("\n\n"))
+	if err != nil {
+		return err
+	}
 	f.flusher.Flush()
+	return nil
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
@@ -122,16 +100,13 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *ht
 	}
 
 	flushWriter := &HttpFlushWriter{
-		writer:       w,
-		flusher:      flusher,
-		sse:          wgParams.UseSse,
-		useJsonPatch: wgParams.UseJsonPatch,
-		buf:          &bytes.Buffer{},
-		lastMessage:  &bytes.Buffer{},
-		ctx:          ctx.Context(),
-		variables:    variables,
+		writer:    w,
+		flusher:   flusher,
+		sse:       wgParams.UseSse,
+		buf:       &bytes.Buffer{},
+		ctx:       ctx.Context(),
+		variables: variables,
 	}
-
 	if wgParams.SubscribeOnce {
 		flushWriter.subscribeOnce = true
 	}
@@ -153,14 +128,12 @@ func setSubscriptionHeaders(w http.ResponseWriter) {
 func NewWgRequestParams(r *http.Request) WgRequestParams {
 	q := r.URL.Query()
 	return WgRequestParams{
-		UseJsonPatch:  q.Has(WgJsonPatchParam),
 		UseSse:        q.Has(WgSseParam),
 		SubscribeOnce: q.Has(WgSubscribeOnceParam),
 	}
 }
 
 type WgRequestParams struct {
-	UseJsonPatch  bool
 	UseSse        bool
 	SubscribeOnce bool
 }

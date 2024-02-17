@@ -4,6 +4,71 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.65.0](https://github.com/wundergraph/cosmo/compare/studio@0.64.3...studio@0.65.0) (2024-02-16)
+
+### Bug Fixes
+
+* disable variable export by default ([#536](https://github.com/wundergraph/cosmo/issues/536)) ([a100591](https://github.com/wundergraph/cosmo/commit/a1005919a28ee8c9e9c3b87c730e47db336bceec)) (@StarpTech)
+
+### Features
+
+* operation check overrides ([#516](https://github.com/wundergraph/cosmo/issues/516)) ([651ff8e](https://github.com/wundergraph/cosmo/commit/651ff8ed88cd542d56cf11d11086f659fc3f5d4e)) (@thisisnithin)
+
+## [0.64.3](https://github.com/wundergraph/cosmo/compare/studio@0.64.2...studio@0.64.3) (2024-02-15)
+
+### Bug Fixes
+
+* show loader on routers page ([#533](https://github.com/wundergraph/cosmo/issues/533)) ([5884641](https://github.com/wundergraph/cosmo/commit/5884641b630549a98189530955f5be9e732c33fb)) (@StarpTech)
+* show subgraphs in the graph view after the creation itself ([#514](https://github.com/wundergraph/cosmo/issues/514)) ([d10b5b9](https://github.com/wundergraph/cosmo/commit/d10b5b973a1788f757249b441d08acbbda6b3f66)) (@JivusAyrus)
+
+## [0.64.2](https://github.com/wundergraph/cosmo/compare/studio@0.64.1...studio@0.64.2) (2024-02-14)
+
+### Bug Fixes
+
+* link to composition from routers page ([#522](https://github.com/wundergraph/cosmo/issues/522)) ([c3c476e](https://github.com/wundergraph/cosmo/commit/c3c476eaf0977e6a55c100af9d259ec3d2e57259)) (@StarpTech)
+
+## [0.64.1](https://github.com/wundergraph/cosmo/compare/studio@0.64.0...studio@0.64.1) (2024-02-13)
+
+### Bug Fixes
+
+* distinguish between server and process uptime, fix uptime ch query ([#520](https://github.com/wundergraph/cosmo/issues/520)) ([6fc2b72](https://github.com/wundergraph/cosmo/commit/6fc2b7237cd029127f6913199c40dd61bb16a22b)) (@StarpTech)
+
+# [0.64.0](https://github.com/wundergraph/cosmo/compare/studio@0.63.1...studio@0.64.0) (2024-02-13)
+
+### Features
+
+* router fleet management ([#515](https://github.com/wundergraph/cosmo/issues/515)) ([7f0deae](https://github.com/wundergraph/cosmo/commit/7f0deae98a2f58bd46927bdb2be8d615613b908f)) (@StarpTech)
+
+## [0.63.1](https://github.com/wundergraph/cosmo/compare/studio@0.63.0...studio@0.63.1) (2024-02-08)
+
+### Bug Fixes
+
+* rpm calculation in the graph overview page ([#507](https://github.com/wundergraph/cosmo/issues/507)) ([307e203](https://github.com/wundergraph/cosmo/commit/307e203b053ebe9b90a10d0ac10734adbdf398fc)) (@JivusAyrus)
+
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/studio@0.62.0...studio@0.63.0) (2024-02-08)
+
+### Features
+
+* improve federated graph lists overview ([#497](https://github.com/wundergraph/cosmo/issues/497)) ([d7f383a](https://github.com/wundergraph/cosmo/commit/d7f383ad074a9dde06e96fd90459478a29b2cf79)) (@JivusAyrus)
+* upgrade to active lts node images ([#501](https://github.com/wundergraph/cosmo/issues/501)) ([684f89f](https://github.com/wundergraph/cosmo/commit/684f89f8b6c46a3b24117c221cab41a5b60dd534)) (@StarpTech)
+
+# [0.62.0](https://github.com/wundergraph/cosmo/compare/studio@0.61.0...studio@0.62.0) (2024-02-06)
+
+### Features
+
+* enable creating orgs without billing ([#491](https://github.com/wundergraph/cosmo/issues/491)) ([dd2a5b9](https://github.com/wundergraph/cosmo/commit/dd2a5b91fb715f20a4adc613b820de9f02220821)) (@JivusAyrus)
+
+# [0.61.0](https://github.com/wundergraph/cosmo/compare/studio@0.60.0...studio@0.61.0) (2024-02-06)
+
+### Bug Fixes
+
+* view usage button style alignment ([#494](https://github.com/wundergraph/cosmo/issues/494)) ([097bfb5](https://github.com/wundergraph/cosmo/commit/097bfb5be3091c0e3760890925cbaca7a63ff7b4)) (@StarpTech)
+
+### Features
+
+* add pagination component and validate limit ([#493](https://github.com/wundergraph/cosmo/issues/493)) ([880f1b9](https://github.com/wundergraph/cosmo/commit/880f1b9f64167b70b7f61620ebb5a895d438727a)) (@JivusAyrus)
+* consider only router root spans in the trace list ([#495](https://github.com/wundergraph/cosmo/issues/495)) ([b7639ab](https://github.com/wundergraph/cosmo/commit/b7639abcc4c2f367a651a65ffbc17238a049f635)) (@StarpTech)
+
 # [0.60.0](https://github.com/wundergraph/cosmo/compare/studio@0.59.0...studio@0.60.0) (2024-02-05)
 
 ### Bug Fixes

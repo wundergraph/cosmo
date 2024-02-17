@@ -13,15 +13,19 @@ WunderGraph Cosmo router.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| commonConfiguration | string | `"version: \"1\"\nlog_level: \"info\""` | For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration |
+| configuration.cdnUrl | string | `""` |  |
 | configuration.controlplaneUrl | string | `""` | The URL of the Cosmo Controlplane. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.devMode | bool | `false` | Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground |
-| configuration.executionConfig | string | `""` | The execution config file to statically configure the router (If no pulling of the config is desired) |
+| configuration.executionConfig | string | `""` | If your config exceeds 1MB (Kubernetes limit), you have to mount it as a file and set the path in routerConfigPath instead |
 | configuration.graphApiToken | string | `"replace-me"` | The router token is used to authenticate the router against the controlplane (required) |
 | configuration.graphqlMetricsCollectorUrl | string | `""` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |
 | configuration.otelCollectorUrl | string | `""` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set. |
+| configuration.routerConfigPath | string | `""` | A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled. |
 | deploymentStrategy | object | `{}` |  |
-| existingConfigmap | string | `""` | Optionally name of existing ConfigMap with Router configuration. The key config.yaml is required. |
+| existingConfigmap | string | `""` | If this is set, the commonConfiguration section is ignored. |
+| existingSecret | string | `""` | Existing secret in the same namespace containing the graphApiToken. The secret key has to match with current secret. |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container |
 | extraEnvVarsCM | string | `""` | Name of existing ConfigMap containing extra env vars |
 | extraEnvVarsSecret | string | `""` | Name of existing Secret containing extra env vars |

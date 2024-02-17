@@ -49,7 +49,6 @@ func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsServi
 }
 
 // saveOperations saves the operation documents to the storage in a batch
-// TODO: Move to async inserts as soon as clickhouse 23.10 is released on cloud
 func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Time, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
 
 	opBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
@@ -90,7 +89,6 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 }
 
 // saveUsageMetrics saves the usage metrics to the storage in a batch
-// TODO: Move to async inserts as soon as clickhouse 23.10 is released on cloud
 func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.Time, claims *GraphAPITokenClaims, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
 
 	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
@@ -261,7 +259,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	if !dispatched {
 		requestLogger.Error("Failed to dispatch request to worker pool")
 
-		// Will force the router to retry the request
+		// Will force the client (router) to retry the request
 		return nil, errPublishFailed
 	}
 
