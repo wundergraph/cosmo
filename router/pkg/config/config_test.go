@@ -27,7 +27,7 @@ func TestCustomBytesExtension(t *testing.T) {
 	require.ErrorAs(t, err, &js)
 
 	require.Equal(t, js.Causes[0].KeywordLocation, "/properties/traffic_shaping/properties/router/properties/max_request_body_size/bytes")
-	require.Equal(t, js.Causes[0].Message, "must be greater or equal than 1.0 MB, given 1.0 kB")
+	require.Equal(t, js.Causes[0].Message, "must be greater or equal than 1.0 MB")
 }
 
 func TestVariableExpansion(t *testing.T) {
@@ -99,14 +99,14 @@ func TestCustomGoDurationExtension(t *testing.T) {
 	require.ErrorAs(t, err, &js)
 
 	require.Equal(t, js.Causes[0].KeywordLocation, "/properties/telemetry/properties/tracing/properties/exporters/items/properties/export_timeout/duration")
-	require.Equal(t, js.Causes[0].Message, "must be greater or equal than 5s, given 1s")
+	require.Equal(t, js.Causes[0].Message, "must be greater or equal than 5s")
 
 	_, err = LoadConfig("./fixtures/max_duration_error.yaml", "")
 
 	require.ErrorAs(t, err, &js)
 
 	require.Equal(t, js.Causes[0].KeywordLocation, "/properties/telemetry/properties/tracing/properties/exporters/items/properties/export_timeout/duration")
-	require.Equal(t, js.Causes[0].Message, "must be less oe equal than 2m0s, given 5m0s")
+	require.Equal(t, js.Causes[0].Message, "must be less or equal than 2m0s")
 }
 
 func TestLoadFullConfig(t *testing.T) {

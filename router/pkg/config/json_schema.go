@@ -82,13 +82,13 @@ func (d humanBytes) Validate(ctx jsonschema.ValidationContext, v interface{}) er
 
 	if d.min > 0 {
 		if bytes < d.min {
-			return ctx.Error("bytes", "must be greater or equal than %s, given %s", humanize.Bytes(d.min), val)
+			return ctx.Error("bytes", "must be greater or equal than %s", humanize.Bytes(d.min))
 		}
 	}
 
 	if d.max > 0 {
 		if bytes > d.max {
-			return ctx.Error("bytes", "must be less oe equal than %s, given %s", humanize.Bytes(d.max), val)
+			return ctx.Error("bytes", "must be less or equal than %s", humanize.Bytes(d.max))
 		}
 
 	}
@@ -151,13 +151,13 @@ func (d duration) Validate(ctx jsonschema.ValidationContext, v interface{}) erro
 
 	if d.min > 0 {
 		if duration < d.min {
-			return ctx.Error("duration", "must be greater or equal than %s, given %s", d.min, val)
+			return ctx.Error("duration", "must be greater or equal than %s", d.min)
 		}
 	}
 
 	if d.max > 0 {
 		if duration > d.max {
-			return ctx.Error("duration", "must be less oe equal than %s, given %s", d.max, val)
+			return ctx.Error("duration", "must be less or equal than %s", d.max)
 		}
 
 	}
