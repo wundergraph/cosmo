@@ -238,7 +238,17 @@
    "MaxRequestBodyBytes": 5000000
   }
  },
- "Version": "1"
+ "Version": "1",
+ "WebSocket": {
+  "AbsintheProtocol": {
+   "Enabled": true,
+   "HandlerPath": "/absinthe/socket"
+  },
+  "Enabled": true,
+  "ForwardInitialPayload": true,
+  "ForwardUpgradeHeaders": true,
+  "ForwardUpgradeQueryParams": true
+ }
 }
 ---
 
@@ -404,6 +414,16 @@
    "MaxRequestBodyBytes": 5000000
   }
  },
- "Version": "1"
+ "Version": "1",
+ "WebSocket": {
+  "AbsintheProtocol": {
+   "Enabled": true,
+   "HandlerPath": "/absinthe/socket"
+  },
+  "Enabled": true,
+  "ForwardInitialPayload": true,
+  "ForwardUpgradeHeaders": true,
+  "ForwardUpgradeQueryParams": true
+ }
 }
 ---

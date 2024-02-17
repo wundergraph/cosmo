@@ -257,8 +257,8 @@ type AbsintheProtocolConfiguration struct {
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"WEBSOCKETS_ABSINTHE_ENABLED"`
 	// HandlerPath is the path where the Absinthe Protocol Handler is mounted
 	// On this specific path, the Router will accept WebSocket Requests using the Absinthe Protocol
-	// even if the Subprotocol is not set to "absinthe"
-	// Legacy clients might not set the Subprotocol Header, so this is a fallback
+	// even if the Sub-protocol is not set to "absinthe"
+	// Legacy clients might not set the Sub-protocol Header, so this is a fallback
 	HandlerPath string `yaml:"handler_path" default:"/absinthe/socket" envconfig:"WEBSOCKETS_ABSINTHE_HANDLER_PATH"`
 }
 
@@ -266,7 +266,7 @@ type WebSocketConfiguration struct {
 	// Enabled true if the Router should accept Requests over WebSockets
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"WEBSOCKETS_ENABLED"`
 	// AbsintheProtocol configuration for the Absinthe Protocol
-	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol"`
+	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol,omitempty"`
 	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
 	ForwardUpgradeHeaders bool `yaml:"forward_upgrade_headers" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_HEADERS"`
 	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph
@@ -318,7 +318,7 @@ type Config struct {
 
 	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
 
-	WebSocket WebSocketConfiguration `yaml:"websocket"`
+	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
 }
 
 type LoadResult struct {

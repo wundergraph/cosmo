@@ -42,6 +42,49 @@
       "default": false,
       "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs."
     },
+    "websocket": {
+      "type": "object",
+      "description": "The configuration for the WebSocket transport. The WebSocket transport is used to enable the WebSocket transport for the GraphQL subscriptions.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable WebSocket transport. The default value is true."
+        },
+        "absinthe_protocol": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable Absinthe protocol. The default value is true."
+            },
+            "handler_path": {
+              "type": "string",
+              "default": "/absinthe/socket",
+              "description": "The path to the WebSocket handler. The default value is '/absinthe/socket'."
+            }
+          }
+        },
+        "forward_upgrade_headers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Forward upgrade request Headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+        },
+        "forward_upgrade_query_params": {
+          "type": "boolean",
+          "default": true,
+          "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+        },
+        "forward_initial_payload": {
+          "type": "boolean",
+          "default": true,
+          "description": "Forward the initial payload in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+        }
+      }
+    },
     "telemetry": {
       "type": "object",
       "description": "The configuration for the telemetry. The telemetry is used to collect and export the traces and metrics.",

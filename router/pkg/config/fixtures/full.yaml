@@ -210,3 +210,11 @@ rate_limit:
 override_routing_url:
   subgraphs:
     some-subgraph: http://router:3002/graphql
+
+websocket:
+  enabled: true
+  absinthe_protocol:
+    handler_path: /absinthe/socket
+  forward_initial_payload: true
+  forward_upgrade_headers: true
+  forward_upgrade_query_params: true
