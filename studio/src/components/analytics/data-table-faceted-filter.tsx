@@ -108,7 +108,7 @@ const SliderWithOptions = ({
           }}
         />
         <Input
-          value={range.end}
+          defaultValue={range.end}
           type="number"
           onBlur={(e) => {
             if (Number(e.target.value) > range.start) {
