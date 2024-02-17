@@ -81,11 +81,11 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(invalidDirectiveError(
-      'UnknownDirective',
-      'Example.string',
-      [undefinedDirectiveErrorMessage('UnknownDirective', 'Example.string')],
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidDirectiveError('UnknownDirective', 'Example.string', [
+        undefinedDirectiveErrorMessage('UnknownDirective', 'Example.string'),
+      ]),
+    );
   });
 
   test('that duplicate directive definitions return an error', () => {
@@ -952,9 +952,9 @@ describe('Normalization tests', () => {
         name: String
       }
       
-      type ProductDimension @shareable {
-        size: String
-        weight: Float
+      type ProductDimension {
+        size: String @shareable
+        weight: Float @shareable
       }
       
       type User @key(fields: "email") {
@@ -1774,9 +1774,16 @@ describe('Normalization tests', () => {
       }
       
       """
-        This is the description Object
+        This is the description for Interface
       """
-      type Object @requiresScopes(scopes: [["read:object"]]) {
+      interface Interface @requiresScopes(scopes: [["read:private"]]) {
+        field(argumentOne: String!): Enum! @authenticated
+      }
+      
+      """
+        This is the description for Object
+      """
+      type Object implements Interface @requiresScopes(scopes: [["read:object"]]) {
         """
           This is the description for Object.field
         """
@@ -1789,7 +1796,8 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(normalizeString(`
+    expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+      normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @composeDirective(name: String!) repeatable on SCHEMA
       directive @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION
@@ -1810,11 +1818,18 @@ describe('Normalization tests', () => {
       enum Enum {
         VALUE
       }
+      
+      """
+        This is the description for Interface
+      """
+      interface Interface {
+        field(argumentOne: String!): Enum! @authenticated @requiresScopes(scopes: [["read:private", "read:enum"]])
+      }
 
       """
-        This is the description Object
+        This is the description for Object
       """
-      type Object {
+      type Object implements Interface {
         """
           This is the description for Object.field
         """
@@ -1823,12 +1838,13 @@ describe('Normalization tests', () => {
             This is the description for the argumentOne argument of Object.field
           """
           argumentOne: String!
-        ): Enum!
+        ): Enum! @authenticated @requiresScopes(scopes: [["read:object", "read:enum", "read:private"]])
       }
       
       scalar openfed__FieldSet
       
       scalar openfed__Scope
-    `));
+    `),
+    );
   });
 });

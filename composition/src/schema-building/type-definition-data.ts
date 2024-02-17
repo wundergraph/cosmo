@@ -21,11 +21,10 @@ import {
 } from './ast';
 import { ExtensionWithFieldsData } from './type-extension-data';
 
-
 export type ArgumentData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   name: string;
-  node: MutableInputValueNode,
+  node: MutableInputValueNode;
   requiredSubgraphNames: Set<string>;
   subgraphNames: Set<string>;
   type: MutableTypeNode;
@@ -147,4 +146,3 @@ export type ParentWithFieldsData = DefinitionWithFieldsData | ExtensionWithField
 export type ChildData = EnumValueData | FieldData | InputValueData;
 
 export type DefinitionWithFieldsData = InterfaceData | ObjectData;
-

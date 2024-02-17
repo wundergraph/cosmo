@@ -14,7 +14,8 @@ describe('Union federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions + `
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Bulbasaur {
         name: String!
       }
@@ -55,7 +56,8 @@ describe('Union federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions + `
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          `
       type Bulbasaur {
         name: String!
       }
@@ -93,17 +95,13 @@ describe('Union federation tests', () => {
   test('that an error is returned if a union has no members #1.1', () => {
     const { errors } = federateSubgraphs([subgraphB, subgraphC]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(subgraphValidationError(
-      'subgraph-c', [noDefinedUnionMembersError('Starters')],
-    ));
+    expect(errors![0]).toStrictEqual(subgraphValidationError('subgraph-c', [noDefinedUnionMembersError('Starters')]));
   });
 
   test('that an error is returned if a union has no members #1.1', () => {
     const { errors } = federateSubgraphs([subgraphC, subgraphB]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(subgraphValidationError(
-      'subgraph-c', [noDefinedUnionMembersError('Starters')],
-    ));
+    expect(errors![0]).toStrictEqual(subgraphValidationError('subgraph-c', [noDefinedUnionMembersError('Starters')]));
   });
 
   test('that union extensions federate correctly #1.1', () => {
@@ -111,7 +109,8 @@ describe('Union federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions + `
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          `
         """
           001 Kanto
         """
@@ -180,8 +179,9 @@ describe('Union federation tests', () => {
           """
           name: String!
         }
-        `
-    ));
+        `,
+      ),
+    );
   });
 
   test('that union extensions federate correctly #1.2', () => {
@@ -189,7 +189,8 @@ describe('Union federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions + `
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          `
         """
           001 Kanto
         """
@@ -258,8 +259,9 @@ describe('Union federation tests', () => {
           """
           name: String!
         }
-        `
-      ));
+        `,
+      ),
+    );
   });
 });
 

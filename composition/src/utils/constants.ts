@@ -85,12 +85,12 @@ const DEPRECATED_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @extends on INTERFACE | OBJECT
-const EXTENDS_DEFINITION: DirectiveDefinitionNode =   {
-    kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringArrayToNameNodeArray([INTERFACE_UPPER, OBJECT_UPPER]),
-    name: stringToNameNode(EXTENDS),
-    repeatable: false,
-  };
+const EXTENDS_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([INTERFACE_UPPER, OBJECT_UPPER]),
+  name: stringToNameNode(EXTENDS),
+  repeatable: false,
+};
 
 // directive @external on FIELD_DEFINITION | OBJECT
 const EXTERNAL_DEFINITION: DirectiveDefinitionNode = {
@@ -295,7 +295,6 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
   [TAG, TAG_DEFINITION],
 ]);
 
-
 // @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -358,7 +357,6 @@ const INTERFACE_OBJECT_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-
 // directive @link(url: String!, as: String!, for: String, import: [String]) repeatable on SCHEMA
 const LINK_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
@@ -396,23 +394,22 @@ const LINK_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @override(from: String!) on FIELD_DEFINITION
-const OVERRIDE_DEFINITION: DirectiveDefinitionNode =
-  {
-    arguments: [
-      {
-        kind: Kind.INPUT_VALUE_DEFINITION,
-        name: stringToNameNode(FROM),
-        type: {
-          kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_SCALAR),
-        },
+const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FROM),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
       },
-    ],
-    kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
-    name: stringToNameNode(OVERRIDE),
-    repeatable: false,
-  };
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(OVERRIDE),
+  repeatable: false,
+};
 
 // @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 const REQUIRES_SCOPES_DEFINITION: DirectiveDefinitionNode = {
@@ -505,3 +502,5 @@ export const SCOPE_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
 };
 
 export const MAXIMUM_TYPE_NESTING = 30;
+
+export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];

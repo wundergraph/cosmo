@@ -48,11 +48,12 @@ export type UnionExtensionData = {
   typeName: string;
 };
 
-export type ParentExtensionData = EnumExtensionData |
-  InputObjectExtensionData |
-  InterfaceExtensionData |
-  ObjectExtensionData |
-  ScalarExtensionData |
-  UnionExtensionData;
+export type ParentExtensionData =
+  | EnumExtensionData
+  | InputObjectExtensionData
+  | InterfaceExtensionData
+  | ObjectExtensionData
+  | ScalarExtensionData
+  | UnionExtensionData;
 
 export type ExtensionWithFieldsData = InterfaceExtensionData | ObjectExtensionData;

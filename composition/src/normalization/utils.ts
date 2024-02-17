@@ -208,9 +208,7 @@ export type InputValidationContainer = {
   typeString: string;
 };
 
-export function addNonExternalFieldsToSet(
-  fieldDataByFieldName: Map<string, FieldData>, fieldNames: Set<string>,
-) {
+export function addNonExternalFieldsToSet(fieldDataByFieldName: Map<string, FieldData>, fieldNames: Set<string>) {
   for (const [fieldName, fieldContainer] of fieldDataByFieldName) {
     if (fieldContainer.directivesByDirectiveName.has(EXTERNAL)) {
       continue;
@@ -273,7 +271,7 @@ function validateNonRepeatableFieldSet(
   let fieldPath = parentData.typeName;
   visit(documentNode, {
     Argument: {
-      enter(node) {
+      enter() {
         return false;
       },
     },

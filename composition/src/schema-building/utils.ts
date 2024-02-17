@@ -75,7 +75,15 @@ import {
   unexpectedDirectiveArgumentErrorMessage,
   unexpectedDirectiveArgumentsErrorMessage,
 } from '../errors/errors';
-import { EXTERNAL, IGNORED_PARENT_DIRECTIVES, KEY, ROOT_TYPES, SHAREABLE } from '../utils/string-constants';
+import {
+  AUTHENTICATED,
+  EXTERNAL,
+  IGNORED_PARENT_DIRECTIVES,
+  KEY,
+  REQUIRES_SCOPES,
+  ROOT_TYPES,
+  SHAREABLE,
+} from '../utils/string-constants';
 import {
   EnumExtensionData,
   ExtensionWithFieldsData,
@@ -87,8 +95,19 @@ import {
 } from './type-extension-data';
 import { getNamedTypeForChild } from './type-merging';
 import { areNodeKindAndDirectiveLocationCompatible, getDirectiveDefinitionArgumentSets } from '../normalization/utils';
-import { getEntriesNotInHashSet, mapToArrayOfValues } from '../utils/utils';
-import { BASE_SCALARS, V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME } from '../utils/constants';
+import {
+  AuthorizationData,
+  generateRequiresScopesDirective,
+  generateSimpleDirective,
+  getEntriesNotInHashSet,
+  getValueOrDefault,
+  mapToArrayOfValues,
+} from '../utils/utils';
+import {
+  BASE_SCALARS,
+  INHERITABLE_DIRECTIVE_NAMES,
+  V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
+} from '../utils/constants';
 
 type IsNodeExternalOrShareableResult = {
   isExternal: boolean;
@@ -96,9 +115,14 @@ type IsNodeExternalOrShareableResult = {
 };
 
 export function isNodeExternalOrShareable(
-  node: ObjectTypeNode | FieldDefinitionNode, areAllFieldsShareable: boolean,
+  node: ObjectTypeNode | FieldDefinitionNode,
+  areAllFieldsShareable: boolean,
+  directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
 ): IsNodeExternalOrShareableResult {
-  const result: IsNodeExternalOrShareableResult = { isExternal: false, isShareable: areAllFieldsShareable };
+  const result: IsNodeExternalOrShareableResult = {
+    isExternal: directivesByDirectiveName.has(EXTERNAL),
+    isShareable: areAllFieldsShareable || directivesByDirectiveName.has(SHAREABLE),
+  };
   if (!node.directives?.length) {
     return result;
   }
@@ -125,15 +149,21 @@ export function getDefinedArgumentsForDirective(
   const directiveArguments = directiveNode.arguments || [];
   const directiveName = directiveNode.name.value;
   const definedArguments = new Set<string>();
+  const handledDuplicateArguments = new Set<string>();
   for (const argument of directiveArguments) {
     const argumentName = argument.name.value;
+    // If an argument is observed more than once, it is a duplication error.
+    // However, the error should only propagate once.
+    if (definedArguments.has(argumentName)) {
+      if (!handledDuplicateArguments.has(argumentName)) {
+        handledDuplicateArguments.add(argumentName);
+        errorMessages.push(duplicateDirectiveArgumentDefinitionErrorMessage(directiveName, hostPath, argumentName));
+      }
+      continue;
+    }
     const argumentTypeNode = argumentTypeNodeByArgumentName.get(argumentName);
     if (!argumentTypeNode) {
       errorMessages.push(unexpectedDirectiveArgumentErrorMessage(directiveName, argumentName));
-      continue;
-    }
-    if (definedArguments.has(argumentName)) {
-      errorMessages.push(duplicateDirectiveArgumentDefinitionErrorMessage(directiveName, hostPath, argumentName));
       continue;
     }
     // TODO validate argument values
@@ -152,11 +182,13 @@ export function getDirectiveValidationErrors(
   hostKind: Kind,
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   hostPath: string,
   isArgument = false,
 ): string[] {
   const directiveName = directiveNode.name.value;
-  const directiveDefinition = directiveDefinitionByDirectiveName.get(directiveName) ||
+  const directiveDefinition =
+    directiveDefinitionByDirectiveName.get(directiveName) ||
     V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.get(directiveName);
   const errorMessages: string[] = [];
   if (!directiveDefinition) {
@@ -166,14 +198,25 @@ export function getDirectiveValidationErrors(
   const argumentTypeNodeByArgumentName = new Map<string, TypeNode>();
   const requiredArguments = new Set<string>();
   getDirectiveDefinitionArgumentSets(
-    directiveDefinition.arguments || [], argumentTypeNodeByArgumentName, requiredArguments,
+    directiveDefinition.arguments || [],
+    argumentTypeNodeByArgumentName,
+    requiredArguments,
   );
   if (!areNodeKindAndDirectiveLocationCompatible(hostKind, directiveDefinition, isArgument)) {
-    errorMessages.push(invalidDirectiveLocationErrorMessage(
-      hostPath, isArgument ? Kind.ARGUMENT : hostKind, directiveName));
+    errorMessages.push(
+      invalidDirectiveLocationErrorMessage(hostPath, isArgument ? Kind.ARGUMENT : hostKind, directiveName),
+    );
   }
   if (!directiveDefinition.repeatable && directivesByDirectiveName.get(directiveName)) {
-    errorMessages.push(invalidRepeatedDirectiveErrorMessage(directiveName, hostPath));
+    const handledRepeatedDirectives = handledRepeatedDirectivesByHostPath.get(hostPath);
+    // Add the directive name to the existing set (if other invalid repeated directives exist) or a new set
+    // If the directive name exists as a value on the host path key, the repeatable error has been handled
+    if (!handledRepeatedDirectives) {
+      handledRepeatedDirectivesByHostPath.set(hostPath, new Set<string>([directiveName]));
+    } else if (!handledRepeatedDirectives.has(directiveName)) {
+      handledRepeatedDirectives.add(directiveName);
+      errorMessages.push(invalidRepeatedDirectiveErrorMessage(directiveName, hostPath));
+    }
   }
   if (!directiveDefinition.arguments?.length) {
     if (directiveNode.arguments?.length) {
@@ -183,9 +226,7 @@ export function getDirectiveValidationErrors(
   }
   if (!directiveNode.arguments?.length) {
     if (requiredArguments.size > 0) {
-      errorMessages.push(
-        undefinedRequiredArgumentsErrorMessage(directiveName, hostPath, [...requiredArguments]),
-      );
+      errorMessages.push(undefinedRequiredArgumentsErrorMessage(directiveName, hostPath, [...requiredArguments]));
     }
     return errorMessages;
   }
@@ -198,36 +239,11 @@ export function getDirectiveValidationErrors(
   );
   const missingRequiredArguments = getEntriesNotInHashSet(requiredArguments, definedArguments);
   if (missingRequiredArguments.length > 0) {
-    errorMessages.push(undefinedRequiredArgumentsErrorMessage(
-      directiveName,
-      hostPath,
-      [...requiredArguments],
-      missingRequiredArguments,
-    ));
+    errorMessages.push(
+      undefinedRequiredArgumentsErrorMessage(directiveName, hostPath, [...requiredArguments], missingRequiredArguments),
+    );
   }
   return errorMessages;
-}
-
-function getDirectiveHostPath(
-  node:
-    | EnumValueDefinitionNode
-    | InputObjectTypeNode
-    | InputValueDefinitionNode
-    | InterfaceTypeNode
-    | ObjectTypeNode
-    | SchemaNode
-    | UnionTypeNode,
-  parentPath: string,
-  isArgument: boolean,
-): string {
-  switch (node.kind) {
-    case Kind.ENUM_VALUE_DEFINITION:
-      return `${parentPath}.${node.name.value}`;
-    case Kind.INPUT_VALUE_DEFINITION:
-      return isArgument ? `${parentPath}(${node.name.value}: ...)` : `${parentPath}.${node.name.value}`
-    default:
-      return parentPath;
-  }
 }
 
 export function extractDirectives(
@@ -242,6 +258,7 @@ export function extractDirectives(
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   hostPath: string,
   isArgument = false,
 ): Map<string, ConstDirectiveNode[]> {
@@ -255,6 +272,7 @@ export function extractDirectives(
       node.kind,
       directivesByDirectiveName,
       directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
       hostPath,
       isArgument,
     );
@@ -275,8 +293,9 @@ export function extractDirectives(
       entityKeys.add(entityKey);
     }
     const existingDirectives = directivesByDirectiveName.get(directiveName);
-    existingDirectives ?
-      existingDirectives.push(directiveNode) : directivesByDirectiveName.set(directiveName, [directiveNode]);
+    existingDirectives
+      ? existingDirectives.push(directiveNode)
+      : directivesByDirectiveName.set(directiveName, [directiveNode]);
   }
   return directivesByDirectiveName;
 }
@@ -286,6 +305,7 @@ export function extractArguments(
   node: FieldDefinitionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   parentsWithChildArguments: Set<string>,
   parentTypeName: string,
   subgraphName: string,
@@ -308,6 +328,7 @@ export function extractArguments(
       argumentNode,
       errors,
       directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
       parentTypeName,
       fieldName,
       subgraphName,
@@ -324,6 +345,7 @@ export function upsertArgumentDataByNode(
   node: InputValueDefinitionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   parentTypeName: string,
   fieldName: string,
   subgraphName: string,
@@ -336,8 +358,9 @@ export function upsertArgumentDataByNode(
       new Map<string, ConstDirectiveNode[]>(),
       errors,
       directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
       `${hostPath}(${name}: ...)`,
-      true
+      true,
     ),
     name,
     node: getMutableInputValueNode(node, parentTypeName, fieldName),
@@ -385,6 +408,7 @@ export function upsertEnumValueDataByNode(
   node: EnumValueDefinitionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   parentTypeName: string,
 ) {
   const name = node.name.value;
@@ -395,6 +419,7 @@ export function upsertEnumValueDataByNode(
       new Map<string, ConstDirectiveNode[]>(),
       errors,
       directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
       `${parentTypeName}.${name}`,
     ),
     name,
@@ -402,6 +427,18 @@ export function upsertEnumValueDataByNode(
     parentTypeName,
     description: formatDescription(node.description),
   });
+}
+
+export function addInheritedDirectivesToFieldData(
+  parentDirectivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+  fieldDirectivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+) {
+  for (const directiveName of INHERITABLE_DIRECTIVE_NAMES) {
+    if (parentDirectivesByDirectiveName.get(directiveName)) {
+      getValueOrDefault(fieldDirectivesByDirectiveName, directiveName, () => [generateSimpleDirective(directiveName)]);
+    }
+  }
+  return fieldDirectivesByDirectiveName;
 }
 
 export function upsertFieldDataByNode(
@@ -417,16 +454,14 @@ export function upsertFieldDataByNode(
   const name = node.name.value;
   const fieldPath = `${parentTypeName}.${name}`;
   const isNodeExternalOrShareableResult = isNodeExternalOrShareable(
-    node, !isSubgraphVersionTwo,
+    node,
+    !isSubgraphVersionTwo,
+    directivesByDirectiveName,
   );
   const fieldData: FieldData = {
     argumentDataByArgumentName: argumentDataByArgumentName,
-    isExternalBySubgraphName: new Map<string, boolean>([
-      [subgraphName, isNodeExternalOrShareableResult.isExternal],
-    ]),
-    isShareableBySubgraphName: new Map<string, boolean>([
-      [subgraphName, isNodeExternalOrShareableResult.isShareable],
-    ]),
+    isExternalBySubgraphName: new Map<string, boolean>([[subgraphName, isNodeExternalOrShareableResult.isExternal]]),
+    isShareableBySubgraphName: new Map<string, boolean>([[subgraphName, isNodeExternalOrShareableResult.isShareable]]),
     node: getMutableFieldNode(node, parentTypeName),
     name,
     namedTypeName: getNamedTypeForChild(fieldPath, node.type),
@@ -444,6 +479,7 @@ export function upsertExtensionWithFieldsDataByNode(
   node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   isEntity: boolean,
 ) {
   const typeName = node.name.value;
@@ -456,6 +492,7 @@ export function upsertExtensionWithFieldsDataByNode(
           new Map<string, ConstDirectiveNode[]>(),
           errors,
           directiveDefinitionByDirectiveName,
+          handledRepeatedDirectivesByHostPath,
           typeName,
         ),
         fieldDataByFieldName: new Map<string, FieldData>(),
@@ -472,6 +509,7 @@ export function upsertExtensionWithFieldsDataByNode(
           new Map<string, ConstDirectiveNode[]>(),
           errors,
           directiveDefinitionByDirectiveName,
+          handledRepeatedDirectivesByHostPath,
           typeName,
         ),
         fieldDataByFieldName: new Map<string, FieldData>(),
@@ -489,6 +527,7 @@ export function upsertInputObjectDefinitionDataByNode(
   node: InputObjectTypeDefinitionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
 ) {
   const typeName = node.name.value;
   parentDefinitionDataByTypeName.set(typeName, {
@@ -498,7 +537,8 @@ export function upsertInputObjectDefinitionDataByNode(
       new Map<string, ConstDirectiveNode[]>(),
       errors,
       directiveDefinitionByDirectiveName,
-      typeName
+      handledRepeatedDirectivesByHostPath,
+      typeName,
     ),
     inputValueDataByValueName: new Map<string, InputValueData>(),
     kind: node.kind,
@@ -513,6 +553,7 @@ export function upsertInputObjectExtensionDataByNode(
   node: InputObjectTypeExtensionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
 ) {
   const typeName = node.name.value;
   parentExtensionDataByTypeName.set(typeName, {
@@ -521,6 +562,7 @@ export function upsertInputObjectExtensionDataByNode(
       new Map<string, ConstDirectiveNode[]>(),
       errors,
       directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
       typeName,
     ),
     inputValueDataByValueName: new Map<string, InputValueData>(),
@@ -534,6 +576,7 @@ export function upsertInputValueDataByNode(
   node: InputValueDefinitionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   parentTypeName: string,
 ) {
   const name = node.name.value;
@@ -544,6 +587,7 @@ export function upsertInputValueDataByNode(
       new Map<string, ConstDirectiveNode[]>(),
       errors,
       directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
       `${parentTypeName}.${name}`,
     ),
     name,
@@ -558,6 +602,7 @@ export function upsertInterfaceDefinitionDataByNode(
   node: InterfaceTypeDefinitionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   isEntity: boolean,
   subgraphName: string,
 ) {
@@ -568,6 +613,7 @@ export function upsertInterfaceDefinitionDataByNode(
       new Map<string, ConstDirectiveNode[]>(),
       errors,
       directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
       typeName,
     ),
     fieldDataByFieldName: new Map<string, FieldData>(),
@@ -586,6 +632,7 @@ export function upsertObjectDefinitionDataByNode(
   node: ObjectTypeDefinitionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   isEntity: boolean,
   isRootType: boolean,
   subgraphName: string,
@@ -597,7 +644,8 @@ export function upsertObjectDefinitionDataByNode(
       new Map<string, ConstDirectiveNode[]>(),
       errors,
       directiveDefinitionByDirectiveName,
-      typeName
+      handledRepeatedDirectivesByHostPath,
+      typeName,
     ),
     fieldDataByFieldName: new Map<string, FieldData>(),
     isEntity,
@@ -672,6 +720,7 @@ export function upsertUnionDefinitionDataByNode(
   node: UnionTypeDefinitionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   abstractToConcreteTypeNames: Map<string, Set<string>>,
   referencedTypeNames: Set<string>,
 ) {
@@ -682,11 +731,21 @@ export function upsertUnionDefinitionDataByNode(
   }
   parentDefinitionDataByTypeName.set(typeName, {
     directivesByDirectiveName: extractDirectives(
-      node, new Map<string, ConstDirectiveNode[]>(), errors, directiveDefinitionByDirectiveName, typeName,
+      node,
+      new Map<string, ConstDirectiveNode[]>(),
+      errors,
+      directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
+      typeName,
     ),
     kind: node.kind,
     memberByMemberTypeName: extractUniqueUnionMembers(
-      node.types, new Map<string, NamedTypeNode>(), errors, typeName, abstractToConcreteTypeNames, referencedTypeNames,
+      node.types,
+      new Map<string, NamedTypeNode>(),
+      errors,
+      typeName,
+      abstractToConcreteTypeNames,
+      referencedTypeNames,
     ),
     node: getMutableUnionNode(node),
     typeName,
@@ -699,17 +758,29 @@ export function upsertUnionExtensionDataByNode(
   node: UnionTypeExtensionNode,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   abstractToConcreteTypeNames: Map<string, Set<string>>,
   referencedTypeNames: Set<string>,
 ) {
   const typeName = node.name.value;
   parentExtensionDataByTypeName.set(typeName, {
     directivesByDirectiveName: extractDirectives(
-      node, new Map<string, ConstDirectiveNode[]>(), errors, directiveDefinitionByDirectiveName, typeName,
+      node,
+      new Map<string, ConstDirectiveNode[]>(),
+      errors,
+      directiveDefinitionByDirectiveName,
+      handledRepeatedDirectivesByHostPath,
+      typeName,
     ),
     kind: node.kind,
-    memberByMemberTypeName: extractUniqueUnionMembers( // Undefined or empty node.types is handled earlier
-      node.types!, new Map<string, NamedTypeNode>(), errors, typeName, abstractToConcreteTypeNames, referencedTypeNames,
+    memberByMemberTypeName: extractUniqueUnionMembers(
+      // Undefined or empty node.types is handled earlier
+      node.types!,
+      new Map<string, NamedTypeNode>(),
+      errors,
+      typeName,
+      abstractToConcreteTypeNames,
+      referencedTypeNames,
     ),
     typeName,
   });
@@ -720,10 +791,7 @@ export function isTypeNameRootType(typeName: string, operationByTypeName: Map<st
 }
 
 export function convertKindForExtension(
-  node: InterfaceTypeDefinitionNode |
-    InterfaceTypeExtensionNode |
-    ObjectTypeDefinitionNode |
-    ObjectTypeExtensionNode,
+  node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
 ): Kind.INTERFACE_TYPE_EXTENSION | Kind.OBJECT_TYPE_EXTENSION {
   switch (node.kind) {
     case Kind.INTERFACE_TYPE_DEFINITION:
@@ -755,7 +823,10 @@ export function extractImplementedInterfaceTypeNames(
   return implementedInterfaceTypeNames;
 }
 
-function addExtensionDirectivesToDefinition(directivesByDirectiveName: Map<string, ConstDirectiveNode[]>, parentExtensionData?: ParentExtensionData) {
+function addExtensionDirectivesToDefinition(
+  directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+  parentExtensionData?: ParentExtensionData,
+) {
   if (!parentExtensionData) {
     return;
   }
@@ -769,78 +840,54 @@ function addExtensionDirectivesToDefinition(directivesByDirectiveName: Map<strin
   }
 }
 
-// function validateChildDirectives(
-//   child: ChildData,
-//   errors: Error[],
-//   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
-//   hostPath: string,
-// ) {
-//   const childKind = child.node.kind;
-//   for (const [directiveName, directives] of child.directivesByDirectiveName) {
-//     const definition = directiveDefinitionByDirectiveName.get(directiveName);
-//     if (!definition) {
-//       errors.push(undefinedDirectiveError(directiveName, hostPath));
-//       continue;
-//     }
-//     const allArguments = new Set<string>();
-//     const requiredArguments = new Set<string>();
-//     getDirectiveDefinitionArgumentSets(definition.arguments || [], allArguments, requiredArguments);
-//     const errorMessages: string[] = [];
-//     for (const directive of directives) {
-//       if (!areNodeKindAndDirectiveLocationCompatible(childKind, definition)) {
-//         errorMessages.push(invalidDirectiveLocationErrorMessage(hostPath, childKind, directiveName));
-//       }
-//       if (!definition.repeatable && directives.length > 1) {
-//         errorMessages.push(invalidRepeatedDirectiveErrorMessage(directiveName, hostPath));
-//       }
-//       if (!definition.arguments || definition.arguments.length < 1) {
-//         if (directive.arguments && directive.arguments.length > 0) {
-//           errorMessages.push(unexpectedDirectiveArgumentsErrorMessage(directive, hostPath));
-//         }
-//         continue;
-//       }
-//       if (!directive.arguments || directive.arguments.length < 1) {
-//         if (requiredArguments.size > 0) {
-//           errorMessages.push(undefinedRequiredArgumentsErrorMessage(directiveName, hostPath, [...requiredArguments]));
-//         }
-//         continue;
-//       }
-//       const definedArguments = getDefinedArgumentsForDirective(
-//         directive.arguments,
-//         allArguments,
-//         directiveName,
-//         hostPath,
-//         errorMessages,
-//       );
-//       const missingRequiredArguments = getEntriesNotInHashSet(requiredArguments, definedArguments);
-//       if (missingRequiredArguments.length > 0) {
-//         errorMessages.push(
-//           undefinedRequiredArgumentsErrorMessage(
-//             directiveName,
-//             hostPath,
-//             [...requiredArguments],
-//             missingRequiredArguments,
-//           ),
-//         );
-//       }
-//     }
-//     if (errorMessages.length > 0) {
-//       errors.push(invalidDirectiveError(directiveName, hostPath, errorMessages));
-//     }
-//   }
-// }
-
 type ChildDefinitionNode = EnumValueDefinitionNode | FieldDefinitionNode | InputValueDefinitionNode;
+
+function addAuthorizationDirectivesToFieldData(
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>,
+  fieldData: FieldData,
+) {
+  const authorizationData = authorizationDataByParentTypeName.get(fieldData.parentTypeName);
+  if (!authorizationData) {
+    return;
+  }
+  const fieldAuthorizationData = authorizationData.fieldAuthorizationDataByFieldName.get(fieldData.name);
+  if (!fieldAuthorizationData) {
+    return;
+  }
+  if (fieldAuthorizationData.requiresAuthentication) {
+    const authenticatedDirective = generateSimpleDirective(AUTHENTICATED);
+    fieldData.directivesByDirectiveName.set(AUTHENTICATED, [authenticatedDirective]);
+  }
+  if (fieldAuthorizationData.requiredScopes.length > 0) {
+    const requiresScopesDirective = generateRequiresScopesDirective(fieldAuthorizationData.requiredScopes);
+    fieldData.directivesByDirectiveName.set(REQUIRES_SCOPES, [requiresScopesDirective]);
+  }
+}
+
+function propagateFieldDataArguments(fieldData: FieldData) {
+  for (const argumentData of fieldData.argumentDataByArgumentName.values()) {
+    // First propagate the argument's directives
+    for (const directiveNodes of argumentData.directivesByDirectiveName.values()) {
+      argumentData.node.directives.push(...directiveNodes);
+    }
+    fieldData.node.arguments.push(argumentData.node);
+  }
+}
 
 function childMapToValueArray<V extends ChildData, N extends ChildDefinitionNode = V['node']>(
   map: Map<string, V>,
-  errors: Error[],
-  directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>,
 ): N[] {
   const valueArray: ChildDefinitionNode[] = [];
   for (const childData of map.values()) {
-    const childPath = `${childData.parentTypeName}.${childData.name}`;
-    // TODO add authorization directives and shareable
+    if (childData.node.kind === Kind.FIELD_DEFINITION) {
+      const fieldData = childData as FieldData;
+      addAuthorizationDirectivesToFieldData(authorizationDataByParentTypeName, fieldData);
+      propagateFieldDataArguments(fieldData);
+    }
+    for (const directiveNodes of childData.directivesByDirectiveName.values()) {
+      childData.node.directives.push(...directiveNodes);
+    }
     valueArray.push(childData.node);
   }
   return valueArray as N[];
@@ -854,15 +901,16 @@ function getValidFlattenedDirectiveArray(
 ): ConstDirectiveNode[] {
   const flattenedArray: ConstDirectiveNode[] = [];
   for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
-    const directiveDefinition = directiveDefinitionByDirectiveName.get(directiveName) ||
+    const directiveDefinition =
+      directiveDefinitionByDirectiveName.get(directiveName) ||
       V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.get(directiveName);
     if (!directiveDefinition) {
       continue;
     }
     if (!directiveDefinition.repeatable && directiveNodes.length > 1) {
-      errors.push(invalidDirectiveError(
-        directiveName, hostPath, [invalidRepeatedDirectiveErrorMessage(directiveName, hostPath)],
-      ));
+      errors.push(
+        invalidDirectiveError(directiveName, hostPath, [invalidRepeatedDirectiveErrorMessage(directiveName, hostPath)]),
+      );
       continue;
     }
     if (directiveName !== KEY) {
@@ -887,96 +935,17 @@ function getValidFlattenedDirectiveArray(
       normalizedDirectiveNodes.push(keyDirectiveNode);
     }
     directivesByDirectiveName.set(directiveName, normalizedDirectiveNodes);
+    if (errorMessages.length > 0) {
+      errors.push(invalidDirectiveError(directiveName, hostPath, errorMessages));
+    }
   }
   return flattenedArray;
 }
 
-// function getValidatedAndNormalizedParentDirectives(
-//   parentData: ParentDefinitionData | SchemaData | ObjectExtensionData,
-//   errors: Error[],
-//   allDirectiveDefinitions: Map<string, DirectiveDefinitionNode>,
-// ): ConstDirectiveNode[] {
-//   const parentTypeName = parentData.typeName;
-//   const normalizedDirectives: ConstDirectiveNode[] = [];
-//   for (const [directiveName, directives] of parentData.directivesByDirectiveName) {
-//     const definition = allDirectiveDefinitions.get(directiveName);
-//     if (!definition) {
-//       errors.push(undefinedDirectiveError(directiveName, parentTypeName));
-//       continue;
-//     }
-//     const allArguments = new Set<string>();
-//     const requiredArguments = new Set<string>();
-//     getDirectiveDefinitionArgumentSets(definition.arguments || [], allArguments, requiredArguments);
-//     const entityKeys = new Set<string>();
-//     const errorMessages: string[] = [];
-//     for (const directive of directives) {
-//       if (!areNodeKindAndDirectiveLocationCompatible(parentData.kind, definition)) {
-//         errorMessages.push(invalidDirectiveLocationErrorMessage(parentTypeName, parentData.kind, directiveName));
-//       }
-//       if (!definition.repeatable && directives.length > 1) {
-//         errorMessages.push(invalidRepeatedDirectiveErrorMessage(directiveName, parentTypeName));
-//       }
-//       if (!definition.arguments || definition.arguments.length < 1) {
-//         if (directive.arguments && directive.arguments.length > 0) {
-//           errorMessages.push(unexpectedDirectiveArgumentsErrorMessage(directive, parentTypeName));
-//         } else {
-//           normalizedDirectives.push(directive);
-//         }
-//         continue;
-//       }
-//       if (!directive.arguments || directive.arguments.length < 1) {
-//         if (requiredArguments.size > 0) {
-//           errorMessages.push(
-//             undefinedRequiredArgumentsErrorMessage(directiveName, parentTypeName, [...requiredArguments]),
-//           );
-//         } else {
-//           normalizedDirectives.push(directive);
-//         }
-//         continue;
-//       }
-//       const definedArguments = getDefinedArgumentsForDirective(
-//         directive.arguments,
-//         allArguments,
-//         directiveName,
-//         parentTypeName,
-//         errorMessages,
-//       );
-//       const missingRequiredArguments = getEntriesNotInHashSet(requiredArguments, definedArguments);
-//       if (missingRequiredArguments.length > 0) {
-//         errorMessages.push(
-//           undefinedRequiredArgumentsErrorMessage(
-//             directiveName,
-//             parentTypeName,
-//             [...requiredArguments],
-//             missingRequiredArguments,
-//           ),
-//         );
-//       }
-//
-//       // Only add unique entity keys
-//       if (directiveName === KEY) {
-//         const directiveKind = directive.arguments[0].value.kind;
-//         if (directiveKind !== Kind.STRING) {
-//           errorMessages.push(invalidKeyDirectiveArgumentErrorMessage(directiveKind));
-//           continue;
-//         }
-//         const entityKey = directive.arguments[0].value.value;
-//         if (entityKeys.has(entityKey)) {
-//           continue;
-//         }
-//         entityKeys.add(entityKey);
-//       }
-//       normalizedDirectives.push(directive);
-//     }
-//     if (errorMessages.length > 0) {
-//       errors.push(invalidDirectiveError(directiveName, parentTypeName, errorMessages));
-//     }
-//   }
-//   return normalizedDirectives;
-// }
-
 function mergeUniqueUnionMembers(
-  unionDefinitionData: UnionDefinitionData, errors: Error[], unionExtensionData?: UnionExtensionData,
+  unionDefinitionData: UnionDefinitionData,
+  errors: Error[],
+  unionExtensionData?: UnionExtensionData,
 ) {
   if (!unionExtensionData) {
     return;
@@ -997,6 +966,7 @@ export function getEnumNodeByData(
   enumDefinitionData: EnumDefinitionData,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>,
   enumExtensionData?: EnumExtensionData,
 ) {
   addExtensionDirectivesToDefinition(enumDefinitionData.directivesByDirectiveName, enumExtensionData);
@@ -1008,8 +978,7 @@ export function getEnumNodeByData(
   );
   enumDefinitionData.node.values = childMapToValueArray(
     enumDefinitionData.enumValueDataByValueName,
-    errors,
-    directiveDefinitionByDirectiveName,
+    authorizationDataByParentTypeName,
   );
   return enumDefinitionData.node;
 }
@@ -1018,6 +987,7 @@ export function getInputObjectNodeByData(
   inputObjectDefinitionData: InputObjectDefinitionData,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>,
   inputObjectExtensionData?: InputObjectExtensionData,
 ) {
   addExtensionDirectivesToDefinition(inputObjectDefinitionData.directivesByDirectiveName, inputObjectExtensionData);
@@ -1029,7 +999,7 @@ export function getInputObjectNodeByData(
   );
   inputObjectDefinitionData.node.fields = childMapToValueArray(
     inputObjectDefinitionData.inputValueDataByValueName,
-    errors, directiveDefinitionByDirectiveName,
+    authorizationDataByParentTypeName,
   );
   return inputObjectDefinitionData.node;
 }
@@ -1038,6 +1008,7 @@ export function getParentWithFieldsNodeByData(
   parentWithFieldsData: DefinitionWithFieldsData | ObjectExtensionData,
   errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  authorizationDataByParentTypeName: Map<string, AuthorizationData>,
   parentExtensionWithFieldsData?: ExtensionWithFieldsData,
 ): ObjectTypeDefinitionNode | InterfaceTypeDefinitionNode | ObjectTypeExtensionNode {
   addExtensionDirectivesToDefinition(parentWithFieldsData.directivesByDirectiveName, parentExtensionWithFieldsData);
@@ -1048,7 +1019,8 @@ export function getParentWithFieldsNodeByData(
     parentWithFieldsData.typeName,
   );
   parentWithFieldsData.node.fields = childMapToValueArray(
-    parentWithFieldsData.fieldDataByFieldName, errors, directiveDefinitionByDirectiveName,
+    parentWithFieldsData.fieldDataByFieldName,
+    authorizationDataByParentTypeName,
   );
   parentWithFieldsData.node.interfaces = setToNamedTypeNodeArray(parentWithFieldsData.implementedInterfaceTypeNames);
   return parentWithFieldsData.node;
@@ -1101,7 +1073,15 @@ export function getUnionNodeByData(
     errors,
     directiveDefinitionByDirectiveName,
     unionDefinitionData.typeName,
-  ),
-    unionDefinitionData.node.types = mapToArrayOfValues(unionDefinitionData.memberByMemberTypeName);
+  );
+  unionDefinitionData.node.types = mapToArrayOfValues(unionDefinitionData.memberByMemberTypeName);
   return unionDefinitionData.node;
+}
+
+export function removeInheritableDirectivesFromParentWithFieldsData(
+  parentData: ParentDefinitionData | ParentExtensionData,
+) {
+  for (const directiveName of INHERITABLE_DIRECTIVE_NAMES) {
+    parentData.directivesByDirectiveName.delete(directiveName);
+  }
 }

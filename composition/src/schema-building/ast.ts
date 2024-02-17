@@ -34,46 +34,46 @@ export function getMutableEnumNode(node: EnumTypeDefinitionNode): MutableEnumNod
     kind: node.kind,
     name: { ...node.name },
     description: formatDescription(node.description),
-    values: node.values?.map(value => getMutableEnumValueNode(value)),
+    values: node.values?.map((value) => getMutableEnumValueNode(value)),
   };
 }
 
 export type MutableEnumValueNode = {
+  directives: ConstDirectiveNode[]; // always initialise for ease
   kind: Kind.ENUM_VALUE_DEFINITION;
   name: NameNode;
   description?: StringValueNode;
-  directives?: ConstDirectiveNode[];
 };
 
 export function getMutableEnumValueNode(node: EnumValueDefinitionNode): MutableEnumValueNode {
   return {
+    directives: [],
     kind: node.kind,
     name: { ...node.name },
     description: formatDescription(node.description),
-    directives: node.directives ? [...node.directives] : undefined, // TODO
   };
 }
 
 export type MutableFieldNode = {
+  arguments: MutableInputValueNode[]; // always initialise for ease
+  directives: ConstDirectiveNode[]; // always initialise for ease
   kind: Kind.FIELD_DEFINITION;
   name: NameNode;
   type: MutableTypeNode;
-  arguments?: MutableInputValueNode[];
   description?: StringValueNode;
-  directives?: ConstDirectiveNode[];
 };
 
 export function getMutableFieldNode(node: FieldDefinitionNode, parentTypeName: string): MutableFieldNode {
-  const fieldPath = `${parentTypeName}.${node.name.value}`; // TODO
   return {
+    arguments: [],
+    directives: [],
     kind: node.kind,
     name: { ...node.name },
     type: deepCopyTypeNode(node.type, parentTypeName, node.name.value),
-    arguments: node.arguments?.map(
-      argumentNode => getMutableInputValueNode(argumentNode, parentTypeName, node.name.value),
-    ),
+    // arguments: node.arguments?.map(
+    //   argumentNode => getMutableInputValueNode(argumentNode, parentTypeName, node.name.value),
+    // ),
     description: formatDescription(node.description),
-    directives: node.directives ? [...node.directives] : undefined, // TODO
   };
 }
 
@@ -94,24 +94,26 @@ export function getMutableInputObjectNode(node: InputObjectTypeDefinitionNode): 
 }
 
 export type MutableInputValueNode = {
+  directives: ConstDirectiveNode[]; // always initialise for ease
   kind: Kind.INPUT_VALUE_DEFINITION;
   name: NameNode;
   type: MutableTypeNode;
   defaultValue?: ConstValueNode;
   description?: StringValueNode;
-  directives?: ConstDirectiveNode[];
 };
 
 export function getMutableInputValueNode(
-  node: InputValueDefinitionNode, parentTypeName: string, fieldName: string,
+  node: InputValueDefinitionNode,
+  parentTypeName: string,
+  fieldName: string,
 ): MutableInputValueNode {
   return {
+    directives: [],
     kind: node.kind,
     name: { ...node.name },
     type: deepCopyTypeNode(node.type, parentTypeName, fieldName),
     defaultValue: node.defaultValue,
     description: formatDescription(node.description),
-    directives: node.directives ? [...node.directives] : undefined, // TODO
   };
 }
 
@@ -158,13 +160,15 @@ export type MutableObjectExtensionNode = {
   interfaces?: NamedTypeNode[];
 };
 
-export function getMutableObjectExtensionNode(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode): MutableObjectExtensionNode {
+export function getMutableObjectExtensionNode(
+  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
+): MutableObjectExtensionNode {
   const description = node.kind === Kind.OBJECT_TYPE_DEFINITION ? node.description : undefined;
   return {
     kind: Kind.OBJECT_TYPE_EXTENSION,
     name: { ...node.name },
     description: formatDescription(description),
-  }
+  };
 }
 
 export type MutableScalarNode = {
@@ -237,7 +241,9 @@ export function getMutableTypeNode(node: TypeNode, childPath: string): MutableTy
         throw unexpectedTypeNodeKindFatalError(childPath);
     }
   }
-  throw new Error(`Field ${childPath} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`);
+  throw new Error(
+    `Field ${childPath} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`,
+  );
 }
 
 export type MutableUnionNode = {
@@ -281,5 +287,7 @@ export function deepCopyTypeNode(node: TypeNode, parentTypeName: string, fieldNa
         throw federationUnexpectedNodeKindError(parentTypeName, fieldName);
     }
   }
-  throw new Error(`Field ${parentTypeName}.${fieldName} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`);
+  throw new Error(
+    `Field ${parentTypeName}.${fieldName} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`,
+  );
 }

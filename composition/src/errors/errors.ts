@@ -165,7 +165,7 @@ export function noBaseTypeExtensionError(typeName: string): Error {
 
 export function noDefinedUnionMembersError(unionTypeName: string, extension = false): Error {
   return new Error(
-    `The union ` + (extension ? 'extension' : '') + ` "${unionTypeName}" must define at least one union member.`
+    `The union ` + (extension ? 'extension' : '') + ` "${unionTypeName}" must define at least one union member.`,
   );
 }
 
@@ -214,8 +214,10 @@ export function shareableFieldDefinitionsError(parent: ObjectContainer, children
 }
 
 export function undefinedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
-  return `The directive "${directiveName}" is declared on "${hostPath}",` +
-      ` but the directive is not defined in the schema.`;
+  return (
+    `The directive "${directiveName}" is declared on "${hostPath}",` +
+    ` but the directive is not defined in the schema.`
+  );
 }
 
 export function undefinedEntityKeyErrorMessage(fieldName: string, objectName: string): string {
@@ -289,9 +291,7 @@ export function invalidUnionError(unionName: string): Error {
 }
 
 export function duplicateUnionMemberError(memberTypeName: string, unionTypeName: string): Error {
-  return new Error(
-    `Member "${memberTypeName}" must only be defined on union "${unionTypeName}" once.`
-  )
+  return new Error(`Member "${memberTypeName}" must only be defined on union "${unionTypeName}" once.`);
 }
 
 export const invalidDeprecatedDirectiveError = new Error(`
@@ -377,29 +377,6 @@ export function invalidDirectiveArgumentTypeErrorMessage(
 
 export function invalidKeyDirectiveArgumentErrorMessage(directiveKind: Kind): string {
   return ` The required argument named "fields" must be type "String" and not type "${directiveKind}".`;
-}
-
-export function invalidGraphQLNameErrorMessage(type: string, name: string): string {
-  return (
-    ` The ${type} "${name}" is an invalid GraphQL name:\n` +
-    `  GraphQL names must match the following regex: /[_a-zA-Z][_a-zA-Z0-9]*/`
-  );
-}
-
-export const invalidOpeningBraceErrorMessage: string = ` Unexpected brace opening:\n  Received an opening brace "{" before the parent value was defined.`;
-
-export const invalidClosingBraceErrorMessage: string = ` Unexpected brace closure:\n  Received a closing brace "}" before any nested values were defined.`;
-
-export const invalidNestingClosureErrorMessage: string = ` Unexpected brace closure:\n  Received a closing brace "}" before its corresponding opening brace "{" was defined.`;
-
-export const invalidNestingErrorMessage: string = ` Invalid nesting:\n  A nested key was terminated without a closing brace "}".`;
-
-export function invalidEntityKeyError(parentTypeName: string, entityKey: string, errorMessage: string): Error {
-  return new Error(
-    `The directive "key" declared on the object "${parentTypeName}"` +
-      ` with the "fields" argument value of "${entityKey}" is invalid for the following reason:\n` +
-      errorMessage,
-  );
 }
 
 export function invalidKeyDirectivesError(parentTypeName: string, errorMessages: string[]): Error {
@@ -887,10 +864,8 @@ export function allFieldDefinitionsAreInaccessibleError(typeString: string, type
   );
 }
 
-export function equivalentSourceAndTargetOverrideError(subgraphName: string, hostPath: string): Error {
-  return new Error(
-    `Cannot override field "${hostPath}" because the source and target subgraph names are both "${subgraphName}"`,
-  );
+export function equivalentSourceAndTargetOverrideErrorMessage(subgraphName: string, hostPath: string): string {
+  return `Cannot override field "${hostPath}" because the source and target subgraph names are both "${subgraphName}"`;
 }
 
 export function undefinedEntityInterfaceImplementationsError(
