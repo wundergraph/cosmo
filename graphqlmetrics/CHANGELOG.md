@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.12.1...graphqlmetrics@0.13.0) (2024-02-17)
+
+### Features
+
+* use json schema to validate and document router config ([#545](https://github.com/wundergraph/cosmo/issues/545)) ([ec700ba](https://github.com/wundergraph/cosmo/commit/ec700bae0224d3d0180b8d56800f48c9002dcee5)) (@StarpTech)
+
 ## [0.12.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.12.0...graphqlmetrics@0.12.1) (2024-02-16)
 
 **Note:** Version bump only for package graphqlmetrics
