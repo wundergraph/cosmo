@@ -241,12 +241,12 @@ type CDNConfiguration struct {
 }
 
 type EventSource struct {
-	Provider string `yaml:"provider"`
-	URL      string `yaml:"url"`
+	Provider string `yaml:"provider,omitempty"`
+	URL      string `yaml:"url,omitempty"`
 }
 
 type EventsConfiguration struct {
-	Sources []EventSource `yaml:"sources"`
+	Sources []EventSource `yaml:"sources,omitempty"`
 }
 
 type Cluster struct {
@@ -257,15 +257,15 @@ type Config struct {
 	Version string `yaml:"version,omitempty"`
 
 	InstanceID     string         `yaml:"instance_id,omitempty" envconfig:"INSTANCE_ID"`
-	Graph          Graph          `yaml:"graph"`
-	Telemetry      Telemetry      `yaml:"telemetry"`
-	GraphqlMetrics GraphqlMetrics `yaml:"graphql_metrics"`
-	CORS           CORS           `yaml:"cors"`
-	Cluster        Cluster        `yaml:"cluster"`
+	Graph          Graph          `yaml:"graph,omitempty"`
+	Telemetry      Telemetry      `yaml:"telemetry,omitempty"`
+	GraphqlMetrics GraphqlMetrics `yaml:"graphql_metrics,omitempty"`
+	CORS           CORS           `yaml:"cors,omitempty"`
+	Cluster        Cluster        `yaml:"cluster,omitempty"`
 
-	Modules        map[string]interface{} `yaml:"modules"`
-	Headers        HeaderRules            `yaml:"headers"`
-	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping"`
+	Modules        map[string]interface{} `yaml:"modules,omitempty"`
+	Headers        HeaderRules            `yaml:"headers,omitempty"`
+	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3003" envconfig:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL"`
@@ -273,7 +273,7 @@ type Config struct {
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
 	LogLevel                      string                      `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay,omitempty" default:"60s" envconfig:"SHUTDOWN_DELAY"`
+	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" default:"60s" envconfig:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" default:"20s" envconfig:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" default:"10s" envconfig:"POLL_INTERVAL"`
 	HealthCheckPath               string                      `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH"`
@@ -281,13 +281,13 @@ type Config struct {
 	LivenessCheckPath             string                      `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH"`
 	GraphQLPath                   string                      `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
 	PlaygroundPath                string                      `yaml:"playground_path" default:"/" envconfig:"PLAYGROUND_PATH"`
-	Authentication                AuthenticationConfiguration `yaml:"authentication"`
-	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
-	RateLimit                     RateLimitConfiguration      `yaml:"rate_limit"`
+	Authentication                AuthenticationConfiguration `yaml:"authentication,omitempty"`
+	Authorization                 AuthorizationConfiguration  `yaml:"authorization,omitempty"`
+	RateLimit                     RateLimitConfiguration      `yaml:"rate_limit,omitempty"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
-	CDN                           CDNConfiguration            `yaml:"cdn"`
-	DevelopmentMode               bool                        `yaml:"dev_mode,omitempty" default:"false" envconfig:"DEV_MODE"`
-	Events                        EventsConfiguration         `yaml:"events"`
+	CDN                           CDNConfiguration            `yaml:"cdn,omitempty"`
+	DevelopmentMode               bool                        `yaml:"dev_mode" default:"false" envconfig:"DEV_MODE"`
+	Events                        EventsConfiguration         `yaml:"events,omitempty"`
 
 	RouterConfigPath   string `yaml:"router_config_path,omitempty" envconfig:"ROUTER_CONFIG_PATH"`
 	RouterRegistration bool   `yaml:"router_registration" envconfig:"ROUTER_REGISTRATION" default:"true"`

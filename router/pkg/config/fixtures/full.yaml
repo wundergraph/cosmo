@@ -193,3 +193,7 @@ rate_limit:
     burst: 60
     period: "60s"
     reject_exceeding_requests: true
+
+override_routing_url:
+  subgraphs:
+    some-subgraph: http://router:3002/graphql

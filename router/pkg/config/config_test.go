@@ -78,7 +78,7 @@ func TestDefaults(t *testing.T) {
 	// Events
 
 	require.Equal(t, cfg.Events, EventsConfiguration{
-		Sources: []EventSource{},
+		Sources: nil,
 	})
 
 	// GraphqlMetrics
@@ -131,7 +131,7 @@ func TestDefaults(t *testing.T) {
 	// Authentication
 
 	require.Equal(t, cfg.Authentication, AuthenticationConfiguration{
-		Providers: []AuthenticationProvider{},
+		Providers: nil,
 	})
 
 	// CORS

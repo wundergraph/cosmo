@@ -14,6 +14,7 @@
     },
     "graph": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "token": {
           "type": "string",
@@ -23,6 +24,7 @@
     },
     "graphql_metrics": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -43,6 +45,7 @@
     "telemetry": {
       "type": "object",
       "description": "The configuration for the telemetry. The telemetry is used to collect and export the traces and metrics.",
+      "additionalProperties": false,
       "properties": {
         "service_name": {
           "type": "string",
@@ -50,6 +53,7 @@
         },
         "tracing": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "enabled": {
               "type": "boolean"
@@ -66,6 +70,7 @@
               "items": {
                 "type": "object",
                 "required": ["endpoint"],
+                "additionalProperties": false,
                 "properties": {
                   "disabled": {
                     "type": "boolean"
@@ -114,6 +119,7 @@
             },
             "propagation": {
               "type": "object",
+              "additionalProperties": false,
               "properties": {
                 "trace_context": {
                   "type": "boolean",
@@ -145,10 +151,12 @@
         "metrics": {
           "type": "object",
           "description": "The configuration for the collection and export of metrics. The metrics are collected and exported using the OpenTelemetry protocol (OTLP) and Prometheus.",
+          "additionalProperties": false,
           "properties": {
             "otlp": {
               "type": "object",
               "description": "The configuration for the OpenTelemetry protocol (OTLP). The OTLP is used to collect and export the metrics.",
+              "additionalProperties": false,
               "properties": {
                 "enabled": {
                   "type": "boolean",
@@ -165,6 +173,7 @@
                   "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
                   "items": {
                     "type": "object",
+                    "additionalProperties": false,
                     "properties": {
                       "disabled": {
                         "type": "boolean"
@@ -201,6 +210,7 @@
             "prometheus": {
               "type": "object",
               "description": "The configuration for the Prometheus metrics. The Prometheus metrics are used to collect and export the metrics.",
+              "additionalProperties": false,
               "properties": {
                 "enabled": {
                   "type": "boolean",
@@ -240,6 +250,7 @@
     },
     "cors": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "allow_origins": {
           "type": "array",
@@ -299,6 +310,7 @@
     },
     "cluster": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string",
@@ -394,9 +406,11 @@
     "traffic_shaping": {
       "type": "object",
       "description": "The configuration for the traffic shaping. Configure rules for traffic shaping like maximum request body size, timeouts, retry behavior, etc. See https://cosmo-docs.wundergraph.com/router/traffic-shaping for more information.",
+      "additionalProperties": false,
       "properties": {
         "router": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "max_request_body_size": {
               "type": "string",
@@ -410,6 +424,7 @@
         "all": {
           "type": "object",
           "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+          "additionalProperties": false,
           "properties": {
             "request_timeout": {
               "type": "string",
@@ -453,6 +468,7 @@
             "retry": {
               "type": "object",
               "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
+              "additionalProperties": false,
               "properties": {
                 "enabled": {
                   "type": "boolean"
@@ -489,8 +505,10 @@
     "headers": {
       "type": "object",
       "description": "The configuration for the headers. The headers rules are used to modify the headers of the incoming requests and how they are propagated to your subgraphs. See https://cosmo-docs.wundergraph.com/router/proxy-capabilities#forward-http-headers-to-subgraphs for more information.",
+      "additionalProperties": false,
       "properties": {
         "all": {
+          "additionalProperties": false,
           "properties": {
             "request": {
               "type": "array",
@@ -504,6 +522,7 @@
           "type": "object",
           "additionalProperties": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "request": {
                 "type": "array",
@@ -528,11 +547,13 @@
     "authentication": {
       "type": "object",
       "description": "The configuration for the authentication. The authentication is used to authenticate the incoming requests. We currently support JWK (JSON Web Key) authentication.",
+      "additionalProperties": false,
       "properties": {
         "providers": {
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "name": {
                 "type": "string",
@@ -540,6 +561,7 @@
               },
               "jwks": {
                 "type": "object",
+                "additionalProperties": false,
                 "properties": {
                   "url": {
                     "type": "string",
@@ -581,6 +603,7 @@
     },
     "authorization": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "require_authentication": {
           "type": "boolean",
@@ -595,6 +618,7 @@
     "rate_limit": {
       "type": "object",
       "description": "The configuration for the rate limit. The rate limit is used to limit the number of requests that can be made to the router.",
+      "additionalProperties": false,
       "properties": {
         "enabled": {
           "type": "boolean"
@@ -606,6 +630,7 @@
         },
         "simple_strategy": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "rate": {
               "type": "integer",
@@ -633,6 +658,7 @@
         },
         "storage": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "addr": {
               "type": "string",
@@ -665,6 +691,7 @@
     "cdn": {
       "type": "object",
       "description": "The configuration for the CDN. The CDN is used to fetch the schema and configurations from the CDN.",
+      "additionalProperties": false,
       "properties": {
         "url": {
           "type": "string",
@@ -685,11 +712,13 @@
     "events": {
       "type": "object",
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
+      "additionalProperties": false,
       "properties": {
         "sources": {
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "provider": {
                 "type": "string",
@@ -724,9 +753,11 @@
     "override_routing_url": {
       "type": "object",
       "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs.",
+      "additionalProperties": false,
       "properties": {
         "subgraphs": {
           "type": "object",
+          "description": "The configuration for the subgraphs. The subgraphs are used to override the routing URL for the subgraphs.",
           "additionalProperties": {
             "type": "string",
             "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
@@ -738,10 +769,12 @@
     "engine": {
       "type": "object",
       "description": "The configuration for the engine. The engine is used to execute the GraphQL queries, mutations and subscriptions. Only modify this if you know what you are doing.",
+      "additionalProperties": false,
       "properties": {
         "debug": {
           "type": "object",
           "description": "The debug configuration. The debug configuration is used to enable the debug mode for the engine.",
+          "additionalProperties": false,
           "properties": {
             "print_operation_transformations": {
               "type": "boolean",
@@ -838,6 +871,7 @@
     "traffic_shaping_header_rule": {
       "type": "object",
       "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+      "additionalProperties": false,
       "properties": {
         "op": {
           "type": "string",
