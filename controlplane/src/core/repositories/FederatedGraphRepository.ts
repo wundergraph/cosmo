@@ -904,8 +904,6 @@ export class FederatedGraphRepository {
 
     const key = keys[0];
 
-    // TOOD
-
     return {
       id: key.id,
       name: key.name,
