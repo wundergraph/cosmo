@@ -599,7 +599,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.traceConfig.Enabled {
-		tp, err := rtrace.NewTracerProvider(ctx, r.logger, r.traceConfig)
+		tp, err := rtrace.NewTracerProvider(ctx, r.logger, r.traceConfig, r.instanceID)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
