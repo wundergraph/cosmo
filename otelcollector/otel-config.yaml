@@ -22,11 +22,6 @@ processors:
   batch:
     send_batch_size: 10000
     timeout: 5s
-  memory_limiter:
-    # percentage of memory only supported on linux
-    limit_percentage: 75
-    spike_limit_percentage: 25
-    check_interval: 1s
 
 exporters:
   clickhouse:
