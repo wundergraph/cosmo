@@ -2726,6 +2726,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           token: tokenValue,
           federatedGraphId: graph.id,
           tokenName: req.tokenName,
+          createdBy: authContext.userId,
           organizationId: authContext.organizationId,
         });
 
@@ -3555,6 +3556,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           federatedGraphId: migratedGraph.id,
           tokenName: migratedGraph.name,
           organizationId: authContext.organizationId,
+          createdBy: authContext.userId,
         });
 
         await auditLogRepo.addAuditLog({
@@ -6431,7 +6433,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          tokens,
+          // Don't return the token, only the metadata
+          tokens: tokens.map(({ token, ...rest }) => ({
+            id: rest.id,
+            name: rest.name,
+            createdAt: rest.createdAt,
+            lastUsedAt: rest.lastUsedAt || '',
+            creatorEmail: rest.creatorEmail || '',
+          })),
         };
       });
     },
