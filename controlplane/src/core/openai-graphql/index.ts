@@ -15,7 +15,7 @@ export class OpenAIGraphql {
   public async generateReadme(input: { graphName: string; sdl: string }): Promise<{ readme: string }> {
     const response = await this.client.chat.completions.create(
       {
-        model: 'gpt-3.5-turbo-1106',
+        model: 'gpt-3.5-turbo-0125',
         messages: [
           {
             role: 'system',
