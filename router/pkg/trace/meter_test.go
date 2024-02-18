@@ -24,7 +24,8 @@ func TestStartAgent(t *testing.T) {
 		}},
 	}
 	c3 := &Config{
-		Name: "otlphttp",
+		Name:    "otlphttp",
+		Version: "1.0.0",
 		Exporters: []*Exporter{{
 			Endpoint: endpoint,
 			Headers: map[string]string{
@@ -36,12 +37,14 @@ func TestStartAgent(t *testing.T) {
 
 	log := zap.NewNop()
 
-	_, err := NewTracerProvider(context.Background(), log, c1)
+	instanceID := "instanceID"
+
+	_, err := NewTracerProvider(context.Background(), log, c1, instanceID)
 	assert.NoError(t, err)
 
-	_, err = NewTracerProvider(context.Background(), log, c2)
+	_, err = NewTracerProvider(context.Background(), log, c2, instanceID)
 	assert.NoError(t, err)
 
-	_, err = NewTracerProvider(context.Background(), log, c3)
+	_, err = NewTracerProvider(context.Background(), log, c3, instanceID)
 	assert.NoError(t, err)
 }
