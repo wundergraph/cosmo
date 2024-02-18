@@ -24,9 +24,9 @@ fullnameOverride: ""
 # -- Allows to set additional environment / runtime variables on the container. Useful for global application non-specific settings.
 extraEnvVars:
   # Recommended for production to mitigate the risk of OOM kills. Requires Go 1.19+.
-  # Keep the value lower than the maximum memory limit you set.
+  # Keep the value lower than the maximum memory limit you set. E.g. if you have 3GB memory limit, set this to 2750MiB.
 #  - name: GOMEMLIMIT
-#    value: "2000MiB"
+#    value: "2750MiB"
 
 serviceAccount:
   # Specifies whether a service account should be created
