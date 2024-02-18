@@ -20,7 +20,7 @@ WunderGraph Cosmo GraphQL Metrics Collector
 | configuration.logLevel | string | `"info"` |  |
 | deploymentStrategy | object | `{}` |  |
 | existingSecret | string | `""` | Existing secret in the same namespace containing the graphqlmetrics Secrets - clickhouseDsn,jwtSecret. The secret keys have to match with current secret. |
-| extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
+| extraEnvVars | list | `[]` | Allows to set additional environment / runtime variables on the container. Useful for global application non-specific settings. |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |

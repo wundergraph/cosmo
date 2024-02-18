@@ -22,11 +22,6 @@ processors:
   batch:
     send_batch_size: 10000
     timeout: 5s
-  memory_limiter:
-    # percentage of memory only supported on linux
-    limit_percentage: 75
-    spike_limit_percentage: 25
-    check_interval: 1s
 
 exporters:
   clickhouse:
@@ -62,10 +57,10 @@ service:
     metrics:
       receivers: [otlp]
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
-      processors: [attributes/from_auth_context, memory_limiter, batch]
+      processors: [attributes/from_auth_context, batch]
       exporters: [clickhouse]
     traces:
       receivers: [otlp]
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
-      processors: [attributes/from_auth_context, memory_limiter, batch]
+      processors: [attributes/from_auth_context, batch]
       exporters: [clickhouse]
