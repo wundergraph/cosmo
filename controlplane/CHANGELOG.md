@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.68.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.68.1...controlplane@0.68.2) (2024-02-18)
+
+### Bug Fixes
+
+* remove duplicated columns ([#547](https://github.com/wundergraph/cosmo/issues/547)) ([36e683a](https://github.com/wundergraph/cosmo/commit/36e683aa21dd8b5ae77ea8fda9d0d07b8e820733)) (@StarpTech)
+
 ## [0.68.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.68.0...controlplane@0.68.1) (2024-02-16)
 
 ### Bug Fixes

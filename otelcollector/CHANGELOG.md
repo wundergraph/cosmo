@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.11.2...otelcollector@0.12.0) (2024-02-18)
+
+### Features
+
+* recommend GOMEMLIMIT and remove memory limiter ([#548](https://github.com/wundergraph/cosmo/issues/548)) ([4167082](https://github.com/wundergraph/cosmo/commit/41670829f55c2b3582cf2381f5460fef29643036)) (@StarpTech)
+
 ## [0.11.2](https://github.com/wundergraph/cosmo/compare/otelcollector@0.11.1...otelcollector@0.11.2) (2024-02-01)
 
 ### Bug Fixes
