@@ -145,13 +145,11 @@ export class RouterMetricsRepository {
         first_value(ServiceName) as serviceName,
         first_value(ServiceVersion) as serviceVersion,
         ServiceInstanceID as serviceInstanceId,
-        first_value(ClusterName) as clusterName,
         first_value(ProcessID) as processId
       from (
          select Timestamp,
                 ProcessUptimeSeconds,
                 Hostname,
-                ClusterName,
                 ConfigVersionID,
                 ServiceName,
                 ServiceVersion,
