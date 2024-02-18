@@ -1,5 +1,5 @@
 {
-  "id": "2d3fbe68-b865-4134-b564-53448e5e66f0",
+  "id": "86c179ca-210c-4daf-bb9e-ed052b5aec34",
   "prevId": "6538b679-75a5-44bd-9ef6-7636847a4c28",
   "version": "5",
   "dialect": "pg",
@@ -1039,8 +1039,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "user_id": {
-          "name": "user_id",
+        "created_by": {
+          "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -1090,12 +1090,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "graph_api_tokens_user_id_users_id_fk": {
-          "name": "graph_api_tokens_user_id_users_id_fk",
+        "graph_api_tokens_created_by_users_id_fk": {
+          "name": "graph_api_tokens_created_by_users_id_fk",
           "tableFrom": "graph_api_tokens",
           "tableTo": "users",
           "columnsFrom": [
-            "user_id"
+            "created_by"
           ],
           "columnsTo": [
             "id"
