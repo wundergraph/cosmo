@@ -400,8 +400,8 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1
       openai:
-        specifier: ^4.26.0
-        version: 4.26.0
+        specifier: ^4.28.0
+        version: 4.28.0
       pino:
         specifier: ^8.17.2
         version: 8.17.2
@@ -16590,8 +16590,8 @@ packages:
       is-inside-container: 1.0.0
       is-wsl: 2.2.0
 
-  /openai@4.26.0:
-    resolution: {integrity: sha512-HPC7tgYdeP38F3uHA5WgnoXZyGbAp9jgcIo23p6It+q/07u4C+NZ8xHKlMShsPbDDmFRpPsa3vdbXYpbhJH3eg==}
+  /openai@4.28.0:
+    resolution: {integrity: sha512-JM8fhcpmpGN0vrUwGquYIzdcEQHtFuom6sRCbbCM6CfzZXNuRk33G7KfeRAIfnaCxSpzrP5iHtwJzIm6biUZ2Q==}
     hasBin: true
     dependencies:
       '@types/node': 18.17.0
