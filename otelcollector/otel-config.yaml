@@ -57,10 +57,10 @@ service:
     metrics:
       receivers: [otlp]
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
-      processors: [attributes/from_auth_context, memory_limiter, batch]
+      processors: [attributes/from_auth_context, batch]
       exporters: [clickhouse]
     traces:
       receivers: [otlp]
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
-      processors: [attributes/from_auth_context, memory_limiter, batch]
+      processors: [attributes/from_auth_context, batch]
       exporters: [clickhouse]
