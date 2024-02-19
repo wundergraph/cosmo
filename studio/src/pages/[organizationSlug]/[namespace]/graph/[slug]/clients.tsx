@@ -370,8 +370,10 @@ const ClientOperations = () => {
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
                               <Link
-                                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${btoa(
+                                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
                                   op.contents || "",
+                                )}&variables=${encodeURIComponent(
+                                  JSON.stringify(variables),
                                 )}`}
                               >
                                 <PlayIcon />
