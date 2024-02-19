@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.68.1](https://github.com/wundergraph/cosmo/compare/router@0.68.0...router@0.68.1) (2024-02-19)
+
+### Bug Fixes
+
+* listen port in config ([#553](https://github.com/wundergraph/cosmo/issues/553)) ([e0345bc](https://github.com/wundergraph/cosmo/commit/e0345bc02eafd96f553760e58510415c9c4fb654)) (@thisisnithin)
+* router listen address default port ([#551](https://github.com/wundergraph/cosmo/issues/551)) ([8315997](https://github.com/wundergraph/cosmo/commit/8315997a48b1c5622f5017aef5b26a772f8cebcf)) (@thisisnithin)
+
 # [0.68.0](https://github.com/wundergraph/cosmo/compare/router@0.67.0...router@0.68.0) (2024-02-18)
 
 ### Features
