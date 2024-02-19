@@ -231,7 +231,7 @@ export function buildCoercedFilterSqlStatement(
 
   for (const [name, item] of Object.entries(groupedFilterStatements)) {
     let condition = ' OR ';
-    if (name === 'durationInNano') {
+    if (name === 'durationInNano' || name === 'p95') {
       condition = ' AND ';
     }
 

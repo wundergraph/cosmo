@@ -41,6 +41,7 @@ interface DataTableFacetedFilter<TData, TValue> {
 
 const SliderWithOptions = ({
   defaultRange,
+  unit,
   onValueChange,
 }: {
   defaultRange: { start: number; end: number };
@@ -49,6 +50,7 @@ const SliderWithOptions = ({
   }: {
     rangeValue: { start: number; end: number };
   }) => void;
+  unit: string;
 }) => {
   const [range, setRange] = useState<{ start: number; end: number }>(
     defaultRange,
@@ -75,69 +77,83 @@ const SliderWithOptions = ({
           });
         }}
       />
-      <div className="flex gap-x-2">
-        <Input
-          defaultValue={range.start}
-          type="number"
-          onBlur={(e) => {
-            if (Number(e.target.value) > range.end) {
-              setRange({
-                start: range.end,
-                end: Number(e.target.value) > 60 ? 60 : Number(e.target.value),
-              });
-              onValueChange({
-                rangeValue: {
+      <div className="flex items-center gap-x-2">
+        <div className="relative flex items-center">
+          <Input
+            defaultValue={range.start}
+            type="number"
+            onBlur={(e) => {
+              if (Number(e.target.value) > range.end) {
+                setRange({
                   start: range.end,
                   end:
                     Number(e.target.value) > 60 ? 60 : Number(e.target.value),
-                },
-              });
-            } else {
-              setRange({
-                ...range,
-                start: Number(e.target.value) > 0 ? Number(e.target.value) : 0,
-              });
-              onValueChange({
-                rangeValue: {
+                });
+                onValueChange({
+                  rangeValue: {
+                    start: range.end,
+                    end:
+                      Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+                  },
+                });
+              } else {
+                setRange({
                   ...range,
                   start:
                     Number(e.target.value) > 0 ? Number(e.target.value) : 0,
-                },
-              });
-            }
-          }}
-        />
-        <Input
-          defaultValue={range.end}
-          type="number"
-          onBlur={(e) => {
-            if (Number(e.target.value) > range.start) {
-              setRange({
-                ...range,
-                end: Number(e.target.value) > 60 ? 60 : Number(e.target.value),
-              });
-              onValueChange({
-                rangeValue: {
+                });
+                onValueChange({
+                  rangeValue: {
+                    ...range,
+                    start:
+                      Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                  },
+                });
+              }
+            }}
+          />
+          <span className="absolute right-2 text-sm text-muted-foreground">
+            {unit}
+          </span>
+        </div>
+        <div className="relative flex items-center">
+          <Input
+            defaultValue={range.end}
+            type="number"
+            onBlur={(e) => {
+              if (Number(e.target.value) > range.start) {
+                setRange({
                   ...range,
                   end:
                     Number(e.target.value) > 60 ? 60 : Number(e.target.value),
-                },
-              });
-            } else {
-              setRange({
-                start: Number(e.target.value) > 0 ? Number(e.target.value) : 0,
-                end: range.start,
-              });
-              onValueChange({
-                rangeValue: {
+                });
+                onValueChange({
+                  rangeValue: {
+                    ...range,
+                    end:
+                      Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+                  },
+                });
+              } else {
+                setRange({
                   start:
                     Number(e.target.value) > 0 ? Number(e.target.value) : 0,
                   end: range.start,
-                },
-              });
-            }
-          }}
-        />
+                });
+                onValueChange({
+                  rangeValue: {
+                    start:
+                      Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                    end: range.start,
+                  },
+                });
+              }
+            }}
+          />
+          <span className="absolute right-2 text-sm text-muted-foreground">
+            {unit}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -161,8 +177,8 @@ export function DataTableFilterCommands<TData, TValue>({
   useEffect(() => {
     if (
       !selectedOptions ||
-      selectedOptions.length !== 2 ||
-      title !== "Duration"
+      selectedOptions.length === 0 || 
+      customOptions !== CustomOptions.Range
     )
       return;
     const option1 = JSON.parse(selectedOptions[0]).value;
@@ -175,7 +191,7 @@ export function DataTableFilterCommands<TData, TValue>({
     } else {
       setRange({ start: time1, end: time2 });
     }
-  }, [selectedOptions, title]);
+  }, [customOptions, selectedOptions]);
 
   const updateRangeFilters = ({
     rangeValue,
@@ -293,7 +309,8 @@ export function DataTableFilterCommands<TData, TValue>({
           <p className="px-2 text-xs text-muted-foreground">{`Select ${title} (secs)`}</p>
           <SliderWithOptions
             key={`slider-${range.start}-${range.end}`}
-            defaultRange={range}
+            unit="secs"
+            defaultRange={{ start: range.start, end: range.end }}
             onValueChange={updateRangeFilters}
           />
           {selectedValues.size > 0 && (
@@ -321,46 +338,52 @@ export function DataTableFilterCommands<TData, TValue>({
     <Command className="w-64">
       {customOptions === undefined && (
         <>
-          <CommandInput placeholder={title} />
+          <CommandInput placeholder={title} disabled={options.length === 0} />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup>
-              {options.map((option, index) => {
-                const isSelected = selectedValues.has(option.value);
-                return (
-                  <CommandItem
-                    key={option.value}
-                    onSelect={() => {
-                      if (isSelected) {
-                        selectedValues.delete(option.value);
-                      } else {
-                        selectedValues.add(option.value);
-                      }
-                      const filterValues = Array.from(selectedValues);
-                      onSelect?.(
-                        filterValues.length ? filterValues : undefined,
-                      );
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50 [&_svg]:invisible",
-                      )}
+            {options.length > 0 ? (
+              <CommandGroup>
+                {options.map((option, index) => {
+                  const isSelected = selectedValues.has(option.value);
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      onSelect={() => {
+                        if (isSelected) {
+                          selectedValues.delete(option.value);
+                        } else {
+                          selectedValues.add(option.value);
+                        }
+                        const filterValues = Array.from(selectedValues);
+                        onSelect?.(
+                          filterValues.length ? filterValues : undefined,
+                        );
+                      }}
                     >
-                      <CheckIcon className={cn("h-4 w-4")} />
-                    </div>
-                    {option.icon && (
-                      <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="hidden">{index}</span>
-                    <span className="truncate">{option.label}</span>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
+                      <div
+                        className={cn(
+                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                          isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "opacity-50 [&_svg]:invisible",
+                        )}
+                      >
+                        <CheckIcon className={cn("h-4 w-4")} />
+                      </div>
+                      {option.icon && (
+                        <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className="hidden">{index}</span>
+                      <span className="truncate">{option.label}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            ) : (
+              <div className="flex w-full items-center justify-center p-4 text-sm">
+                No filters.
+              </div>
+            )}
             {selectedValues.size > 0 && (
               <>
                 <CommandSeparator />
@@ -405,7 +428,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                 variant="muted"
                 className="rounded-sm px-1 font-normal lg:hidden"
               >
-                {title === "Duration"
+                {customOptions === CustomOptions.Range
                   ? selectedValues.size / 2
                   : selectedValues.size}
               </Badge>
@@ -415,7 +438,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                     variant="muted"
                     className="rounded-sm px-1 font-normal"
                   >
-                    {title === "Duration"
+                    {customOptions === CustomOptions.Range
                       ? selectedValues.size / 2
                       : selectedValues.size}{" "}
                     selected

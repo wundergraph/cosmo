@@ -27,14 +27,10 @@ export function DataTablePrimaryFilterMenu<T>({
 }) {
   const { isMobile } = useWindowSize();
 
-  const isDisabled =
-    filters.filter((f) => f.options.length > 0 && f.customOptions === undefined).length ===
-    0;
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" disabled={isDisabled}>
+        <Button variant="outline">
           Filter <ChevronDownIcon className="ml-2" />
         </Button>
       </DropdownMenuTrigger>
@@ -45,46 +41,35 @@ export function DataTablePrimaryFilterMenu<T>({
             collapsible
             className="max-h-72 w-full overflow-auto"
           >
-            {filters
-              .filter(
-                (f) => f.options.length > 0 || f.customOptions !== undefined,
-              )
-              .map((filter, index) => {
-                return (
-                  <AccordionItem
-                    value={index.toString()}
-                    key={index.toString()}
-                  >
-                    <AccordionTrigger className="p-2">
-                      <span>{filter.title}</span>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <DataTableFilterCommands {...filter} />
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
+            {filters.map((filter, index) => {
+              return (
+                <AccordionItem value={index.toString()} key={index.toString()}>
+                  <AccordionTrigger className="p-2">
+                    <span>{filter.title}</span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <DataTableFilterCommands {...filter} />
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         ) : (
           <DropdownMenuGroup>
-            {filters
-              .filter(
-                (f) => f.options.length > 0 || f.customOptions !== undefined,
-              )
-              .map((filter, index) => {
-                return (
-                  <DropdownMenuSub key={index.toString()}>
-                    <DropdownMenuSubTrigger>
-                      <span>{filter.title}</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuSubContent>
-                        <DataTableFilterCommands {...filter} />
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
-                );
-              })}
+            {filters.map((filter, index) => {
+              return (
+                <DropdownMenuSub key={index.toString()}>
+                  <DropdownMenuSubTrigger>
+                    <span>{filter.title}</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      <DataTableFilterCommands {...filter} />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              );
+            })}
           </DropdownMenuGroup>
         )}
       </DropdownMenuContent>

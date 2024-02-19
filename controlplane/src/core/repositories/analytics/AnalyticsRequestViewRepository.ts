@@ -207,28 +207,8 @@ export class AnalyticsRequestViewRepository {
       dbClause: 'having',
       title: 'P95 Latency',
       columnName: 'p95',
-      options: [
-        {
-          operator: AnalyticsViewFilterOperator.LESS_THAN,
-          label: '< 150ms',
-          value: '150000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.LESS_THAN,
-          label: '< 1000ms',
-          value: '1000000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.LESS_THAN,
-          label: '< 2000ms',
-          value: '2000000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL,
-          label: '>= 2000ms',
-          value: '2000000000',
-        },
-      ],
+      options: [],
+      customOptions: CustomOptions.Range,
     },
     clientName: {
       dbField: 'ClientName',
