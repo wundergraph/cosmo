@@ -737,29 +737,45 @@ const APIKeysPage: NextPageWithLayout = () => {
       ) : (
         <>
           <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <p className="text-sm text-muted-foreground">
-              API keys are used to authenticate the Cosmo CLI for local
-              development or CI/CD.{" "}
-              <Link
-                href={docsBaseURL + "/studio/api-keys"}
-                className="text-primary"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Learn more
-              </Link>
-            </p>
-            {checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            }) && (
-              <CreateAPIKey
-                apiKey={apiKey}
-                setApiKey={setApiKey}
-                open={openApiKeyCreatedDialog}
-                setOpen={setOpenApiKeyCreatedDialog}
-              />
-            )}
+            <div>
+              <p className="text-sm text-muted-foreground">
+                API keys are used to authenticate the Cosmo CLI for local
+                development or CI/CD.{" "}
+                <Link
+                  href={docsBaseURL + "/studio/api-keys"}
+                  className="text-primary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Learn more
+                </Link>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                If you need a token for the Router please take a look{" "}
+                <Link
+                  href={docsBaseURL + "/cli/router/token/create"}
+                  className="text-primary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  here
+                </Link>
+                .
+              </p>
+            </div>
+            <div>
+              {checkUserAccess({
+                rolesToBe: ["admin", "developer"],
+                userRoles: user?.currentOrganization.roles || [],
+              }) && (
+                <CreateAPIKey
+                  apiKey={apiKey}
+                  setApiKey={setApiKey}
+                  open={openApiKeyCreatedDialog}
+                  setOpen={setOpenApiKeyCreatedDialog}
+                />
+              )}
+            </div>
           </div>
           {deleteApiKeyName &&
             checkUserAccess({
