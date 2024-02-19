@@ -3,6 +3,7 @@ import {
   GraphQLEnumType,
   GraphQLInputObjectType,
   GraphQLInterfaceType,
+  GraphQLNamedType,
   GraphQLObjectType,
   GraphQLScalarType,
   GraphQLSchema,
@@ -155,6 +156,75 @@ export const mapGraphQLType = (
 
   throw new Error("Unsupported GraphQL type");
 };
+
+export const extractVariablesFromGraphQL = (
+  body: string,
+  ast: GraphQLSchema | null,
+) => {
+  const allTypes = ast
+    ? Object.values(ast.getTypeMap())
+        .filter((type) => !type.name.startsWith("__"))
+        .sort()
+    : [];
+
+  const variablesRegex =
+    /\$([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*([^\s!]+)(!)?(\s*=\s*([^,\)]+))?/g;
+  let variables: Record<string, any> = {};
+
+  let match;
+  while ((match = variablesRegex.exec(body)) !== null) {
+    const [, variableName, variableType, nonNull, , defaultValue] = match;
+    let defaultValueParsed;
+    if (defaultValue !== undefined && defaultValue !== "") {
+      defaultValueParsed = JSON.parse(defaultValue);
+    } else {
+      defaultValueParsed = nonNull
+        ? getDefaultValue(variableType, allTypes)
+        : null;
+    }
+
+    variables[variableName] = defaultValueParsed;
+  }
+
+  return variables;
+};
+
+function getDefaultValue(
+  typeName: string,
+  schemaTypes: GraphQLNamedType[],
+): any {
+  const foundType = schemaTypes.find((type) => type.name === typeName);
+  if (!foundType) return null;
+
+  if (foundType instanceof GraphQLScalarType) {
+    switch (foundType.name) {
+      case "Int":
+      case "Float":
+        return 1;
+      case "Boolean":
+        return false;
+      case "ID":
+      case "String":
+        return "";
+      default:
+        return null;
+    }
+  } else if (foundType instanceof GraphQLInputObjectType) {
+    const fields = foundType.getFields();
+    const fieldDefaults: Record<string, any> = {};
+    Object.entries(fields).forEach(([fieldName, field]) => {
+      fieldDefaults[fieldName] = getDefaultValue(
+        field.type.toString(),
+        schemaTypes,
+      );
+    });
+    return fieldDefaults;
+  } else if (foundType instanceof GraphQLEnumType) {
+    return foundType.getValues()[0]?.value || null;
+  } else {
+    return null;
+  }
+}
 
 export const getTypesByCategory = (
   astSchema: GraphQLSchema,
