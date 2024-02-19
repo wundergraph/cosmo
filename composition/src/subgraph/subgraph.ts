@@ -10,21 +10,12 @@ import {
   operationTypeNodeToDefaultType,
   stringToNameNode,
 } from '../ast/utils';
-import { getNamedTypeForChild } from '../type-merging/type-merging';
-import {
-  AuthorizationData,
-  EntityInterfaceSubgraphData,
-  getOrThrowError,
-  getValueOrDefault,
-  mergeAuthorizationDataByAND,
-  newAuthorizationData,
-  newFieldAuthorizationData,
-  setAndGetValue,
-} from '../utils/utils';
+import { getNamedTypeForChild } from '../schema-building/type-merging';
+import { EntityInterfaceSubgraphData, getOrThrowError } from '../utils/utils';
 import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
 import { ConfigurationDataByTypeName } from '../router-configuration/router-configuration';
-import { ExtensionContainerByTypeName, ParentContainerByTypeName } from '../normalization/utils';
-import { NormalizationFactory } from '../normalization/normalization-factory';
+import { ParentDefinitionData } from '../schema-building/type-definition-data';
+import { ParentExtensionData } from '../schema-building/type-extension-data';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -36,13 +27,13 @@ export type InternalSubgraph = {
   configurationDataMap: ConfigurationDataByTypeName;
   definitions: DocumentNode;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
-  extensionContainerByTypeName: ExtensionContainerByTypeName;
   isVersionTwo: boolean;
   keyFieldNamesByParentTypeName: Map<string, Set<string>>;
   name: string;
   operationTypes: Map<string, OperationTypeNode>;
   overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
-  parentContainerByTypeName: ParentContainerByTypeName;
+  parentDataByTypeName: Map<string, ParentDefinitionData>;
+  parentExtensionDataByTypeName: Map<string, ParentExtensionData>;
   schema: GraphQLSchema;
   url: string;
 };
@@ -62,109 +53,6 @@ export function recordSubgraphName(
     return;
   }
   nonUniqueSubgraphNames.add(subgraphName);
-}
-
-export function walkSubgraphToApplyFieldAuthorization(factory: NormalizationFactory, definitions: DocumentNode) {
-  let parentAuthorizationData: AuthorizationData | undefined;
-  let isInterfaceKind = false;
-  visit(definitions, {
-    FieldDefinition: {
-      enter(node) {
-        factory.childName = node.name.value;
-        const typeName = getNamedTypeForChild(`${factory.parentTypeName}.${factory.childName}`, node.type);
-        const inheritsAuthorization = factory.leafTypeNamesWithAuthorizationDirectives.has(typeName);
-        if (
-          (!parentAuthorizationData || !parentAuthorizationData.hasParentLevelAuthorization) &&
-          !inheritsAuthorization
-        ) {
-          return false;
-        }
-        if (!parentAuthorizationData) {
-          parentAuthorizationData = setAndGetValue(
-            factory.authorizationDataByParentTypeName,
-            factory.parentTypeName,
-            newAuthorizationData(factory.parentTypeName),
-          );
-        }
-        const fieldAuthorizationData = getValueOrDefault(
-          parentAuthorizationData.fieldAuthorizationDataByFieldName,
-          factory.childName,
-          () => newFieldAuthorizationData(factory.childName),
-        );
-        if (!mergeAuthorizationDataByAND(parentAuthorizationData, fieldAuthorizationData)) {
-          factory.invalidOrScopesHostPaths.add(`${factory.parentTypeName}.${factory.childName}`);
-          return false;
-        }
-        if (!inheritsAuthorization) {
-          return false;
-        }
-        if (isInterfaceKind) {
-          /* Collect the inherited leaf authorization to apply later. This is to avoid duplication of inherited
-             authorization applied to interface and concrete types. */
-          getValueOrDefault(factory.heirFieldAuthorizationDataByTypeName, typeName, () => []).push(
-            fieldAuthorizationData,
-          );
-          return false;
-        }
-        const definitionAuthorizationData = factory.authorizationDataByParentTypeName.get(typeName);
-        if (
-          definitionAuthorizationData &&
-          definitionAuthorizationData.hasParentLevelAuthorization &&
-          !mergeAuthorizationDataByAND(definitionAuthorizationData, fieldAuthorizationData)
-        ) {
-          factory.invalidOrScopesHostPaths.add(`${factory.parentTypeName}.${factory.childName}`);
-        }
-        return false;
-      },
-      leave() {
-        factory.childName = '';
-      },
-    },
-    InterfaceTypeDefinition: {
-      enter(node) {
-        factory.parentTypeName = node.name.value;
-        parentAuthorizationData = factory.getAuthorizationData(node);
-        isInterfaceKind = true;
-      },
-      leave() {
-        factory.parentTypeName = '';
-        parentAuthorizationData = undefined;
-        isInterfaceKind = false;
-      },
-    },
-    InterfaceTypeExtension: {
-      enter(node) {
-        factory.parentTypeName = node.name.value;
-        parentAuthorizationData = factory.getAuthorizationData(node);
-        isInterfaceKind = true;
-      },
-      leave() {
-        factory.parentTypeName = '';
-        parentAuthorizationData = undefined;
-        isInterfaceKind = false;
-      },
-    },
-    ObjectTypeDefinition: {
-      enter(node) {
-        factory.parentTypeName = node.name.value;
-        parentAuthorizationData = factory.getAuthorizationData(node);
-      },
-      leave() {
-        factory.parentTypeName = '';
-        parentAuthorizationData = undefined;
-      },
-    },
-    ObjectTypeExtension: {
-      enter(node) {
-        factory.parentTypeName = node.name.value;
-        parentAuthorizationData = factory.getAuthorizationData(node);
-      },
-      leave() {
-        factory.parentTypeName = '';
-        parentAuthorizationData = undefined;
-      },
-    },
-  });
 }
 
 // Places the object-like nodes into the multigraph including the concrete types for abstract types
