@@ -117,11 +117,7 @@ export const FederatedGraphsTable = ({
                   </TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">
-                      {labelMatchers.length === 0 && (
-                        <Badge variant="secondary">
-                          <PiAsterisk className="my-px" />
-                        </Badge>
-                      )}
+                      {labelMatchers.length === 0 && <div>-</div>}
                       {labelMatchers.map((l) => {
                         return (
                           <Badge variant="secondary" key={l}>

@@ -449,4 +449,98 @@ describe('Labels', (ctx) => {
 
     await server.close();
   });
+
+  test('Unset and set subgraph label', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const fedGraph1Name = genID('fedGraph1');
+    const fedGraph2Name = genID('fedGraph2');
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+
+    await createFederatedGraph(client, fedGraph1Name, 'default', [joinLabel(label1)], 'http://localhost:8081');
+    await createFederatedGraph(client, fedGraph2Name, 'default', [], 'http://localhost:8082');
+
+    const createSubgraph = async (name: string, labels: Label[], routingUrl: string) => {
+      const createRes = await client.createFederatedSubgraph({
+        name,
+        labels,
+        routingUrl,
+        namespace: 'default',
+      });
+      expect(createRes.response?.code).toBe(EnumStatusCode.OK);
+      const publishResp = await client.publishFederatedSubgraph({
+        name,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from(`type Query { name: String! }`)),
+      });
+      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+    };
+
+    await createSubgraph(subgraph1Name, [label1], 'http://localhost:8083');
+    await createSubgraph(subgraph2Name, [], 'http://localhost:8084');
+
+    // fedGraph1 should have subgraph1 and fedGraph2 should have subgraph2
+    const graph1 = await client.getFederatedGraphByName({
+      name: fedGraph1Name,
+      namespace: 'default',
+    });
+    expect(graph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1.subgraphs.length).toBe(1);
+    expect(graph1.subgraphs[0].name).toBe(subgraph1Name);
+
+    const graph2 = await client.getFederatedGraphByName({
+      name: fedGraph2Name,
+      namespace: 'default',
+    });
+    expect(graph2.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph2.subgraphs.length).toBe(1);
+    expect(graph2.subgraphs[0].name).toBe(subgraph2Name);
+
+    await client.updateSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      unsetLabels: true,
+    });
+
+    // fedGraph1 should have 0 subgraphs and fedGraph2 should have 2 subgraphs
+    const graph1AfterUnset = await client.getFederatedGraphByName({
+      name: fedGraph1Name,
+      namespace: 'default',
+    });
+    expect(graph1AfterUnset.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1AfterUnset.subgraphs.length).toBe(0);
+
+    const graph2AfterUnset = await client.getFederatedGraphByName({
+      name: fedGraph2Name,
+      namespace: 'default',
+    });
+    expect(graph2AfterUnset.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph2AfterUnset.subgraphs.length).toBe(2);
+
+    await client.updateSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      labels: [label1],
+    });
+
+    // fedGraph1 should have 1 subgraphs and fedGraph2 should have 1 subgraph
+    const graph1AfterSet = await client.getFederatedGraphByName({
+      name: fedGraph1Name,
+      namespace: 'default',
+    });
+    expect(graph1AfterSet.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1AfterSet.subgraphs.length).toBe(1);
+
+    const graph2AfterSet = await client.getFederatedGraphByName({
+      name: fedGraph2Name,
+      namespace: 'default',
+    });
+    expect(graph2AfterSet.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph2AfterSet.subgraphs.length).toBe(1);
+
+    await server.close();
+  });
 });
