@@ -44,7 +44,7 @@ export default (opts: BaseCommandOptions) => {
       console.log(`${pc.bold(resp.token)}\n`);
       console.log(pc.yellow('---'));
       console.log(pc.yellow(`Please store the token in a secure place. It will not be shown again.`));
-      console.log(pc.yellow(`You can use the token to authenticate against the control plane from the routers.`));
+      console.log(pc.yellow(`You can use the token only to authenticate against the Cosmo Platform from the routers.`));
       console.log(pc.yellow('---'));
     } else {
       console.log(`${pc.red('Could not create token for federated graph')}`);
