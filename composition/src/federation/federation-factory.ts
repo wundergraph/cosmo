@@ -1,5 +1,6 @@
 import { MultiGraph } from 'graphology';
 import {
+  BREAK,
   buildASTSchema,
   ConstDirectiveNode,
   ConstValueNode,
@@ -14,6 +15,7 @@ import {
   ObjectTypeExtensionNode,
   TypeDefinitionNode,
   TypeNode,
+  visit,
 } from 'graphql';
 import {
   ConstValueNodeWithValue,
@@ -83,7 +85,7 @@ import {
   getMostRestrictiveMergedTypeNode,
   getNamedTypeForChild,
   isTypeRequired,
-} from '../type-merging/type-merging';
+} from '../schema-building/type-merging';
 import {
   ArgumentContainer,
   ArgumentMap,
@@ -92,8 +94,8 @@ import {
   DirectiveMap,
   EnumValueContainer,
   ExtensionContainer,
+  FederationFieldData,
   FederationResultContainer,
-  FieldContainer,
   InputValueContainer,
   InterfaceContainer,
   isFieldInaccessible,
@@ -138,8 +140,8 @@ import {
   EntityContainer,
   EntityContainerByTypeName,
   EntityInterfaceFederationData,
-  generateAuthenticatedDirective,
   generateRequiresScopesDirective,
+  generateSimpleDirective,
   getAllMutualEntries,
   getEntriesNotInHashSet,
   getOrThrowError,
@@ -166,12 +168,8 @@ import {
 } from '../router-configuration/router-configuration';
 import { BASE_SCALARS, SCOPE_SCALAR_DEFINITION } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
-import {
-  getNormalizedFieldSet,
-  isNodeQuery,
-  ObjectLikeContainer as NormalizationObjectLikeContainer,
-} from '../normalization/utils';
-import { BREAK, visit } from 'graphql/index';
+import { getNormalizedFieldSet, isNodeQuery } from '../normalization/utils';
+import { ParentWithFieldsData as NormalizationObjectLikeData } from '../schema-building/type-definition-data';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -490,7 +488,7 @@ export class FederationFactory {
     }
   }
 
-  isShareabilityOfAllFieldInstancesValid(fieldContainer: FieldContainer) {
+  isShareabilityOfAllFieldInstancesValid(fieldContainer: FederationFieldData) {
     let shareableFields = 0;
     let unshareableFields = 0;
     for (const [subgraphName, isShareable] of fieldContainer.subgraphsByShareable) {
@@ -680,7 +678,7 @@ export class FederationFactory {
     }
     this.parents.set(parentTypeName, {
       directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-      fields: new Map<string, FieldContainer>(),
+      fields: new Map<string, FederationFieldData>(),
       interfaces: extractInterfaces(node, new Set<string>()),
       kind: Kind.INTERFACE_TYPE_DEFINITION,
       node: interfaceTypeDefinitionNodeToMutable({
@@ -742,7 +740,7 @@ export class FederationFactory {
         }
         this.parents.set(parentTypeName, {
           directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          fields: new Map<string, FieldContainer>(),
+          fields: new Map<string, FederationFieldData>(),
           interfaces: extractInterfaces(node, new Set<string>()),
           kind: node.kind,
           node: interfaceTypeDefinitionNodeToMutable(node),
@@ -773,7 +771,7 @@ export class FederationFactory {
         }
         this.parents.set(parentTypeName, {
           directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          fields: new Map<string, FieldContainer>(),
+          fields: new Map<string, FederationFieldData>(),
           interfaces: extractInterfaces(node, new Set<string>()),
           isRootType: this.isParentRootType,
           kind: node.kind,
@@ -818,7 +816,7 @@ export class FederationFactory {
     const interfaces = extractInterfaces(node, new Set<string>());
     this.extensions.set(this.parentTypeName, {
       directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-      fields: new Map<string, FieldContainer>(),
+      fields: new Map<string, FederationFieldData>(),
       interfaces,
       isRootType: this.isParentRootType,
       kind: Kind.OBJECT_TYPE_EXTENSION,
@@ -956,7 +954,7 @@ export class FederationFactory {
   }
 
   mergeArguments(
-    container: FieldContainer | DirectiveContainer,
+    container: FederationFieldData | DirectiveContainer,
     args: MutableInputValueDefinitionNode[],
     errors: InvalidRequiredArgument[],
     argumentNames?: string[],
@@ -1014,7 +1012,7 @@ export class FederationFactory {
     definitions.push(directiveContainer.node);
   }
 
-  pushAuthorizationDirectives(fieldContainer: FieldContainer, parentTypeName: string) {
+  pushAuthorizationDirectives(fieldContainer: FederationFieldData, parentTypeName: string) {
     const authorizationData = this.authorizationDataByParentTypeName.get(parentTypeName);
     if (!authorizationData) {
       return;
@@ -1026,7 +1024,7 @@ export class FederationFactory {
       return;
     }
     if (fieldAuthorizationData.requiresAuthentication) {
-      fieldContainer.directives.directives.set(AUTHENTICATED, [generateAuthenticatedDirective()]);
+      fieldContainer.directives.directives.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
     }
     if (fieldAuthorizationData.requiredScopes.length > 0) {
       fieldContainer.directives.directives.set(REQUIRES_SCOPES, [
@@ -1035,7 +1033,7 @@ export class FederationFactory {
     }
   }
 
-  getMergedFieldDefinitionNode(fieldContainer: FieldContainer, parentTypeName: string): FieldDefinitionNode {
+  getMergedFieldDefinitionNode(fieldContainer: FederationFieldData, parentTypeName: string): FieldDefinitionNode {
     this.pushAuthorizationDirectives(fieldContainer, parentTypeName);
     pushPersistedDirectivesAndGetNode(fieldContainer);
     if (fieldContainer.arguments.size < 1) {
@@ -1176,7 +1174,7 @@ export class FederationFactory {
     return false;
   }
 
-  isFieldExternalInAllMutualSubgraphs(subgraphs: Set<string>, fieldContainer: FieldContainer): boolean {
+  isFieldExternalInAllMutualSubgraphs(subgraphs: Set<string>, fieldContainer: FederationFieldData): boolean {
     const mutualSubgraphs = getAllMutualEntries(subgraphs, fieldContainer.subgraphNames);
     if (mutualSubgraphs.size < 1) {
       return false;
@@ -1407,8 +1405,8 @@ export class FederationFactory {
       this.currentSubgraphName,
       'internalSubgraphBySubgraphName',
     );
-    const parentContainerByTypeName = internalSubgraph.parentContainerByTypeName;
-    const extensionContainerByTypeName = internalSubgraph.extensionContainerByTypeName;
+    const parentContainerByTypeName = internalSubgraph.parentDataByTypeName;
+    const extensionContainerByTypeName = internalSubgraph.parentExtensionDataByTypeName;
     const implicitEntityContainer =
       parentContainerByTypeName.get(entityContainer.typeName) ||
       extensionContainerByTypeName.get(entityContainer.typeName);
@@ -1438,7 +1436,7 @@ export class FederationFactory {
         // This would be caught as an error elsewhere
         continue;
       }
-      const parentContainers: NormalizationObjectLikeContainer[] = [implicitEntityContainer];
+      const parentContainers: NormalizationObjectLikeData[] = [implicitEntityContainer];
       const definedFields: Set<string>[] = [];
       let currentDepth = -1;
       let shouldDefineSelectionSet = true;
@@ -1455,7 +1453,7 @@ export class FederationFactory {
         Field: {
           enter(node) {
             const parentContainer = parentContainers[currentDepth];
-            const parentTypeName = parentContainer.name.value;
+            const parentTypeName = parentContainer.typeName;
             // If an object-like was just visited, a selection set should have been entered
             if (shouldDefineSelectionSet) {
               shouldAddKeyFieldSet = false;
@@ -1463,9 +1461,13 @@ export class FederationFactory {
             }
             const fieldName = node.name.value;
             const fieldPath = `${parentTypeName}.${fieldName}`;
-            const fieldContainer = parentContainer.fields.get(fieldName);
+            const fieldContainer = parentContainer.fieldDataByFieldName.get(fieldName);
             // undefined if the field does not exist on the parent
-            if (!fieldContainer || fieldContainer.arguments.size || definedFields[currentDepth].has(fieldName)) {
+            if (
+              !fieldContainer ||
+              fieldContainer.argumentDataByArgumentName.size ||
+              definedFields[currentDepth].has(fieldName)
+            ) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }

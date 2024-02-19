@@ -3,14 +3,14 @@ import {
   duplicateEnumValueDefinitionError,
   duplicateFieldDefinitionError,
   duplicateTypeDefinitionError,
-  duplicateUnionMemberError,
+  duplicateUnionMemberExtensionError,
   invalidDirectiveError,
   invalidKeyDirectivesError,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionSetErrorMessage,
   noBaseTypeExtensionError,
   normalizeSubgraphFromString,
-  undefinedDirectiveError,
+  undefinedDirectiveErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   undefinedTypeError,
   unparsableFieldSetErrorMessage,
@@ -18,7 +18,12 @@ import {
 import { readFileSync } from 'fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { normalizeString, versionOneBaseSchema, versionTwoBaseSchema } from './utils/utils';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionOneBaseSchema,
+  versionTwoBaseSchema,
+} from './utils/utils';
 
 describe('Normalization tests', () => {
   test('that an unparsable graph returns an error', () => {
@@ -76,7 +81,11 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(undefinedDirectiveError('UnknownDirective', 'Example.string'));
+    expect(errors![0]).toStrictEqual(
+      invalidDirectiveError('UnknownDirective', 'Example.string', [
+        undefinedDirectiveErrorMessage('UnknownDirective', 'Example.string'),
+      ]),
+    );
   });
 
   test('that duplicate directive definitions return an error', () => {
@@ -651,7 +660,7 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(duplicateUnionMemberError('Muffin', 'Cats'));
+    expect(errors![0]).toStrictEqual(duplicateUnionMemberExtensionError('Muffin', 'Cats'));
   });
 
   test('that redefining a union returns an error', () => {
@@ -943,9 +952,9 @@ describe('Normalization tests', () => {
         name: String
       }
       
-      type ProductDimension @shareable {
-        size: String
-        weight: Float
+      type ProductDimension {
+        size: String @shareable
+        weight: Float @shareable
       }
       
       type User @key(fields: "email") {
@@ -1755,6 +1764,87 @@ describe('Normalization tests', () => {
         }
     `,
       ),
+    );
+  });
+
+  test('that a subgraph is normalized correctly', () => {
+    const { errors, normalizationResult } = normalizeSubgraphFromString(`
+      enum Enum @requiresScopes(scopes: [["read:enum"]]) {
+        VALUE
+      }
+      
+      """
+        This is the description for Interface
+      """
+      interface Interface @requiresScopes(scopes: [["read:private"]]) {
+        field(argumentOne: String!): Enum! @authenticated
+      }
+      
+      """
+        This is the description for Object
+      """
+      type Object implements Interface @requiresScopes(scopes: [["read:object"]]) {
+        """
+          This is the description for Object.field
+        """
+        field(
+          """
+            This is the description for the argumentOne argument of Object.field
+          """
+          argumentOne: String!
+        ): Enum!
+      }
+    `);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+      normalizeString(`
+      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+      directive @composeDirective(name: String!) repeatable on SCHEMA
+      directive @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION
+      directive @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION
+      directive @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION
+      directive @extends on INTERFACE | OBJECTdirective @external on FIELD_DEFINITION | OBJECT
+      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+      directive @interfaceObject on OBJECT
+      directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+      directive @link(as: String, for: String, import: [String], url: String!) repeatable on SCHEMA
+      directive @override(from: String!) on FIELD_DEFINITION
+      directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
+      directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
+      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+      directive @shareable on FIELD_DEFINITION | OBJECT
+      directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+      
+      enum Enum {
+        VALUE
+      }
+      
+      """
+        This is the description for Interface
+      """
+      interface Interface {
+        field(argumentOne: String!): Enum! @authenticated @requiresScopes(scopes: [["read:private", "read:enum"]])
+      }
+
+      """
+        This is the description for Object
+      """
+      type Object implements Interface {
+        """
+          This is the description for Object.field
+        """
+        field(
+          """
+            This is the description for the argumentOne argument of Object.field
+          """
+          argumentOne: String!
+        ): Enum! @authenticated @requiresScopes(scopes: [["read:object", "read:enum", "read:private"]])
+      }
+      
+      scalar openfed__FieldSet
+      
+      scalar openfed__Scope
+    `),
     );
   });
 });

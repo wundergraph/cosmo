@@ -1,11 +1,9 @@
-import { ConstDirectiveNode, Kind, StringValueNode } from 'graphql';
-import { AUTHENTICATED, FIELD, REQUIRES_SCOPES, SCOPES, UNION } from './string-constants';
+import { ConstDirectiveNode, ConstValueNode, FieldDefinitionNode, Kind, StringValueNode } from 'graphql';
+import { FIELD, REQUIRES_SCOPES, SCOPES, UNION } from './string-constants';
 import { MultiGraph } from 'graphology';
 import { invalidKeyFatalError } from '../errors/errors';
 import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode, stringToNameNode } from '../ast/utils';
-import { FieldDefinitionNode } from 'graphql/index';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
-import { ConstValueNode } from 'graphql/language/ast';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {
@@ -463,8 +461,6 @@ export function mergeAuthorizationDataByAND(
   return true;
 }
 
-export function addAuthorizationDataProperties(source: AuthorizationData, target: AuthorizationData) {}
-
 export function upsertFieldAuthorizationData(
   fieldAuthorizationDataByFieldName: Map<string, FieldAuthorizationData>,
   incomingFieldAuthorizationData: FieldAuthorizationData,
@@ -536,10 +532,10 @@ export function setAndGetValue<K, V>(map: Map<K, V>, key: K, value: V) {
   return value;
 }
 
-export function generateAuthenticatedDirective(): ConstDirectiveNode {
+export function generateSimpleDirective(name: string): ConstDirectiveNode {
   return {
     kind: Kind.DIRECTIVE,
-    name: stringToNameNode(AUTHENTICATED),
+    name: stringToNameNode(name),
   };
 }
 

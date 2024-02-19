@@ -1,4 +1,9 @@
-import { getLeastRestrictiveMergedTypeNode, getMostRestrictiveMergedTypeNode, MutableTypeNode } from '../src';
+import {
+  getLeastRestrictiveMergedTypeNode,
+  getMostRestrictiveMergedTypeNode,
+  MutableIntermediateTypeNode,
+  MutableTypeNode,
+} from '../src';
 import { Kind, TypeNode } from 'graphql';
 import { describe, expect, test } from 'vitest';
 
@@ -210,8 +215,8 @@ describe('getMergedTypeNode Tests', () => {
 
 const stringToTypeNode = (input: string): TypeNode => {
   input = input.replaceAll('[', '');
-  let typeNode: MutableTypeNode;
-  let lastNode: MutableTypeNode | undefined;
+  let typeNode: MutableIntermediateTypeNode;
+  let lastNode: MutableIntermediateTypeNode | undefined;
   const lastIndex = input.length - 1;
   for (let i = lastIndex; i > -1; i--) {
     const character = input[i];

@@ -23,8 +23,8 @@ import {
   TypeNode,
   UnionTypeDefinitionNode,
 } from 'graphql';
-import { federationUnexpectedNodeKindError } from '../errors/errors';
 import { formatDescription } from './utils';
+import { deepCopyTypeNode } from '../schema-building/ast';
 
 function deepCopyFieldsAndInterfaces(
   node: InterfaceTypeDefinitionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
@@ -49,33 +49,6 @@ export type ConstValueNodeWithValue =
   | StringValueNode
   | BooleanValueNode
   | EnumValueNode;
-
-export function deepCopyTypeNode(node: TypeNode, parentName: string, fieldName: string): TypeNode {
-  const deepCopy: MutableTypeNode = { kind: node.kind };
-  let lastTypeNode = deepCopy;
-  for (let i = 0; i < maximumTypeNesting; i++) {
-    switch (node.kind) {
-      case Kind.NAMED_TYPE:
-        lastTypeNode.name = { ...node.name };
-        return deepCopy as TypeNode;
-      case Kind.LIST_TYPE:
-        lastTypeNode.kind = node.kind;
-        lastTypeNode.type = { kind: node.type.kind };
-        lastTypeNode = lastTypeNode.type;
-        node = node.type;
-        continue;
-      case Kind.NON_NULL_TYPE:
-        lastTypeNode.kind = node.kind;
-        lastTypeNode.type = { kind: node.type.kind };
-        lastTypeNode = lastTypeNode.type;
-        node = node.type;
-        continue;
-      default:
-        throw federationUnexpectedNodeKindError(parentName, fieldName);
-    }
-  }
-  throw new Error(`Field ${parentName}.${fieldName} has more than 30 layers of nesting, or there is a cyclical error.`);
-}
 
 export type MutableDirectiveDefinitionNode = {
   arguments?: InputValueDefinitionNode[];
@@ -258,12 +231,12 @@ export function objectTypeDefinitionNodeToMutable(node: ObjectTypeDefinitionNode
 }
 
 export type MutableObjectTypeExtensionNode = {
-  description?: StringValueNode;
-  directives?: ConstDirectiveNode[];
   fields: FieldDefinitionNode[];
   interfaces: NamedTypeNode[];
   kind: Kind.OBJECT_TYPE_EXTENSION;
   name: NameNode;
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
 };
 
 export function objectTypeExtensionNodeToMutable(node: ObjectTypeExtensionNode): MutableObjectTypeExtensionNode {
@@ -306,14 +279,6 @@ export function scalarTypeDefinitionNodeToMutable(node: ScalarTypeDefinitionNode
     name: { ...node.name },
   };
 }
-
-export type MutableTypeNode = {
-  kind: Kind.NAMED_TYPE | Kind.LIST_TYPE | Kind.NON_NULL_TYPE;
-  name?: NameNode;
-  type?: MutableTypeNode;
-};
-
-export const maximumTypeNesting = 30;
 
 export type MutableUnionTypeDefinitionNode = {
   description?: StringValueNode;

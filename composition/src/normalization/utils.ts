@@ -1,31 +1,17 @@
 import {
   BREAK,
-  ConstArgumentNode,
   ConstDirectiveNode,
   DirectiveDefinitionNode,
   DocumentNode,
-  EnumTypeDefinitionNode,
-  EnumValueDefinitionNode,
-  FieldDefinitionNode,
-  InputObjectTypeDefinitionNode,
   InputValueDefinitionNode,
-  InterfaceTypeDefinitionNode,
   Kind,
-  NamedTypeNode,
-  NameNode,
-  ObjectTypeDefinitionNode,
-  ObjectTypeExtensionNode,
-  OperationTypeDefinitionNode,
   OperationTypeNode,
   print,
-  ScalarTypeDefinitionNode,
-  SchemaDefinitionNode,
-  StringValueNode,
-  UnionTypeDefinitionNode,
+  TypeNode,
   visit,
 } from 'graphql';
-import { getOrThrowError, getValueOrDefault, kindToTypeString, mapToArrayOfValues } from '../utils/utils';
-import { isKindAbstract, lexicographicallySortDocumentNode, safeParse, setToNamedTypeNodeArray } from '../ast/utils';
+import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../utils/utils';
+import { isKindAbstract, lexicographicallySortDocumentNode, safeParse } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
@@ -51,11 +37,10 @@ import {
   VARIABLE_DEFINITION_UPPER,
 } from '../utils/string-constants';
 import { NormalizationFactory } from './normalization-factory';
-import { getNamedTypeForChild } from '../type-merging/type-merging';
+import { getNamedTypeForChild } from '../schema-building/type-merging';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
-  duplicateDirectiveArgumentDefinitionErrorMessage,
   duplicateFieldInFieldSetErrorMessage,
   inlineFragmentInFieldSetErrorMessage,
   inlineFragmentWithoutTypeConditionErrorMessage,
@@ -70,7 +55,6 @@ import {
   invalidSelectionSetErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
-  unexpectedDirectiveArgumentErrorMessage,
   unexpectedDirectiveLocationError,
   unknownInlineFragmentTypeConditionErrorMessage,
   unknownProvidesEntityErrorMessage,
@@ -80,105 +64,7 @@ import {
 } from '../errors/errors';
 import { BASE_SCALARS } from '../utils/constants';
 import { RequiredFieldConfiguration } from '../router-configuration/router-configuration';
-
-export type EnumContainer = {
-  description?: StringValueNode;
-  directives: Map<string, ConstDirectiveNode[]>;
-  kind: Kind.ENUM_TYPE_DEFINITION;
-  name: NameNode;
-  values: Map<string, EnumValueContainer>;
-};
-
-export type EnumValueContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  name: string;
-  node: EnumValueDefinitionNode;
-};
-
-export type FieldContainer = {
-  arguments: Map<string, InputValueDefinitionNode>;
-  directives: Map<string, ConstDirectiveNode[]>;
-  name: string;
-  node: FieldDefinitionNode;
-};
-
-export type InputObjectContainer = {
-  description?: StringValueNode;
-  directives: Map<string, ConstDirectiveNode[]>;
-  fields: Map<string, InputValueContainer>;
-  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
-  name: NameNode;
-};
-
-export type InputValueContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  name: string;
-  node: InputValueDefinitionNode;
-};
-
-export type InterfaceContainer = {
-  description?: StringValueNode;
-  directives: Map<string, ConstDirectiveNode[]>;
-  fields: Map<string, FieldContainer>;
-  interfaces: Set<string>;
-  isEntity: boolean;
-  kind: Kind.INTERFACE_TYPE_DEFINITION;
-  name: NameNode;
-};
-
-export type ObjectContainer = {
-  description?: StringValueNode;
-  directives: Map<string, ConstDirectiveNode[]>;
-  fields: Map<string, FieldContainer>;
-  interfaces: Set<string>;
-  isEntity: boolean;
-  kind: Kind.OBJECT_TYPE_DEFINITION;
-  name: NameNode;
-};
-
-export type ScalarContainer = {
-  description?: StringValueNode;
-  directives: Map<string, ConstDirectiveNode[]>;
-  kind: Kind.SCALAR_TYPE_DEFINITION;
-  name: NameNode;
-};
-
-export type SchemaContainer = {
-  description?: StringValueNode;
-  directives: Map<string, ConstDirectiveNode[]>;
-  kind: Kind.SCHEMA_DEFINITION;
-  name: NameNode;
-  operationTypes: Map<OperationTypeNode, OperationTypeDefinitionNode>;
-};
-
-export type UnionContainer = {
-  description?: StringValueNode;
-  directives: Map<string, ConstDirectiveNode[]>;
-  kind: Kind.UNION_TYPE_DEFINITION;
-  name: NameNode;
-  types: Map<string, NamedTypeNode>;
-};
-
-export type ObjectLikeTypeContainer = InterfaceContainer | ObjectContainer;
-
-export type ParentContainer =
-  | EnumContainer
-  | InputObjectContainer
-  | InterfaceContainer
-  | ObjectContainer
-  | ScalarContainer
-  | UnionContainer;
-
-export type ChildContainer = EnumValueContainer | FieldContainer | InputValueContainer;
-
-export type ParentContainerByTypeName = Map<string, ParentContainer>;
-
-export type EnumExtensionContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  kind: Kind.ENUM_TYPE_EXTENSION;
-  name: NameNode;
-  values: Map<string, EnumValueContainer>;
-};
+import { FieldData, ParentWithFieldsData, UnionDefinitionData } from '../schema-building/type-definition-data';
 
 export type FieldSetContainer = {
   keys: Set<string>;
@@ -195,170 +81,18 @@ export function newFieldSetContainer(): FieldSetContainer {
   };
 }
 
-export type InputObjectExtensionContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  fields: Map<string, InputValueContainer>;
-  kind: Kind.INPUT_OBJECT_TYPE_EXTENSION;
-  name: NameNode;
-};
-
-export type InterfaceExtensionContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  fields: Map<string, FieldContainer>;
-  interfaces: Set<string>;
-  kind: Kind.INTERFACE_TYPE_EXTENSION;
-  name: NameNode;
-};
-
-export type ObjectExtensionContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  fields: Map<string, FieldContainer>;
-  interfaces: Set<string>;
-  isEntity: boolean;
-  kind: Kind.OBJECT_TYPE_EXTENSION;
-  name: NameNode;
-};
-
-export type ScalarExtensionContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  kind: Kind.SCALAR_TYPE_EXTENSION;
-  name: NameNode;
-};
-
-export type UnionExtensionContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  kind: Kind.UNION_TYPE_EXTENSION;
-  name: NameNode;
-  types: Map<string, NamedTypeNode>;
-};
-
-export type ObjectLikeExtensionContainer = InterfaceExtensionContainer | ObjectExtensionContainer;
-
-export type ObjectLikeContainer = ObjectLikeTypeContainer | ObjectLikeExtensionContainer;
-
-export type ExtensionContainer =
-  | EnumExtensionContainer
-  | InputObjectExtensionContainer
-  | InterfaceExtensionContainer
-  | ObjectExtensionContainer
-  | ScalarExtensionContainer
-  | UnionExtensionContainer;
-
-export type ExtensionContainerByTypeName = Map<string, ExtensionContainer>;
-
-type ChildDefinitionNode = EnumValueDefinitionNode | InputValueDefinitionNode | FieldDefinitionNode;
-
-function childMapToValueArray<V extends ChildContainer, N extends ChildDefinitionNode = V['node']>(
-  factory: NormalizationFactory,
-  map: Map<string, V>,
-  parentTypeName: string,
-): N[] {
-  const valueArray: ChildDefinitionNode[] = [];
-  for (const childContainer of map.values()) {
-    const childPath = `${parentTypeName}.${childContainer.name}`;
-    factory.validateChildDirectives(childContainer, childPath);
-    valueArray.push(childContainer.node);
-  }
-  return valueArray as N[];
-}
-
-export function enumContainerToNode(
-  factory: NormalizationFactory,
-  baseEnum: EnumContainer,
-  enumExtension?: ExtensionContainer,
-): EnumTypeDefinitionNode {
-  factory.mergeDirectives(baseEnum.directives, enumExtension);
-  return {
-    description: baseEnum.description,
-    directives: factory.getValidatedAndNormalizedParentDirectives(baseEnum),
-    kind: baseEnum.kind,
-    name: baseEnum.name,
-    values: childMapToValueArray(factory, baseEnum.values, baseEnum.name.value),
-  };
-}
-
-export function inputObjectContainerToNode(
-  factory: NormalizationFactory,
-  baseInputObject: InputObjectContainer,
-  inputObjectExtension?: InputObjectExtensionContainer,
-): InputObjectTypeDefinitionNode {
-  factory.mergeDirectives(baseInputObject.directives, inputObjectExtension);
-  return {
-    description: baseInputObject.description,
-    directives: factory.getValidatedAndNormalizedParentDirectives(baseInputObject),
-    fields: childMapToValueArray(factory, baseInputObject.fields, baseInputObject.name.value),
-    kind: baseInputObject.kind,
-    name: baseInputObject.name,
-  };
-}
-
-export function objectLikeContainerToNode(
-  factory: NormalizationFactory,
-  baseObjectLike: ObjectLikeTypeContainer | ObjectExtensionContainer,
-  objectLikeExtension?: ObjectLikeExtensionContainer,
-): ObjectTypeDefinitionNode | InterfaceTypeDefinitionNode | ObjectTypeExtensionNode {
-  factory.mergeDirectives(baseObjectLike.directives, objectLikeExtension);
-  const description = baseObjectLike.kind === Kind.OBJECT_TYPE_EXTENSION ? undefined : baseObjectLike.description;
-  return {
-    description,
-    directives: factory.getValidatedAndNormalizedParentDirectives(baseObjectLike),
-    fields: childMapToValueArray(factory, baseObjectLike.fields, baseObjectLike.name.value),
-    interfaces: setToNamedTypeNodeArray(baseObjectLike.interfaces),
-    kind: baseObjectLike.kind,
-    name: baseObjectLike.name,
-  };
-}
-
-export function scalarContainerToNode(
-  factory: NormalizationFactory,
-  baseScalar: ScalarContainer,
-  scalarExtension?: ScalarExtensionContainer,
-): ScalarTypeDefinitionNode {
-  factory.mergeDirectives(baseScalar.directives, scalarExtension);
-  return {
-    description: baseScalar.description,
-    directives: factory.getValidatedAndNormalizedParentDirectives(baseScalar),
-    kind: baseScalar.kind,
-    name: baseScalar.name,
-  };
-}
-
-export function schemaContainerToNode(
-  factory: NormalizationFactory,
-  baseSchema: SchemaContainer,
-): SchemaDefinitionNode {
-  return {
-    description: baseSchema.description,
-    directives: factory.getValidatedAndNormalizedParentDirectives(baseSchema),
-    kind: baseSchema.kind,
-    operationTypes: mapToArrayOfValues(baseSchema.operationTypes),
-  };
-}
-
-export function unionContainerToNode(
-  factory: NormalizationFactory,
-  baseUnion: UnionContainer,
-  unionExtension?: UnionExtensionContainer,
-): UnionTypeDefinitionNode {
-  factory.mergeUniqueUnionMembers(baseUnion, unionExtension);
-  factory.mergeDirectives(baseUnion.directives, unionExtension);
-  return {
-    description: baseUnion.description,
-    directives: factory.getValidatedAndNormalizedParentDirectives(baseUnion),
-    kind: baseUnion.kind,
-    name: baseUnion.name,
-    types: mapToArrayOfValues(baseUnion.types),
-  };
-}
-
 export function areNodeKindAndDirectiveLocationCompatible(
   kind: Kind,
   directiveDefinitionNode: DirectiveDefinitionNode,
+  isArgument = false,
 ): boolean {
   for (const location of directiveDefinitionNode.locations) {
     const locationName = location.value.toUpperCase();
     switch (locationName) {
       case ARGUMENT_DEFINITION_UPPER:
+        if (!isArgument) {
+          break;
+        }
         if (kind === Kind.INPUT_VALUE_DEFINITION) {
           return true;
         }
@@ -456,12 +190,12 @@ export function areNodeKindAndDirectiveLocationCompatible(
 
 export function getDirectiveDefinitionArgumentSets(
   args: readonly InputValueDefinitionNode[],
-  allArguments: Set<string>,
+  argumentKindByArgumentName: Map<string, TypeNode>,
   requiredArguments: Set<string>,
 ) {
   for (const argument of args) {
     const argumentName = argument.name.value;
-    allArguments.add(argumentName);
+    argumentKindByArgumentName.set(argumentName, argument.type);
     // If the definition defines a default argument, it's not necessary to include it
     if (argument.type.kind === Kind.NON_NULL_TYPE && !argument.defaultValue) {
       requiredArguments.add(argumentName);
@@ -469,37 +203,14 @@ export function getDirectiveDefinitionArgumentSets(
   }
 }
 
-export function getDefinedArgumentsForDirective(
-  args: readonly ConstArgumentNode[],
-  allArguments: Set<string>,
-  directiveName: string,
-  hostPath: string,
-  errorMessages: string[],
-): Set<string> {
-  const definedArguments = new Set<string>();
-  for (const argument of args) {
-    const argumentName = argument.name.value;
-    if (!allArguments.has(argumentName)) {
-      errorMessages.push(unexpectedDirectiveArgumentErrorMessage(directiveName, argumentName));
-      continue;
-    }
-    if (definedArguments.has(argumentName)) {
-      errorMessages.push(duplicateDirectiveArgumentDefinitionErrorMessage(directiveName, hostPath, argumentName));
-      continue;
-    }
-    definedArguments.add(argumentName);
-  }
-  return definedArguments;
-}
-
 export type InputValidationContainer = {
   hasUnhandledError: boolean;
   typeString: string;
 };
 
-export function addNonExternalFieldsToSet(fields: Map<string, FieldContainer>, fieldNames: Set<string>) {
-  for (const [fieldName, fieldContainer] of fields) {
-    if (fieldContainer.directives.has(EXTERNAL)) {
+export function addNonExternalFieldsToSet(fieldDataByFieldName: Map<string, FieldData>, fieldNames: Set<string>) {
+  for (const [fieldName, fieldContainer] of fieldDataByFieldName) {
+    if (fieldContainer.directivesByDirectiveName.has(EXTERNAL)) {
       continue;
     }
     fieldNames.add(fieldName);
@@ -542,7 +253,7 @@ export function getNormalizedFieldSet(documentNode: DocumentNode): string {
 
 function validateNonRepeatableFieldSet(
   factory: NormalizationFactory,
-  parentContainer: ObjectLikeContainer,
+  parentData: ParentWithFieldsData,
   fieldSet: string,
   directiveFieldName: string,
 ): NonRepeatableFieldSetValidationResult {
@@ -552,23 +263,23 @@ function validateNonRepeatableFieldSet(
     return { errorMessage: unparsableFieldSetErrorMessage(fieldSet, error) };
   }
   let errorMessage;
-  const parentContainers: (ObjectLikeContainer | UnionContainer)[] = [parentContainer];
+  const parentDatas: (ParentWithFieldsData | UnionDefinitionData)[] = [parentData];
   const definedFields: Set<string>[] = [];
   let currentDepth = -1;
   let shouldDefineSelectionSet = true;
   let lastFieldName = directiveFieldName;
-  let fieldPath = parentContainer.name.value;
+  let fieldPath = parentData.typeName;
   visit(documentNode, {
     Argument: {
-      enter(node) {
+      enter() {
         return false;
       },
     },
     Field: {
       enter(node) {
-        const parentContainer = parentContainers[currentDepth];
-        const parentTypeName = parentContainer.name.value;
-        if (parentContainer.kind === Kind.UNION_TYPE_DEFINITION) {
+        const parentData = parentDatas[currentDepth];
+        const parentTypeName = parentData.typeName;
+        if (parentData.kind === Kind.UNION_TYPE_DEFINITION) {
           errorMessage = invalidSelectionOnUnionErrorMessage(fieldSet, fieldPath, parentTypeName);
           return BREAK;
         }
@@ -578,14 +289,14 @@ function validateNonRepeatableFieldSet(
             fieldSet,
             fieldPath,
             parentTypeName,
-            kindToTypeString(parentContainer.kind),
+            kindToTypeString(parentData.kind),
           );
           return BREAK;
         }
         const fieldName = node.name.value;
         fieldPath = `${parentTypeName}.${fieldName}`;
         lastFieldName = fieldName;
-        const fieldContainer = parentContainer.fields.get(fieldName);
+        const fieldContainer = parentData.fieldDataByFieldName.get(fieldName);
         // undefined if the field does not exist on the parent
         if (!fieldContainer) {
           errorMessage = undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName);
@@ -603,8 +314,8 @@ function validateNonRepeatableFieldSet(
         }
         // The child could itself be a parent and could exist as an object extension
         const childContainer =
-          factory.parentContainerByTypeName.get(namedTypeName) ||
-          factory.extensionContainerByTypeName.get(namedTypeName);
+          factory.parentDefinitionDataByTypeName.get(namedTypeName) ||
+          factory.parentExtensionDataByTypeName.get(namedTypeName);
         if (!childContainer) {
           // Should not be possible to receive this error
           errorMessage = unknownTypeInFieldSetErrorMessage(fieldSet, fieldPath, namedTypeName);
@@ -617,15 +328,15 @@ function validateNonRepeatableFieldSet(
           childContainer.kind === Kind.UNION_TYPE_DEFINITION
         ) {
           shouldDefineSelectionSet = true;
-          parentContainers.push(childContainer);
+          parentDatas.push(childContainer);
           return;
         }
       },
     },
     InlineFragment: {
       enter(node) {
-        const parentContainer = parentContainers[currentDepth];
-        const parentTypeName = parentContainer.name.value;
+        const parentData = parentDatas[currentDepth];
+        const parentTypeName = parentData.typeName;
         if (!node.typeCondition) {
           errorMessage = inlineFragmentWithoutTypeConditionErrorMessage(fieldSet, fieldPath);
           return BREAK;
@@ -633,17 +344,17 @@ function validateNonRepeatableFieldSet(
         const typeConditionName = node.typeCondition.name.value;
         // It's possible to infinitely define fragments
         if (typeConditionName === parentTypeName) {
-          parentContainers.push(parentContainer);
+          parentDatas.push(parentData);
           shouldDefineSelectionSet = true;
           return;
         }
-        if (!isKindAbstract(parentContainer.kind)) {
+        if (!isKindAbstract(parentData.kind)) {
           errorMessage = invalidInlineFragmentTypeErrorMessage(fieldSet, fieldPath, typeConditionName, parentTypeName);
           return BREAK;
         }
         const fragmentTypeContainer =
-          factory.parentContainerByTypeName.get(typeConditionName) ||
-          factory.extensionContainerByTypeName.get(typeConditionName);
+          factory.parentDefinitionDataByTypeName.get(typeConditionName) ||
+          factory.parentExtensionDataByTypeName.get(typeConditionName);
         if (!fragmentTypeContainer) {
           errorMessage = unknownInlineFragmentTypeConditionErrorMessage(fieldSet, fieldPath, typeConditionName);
           return BREAK;
@@ -668,35 +379,35 @@ function validateNonRepeatableFieldSet(
             fieldSet,
             fieldPath,
             typeConditionName,
-            kindToTypeString(parentContainer.kind),
+            kindToTypeString(parentData.kind),
             parentTypeName,
           );
           return BREAK;
         }
         shouldDefineSelectionSet = true;
-        parentContainers.push(fragmentTypeContainer);
+        parentDatas.push(fragmentTypeContainer);
       },
       leave() {
-        parentContainers.pop();
+        parentDatas.pop();
       },
     },
     SelectionSet: {
       enter() {
         if (!shouldDefineSelectionSet) {
-          const parentContainer = parentContainers[currentDepth];
+          const parentContainer = parentDatas[currentDepth];
           if (parentContainer.kind === Kind.UNION_TYPE_DEFINITION) {
             // Should never happen
             errorMessage = unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName);
             return BREAK;
           }
-          const fieldContainer = parentContainer.fields.get(lastFieldName);
+          const fieldContainer = parentContainer.fieldDataByFieldName.get(lastFieldName);
           if (!fieldContainer) {
             errorMessage = undefinedFieldInFieldSetErrorMessage(fieldSet, fieldPath, lastFieldName);
             return BREAK;
           }
           const fieldNamedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
           // If the child is not found, it's a base scalar. Undefined types would have already been handled.
-          const childContainer = factory.parentContainerByTypeName.get(fieldNamedTypeName);
+          const childContainer = factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
           const childKind = childContainer ? childContainer.kind : Kind.SCALAR_TYPE_DEFINITION;
           errorMessage = invalidSelectionSetDefinitionErrorMessage(
             fieldSet,
@@ -708,7 +419,7 @@ function validateNonRepeatableFieldSet(
         }
         currentDepth += 1;
         shouldDefineSelectionSet = false;
-        if (currentDepth < 0 || currentDepth >= parentContainers.length) {
+        if (currentDepth < 0 || currentDepth >= parentDatas.length) {
           errorMessage = unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName);
           return BREAK;
         }
@@ -716,18 +427,18 @@ function validateNonRepeatableFieldSet(
       },
       leave() {
         if (shouldDefineSelectionSet) {
-          const parentContainer = parentContainers[currentDepth + 1];
+          const parentContainer = parentDatas[currentDepth + 1];
           errorMessage = invalidSelectionSetErrorMessage(
             fieldSet,
             fieldPath,
-            parentContainer.name.value,
+            parentContainer.typeName,
             kindToTypeString(parentContainer.kind),
           );
           shouldDefineSelectionSet = false;
         }
         // Empty selection sets would be a parse error, so it is unnecessary to handle them
         currentDepth -= 1;
-        parentContainers.pop();
+        parentDatas.pop();
         definedFields.pop();
       },
     },
@@ -740,15 +451,14 @@ function validateNonRepeatableFieldSet(
 
 function validateKeyFieldSets(
   factory: NormalizationFactory,
-  entityContainer: ObjectLikeContainer,
+  entityParentData: ParentWithFieldsData,
   fieldSets: Set<string>,
-  fieldNames: Set<string>,
   disableEntityResolver?: boolean,
 ): RequiredFieldConfiguration[] | undefined {
-  const entityTypeName = entityContainer.name.value;
+  const entityTypeName = entityParentData.typeName;
   const errorMessages: string[] = [];
   const configurations: RequiredFieldConfiguration[] = [];
-  const keyFieldNames = new Set<string>();
+  // const keyFieldNames = new Set<string>();
   for (const fieldSet of fieldSets) {
     // Create a new selection set so that the value can be parsed as a new DocumentNode
     const { error, documentNode } = safeParse('{' + fieldSet + '}');
@@ -756,7 +466,7 @@ function validateKeyFieldSets(
       errorMessages.push(unparsableFieldSetErrorMessage(fieldSet, error));
       continue;
     }
-    const parentContainers: ObjectLikeContainer[] = [entityContainer];
+    const parentWithFieldsDatas: ParentWithFieldsData[] = [entityParentData];
     const definedFields: Set<string>[] = [];
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
@@ -769,7 +479,7 @@ function validateKeyFieldSets(
           errorMessages.push(
             unexpectedArgumentErrorMessage(
               fieldSet,
-              `${parentContainers[currentDepth].name.value}.${lastFieldName}`,
+              `${parentWithFieldsDatas[currentDepth].typeName}.${lastFieldName}`,
               node.name.value,
             ),
           );
@@ -778,17 +488,17 @@ function validateKeyFieldSets(
       },
       Field: {
         enter(node) {
-          const grandparentContainer = parentContainers[currentDepth - 1];
-          const parentContainer = parentContainers[currentDepth];
-          const parentTypeName = parentContainer.name.value;
+          const grandparentContainer = parentWithFieldsDatas[currentDepth - 1];
+          const parentData = parentWithFieldsDatas[currentDepth];
+          const parentTypeName = parentData.typeName;
           // If an object-like was just visited, a selection set should have been entered
           if (shouldDefineSelectionSet) {
             errorMessages.push(
               invalidSelectionSetErrorMessage(
                 fieldSet,
-                `${grandparentContainer.name.value}.${lastFieldName}`,
+                `${grandparentContainer.typeName}.${lastFieldName}`,
                 parentTypeName,
-                kindToTypeString(parentContainer.kind),
+                kindToTypeString(parentData.kind),
               ),
             );
             return BREAK;
@@ -796,13 +506,13 @@ function validateKeyFieldSets(
           const fieldName = node.name.value;
           const fieldPath = `${parentTypeName}.${fieldName}`;
           lastFieldName = fieldName;
-          const fieldContainer = parentContainer.fields.get(fieldName);
+          const fieldData = parentData.fieldDataByFieldName.get(fieldName);
           // undefined if the field does not exist on the parent
-          if (!fieldContainer) {
+          if (!fieldData) {
             errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName));
             return BREAK;
           }
-          if (fieldContainer.arguments.size) {
+          if (fieldData.argumentDataByArgumentName.size) {
             errorMessages.push(argumentsInKeyFieldSetErrorMessage(fieldSet, fieldPath));
             return BREAK;
           }
@@ -811,24 +521,18 @@ function validateKeyFieldSets(
             return BREAK;
           }
           definedFields[currentDepth].add(fieldName);
-          // Depth 0 is the original parent type
-          // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
-          if (currentDepth === 0) {
-            keyFieldNames.add(fieldName);
-            fieldNames.add(fieldName);
-          }
           getValueOrDefault(factory.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(
             fieldName,
           );
-          const namedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
+          const namedTypeName = getNamedTypeForChild(fieldPath, fieldData.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
             return;
           }
           // The child could itself be a parent and could exist as an object extension
           const childContainer =
-            factory.parentContainerByTypeName.get(namedTypeName) ||
-            factory.extensionContainerByTypeName.get(namedTypeName);
+            factory.parentDefinitionDataByTypeName.get(namedTypeName) ||
+            factory.parentExtensionDataByTypeName.get(namedTypeName);
           if (!childContainer) {
             // Should not be possible to receive this error
             errorMessages.push(unknownTypeInFieldSetErrorMessage(fieldSet, fieldPath, namedTypeName));
@@ -839,7 +543,7 @@ function validateKeyFieldSets(
             childContainer.kind === Kind.OBJECT_TYPE_EXTENSION
           ) {
             shouldDefineSelectionSet = true;
-            parentContainers.push(childContainer);
+            parentWithFieldsDatas.push(childContainer);
             return;
           }
           // interfaces and unions are invalid in a key directive
@@ -865,18 +569,18 @@ function validateKeyFieldSets(
       SelectionSet: {
         enter() {
           if (!shouldDefineSelectionSet) {
-            const parentContainer = parentContainers[currentDepth];
-            const parentTypeName = parentContainer.name.value;
+            const parentData = parentWithFieldsDatas[currentDepth];
+            const parentTypeName = parentData.typeName;
             const fieldPath = `${parentTypeName}.${lastFieldName}`;
             // If the last field is not an object-like
-            const fieldContainer = parentContainer.fields.get(lastFieldName);
+            const fieldContainer = parentData.fieldDataByFieldName.get(lastFieldName);
             if (!fieldContainer) {
               errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, fieldPath, lastFieldName));
               return BREAK;
             }
             const fieldNamedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
             // If the child is not found, it's a base scalar. Undefined types would have already been handled.
-            const childContainer = factory.parentContainerByTypeName.get(fieldNamedTypeName);
+            const childContainer = factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
             const childKind = childContainer ? childContainer.kind : Kind.SCALAR_TYPE_DEFINITION;
             errorMessages.push(
               invalidSelectionSetDefinitionErrorMessage(
@@ -890,7 +594,7 @@ function validateKeyFieldSets(
           }
           currentDepth += 1;
           shouldDefineSelectionSet = false;
-          if (currentDepth < 0 || currentDepth >= parentContainers.length) {
+          if (currentDepth < 0 || currentDepth >= parentWithFieldsDatas.length) {
             errorMessages.push(unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName));
             return BREAK;
           }
@@ -898,23 +602,23 @@ function validateKeyFieldSets(
         },
         leave() {
           if (shouldDefineSelectionSet) {
-            const grandparentContainer = parentContainers[currentDepth];
-            const grandparentTypeName = grandparentContainer.name.value;
-            const parentContainer = parentContainers[currentDepth + 1];
+            const grandparentContainer = parentWithFieldsDatas[currentDepth];
+            const grandparentTypeName = grandparentContainer.typeName;
+            const parentData = parentWithFieldsDatas[currentDepth + 1];
             const fieldPath = `${grandparentTypeName}.${lastFieldName}`;
             errorMessages.push(
               invalidSelectionSetErrorMessage(
                 fieldSet,
                 fieldPath,
-                parentContainer.name.value,
-                kindToTypeString(parentContainer.kind),
+                parentData.typeName,
+                kindToTypeString(parentData.kind),
               ),
             );
             shouldDefineSelectionSet = false;
           }
           // Empty selection sets would be a parse error, so it is unnecessary to handle them
           currentDepth -= 1;
-          parentContainers.pop();
+          parentWithFieldsDatas.pop();
           definedFields.pop();
         },
       },
@@ -943,28 +647,28 @@ enum FieldSetDirective {
 
 type FieldSetParentResult = {
   errorString?: string;
-  fieldSetParentContainer?: ObjectLikeContainer;
+  fieldSetParentContainer?: ParentWithFieldsData;
 };
 
 function getFieldSetParent(
   factory: NormalizationFactory,
   fieldSetDirective: FieldSetDirective,
-  parentContainer: ObjectLikeContainer,
+  parentContainer: ParentWithFieldsData,
   fieldName: string,
   parentTypeName: string,
 ): FieldSetParentResult {
   if (fieldSetDirective !== FieldSetDirective.PROVIDES) {
     return factory.entityContainerByTypeName.has(parentTypeName) ? { fieldSetParentContainer: parentContainer } : {};
   }
-  const fieldContainer = getOrThrowError(parentContainer.fields, fieldName, `${parentTypeName}.fields`);
+  const fieldContainer = getOrThrowError(parentContainer.fieldDataByFieldName, fieldName, `${parentTypeName}.fields`);
   const fieldNamedTypeName = getNamedTypeForChild(`${parentTypeName}.${fieldName}`, fieldContainer.node.type);
 
   if (!factory.entityContainerByTypeName.has(fieldNamedTypeName)) {
     return {};
   }
   const childContainer =
-    factory.parentContainerByTypeName.get(fieldNamedTypeName) ||
-    factory.extensionContainerByTypeName.get(fieldNamedTypeName);
+    factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName) ||
+    factory.parentExtensionDataByTypeName.get(fieldNamedTypeName);
   if (
     !childContainer ||
     (childContainer.kind !== Kind.OBJECT_TYPE_DEFINITION && childContainer.kind !== Kind.OBJECT_TYPE_EXTENSION)
@@ -978,13 +682,13 @@ function getFieldSetParent(
 
 function validateProvidesOrRequires(
   factory: NormalizationFactory,
-  parentContainer: ObjectLikeContainer,
+  parentContainer: ParentWithFieldsData,
   fieldSetByFieldName: Map<string, string>,
   fieldSetDirective: FieldSetDirective,
 ): RequiredFieldConfiguration[] | undefined {
   const errorMessages: string[] = [];
   const configurations: RequiredFieldConfiguration[] = [];
-  const parentTypeName = parentContainer.name.value;
+  const parentTypeName = parentContainer.typeName;
   for (const [fieldName, fieldSet] of fieldSetByFieldName) {
     /* It is possible to encounter a field before encountering the type definition.
      Consequently, at that time, it is unknown whether the named type is an entity.
@@ -1033,19 +737,18 @@ function validateProvidesOrRequires(
 
 export function validateAndAddDirectivesWithFieldSetToConfigurationData(
   factory: NormalizationFactory,
-  parentContainer: ObjectLikeContainer,
+  parentContainer: ParentWithFieldsData,
   fieldSetContainer: FieldSetContainer,
 ) {
   const configurationData = getOrThrowError(
     factory.configurationDataMap,
-    parentContainer.name.value,
+    parentContainer.typeName,
     'configurationDataMap',
   );
   const keys = validateKeyFieldSets(
     factory,
     parentContainer,
     fieldSetContainer.keys,
-    configurationData.fieldNames,
     fieldSetContainer.disableEntityResolver,
   );
   if (keys) {

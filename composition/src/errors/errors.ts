@@ -134,7 +134,7 @@ export function duplicateInterfaceError(interfaceName: string, typeName: string)
   return new Error(`Interface "${interfaceName}" can only be defined on type "${typeName}" once.`);
 }
 
-export function duplicateUnionMemberError(memberName: string, typeName: string): Error {
+export function duplicateUnionMemberExtensionError(memberName: string, typeName: string): Error {
   return new Error(`Extension error:\n Member "${memberName}" already exists on union "${typeName}".`);
 }
 
@@ -163,8 +163,10 @@ export function noBaseTypeExtensionError(typeName: string): Error {
   return new Error(`Extension error:\n Could not extend the type "${typeName}" because no base definition exists.`);
 }
 
-export function noDefinedUnionMembersError(unionName: string): Error {
-  return new Error(`The union "${unionName}" must define at least one union member.`);
+export function noDefinedUnionMembersError(unionTypeName: string, extension = false): Error {
+  return new Error(
+    `The union ` + (extension ? 'extension' : '') + ` "${unionTypeName}" must define at least one union member.`,
+  );
 }
 
 export function operationDefinitionError(typeName: string, operationType: OperationTypeNode, actualType: Kind): Error {
@@ -211,10 +213,10 @@ export function shareableFieldDefinitionsError(parent: ObjectContainer, children
   );
 }
 
-export function undefinedDirectiveError(directiveName: string, hostPath: string): Error {
-  return new Error(
+export function undefinedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
+  return (
     `The directive "${directiveName}" is declared on "${hostPath}",` +
-      ` but the directive is not defined in the schema.`,
+    ` but the directive is not defined in the schema.`
   );
 }
 
@@ -286,6 +288,10 @@ export function invalidRepeatedDirectiveErrorMessage(directiveName: string, host
 
 export function invalidUnionError(unionName: string): Error {
   return new Error(`Union "${unionName}" must have at least one member.`);
+}
+
+export function duplicateUnionMemberError(memberTypeName: string, unionTypeName: string): Error {
+  return new Error(`Member "${memberTypeName}" must only be defined on union "${unionTypeName}" once.`);
 }
 
 export const invalidDeprecatedDirectiveError = new Error(`
@@ -373,29 +379,6 @@ export function invalidKeyDirectiveArgumentErrorMessage(directiveKind: Kind): st
   return ` The required argument named "fields" must be type "String" and not type "${directiveKind}".`;
 }
 
-export function invalidGraphQLNameErrorMessage(type: string, name: string): string {
-  return (
-    ` The ${type} "${name}" is an invalid GraphQL name:\n` +
-    `  GraphQL names must match the following regex: /[_a-zA-Z][_a-zA-Z0-9]*/`
-  );
-}
-
-export const invalidOpeningBraceErrorMessage: string = ` Unexpected brace opening:\n  Received an opening brace "{" before the parent value was defined.`;
-
-export const invalidClosingBraceErrorMessage: string = ` Unexpected brace closure:\n  Received a closing brace "}" before any nested values were defined.`;
-
-export const invalidNestingClosureErrorMessage: string = ` Unexpected brace closure:\n  Received a closing brace "}" before its corresponding opening brace "{" was defined.`;
-
-export const invalidNestingErrorMessage: string = ` Invalid nesting:\n  A nested key was terminated without a closing brace "}".`;
-
-export function invalidEntityKeyError(parentTypeName: string, entityKey: string, errorMessage: string): Error {
-  return new Error(
-    `The directive "key" declared on the object "${parentTypeName}"` +
-      ` with the "fields" argument value of "${entityKey}" is invalid for the following reason:\n` +
-      errorMessage,
-  );
-}
-
 export function invalidKeyDirectivesError(parentTypeName: string, errorMessages: string[]): Error {
   return new Error(
     `The entity "${parentTypeName}" defines the following invalid "key" directive` +
@@ -438,7 +421,7 @@ export function unexpectedDirectiveLocationError(locationName: string): Error {
   return new Error(`Fatal: Unknown directive location "${locationName}".`);
 }
 
-export function unexpectedTypeNodeKindError(childPath: string): Error {
+export function unexpectedTypeNodeKindFatalError(childPath: string): Error {
   return new Error(
     `Fatal: Expected all constituent types of "${childPath}" to be one of the following: ` +
       `"LIST_TYPE", "NAMED_TYPE", or "NON_NULL_TYPE".`,
@@ -881,10 +864,8 @@ export function allFieldDefinitionsAreInaccessibleError(typeString: string, type
   );
 }
 
-export function equivalentSourceAndTargetOverrideError(subgraphName: string, hostPath: string): Error {
-  return new Error(
-    `Cannot override field "${hostPath}" because the source and target subgraph names are both "${subgraphName}"`,
-  );
+export function equivalentSourceAndTargetOverrideErrorMessage(subgraphName: string, hostPath: string): string {
+  return `Cannot override field "${hostPath}" because the source and target subgraph names are both "${subgraphName}"`;
 }
 
 export function undefinedEntityInterfaceImplementationsError(

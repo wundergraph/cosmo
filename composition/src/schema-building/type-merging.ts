@@ -1,6 +1,7 @@
 import { Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode, TypeNode } from 'graphql';
-import { federationUnexpectedNodeKindError, unexpectedTypeNodeKindError } from '../errors/errors';
-import { deepCopyTypeNode, maximumTypeNesting, MutableTypeNode } from '../ast/ast';
+import { federationUnexpectedNodeKindError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
+import { deepCopyTypeNode, MutableIntermediateTypeNode } from './ast';
+import { MAXIMUM_TYPE_NESTING } from '../utils/constants';
 
 enum DivergentType {
   NONE,
@@ -24,10 +25,10 @@ function getMergedTypeNode(
   // The first type of the pair to diverge in restriction takes precedence in all future differences.
   // If the other type of the pair also diverges, it's a src error.
   // To keep the output link intact, it is not possible to spread assign "lastTypeNode".
-  const mergedTypeNode: MutableTypeNode = { kind: current.kind };
+  const mergedTypeNode: MutableIntermediateTypeNode = { kind: current.kind };
   let divergentType = DivergentType.NONE;
-  let lastTypeNode: MutableTypeNode = mergedTypeNode;
-  for (let i = 0; i < maximumTypeNesting; i++) {
+  let lastTypeNode: MutableIntermediateTypeNode = mergedTypeNode;
+  for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
     if (current.kind === other.kind) {
       switch (current.kind) {
         case Kind.NAMED_TYPE:
@@ -90,7 +91,7 @@ function getMergedTypeNode(
     return { typeErrors: [current.kind, other.kind] };
   }
   throw new Error(
-    `Field ${parentName}.${childName} has more than ${maximumTypeNesting} layers of nesting, or there is a cyclical error.`,
+    `Field ${parentName}.${childName} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`,
   );
 }
 
@@ -125,6 +126,6 @@ export function getNamedTypeForChild(childPath: string, typeNode: TypeNode): str
     case Kind.NON_NULL_TYPE:
       return getNamedTypeForChild(childPath, typeNode.type);
     default:
-      throw unexpectedTypeNodeKindError(childPath);
+      throw unexpectedTypeNodeKindFatalError(childPath);
   }
 }

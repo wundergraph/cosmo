@@ -2,6 +2,8 @@ import {
   ArgumentNode,
   ConstDirectiveNode,
   DocumentNode,
+  EnumTypeDefinitionNode,
+  EnumTypeExtensionNode,
   FieldDefinitionNode,
   FieldNode,
   InputObjectTypeDefinitionNode,
@@ -15,10 +17,13 @@ import {
   ObjectTypeExtensionNode,
   OperationTypeNode,
   parse,
+  ScalarTypeDefinitionNode,
+  ScalarTypeExtensionNode,
   SchemaDefinitionNode,
   SchemaExtensionNode,
   SelectionSetNode,
   StringValueNode,
+  UnionTypeDefinitionNode,
   UnionTypeExtensionNode,
 } from 'graphql';
 import {
@@ -54,13 +59,6 @@ import {
   UNION_UPPER,
 } from '../utils/string-constants';
 import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/errors';
-import {
-  EnumTypeDefinitionNode,
-  EnumTypeExtensionNode,
-  ScalarTypeDefinitionNode,
-  ScalarTypeExtensionNode,
-  UnionTypeDefinitionNode,
-} from 'graphql/index';
 import { DirectiveContainer, EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
