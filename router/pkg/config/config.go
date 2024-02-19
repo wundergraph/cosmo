@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/goccy/go-yaml"
 	"os"
 	"time"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
@@ -289,7 +290,7 @@ type Config struct {
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
 
-	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3003" envconfig:"LISTEN_ADDR"`
+	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3002" envconfig:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
