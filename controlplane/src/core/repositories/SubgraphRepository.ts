@@ -239,7 +239,7 @@ export class SubgraphRepository {
       }
 
       if (labelChanged || data.unsetLabels) {
-        const newLabels = normalizeLabels(data.unsetLabels ? [] : data.labels);
+        const newLabels = data.unsetLabels ? [] : normalizeLabels(data.labels);
 
         // update labels of the subgraph
         await tx

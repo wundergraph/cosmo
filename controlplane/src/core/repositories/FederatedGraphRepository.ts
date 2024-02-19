@@ -166,7 +166,7 @@ export class FederatedGraphRepository {
 
       // update label matchers
       if (data.labelMatchers.length > 0 || data.unsetLabelMatchers) {
-        const labelMatchers = normalizeLabelMatchers(data.unsetLabelMatchers ? [] : data.labelMatchers);
+        const labelMatchers = data.unsetLabelMatchers ? [] : normalizeLabelMatchers(data.labelMatchers);
 
         await tx
           .delete(schema.targetLabelMatchers)
