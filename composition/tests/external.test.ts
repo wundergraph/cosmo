@@ -1,57 +1,121 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, Subgraph } from '../src';
+import { federateSubgraphs, normalizeSubgraphFromString, Subgraph } from '../src';
 import { parse } from 'graphql';
 import {
+  baseDirectiveDefinitions,
   normalizeString,
   schemaToSortedNormalizedString,
   versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 
-describe('External tests', () => {
-  test('that @external does not contribute to shareability checks #1.1', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
-    expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
-          `
-      type Entity implements Interface {
-        age: Int!
-        id: ID!
-        isEntity: Boolean!
-        name: String!
-      }
-      
-      type EntityTwo implements Interface {
-        age: Int!
-        field: String!
-        id: ID!
-        name: String!
-      }
-      
-      interface Interface {
-        id: ID!
-        name: String!
-      }
-      
-      type Query {
-        entity: Entity!
-        entityTwo: EntityTwo!
-      }
-      
-      scalar openfed__Scope
-    `,
-      ),
-    );
+describe('@external directive tests', () => {
+  describe('Normalization tests', () => {
+    // TODO external validation  (fieldset/interfaces)
+    test('that @external declared on the object level applies to its defined fields #1.1', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Object {
+          externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
+          nonExternalFieldOne: Boolean!
+        }
+        
+        extend type Object @external {
+          externalFieldTwo: Int!
+          externalFieldThree: Float
+        }
+        
+        type Object @external @extends {
+          """
+            This is the description for Object.externalFieldFour
+          """
+          externalFieldFour: String!
+        }
+        
+        extend type Object {
+          nonExternalFieldTwo(argOne: Int, """This is a description for Object.nonExternalFieldTwo.argTwo""" argTwo: Boolean!): Float!
+          nonExternalFieldThree: Boolean
+        }
+      `);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+         type Object {
+          """
+            This is the description for Object.externalFieldFour
+          """
+          externalFieldFour: String! @external
+          externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
+          externalFieldThree: Float @external
+          externalFieldTwo: Int! @external
+          nonExternalFieldOne: Boolean!
+          nonExternalFieldThree: Boolean
+          nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
+        }
+        
+        scalar openfed__FieldSet
+      `,
+        ),
+      );
+    });
+
+    test('that @external declared on the object level applies to all its defined fields #1.2', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Object @external @extends {
+          """
+            This is the description for Object.externalFieldFour
+          """
+          externalFieldFour: String!
+        }
+        
+        extend type Object {
+          nonExternalFieldTwo(argOne: Int, """This is a description for Object.nonExternalFieldTwo.argTwo""" argTwo: Boolean!): Float!
+          nonExternalFieldThree: Boolean
+        }
+        
+        extend type Object @external {
+          externalFieldTwo: Int!
+          externalFieldThree: Float
+        }
+        
+        type Object {
+          externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
+          nonExternalFieldOne: Boolean!
+        }
+      `);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+         type Object {
+          """
+            This is the description for Object.externalFieldFour
+          """
+          externalFieldFour: String! @external
+          externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
+          externalFieldThree: Float @external
+          externalFieldTwo: Int! @external
+          nonExternalFieldOne: Boolean!
+          nonExternalFieldThree: Boolean
+          nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
+        }
+        
+        scalar openfed__FieldSet
+      `,
+        ),
+      );
+    });
   });
 
-  test('that @external does not contribute to shareability checks #1.2', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphA]);
-    expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
-          `
+  describe('Federation tests', () => {
+    test('that @external does not contribute to shareability checks #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
       type Entity implements Interface {
         age: Int!
         id: ID!
@@ -78,20 +142,19 @@ describe('External tests', () => {
       
       scalar openfed__Scope
     `,
-      ),
-    );
-  });
+        ),
+      );
+    });
 
-  test('that @external does not contribute to shareability checks #2.1', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB, subgraphC]);
-    expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
-          `
+    test('that @external does not contribute to shareability checks #1.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphA]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
       type Entity implements Interface {
         age: Int!
-        field: String!
         id: ID!
         isEntity: Boolean!
         name: String!
@@ -101,7 +164,6 @@ describe('External tests', () => {
         age: Int!
         field: String!
         id: ID!
-        isEntity: Boolean!
         name: String!
       }
       
@@ -117,17 +179,17 @@ describe('External tests', () => {
       
       scalar openfed__Scope
     `,
-      ),
-    );
-  });
+        ),
+      );
+    });
 
-  test('that @external does not contribute to shareability checks #2.2', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC, subgraphB]);
-    expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
-          `
+    test('that @external does not contribute to shareability checks #2.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB, subgraphC]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -156,17 +218,17 @@ describe('External tests', () => {
       
       scalar openfed__Scope
     `,
-      ),
-    );
-  });
+        ),
+      );
+    });
 
-  test('that @external does not contribute to shareability checks #2.3', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphA, subgraphC]);
-    expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
-          `
+    test('that @external does not contribute to shareability checks #2.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC, subgraphB]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -195,17 +257,17 @@ describe('External tests', () => {
       
       scalar openfed__Scope
     `,
-      ),
-    );
-  });
+        ),
+      );
+    });
 
-  test('that @external does not contribute to shareability checks #2.4', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphC, subgraphA]);
-    expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
-          `
+    test('that @external does not contribute to shareability checks #2.3', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphA, subgraphC]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -234,17 +296,17 @@ describe('External tests', () => {
       
       scalar openfed__Scope
     `,
-      ),
-    );
-  });
+        ),
+      );
+    });
 
-  test('that @external does not contribute to shareability checks #2.5', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphA, subgraphB]);
-    expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
-          `
+    test('that @external does not contribute to shareability checks #2.4', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphC, subgraphA]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -273,17 +335,17 @@ describe('External tests', () => {
       
       scalar openfed__Scope
     `,
-      ),
-    );
-  });
+        ),
+      );
+    });
 
-  test('that @external does not contribute to shareability checks #2.6', () => {
-    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphB, subgraphA]);
-    expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
-      normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
-          `
+    test('that @external does not contribute to shareability checks #2.5', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphA, subgraphB]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
       type Entity implements Interface {
         age: Int!
         field: String!
@@ -312,8 +374,48 @@ describe('External tests', () => {
       
       scalar openfed__Scope
     `,
-      ),
-    );
+        ),
+      );
+    });
+
+    test('that @external does not contribute to shareability checks #2.6', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphB, subgraphA]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+      type Entity implements Interface {
+        age: Int!
+        field: String!
+        id: ID!
+        isEntity: Boolean!
+        name: String!
+      }
+      
+      type EntityTwo implements Interface {
+        age: Int!
+        field: String!
+        id: ID!
+        isEntity: Boolean!
+        name: String!
+      }
+      
+      interface Interface {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        entity: Entity!
+        entityTwo: EntityTwo!
+      }
+      
+      scalar openfed__Scope
+    `,
+        ),
+      );
+    });
   });
 });
 

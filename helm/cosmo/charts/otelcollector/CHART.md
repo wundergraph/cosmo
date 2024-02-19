@@ -19,7 +19,7 @@ WunderGraph Cosmo Open Telemetry Collector.
 | deploymentStrategy | object | `{}` |  |
 | existingConfigmap | string | `nil` | The name of the configmap to use for the otelcollector configuration. The key must be "otel-config.yaml". |
 | existingSecret | string | `""` | Existing secret in the same namespace containing the otelcollector Secrets - clickhouseDsn,authJwtSecret. The secret keys have to match with current secret. |
-| extraEnvVars | list | `[]` | Allows to set additional environment variables on the container. Useful for global application non-specific settings. |
+| extraEnvVars | string | `nil` | Allows to set additional environment / runtime variables on the container. Useful for global application non-specific settings. |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
