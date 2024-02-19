@@ -1,7 +1,7 @@
 import {
   ConfigurationData,
   federateSubgraphs,
-  FieldContainer,
+  FederationFieldData,
   ObjectContainer,
   RootTypeFieldData,
   shareableFieldDefinitionsError,
@@ -235,7 +235,7 @@ describe('Entity Tests', () => {
         shareableFieldDefinitionsError(
           {
             node: { name: { value: 'Entity' } },
-            fields: new Map<string, FieldContainer>([
+            fields: new Map<string, FederationFieldData>([
               [
                 'id',
                 {
@@ -244,7 +244,7 @@ describe('Entity Tests', () => {
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FieldContainer,
+                } as FederationFieldData,
               ],
               [
                 'object',
@@ -254,7 +254,7 @@ describe('Entity Tests', () => {
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FieldContainer,
+                } as FederationFieldData,
               ],
               [
                 'age',
@@ -264,7 +264,7 @@ describe('Entity Tests', () => {
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FieldContainer,
+                } as FederationFieldData,
               ],
             ]),
           } as ObjectContainer,
@@ -275,7 +275,7 @@ describe('Entity Tests', () => {
         shareableFieldDefinitionsError(
           {
             node: { name: { value: 'Object' } },
-            fields: new Map<string, FieldContainer>([
+            fields: new Map<string, FederationFieldData>([
               [
                 'id',
                 {
@@ -284,7 +284,7 @@ describe('Entity Tests', () => {
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FieldContainer,
+                } as FederationFieldData,
               ],
               [
                 'name',
@@ -294,7 +294,7 @@ describe('Entity Tests', () => {
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FieldContainer,
+                } as FederationFieldData,
               ],
             ]),
           } as ObjectContainer,
