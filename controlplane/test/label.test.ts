@@ -304,7 +304,7 @@ describe('Labels', (ctx) => {
   // 1 with and without labels in each type
   // Unset the labels of subgraph
   // The graph with empty matchers should have both subgraphs and the other should have none
-  test('Unset subgraph labels', async (testContext) => {
+  test('Should compose correct subgraphs after unsetting subgraph labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
     const fedGraph1Name = genID('fedGraph1');
@@ -389,7 +389,7 @@ describe('Labels', (ctx) => {
   // 1 with and without labels in each type
   // Unset the matchers of graph
   // Both graphs should have the subgraph with no labels
-  test('Unset federated graph label matchers', async (testContext) => {
+  test('Should compose correct subgraphs after unsetting graph label matchers', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
     const fedGraph1Name = genID('fedGraph1');
@@ -464,7 +464,7 @@ describe('Labels', (ctx) => {
   // Graph without matchers will now have 2 subgraphs and the other one will have no subgraphs
   // Now set a label again to the subgraph
   // Each graph will have 1 subgraph
-  test('Unset and set subgraph label', async (testContext) => {
+  test('Should compose correct subgraph after unsetting and re-adding subgraph labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
     const fedGraph1Name = genID('fedGraph1');
