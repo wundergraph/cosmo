@@ -49,6 +49,7 @@ import {
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
 import { useContext, useState } from "react";
+import { PiAsterisk } from "react-icons/pi";
 import { ReactFlowProvider } from "reactflow";
 
 const GraphOverviewPage: NextPageWithLayout = () => {
@@ -195,6 +196,11 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   Matchers
                 </span>
                 <div className="flex flex-wrap gap-2 overflow-hidden">
+                  {labelMatchers.length === 0 && (
+                    <Badge variant="secondary">
+                      <PiAsterisk className="my-px" />
+                    </Badge>
+                  )}
                   {labelMatchers.map((lm: any) => {
                     return (
                       <Badge variant="secondary" key={lm} className="truncate">

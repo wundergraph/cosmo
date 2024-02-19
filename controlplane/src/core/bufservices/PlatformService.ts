@@ -1489,16 +1489,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          if (req.labels.length === 0) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `At least one label is required to create a new subgraph`,
-              },
-              compositionErrors: [],
-            };
-          }
-
           if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
             return {
               response: {
@@ -1544,7 +1534,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
           {
             targetId: subgraph.targetId,
-            labels: req.labels,
+            labels: req.unsetLabels ? [] : req.labels,
             routingUrl: req.routingUrl,
             subscriptionUrl: req.subscriptionUrl,
             schemaSDL: subgraphSchemaSDL,
@@ -2371,6 +2361,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           readme: req.readme,
           blobStorage: opts.blobStorage,
           namespaceId: federatedGraph.namespaceId,
+          unsetLabelMatchers: req.unsetLabelMatchers ?? false,
         });
 
         if (errors) {
@@ -2501,7 +2492,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
           {
             targetId: subgraph.targetId,
-            labels: req.labels,
+            labels: req.unsetLabels ? [] : req.labels,
             subscriptionUrl: req.subscriptionUrl,
             routingUrl: req.routingUrl,
             subscriptionProtocol: req.subscriptionProtocol

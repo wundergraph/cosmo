@@ -23,6 +23,10 @@ export default (opts: BaseCommandOptions) => {
     'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
   command.option(
+    '--unset-labels',
+    'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
+  );
+  command.option(
     '--header [headers...]',
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
   );
@@ -62,6 +66,7 @@ export default (opts: BaseCommandOptions) => {
               value,
             };
           }) ?? [],
+        unsetLabels: !!options.unsetLabels,
         // If the argument is provided but the URL is not, clear it
         subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
         routingUrl: options.routingUrl,

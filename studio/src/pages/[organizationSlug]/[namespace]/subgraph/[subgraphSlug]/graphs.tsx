@@ -28,6 +28,7 @@ import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/plat
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { PiAsterisk, PiAsteriskLight } from "react-icons/pi";
 
 export const Empty = ({ labels }: { labels: string[] }) => {
   const router = useRouter();
@@ -116,6 +117,11 @@ export const FederatedGraphsTable = ({
                   </TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">
+                      {labelMatchers.length === 0 && (
+                        <Badge variant="secondary">
+                          <PiAsterisk className="my-px" />
+                        </Badge>
+                      )}
                       {labelMatchers.map((l) => {
                         return (
                           <Badge variant="secondary" key={l}>

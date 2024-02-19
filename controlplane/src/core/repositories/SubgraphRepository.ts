@@ -159,7 +159,7 @@ export class SubgraphRepository {
     data: {
       targetId: string;
       routingUrl?: string;
-      labels?: Label[];
+      labels: Label[];
       subscriptionUrl?: string;
       schemaSDL?: string;
       subscriptionProtocol?: SubscriptionProtocol;
@@ -872,6 +872,11 @@ export class SubgraphRepository {
       const labelsSQL = labels.map((l) => `"${joinLabel(l)}"`).join(', ');
       // At least one common label
       conditions.push(sql.raw(`labels && '{${labelsSQL}}'`));
+    }
+
+    // Only get subgraphs that do not have any labels if the label matchers are empty.
+    if (data.labelMatchers.length === 0) {
+      conditions.push(eq(targets.labels, []));
     }
 
     const subgraphs = await this.db
