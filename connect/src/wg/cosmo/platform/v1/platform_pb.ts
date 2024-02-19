@@ -5844,14 +5844,19 @@ export class RouterToken extends Message<RouterToken> {
   name = "";
 
   /**
-   * @generated from field: string token = 3;
-   */
-  token = "";
-
-  /**
-   * @generated from field: string createdAt = 4;
+   * @generated from field: string createdAt = 3;
    */
   createdAt = "";
+
+  /**
+   * @generated from field: string lastUsedAt = 4;
+   */
+  lastUsedAt = "";
+
+  /**
+   * @generated from field: string creatorEmail = 5;
+   */
+  creatorEmail = "";
 
   constructor(data?: PartialMessage<RouterToken>) {
     super();
@@ -5863,8 +5868,9 @@ export class RouterToken extends Message<RouterToken> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "lastUsedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "creatorEmail", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RouterToken {

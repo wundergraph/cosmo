@@ -15,6 +15,7 @@ import {
   schemaVersionChangeAction,
   targetLabelMatchers,
   targets,
+  users,
 } from '../../db/schema.js';
 import {
   DateRange,
@@ -33,6 +34,7 @@ import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
+import { UserRepository } from './UserRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -875,6 +877,7 @@ export class FederatedGraphRepository {
     token: string;
     organizationId: string;
     federatedGraphId: string;
+    createdBy: string;
   }): Promise<GraphApiKeyDTO> {
     const keys = await this.db
       .insert(graphApiTokens)
@@ -883,12 +886,20 @@ export class FederatedGraphRepository {
         token: input.token,
         organizationId: input.organizationId,
         federatedGraphId: input.federatedGraphId,
+        createdBy: input.createdBy,
       })
       .returning()
       .execute();
 
     if (keys.length === 0) {
       throw new Error('Failed to create token');
+    }
+
+    const userRepo = new UserRepository(this.db);
+    const user = await userRepo.byId(input.createdBy);
+
+    if (!user) {
+      throw new Error('User not found');
     }
 
     const key = keys[0];
@@ -898,6 +909,8 @@ export class FederatedGraphRepository {
       name: key.name,
       token: key.token,
       createdAt: key.createdAt.toISOString(),
+      creatorEmail: user.email,
+      lastUsedAt: '',
     };
   }
 
@@ -924,9 +937,12 @@ export class FederatedGraphRepository {
         id: graphApiTokens.id,
         name: graphApiTokens.name,
         createdAt: graphApiTokens.createdAt,
+        lastUsedAt: graphApiTokens.lastUsedAt,
+        creatorEmail: users.email,
         token: graphApiTokens.token,
       })
       .from(graphApiTokens)
+      .leftJoin(users, eq(users.id, graphApiTokens.createdBy))
       .where(
         and(
           eq(graphApiTokens.organizationId, input.organizationId),
@@ -945,7 +961,9 @@ export class FederatedGraphRepository {
       name: tokens[0].name,
       createdAt: tokens[0].createdAt.toISOString(),
       token: tokens[0].token,
-    } as GraphApiKeyDTO;
+      creatorEmail: tokens[0].creatorEmail,
+      lastUsedAt: tokens[0].lastUsedAt?.toISOString(),
+    };
   }
 
   public async getRouterTokens(input: {
@@ -957,10 +975,13 @@ export class FederatedGraphRepository {
       .select({
         id: graphApiTokens.id,
         name: graphApiTokens.name,
+        lastUsedAt: graphApiTokens.lastUsedAt,
         createdAt: graphApiTokens.createdAt,
+        creatorEmail: users.email,
         token: graphApiTokens.token,
       })
       .from(graphApiTokens)
+      .leftJoin(users, eq(users.id, graphApiTokens.createdBy))
       .where(
         and(
           eq(graphApiTokens.organizationId, input.organizationId),
@@ -971,15 +992,14 @@ export class FederatedGraphRepository {
       .limit(input.limit)
       .execute();
 
-    return tokens.map(
-      (token) =>
-        ({
-          id: token.id,
-          name: token.name,
-          createdAt: token.createdAt.toISOString(),
-          token: token.token,
-        }) as GraphApiKeyDTO,
-    );
+    return tokens.map((token) => ({
+      id: token.id,
+      name: token.name,
+      createdAt: token.createdAt.toISOString(),
+      lastUsedAt: token.lastUsedAt?.toISOString(),
+      creatorEmail: token.creatorEmail,
+      token: token.token,
+    }));
   }
 
   public async createGraphCryptoKeyPairs(input: {
