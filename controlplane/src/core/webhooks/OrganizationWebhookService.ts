@@ -165,6 +165,23 @@ export class OrganizationWebhookService {
         (c) => c.changeType.includes('ADDED') || c.changeType.includes('CHANGED'),
       );
       const removedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('REMOVED'));
+
+      if (removedChanges.length + addedChanges.length > 20) {
+        tempData.attachments.unshift({
+          color: '#e11d48',
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `Too many changes to display. There were ${removedChanges.length} deletions and ${addedChanges.length} additions.`,
+              },
+            },
+          ],
+        });
+        return tempData;
+      }
+
       if (removedChanges.length > 0) {
         tempData.attachments.unshift({
           color: '#e11d48',
