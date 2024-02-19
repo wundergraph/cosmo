@@ -3,14 +3,17 @@ import {
   GraphQLEnumType,
   GraphQLInputObjectType,
   GraphQLInterfaceType,
+  GraphQLList,
   GraphQLNamedType,
   GraphQLObjectType,
   GraphQLScalarType,
   GraphQLSchema,
   GraphQLUnionType,
+  Kind,
   Location,
   buildASTSchema,
   isObjectType,
+  isScalarType,
   parse,
 } from "graphql";
 import babelPlugin from "prettier/plugins/babel";
@@ -167,32 +170,95 @@ export const extractVariablesFromGraphQL = (
         .sort()
     : [];
 
-  const variablesRegex =
-    /\$([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*([^\s!]+)(!)?(\s*=\s*([^,\)]+))?/g;
   let variables: Record<string, any> = {};
 
-  let match;
-  while ((match = variablesRegex.exec(body)) !== null) {
-    const [, variableName, variableType, nonNull, , defaultValue] = match;
-    let defaultValueParsed;
-    if (defaultValue !== undefined && defaultValue !== "") {
-      defaultValueParsed = JSON.parse(defaultValue);
-    } else {
-      defaultValueParsed = nonNull
-        ? getDefaultValue(variableType, allTypes)
-        : null;
-    }
+  const parsedOp = parse(body);
 
-    variables[variableName] = defaultValueParsed;
+  if (parsedOp.definitions[0].kind === Kind.OPERATION_DEFINITION) {
+    parsedOp.definitions[0].variableDefinitions?.forEach((vd) => {
+      const variableName = vd.variable.name.value;
+      let type = "";
+
+      if (vd.type.kind === Kind.NON_NULL_TYPE) {
+        if (vd.type.type.kind === Kind.NAMED_TYPE) {
+          type = vd.type.type.name.value;
+        }
+      } else if (vd.type.kind === Kind.NAMED_TYPE) {
+        type = vd.type.name.value;
+      }
+
+      let defaultValueParsed;
+
+      if (vd.defaultValue) {
+        defaultValueParsed = parseDefaultValue(vd.defaultValue, allTypes);
+      } else {
+        defaultValueParsed = getDefaultValue(type, allTypes);
+      }
+      variables[variableName] = defaultValueParsed;
+    });
   }
 
   return variables;
 };
 
+function parseDefaultValue(defaultValue: any, allTypes: any[]): any {
+  switch (defaultValue.kind) {
+    case Kind.INT:
+      return parseInt(defaultValue.value);
+    case Kind.FLOAT:
+      return parseFloat(defaultValue.value);
+    case Kind.STRING:
+    case Kind.BOOLEAN:
+    case Kind.ENUM:
+      return defaultValue.value;
+    case Kind.LIST:
+      return defaultValue.values.map((val: any) =>
+        parseDefaultValue(val, allTypes),
+      );
+    case Kind.OBJECT:
+      const objValue: Record<string, any> = {};
+      defaultValue.fields.forEach((field: any) => {
+        const fieldName = field.name.value;
+        const fieldType = allTypes.find((type) => type.name === fieldName);
+        const fieldValue = parseDefaultValue(field.value, allTypes);
+        objValue[fieldName] = fieldType
+          ? castToType(fieldType, fieldValue)
+          : fieldValue;
+      });
+      return objValue;
+    case Kind.NULL:
+      return null;
+    default:
+      return undefined;
+  }
+}
+
+// Helper function to cast field value to its respective type
+function castToType(fieldType: any, fieldValue: any): any {
+  if (isScalarType(fieldType)) {
+    if (fieldType.name === "Int") {
+      return parseInt(fieldValue);
+    } else if (fieldType.name === "Float") {
+      return parseFloat(fieldValue);
+    } else if (fieldType.name === "Boolean") {
+      return fieldValue === "true";
+    } else {
+      return fieldValue;
+    }
+  } else {
+    return fieldValue;
+  }
+}
+
 function getDefaultValue(
   typeName: string,
   schemaTypes: GraphQLNamedType[],
 ): any {
+  const isNonNull = typeName.endsWith("!");
+  if (isNonNull) {
+    typeName = typeName.slice(0, -1);
+  }
+
   const foundType = schemaTypes.find((type) => type.name === typeName);
   if (!foundType) return null;
 
@@ -200,7 +266,7 @@ function getDefaultValue(
     switch (foundType.name) {
       case "Int":
       case "Float":
-        return 1;
+        return 0;
       case "Boolean":
         return false;
       case "ID":
