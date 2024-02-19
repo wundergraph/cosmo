@@ -300,6 +300,10 @@ describe('Labels', (ctx) => {
     await server.close();
   });
 
+  // Create 2 Graphs and 2 subgraphs
+  // 1 with and without labels in each type
+  // Unset the labels of subgraph
+  // The graph with empty matchers should have both subgraphs and the other should have none
   test('Unset subgraph labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
@@ -381,6 +385,10 @@ describe('Labels', (ctx) => {
     await server.close();
   });
 
+  // Create 2 Graphs and 2 subgraphs
+  // 1 with and without labels in each type
+  // Unset the matchers of graph
+  // Both graphs should have the subgraph with no labels
   test('Unset federated graph label matchers', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
@@ -450,6 +458,12 @@ describe('Labels', (ctx) => {
     await server.close();
   });
 
+  // Create 2 Graphs and 2 subgraphs
+  // 1 with and without labels in each type
+  // Unset the labels of the subgraph with labels
+  // Graph without matchers will now have 2 subgraphs and the other one will have no subgraphs
+  // Now set a label again to the subgraph
+  // Each graph will have 1 subgraph
   test('Unset and set subgraph label', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
@@ -458,7 +472,6 @@ describe('Labels', (ctx) => {
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
     const label1 = genUniqueLabel('label1');
-    const label2 = genUniqueLabel('label2');
 
     await createFederatedGraph(client, fedGraph1Name, 'default', [joinLabel(label1)], 'http://localhost:8081');
     await createFederatedGraph(client, fedGraph2Name, 'default', [], 'http://localhost:8082');
