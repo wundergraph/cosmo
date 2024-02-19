@@ -332,7 +332,7 @@
  "InstanceID": "",
  "IntrospectionEnabled": true,
  "JSONLog": true,
- "ListenAddr": "localhost:3003",
+ "ListenAddr": "localhost:3002",
  "LivenessCheckPath": "/health/live",
  "LocalhostFallbackInsideDocker": true,
  "LogLevel": "info",
