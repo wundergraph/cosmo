@@ -1534,7 +1534,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
           {
             targetId: subgraph.targetId,
-            labels: req.unsetLabels ? [] : req.labels,
+            labels: req.labels,
+            unsetLabels: req.unsetLabels ?? false,
             routingUrl: req.routingUrl,
             subscriptionUrl: req.subscriptionUrl,
             schemaSDL: subgraphSchemaSDL,
@@ -2492,7 +2493,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update(
           {
             targetId: subgraph.targetId,
-            labels: req.unsetLabels ? [] : req.labels,
+            labels: req.labels,
+            unsetLabels: req.unsetLabels ?? false,
             subscriptionUrl: req.subscriptionUrl,
             routingUrl: req.routingUrl,
             subscriptionProtocol: req.subscriptionProtocol

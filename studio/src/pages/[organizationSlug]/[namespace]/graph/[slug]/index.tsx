@@ -196,11 +196,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   Matchers
                 </span>
                 <div className="flex flex-wrap gap-2 overflow-hidden">
-                  {labelMatchers.length === 0 && (
-                    <Badge variant="secondary">
-                      <PiAsterisk className="my-px" />
-                    </Badge>
-                  )}
+                  {labelMatchers.length === 0 && <span>-</span>}
                   {labelMatchers.map((lm: any) => {
                     return (
                       <Badge variant="secondary" key={lm} className="truncate">

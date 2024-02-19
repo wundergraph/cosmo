@@ -166,6 +166,7 @@ export class SubgraphRepository {
       updatedBy: string;
       readme?: string;
       namespaceId: string;
+      unsetLabels: boolean;
     },
     blobStorage: BlobStorage,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
@@ -237,8 +238,8 @@ export class SubgraphRepository {
         labelChanged = hasLabelsChanged(subgraph.labels, data.labels);
       }
 
-      if (labelChanged && data.labels) {
-        const newLabels = normalizeLabels(data.labels);
+      if (labelChanged || data.unsetLabels) {
+        const newLabels = normalizeLabels(data.unsetLabels ? [] : data.labels);
 
         // update labels of the subgraph
         await tx

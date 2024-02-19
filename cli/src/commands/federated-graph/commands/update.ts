@@ -46,7 +46,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
-        unsetLabelMatchers: !!options.unsetLabelMatchers,
+        unsetLabelMatchers: options.unsetLabelMatchers,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {

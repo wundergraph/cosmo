@@ -66,7 +66,7 @@ export default (opts: BaseCommandOptions) => {
               value,
             };
           }) ?? [],
-        unsetLabels: !!options.unsetLabels,
+        unsetLabels: options.unsetLabels,
         // If the argument is provided but the URL is not, clear it
         subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
         routingUrl: options.routingUrl,

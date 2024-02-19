@@ -431,11 +431,7 @@ export const SubgraphsTable = ({
                   </TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">
-                      {labels.length === 0 && (
-                        <Badge variant="secondary">
-                          <PiAsterisk className="my-px" />
-                        </Badge>
-                      )}
+                      {labels.length === 0 && <div>-</div>}
                       {labels.map(({ key, value }) => {
                         return (
                           <Badge variant="secondary" key={key + value}>
