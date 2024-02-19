@@ -47,6 +47,7 @@ import {
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
+import { Link } from "../ui/link";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -298,8 +299,17 @@ export const GraphPageLayout = ({
   children,
   scrollRef,
 }: TitleLayoutProps) => {
+  const router = useRouter();
+
   const breadcrumb = (
-    <div className="-ml-2 flex flex-row items-center space-x-2 text-sm">
+    <div className="flex flex-row items-center space-x-2 text-sm">
+      <Link
+        className="text-muted-foreground hover:text-current"
+        href={`/${router.query.organizationSlug}`}
+      >
+        Home
+      </Link>
+      <span className="text-muted-foreground">/</span>
       <GraphSelect /> <span className="text-muted-foreground">/</span>
       {breadcrumbs?.map((b, i) => (
         <Fragment key={i}>
