@@ -364,7 +364,7 @@
     "listen_addr": {
       "type": "string",
       "description": "The address on which the router listens for incoming requests. The address is specified as a string with the format 'host:port'.",
-      "default": "localhost:3003",
+      "default": "localhost:3002",
       "format": "hostname-port"
     },
     "controlplane_url": {
