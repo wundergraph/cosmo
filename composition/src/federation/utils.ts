@@ -24,7 +24,6 @@ import {
   SUBSCRIPTION_UPPER,
 } from '../utils/string-constants';
 import { SubgraphConfig } from '../subgraph/subgraph';
-import { AuthorizationData } from '../utils/utils';
 
 export type FederationResultContainer = {
   errors?: Error[];
@@ -117,7 +116,7 @@ export type EnumValueContainer = {
 
 export type EnumValueMap = Map<string, EnumValueContainer>;
 
-export type FieldContainer = {
+export type FederationFieldData = {
   arguments: ArgumentMap;
   directives: PersistedDirectivesContainer;
   isShareable: boolean;
@@ -128,7 +127,7 @@ export type FieldContainer = {
   subgraphsByShareable: Map<string, boolean>;
 };
 
-export type FieldMap = Map<string, FieldContainer>;
+export type FieldMap = Map<string, FederationFieldData>;
 
 export type InputValueContainer = {
   appearances: number;
@@ -189,7 +188,7 @@ export type UnionContainer = {
   node: MutableUnionTypeDefinitionNode;
 };
 
-export type ChildContainer = FieldContainer | InputValueContainer | EnumValueContainer;
+export type ChildContainer = FederationFieldData | InputValueContainer | EnumValueContainer;
 
 export type ParentContainer =
   | EnumContainer
@@ -204,6 +203,6 @@ export type ExtensionContainer = ObjectExtensionContainer;
 export type ParentMap = Map<string, ParentContainer>;
 export type ObjectLikeContainer = ObjectContainer | InterfaceContainer;
 
-export function isFieldInaccessible(fieldContainer: FieldContainer): boolean {
-  return fieldContainer.directives.directives.has(INACCESSIBLE);
+export function isFieldInaccessible(fieldData: FederationFieldData): boolean {
+  return fieldData.directives.directives.has(INACCESSIBLE);
 }
