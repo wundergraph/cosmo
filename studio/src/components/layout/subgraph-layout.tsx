@@ -35,6 +35,7 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { ChartBarIcon } from "@heroicons/react/24/outline";
 import { Badge } from "../ui/badge";
+import { Link } from "../ui/link";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -227,8 +228,17 @@ export const SubgraphPageLayout = ({
   children,
   scrollRef,
 }: TitleLayoutProps) => {
+  const router = useRouter();
+
   const breadcrumb = (
-    <div className="-ml-2 flex flex-row items-center space-x-2 text-sm">
+    <div className="flex flex-row items-center space-x-2 text-sm">
+      <Link
+        className="text-muted-foreground hover:text-current"
+        href={`/${router.query.organizationSlug}`}
+      >
+        Home
+      </Link>
+      <span className="text-muted-foreground">/</span>
       <SubgraphSelect /> <span className="text-muted-foreground">/</span>
       {breadcrumbs?.map((b, i) => (
         <Fragment key={i}>
