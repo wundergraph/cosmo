@@ -50,6 +50,8 @@ telemetry:
   # Common options
   service_name: "cosmo-router"
   # uses https://cosmo-otel.wundergraph.com for tracing and metrics
+  redact_ips:
+    enabled: true
 
   # OpenTelemetry Tracing
   tracing:
