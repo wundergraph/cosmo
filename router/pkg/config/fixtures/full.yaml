@@ -49,8 +49,9 @@ cors:
 telemetry:
   # Common options
   service_name: "cosmo-router"
-  redact_ips:
+  anonymize_ip:
     enabled: true
+    method: redact # hash or redact
 
   # If no exporter is specified it uses https://cosmo-otel.wundergraph.com for tracing and metrics
 
