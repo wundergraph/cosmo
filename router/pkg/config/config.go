@@ -83,10 +83,10 @@ type MetricsOTLP struct {
 }
 
 type Telemetry struct {
-	ServiceName string                            `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
-	Tracing     Tracing                           `yaml:"tracing"`
-	Metrics     Metrics                           `yaml:"metrics"`
-	RedactIPs   TelemetryIPRedactionConfiguration `yaml:"redact_ips,omitempty"`
+	ServiceName string                   `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
+	Tracing     Tracing                  `yaml:"tracing"`
+	Metrics     Metrics                  `yaml:"metrics"`
+	AnonymizeIP AnonymizeIpConfiguration `yaml:"anonymize_ip,omitempty"`
 }
 
 type CORS struct {
@@ -277,8 +277,9 @@ type WebSocketConfiguration struct {
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
 }
 
-type TelemetryIPRedactionConfiguration struct {
-	Enabled bool `yaml:"enabled" default:"true" envconfig:"TELEMETRY_REDACT_IPS_ENABLED"`
+type AnonymizeIpConfiguration struct {
+	Enabled bool   `yaml:"enabled" default:"true" envconfig:"ANONYMIZE_IP_ENABLED"`
+	Method  string `yaml:"method" default:"hash" envconfig:"ANONYMIZE_IP_METHOD"`
 }
 
 type Config struct {

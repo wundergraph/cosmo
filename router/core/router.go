@@ -78,6 +78,11 @@ type (
 		CollectorEndpoint string
 	}
 
+	IPAnonymizationConfig struct {
+		Enabled bool
+		Method  string
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		clusterName              string
@@ -95,7 +100,7 @@ type (
 		awsLambda                bool
 		shutdown                 bool
 		bootstrapped             bool
-		redactIPs                bool
+		ipAnonymization          IPAnonymizationConfig
 		listenAddr               string
 		baseURL                  string
 		graphqlWebURL            string
@@ -604,7 +609,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			Logger:            r.logger,
 			Config:            r.traceConfig,
 			ServiceInstanceID: r.instanceID,
-			RedactIPs:         r.redactIPs,
+			IPAnonymization: &rtrace.IPAnonymizationConfig{
+				Enabled: r.ipAnonymization.Enabled,
+				Method:  r.ipAnonymization.Method,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
@@ -796,8 +804,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}),
 	}
 
-	if r.redactIPs {
-		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithRedactIPs())
+	if r.ipAnonymization.Enabled {
+		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
+			Enabled: r.ipAnonymization.Enabled,
+			Method:  r.ipAnonymization.Method,
+		}))
 	}
 
 	requestLogger := requestlogger.New(
@@ -1530,9 +1541,9 @@ func WithInstanceID(id string) Option {
 	}
 }
 
-func WithRedactIPs(enabled bool) Option {
+func WithAnonymization(ipConfig IPAnonymizationConfig) Option {
 	return func(r *Router) {
-		r.redactIPs = enabled
+		r.ipAnonymization = ipConfig
 	}
 }
 

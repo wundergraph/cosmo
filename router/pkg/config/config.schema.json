@@ -95,14 +95,20 @@
           "description": "The name of the service. The name is used to identify the service in the traces and metrics. The default value is 'cosmo-router'.",
           "default": "cosmo-router"
         },
-        "redact_ips": {
+        "anonymize_ip": {
           "type": "object",
-          "description": "The configuration for the redaction of the IP addresses. Redaction is applied to the IP addresses in the traces and logs to protect the privacy of the users.",
+          "description": "The configuration for the anonymization of the IP addresses. Redaction is applied to the IP addresses in the traces and logs to protect the privacy of the users.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Enable the redaction of the IP addresses. The default value is true."
+              "description": "Enable the anonymization of the IP addresses. The default value is true."
+            },
+            "method": {
+              "type": "string",
+              "default": "hash",
+              "description": "The method used to anonymize the IP addresses. The supported methods are 'redact' and 'hash'. The default value is 'hash'. The 'redact' method replaces the IP addresses with the string 'REDACTED'. The 'hash' method hashes the IP addresses using the SHA-256 algorithm.",
+              "enum": ["redact", "hash"]
             }
           }
         },

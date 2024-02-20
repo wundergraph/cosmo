@@ -43,7 +43,7 @@ func TestStartAgent(t *testing.T) {
 		Logger:            log,
 		Config:            c1,
 		ServiceInstanceID: instanceID,
-		RedactIPs:         false,
+		IPAnonymization:   nil,
 	})
 	assert.NoError(t, err)
 
@@ -51,7 +51,7 @@ func TestStartAgent(t *testing.T) {
 		Logger:            log,
 		Config:            c2,
 		ServiceInstanceID: instanceID,
-		RedactIPs:         false,
+		IPAnonymization:   nil,
 	})
 	assert.NoError(t, err)
 
@@ -59,7 +59,7 @@ func TestStartAgent(t *testing.T) {
 		Logger:            log,
 		Config:            c3,
 		ServiceInstanceID: instanceID,
-		RedactIPs:         false,
+		IPAnonymization:   nil,
 	})
 	assert.NoError(t, err)
 }

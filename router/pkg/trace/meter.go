@@ -2,8 +2,8 @@ package trace
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
-	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/trace/redact"
 	"go.opentelemetry.io/otel"
@@ -22,6 +22,20 @@ import (
 
 var (
 	tp *sdktrace.TracerProvider
+)
+
+type (
+	IPAnonymizationConfig struct {
+		Enabled bool
+		Method  string
+	}
+
+	ProviderConfig struct {
+		Logger            *zap.Logger
+		Config            *Config
+		ServiceInstanceID string
+		IPAnonymization   *IPAnonymizationConfig
+	}
 )
 
 func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, error) {
@@ -87,13 +101,6 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 	return exporter, nil
 }
 
-type ProviderConfig struct {
-	Logger            *zap.Logger
-	Config            *Config
-	ServiceInstanceID string
-	RedactIPs         bool
-}
-
 func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.TracerProvider, error) {
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(config.Config.Name)),
@@ -130,16 +137,29 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		sdktrace.WithResource(r),
 	}
 
-	if config.RedactIPs {
+	if config.IPAnonymization != nil && config.IPAnonymization.Enabled {
+
+		var rFunc redact.RedactFunc
+
+		if config.IPAnonymization.Method == "hash" {
+			rFunc = func(key attribute.KeyValue) string {
+				h := sha256.New()
+				return string(h.Sum([]byte(key.Value.AsString())))
+			}
+		} else if config.IPAnonymization.Method == "redact" {
+			rFunc = func(key attribute.KeyValue) string {
+				return "[REDACTED]"
+			}
+
+		}
+
 		opts = append(opts,
 			// Attributes that should be redacted by the OTEL http instrumentation package.
 			redact.Attributes([]attribute.Key{
 				// Both could contain sensitive information.
 				semconv17.HTTPClientIPKey,
 				semconv17.NetSockPeerAddrKey,
-			}, func(key attribute.KeyValue) string {
-				return fmt.Sprintf("%d", xxhash.Sum64String(key.Value.AsString()))
-			}))
+			}, rFunc))
 	}
 
 	if len(config.Config.Propagators) > 0 {

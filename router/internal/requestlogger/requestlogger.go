@@ -1,8 +1,8 @@
 package requestlogger
 
 import (
+	"crypto/sha256"
 	"fmt"
-	"github.com/cespare/xxhash/v2"
 	"net/http"
 	"time"
 
@@ -18,17 +18,24 @@ type Fn func(r *http.Request) []zapcore.Field
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
 // whether to print stack traces on panic.
-type Option func(handler *handler)
+type (
+	Option func(handler *handler)
+
+	IPAnonymizationConfig struct {
+		Enabled bool
+		Method  string
+	}
+)
 
 type handler struct {
-	timeFormat string
-	utc        bool
-	skipPaths  []string
-	redactIPs  bool
-	traceID    bool // optionally log Open Telemetry TraceID
-	context    Fn
-	handler    http.Handler
-	logger     *zap.Logger
+	timeFormat      string
+	utc             bool
+	skipPaths       []string
+	ipNormalization *IPAnonymizationConfig
+	traceID         bool // optionally log Open Telemetry TraceID
+	context         Fn
+	handler         http.Handler
+	logger          *zap.Logger
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -39,9 +46,9 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 	return r
 }
 
-func WithRedactIPs() Option {
+func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	return func(r *handler) {
-		r.redactIPs = true
+		r.ipNormalization = ipConfig
 	}
 }
 
@@ -92,8 +99,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	remoteAddr := r.RemoteAddr
 
-	if h.redactIPs {
-		remoteAddr = fmt.Sprintf("%d", xxhash.Sum64String(r.RemoteAddr))
+	if h.ipNormalization != nil && h.ipNormalization.Enabled {
+		if h.ipNormalization.Method == "hash" {
+			h := sha256.New()
+			remoteAddr = fmt.Sprintf("%d", h.Sum([]byte(r.RemoteAddr)))
+		} else if h.ipNormalization.Method == "redact" {
+			remoteAddr = "[REDACTED]"
+		}
 	}
 
 	fields := []zapcore.Field{
