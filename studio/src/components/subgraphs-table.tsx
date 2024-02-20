@@ -474,7 +474,7 @@ export const SubgraphsTable = ({
                       <TooltipContent>Analytics</TooltipContent>
                     </Tooltip>
                     <Button variant="ghost" size="sm" className="table-action">
-                      View
+                      <Link href={path}>View</Link>
                     </Button>
                   </TableCell>
                 </TableRow>
