@@ -2,7 +2,7 @@
 Thank you for your pull request. Please provide a description above and review
 the requirements below.
 
-Contributors guide: https://github.com/wundergraph/cloud/blob/main/CONTRIBUTING.md
+Contributors guide: https://github.com/wundergraph/cosmo/blob/main/CONTRIBUTING.md
 Squashed commit must follow https://www.conventionalcommits.org/en/v1.0.0/ so we can generate the changelog.
 -->
 
