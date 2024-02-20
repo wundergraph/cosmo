@@ -74,13 +74,13 @@ You can find your API Gateway Endpoint URL in the output values displayed after 
 You don't have to build the router yourself. You can download the latest release and follow the instructions below.
 
 1. Download the Lambda Router binary from the official [Router Releases](https://github.com/wundergraph/cosmo/releases?q=aws-lambda-router&expanded=true) page.
-2. Create a .zip archive with the binary and the `router.json` file. You can download the latest `router.json` with [`wgc federated-graph fetch`](https://cosmo-docs.wundergraph.com/cli/federated-graph/fetch).
+2. Create a .zip archive with the binary and the `router.json` file. You can download the latest `router.json` with [`wgc router fetch`](https://cosmo-docs.wundergraph.com/cli/router/fetch).
 
 The .zip archive should look like this:
 ```bash
 .
 └── myFunction.zip/
     ├── bootstrap # Extracted from the Router release archive
-    └── router.json # Downloaded with `wgc federated-graph fetch`
+    └── router.json # Downloaded with `wgc router fetch`
 ```
 3. Deploy the .zip archive to AWS Lambda. You can use SAM CLI or the AWS console. Alternatively, you can use your IaC tool of choice.
