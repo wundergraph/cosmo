@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.68.0](https://github.com/wundergraph/cosmo/compare/studio@0.67.0...studio@0.68.0) (2024-02-20)
+
+### Bug Fixes
+
+* view button in subgraph table ([#559](https://github.com/wundergraph/cosmo/issues/559)) ([e598ef4](https://github.com/wundergraph/cosmo/commit/e598ef4643f2d96f5b204bcaa0afa53fafcfeeb2)) (@JivusAyrus)
+
+### Features
+
+* implement slider for analytics duration ([#539](https://github.com/wundergraph/cosmo/issues/539)) ([3f4a0ee](https://github.com/wundergraph/cosmo/commit/3f4a0eeb58daa36ddf0be4bfc20959b53b6d0928)) (@JivusAyrus)
+
 # [0.67.0](https://github.com/wundergraph/cosmo/compare/studio@0.66.0...studio@0.67.0) (2024-02-20)
 
 ### Bug Fixes

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.71.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.70.0...controlplane@0.71.0) (2024-02-20)
+
+### Features
+
+* implement slider for analytics duration ([#539](https://github.com/wundergraph/cosmo/issues/539)) ([3f4a0ee](https://github.com/wundergraph/cosmo/commit/3f4a0eeb58daa36ddf0be4bfc20959b53b6d0928)) (@JivusAyrus)
+
 # [0.70.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.69.0...controlplane@0.70.0) (2024-02-20)
 
 ### Bug Fixes
