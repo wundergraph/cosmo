@@ -318,15 +318,15 @@ const AddSubgraphUsers = ({
     <div className="flex items-center justify-end px-2">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
+          asChild
           disabled={!isAdmin && !(creatorUserId && creatorUserId === user?.id)}
         >
-          <TooltipProvider>
+          <div>
             <Tooltip delayDuration={100}>
-              <TooltipTrigger>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={(e) => e.stopPropagation()}
                   disabled={
                     !isAdmin && !(creatorUserId && creatorUserId === user?.id)
                   }
@@ -340,7 +340,7 @@ const AddSubgraphUsers = ({
                   : "Only admins or the creator of the subgraph can add users."}
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </div>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -419,11 +419,7 @@ export const SubgraphsTable = ({
                 )}`;
               }
               return (
-                <TableRow
-                  onClick={() => router.push(path)}
-                  key={name}
-                  className="group cursor-pointer py-1 even:bg-secondary/20 hover:bg-secondary/40"
-                >
+                <TableRow key={name} className="py-1 even:bg-secondary/20">
                   <TableCell className="px-4 font-medium">{name}</TableCell>
                   <TableCell className="px-4 text-muted-foreground">
                     {routingURL}
