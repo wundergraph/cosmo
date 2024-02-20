@@ -61,6 +61,7 @@ import {
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 import { cn } from "@/lib/utils";
+import { PiAsterisk } from "react-icons/pi";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const router = useRouter();
@@ -426,6 +427,15 @@ export const SubgraphsTable = ({
                   </TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">
+                      {labels.length === 0 && (
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>-</TooltipTrigger>
+                          <TooltipContent>
+                            Only graphs with empty label matchers will compose
+                            this subgraph
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       {labels.map(({ key, value }) => {
                         return (
                           <Badge variant="secondary" key={key + value}>
