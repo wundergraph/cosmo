@@ -276,12 +276,12 @@ type WebSocketConfiguration struct {
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
 }
 
-type RedactIPAddressesConfiguration struct {
+type AnonymizeIPAddressesConfiguration struct {
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"REDACT_IP_ADDRESSES_ENABLED"`
 }
 
 type ComplianceConfiguration struct {
-	RedactIPAddresses RedactIPAddressesConfiguration `yaml:"redact_ip_addresses"`
+	AnonymizeIPAddresses AnonymizeIPAddressesConfiguration `yaml:"anonymize_ip_addresses"`
 }
 
 type Config struct {

@@ -95,7 +95,7 @@ type (
 		awsLambda                bool
 		shutdown                 bool
 		bootstrapped             bool
-		redactIPAddr             bool
+		anonymizeIPAddr          bool
 		listenAddr               string
 		baseURL                  string
 		graphqlWebURL            string
@@ -604,7 +604,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			Logger:            r.logger,
 			Config:            r.traceConfig,
 			ServiceInstanceID: r.instanceID,
-			RedactIPAddr:      r.redactIPAddr,
+			AnonymizeIPAddr:   r.anonymizeIPAddr,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
@@ -796,8 +796,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}),
 	}
 
-	if r.redactIPAddr {
-		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithRedactIPAddr())
+	if r.anonymizeIPAddr {
+		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymizeIPAddresses())
 	}
 
 	requestLogger := requestlogger.New(
@@ -1530,9 +1530,9 @@ func WithInstanceID(id string) Option {
 	}
 }
 
-func WithRedactIPAddress(enabled bool) Option {
+func WithAnonymizeIPAddresses(enabled bool) Option {
 	return func(r *Router) {
-		r.redactIPAddr = enabled
+		r.anonymizeIPAddr = enabled
 	}
 }
 

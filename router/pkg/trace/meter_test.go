@@ -39,12 +39,27 @@ func TestStartAgent(t *testing.T) {
 
 	instanceID := "instanceID"
 
-	_, err := NewTracerProvider(context.Background(), log, c1, instanceID)
+	_, err := NewTracerProvider(context.Background(), &ProviderConfig{
+		Logger:            log,
+		Config:            c1,
+		ServiceInstanceID: instanceID,
+		AnonymizeIPAddr:   false,
+	})
 	assert.NoError(t, err)
 
-	_, err = NewTracerProvider(context.Background(), log, c2, instanceID)
+	_, err = NewTracerProvider(context.Background(), &ProviderConfig{
+		Logger:            log,
+		Config:            c2,
+		ServiceInstanceID: instanceID,
+		AnonymizeIPAddr:   false,
+	})
 	assert.NoError(t, err)
 
-	_, err = NewTracerProvider(context.Background(), log, c3, instanceID)
+	_, err = NewTracerProvider(context.Background(), &ProviderConfig{
+		Logger:            log,
+		Config:            c3,
+		ServiceInstanceID: instanceID,
+		AnonymizeIPAddr:   false,
+	})
 	assert.NoError(t, err)
 }

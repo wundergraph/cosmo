@@ -27,7 +27,7 @@
       "description": "The configuration for the compliance. Allows to configure the compliance settings for the router e.g. redact IP addresses.",
       "additionalProperties": false,
       "properties": {
-        "redact_ip_addresses": {
+        "anonymize_ip_addresses": {
           "type": "object",
           "additionalProperties": false,
           "properties": {

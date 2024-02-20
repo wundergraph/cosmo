@@ -46,6 +46,11 @@
  "Cluster": {
   "Name": "my-cluster"
  },
+ "Compliance": {
+  "AnonymizeIPAddresses": {
+   "Enabled": true
+  }
+ },
  "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
  "DevelopmentMode": false,
  "EngineExecutionConfiguration": {
@@ -284,6 +289,11 @@
  },
  "Cluster": {
   "Name": ""
+ },
+ "Compliance": {
+  "AnonymizeIPAddresses": {
+   "Enabled": true
+  }
  },
  "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
  "DevelopmentMode": false,

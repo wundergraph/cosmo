@@ -91,7 +91,7 @@ type ProviderConfig struct {
 	Logger            *zap.Logger
 	Config            *Config
 	ServiceInstanceID string
-	RedactIPAddr      bool
+	AnonymizeIPAddr   bool
 }
 
 func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.TracerProvider, error) {
@@ -130,7 +130,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		sdktrace.WithResource(r),
 	}
 
-	if config.RedactIPAddr {
+	if config.AnonymizeIPAddr {
 		opts = append(opts,
 			// Attributes that should be redacted by the OTEL http instrumentation package.
 			redact.Attributes([]attribute.Key{
