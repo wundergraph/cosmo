@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   allFieldDefinitionsAreInaccessibleError,
   federateSubgraphs,
-  FieldContainer,
+  FederationFieldData,
   ImplementationErrors,
   InvalidFieldImplementation,
   normalizeSubgraph,
@@ -42,7 +42,7 @@ describe('@inaccessible tests', () => {
       shareableFieldDefinitionsError(
         {
           node: { name: { value: 'Entity' } },
-          fields: new Map<string, FieldContainer>([
+          fields: new Map<string, FederationFieldData>([
             [
               'name',
               {
@@ -51,7 +51,7 @@ describe('@inaccessible tests', () => {
                   ['subgraph-a', true],
                   ['subgraph-c', false],
                 ]),
-              } as FieldContainer,
+              } as FederationFieldData,
             ],
           ]),
         } as ObjectContainer,

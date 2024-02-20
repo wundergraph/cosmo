@@ -4,6 +4,50 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.68.1](https://github.com/wundergraph/cosmo/compare/router@0.68.0...router@0.68.1) (2024-02-19)
+
+### Bug Fixes
+
+* listen port in config ([#553](https://github.com/wundergraph/cosmo/issues/553)) ([e0345bc](https://github.com/wundergraph/cosmo/commit/e0345bc02eafd96f553760e58510415c9c4fb654)) (@thisisnithin)
+* router listen address default port ([#551](https://github.com/wundergraph/cosmo/issues/551)) ([8315997](https://github.com/wundergraph/cosmo/commit/8315997a48b1c5622f5017aef5b26a772f8cebcf)) (@thisisnithin)
+
+# [0.68.0](https://github.com/wundergraph/cosmo/compare/router@0.67.0...router@0.68.0) (2024-02-18)
+
+### Features
+
+* **metrics:** collect OS type and enrich traces with resource instan… ([#546](https://github.com/wundergraph/cosmo/issues/546)) ([746b117](https://github.com/wundergraph/cosmo/commit/746b1175270b07fd7f3b9a9ae2077ee7dcc471c3)) (@StarpTech)
+
+# [0.67.0](https://github.com/wundergraph/cosmo/compare/router@0.66.3...router@0.67.0) (2024-02-17)
+
+### Features
+
+* add support for absinthe WebSocket protocol ([#541](https://github.com/wundergraph/cosmo/issues/541)) ([740e960](https://github.com/wundergraph/cosmo/commit/740e960d48560f92854e63feec97c9dd62e29b01)) (@jensneuse)
+* use json schema to validate and document router config ([#545](https://github.com/wundergraph/cosmo/issues/545)) ([ec700ba](https://github.com/wundergraph/cosmo/commit/ec700bae0224d3d0180b8d56800f48c9002dcee5)) (@StarpTech)
+
+## [0.66.3](https://github.com/wundergraph/cosmo/compare/router@0.66.2...router@0.66.3) (2024-02-16)
+
+### Bug Fixes
+
+* disable variable export by default ([#536](https://github.com/wundergraph/cosmo/issues/536)) ([a100591](https://github.com/wundergraph/cosmo/commit/a1005919a28ee8c9e9c3b87c730e47db336bceec)) (@StarpTech)
+
+## [0.66.2](https://github.com/wundergraph/cosmo/compare/router@0.66.1...router@0.66.2) (2024-02-14)
+
+### Bug Fixes
+
+* don't panic when config is nil ([#524](https://github.com/wundergraph/cosmo/issues/524)) ([bf9ee9e](https://github.com/wundergraph/cosmo/commit/bf9ee9ec3728212186511e8d9826c2276a54f55a)) (@StarpTech)
+
+## [0.66.1](https://github.com/wundergraph/cosmo/compare/router@0.66.0...router@0.66.1) (2024-02-13)
+
+### Bug Fixes
+
+* distinguish between server and process uptime, fix uptime ch query ([#520](https://github.com/wundergraph/cosmo/issues/520)) ([6fc2b72](https://github.com/wundergraph/cosmo/commit/6fc2b7237cd029127f6913199c40dd61bb16a22b)) (@StarpTech)
+
+# [0.66.0](https://github.com/wundergraph/cosmo/compare/router@0.65.0...router@0.66.0) (2024-02-13)
+
+### Features
+
+* router fleet management ([#515](https://github.com/wundergraph/cosmo/issues/515)) ([7f0deae](https://github.com/wundergraph/cosmo/commit/7f0deae98a2f58bd46927bdb2be8d615613b908f)) (@StarpTech)
+
 # [0.65.0](https://github.com/wundergraph/cosmo/compare/router@0.64.0...router@0.65.0) (2024-02-13)
 
 ### Features

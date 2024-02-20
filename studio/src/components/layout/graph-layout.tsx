@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import {
   ChartBarIcon,
+  ServerStackIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import {
@@ -21,8 +22,14 @@ import {
   GetFederatedGraphByNameResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import { Fragment, ReactNode, createContext, useMemo } from "react";
-import { PiChat, PiCubeFocus, PiDevices, PiGitBranch } from "react-icons/pi";
+import { Fragment, createContext, useMemo } from "react";
+import {
+  PiChat,
+  PiCubeFocus,
+  PiDevices,
+  PiGitBranch,
+  PiToggleRight,
+} from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -40,19 +47,7 @@ import {
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
-
-const icons: { [key: string]: ReactNode } = {
-  Overview: <HomeIcon />,
-  Subgraphs: <Component2Icon />,
-  Explorer: <PlayIcon />,
-  Schema: <FileTextIcon />,
-  Compositions: <PiCubeFocus />,
-  Changelog: <PiGitBranch />,
-  Checks: <CheckCircledIcon />,
-  Analytics: <ChartBarIcon className="h-4 w-4" />,
-  Clients: <PiDevices className="h-4 w-4" />,
-  Discussions: <PiChat className="h-4 w-4" />,
-};
+import { Link } from "../ui/link";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -120,6 +115,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <ChartBarIcon className="h-4 w-4" />,
       },
       {
+        title: "Routers",
+        href: basePath + "/routers",
+        matchExact: false,
+        icon: <ServerStackIcon className="h-4 w-4" />,
+      },
+      {
         title: "Compositions",
         href: basePath + "/compositions",
         matchExact: false,
@@ -140,6 +141,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/checks",
         matchExact: false,
         icon: <CheckCircledIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Overrides",
+        href: basePath + "/overrides",
+        matchExact: true,
+        icon: <PiToggleRight className="h-4 w-4" />,
       },
       {
         title: "Discussions",
@@ -177,7 +184,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      <div className="flex min-h-screen w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
+      <div className="flex min-h-screen w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x">
         <SideNav links={links} />
         <main className="flex-1">{render}</main>
       </div>
@@ -292,8 +299,17 @@ export const GraphPageLayout = ({
   children,
   scrollRef,
 }: TitleLayoutProps) => {
+  const router = useRouter();
+
   const breadcrumb = (
-    <div className="-ml-2 flex flex-row items-center space-x-2 text-sm">
+    <div className="flex flex-row items-center space-x-2 text-sm">
+      <Link
+        className="text-muted-foreground hover:text-current"
+        href={`/${router.query.organizationSlug}`}
+      >
+        Home
+      </Link>
+      <span className="text-muted-foreground">/</span>
       <GraphSelect /> <span className="text-muted-foreground">/</span>
       {breadcrumbs?.map((b, i) => (
         <Fragment key={i}>

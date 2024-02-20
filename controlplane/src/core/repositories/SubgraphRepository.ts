@@ -159,13 +159,14 @@ export class SubgraphRepository {
     data: {
       targetId: string;
       routingUrl?: string;
-      labels?: Label[];
+      labels: Label[];
       subscriptionUrl?: string;
       schemaSDL?: string;
       subscriptionProtocol?: SubscriptionProtocol;
       updatedBy: string;
       readme?: string;
       namespaceId: string;
+      unsetLabels: boolean;
     },
     blobStorage: BlobStorage,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
@@ -237,8 +238,8 @@ export class SubgraphRepository {
         labelChanged = hasLabelsChanged(subgraph.labels, data.labels);
       }
 
-      if (labelChanged && data.labels) {
-        const newLabels = normalizeLabels(data.labels);
+      if (labelChanged || data.unsetLabels) {
+        const newLabels = data.unsetLabels ? [] : normalizeLabels(data.labels);
 
         // update labels of the subgraph
         await tx
@@ -872,6 +873,11 @@ export class SubgraphRepository {
       const labelsSQL = labels.map((l) => `"${joinLabel(l)}"`).join(', ');
       // At least one common label
       conditions.push(sql.raw(`labels && '{${labelsSQL}}'`));
+    }
+
+    // Only get subgraphs that do not have any labels if the label matchers are empty.
+    if (data.labelMatchers.length === 0) {
+      conditions.push(eq(targets.labels, []));
     }
 
     const subgraphs = await this.db

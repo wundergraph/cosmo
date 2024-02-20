@@ -66,6 +66,10 @@ import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import {
+  extractVariablesFromGraphQL,
+  useParseSchema,
+} from "@/lib/schema-helpers";
 import { checkUserAccess, cn } from "@/lib/utils";
 import {
   CommandLineIcon,
@@ -82,6 +86,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getClients,
+  getFederatedGraphSDLByName,
   getPersistedOperations,
   publishPersistedOperations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -101,19 +106,31 @@ const getSnippets = ({
   operationId,
   operationNames,
   routingURL,
+  variables,
 }: {
   clientName: string;
   operationId: string;
   operationNames: string[];
   routingURL: string;
+  variables: Record<string, any>;
 }) => {
-  // Compatability with curl >=7.81.0 (Release-Date: 2022-01-05)
+  const variablesString =
+    Object.keys(variables).length > 0 ? JSON.stringify(variables) : undefined;
+
+  let variablesDeclaration = "";
+  for (const [key, value] of Object.entries(variables)) {
+    variablesDeclaration += `${key}: ${JSON.stringify(value)},\n`;
+  }
+
+  // Compatibility with curl >=7.81.0 (Release-Date: 2022-01-05)
   const curl = `curl '${routingURL}' \\
     -H 'graphql-client-name: ${clientName}' \\
     -H 'Content-Type: application/json' \\
     -d '{${
       operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
-    }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}}'`;
+    }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}${
+      variablesString ? `,"variables": ${variablesString}` : ""
+    }}'`;
 
   const js = `const url = '${routingURL}';
 const headers = {
@@ -128,7 +145,13 @@ const body = {
       version: 1,
       sha256Hash: '${operationId}',
     },
-  },
+  }${
+    variablesDeclaration.length > 0
+      ? `,
+  variables: {
+    ${variablesDeclaration}  },`
+      : ""
+  }
 };
 
 fetch(url, {
@@ -153,6 +176,16 @@ const ClientOperations = () => {
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
   const graphContext = useContext(GraphContext);
+
+  const { data: sdlData } = useQuery({
+    ...getFederatedGraphSDLByName.useQuery({
+      name: slug,
+      namespace,
+    }),
+    enabled: !!clientId,
+  });
+
+  const { ast } = useParseSchema(sdlData?.sdl);
 
   const [search, setSearch] = useState(router.query.search as string);
   const applyParams = (search: string) => {
@@ -264,11 +297,14 @@ const ClientOperations = () => {
               base +
               `?clientId=${clientId}&clientName=${clientName}&search=${op.id}`;
 
+            const variables = extractVariablesFromGraphQL(op.contents, ast);
+
             const snippets = getSnippets({
               clientName: clientName ?? "",
               operationId: op.id,
               operationNames: op.operationNames,
               routingURL: graphContext.graph?.routingURL ?? "",
+              variables,
             });
 
             return (
@@ -290,7 +326,7 @@ const ClientOperations = () => {
                       ? op.operationNames.length > 1
                         ? `[ ${op.operationNames.join(", ")} ]`
                         : op.operationNames[0]
-                      : "unnamed Operation"}
+                      : "unnamed operation"}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="mt-2 px-2">
@@ -334,8 +370,10 @@ const ClientOperations = () => {
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
                               <Link
-                                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${btoa(
+                                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
                                   op.contents || "",
+                                )}&variables=${encodeURIComponent(
+                                  JSON.stringify(variables),
                                 )}`}
                               >
                                 <PlayIcon />
@@ -700,12 +738,12 @@ const ClientsPage: NextPageWithLayout = () => {
                             View Operations
                           </Button>
                         </TableCell>
-                        <TableCell className="flex items-center gap-x-3 pr-8">
+                        <TableCell className="flex items-center gap-x-2 pr-8">
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger>
                               <Button variant="ghost" size="icon" asChild>
                                 <Link href={constructLink(name, "metrics")}>
-                                  <BiAnalyse className="h-5 w-5" />
+                                  <BiAnalyse className="h-4 w-4" />
                                 </Link>
                               </Button>
                             </TooltipTrigger>
@@ -715,7 +753,7 @@ const ClientsPage: NextPageWithLayout = () => {
                             <TooltipTrigger>
                               <Button variant="ghost" size="icon" asChild>
                                 <Link href={constructLink(name, "traces")}>
-                                  <IoBarcodeSharp className="h-5 w-5" />
+                                  <IoBarcodeSharp className="h-4 w-4" />
                                 </Link>
                               </Button>
                             </TooltipTrigger>

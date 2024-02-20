@@ -286,6 +286,7 @@ export const RunRouterCommand = ({
   -p 3002:3002 \\
   --add-host=host.docker.internal:host-gateway \\
   --platform=linux/amd64 \\
+  --pull always \\
   -e DEV_MODE=true \\
   -e LISTEN_ADDR=0.0.0.0:3002 \\
   -e GRAPH_API_TOKEN=${token ? token : "<graph-api-token>"} \\
@@ -299,6 +300,7 @@ export const RunRouterCommand = ({
       <span>{`  -p 3002:3002 \\`}</span>
       <span>{`  --add-host=host.docker.internal:host-gateway \\`}</span>
       <span>{`  --platform=linux/amd64 \\`}</span>
+      <span>{`  -e pull=always \\`}</span>
       <span>{`  -e DEV_MODE=true \\`}</span>
       <span>{`  -e LISTEN_ADDR=0.0.0.0:3002 \\`}</span>
       <span>
@@ -344,7 +346,6 @@ export const RunRouterCommand = ({
       {triggerLabel && (
         <DialogTrigger className={triggerClassName} asChild={true}>
           <Button
-            className="w-full"
             onClick={() => {
               setOpen(true);
             }}

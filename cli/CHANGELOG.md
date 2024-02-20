@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.42.0](https://github.com/wundergraph/cosmo/compare/wgc@0.41.1...wgc@0.42.0) (2024-02-20)
+
+### Features
+
+* support empty labels and label matchers ([#555](https://github.com/wundergraph/cosmo/issues/555)) ([8bb857c](https://github.com/wundergraph/cosmo/commit/8bb857c94f8165676b2ca5101c199f3bc0648d10)) (@thisisnithin)
+
+## [0.41.1](https://github.com/wundergraph/cosmo/compare/wgc@0.41.0...wgc@0.41.1) (2024-02-19)
+
+### Bug Fixes
+
+* don't expose token on wgc list command ([#550](https://github.com/wundergraph/cosmo/issues/550)) ([357ffae](https://github.com/wundergraph/cosmo/commit/357ffae4362c3c37dc955d40363da40cd985bf3f)) (@StarpTech)
+
+# [0.41.0](https://github.com/wundergraph/cosmo/compare/wgc@0.40.6...wgc@0.41.0) (2024-02-16)
+
+### Features
+
+* operation check overrides ([#516](https://github.com/wundergraph/cosmo/issues/516)) ([651ff8e](https://github.com/wundergraph/cosmo/commit/651ff8ed88cd542d56cf11d11086f659fc3f5d4e)) (@thisisnithin)
+
+## [0.40.6](https://github.com/wundergraph/cosmo/compare/wgc@0.40.5...wgc@0.40.6) (2024-02-13)
+
+**Note:** Version bump only for package wgc
+
+## [0.40.5](https://github.com/wundergraph/cosmo/compare/wgc@0.40.4...wgc@0.40.5) (2024-02-13)
+
+**Note:** Version bump only for package wgc
+
 ## [0.40.4](https://github.com/wundergraph/cosmo/compare/wgc@0.40.3...wgc@0.40.4) (2024-02-13)
 
 ### Bug Fixes

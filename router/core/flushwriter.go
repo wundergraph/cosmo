@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"net/http"
-	"sync"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -24,10 +23,12 @@ type HttpFlushWriter struct {
 	sse           bool
 	buf           *bytes.Buffer
 	variables     []byte
-	mux           sync.Mutex
 }
 
 func (f *HttpFlushWriter) Complete() {
+	if f.ctx.Err() != nil {
+		return
+	}
 	if f.sse {
 		_, _ = f.writer.Write([]byte("event: complete"))
 	}
@@ -35,33 +36,49 @@ func (f *HttpFlushWriter) Complete() {
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
+	if err = f.ctx.Err(); err != nil {
+		return
+	}
 	return f.buf.Write(p)
 }
 
 func (f *HttpFlushWriter) Close() {
+	if f.ctx.Err() != nil {
+		return
+	}
 	f.cancel()
 }
 
-func (f *HttpFlushWriter) Flush() {
-
-	f.mux.Lock()
-	defer f.mux.Unlock()
+func (f *HttpFlushWriter) Flush() (err error) {
+	if err = f.ctx.Err(); err != nil {
+		return err
+	}
 
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
 	if f.sse {
-		_, _ = f.writer.Write([]byte("event: next\ndata: "))
+		_, err = f.writer.Write([]byte("event: next\ndata: "))
+		if err != nil {
+			return err
+		}
 	}
-	_, _ = f.writer.Write(resp)
+	_, err = f.writer.Write(resp)
+	if err != nil {
+		return err
+	}
 
 	if f.subscribeOnce {
 		f.flusher.Flush()
 		f.cancel()
 		return
 	}
-	_, _ = f.writer.Write([]byte("\n\n"))
+	_, err = f.writer.Write([]byte("\n\n"))
+	if err != nil {
+		return err
+	}
 	f.flusher.Flush()
+	return nil
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {

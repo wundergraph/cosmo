@@ -126,15 +126,13 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           {
             \\"typeName\\": \\"User\\",
             \\"fieldNames\\": [
-              \\"reviews\\",
-              \\"id\\"
+              \\"reviews\\"
             ]
           },
           {
             \\"typeName\\": \\"Product\\",
             \\"fieldNames\\": [
-              \\"reviews\\",
-              \\"upc\\"
+              \\"reviews\\"
             ]
           },
           {
@@ -202,8 +200,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             \\"typeName\\": \\"Product\\",
             \\"fieldNames\\": [
               \\"inStock\\",
-              \\"shippingEstimate\\",
-              \\"upc\\"
+              \\"shippingEstimate\\"
             ]
           }
         ],

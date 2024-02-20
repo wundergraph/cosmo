@@ -445,6 +445,11 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool unset_labels = 9;
+   */
+  unsetLabels?: boolean;
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -461,6 +466,7 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
     { no: 6, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 7, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "unset_labels", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphRequest {
@@ -972,6 +978,11 @@ export class SchemaChange extends Message<SchemaChange> {
    */
   isBreaking = false;
 
+  /**
+   * @generated from field: optional bool hasOverride = 5;
+   */
+  hasOverride?: boolean;
+
   constructor(data?: PartialMessage<SchemaChange>) {
     super();
     proto3.util.initPartial(data, this);
@@ -984,6 +995,7 @@ export class SchemaChange extends Message<SchemaChange> {
     { no: 2, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "hasOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaChange {
@@ -1071,6 +1083,11 @@ export class CheckOperationUsageStats extends Message<CheckOperationUsageStats> 
    */
   lastSeenAt = "";
 
+  /**
+   * @generated from field: uint32 safeOperations = 4;
+   */
+  safeOperations = 0;
+
   constructor(data?: PartialMessage<CheckOperationUsageStats>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1082,6 +1099,7 @@ export class CheckOperationUsageStats extends Message<CheckOperationUsageStats> 
     { no: 1, name: "totalOperations", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
     { no: 2, name: "firstSeenAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "lastSeenAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "safeOperations", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckOperationUsageStats {
@@ -2936,6 +2954,16 @@ export class GetCheckOperationsResponse_CheckOperation extends Message<GetCheckO
    */
   impactingChanges: SchemaChange[] = [];
 
+  /**
+   * @generated from field: bool is_safe = 7;
+   */
+  isSafe = false;
+
+  /**
+   * @generated from field: bool hasIgnoreAllOverride = 8;
+   */
+  hasIgnoreAllOverride = false;
+
   constructor(data?: PartialMessage<GetCheckOperationsResponse_CheckOperation>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2950,6 +2978,8 @@ export class GetCheckOperationsResponse_CheckOperation extends Message<GetCheckO
     { no: 4, name: "first_seen_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "last_seen_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "impacting_changes", kind: "message", T: SchemaChange, repeated: true },
+    { no: 7, name: "is_safe", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "hasIgnoreAllOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsResponse_CheckOperation {
@@ -3354,6 +3384,11 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool unset_labels = 9;
+   */
+  unsetLabels?: boolean;
+
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3370,6 +3405,7 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "unset_labels", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {
@@ -3461,6 +3497,11 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool unset_label_matchers = 6;
+   */
+  unsetLabelMatchers?: boolean;
+
   constructor(data?: PartialMessage<UpdateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3474,6 +3515,7 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
     { no: 3, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "unset_label_matchers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphRequest {
@@ -5820,14 +5862,19 @@ export class RouterToken extends Message<RouterToken> {
   name = "";
 
   /**
-   * @generated from field: string token = 3;
-   */
-  token = "";
-
-  /**
-   * @generated from field: string createdAt = 4;
+   * @generated from field: string createdAt = 3;
    */
   createdAt = "";
+
+  /**
+   * @generated from field: string lastUsedAt = 4;
+   */
+  lastUsedAt = "";
+
+  /**
+   * @generated from field: string creatorEmail = 5;
+   */
+  creatorEmail = "";
 
   constructor(data?: PartialMessage<RouterToken>) {
     super();
@@ -5839,8 +5886,9 @@ export class RouterToken extends Message<RouterToken> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "lastUsedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "creatorEmail", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RouterToken {
@@ -9209,6 +9257,662 @@ export class ForceCheckSuccessResponse extends Message<ForceCheckSuccessResponse
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.OverrideChange
+ */
+export class OverrideChange extends Message<OverrideChange> {
+  /**
+   * @generated from field: string changeType = 1;
+   */
+  changeType = "";
+
+  /**
+   * @generated from field: optional string path = 2;
+   */
+  path?: string;
+
+  constructor(data?: PartialMessage<OverrideChange>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.OverrideChange";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OverrideChange {
+    return new OverrideChange().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OverrideChange {
+    return new OverrideChange().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OverrideChange {
+    return new OverrideChange().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OverrideChange | PlainMessage<OverrideChange> | undefined, b: OverrideChange | PlainMessage<OverrideChange> | undefined): boolean {
+    return proto3.util.equals(OverrideChange, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOperationOverridesRequest
+ */
+export class CreateOperationOverridesRequest extends Message<CreateOperationOverridesRequest> {
+  /**
+   * @generated from field: string graph_name = 1;
+   */
+  graphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string operation_hash = 3;
+   */
+  operationHash = "";
+
+  /**
+   * @generated from field: string operation_name = 4;
+   */
+  operationName = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.OverrideChange changes = 5;
+   */
+  changes: OverrideChange[] = [];
+
+  constructor(data?: PartialMessage<CreateOperationOverridesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOperationOverridesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operation_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operation_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "changes", kind: "message", T: OverrideChange, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOperationOverridesRequest {
+    return new CreateOperationOverridesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOperationOverridesRequest {
+    return new CreateOperationOverridesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOperationOverridesRequest {
+    return new CreateOperationOverridesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOperationOverridesRequest | PlainMessage<CreateOperationOverridesRequest> | undefined, b: CreateOperationOverridesRequest | PlainMessage<CreateOperationOverridesRequest> | undefined): boolean {
+    return proto3.util.equals(CreateOperationOverridesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOperationOverridesResponse
+ */
+export class CreateOperationOverridesResponse extends Message<CreateOperationOverridesResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<CreateOperationOverridesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOperationOverridesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOperationOverridesResponse {
+    return new CreateOperationOverridesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOperationOverridesResponse {
+    return new CreateOperationOverridesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOperationOverridesResponse {
+    return new CreateOperationOverridesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOperationOverridesResponse | PlainMessage<CreateOperationOverridesResponse> | undefined, b: CreateOperationOverridesResponse | PlainMessage<CreateOperationOverridesResponse> | undefined): boolean {
+    return proto3.util.equals(CreateOperationOverridesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideRequest
+ */
+export class CreateOperationIgnoreAllOverrideRequest extends Message<CreateOperationIgnoreAllOverrideRequest> {
+  /**
+   * @generated from field: string graph_name = 1;
+   */
+  graphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string operation_hash = 3;
+   */
+  operationHash = "";
+
+  /**
+   * @generated from field: string operation_name = 4;
+   */
+  operationName = "";
+
+  constructor(data?: PartialMessage<CreateOperationIgnoreAllOverrideRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operation_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operation_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOperationIgnoreAllOverrideRequest {
+    return new CreateOperationIgnoreAllOverrideRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOperationIgnoreAllOverrideRequest {
+    return new CreateOperationIgnoreAllOverrideRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOperationIgnoreAllOverrideRequest {
+    return new CreateOperationIgnoreAllOverrideRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOperationIgnoreAllOverrideRequest | PlainMessage<CreateOperationIgnoreAllOverrideRequest> | undefined, b: CreateOperationIgnoreAllOverrideRequest | PlainMessage<CreateOperationIgnoreAllOverrideRequest> | undefined): boolean {
+    return proto3.util.equals(CreateOperationIgnoreAllOverrideRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideResponse
+ */
+export class CreateOperationIgnoreAllOverrideResponse extends Message<CreateOperationIgnoreAllOverrideResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<CreateOperationIgnoreAllOverrideResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOperationIgnoreAllOverrideResponse {
+    return new CreateOperationIgnoreAllOverrideResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOperationIgnoreAllOverrideResponse {
+    return new CreateOperationIgnoreAllOverrideResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOperationIgnoreAllOverrideResponse {
+    return new CreateOperationIgnoreAllOverrideResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOperationIgnoreAllOverrideResponse | PlainMessage<CreateOperationIgnoreAllOverrideResponse> | undefined, b: CreateOperationIgnoreAllOverrideResponse | PlainMessage<CreateOperationIgnoreAllOverrideResponse> | undefined): boolean {
+    return proto3.util.equals(CreateOperationIgnoreAllOverrideResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RemoveOperationOverridesRequest
+ */
+export class RemoveOperationOverridesRequest extends Message<RemoveOperationOverridesRequest> {
+  /**
+   * @generated from field: string graph_name = 1;
+   */
+  graphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string operation_hash = 3;
+   */
+  operationHash = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.OverrideChange changes = 4;
+   */
+  changes: OverrideChange[] = [];
+
+  constructor(data?: PartialMessage<RemoveOperationOverridesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RemoveOperationOverridesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operation_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "changes", kind: "message", T: OverrideChange, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveOperationOverridesRequest {
+    return new RemoveOperationOverridesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveOperationOverridesRequest {
+    return new RemoveOperationOverridesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveOperationOverridesRequest {
+    return new RemoveOperationOverridesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveOperationOverridesRequest | PlainMessage<RemoveOperationOverridesRequest> | undefined, b: RemoveOperationOverridesRequest | PlainMessage<RemoveOperationOverridesRequest> | undefined): boolean {
+    return proto3.util.equals(RemoveOperationOverridesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RemoveOperationOverridesResponse
+ */
+export class RemoveOperationOverridesResponse extends Message<RemoveOperationOverridesResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<RemoveOperationOverridesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RemoveOperationOverridesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveOperationOverridesResponse {
+    return new RemoveOperationOverridesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveOperationOverridesResponse {
+    return new RemoveOperationOverridesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveOperationOverridesResponse {
+    return new RemoveOperationOverridesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveOperationOverridesResponse | PlainMessage<RemoveOperationOverridesResponse> | undefined, b: RemoveOperationOverridesResponse | PlainMessage<RemoveOperationOverridesResponse> | undefined): boolean {
+    return proto3.util.equals(RemoveOperationOverridesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RemoveOperationIgnoreAllOverrideRequest
+ */
+export class RemoveOperationIgnoreAllOverrideRequest extends Message<RemoveOperationIgnoreAllOverrideRequest> {
+  /**
+   * @generated from field: string graph_name = 1;
+   */
+  graphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string operation_hash = 3;
+   */
+  operationHash = "";
+
+  constructor(data?: PartialMessage<RemoveOperationIgnoreAllOverrideRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RemoveOperationIgnoreAllOverrideRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operation_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveOperationIgnoreAllOverrideRequest {
+    return new RemoveOperationIgnoreAllOverrideRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveOperationIgnoreAllOverrideRequest {
+    return new RemoveOperationIgnoreAllOverrideRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveOperationIgnoreAllOverrideRequest {
+    return new RemoveOperationIgnoreAllOverrideRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveOperationIgnoreAllOverrideRequest | PlainMessage<RemoveOperationIgnoreAllOverrideRequest> | undefined, b: RemoveOperationIgnoreAllOverrideRequest | PlainMessage<RemoveOperationIgnoreAllOverrideRequest> | undefined): boolean {
+    return proto3.util.equals(RemoveOperationIgnoreAllOverrideRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RemoveOperationIgnoreAllOverrideResponse
+ */
+export class RemoveOperationIgnoreAllOverrideResponse extends Message<RemoveOperationIgnoreAllOverrideResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<RemoveOperationIgnoreAllOverrideResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RemoveOperationIgnoreAllOverrideResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveOperationIgnoreAllOverrideResponse {
+    return new RemoveOperationIgnoreAllOverrideResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveOperationIgnoreAllOverrideResponse {
+    return new RemoveOperationIgnoreAllOverrideResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveOperationIgnoreAllOverrideResponse {
+    return new RemoveOperationIgnoreAllOverrideResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveOperationIgnoreAllOverrideResponse | PlainMessage<RemoveOperationIgnoreAllOverrideResponse> | undefined, b: RemoveOperationIgnoreAllOverrideResponse | PlainMessage<RemoveOperationIgnoreAllOverrideResponse> | undefined): boolean {
+    return proto3.util.equals(RemoveOperationIgnoreAllOverrideResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOperationOverridesRequest
+ */
+export class GetOperationOverridesRequest extends Message<GetOperationOverridesRequest> {
+  /**
+   * @generated from field: string graph_name = 1;
+   */
+  graphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string operation_hash = 3;
+   */
+  operationHash = "";
+
+  constructor(data?: PartialMessage<GetOperationOverridesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOperationOverridesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operation_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationOverridesRequest {
+    return new GetOperationOverridesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOperationOverridesRequest {
+    return new GetOperationOverridesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOperationOverridesRequest {
+    return new GetOperationOverridesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOperationOverridesRequest | PlainMessage<GetOperationOverridesRequest> | undefined, b: GetOperationOverridesRequest | PlainMessage<GetOperationOverridesRequest> | undefined): boolean {
+    return proto3.util.equals(GetOperationOverridesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOperationOverridesResponse
+ */
+export class GetOperationOverridesResponse extends Message<GetOperationOverridesResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.OverrideChange changes = 2;
+   */
+  changes: OverrideChange[] = [];
+
+  /**
+   * @generated from field: bool ignore_all = 3;
+   */
+  ignoreAll = false;
+
+  constructor(data?: PartialMessage<GetOperationOverridesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOperationOverridesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "changes", kind: "message", T: OverrideChange, repeated: true },
+    { no: 3, name: "ignore_all", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationOverridesResponse {
+    return new GetOperationOverridesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOperationOverridesResponse {
+    return new GetOperationOverridesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOperationOverridesResponse {
+    return new GetOperationOverridesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOperationOverridesResponse | PlainMessage<GetOperationOverridesResponse> | undefined, b: GetOperationOverridesResponse | PlainMessage<GetOperationOverridesResponse> | undefined): boolean {
+    return proto3.util.equals(GetOperationOverridesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetAllOverridesRequest
+ */
+export class GetAllOverridesRequest extends Message<GetAllOverridesRequest> {
+  /**
+   * @generated from field: string graph_name = 1;
+   */
+  graphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetAllOverridesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetAllOverridesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAllOverridesRequest {
+    return new GetAllOverridesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAllOverridesRequest {
+    return new GetAllOverridesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAllOverridesRequest {
+    return new GetAllOverridesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAllOverridesRequest | PlainMessage<GetAllOverridesRequest> | undefined, b: GetAllOverridesRequest | PlainMessage<GetAllOverridesRequest> | undefined): boolean {
+    return proto3.util.equals(GetAllOverridesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetAllOverridesResponse
+ */
+export class GetAllOverridesResponse extends Message<GetAllOverridesResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetAllOverridesResponse.Override overrides = 2;
+   */
+  overrides: GetAllOverridesResponse_Override[] = [];
+
+  constructor(data?: PartialMessage<GetAllOverridesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetAllOverridesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "overrides", kind: "message", T: GetAllOverridesResponse_Override, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAllOverridesResponse {
+    return new GetAllOverridesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAllOverridesResponse {
+    return new GetAllOverridesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAllOverridesResponse {
+    return new GetAllOverridesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAllOverridesResponse | PlainMessage<GetAllOverridesResponse> | undefined, b: GetAllOverridesResponse | PlainMessage<GetAllOverridesResponse> | undefined): boolean {
+    return proto3.util.equals(GetAllOverridesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetAllOverridesResponse.Override
+ */
+export class GetAllOverridesResponse_Override extends Message<GetAllOverridesResponse_Override> {
+  /**
+   * @generated from field: string hash = 1;
+   */
+  hash = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: uint32 changesOverrideCount = 3;
+   */
+  changesOverrideCount = 0;
+
+  /**
+   * @generated from field: bool hasIgnoreAllOverride = 4;
+   */
+  hasIgnoreAllOverride = false;
+
+  /**
+   * @generated from field: string updated_at = 5;
+   */
+  updatedAt = "";
+
+  constructor(data?: PartialMessage<GetAllOverridesResponse_Override>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetAllOverridesResponse.Override";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "changesOverrideCount", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
+    { no: 4, name: "hasIgnoreAllOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "updated_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAllOverridesResponse_Override {
+    return new GetAllOverridesResponse_Override().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAllOverridesResponse_Override {
+    return new GetAllOverridesResponse_Override().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAllOverridesResponse_Override {
+    return new GetAllOverridesResponse_Override().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAllOverridesResponse_Override | PlainMessage<GetAllOverridesResponse_Override> | undefined, b: GetAllOverridesResponse_Override | PlainMessage<GetAllOverridesResponse_Override> | undefined): boolean {
+    return proto3.util.equals(GetAllOverridesResponse_Override, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.IsGitHubAppInstalledRequest
  */
 export class IsGitHubAppInstalledRequest extends Message<IsGitHubAppInstalledRequest> {
@@ -11278,6 +11982,207 @@ export class AddReadmeResponse extends Message<AddReadmeResponse> {
 
   static equals(a: AddReadmeResponse | PlainMessage<AddReadmeResponse> | undefined, b: AddReadmeResponse | PlainMessage<AddReadmeResponse> | undefined): boolean {
     return proto3.util.equals(AddReadmeResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.Router
+ */
+export class Router extends Message<Router> {
+  /**
+   * @generated from field: string hostname = 1;
+   */
+  hostname = "";
+
+  /**
+   * @generated from field: string clusterName = 2;
+   */
+  clusterName = "";
+
+  /**
+   * @generated from field: string serviceName = 3;
+   */
+  serviceName = "";
+
+  /**
+   * @generated from field: string serviceVersion = 4;
+   */
+  serviceVersion = "";
+
+  /**
+   * @generated from field: string serviceInstanceId = 5;
+   */
+  serviceInstanceId = "";
+
+  /**
+   * @generated from field: string uptimeSeconds = 6;
+   */
+  uptimeSeconds = "";
+
+  /**
+   * @generated from field: string serverUptimeSeconds = 7;
+   */
+  serverUptimeSeconds = "";
+
+  /**
+   * @generated from field: string compositionId = 8;
+   */
+  compositionId = "";
+
+  /**
+   * @generated from field: bool onLatestComposition = 9;
+   */
+  onLatestComposition = false;
+
+  /**
+   * @generated from field: string processId = 10;
+   */
+  processId = "";
+
+  /**
+   * @generated from field: float memoryUsageMb = 11;
+   */
+  memoryUsageMb = 0;
+
+  /**
+   * @generated from field: float memoryUsageChangePercent = 12;
+   */
+  memoryUsageChangePercent = 0;
+
+  /**
+   * @generated from field: float cpuUsagePercent = 13;
+   */
+  cpuUsagePercent = 0;
+
+  /**
+   * @generated from field: float cpuUsageChangePercent = 14;
+   */
+  cpuUsageChangePercent = 0;
+
+  constructor(data?: PartialMessage<Router>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Router";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "hostname", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "clusterName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "serviceName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "serviceVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "serviceInstanceId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "uptimeSeconds", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "serverUptimeSeconds", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "onLatestComposition", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "processId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "memoryUsageMb", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 12, name: "memoryUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 13, name: "cpuUsagePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 14, name: "cpuUsageChangePercent", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Router {
+    return new Router().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Router {
+    return new Router().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Router {
+    return new Router().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Router | PlainMessage<Router> | undefined, b: Router | PlainMessage<Router> | undefined): boolean {
+    return proto3.util.equals(Router, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetRoutersRequest
+ */
+export class GetRoutersRequest extends Message<GetRoutersRequest> {
+  /**
+   * @generated from field: string fedGraphName = 1;
+   */
+  fedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetRoutersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetRoutersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRoutersRequest {
+    return new GetRoutersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRoutersRequest {
+    return new GetRoutersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRoutersRequest {
+    return new GetRoutersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRoutersRequest | PlainMessage<GetRoutersRequest> | undefined, b: GetRoutersRequest | PlainMessage<GetRoutersRequest> | undefined): boolean {
+    return proto3.util.equals(GetRoutersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetRoutersResponse
+ */
+export class GetRoutersResponse extends Message<GetRoutersResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Router routers = 2;
+   */
+  routers: Router[] = [];
+
+  constructor(data?: PartialMessage<GetRoutersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetRoutersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "routers", kind: "message", T: Router, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRoutersResponse {
+    return new GetRoutersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRoutersResponse {
+    return new GetRoutersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRoutersResponse {
+    return new GetRoutersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRoutersResponse | PlainMessage<GetRoutersResponse> | undefined, b: GetRoutersResponse | PlainMessage<GetRoutersResponse> | undefined): boolean {
+    return proto3.util.equals(GetRoutersResponse, a, b);
   }
 }
 

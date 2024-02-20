@@ -1,10 +1,14 @@
 package integration_test
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math/big"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"testing"
 	"time"
@@ -24,6 +28,15 @@ import (
 func TestWebSockets(t *testing.T) {
 	t.Parallel()
 
+	t.Run("disabled", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			DisableWebSockets: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			_, _, err := xEnv.GraphQLWebsocketDialWithRetry(nil)
+			require.Error(t, err)
+		})
+	})
 	t.Run("query", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -444,6 +457,70 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
 		})
 	})
+	t.Run("forward query params via initial payload", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make sure sending two simultaneous subscriptions with different extensions
+			// triggers two subscriptions to the upstream
+
+			xEnv.SetExtraURLQueryValues(url.Values{
+				"Authorization": []string{"token 123"},
+			})
+
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			var err error
+			err = conn1.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"456"}}`),
+			})
+			require.NoError(t, err)
+
+			var msg testenv.WebSocketMessage
+			var payload struct {
+				Data struct {
+					InitialPayload json.RawMessage `json:"initialPayload"`
+				} `json:"data"`
+			}
+			err = conn1.ReadJSON(&msg)
+			require.NoError(t, err)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, `{"extensions":{"token":"456","upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]},"upgradeQueryParams":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
+		})
+	})
+	t.Run("forward query params via initial payload alongside existing", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make sure sending two simultaneous subscriptions with different extensions
+			// triggers two subscriptions to the upstream
+
+			xEnv.SetExtraURLQueryValues(url.Values{
+				"Authorization": []string{"token 123"},
+			})
+
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			var err error
+			err = conn1.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+			})
+			require.NoError(t, err)
+
+			var msg testenv.WebSocketMessage
+			var payload struct {
+				Data struct {
+					InitialPayload json.RawMessage `json:"initialPayload"`
+				} `json:"data"`
+			}
+			err = conn1.ReadJSON(&msg)
+			require.NoError(t, err)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, `{"extensions":{"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]},"upgradeQueryParams":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
+		})
+	})
 	t.Run("same graphql path as playground", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
@@ -460,7 +537,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("different path", func(t *testing.T) {
@@ -479,7 +556,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
 		})
 	})
 
@@ -535,7 +612,8 @@ func TestWebSockets(t *testing.T) {
 			xEnv.Shutdown()
 			_, _, err = conn.NextReader()
 			// Check that the WS client error indicates the connection was unexpectedly closed
-			closeError, ok := err.(*websocket.CloseError)
+			var closeError *websocket.CloseError
+			ok := errors.As(err, &closeError)
 			require.True(t, ok)
 			require.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
 		})
@@ -557,7 +635,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("single connection with initial payload and extensions in the request", func(t *testing.T) {
@@ -578,7 +656,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2"}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"hello":"world2","initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("single connection multiple differing subscriptions", func(t *testing.T) {
@@ -718,11 +796,90 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn1.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.JSONEq(t, `{"data":{"initialPayload":{"id":1}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":1},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
 
 			err = conn2.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.JSONEq(t, `{"data":{"initialPayload":{"id":2}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":2},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+		})
+	})
+	t.Run("absinthe subscription", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			type currentTimePayload struct {
+				Result struct {
+					Data struct {
+						CurrentTime struct {
+							UnixTime  float64 `json:"unixTime"`
+							Timestamp string  `json:"timestamp"`
+						} `json:"currentTime"`
+					} `json:"data"`
+				} `json:"result"`
+			}
+
+			conn := xEnv.InitAbsintheWebSocketConnection(nil, json.RawMessage(`["1", "1", "__absinthe__:control", "phx_join", {}]`))
+			err := conn.WriteJSON(json.RawMessage(`["1", "1", "__absinthe__:control", "doc", {"query":"subscription { currentTime { unixTime timeStamp }}" }]`))
+			require.NoError(t, err)
+			var msg json.RawMessage
+			var payload currentTimePayload
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			h := sha256.New()
+			h.Write([]byte("1"))
+			operationId := new(big.Int).SetBytes(h.Sum(nil))
+			require.Equal(t, string(msg), fmt.Sprintf(`["1","1","__absinthe__:control","phx_reply",{"status":"ok","response":{"subscriptionId":"__absinthe__:doc:1:%s"}}]`, operationId))
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Contains(t, string(msg), `["1","1","__absinthe__:control","subscription:data"`)
+			var data []json.RawMessage
+			err = json.Unmarshal(msg, &data)
+			require.NoError(t, err)
+			require.Equal(t, 5, len(data))
+			err = json.Unmarshal(data[4], &payload)
+			require.NoError(t, err)
+
+			unix1 := payload.Result.Data.CurrentTime.UnixTime
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Contains(t, string(msg), `["1","1","__absinthe__:control","subscription:data"`)
+			err = json.Unmarshal(msg, &data)
+			require.NoError(t, err)
+			require.Equal(t, 5, len(data))
+			err = json.Unmarshal(data[4], &payload)
+			require.NoError(t, err)
+
+			unix2 := payload.Result.Data.CurrentTime.UnixTime
+			require.Equal(t, unix1+1, unix2)
+
+			// Sending a complete must stop the subscription
+			err = conn.WriteJSON(json.RawMessage(`["1", "1", "__absinthe__:control", "phx_leave", {}]`))
+			require.NoError(t, err)
+
+			var complete json.RawMessage
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, string(complete), fmt.Sprintf(`["1","","__absinthe__:control","phx_reply",{"status":"ok","response":{"subscriptionId":"__absinthe__:doc:1:%s"}}]`, operationId))
+
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			_, _, err = conn.ReadMessage()
+			require.Error(t, err)
+			var netErr net.Error
+			if errors.As(err, &netErr) {
+				require.True(t, netErr.Timeout())
+			} else {
+				require.Fail(t, "expected net.Error")
+			}
 		})
 	})
 }

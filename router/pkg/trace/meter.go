@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
 	"net/url"
 
@@ -28,7 +28,7 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 	var exporter sdktrace.SpanExporter
 	// Just support OTLP and gRPC for now. Jaeger has native OTLP support.
 	switch exp.Exporter {
-	case otelconfig.ExporterDefault, otelconfig.ExporterOLTPHTTP:
+	case otelconfig.ExporterOLTPHTTP:
 		opts := []otlptracehttp.Option{
 			// Includes host and port
 			otlptracehttp.WithEndpoint(u.Host),
@@ -83,10 +83,13 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 	return exporter, nil
 }
 
-func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
+func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config, serviceInstanceID string) (*sdktrace.TracerProvider, error) {
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
+		resource.WithAttributes(semconv.ServiceVersionKey.String(c.Version)),
+		resource.WithAttributes(semconv.ServiceInstanceID(serviceInstanceID)),
 		resource.WithProcessPID(),
+		resource.WithOSType(),
 		resource.WithTelemetrySDK(),
 		resource.WithHost(),
 	)
@@ -129,6 +132,11 @@ func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdktra
 		for _, exp := range c.Exporters {
 			if exp.Disabled {
 				continue
+			}
+
+			// Default to OLTP HTTP
+			if exp.Exporter == "" {
+				exp.Exporter = otelconfig.ExporterOLTPHTTP
 			}
 
 			exporter, err := createExporter(log, exp)

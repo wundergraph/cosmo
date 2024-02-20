@@ -5,7 +5,6 @@ import "os"
 type Exporter string
 
 const (
-	ExporterDefault  Exporter = "" // Use ExporterOLTPHTTP
 	ExporterOLTPHTTP Exporter = "http"
 	ExporterOLTPGRPC Exporter = "grpc"
 

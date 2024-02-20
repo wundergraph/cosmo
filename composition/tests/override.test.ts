@@ -5,9 +5,9 @@ import {
   ConfigurationData,
   duplicateOverriddenFieldErrorMessage,
   duplicateOverriddenFieldsError,
-  equivalentSourceAndTargetOverrideError,
+  equivalentSourceAndTargetOverrideErrorMessage,
   federateSubgraphs,
-  FieldContainer,
+  FederationFieldData,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   normalizeSubgraph,
@@ -18,11 +18,10 @@ import {
 } from '../src';
 import {
   documentNodeToNormalizedString,
-  schemaToSortedNormalizedString,
   normalizeString,
+  schemaToSortedNormalizedString,
   versionTwoPersistedBaseSchema,
   versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
-  sortedNormalizedVersionTwoSchemaString,
 } from './utils/utils';
 import { OVERRIDE } from '../src/utils/string-constants';
 import { invalidOverrideTargetSubgraphNameWarning } from '../src/warnings/warnings';
@@ -64,7 +63,11 @@ describe('@override directive tests', () => {
   test('that an error is returned if the source and target subgraph name for @override are equivalent', () => {
     const { errors } = normalizeSubgraph(subgraphQ.definitions, 'subgraph-q');
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(equivalentSourceAndTargetOverrideError('subgraph-q', 'Entity.name'));
+    expect(errors![0]).toStrictEqual(
+      invalidDirectiveError(OVERRIDE, 'Entity.name', [
+        equivalentSourceAndTargetOverrideErrorMessage('subgraph-q', 'Entity.name'),
+      ]),
+    );
   });
 
   test('that an overridden field does not need to be declared shareable #1.1', () => {
@@ -442,7 +445,7 @@ describe('@override directive tests', () => {
       shareableFieldDefinitionsError(
         {
           node: { name: { value: 'Entity' } },
-          fields: new Map<string, FieldContainer>([
+          fields: new Map<string, FederationFieldData>([
             [
               'name',
               {
@@ -451,7 +454,7 @@ describe('@override directive tests', () => {
                   ['subgraph-c', false],
                   ['subgraph-e', true],
                 ]),
-              } as FieldContainer,
+              } as FederationFieldData,
             ],
           ]),
         } as ObjectContainer,
@@ -467,7 +470,7 @@ describe('@override directive tests', () => {
       shareableFieldDefinitionsError(
         {
           node: { name: { value: 'Entity' } },
-          fields: new Map<string, FieldContainer>([
+          fields: new Map<string, FederationFieldData>([
             [
               'name',
               {
@@ -476,7 +479,7 @@ describe('@override directive tests', () => {
                   ['subgraph-a', false],
                   ['subgraph-j', true],
                 ]),
-              } as FieldContainer,
+              } as FederationFieldData,
             ],
           ]),
         } as ObjectContainer,

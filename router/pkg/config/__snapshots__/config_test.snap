@@ -1,0 +1,429 @@
+
+[TestLoadFullConfig - 1]
+{
+ "Authentication": {
+  "Providers": [
+   {
+    "JWKS": {
+     "HeaderNames": [
+      "Authorization"
+     ],
+     "HeaderValuePrefixes": [
+      "Bearer"
+     ],
+     "RefreshInterval": 60000000000,
+     "URL": "https://example.com/.well-known/jwks.json"
+    },
+    "Name": "My Auth Provider"
+   }
+  ]
+ },
+ "Authorization": {
+  "RejectOperationIfUnauthorized": false,
+  "RequireAuthentication": false
+ },
+ "CDN": {
+  "CacheSize": 100000000,
+  "URL": "https://cosmo-cdn.wundergraph.com"
+ },
+ "CORS": {
+  "AllowCredentials": true,
+  "AllowHeaders": [
+   "Origin",
+   "Content-Length",
+   "Content-Type"
+  ],
+  "AllowMethods": [
+   "HEAD",
+   "GET",
+   "POST"
+  ],
+  "AllowOrigins": [
+   "*"
+  ],
+  "MaxAge": 300000000000
+ },
+ "Cluster": {
+  "Name": "my-cluster"
+ },
+ "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
+ "DevelopmentMode": false,
+ "EngineExecutionConfiguration": {
+  "Debug": {
+   "ConfigurationVisitor": false,
+   "DatasourceVisitor": false,
+   "PlanningVisitor": false,
+   "PrintNodeSuggestions": false,
+   "PrintOperationEnableASTRefs": false,
+   "PrintOperationTransformations": false,
+   "PrintPlanningPaths": false,
+   "PrintQueryPlans": false,
+   "ReportMemoryUsage": false,
+   "ReportWebSocketConnections": false
+  },
+  "EnableExecutionPlanCacheResponseHeader": false,
+  "EnableRequestTracing": true,
+  "EnableSingleFlight": true,
+  "EnableWebSocketEpollKqueue": true,
+  "EpollKqueueConnBufferSize": 128,
+  "EpollKqueuePollTimeout": 1000000000,
+  "ExecutionPlanCacheSize": 10000,
+  "MaxConcurrentResolvers": 1024,
+  "WebSocketReadTimeout": 1000000000
+ },
+ "Events": {
+  "Sources": [
+   {
+    "Provider": "NATS",
+    "URL": "nats://localhost:4222"
+   }
+  ]
+ },
+ "GracePeriod": 20000000000,
+ "Graph": {
+  "Token": "mytoken"
+ },
+ "GraphQLPath": "/graphql",
+ "GraphqlMetrics": {
+  "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com",
+  "Enabled": true
+ },
+ "Headers": {
+  "All": {
+   "Request": [
+    {
+     "Default": "",
+     "Matching": "",
+     "Named": "X-Test-Header",
+     "Operation": "propagate"
+    },
+    {
+     "Default": "",
+     "Matching": "(?i)^X-Custom-.*",
+     "Named": "",
+     "Operation": "propagate"
+    },
+    {
+     "Default": "123",
+     "Matching": "",
+     "Named": "X-User-Id",
+     "Operation": "propagate"
+    }
+   ]
+  },
+  "Subgraphs": {
+   "specific-subgraph": {
+    "Request": [
+     {
+      "Default": "some-secret",
+      "Matching": "",
+      "Named": "Subgraph-Secret",
+      "Operation": "propagate"
+     }
+    ]
+   }
+  }
+ },
+ "HealthCheckPath": "/health",
+ "InstanceID": "",
+ "IntrospectionEnabled": true,
+ "JSONLog": true,
+ "ListenAddr": "localhost:3002",
+ "LivenessCheckPath": "/health/live",
+ "LocalhostFallbackInsideDocker": true,
+ "LogLevel": "info",
+ "Modules": {
+  "myModule": {
+   "value": 1
+  }
+ },
+ "OverrideRoutingURL": {
+  "Subgraphs": {
+   "some-subgraph": "http://router:3002/graphql"
+  }
+ },
+ "PlaygroundEnabled": true,
+ "PlaygroundPath": "/",
+ "PollInterval": 10000000000,
+ "RateLimit": {
+  "Debug": false,
+  "Enabled": true,
+  "SimpleStrategy": {
+   "Burst": 60,
+   "Period": 60000000000,
+   "Rate": 60,
+   "RejectExceedingRequests": true
+  },
+  "Storage": {
+   "Addr": "localhost:6379",
+   "KeyPrefix": "cosmo_rate_limit",
+   "Password": "test"
+  },
+  "Strategy": "simple"
+ },
+ "ReadinessCheckPath": "/health/ready",
+ "RouterConfigPath": "",
+ "RouterRegistration": true,
+ "ShutdownDelay": 15000000000,
+ "Telemetry": {
+  "Metrics": {
+   "OTLP": {
+    "Enabled": true,
+    "Exporters": [
+     {
+      "Disabled": false,
+      "Endpoint": "https://my-otel-collector.example.com",
+      "Exporter": "http",
+      "HTTPPath": "/v1/metrics",
+      "Headers": {}
+     }
+    ],
+    "RouterRuntime": true
+   },
+   "Prometheus": {
+    "Enabled": true,
+    "ExcludeMetricLabels": [
+     ""
+    ],
+    "ExcludeMetrics": [
+     ""
+    ],
+    "ListenAddr": "127.0.0.1:8088",
+    "Path": "/metrics"
+   }
+  },
+  "ServiceName": "cosmo-router",
+  "Tracing": {
+   "Enabled": true,
+   "ExportGraphQLVariables": true,
+   "Exporters": [
+    {
+     "BatchTimeout": 10000000000,
+     "Disabled": false,
+     "Endpoint": "https://my-otel-collector.example.com",
+     "ExportTimeout": 30000000000,
+     "Exporter": "http",
+     "HTTPPath": "/v1/traces",
+     "Headers": null
+    }
+   ],
+   "Propagation": {
+    "B3": false,
+    "Baggage": false,
+    "Jaeger": false,
+    "TraceContext": true
+   },
+   "SamplingRate": 1,
+   "WithNewRoot": false
+  }
+ },
+ "TrafficShaping": {
+  "All": {
+   "BackoffJitterRetry": {
+    "Algorithm": "backoff_jitter",
+    "Enabled": true,
+    "Interval": 3000000000,
+    "MaxAttempts": 5,
+    "MaxDuration": 10000000000
+   },
+   "DialTimeout": 30000000000,
+   "ExpectContinueTimeout": 0,
+   "KeepAliveIdleTimeout": 0,
+   "KeepAliveProbeInterval": 30000000000,
+   "RequestTimeout": 60000000000,
+   "ResponseHeaderTimeout": 0,
+   "TLSHandshakeTimeout": 0
+  },
+  "Router": {
+   "MaxRequestBodyBytes": 5000000
+  }
+ },
+ "Version": "1",
+ "WebSocket": {
+  "AbsintheProtocol": {
+   "Enabled": true,
+   "HandlerPath": "/absinthe/socket"
+  },
+  "Enabled": true,
+  "ForwardInitialPayload": true,
+  "ForwardUpgradeHeaders": true,
+  "ForwardUpgradeQueryParams": true
+ }
+}
+---
+
+[TestDefaults - 1]
+{
+ "Authentication": {
+  "Providers": null
+ },
+ "Authorization": {
+  "RejectOperationIfUnauthorized": false,
+  "RequireAuthentication": false
+ },
+ "CDN": {
+  "CacheSize": 100000000,
+  "URL": "https://cosmo-cdn.wundergraph.com"
+ },
+ "CORS": {
+  "AllowCredentials": true,
+  "AllowHeaders": [
+   "Origin",
+   "Content-Length",
+   "Content-Type"
+  ],
+  "AllowMethods": [
+   "HEAD",
+   "GET",
+   "POST"
+  ],
+  "AllowOrigins": [
+   "*"
+  ],
+  "MaxAge": 300000000000
+ },
+ "Cluster": {
+  "Name": ""
+ },
+ "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
+ "DevelopmentMode": false,
+ "EngineExecutionConfiguration": {
+  "Debug": {
+   "ConfigurationVisitor": false,
+   "DatasourceVisitor": false,
+   "PlanningVisitor": false,
+   "PrintNodeSuggestions": false,
+   "PrintOperationEnableASTRefs": false,
+   "PrintOperationTransformations": false,
+   "PrintPlanningPaths": false,
+   "PrintQueryPlans": false,
+   "ReportMemoryUsage": false,
+   "ReportWebSocketConnections": false
+  },
+  "EnableExecutionPlanCacheResponseHeader": false,
+  "EnableRequestTracing": true,
+  "EnableSingleFlight": true,
+  "EnableWebSocketEpollKqueue": true,
+  "EpollKqueueConnBufferSize": 128,
+  "EpollKqueuePollTimeout": 1000000000,
+  "ExecutionPlanCacheSize": 10000,
+  "MaxConcurrentResolvers": 1024,
+  "WebSocketReadTimeout": 5000000000
+ },
+ "Events": {
+  "Sources": null
+ },
+ "GracePeriod": 20000000000,
+ "Graph": {
+  "Token": "token"
+ },
+ "GraphQLPath": "/graphql",
+ "GraphqlMetrics": {
+  "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com",
+  "Enabled": true
+ },
+ "Headers": {
+  "All": {
+   "Request": null
+  },
+  "Subgraphs": null
+ },
+ "HealthCheckPath": "/health",
+ "InstanceID": "",
+ "IntrospectionEnabled": true,
+ "JSONLog": true,
+ "ListenAddr": "localhost:3002",
+ "LivenessCheckPath": "/health/live",
+ "LocalhostFallbackInsideDocker": true,
+ "LogLevel": "info",
+ "Modules": null,
+ "OverrideRoutingURL": {
+  "Subgraphs": {}
+ },
+ "PlaygroundEnabled": true,
+ "PlaygroundPath": "/",
+ "PollInterval": 10000000000,
+ "RateLimit": {
+  "Debug": false,
+  "Enabled": false,
+  "SimpleStrategy": {
+   "Burst": 10,
+   "Period": 1000000000,
+   "Rate": 10,
+   "RejectExceedingRequests": false
+  },
+  "Storage": {
+   "Addr": "localhost:6379",
+   "KeyPrefix": "cosmo_rate_limit",
+   "Password": ""
+  },
+  "Strategy": "simple"
+ },
+ "ReadinessCheckPath": "/health/ready",
+ "RouterConfigPath": "",
+ "RouterRegistration": true,
+ "ShutdownDelay": 60000000000,
+ "Telemetry": {
+  "Metrics": {
+   "OTLP": {
+    "Enabled": true,
+    "Exporters": [],
+    "RouterRuntime": true
+   },
+   "Prometheus": {
+    "Enabled": true,
+    "ExcludeMetricLabels": null,
+    "ExcludeMetrics": null,
+    "ListenAddr": "127.0.0.1:8088",
+    "Path": "/metrics"
+   }
+  },
+  "ServiceName": "cosmo-router",
+  "Tracing": {
+   "Enabled": true,
+   "ExportGraphQLVariables": false,
+   "Exporters": [],
+   "Propagation": {
+    "B3": false,
+    "Baggage": false,
+    "Jaeger": false,
+    "TraceContext": true
+   },
+   "SamplingRate": 1,
+   "WithNewRoot": false
+  }
+ },
+ "TrafficShaping": {
+  "All": {
+   "BackoffJitterRetry": {
+    "Algorithm": "backoff_jitter",
+    "Enabled": true,
+    "Interval": 3000000000,
+    "MaxAttempts": 5,
+    "MaxDuration": 10000000000
+   },
+   "DialTimeout": 30000000000,
+   "ExpectContinueTimeout": 0,
+   "KeepAliveIdleTimeout": 0,
+   "KeepAliveProbeInterval": 30000000000,
+   "RequestTimeout": 60000000000,
+   "ResponseHeaderTimeout": 0,
+   "TLSHandshakeTimeout": 10000000000
+  },
+  "Router": {
+   "MaxRequestBodyBytes": 5000000
+  }
+ },
+ "Version": "1",
+ "WebSocket": {
+  "AbsintheProtocol": {
+   "Enabled": true,
+   "HandlerPath": "/absinthe/socket"
+  },
+  "Enabled": true,
+  "ForwardInitialPayload": true,
+  "ForwardUpgradeHeaders": true,
+  "ForwardUpgradeQueryParams": true
+ }
+}
+---

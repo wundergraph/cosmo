@@ -35,6 +35,7 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { ChartBarIcon } from "@heroicons/react/24/outline";
 import { Badge } from "../ui/badge";
+import { Link } from "../ui/link";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -129,7 +130,7 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      <div className="flex min-h-screen w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
+      <div className="flex min-h-screen w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x">
         <SideNav links={links} />
         <main className="flex-1">{render}</main>
       </div>
@@ -227,8 +228,17 @@ export const SubgraphPageLayout = ({
   children,
   scrollRef,
 }: TitleLayoutProps) => {
+  const router = useRouter();
+
   const breadcrumb = (
-    <div className="-ml-2 flex flex-row items-center space-x-2 text-sm">
+    <div className="flex flex-row items-center space-x-2 text-sm">
+      <Link
+        className="text-muted-foreground hover:text-current"
+        href={`/${router.query.organizationSlug}`}
+      >
+        Home
+      </Link>
+      <span className="text-muted-foreground">/</span>
       <SubgraphSelect /> <span className="text-muted-foreground">/</span>
       {breadcrumbs?.map((b, i) => (
         <Fragment key={i}>

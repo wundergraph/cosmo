@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nats-io/nuid"
+
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -35,8 +37,8 @@ import (
 	brotli "go.withmatt.com/connect-brotli"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/mitchellh/mapstructure"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
@@ -78,6 +80,8 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
+		clusterName              string
+		instanceID               string
 		logger                   *zap.Logger
 		traceConfig              *rtrace.Config
 		metricConfig             *rmetric.Config
@@ -90,6 +94,7 @@ type (
 		gracePeriod              time.Duration
 		awsLambda                bool
 		shutdown                 bool
+		bootstrapped             bool
 		listenAddr               string
 		baseURL                  string
 		graphqlWebURL            string
@@ -117,6 +122,7 @@ type (
 		routerTrafficConfig      *config.RouterTrafficConfiguration
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
+		processStartTime         time.Time
 		developmentMode          bool
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
@@ -134,6 +140,8 @@ type (
 		authorization *config.AuthorizationConfiguration
 
 		rateLimit *config.RateLimitConfiguration
+
+		webSocketConfiguration *config.WebSocketConfiguration
 	}
 
 	Server interface {
@@ -144,7 +152,8 @@ type (
 	// server is the main router instance.
 	server struct {
 		Config
-		server *http.Server
+		server      *http.Server
+		metricStore rmetric.Store
 		// rootContext that all services depending on the router should
 		// use as a parent context
 		rootContext       context.Context
@@ -184,6 +193,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.playgroundPath == "" {
 		r.playgroundPath = "/"
 	}
+
+	if r.instanceID == "" {
+		r.instanceID = nuid.Next()
+	}
+
+	r.processStartTime = time.Now()
 
 	// Create noop tracer and meter to avoid nil pointer panics and to avoid checking for nil everywhere
 
@@ -548,8 +563,14 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 }
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
-// It should only be called once for a Router instance.
+// It should only be called once for a Router instance. Not safe for concurrent use.
 func (r *Router) bootstrap(ctx context.Context) error {
+	if r.bootstrapped {
+		return fmt.Errorf("router is already bootstrapped")
+	}
+
+	r.bootstrapped = true
+
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
 	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
@@ -578,7 +599,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.traceConfig.Enabled {
-		tp, err := rtrace.NewTracerProvider(ctx, r.logger, r.traceConfig)
+		tp, err := rtrace.NewTracerProvider(ctx, r.logger, r.traceConfig, r.instanceID)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -588,19 +609,19 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
 		if r.metricConfig.Prometheus.Enabled {
-			mp, registry, err := rmetric.NewPrometheusMeterProvider(ctx, r.metricConfig)
+			mp, registry, err := rmetric.NewPrometheusMeterProvider(ctx, r.metricConfig, r.instanceID)
 			if err != nil {
 				return fmt.Errorf("failed to create Prometheus exporter: %w", err)
 			}
 			r.promMeterProvider = mp
-			r.prometheusServer = rmetric.ServePrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
+			r.prometheusServer = rmetric.NewPrometheusServer(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
 			go func() {
 				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
 		}
-		mp, err := rmetric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig)
+		mp, err := rmetric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig, r.instanceID)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -648,6 +669,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 // Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
+// Not safe for concurrent use.
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
@@ -696,7 +718,7 @@ func (r *Router) Start(ctx context.Context) error {
 }
 
 // newServer creates a new server instance.
-// All stateful data is copied from the Router over to the new server instance.
+// All stateful data is copied from the Router over to the new server instance. Not safe for concurrent use.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
 	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
 	if err != nil {
@@ -709,11 +731,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		rootContextCancel: rootContextCancel,
 		routerConfig:      routerConfig,
 		Config:            r.Config,
+		metricStore:       rmetric.NewNoopMetrics(),
 	}
 
 	baseAttributes := []attribute.KeyValue{
 		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 		otel.WgRouterVersion.String(Version),
+		otel.WgRouterClusterName.String(r.clusterName),
 	}
 
 	if r.graphApiToken != "" {
@@ -822,16 +846,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
-	metricStore := rmetric.NewNoopMetrics()
-
 	// Prometheus metricStore rely on OTLP metricStore
 	if r.metricConfig.IsEnabled() {
-		m, err := rmetric.NewMetrics(
-			r.metricConfig.Name,
-			Version,
+		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(r.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(r.otlpMeterProvider),
 			rmetric.WithLogger(r.logger),
+			rmetric.WithProcessStartTime(r.processStartTime),
 			rmetric.WithAttributes(
 				baseAttributes...,
 			),
@@ -840,11 +861,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
 		}
 
-		metricStore = m
+		ro.metricStore = m
 	}
 
 	routerMetrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:             metricStore,
+		metrics:             ro.metricStore,
 		gqlMetricsExporter:  r.gqlMetricsExporter,
 		exportEnabled:       r.graphqlMetricsConfig.Enabled,
 		routerConfigVersion: routerConfig.GetVersion(),
@@ -863,7 +884,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
 			PreHandlers:    r.preOriginHandlers,
 			PostHandlers:   r.postOriginHandlers,
-			MetricStore:    metricStore,
+			MetricStore:    ro.metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
@@ -996,31 +1017,37 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		TraceExportVariables:        r.traceConfig.ExportGraphQLVariables.Enabled,
 	})
 
-	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-		OperationProcessor:         operationParser,
-		Planner:                    operationPlanner,
-		GraphQLHandler:             graphqlHandler,
-		Metrics:                    routerMetrics,
-		AccessController:           r.accessController,
-		Logger:                     r.logger,
-		Stats:                      r.WebsocketStats,
-		ReadTimeout:                r.engineExecutionConfiguration.WebSocketReadTimeout,
-		EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
-		EpollKqueuePollTimeout:     r.engineExecutionConfiguration.EpollKqueuePollTimeout,
-		EpollKqueueConnBufferSize:  r.engineExecutionConfiguration.EpollKqueueConnBufferSize,
-	})
-
 	graphqlChiRouter := chi.NewRouter()
 
-	// When the playground path is equal to the graphql path, we need to handle
-	// ws upgrades and html requests on the same route.
-	if r.playground && r.graphqlPath == r.playgroundPath {
-		graphqlChiRouter.Use(graphqlPlaygroundHandler, wsMiddleware)
+	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
+		wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
+			OperationProcessor:         operationParser,
+			Planner:                    operationPlanner,
+			GraphQLHandler:             graphqlHandler,
+			Metrics:                    routerMetrics,
+			AccessController:           r.accessController,
+			Logger:                     r.logger,
+			Stats:                      r.WebsocketStats,
+			ReadTimeout:                r.engineExecutionConfiguration.WebSocketReadTimeout,
+			EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
+			EpollKqueuePollTimeout:     r.engineExecutionConfiguration.EpollKqueuePollTimeout,
+			EpollKqueueConnBufferSize:  r.engineExecutionConfiguration.EpollKqueueConnBufferSize,
+			WebSocketConfiguration:     r.webSocketConfiguration,
+		})
+		// When the playground path is equal to the graphql path, we need to handle
+		// ws upgrades and html requests on the same route.
+		if r.playground && r.graphqlPath == r.playgroundPath {
+			graphqlChiRouter.Use(graphqlPlaygroundHandler, wsMiddleware)
+		} else {
+			if r.playground {
+				httpRouter.Get(r.playgroundPath, graphqlPlaygroundHandler(nil).ServeHTTP)
+			}
+			graphqlChiRouter.Use(wsMiddleware)
+		}
 	} else {
 		if r.playground {
 			httpRouter.Get(r.playgroundPath, graphqlPlaygroundHandler(nil).ServeHTTP)
 		}
-		graphqlChiRouter.Use(wsMiddleware)
 	}
 
 	graphqlChiRouter.Use(graphqlPreHandler.Handler)
@@ -1032,6 +1059,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
+
+	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
+		// Mount the Absinthe protocol handler for WebSockets
+		httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, graphqlChiRouter)
+	}
 
 	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
 	if err != nil {
@@ -1065,19 +1097,19 @@ func (r *server) listenAndServe() error {
 	return nil
 }
 
-// Shutdown gracefully shuts down the router.
+// Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
+// If the router is already shutdown, the method returns immediately without error. Not safe for concurrent use.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
+
+	if r.shutdown {
+		return nil
+	}
+
 	r.shutdown = true
 
 	if r.configPoller != nil {
 		if subErr := r.configPoller.Stop(ctx); subErr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to stop config poller: %w", subErr))
-		}
-	}
-
-	if r.selfRegister != nil {
-		if subErr := r.selfRegister.Stop(ctx); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to stop self registration: %w", subErr))
 		}
 	}
 
@@ -1118,7 +1150,31 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to stop graphql metrics exporter: %w", subErr))
+				err = errors.Join(err, fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
+			}
+		}()
+	}
+
+	if r.promMeterProvider != nil {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			if subErr := r.promMeterProvider.Shutdown(ctx); subErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
+			}
+		}()
+	}
+
+	if r.otlpMeterProvider != nil {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			if subErr := r.otlpMeterProvider.Shutdown(ctx); subErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
 			}
 		}()
 	}
@@ -1142,11 +1198,16 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 }
 
 // Shutdown gracefully shutdown the server.
-func (r *server) Shutdown(ctx context.Context) (err error) {
+func (r *server) Shutdown(ctx context.Context) error {
 	r.logger.Info("Gracefully shutting down the router ...",
 		zap.String("config_version", r.routerConfig.GetVersion()),
 		zap.String("grace_period", r.gracePeriod.String()),
 	)
+
+	err := r.metricStore.Flush(ctx)
+	if err != nil {
+		r.logger.Error("Failed to flush metric store", zap.Error(err))
+	}
 
 	r.rootContextCancel()
 
@@ -1438,6 +1499,24 @@ func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 func WithDevelopmentMode(enabled bool) Option {
 	return func(r *Router) {
 		r.developmentMode = enabled
+	}
+}
+
+func WithClusterName(name string) Option {
+	return func(r *Router) {
+		r.clusterName = name
+	}
+}
+
+func WithInstanceID(id string) Option {
+	return func(r *Router) {
+		r.instanceID = id
+	}
+}
+
+func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
+	return func(r *Router) {
+		r.Config.webSocketConfiguration = cfg
 	}
 }
 
