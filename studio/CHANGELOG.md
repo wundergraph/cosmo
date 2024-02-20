@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.67.0](https://github.com/wundergraph/cosmo/compare/studio@0.66.0...studio@0.67.0) (2024-02-20)
+
+### Bug Fixes
+
+* link to changelog in slack update ([#557](https://github.com/wundergraph/cosmo/issues/557)) ([300b4fc](https://github.com/wundergraph/cosmo/commit/300b4fcd6cce8142b19fade20ebd8fcc94317bd7)) (@thisisnithin)
+
+### Features
+
+* support empty labels and label matchers ([#555](https://github.com/wundergraph/cosmo/issues/555)) ([8bb857c](https://github.com/wundergraph/cosmo/commit/8bb857c94f8165676b2ca5101c199f3bc0648d10)) (@thisisnithin)
+
 # [0.66.0](https://github.com/wundergraph/cosmo/compare/studio@0.65.0...studio@0.66.0) (2024-02-19)
 
 ### Bug Fixes
