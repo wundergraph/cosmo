@@ -135,6 +135,12 @@ export class OrganizationWebhookService {
   private async constructSlackBody<T extends keyof EventMap>(eventPayload: EventMap[T]) {
     const fedRepo = new FederatedGraphRepository(this.db, eventPayload.organization.id);
     const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(eventPayload.federated_graph.id);
+
+    let linkToChangelog = `https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name}`;
+    if (latestChangelogs) {
+      linkToChangelog += `/changelog/${latestChangelogs?.schemaVersionId}`;
+    }
+
     const tempData: { blocks: any[]; attachments: any[] } = {
       blocks: [
         {
@@ -153,7 +159,7 @@ export class OrganizationWebhookService {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name}/changelog/${latestChangelogs?.schemaVersionId}| here> for more details.`,
+                text: `Click <${linkToChangelog}| here> for more details.`,
               },
             },
           ],
