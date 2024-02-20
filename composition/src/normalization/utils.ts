@@ -453,12 +453,13 @@ function validateKeyFieldSets(
   factory: NormalizationFactory,
   entityParentData: ParentWithFieldsData,
   fieldSets: Set<string>,
+  fieldNames: Set<string>,
   disableEntityResolver?: boolean,
 ): RequiredFieldConfiguration[] | undefined {
   const entityTypeName = entityParentData.typeName;
   const errorMessages: string[] = [];
   const configurations: RequiredFieldConfiguration[] = [];
-  // const keyFieldNames = new Set<string>();
+  const keyFieldNames = new Set<string>();
   for (const fieldSet of fieldSets) {
     // Create a new selection set so that the value can be parsed as a new DocumentNode
     const { error, documentNode } = safeParse('{' + fieldSet + '}');
@@ -521,6 +522,12 @@ function validateKeyFieldSets(
             return BREAK;
           }
           definedFields[currentDepth].add(fieldName);
+          // Depth 0 is the original parent type
+          // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
+          if (currentDepth === 0) {
+            keyFieldNames.add(fieldName);
+            fieldNames.add(fieldName);
+          }
           getValueOrDefault(factory.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(
             fieldName,
           );
@@ -749,6 +756,7 @@ export function validateAndAddDirectivesWithFieldSetToConfigurationData(
     factory,
     parentContainer,
     fieldSetContainer.keys,
+    configurationData.fieldNames,
     fieldSetContainer.disableEntityResolver,
   );
   if (keys) {
