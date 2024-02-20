@@ -106,8 +106,8 @@
             },
             "method": {
               "type": "string",
-              "default": "hash",
-              "description": "The method used to anonymize the IP addresses. The supported methods are 'redact' and 'hash'. The default value is 'hash'. The 'redact' method replaces the IP addresses with the string 'REDACTED'. The 'hash' method hashes the IP addresses using the SHA-256 algorithm.",
+              "default": "redact",
+              "description": "The method used to anonymize the IP addresses. The supported methods are 'redact' and 'hash'. The default value is 'redact'. The 'redact' method replaces the IP addresses with the string '[REDACTED]'. The 'hash' method hashes the IP addresses using the SHA-256 algorithm.",
               "enum": ["redact", "hash"]
             }
           }

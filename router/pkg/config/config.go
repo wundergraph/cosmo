@@ -279,7 +279,7 @@ type WebSocketConfiguration struct {
 
 type AnonymizeIpConfiguration struct {
 	Enabled bool   `yaml:"enabled" default:"true" envconfig:"ANONYMIZE_IP_ENABLED"`
-	Method  string `yaml:"method" default:"hash" envconfig:"ANONYMIZE_IP_METHOD"`
+	Method  string `yaml:"method" default:"redact" envconfig:"ANONYMIZE_IP_METHOD"`
 }
 
 type Config struct {
