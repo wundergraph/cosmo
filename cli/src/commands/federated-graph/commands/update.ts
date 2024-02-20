@@ -21,6 +21,10 @@ export default (opts: BaseCommandOptions) => {
     '--label-matcher [labels...]',
     'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
   );
+  command.option(
+    '--unset-label-matchers',
+    'This will remove all label matchers. It will not add new label matchers if both this and --label-matchers option is passed.',
+  );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
     let readmeFile;
@@ -42,6 +46,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
+        unsetLabelMatchers: options.unsetLabelMatchers,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
