@@ -92,10 +92,12 @@
       "properties": {
         "service_name": {
           "type": "string",
+          "description": "The name of the service. The name is used to identify the service in the traces and metrics. The default value is 'cosmo-router'.",
           "default": "cosmo-router"
         },
         "redact_ips": {
           "type": "object",
+          "description": "The configuration for the redaction of the IP addresses. Redaction is applied to the IP addresses in the traces and logs to protect the privacy of the users.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
