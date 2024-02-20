@@ -49,9 +49,10 @@ cors:
 telemetry:
   # Common options
   service_name: "cosmo-router"
-  # uses https://cosmo-otel.wundergraph.com for tracing and metrics
   redact_ips:
     enabled: true
+
+  # If no exporter is specified it uses https://cosmo-otel.wundergraph.com for tracing and metrics
 
   # OpenTelemetry Tracing
   tracing:

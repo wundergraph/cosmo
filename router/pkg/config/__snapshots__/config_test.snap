@@ -46,11 +46,6 @@
  "Cluster": {
   "Name": "my-cluster"
  },
- "Compliance": {
-  "AnonymizeIPAddresses": {
-   "Enabled": true
-  }
- },
  "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
  "DevelopmentMode": false,
  "EngineExecutionConfiguration": {
@@ -197,6 +192,9 @@
     "Path": "/metrics"
    }
   },
+  "RedactIPs": {
+   "Enabled": true
+  },
   "ServiceName": "cosmo-router",
   "Tracing": {
    "Enabled": true,
@@ -290,11 +288,6 @@
  "Cluster": {
   "Name": ""
  },
- "Compliance": {
-  "AnonymizeIPAddresses": {
-   "Enabled": true
-  }
- },
  "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
  "DevelopmentMode": false,
  "EngineExecutionConfiguration": {
@@ -387,6 +380,9 @@
     "ListenAddr": "127.0.0.1:8088",
     "Path": "/metrics"
    }
+  },
+  "RedactIPs": {
+   "Enabled": true
   },
   "ServiceName": "cosmo-router",
   "Tracing": {
