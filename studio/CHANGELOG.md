@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.66.0](https://github.com/wundergraph/cosmo/compare/studio@0.65.0...studio@0.66.0) (2024-02-19)
+
+### Bug Fixes
+
+* don't expose token on wgc list command ([#550](https://github.com/wundergraph/cosmo/issues/550)) ([357ffae](https://github.com/wundergraph/cosmo/commit/357ffae4362c3c37dc955d40363da40cd985bf3f)) (@StarpTech)
+* improve navigation ([#554](https://github.com/wundergraph/cosmo/issues/554)) ([c56ce3c](https://github.com/wundergraph/cosmo/commit/c56ce3cfa213a2952bfac7f3740341352ec48d67)) (@thisisnithin)
+
+### Features
+
+* generate variables when we copy a persisted operation ([#552](https://github.com/wundergraph/cosmo/issues/552)) ([44a8c7b](https://github.com/wundergraph/cosmo/commit/44a8c7bb588f8287987233537607370c896615a6)) (@thisisnithin)
+
 # [0.65.0](https://github.com/wundergraph/cosmo/compare/studio@0.64.3...studio@0.65.0) (2024-02-16)
 
 ### Bug Fixes
