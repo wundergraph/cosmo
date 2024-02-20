@@ -166,6 +166,10 @@
  "RouterRegistration": true,
  "ShutdownDelay": 15000000000,
  "Telemetry": {
+  "AnonymizeIP": {
+   "Enabled": true,
+   "Method": "redact"
+  },
   "Metrics": {
    "OTLP": {
     "Enabled": true,
@@ -191,9 +195,6 @@
     "ListenAddr": "127.0.0.1:8088",
     "Path": "/metrics"
    }
-  },
-  "RedactIPs": {
-   "Enabled": true
   },
   "ServiceName": "cosmo-router",
   "Tracing": {
@@ -367,6 +368,10 @@
  "RouterRegistration": true,
  "ShutdownDelay": 60000000000,
  "Telemetry": {
+  "AnonymizeIP": {
+   "Enabled": true,
+   "Method": "redact"
+  },
   "Metrics": {
    "OTLP": {
     "Enabled": true,
@@ -380,9 +385,6 @@
     "ListenAddr": "127.0.0.1:8088",
     "Path": "/metrics"
    }
-  },
-  "RedactIPs": {
-   "Enabled": true
   },
   "ServiceName": "cosmo-router",
   "Tracing": {
