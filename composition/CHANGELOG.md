@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.18.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.18.1...@wundergraph/composition@0.18.2) (2024-02-20)
+
+### Bug Fixes
+
+* regression composition of external directive applied to key fields ([#560](https://github.com/wundergraph/cosmo/issues/560)) ([d0a092a](https://github.com/wundergraph/cosmo/commit/d0a092a61b75489dc0c482905feb46dc8e0af364)) (@devsergiy)
+
 ## [0.18.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.18.0...@wundergraph/composition@0.18.1) (2024-02-19)
 
 **Note:** Version bump only for package @wundergraph/composition
