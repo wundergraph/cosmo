@@ -21,14 +21,14 @@ type Fn func(r *http.Request) []zapcore.Field
 type Option func(handler *handler)
 
 type handler struct {
-	timeFormat      string
-	utc             bool
-	skipPaths       []string
-	anonymizeIPAddr bool
-	traceID         bool // optionally log Open Telemetry TraceID
-	context         Fn
-	handler         http.Handler
-	logger          *zap.Logger
+	timeFormat string
+	utc        bool
+	skipPaths  []string
+	redactIPs  bool
+	traceID    bool // optionally log Open Telemetry TraceID
+	context    Fn
+	handler    http.Handler
+	logger     *zap.Logger
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -39,9 +39,9 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 	return r
 }
 
-func WithAnonymizeIPAddresses() Option {
+func WithRedactIPs() Option {
 	return func(r *handler) {
-		r.anonymizeIPAddr = true
+		r.redactIPs = true
 	}
 }
 
@@ -92,7 +92,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	remoteAddr := r.RemoteAddr
 
-	if h.anonymizeIPAddr {
+	if h.redactIPs {
 		remoteAddr = fmt.Sprintf("%d", xxhash.Sum64String(r.RemoteAddr))
 	}
 

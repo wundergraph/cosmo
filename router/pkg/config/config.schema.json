@@ -22,23 +22,6 @@
         }
       }
     },
-    "compliance": {
-      "type": "object",
-      "description": "The configuration for the compliance. Allows to configure the compliance settings for the router e.g. redact IP addresses.",
-      "additionalProperties": false,
-      "properties": {
-        "anonymize_ip_addresses": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "description": "Enable the redaction of the IP addresses. The default value is true."
-            }
-          }
-        }
-      }
-    },
     "graphql_metrics": {
       "type": "object",
       "additionalProperties": false,
@@ -110,6 +93,16 @@
         "service_name": {
           "type": "string",
           "default": "cosmo-router"
+        },
+        "redact_ips": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the redaction of the IP addresses. The default value is true."
+            }
+          }
         },
         "tracing": {
           "type": "object",

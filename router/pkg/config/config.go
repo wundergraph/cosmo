@@ -83,9 +83,10 @@ type MetricsOTLP struct {
 }
 
 type Telemetry struct {
-	ServiceName string  `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
-	Tracing     Tracing `yaml:"tracing"`
-	Metrics     Metrics `yaml:"metrics"`
+	ServiceName string                            `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
+	Tracing     Tracing                           `yaml:"tracing"`
+	Metrics     Metrics                           `yaml:"metrics"`
+	RedactIPs   TelemetryIPRedactionConfiguration `yaml:"redact_ips,omitempty"`
 }
 
 type CORS struct {
@@ -276,12 +277,8 @@ type WebSocketConfiguration struct {
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
 }
 
-type AnonymizeIPAddressesConfiguration struct {
-	Enabled bool `yaml:"enabled" default:"true" envconfig:"REDACT_IP_ADDRESSES_ENABLED"`
-}
-
-type ComplianceConfiguration struct {
-	AnonymizeIPAddresses AnonymizeIPAddressesConfiguration `yaml:"anonymize_ip_addresses"`
+type TelemetryIPRedactionConfiguration struct {
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"TELEMETRY_REDACT_IPS_ENABLED"`
 }
 
 type Config struct {
@@ -293,8 +290,6 @@ type Config struct {
 	GraphqlMetrics GraphqlMetrics `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS           `yaml:"cors,omitempty"`
 	Cluster        Cluster        `yaml:"cluster,omitempty"`
-
-	Compliance ComplianceConfiguration `yaml:"compliance,omitempty"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
