@@ -30,6 +30,10 @@ export default (opts: BaseCommandOptions) => {
     [],
   );
   command.option(
+    '--unset-labels',
+    'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
+  );
+  command.option(
     '--header [headers...]',
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
     [],
@@ -68,6 +72,7 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
+        unsetLabels: !!options.unsetLabels,
       },
       {
         headers: baseHeaders,

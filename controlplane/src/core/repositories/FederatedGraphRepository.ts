@@ -2,7 +2,7 @@ import { KeyObject } from 'node:crypto';
 import { JsonValue } from '@bufbuild/protobuf';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, sql } from 'drizzle-orm';
+import { SQL, and, asc, desc, eq, exists, gt, inArray, lt, not, notExists, notInArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SignJWT, generateKeyPair, importPKCS8 } from 'jose';
 import * as schema from '../../db/schema.js';
@@ -86,15 +86,17 @@ export class FederatedGraphRepository {
         .returning()
         .execute();
 
-      await tx
-        .insert(schema.targetLabelMatchers)
-        .values(
-          labelMatchers.map((s) => ({
-            targetId: insertedTarget[0].id,
-            labelMatcher: s.split(','),
-          })),
-        )
-        .execute();
+      if (labelMatchers.length > 0) {
+        await tx
+          .insert(schema.targetLabelMatchers)
+          .values(
+            labelMatchers.map((s) => ({
+              targetId: insertedTarget[0].id,
+              labelMatcher: s.split(','),
+            })),
+          )
+          .execute();
+      }
 
       const subgraphs = await subgraphRepo.byGraphLabelMatchers({
         labelMatchers: data.labelMatchers,
@@ -137,8 +139,8 @@ export class FederatedGraphRepository {
     readme?: string;
     blobStorage: BlobStorage;
     namespaceId: string;
+    unsetLabelMatchers: boolean;
   }) {
-    const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
 
     return this.db.transaction(async (tx) => {
@@ -162,21 +164,25 @@ export class FederatedGraphRepository {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
 
-      if (labelMatchers.length > 0) {
-        // update label matchers
+      // update label matchers
+      if (data.labelMatchers.length > 0 || data.unsetLabelMatchers) {
+        const labelMatchers = data.unsetLabelMatchers ? [] : normalizeLabelMatchers(data.labelMatchers);
+
         await tx
           .delete(schema.targetLabelMatchers)
           .where(eq(schema.targetLabelMatchers.targetId, federatedGraph.targetId));
 
-        await tx
-          .insert(schema.targetLabelMatchers)
-          .values(
-            labelMatchers.map((labelMatcher) => ({
-              targetId: federatedGraph.targetId,
-              labelMatcher: labelMatcher.split(','),
-            })),
-          )
-          .execute();
+        if (labelMatchers.length > 0) {
+          await tx
+            .insert(schema.targetLabelMatchers)
+            .values(
+              labelMatchers.map((labelMatcher) => ({
+                targetId: federatedGraph.targetId,
+                labelMatcher: labelMatcher.split(','),
+              })),
+            )
+            .execute();
+        }
 
         const subgraphs = await subgraphRepo.byGraphLabelMatchers({ labelMatchers, namespaceId: data.namespaceId });
 
@@ -451,28 +457,34 @@ export class FederatedGraphRepository {
           eq(targets.organizationId, this.organizationId),
           eq(targets.type, 'federated'),
           eq(targets.namespaceId, data.namespaceId),
-          // This is a negative lookup. We check if there is a label matchers of a federated graph
-          // that does not match the given subgraph labels. If all label matchers match, then the
-          // federated graph will be part of the result.
-          notExists(
-            this.db
-              .select()
-              .from(targetLabelMatchers)
-              .where(
-                and(
-                  eq(targetLabelMatchers.targetId, targets.id),
-                  not(
-                    // We created a GIN index on the label_matcher column, so we can look up
-                    // very quickly if the label matcher matches the given subgraph labels.
-                    sql.raw(
-                      `${targetLabelMatchers.labelMatcher.name} && ARRAY[${uniqueLabels.map(
-                        (ul) => "'" + joinLabel(ul) + "'",
-                      )}]`,
+          // In case labels are empty only compose with graphs whose label matchers are also empty.
+          // This is a negative lookup. We check if the graph has label matchers and then
+          // If there is a label matchers of a federated graph that does not match the given subgraph labels.
+          // If all label matchers match, then the federated graph will be part of the result.
+          data.labels.length > 0
+            ? and(
+                exists(this.db.select().from(targetLabelMatchers).where(eq(targetLabelMatchers.targetId, targets.id))),
+                notExists(
+                  this.db
+                    .select()
+                    .from(targetLabelMatchers)
+                    .where(
+                      and(
+                        eq(targetLabelMatchers.targetId, targets.id),
+                        not(
+                          // We created a GIN index on the label_matcher column, so we can look up
+                          // very quickly if the label matcher matches the given subgraph labels.
+                          sql.raw(
+                            `${targetLabelMatchers.labelMatcher.name} && ARRAY[${uniqueLabels.map(
+                              (ul) => "'" + joinLabel(ul) + "'",
+                            )}]`,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
                 ),
-              ),
-          ),
+              )
+            : notExists(this.db.select().from(targetLabelMatchers).where(eq(targetLabelMatchers.targetId, targets.id))),
         ),
       )
       .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targets.id))

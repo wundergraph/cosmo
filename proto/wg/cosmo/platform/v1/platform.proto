@@ -40,6 +40,7 @@ message PublishFederatedSubgraphRequest {
   // url used for subscriptions
   optional string subscription_url = 7;
   string namespace = 8;
+  optional bool unset_labels = 9;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -426,6 +427,7 @@ message UpdateSubgraphRequest {
   optional string subscription_url = 6;
   optional string readme = 7;
   string namespace = 8;
+  optional bool unset_labels = 9;
 }
 
 message UpdateSubgraphResponse {
@@ -439,6 +441,7 @@ message UpdateFederatedGraphRequest {
   repeated string label_matchers = 3;
   optional string readme = 4;
   string namespace = 5;
+  optional bool unset_label_matchers = 6;
 }
 
 message UpdateFederatedGraphResponse {

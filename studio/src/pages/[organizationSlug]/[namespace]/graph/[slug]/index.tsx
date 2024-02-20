@@ -33,6 +33,11 @@ import {
 import { CLI } from "@/components/ui/cli";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Spacer } from "@/components/ui/spacer";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -49,6 +54,7 @@ import {
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
 import { useContext, useState } from "react";
+import { PiAsterisk } from "react-icons/pi";
 import { ReactFlowProvider } from "reactflow";
 
 const GraphOverviewPage: NextPageWithLayout = () => {
@@ -195,6 +201,14 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   Matchers
                 </span>
                 <div className="flex flex-wrap gap-2 overflow-hidden">
+                  {labelMatchers.length === 0 && (
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger>-</TooltipTrigger>
+                      <TooltipContent>
+                        This graph will only compose subgraphs without labels
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   {labelMatchers.map((lm: any) => {
                     return (
                       <Badge variant="secondary" key={lm} className="truncate">
