@@ -443,7 +443,7 @@ export const SubgraphsTable = ({
                       : "Never"}
                   </TableCell>
                   <TableCell className="flex justify-end gap-2">
-                    {!rbac && (
+                    {rbac && (
                       <AddSubgraphUsers
                         subgraphName={name}
                         namespace={namespace}
