@@ -473,8 +473,8 @@ export const SubgraphsTable = ({
                       </TooltipTrigger>
                       <TooltipContent>Analytics</TooltipContent>
                     </Tooltip>
-                    <Button variant="ghost" size="sm" className="table-action">
-                      View
+                    <Button asChild variant="ghost" size="sm" className="table-action">
+                      <Link href={path}>View</Link>
                     </Button>
                   </TableCell>
                 </TableRow>
