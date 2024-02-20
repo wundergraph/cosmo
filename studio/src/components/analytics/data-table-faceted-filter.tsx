@@ -306,10 +306,10 @@ export function DataTableFilterCommands<TData, TValue>({
     case CustomOptions.Range:
       content = (
         <div className="flex flex-col py-2">
-          <p className="px-2 text-xs text-muted-foreground">{`Select ${title} (secs)`}</p>
+          <p className="px-2 text-xs text-muted-foreground">{`Select ${title} (seconds)`}</p>
           <SliderWithOptions
             key={`slider-${range.start}-${range.end}`}
-            unit="secs"
+            unit="sec"
             defaultRange={{ start: range.start, end: range.end }}
             onValueChange={updateRangeFilters}
           />
