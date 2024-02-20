@@ -44,7 +44,7 @@ export const getDataTableFilters = <T>(
           value: each.value as unknown as string,
         }),
       ),
-      customOptions: filter.customOptions || false,
+      customOptions: filter.customOptions,
     });
   });
 
