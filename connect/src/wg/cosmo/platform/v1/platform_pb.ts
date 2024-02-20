@@ -43,6 +43,26 @@ proto3.util.setEnumType(AnalyticsViewGroupName, "wg.cosmo.platform.v1.AnalyticsV
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.CustomOptions
+ */
+export enum CustomOptions {
+  /**
+   * @generated from enum value: Text = 0;
+   */
+  Text = 0,
+
+  /**
+   * @generated from enum value: Range = 1;
+   */
+  Range = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(CustomOptions)
+proto3.util.setEnumType(CustomOptions, "wg.cosmo.platform.v1.CustomOptions", [
+  { no: 0, name: "Text" },
+  { no: 1, name: "Range" },
+]);
+
+/**
  * @generated from enum wg.cosmo.platform.v1.Unit
  */
 export enum Unit {
@@ -4122,9 +4142,9 @@ export class AnalyticsViewResultFilter extends Message<AnalyticsViewResultFilter
   options: AnalyticsViewResultFilterOption[] = [];
 
   /**
-   * @generated from field: optional bool custom_options = 4;
+   * @generated from field: optional wg.cosmo.platform.v1.CustomOptions custom_options = 4;
    */
-  customOptions?: boolean;
+  customOptions?: CustomOptions;
 
   constructor(data?: PartialMessage<AnalyticsViewResultFilter>) {
     super();
@@ -4137,7 +4157,7 @@ export class AnalyticsViewResultFilter extends Message<AnalyticsViewResultFilter
     { no: 1, name: "columnName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "options", kind: "message", T: AnalyticsViewResultFilterOption, repeated: true },
-    { no: 4, name: "custom_options", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "custom_options", kind: "enum", T: proto3.getEnumType(CustomOptions), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalyticsViewResultFilter {
