@@ -33,6 +33,11 @@ import {
 import { CLI } from "@/components/ui/cli";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Spacer } from "@/components/ui/spacer";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -196,7 +201,14 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   Matchers
                 </span>
                 <div className="flex flex-wrap gap-2 overflow-hidden">
-                  {labelMatchers.length === 0 && <span>-</span>}
+                  {labelMatchers.length === 0 && (
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger>-</TooltipTrigger>
+                      <TooltipContent>
+                        This graph will only compose subgraphs without labels
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   {labelMatchers.map((lm: any) => {
                     return (
                       <Badge variant="secondary" key={lm} className="truncate">
