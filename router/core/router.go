@@ -95,6 +95,7 @@ type (
 		awsLambda                bool
 		shutdown                 bool
 		bootstrapped             bool
+		redactIPAddr             bool
 		listenAddr               string
 		baseURL                  string
 		graphqlWebURL            string
@@ -599,7 +600,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.traceConfig.Enabled {
-		tp, err := rtrace.NewTracerProvider(ctx, r.logger, r.traceConfig, r.instanceID)
+		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
+			Logger:            r.logger,
+			Config:            r.traceConfig,
+			ServiceInstanceID: r.instanceID,
+			RedactIPAddr:      r.redactIPAddr,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -777,8 +783,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			otelhttp.WithTracerProvider(r.tracerProvider),
 		)
 	}
-	requestLogger := requestlogger.New(
-		r.logger,
+
+	// Request logger
+	requestLoggerOpts := []requestlogger.Option{
 		requestlogger.WithDefaultOptions(),
 		requestlogger.WithNoTimeField(),
 		requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
@@ -787,6 +794,15 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 				zap.String("request_id", middleware.GetReqID(request.Context())),
 			}
 		}),
+	}
+
+	if r.redactIPAddr {
+		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithRedactIPAddr())
+	}
+
+	requestLogger := requestlogger.New(
+		r.logger,
+		requestLoggerOpts...,
 	)
 
 	httpRouter := chi.NewRouter()
@@ -1511,6 +1527,12 @@ func WithClusterName(name string) Option {
 func WithInstanceID(id string) Option {
 	return func(r *Router) {
 		r.instanceID = id
+	}
+}
+
+func WithRedactIPAddress(enabled bool) Option {
+	return func(r *Router) {
+		r.redactIPAddr = enabled
 	}
 }
 

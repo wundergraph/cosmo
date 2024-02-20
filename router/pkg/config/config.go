@@ -276,6 +276,14 @@ type WebSocketConfiguration struct {
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
 }
 
+type RedactIPAddressesConfiguration struct {
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"REDACT_IP_ADDRESSES_ENABLED"`
+}
+
+type ComplianceConfiguration struct {
+	RedactIPAddresses RedactIPAddressesConfiguration `yaml:"redact_ip_addresses"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -285,6 +293,8 @@ type Config struct {
 	GraphqlMetrics GraphqlMetrics `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS           `yaml:"cors,omitempty"`
 	Cluster        Cluster        `yaml:"cluster,omitempty"`
+
+	Compliance ComplianceConfiguration `yaml:"compliance,omitempty"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

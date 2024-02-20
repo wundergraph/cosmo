@@ -109,6 +109,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			Enabled:           cfg.GraphqlMetrics.Enabled,
 			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
 		}),
+		core.WithRedactIPAddress(cfg.Compliance.RedactIPAddresses.Enabled),
 		core.WithClusterName(cfg.Cluster.Name),
 		core.WithInstanceID(cfg.InstanceID),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),

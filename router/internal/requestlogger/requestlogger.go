@@ -1,6 +1,8 @@
 package requestlogger
 
 import (
+	"fmt"
+	"github.com/cespare/xxhash/v2"
 	"net/http"
 	"time"
 
@@ -19,13 +21,14 @@ type Fn func(r *http.Request) []zapcore.Field
 type Option func(handler *handler)
 
 type handler struct {
-	timeFormat string
-	utc        bool
-	skipPaths  []string
-	traceID    bool // optionally log Open Telemetry TraceID
-	context    Fn
-	handler    http.Handler
-	logger     *zap.Logger
+	timeFormat   string
+	utc          bool
+	skipPaths    []string
+	redactIPAddr bool
+	traceID      bool // optionally log Open Telemetry TraceID
+	context      Fn
+	handler      http.Handler
+	logger       *zap.Logger
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -34,6 +37,12 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 	}
 
 	return r
+}
+
+func WithRedactIPAddr() Option {
+	return func(r *handler) {
+		r.redactIPAddr = true
+	}
 }
 
 func WithContext(fn Fn) Option {
@@ -81,13 +90,19 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		end = end.UTC()
 	}
 
+	remoteAddr := r.RemoteAddr
+
+	if h.redactIPAddr {
+		remoteAddr = fmt.Sprintf("%d", xxhash.Sum64String(r.RemoteAddr))
+	}
+
 	fields := []zapcore.Field{
 		zap.Int("status", ww.Status()),
 		zap.String("method", r.Method),
 		zap.String("path", path),
 		zap.String("query", query),
 		// Has to be set by a middleware before this one
-		zap.String("ip", r.RemoteAddr),
+		zap.String("ip", remoteAddr),
 		zap.String("user-agent", r.UserAgent()),
 		zap.Duration("latency", latency),
 	}
