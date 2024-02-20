@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.68.2...controlplane@0.69.0) (2024-02-19)
+
+### Bug Fixes
+
+* don't expose token on wgc list command ([#550](https://github.com/wundergraph/cosmo/issues/550)) ([357ffae](https://github.com/wundergraph/cosmo/commit/357ffae4362c3c37dc955d40363da40cd985bf3f)) (@StarpTech)
+* send only summary for large slack notifications ([#556](https://github.com/wundergraph/cosmo/issues/556)) ([732dbc5](https://github.com/wundergraph/cosmo/commit/732dbc5cdf99c5ab742cf7dcf8339b516956bfdd)) (@thisisnithin)
+
+### Features
+
+* upgrade to latest gpt3.5 model ([#549](https://github.com/wundergraph/cosmo/issues/549)) ([3a44d02](https://github.com/wundergraph/cosmo/commit/3a44d022cd781fcd3435ac9f1d062597e51a2274)) (@StarpTech)
+
 ## [0.68.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.68.1...controlplane@0.68.2) (2024-02-18)
 
 ### Bug Fixes

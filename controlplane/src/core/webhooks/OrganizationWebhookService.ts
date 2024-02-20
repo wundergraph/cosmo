@@ -135,6 +135,12 @@ export class OrganizationWebhookService {
   private async constructSlackBody<T extends keyof EventMap>(eventPayload: EventMap[T]) {
     const fedRepo = new FederatedGraphRepository(this.db, eventPayload.organization.id);
     const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(eventPayload.federated_graph.id);
+
+    let linkToChangelog = `https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name}`;
+    if (latestChangelogs) {
+      linkToChangelog += `/changelog/${latestChangelogs?.schemaVersionId}`;
+    }
+
     const tempData: { blocks: any[]; attachments: any[] } = {
       blocks: [
         {
@@ -153,7 +159,7 @@ export class OrganizationWebhookService {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name}| here> for more details.`,
+                text: `Click <${linkToChangelog}| here> for more details.`,
               },
             },
           ],
@@ -165,6 +171,23 @@ export class OrganizationWebhookService {
         (c) => c.changeType.includes('ADDED') || c.changeType.includes('CHANGED'),
       );
       const removedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('REMOVED'));
+
+      if (removedChanges.length + addedChanges.length > 20) {
+        tempData.attachments.unshift({
+          color: '#e11d48',
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `Too many changes to display. There were ${removedChanges.length} deletions and ${addedChanges.length} additions.`,
+              },
+            },
+          ],
+        });
+        return tempData;
+      }
+
       if (removedChanges.length > 0) {
         tempData.attachments.unshift({
           color: '#e11d48',
