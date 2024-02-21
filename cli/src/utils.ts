@@ -97,7 +97,6 @@ export const updateConfigFile = (newData: ConfigData) => {
     ...newData,
   });
 
-  console.log('test');
   writeFileSync(configFile, updatedData);
 };
 
