@@ -1,12 +1,14 @@
+import { mkdirSync } from 'node:fs';
 import { Command } from 'commander';
 import { CreateClient } from '../core/client/client.js';
-import { config } from '../core/config.js';
+import { config, configDir } from '../core/config.js';
+import { checkForUpdates } from '../utils.js';
 import AuthCommands from './auth/index.js';
 import FederatedGraphCommands from './federated-graph/index.js';
+import NamespaceCommands from './namespace/index.js';
 import OperationCommands from './operations/index.js';
 import RouterCommands from './router/index.js';
 import SchemaCommands from './subgraph/index.js';
-import NamespaceCommands from './namespace/index.js';
 
 const client = CreateClient({
   baseUrl: config.baseURL,
@@ -50,4 +52,10 @@ program.addCommand(
     client,
   }),
 );
+
+program.hook('preAction', async () => {
+  mkdirSync(configDir, { recursive: true });
+  await checkForUpdates();
+});
+
 export default program;
