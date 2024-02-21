@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv17 "go.opentelemetry.io/otel/semconv/v1.17.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.uber.org/zap"
 	"net/url"
@@ -153,13 +152,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 		}
 
-		opts = append(opts,
-			// Attributes that should be redacted by the OTEL http instrumentation package.
-			redact.Attributes([]attribute.Key{
-				// Both could contain sensitive information.
-				semconv17.HTTPClientIPKey,
-				semconv17.NetSockPeerAddrKey,
-			}, rFunc))
+		opts = append(opts, redact.Attributes(SensitiveAttributes, rFunc))
 	}
 
 	if len(config.Config.Propagators) > 0 {
