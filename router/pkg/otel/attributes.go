@@ -23,7 +23,6 @@ const (
 	WgEngineRequestTracingEnabled = attribute.Key("wg.engine.request_tracing_enabled")
 	WgRouterRootSpan              = attribute.Key("wg.router.root_span")
 	WgRouterClusterName           = attribute.Key("wg.router.cluster.name")
-	WgRouterInstanceID            = attribute.Key("wg.router.instance.id")
 )
 
 var (
