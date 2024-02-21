@@ -53,6 +53,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type IPAnonymizationMethod string
+
+const (
+	Hash   IPAnonymizationMethod = "hash"
+	Redact IPAnonymizationMethod = "redact"
+)
+
 type (
 	// Router is the main application instance.
 	Router struct {
@@ -80,7 +87,7 @@ type (
 
 	IPAnonymizationConfig struct {
 		Enabled bool
-		Method  string
+		Method  IPAnonymizationMethod
 	}
 
 	// Config defines the configuration options for the Router.
@@ -100,7 +107,7 @@ type (
 		awsLambda                bool
 		shutdown                 bool
 		bootstrapped             bool
-		ipAnonymization          IPAnonymizationConfig
+		ipAnonymization          *IPAnonymizationConfig
 		listenAddr               string
 		baseURL                  string
 		graphqlWebURL            string
@@ -242,7 +249,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
 			r.logger.Warn("authentication is required but no authenticators are configured")
 		}
+	}
 
+	if r.ipAnonymization == nil {
+		r.ipAnonymization = &IPAnonymizationConfig{
+			Enabled: true,
+			Method:  Redact,
+		}
 	}
 
 	// Default values for health check paths
@@ -1541,7 +1554,7 @@ func WithInstanceID(id string) Option {
 	}
 }
 
-func WithAnonymization(ipConfig IPAnonymizationConfig) Option {
+func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	return func(r *Router) {
 		r.ipAnonymization = ipConfig
 	}

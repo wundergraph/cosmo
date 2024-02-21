@@ -109,9 +109,9 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			Enabled:           cfg.GraphqlMetrics.Enabled,
 			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
 		}),
-		core.WithAnonymization(core.IPAnonymizationConfig{
+		core.WithAnonymization(&core.IPAnonymizationConfig{
 			Enabled: cfg.Compliance.AnonymizeIP.Enabled,
-			Method:  cfg.Compliance.AnonymizeIP.Method,
+			Method:  core.IPAnonymizationMethod(cfg.Compliance.AnonymizeIP.Method),
 		}),
 		core.WithClusterName(cfg.Cluster.Name),
 		core.WithInstanceID(cfg.InstanceID),
