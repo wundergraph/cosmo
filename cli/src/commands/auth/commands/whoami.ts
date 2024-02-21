@@ -5,10 +5,10 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders, config } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schemaPush = new Command('whoami');
-  schemaPush.description('Displays the users/service identity currently authenticated and in use.');
+  const command = new Command('whoami');
+  command.description('Displays the users/service identity currently authenticated and in use.');
 
-  schemaPush.action(async (name, options) => {
+  command.action(async (name, options) => {
     const resp = await opts.client.platform.whoAmI(
       {},
       {
@@ -32,5 +32,5 @@ export default (opts: BaseCommandOptions) => {
     }
   });
 
-  return schemaPush;
+  return command;
 };
