@@ -86,11 +86,8 @@ export const readConfigFile = (): ConfigData => {
   }
 
   const data = yaml.load(readFileSync(configFile, 'utf8'));
-  if (!data) {
-    return {};
-  }
 
-  return JSON.parse(JSON.stringify(data));
+  return data ?? {};
 };
 
 export const updateConfigFile = (newData: ConfigData) => {
