@@ -83,10 +83,9 @@ type MetricsOTLP struct {
 }
 
 type Telemetry struct {
-	ServiceName string                   `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
-	Tracing     Tracing                  `yaml:"tracing"`
-	Metrics     Metrics                  `yaml:"metrics"`
-	AnonymizeIP AnonymizeIpConfiguration `yaml:"anonymize_ip,omitempty"`
+	ServiceName string  `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
+	Tracing     Tracing `yaml:"tracing"`
+	Metrics     Metrics `yaml:"metrics"`
 }
 
 type CORS struct {
@@ -264,6 +263,10 @@ type AbsintheProtocolConfiguration struct {
 	HandlerPath string `yaml:"handler_path" default:"/absinthe/socket" envconfig:"WEBSOCKETS_ABSINTHE_HANDLER_PATH"`
 }
 
+type ComplianceConfig struct {
+	AnonymizeIP AnonymizeIpConfiguration `yaml:"anonymize_ip,omitempty"`
+}
+
 type WebSocketConfiguration struct {
 	// Enabled true if the Router should accept Requests over WebSockets
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"WEBSOCKETS_ENABLED"`
@@ -278,19 +281,20 @@ type WebSocketConfiguration struct {
 }
 
 type AnonymizeIpConfiguration struct {
-	Enabled bool   `yaml:"enabled" default:"true" envconfig:"ANONYMIZE_IP_ENABLED"`
-	Method  string `yaml:"method" default:"redact" envconfig:"ANONYMIZE_IP_METHOD"`
+	Enabled bool   `yaml:"enabled" default:"true" envconfig:"SECURITY_ANONYMIZE_IP_ENABLED"`
+	Method  string `yaml:"method" default:"redact" envconfig:"SECURITY_ANONYMIZE_IP_METHOD"`
 }
 
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
-	InstanceID     string         `yaml:"instance_id,omitempty" envconfig:"INSTANCE_ID"`
-	Graph          Graph          `yaml:"graph,omitempty"`
-	Telemetry      Telemetry      `yaml:"telemetry,omitempty"`
-	GraphqlMetrics GraphqlMetrics `yaml:"graphql_metrics,omitempty"`
-	CORS           CORS           `yaml:"cors,omitempty"`
-	Cluster        Cluster        `yaml:"cluster,omitempty"`
+	InstanceID     string           `yaml:"instance_id,omitempty" envconfig:"INSTANCE_ID"`
+	Graph          Graph            `yaml:"graph,omitempty"`
+	Telemetry      Telemetry        `yaml:"telemetry,omitempty"`
+	GraphqlMetrics GraphqlMetrics   `yaml:"graphql_metrics,omitempty"`
+	CORS           CORS             `yaml:"cors,omitempty"`
+	Cluster        Cluster          `yaml:"cluster,omitempty"`
+	Compliance     ComplianceConfig `yaml:"compliance,omitempty"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

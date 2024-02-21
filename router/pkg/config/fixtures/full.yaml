@@ -44,14 +44,16 @@ cors:
   allow_credentials: true
   max_age: 5m
 
+compliance:
+  anonymize_ip:
+    enabled: true
+    method: redact # hash or redact
+
 # Config for custom modules
 # See "https://cosmo-docs.wundergraph.com/router/metrics-and-monitoring" for more information
 telemetry:
   # Common options
   service_name: "cosmo-router"
-  anonymize_ip:
-    enabled: true
-    method: redact # hash or redact
 
   # If no exporter is specified it uses https://cosmo-otel.wundergraph.com for tracing and metrics
 

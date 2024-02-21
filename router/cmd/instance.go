@@ -110,8 +110,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
 		}),
 		core.WithAnonymization(core.IPAnonymizationConfig{
-			Enabled: cfg.Telemetry.AnonymizeIP.Enabled,
-			Method:  cfg.Telemetry.AnonymizeIP.Method,
+			Enabled: cfg.Compliance.AnonymizeIP.Enabled,
+			Method:  cfg.Compliance.AnonymizeIP.Method,
 		}),
 		core.WithClusterName(cfg.Cluster.Name),
 		core.WithInstanceID(cfg.InstanceID),

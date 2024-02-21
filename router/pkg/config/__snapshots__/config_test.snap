@@ -46,6 +46,12 @@
  "Cluster": {
   "Name": "my-cluster"
  },
+ "Compliance": {
+  "AnonymizeIP": {
+   "Enabled": true,
+   "Method": "redact"
+  }
+ },
  "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
  "DevelopmentMode": false,
  "EngineExecutionConfiguration": {
@@ -166,10 +172,6 @@
  "RouterRegistration": true,
  "ShutdownDelay": 15000000000,
  "Telemetry": {
-  "AnonymizeIP": {
-   "Enabled": true,
-   "Method": "redact"
-  },
   "Metrics": {
    "OTLP": {
     "Enabled": true,
@@ -289,6 +291,12 @@
  "Cluster": {
   "Name": ""
  },
+ "Compliance": {
+  "AnonymizeIP": {
+   "Enabled": true,
+   "Method": "redact"
+  }
+ },
  "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
  "DevelopmentMode": false,
  "EngineExecutionConfiguration": {
@@ -368,10 +376,6 @@
  "RouterRegistration": true,
  "ShutdownDelay": 60000000000,
  "Telemetry": {
-  "AnonymizeIP": {
-   "Enabled": true,
-   "Method": "redact"
-  },
   "Metrics": {
    "OTLP": {
     "Enabled": true,
