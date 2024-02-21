@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { CreateClient } from '../core/client/client.js';
 import { config } from '../core/config.js';
+import { checkForUpdates } from '../utils.js';
 import AuthCommands from './auth/index.js';
 import FederatedGraphCommands from './federated-graph/index.js';
 import OperationCommands from './operations/index.js';
@@ -50,4 +51,9 @@ program.addCommand(
     client,
   }),
 );
+
+program.hook('preAction', async () => {
+  await checkForUpdates();
+});
+
 export default program;

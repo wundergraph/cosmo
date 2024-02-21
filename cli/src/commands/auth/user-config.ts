@@ -23,7 +23,8 @@ export default class UserConfig {
 
   loadToken = (tokenResp: KeycloakToken & { organizationSlug: string }) => {
     mkdirSync(configDir, { recursive: true });
-    const token = yaml.dump(tokenResp);
-    writeFileSync(configFile, token);
+    const existingData = existsSync(configFile) ? (yaml.load(readFileSync(configFile, 'utf8')) as any) : {};
+    const yamlData = yaml.dump({ ...existingData, ...tokenResp });
+    writeFileSync(configFile, yamlData);
   };
 }

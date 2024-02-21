@@ -36,6 +36,7 @@
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
+    "boxen": "^7.1.1",
     "cli-progress": "^3.12.0",
     "cli-table3": "^0.6.3",
     "commander": "^11.1.0",

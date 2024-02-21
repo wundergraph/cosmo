@@ -1,7 +1,10 @@
-import { federateSubgraphs, FederationResultContainer, Subgraph } from '@wundergraph/composition';
-import pc from 'picocolors';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
+import boxen from 'boxen';
 import { program } from 'commander';
-import { config } from './core/config.js';
+import yaml from 'js-yaml';
+import pc from 'picocolors';
+import { config, configDir, configFile } from './core/config.js';
 
 export interface Header {
   key: string;
@@ -73,3 +76,48 @@ export function checkAPIKey() {
     );
   }
 }
+
+export const checkForUpdates = async () => {
+  try {
+    if (config.disableUpdateCheck === 'true') {
+      return;
+    }
+
+    const currentTime = Date.now();
+
+    const data = existsSync(configFile) ? yaml.load(readFileSync(configFile, 'utf8')) ?? {} : {};
+    const configFileData = JSON.parse(JSON.stringify(data));
+    if (configFileData.lastUpdateCheck && currentTime - configFileData.lastUpdateCheck < 24 * 60 * 60 * 1000) {
+      return;
+    }
+
+    const response = await fetch(`https://registry.npmjs.org/wgc/latest`);
+    const latestVersion = (await response.json()).version;
+
+    if (config.version === latestVersion) {
+      return;
+    }
+
+    const message = `Update available! ${pc.red(config.version)} → ${pc.green(latestVersion)}
+Changelog: https://github.com/wundergraph/cosmo/releases/tag/wgc@${latestVersion}`;
+
+    console.log(
+      boxen(message, {
+        padding: 1,
+        margin: 1,
+        align: 'center',
+        borderColor: 'yellow',
+        borderStyle: 'round',
+      }),
+    );
+
+    const newData = yaml.dump({
+      ...configFileData,
+      lastUpdateCheck: currentTime,
+    });
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(configFile, newData);
+  } catch {
+    console.log(pc.red('Failed to check for updates'));
+  }
+};
