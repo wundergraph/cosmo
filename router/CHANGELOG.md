@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/router@0.68.1...router@0.69.0) (2024-02-21)
+
+### Features
+
+* add option to redact IP in traces and logs ([#561](https://github.com/wundergraph/cosmo/issues/561)) ([6c63730](https://github.com/wundergraph/cosmo/commit/6c6373087df4520d1c8695a0ee8b2a8514cc3c0a)) (@StarpTech)
+
 ## [0.68.1](https://github.com/wundergraph/cosmo/compare/router@0.68.0...router@0.68.1) (2024-02-19)
 
 ### Bug Fixes
