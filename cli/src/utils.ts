@@ -5,6 +5,7 @@ import { program } from 'commander';
 import yaml from 'js-yaml';
 import pc from 'picocolors';
 import { config, configDir, configFile } from './core/config.js';
+import { KeycloakToken } from './commands/auth/utils.js';
 
 export interface Header {
   key: string;
@@ -77,6 +78,32 @@ export function checkAPIKey() {
   }
 }
 
+export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
+
+export const readConfigFile = (): ConfigData => {
+  if (!existsSync(configFile)) {
+    return {};
+  }
+
+  const data = yaml.load(readFileSync(configFile, 'utf8'));
+  if (!data) {
+    return {};
+  }
+
+  return JSON.parse(JSON.stringify(data));
+};
+
+export const updateConfigFile = (newData: ConfigData) => {
+  const existingData = readConfigFile();
+  const updatedData = yaml.dump({
+    ...existingData,
+    ...newData,
+  });
+
+  console.log('test');
+  writeFileSync(configFile, updatedData);
+};
+
 export const checkForUpdates = async () => {
   try {
     if (config.disableUpdateCheck === 'true') {
@@ -85,8 +112,7 @@ export const checkForUpdates = async () => {
 
     const currentTime = Date.now();
 
-    const data = existsSync(configFile) ? yaml.load(readFileSync(configFile, 'utf8')) ?? {} : {};
-    const configFileData = JSON.parse(JSON.stringify(data));
+    const configFileData = readConfigFile();
     if (configFileData.lastUpdateCheck && currentTime - configFileData.lastUpdateCheck < 24 * 60 * 60 * 1000) {
       return;
     }
@@ -99,7 +125,8 @@ export const checkForUpdates = async () => {
     }
 
     const message = `Update available! ${pc.red(config.version)} → ${pc.green(latestVersion)}
-Changelog: https://github.com/wundergraph/cosmo/releases/tag/wgc@${latestVersion}`;
+Changelog: https://github.com/wundergraph/cosmo/releases/tag/wgc@${latestVersion}
+Run npm i -g wgc@latest`;
 
     console.log(
       boxen(message, {
@@ -111,13 +138,12 @@ Changelog: https://github.com/wundergraph/cosmo/releases/tag/wgc@${latestVersion
       }),
     );
 
-    const newData = yaml.dump({
-      ...configFileData,
+    updateConfigFile({
       lastUpdateCheck: currentTime,
     });
-    mkdirSync(configDir, { recursive: true });
-    writeFileSync(configFile, newData);
-  } catch {
-    console.log(pc.red('Failed to check for updates'));
+  } catch (e: any) {
+    throw new Error(
+      `Failed to check for updates. You can disable update check by setting env DISABLE_UPDATE_CHECK=true. ${e.message}`,
+    );
   }
 };
