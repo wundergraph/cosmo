@@ -23,19 +23,26 @@ type (
 
 	IPAnonymizationConfig struct {
 		Enabled bool
-		Method  string
+		Method  IPAnonymizationMethod
 	}
 )
 
+type IPAnonymizationMethod string
+
+const (
+	Hash   IPAnonymizationMethod = "hash"
+	Redact IPAnonymizationMethod = "redact"
+)
+
 type handler struct {
-	timeFormat      string
-	utc             bool
-	skipPaths       []string
-	ipNormalization *IPAnonymizationConfig
-	traceID         bool // optionally log Open Telemetry TraceID
-	context         Fn
-	handler         http.Handler
-	logger          *zap.Logger
+	timeFormat            string
+	utc                   bool
+	skipPaths             []string
+	ipAnonymizationConfig *IPAnonymizationConfig
+	traceID               bool // optionally log Open Telemetry TraceID
+	context               Fn
+	handler               http.Handler
+	logger                *zap.Logger
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -48,7 +55,7 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 
 func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 	return func(r *handler) {
-		r.ipNormalization = ipConfig
+		r.ipAnonymizationConfig = ipConfig
 	}
 }
 
@@ -99,11 +106,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	remoteAddr := r.RemoteAddr
 
-	if h.ipNormalization != nil && h.ipNormalization.Enabled {
-		if h.ipNormalization.Method == "hash" {
+	if h.ipAnonymizationConfig != nil && h.ipAnonymizationConfig.Enabled {
+		if h.ipAnonymizationConfig.Method == Hash {
 			h := sha256.New()
 			remoteAddr = fmt.Sprintf("%d", h.Sum([]byte(r.RemoteAddr)))
-		} else if h.ipNormalization.Method == "redact" {
+		} else if h.ipAnonymizationConfig.Method == Redact {
 			remoteAddr = "[REDACTED]"
 		}
 	}

@@ -24,9 +24,11 @@ var (
 )
 
 type (
+	IPAnonymizationMethod string
+
 	IPAnonymizationConfig struct {
 		Enabled bool
-		Method  string
+		Method  IPAnonymizationMethod
 	}
 
 	ProviderConfig struct {
@@ -35,6 +37,11 @@ type (
 		ServiceInstanceID string
 		IPAnonymization   *IPAnonymizationConfig
 	}
+)
+
+const (
+	Hash   IPAnonymizationMethod = "hash"
+	Redact IPAnonymizationMethod = "redact"
 )
 
 func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, error) {
@@ -140,12 +147,12 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 		var rFunc redact.RedactFunc
 
-		if config.IPAnonymization.Method == "hash" {
+		if config.IPAnonymization.Method == Hash {
 			rFunc = func(key attribute.KeyValue) string {
 				h := sha256.New()
 				return string(h.Sum([]byte(key.Value.AsString())))
 			}
-		} else if config.IPAnonymization.Method == "redact" {
+		} else if config.IPAnonymization.Method == Redact {
 			rFunc = func(key attribute.KeyValue) string {
 				return "[REDACTED]"
 			}

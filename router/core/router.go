@@ -611,7 +611,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			ServiceInstanceID: r.instanceID,
 			IPAnonymization: &rtrace.IPAnonymizationConfig{
 				Enabled: r.ipAnonymization.Enabled,
-				Method:  r.ipAnonymization.Method,
+				Method:  rtrace.IPAnonymizationMethod(r.ipAnonymization.Method),
 			},
 		})
 		if err != nil {
@@ -807,7 +807,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	if r.ipAnonymization.Enabled {
 		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
 			Enabled: r.ipAnonymization.Enabled,
-			Method:  r.ipAnonymization.Method,
+			Method:  requestlogger.IPAnonymizationMethod(r.ipAnonymization.Method),
 		}))
 	}
 
