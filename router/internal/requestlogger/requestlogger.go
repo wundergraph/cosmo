@@ -1,6 +1,8 @@
 package requestlogger
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -16,16 +18,31 @@ type Fn func(r *http.Request) []zapcore.Field
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
 // whether to print stack traces on panic.
-type Option func(handler *handler)
+type (
+	Option func(handler *handler)
+
+	IPAnonymizationConfig struct {
+		Enabled bool
+		Method  IPAnonymizationMethod
+	}
+)
+
+type IPAnonymizationMethod string
+
+const (
+	Hash   IPAnonymizationMethod = "hash"
+	Redact IPAnonymizationMethod = "redact"
+)
 
 type handler struct {
-	timeFormat string
-	utc        bool
-	skipPaths  []string
-	traceID    bool // optionally log Open Telemetry TraceID
-	context    Fn
-	handler    http.Handler
-	logger     *zap.Logger
+	timeFormat            string
+	utc                   bool
+	skipPaths             []string
+	ipAnonymizationConfig *IPAnonymizationConfig
+	traceID               bool // optionally log Open Telemetry TraceID
+	context               Fn
+	handler               http.Handler
+	logger                *zap.Logger
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -34,6 +51,12 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 	}
 
 	return r
+}
+
+func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
+	return func(r *handler) {
+		r.ipAnonymizationConfig = ipConfig
+	}
 }
 
 func WithContext(fn Fn) Option {
@@ -81,13 +104,24 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		end = end.UTC()
 	}
 
+	remoteAddr := r.RemoteAddr
+
+	if h.ipAnonymizationConfig != nil && h.ipAnonymizationConfig.Enabled {
+		if h.ipAnonymizationConfig.Method == Hash {
+			h := sha256.New()
+			remoteAddr = fmt.Sprintf("%d", h.Sum([]byte(r.RemoteAddr)))
+		} else if h.ipAnonymizationConfig.Method == Redact {
+			remoteAddr = "[REDACTED]"
+		}
+	}
+
 	fields := []zapcore.Field{
 		zap.Int("status", ww.Status()),
 		zap.String("method", r.Method),
 		zap.String("path", path),
 		zap.String("query", query),
 		// Has to be set by a middleware before this one
-		zap.String("ip", r.RemoteAddr),
+		zap.String("ip", remoteAddr),
 		zap.String("user-agent", r.UserAgent()),
 		zap.Duration("latency", latency),
 	}

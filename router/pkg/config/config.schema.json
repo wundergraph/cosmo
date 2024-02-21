@@ -85,6 +85,30 @@
         }
       }
     },
+    "compliance": {
+      "type": "object",
+      "description": "The configuration for the compliance. Includes for example the configuration for the anonymization of the IP addresses.",
+      "additionalProperties": false,
+      "properties": {
+        "anonymize_ip": {
+          "type": "object",
+          "description": "The configuration for the anonymization of the IP addresses. Redaction is applied to the IP addresses in the traces and logs to protect the privacy of the users.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the anonymization of the IP addresses. The default value is true."
+            },
+            "method": {
+              "type": "string",
+              "default": "redact",
+              "description": "The method used to anonymize the IP addresses. The supported methods are 'redact' and 'hash'. The default value is 'redact'. The 'redact' method replaces the IP addresses with the string '[REDACTED]'. The 'hash' method hashes the IP addresses using the SHA-256 algorithm.",
+              "enum": ["redact", "hash"]
+            }
+          }
+        }
+      }
+    },
     "telemetry": {
       "type": "object",
       "description": "The configuration for the telemetry. The telemetry is used to collect and export the traces and metrics.",
@@ -92,6 +116,7 @@
       "properties": {
         "service_name": {
           "type": "string",
+          "description": "The name of the service. The name is used to identify the service in the traces and metrics. The default value is 'cosmo-router'.",
           "default": "cosmo-router"
         },
         "tracing": {

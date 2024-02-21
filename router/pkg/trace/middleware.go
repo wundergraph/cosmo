@@ -2,6 +2,7 @@ package trace
 
 import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv17 "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
@@ -10,6 +11,14 @@ import (
 
 type Middleware struct {
 	otelOpts []otelhttp.Option
+}
+
+// SensitiveAttributes that should be redacted by the OTEL http instrumentation package.
+// Take attention to the right version of the semconv package.
+var SensitiveAttributes = []attribute.Key{
+	// Both can contain external IP addresses
+	semconv17.HTTPClientIPKey,
+	semconv17.NetSockPeerAddrKey,
 }
 
 func NewMiddleware(opts ...otelhttp.Option) *Middleware {
