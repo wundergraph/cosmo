@@ -9,8 +9,8 @@ dotenv.config();
 
 try {
   await program.parseAsync(process.argv);
-} catch (e: any) {
-  console.error(pc.red(`An unexpected error occurred with code ${e.code} and message → ${e.message}`));
+} catch (e) {
+  console.error(e);
   const message = `\
 Please try the below steps to solve the issue
 
