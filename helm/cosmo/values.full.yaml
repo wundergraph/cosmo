@@ -221,8 +221,14 @@ clickhouse:
     username: 'default'
     password: 'changeme'
   initdbScripts:
-    db-init.sql: |
-      CREATE DATABASE cosmo;
+    db-init.sh: |
+      #!/bin/bash
+      set -e
+
+      clickhouse-client --user $CLICKHOUSE_ADMIN_USER --password $CLICKHOUSE_ADMIN_PASSWORD -n <<-EOSQL
+        CREATE DATABASE IF NOT EXISTS cosmo;
+      EOSQL
+
 
 # Postgres for the Cosmo Controlplane
 # https://artifacthub.io/packages/helm/bitnami/postgresql
