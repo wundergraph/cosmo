@@ -30,7 +30,11 @@ export default (opts: BaseCommandOptions) => {
     if (options.schema) {
       schemaFile = resolve(process.cwd(), options.schema);
       if (!existsSync(schemaFile)) {
-        program.error(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`);
+        program.error(
+          pc.red(
+            pc.bold(`The readme file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
+          ),
+        );
       }
     }
 
