@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import { join } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -23,12 +23,11 @@ export default (opts: BaseCommandOptions) => {
   command.action(async (name, options) => {
     const schemaFile = join(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
-      console.log(
+      program.error(
         pc.red(
           pc.bold(`The schema file '${pc.bold(options.schema)}' does not exist. Please check the path and try again.`),
         ),
       );
-      return;
     }
 
     const resp = await opts.client.platform.fixSubgraphSchema(
@@ -49,7 +48,6 @@ export default (opts: BaseCommandOptions) => {
       }
       console.log(logSymbols.error + pc.red(' Schema fix failed.'));
       process.exit(1);
-      return;
     }
 
     if (!resp.modified) {
