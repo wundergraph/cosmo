@@ -52,6 +52,7 @@ func (Cat) IsAnimal() {}
 
 type Details struct {
 	Forename      string         `json:"forename"`
+	Middlename    *string        `json:"middlename,omitempty"`
 	Surname       string         `json:"surname"`
 	HasChildren   bool           `json:"hasChildren"`
 	MaritalStatus *MaritalStatus `json:"maritalStatus,omitempty"`

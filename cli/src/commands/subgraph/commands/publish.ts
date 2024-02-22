@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import Table from 'cli-table3';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -50,12 +50,11 @@ export default (opts: BaseCommandOptions) => {
   command.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
-      console.log(
+      program.error(
         pc.red(
           pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
         ),
       );
-      return;
     }
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
