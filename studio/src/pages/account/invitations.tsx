@@ -16,6 +16,7 @@ import {
   getInvitations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
+import { useState } from "react";
 
 const InvitationCard = ({
   id,
@@ -27,10 +28,13 @@ const InvitationCard = ({
   invitedBy?: string;
 }) => {
   const router = useRouter();
-  const { mutate } = useMutation(acceptOrDeclineInvitation.useMutation());
+  const { mutate, isPending } = useMutation(
+    acceptOrDeclineInvitation.useMutation(),
+  );
   const { refetch } = useQuery(getInvitations.useQuery());
   const { toast } = useToast();
   const client = useQueryClient();
+  const [accepted, setAccepted] = useState("");
 
   const onSubmit = (accept: boolean) => {
     mutate(
@@ -47,8 +51,10 @@ const InvitationCard = ({
           client.invalidateQueries({
             queryKey: ["user", router.asPath],
           });
+          setAccepted("");
         },
         onError: () => {
+          setAccepted("");
           toast({
             description: accept
               ? "Could not accept the invite. Please try again."
@@ -74,10 +80,28 @@ const InvitationCard = ({
         </span>
       )}
       <div className="flex gap-x-3">
-        <Button type="submit" variant="default" onClick={() => onSubmit(true)}>
+        <Button
+          type="submit"
+          variant="default"
+          onClick={() => {
+            setAccepted("true");
+            onSubmit(true);
+          }}
+          disabled={isPending}
+          isLoading={accepted === "true" && isPending}
+        >
           Accept
         </Button>
-        <Button type="submit" variant="outline" onClick={() => onSubmit(false)}>
+        <Button
+          type="submit"
+          variant="outline"
+          onClick={() => {
+            setAccepted("false");
+            onSubmit(false);
+          }}
+          disabled={isPending}
+          isLoading={accepted === "false" && isPending}
+        >
           Decline
         </Button>
       </div>
