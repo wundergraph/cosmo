@@ -65,6 +65,7 @@ type ComplexityRoot struct {
 		Forename      func(childComplexity int) int
 		HasChildren   func(childComplexity int) int
 		MaritalStatus func(childComplexity int) int
+		Middlename    func(childComplexity int) int
 		Nationality   func(childComplexity int) int
 		Pets          func(childComplexity int) int
 		Surname       func(childComplexity int) int
@@ -211,6 +212,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Details.MaritalStatus(childComplexity), true
+
+	case "Details.middlename":
+		if e.complexity.Details.Middlename == nil {
+			break
+		}
+
+		return e.complexity.Details.Middlename(childComplexity), true
 
 	case "Details.nationality":
 		if e.complexity.Details.Nationality == nil {
@@ -546,8 +554,9 @@ enum Nationality {
   UKRAINIAN
 }
 
-type Details  {
+type Details {
   forename: String! @shareable
+  middlename: String @deprecated
   surname: String! @shareable
   hasChildren: Boolean!
   maritalStatus: MaritalStatus
@@ -569,7 +578,8 @@ input SearchInput {
 input NestedSearchInput {
   maritalStatus: MaritalStatus
   hasChildren: Boolean
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
 	directive @composeDirective(name: String!) repeatable on SCHEMA
@@ -1134,6 +1144,47 @@ func (ec *executionContext) fieldContext_Details_forename(ctx context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _Details_middlename(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Details_middlename(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Middlename, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Details_middlename(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Details",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Details_surname(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Details_surname(ctx, field)
 	if err != nil {
@@ -1562,6 +1613,8 @@ func (ec *executionContext) fieldContext_Employee_details(ctx context.Context, f
 			switch field.Name {
 			case "forename":
 				return ec.fieldContext_Details_forename(ctx, field)
+			case "middlename":
+				return ec.fieldContext_Details_middlename(ctx, field)
 			case "surname":
 				return ec.fieldContext_Details_surname(ctx, field)
 			case "hasChildren":
@@ -4381,6 +4434,8 @@ func (ec *executionContext) _Details(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "middlename":
+			out.Values[i] = ec._Details_middlename(ctx, field, obj)
 		case "surname":
 			out.Values[i] = ec._Details_surname(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

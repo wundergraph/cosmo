@@ -42,10 +42,9 @@ export default (opts: BaseCommandOptions) => {
     const inputFileLocation = dirname(inputFile);
 
     if (!existsSync(inputFile)) {
-      console.log(
+      program.error(
         pc.red(pc.bold(`The input file '${pc.bold(inputFile)}' does not exist. Please check the path and try again.`)),
       );
-      process.exit(1);
     }
 
     const fileContent = (await readFile(inputFile)).toString();
