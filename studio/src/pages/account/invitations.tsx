@@ -34,7 +34,7 @@ const InvitationCard = ({
   const { refetch } = useQuery(getInvitations.useQuery());
   const { toast } = useToast();
   const client = useQueryClient();
-  const [accepted, setAccepted] = useState("");
+  const [accepted, setAccepted] = useState<boolean | undefined>();
 
   const onSubmit = (accept: boolean) => {
     mutate(
@@ -51,10 +51,10 @@ const InvitationCard = ({
           client.invalidateQueries({
             queryKey: ["user", router.asPath],
           });
-          setAccepted("");
+          setAccepted(undefined);
         },
         onError: () => {
-          setAccepted("");
+          setAccepted(undefined);
           toast({
             description: accept
               ? "Could not accept the invite. Please try again."
@@ -84,11 +84,11 @@ const InvitationCard = ({
           type="submit"
           variant="default"
           onClick={() => {
-            setAccepted("true");
+            setAccepted(true);
             onSubmit(true);
           }}
           disabled={isPending}
-          isLoading={accepted === "true" && isPending}
+          isLoading={accepted === true && isPending}
         >
           Accept
         </Button>
@@ -96,11 +96,11 @@ const InvitationCard = ({
           type="submit"
           variant="outline"
           onClick={() => {
-            setAccepted("false");
+            setAccepted(false);
             onSubmit(false);
           }}
           disabled={isPending}
-          isLoading={accepted === "false" && isPending}
+          isLoading={accepted === false && isPending}
         >
           Decline
         </Button>
