@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import Table from 'cli-table3';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { splitLabel, parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
@@ -45,12 +45,11 @@ export default (opts: BaseCommandOptions) => {
     if (options.readme) {
       readmeFile = resolve(process.cwd(), options.readme);
       if (!existsSync(readmeFile)) {
-        console.log(
+        program.error(
           pc.red(
             pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
           ),
         );
-        return;
       }
     }
 
