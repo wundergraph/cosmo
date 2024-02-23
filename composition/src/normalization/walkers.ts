@@ -34,6 +34,7 @@ import {
   addConcreteTypesForUnion,
   isNodeExtension,
   isObjectLikeNodeEntity,
+  SchemaNode,
 } from '../ast/utils';
 import { extractFieldSetValue, newFieldSetContainer } from './utils';
 import {
@@ -77,6 +78,7 @@ import { ArgumentData } from '../schema-building/type-definition-data';
 // Walker to collect schema definition and directive definitions
 export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, document: DocumentNode) {
   const definedDirectives = new Set<string>();
+  const schemaNodes: SchemaNode[] = [];
   visit(document, {
     DirectiveDefinition: {
       enter(node) {
@@ -126,30 +128,29 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
     },
     SchemaDefinition: {
       enter(node) {
-        extractDirectives(
-          node,
-          nf.schemaDefinition.directivesByDirectiveName,
-          nf.errors,
-          nf.directiveDefinitionByDirectiveName,
-          nf.handledRepeatedDirectivesByHostPath,
-          SCHEMA,
-        );
+        schemaNodes.push(node);
         nf.schemaDefinition.description = node.description;
       },
     },
     SchemaExtension: {
       enter(node) {
-        extractDirectives(
-          node,
-          nf.schemaDefinition.directivesByDirectiveName,
-          nf.errors,
-          nf.directiveDefinitionByDirectiveName,
-          nf.handledRepeatedDirectivesByHostPath,
-          SCHEMA,
-        );
+        schemaNodes.push(node);
       },
     },
   });
+  /* It is possible that directives definitions are defined in the schema after the schema nodes that declare those
+     directives have been defined. Consequently, the directives can  only be validated after the walker has finished
+     collecting all directive definitions. */
+  for (const node of schemaNodes) {
+    extractDirectives(
+      node,
+      nf.schemaDefinition.directivesByDirectiveName,
+      nf.errors,
+      nf.directiveDefinitionByDirectiveName,
+      nf.handledRepeatedDirectivesByHostPath,
+      SCHEMA,
+    );
+  }
 }
 
 export function upsertParentsAndChildren(nf: NormalizationFactory, document: DocumentNode) {
