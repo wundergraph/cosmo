@@ -53,8 +53,12 @@ func (m *MyModule) OnOriginResponse(response *http.Response, ctx core.RequestCon
 	// Return a new response or nil if you want to pass it to the next handler
 	// If you want to modify the response, return a new response
 
-	// Set a header on the final client response
-	ctx.ResponseWriter().Header().Set("myHeader", ctx.GetString("myValue"))
+	// Access the custom value set in OnOriginRequest
+	value := ctx.GetString("myValue")
+
+	fmt.Println("SharedValue", value)
+
+	fmt.Println("OnOriginResponse", response.Request.URL, response.StatusCode)
 
 	return nil
 }
