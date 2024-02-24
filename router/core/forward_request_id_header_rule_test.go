@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestNamedForwardRequestIDHeaderRule(t *testing.T) {
+func TestForwardRequestID(t *testing.T) {
 	ht := NewForwardRequestIDHeader()
 
 	rr := httptest.NewRecorder()
