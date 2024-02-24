@@ -53,6 +53,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type IPAnonymizationMethod string
+
+const (
+	Hash   IPAnonymizationMethod = "hash"
+	Redact IPAnonymizationMethod = "redact"
+)
+
 type (
 	// Router is the main application instance.
 	Router struct {
@@ -78,6 +85,11 @@ type (
 		CollectorEndpoint string
 	}
 
+	IPAnonymizationConfig struct {
+		Enabled bool
+		Method  IPAnonymizationMethod
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		clusterName              string
@@ -95,6 +107,7 @@ type (
 		awsLambda                bool
 		shutdown                 bool
 		bootstrapped             bool
+		ipAnonymization          *IPAnonymizationConfig
 		listenAddr               string
 		baseURL                  string
 		graphqlWebURL            string
@@ -236,7 +249,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
 			r.logger.Warn("authentication is required but no authenticators are configured")
 		}
+	}
 
+	if r.ipAnonymization == nil {
+		r.ipAnonymization = &IPAnonymizationConfig{
+			Enabled: true,
+			Method:  Redact,
+		}
 	}
 
 	// Default values for health check paths
@@ -604,7 +623,15 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.traceConfig.Enabled {
-		tp, err := rtrace.NewTracerProvider(ctx, r.logger, r.traceConfig, r.instanceID)
+		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
+			Logger:            r.logger,
+			Config:            r.traceConfig,
+			ServiceInstanceID: r.instanceID,
+			IPAnonymization: &rtrace.IPAnonymizationConfig{
+				Enabled: r.ipAnonymization.Enabled,
+				Method:  rtrace.IPAnonymizationMethod(r.ipAnonymization.Method),
+			},
+		})
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -782,8 +809,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			otelhttp.WithTracerProvider(r.tracerProvider),
 		)
 	}
-	requestLogger := requestlogger.New(
-		r.logger,
+
+	// Request logger
+	requestLoggerOpts := []requestlogger.Option{
 		requestlogger.WithDefaultOptions(),
 		requestlogger.WithNoTimeField(),
 		requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
@@ -792,6 +820,18 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 				zap.String("request_id", middleware.GetReqID(request.Context())),
 			}
 		}),
+	}
+
+	if r.ipAnonymization.Enabled {
+		requestLoggerOpts = append(requestLoggerOpts, requestlogger.WithAnonymization(&requestlogger.IPAnonymizationConfig{
+			Enabled: r.ipAnonymization.Enabled,
+			Method:  requestlogger.IPAnonymizationMethod(r.ipAnonymization.Method),
+		}))
+	}
+
+	requestLogger := requestlogger.New(
+		r.logger,
+		requestLoggerOpts...,
 	)
 
 	httpRouter := chi.NewRouter()
@@ -1516,6 +1556,12 @@ func WithClusterName(name string) Option {
 func WithInstanceID(id string) Option {
 	return func(r *Router) {
 		r.instanceID = id
+	}
+}
+
+func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
+	return func(r *Router) {
+		r.ipAnonymization = ipConfig
 	}
 }
 
