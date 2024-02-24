@@ -280,15 +280,6 @@ func TestTracing(t *testing.T) {
 	})
 }
 
-func prettifyJSON(t *testing.T, jsonStr string) string {
-	var v interface{}
-	err := json.Unmarshal([]byte(jsonStr), &v)
-	require.NoError(t, err)
-	normalized, err := json.MarshalIndent(v, "", "  ")
-	require.NoError(t, err)
-	return string(normalized)
-}
-
 func TestOperationSelection(t *testing.T) {
 	t.Parallel()
 
