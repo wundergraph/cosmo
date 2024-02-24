@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/buger/jsonparser"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -277,7 +279,50 @@ func TestTracing(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
+		require.NoError(t, err)
+		// we generate a random port for the test server, so we need to replace the port in the tracing json
+		rex, err := regexp.Compile(`http://127.0.0.1:\d+/graphql`)
+		require.NoError(t, err)
+		tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
+		resultBody := rex.ReplaceAllString(res.Body, "http://localhost/graphql")
+		// all nodes have UUIDs, so we need to replace them with a static UUID
+		rex2, err := regexp.Compile(`"id":"[a-f0-9\-]{36}"`)
+		require.NoError(t, err)
+		tracingJson = rex2.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
+		resultBody = rex2.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
+		require.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
+		if t.Failed() {
+			t.Log(resultBody)
+		}
+		// make the request again, but with "enable_predictable_debug_timings" disabled
+		// compare the result and ensure that the timings are different
+		res2, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: bigEmployeesQuery,
+			Header: http.Header{
+				"X-WG-Trace": []string{"true"},
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res2.Response.StatusCode)
+		body := []byte(res2.Body)
+		data, _, _, err := jsonparser.Get(body, "data")
+		require.NoError(t, err)
+		require.NotNilf(t, data, "data should not be nil: %s", body)
+		tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
+		require.NoError(t, err)
+		require.NotNilf(t, tracing, "tracing should not be nil: %s", body)
+		require.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, string(body)))
 	})
+}
+
+func prettifyJSON(t *testing.T, jsonStr string) string {
+	var v interface{}
+	err := json.Unmarshal([]byte(jsonStr), &v)
+	require.NoError(t, err)
+	normalized, err := json.MarshalIndent(v, "", "  ")
+	require.NoError(t, err)
+	return string(normalized)
 }
 
 func TestOperationSelection(t *testing.T) {
