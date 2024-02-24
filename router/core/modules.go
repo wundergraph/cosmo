@@ -52,7 +52,7 @@ func RegisterModule(instance Module) {
 // Module Interfaces
 
 // RouterMiddlewareHandler allows you to add a middleware to the router.
-// The middleware is called for every request. It allows you to modify the request before it is processed by the router.
+// The middleware is called for every router request. It allows you to modify the request before it is processed by the router.
 // The same semantics of http.Handler apply here. Don't manipulate / consume the body of the request unless
 // you know what you are doing. If you consume the body of the request it will not be available for the next handler.
 type RouterMiddlewareHandler interface {
@@ -61,23 +61,29 @@ type RouterMiddlewareHandler interface {
 }
 
 // EnginePreOriginHandler allows you to add a handler to the router engine origin requests.
-// The handler is called before the request is sent to the origin. All origin handlers are called sequentially.
-// It allows you to modify the request before it is sent or return a custom response. The same semantics of http.RoundTripper apply here.
+// The handler is called before the request is sent to the origin. All origin handlers are called
+// sequentially but in parallel for different origins. It allows you to modify the request before it is
+// sent or return a custom response. The same semantics of http.RoundTripper apply here.
 // Don't manipulate / consume the body of the request unless you know what you are doing.
 // If you consume the body of the request it will not be available for the next handler.
+// If you want to modify the original router client request or response in this handler
+// you have to ensure that the response is properly protected from concurrent access e.g. by using a mutex.
 type EnginePreOriginHandler interface {
 	// OnOriginRequest is called before the request is sent to the origin
-	// Might be called multiple times if there are multiple origins
+	// Might be called multiple times if there are multiple origin requests to handle.
 	OnOriginRequest(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
 }
 
 // EnginePostOriginHandler allows you to add a handler to the router engine origin requests.
-// The handler is called after the response was received from the origin. All origin handlers are called sequentially.
-// It allows you to return a custom response to the client. If your return nil as response, the next handler is called.
-// The same semantics of http.RoundTripper apply here. In order to modify the response, you have to return a new response.
+// The handler is called after the response was received from the origin. All origin handlers are called
+// sequentially but in parallel for different origins. It allows you to return a custom response to the client.
+// If your return nil as response, the next handler is called. The same semantics of http.RoundTripper apply here.
+// In order to modify the response, you have to return a new response.
+// If you want to modify the original router client request or response in this handler
+// you have to ensure that the response is properly protected from concurrent access e.g. by using a mutex.
 type EnginePostOriginHandler interface {
 	// OnOriginResponse is called after the request is sent to the origin.
-	// Might be called multiple times if there are multiple origins
+	// Might be called multiple times if there are multiple origin responses to handle.
 	OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response
 }
 

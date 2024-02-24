@@ -128,7 +128,6 @@ type (
 		routerMiddlewares        []func(http.Handler) http.Handler
 		preOriginHandlers        []TransportPreHandler
 		postOriginHandlers       []TransportPostHandler
-		headerRuleEngine         *HeaderRuleEngine
 		headerRules              config.HeaderRules
 		subgraphTransportOptions *SubgraphTransportOptions
 		graphqlMetricsConfig     *GraphQLMetricsConfig
@@ -272,7 +271,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	// Create new modifier for incoming request
 	fReqID := NewForwardRequestIDHeader()
-	// Save it
+
 	r.preOriginHandlers = append(r.preOriginHandlers, fReqID.OnOriginRequest)
 
 	hr, err := NewHeaderTransformer(r.headerRules)
@@ -280,9 +279,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		return nil, err
 	}
 
-	r.headerRuleEngine = hr
-
-	r.preOriginHandlers = append(r.preOriginHandlers, r.headerRuleEngine.OnOriginRequest)
+	r.preOriginHandlers = append(r.preOriginHandlers, hr.OnOriginRequest)
 
 	defaultHeaders := []string{
 		// Common headers
