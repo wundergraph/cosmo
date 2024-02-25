@@ -286,12 +286,21 @@ func TestTracing(t *testing.T) {
 		require.NoError(t, err)
 		tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
 		resultBody := rex.ReplaceAllString(res.Body, "http://localhost/graphql")
+
 		// all nodes have UUIDs, so we need to replace them with a static UUID
-		rex2, err := regexp.Compile(`"id":"[a-f0-9\-]{36}"`)
+		regExSubgraphID, err := regexp.Compile(`"id":"[a-f0-9\-]{36}"`)
 		require.NoError(t, err)
-		tracingJson = rex2.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
-		resultBody = rex2.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
+		tracingJson = regExSubgraphID.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
+		resultBody = regExSubgraphID.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
+
+		// replace request IDs
+		regExRequestID, err := regexp.Compile(`"X-Request-Id":\["[a-zA-Z0-9_\-/]+"]`)
+		require.NoError(t, err)
+		tracingJson = regExRequestID.ReplaceAllString(tracingJson, `"X-Request-Id":["fv-az1206-825/LZiV08E9CL-00001"]`)
+		resultBody = regExRequestID.ReplaceAllString(resultBody, `"X-Request-Id":["fv-az1206-825/LZiV08E9CL-00001"]`)
+
 		require.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
+
 		if t.Failed() {
 			t.Log(resultBody)
 		}
