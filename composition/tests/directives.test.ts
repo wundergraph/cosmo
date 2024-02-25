@@ -107,9 +107,9 @@ describe('Directive tests', () => {
 # See https://github.com/apollographql/federation/issues/1847
 extend schema
   @contact(
-    name: "Manage GROW Team"
-    url: "https://nerdwallet.enterprise.slack.com/archives/C02HGPELY9E"
-    description: "tag @oncall-manage-grow for urgent issues."
+    name: "Manage X Team"
+    url: "https://company.enterprise.com"
+    description: "tag @oncall-manage-x for urgent issues."
   )
   @link(
     url: "https://specs.apollo.dev/federation/v2.3"
@@ -138,7 +138,7 @@ directive @contact(
 
 
 type Query {
-  couponsByMerchantId(merchantId: ID!): [Coupon!]
+  couponsByUserId(merchantId: ID!): [Coupon!]
 }
 
 type Coupon @key(fields: "id") {
