@@ -962,9 +962,9 @@ export class SubgraphRepository {
         schemaSDL: schemaVersion.schemaSDL,
         schemaVersionId: schemaVersion.id,
       })
-      .from(schemaVersion)
-      .where(and(eq(schemaVersion.targetId, data.subgraphTargetId)))
-      .orderBy(desc(schemaVersion.createdAt))
+      .from(subgraphs)
+      .innerJoin(subgraphs, eq(schemaVersion.id, subgraphs.schemaVersionId))
+      .where(and(eq(subgraphs.targetId, data.subgraphTargetId)))
       .limit(1)
       .execute();
 
