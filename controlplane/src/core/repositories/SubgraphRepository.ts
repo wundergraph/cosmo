@@ -908,8 +908,11 @@ export class SubgraphRepository {
     return subgraphDTOs;
   }
 
-  // returns the latest valid schema version of a subgraph
-  public async getLatestValidSchemaVersion(data: { subgraphTargetId: string; federatedGraphTargetId: string }) {
+  /**
+   * Returns the latest valid schema version of a subgraph that was composed with a federated graph.
+   * @param data
+   */
+  public async getLatestValidComposedSchemaVersion(data: { subgraphTargetId: string; federatedGraphTargetId: string }) {
     const fedRepo = new FederatedGraphRepository(this.db, this.organizationId);
     const fedGraphSchemaVersion = await fedRepo.getLatestValidSchemaVersion({ targetId: data.federatedGraphTargetId });
     if (!fedGraphSchemaVersion) {
@@ -936,6 +939,32 @@ export class SubgraphRepository {
         ),
       )
       .orderBy(desc(graphCompositions.createdAt))
+      .limit(1)
+      .execute();
+
+    if (latestValidVersion.length === 0) {
+      return undefined;
+    }
+
+    return {
+      schema: latestValidVersion[0].schemaSDL,
+      schemaVersionId: latestValidVersion[0].schemaVersionId,
+    };
+  }
+
+  /**
+   * Returns the latest published schema version of a subgraph.
+   * @param data
+   */
+  public async getLatestSchemaVersion(data: { subgraphTargetId: string }) {
+    const latestValidVersion = await this.db
+      .select({
+        schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: schemaVersion.id,
+      })
+      .from(schemaVersion)
+      .where(and(eq(schemaVersion.targetId, data.subgraphTargetId)))
+      .orderBy(desc(schemaVersion.createdAt))
       .limit(1)
       .execute();
 

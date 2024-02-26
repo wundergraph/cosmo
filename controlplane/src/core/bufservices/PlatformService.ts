@@ -5412,22 +5412,43 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        req.namespace = req.namespace || DefaultNamespace;
 
         const subgraph = await subgraphRepo.byName(req.name, req.namespace);
-        const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName, req.namespace);
-        if (!subgraph || !federatedGraph) {
+        if (!subgraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.name}' not found`,
             },
           };
         }
 
-        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion({
-          subgraphTargetId: subgraph.targetId,
-          federatedGraphTargetId: federatedGraph.targetId,
-        });
+        let schemaVersion: { schema: string | null; schemaVersionId: string } | undefined;
+
+        if (req.fedGraphName) {
+          const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+          const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName, req.namespace);
+          if (!federatedGraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Federated graph '${req.fedGraphName}' not found`,
+              },
+            };
+          }
+
+          schemaVersion = await subgraphRepo.getLatestValidComposedSchemaVersion({
+            subgraphTargetId: subgraph.targetId,
+            federatedGraphTargetId: federatedGraph.targetId,
+          });
+        } else {
+          schemaVersion = await subgraphRepo.getLatestSchemaVersion({
+            subgraphTargetId: subgraph.targetId,
+          });
+        }
+
         if (!schemaVersion) {
           return {
             response: {

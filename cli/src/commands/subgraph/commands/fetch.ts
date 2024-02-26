@@ -9,14 +9,21 @@ import program from '../../index.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('fetch');
-  command.description('Fetches the latest valid SDL of a subgraph. The output can be piped to a file.');
+  command.description(
+    'Fetches the latest published SDL of a subgraph. If the federated graph is specified, the latest successfully composed version of the subgraph will be fetched.',
+  );
   command.argument('<name>', 'The name of the subgraph to fetch.');
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
+  command.option(
+    '-g --graph-name [string]',
+    'The name of the federated graph to fetch the latest valid subgraph SDL from.',
+  );
   command.option('-o, --out [string]', 'Destination file for the SDL.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.getLatestValidSubgraphSDLByName(
       {
         name,
+        fedGraphName: options.graphName,
         namespace: options.namespace,
       },
       {
