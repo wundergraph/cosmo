@@ -5109,8 +5109,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        logger.error('lala');
-
         const namespace = await namespaceRepo.byName(req.namespace);
 
         const list: FederatedGraphDTO[] = await fedGraphRepo.list({
