@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.8](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.7...keycloak@0.8.8) (2024-02-27)
+
+### Bug Fixes
+
+* info.ftl keycloak template ([#565](https://github.com/wundergraph/cosmo/issues/565)) ([ce2eec8](https://github.com/wundergraph/cosmo/commit/ce2eec87c9261dd73906e304e8778fe2d9189c5d)) (@JivusAyrus)
+
 ## [0.8.7](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.6...keycloak@0.8.7) (2024-02-05)
 
 ### Bug Fixes
