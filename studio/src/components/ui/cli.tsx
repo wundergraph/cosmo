@@ -30,11 +30,19 @@ export const CLI = ({
 
   return (
     <Button
-      className={cn("w-full justify-between text-muted-foreground", className)}
+      className={cn(
+        "h-auto w-full justify-between text-muted-foreground",
+        className,
+      )}
       variant="outline"
       onClick={() => setCopied(true)}
     >
-      <span className={cn("mr-2 truncate font-mono text-xs", spanClassName)}>
+      <span
+        className={cn(
+          "mr-2 whitespace-pre-wrap font-mono text-xs",
+          spanClassName,
+        )}
+      >
         {command}
       </span>
       {copied ? (
