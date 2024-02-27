@@ -61,8 +61,10 @@ export const enrichLogger = async (req: object, ctx: HandlerContext, logger: Log
   return logger.child({
     service: ctx.service.typeName,
     method: ctx.method.name,
-    userId: authContext.userId,
-    organizationId: authContext.organizationId,
+    actor: {
+      userId: authContext.userId,
+      organizationId: authContext.organizationId,
+    },
     req: {
       ...req,
     },
