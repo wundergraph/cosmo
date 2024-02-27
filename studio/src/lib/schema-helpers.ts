@@ -164,38 +164,42 @@ export const extractVariablesFromGraphQL = (
   body: string,
   ast: GraphQLSchema | null,
 ) => {
-  const allTypes = ast
-    ? Object.values(ast.getTypeMap())
-        .filter((type) => !type.name.startsWith("__"))
-        .sort()
-    : [];
-
   let variables: Record<string, any> = {};
 
-  const parsedOp = parse(body);
+  try {
+    const allTypes = ast
+      ? Object.values(ast.getTypeMap())
+          .filter((type) => !type.name.startsWith("__"))
+          .sort()
+      : [];
 
-  if (parsedOp.definitions[0].kind === Kind.OPERATION_DEFINITION) {
-    parsedOp.definitions[0].variableDefinitions?.forEach((vd) => {
-      const variableName = vd.variable.name.value;
-      let type = "";
+    const parsedOp = parse(body);
 
-      if (vd.type.kind === Kind.NON_NULL_TYPE) {
-        if (vd.type.type.kind === Kind.NAMED_TYPE) {
-          type = vd.type.type.name.value;
+    if (parsedOp.definitions[0].kind === Kind.OPERATION_DEFINITION) {
+      parsedOp.definitions[0].variableDefinitions?.forEach((vd) => {
+        const variableName = vd.variable.name.value;
+        let type = "";
+
+        if (vd.type.kind === Kind.NON_NULL_TYPE) {
+          if (vd.type.type.kind === Kind.NAMED_TYPE) {
+            type = vd.type.type.name.value;
+          }
+        } else if (vd.type.kind === Kind.NAMED_TYPE) {
+          type = vd.type.name.value;
         }
-      } else if (vd.type.kind === Kind.NAMED_TYPE) {
-        type = vd.type.name.value;
-      }
 
-      let defaultValueParsed;
+        let defaultValueParsed;
 
-      if (vd.defaultValue) {
-        defaultValueParsed = parseDefaultValue(vd.defaultValue, allTypes);
-      } else {
-        defaultValueParsed = getDefaultValue(type, allTypes);
-      }
-      variables[variableName] = defaultValueParsed;
-    });
+        if (vd.defaultValue) {
+          defaultValueParsed = parseDefaultValue(vd.defaultValue, allTypes);
+        } else {
+          defaultValueParsed = getDefaultValue(type, allTypes);
+        }
+        variables[variableName] = defaultValueParsed;
+      });
+    }
+  } catch {
+    return variables;
   }
 
   return variables;
