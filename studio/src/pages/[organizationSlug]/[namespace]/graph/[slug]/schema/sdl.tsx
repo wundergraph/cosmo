@@ -34,18 +34,14 @@ import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getFederatedGraphSDLByName,
-  getLatestValidSubgraphSDLByName,
+  getSubgraphSDLFromLatestComposition,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
 
-const Empty = ({
-  subgraphName,
-}: {
-  subgraphName?: string;
-}) => {
+const Empty = ({ subgraphName }: { subgraphName?: string }) => {
   const router = useRouter();
 
   return (
@@ -130,7 +126,7 @@ const SDLPage: NextPageWithLayout = () => {
     graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
   const { data: subgraphSdl, isLoading: loadingSubgraphSDL } = useQuery({
-    ...getLatestValidSubgraphSDLByName.useQuery({
+    ...getSubgraphSDLFromLatestComposition.useQuery({
       name: activeSubgraph,
       fedGraphName: graphName,
       namespace,
@@ -188,9 +184,7 @@ const SDLPage: NextPageWithLayout = () => {
   ) {
     validGraph = true;
     content = (
-      <Empty
-        subgraphName={graphData?.subgraphs?.[0]?.name || undefined}
-      />
+      <Empty subgraphName={graphData?.subgraphs?.[0]?.name || undefined} />
     );
   } else {
     content = (
