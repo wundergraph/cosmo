@@ -197,7 +197,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     */
 
     createNamespace: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -260,7 +260,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteNamespace: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -384,7 +384,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     renameNamespace: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RenameNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -433,7 +433,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getNamespaces: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetNamespacesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -451,7 +451,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     moveFederatedGraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<MoveGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -569,7 +569,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     moveSubgraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<MoveGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -685,7 +685,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createFederatedGraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
         req.namespace = req.namespace || DefaultNamespace;
@@ -885,7 +885,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createFederatedSubgraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -991,7 +991,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     checkSubgraphSchema: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CheckSubgraphSchemaResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1210,7 +1210,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     fixSubgraphSchema: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<FixSubgraphSchemaResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1375,7 +1375,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     publishFederatedSubgraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<PublishFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1605,7 +1605,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     forceCheckSuccess: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<ForceCheckSuccessResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1663,7 +1663,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOperationOverrides: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOperationOverridesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1732,7 +1732,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeOperationOverrides: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveOperationOverridesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1789,7 +1789,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeOperationIgnoreAllOverride: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveOperationIgnoreAllOverrideResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1854,7 +1854,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOperationIgnoreAllOverride: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOperationIgnoreAllOverrideResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1921,7 +1921,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOperationOverrides: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOperationOverridesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1977,7 +1977,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAllOverrides: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAllOverridesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2021,7 +2021,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteFederatedGraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2088,7 +2088,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteFederatedSubgraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2247,7 +2247,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateFederatedGraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2372,7 +2372,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateSubgraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2505,7 +2505,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     checkFederatedGraph: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CheckFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2605,7 +2605,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createFederatedGraphToken: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateFederatedGraphTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2693,7 +2693,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     inviteUser: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<InviteUserResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2872,7 +2872,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createAPIKey: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2947,7 +2947,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteAPIKey: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3013,7 +3013,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeOrganizationMember: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3170,7 +3170,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeInvitation: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3264,7 +3264,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     migrateFromApollo: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<MigrateFromApolloResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3512,7 +3512,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOrganizationWebhookConfig: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3553,7 +3553,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateOrganizationWebhookConfig: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3594,7 +3594,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteOrganizationWebhookConfig: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3644,7 +3644,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteOrganization: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3734,7 +3734,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     leaveOrganization: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<LeaveOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3834,7 +3834,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateOrganizationDetails: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateOrganizationDetailsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3953,7 +3953,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateOrgMemberRole: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4169,7 +4169,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteRouterToken: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteRouterTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4244,7 +4244,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createIntegration: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4329,7 +4329,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateIntegrationConfig: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4389,7 +4389,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteIntegration: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4440,7 +4440,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOIDCProvider: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4484,7 +4484,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteOIDCProvider: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4549,7 +4549,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
        * the operations has never been seen before, we create an entry in the database
        * with it.
        */
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
         req.namespace = req.namespace || DefaultNamespace;
@@ -4727,7 +4727,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     acceptOrDeclineInvitation: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4830,7 +4830,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateRBACSettings: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateRBACSettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4860,7 +4860,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     addSubgraphMember: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<AddSubgraphMemberResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4941,7 +4941,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeSubgraphMember: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveSubgraphMemberResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5013,7 +5013,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     addReadme: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<AddReadmeResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5043,7 +5043,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     Queries
     */
     getSubgraphs: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5078,7 +5078,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphByName: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5117,7 +5117,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphs: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFederatedGraphsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5176,7 +5176,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphsBySubgraphLabels: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5222,7 +5222,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphSDLByName: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
       return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
@@ -5259,7 +5259,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getLatestValidSubgraphSDLByName: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
       return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -5298,7 +5298,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getLatestSubgraphSDLByName: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
       return handleError<PlainMessage<GetLatestSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -5322,7 +5322,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphByName: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFederatedGraphByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5403,7 +5403,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphChangelog: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5482,7 +5482,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getChecksByFederatedGraphName: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5563,7 +5563,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getCheckSummary: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetCheckSummaryResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5619,7 +5619,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getCheckOperations: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetCheckOperationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5696,7 +5696,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAnalyticsView: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAnalyticsViewResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -5756,7 +5756,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getDashboardAnalyticsView: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetDashboardAnalyticsViewResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -5827,7 +5827,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getGraphMetrics: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetGraphMetricsResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -5883,7 +5883,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getMetricsErrorRate: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetMetricsErrorRateResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -5940,7 +5940,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getTrace: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetTraceResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -5966,7 +5966,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationMembers: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationMembersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5989,7 +5989,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getLatestValidRouterConfig: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6031,7 +6031,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAPIKeys: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAPIKeysResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6049,7 +6049,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     whoAmI: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<WhoAmIResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6077,7 +6077,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationWebhookConfigs: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6095,7 +6095,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationWebhookMeta: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationWebhookMetaResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6114,7 +6114,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     // generates a temporary router token to fetch the router config only. Should only be used while fetching router config.
     generateRouterToken: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GenerateRouterTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6181,7 +6181,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getRouterTokens: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetRouterTokensResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6233,7 +6233,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationIntegrations: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6251,7 +6251,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     isGitHubAppInstalled: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6304,7 +6304,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFieldUsage: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFieldUsageResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6365,7 +6365,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOperationContent: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOperationContentResponse>>(logger, async () => {
         await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6408,7 +6408,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOIDCProvider: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6444,7 +6444,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getPersistedOperations: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetPersistedOperationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6477,7 +6477,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getRouters: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetRoutersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6559,7 +6559,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getClients: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetClientsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6587,7 +6587,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationRequestsCount: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6614,7 +6614,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     // returns the pending invites of a user
     getInvitations: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetInvitationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6630,7 +6630,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getCompositions: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetCompositionsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6719,7 +6719,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getCompositionDetails: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetCompositionDetailsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6777,7 +6777,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSdlBySchemaVersion: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSdlBySchemaVersionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6798,7 +6798,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getChangelogBySchemaVersion: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetChangelogBySchemaVersionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6822,7 +6822,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getUserAccessibleResources: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetUserAccessibleResourcesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6880,7 +6880,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphMembers: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphMembersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6908,7 +6908,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateAISettings: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateAISettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6930,7 +6930,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getBillingPlans: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetBillingPlansResponse>>(logger, async () => {
         const billingRepo = new BillingRepository(opts.db);
@@ -6945,7 +6945,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAuditLogs: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAuditLogsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7037,7 +7037,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOrganization: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7182,7 +7182,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createCheckoutSession: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7215,7 +7215,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     upgradePlan: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpgradePlanResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7266,7 +7266,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createBillingPortalSession: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateBillingPortalSessionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7300,7 +7300,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createDiscussion: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7330,7 +7330,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     replyToDiscussion: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<ReplyToDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7370,7 +7370,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAllDiscussions: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAllDiscussionsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7415,7 +7415,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateDiscussionComment: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateDiscussionCommentResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7453,7 +7453,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteDiscussionComment: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteDiscussionCommentResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7515,7 +7515,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getDiscussion: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7582,7 +7582,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getDiscussionSchemas: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetDiscussionSchemasResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7628,7 +7628,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     setDiscussionResolution: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<SetDiscussionResolutionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7657,7 +7657,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphMetrics: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphMetricsResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -7715,7 +7715,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphMetricsErrorRate: async (req, ctx) => {
-      const logger = await enrichLogger(req, ctx, opts.logger, opts.authenticator);
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphMetricsErrorRateResponse>>(logger, async () => {
         if (!opts.chClient) {

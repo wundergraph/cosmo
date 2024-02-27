@@ -56,7 +56,7 @@ export async function handleError<T extends ResponseMessage>(
   }
 }
 
-export const enrichLogger = async (req: object, ctx: HandlerContext, logger: Logger, authenticator: Authenticator) => {
+export const enrichLogger = async (ctx: HandlerContext, logger: Logger, authenticator: Authenticator) => {
   const authContext = await authenticator.extractUserAndOrgId(ctx.requestHeader);
   return logger.child({
     service: ctx.service.typeName,
@@ -64,9 +64,6 @@ export const enrichLogger = async (req: object, ctx: HandlerContext, logger: Log
     actor: {
       userId: authContext.userId,
       organizationId: authContext.organizationId,
-    },
-    req: {
-      ...req,
     },
   });
 };
