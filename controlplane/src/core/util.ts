@@ -57,6 +57,7 @@ export async function handleError<T extends ResponseMessage>(
 }
 
 export const enrichLogger = async (
+  req: object,
   ctx: HandlerContext,
   logger: Logger,
   authenticator: Authenticator,
@@ -68,6 +69,7 @@ export const enrichLogger = async (
     method: ctx.method.name,
     userId: authContext.userId,
     organizationId: authContext.organizationId,
+    ...req,
     ...additionalBindings,
   });
 };
