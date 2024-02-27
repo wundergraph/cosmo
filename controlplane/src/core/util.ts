@@ -1,13 +1,15 @@
 import { randomFill } from 'node:crypto';
-import pino from 'pino';
+import pino, { Logger } from 'pino';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { formatISO, subHours } from 'date-fns';
 import { parse, visit } from 'graphql';
+import { HandlerContext } from '@connectrpc/connect';
 import { Label, ResponseMessage, DateRange } from '../types/index.js';
 import { MemberRole } from '../db/models.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
+import { Authenticator } from './services/Authentication.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -53,6 +55,22 @@ export async function handleError<T extends ResponseMessage>(
     throw error;
   }
 }
+
+export const enrichLogger = async (
+  ctx: HandlerContext,
+  logger: Logger,
+  authenticator: Authenticator,
+  additionalBindings?: pino.Bindings,
+) => {
+  const authContext = await authenticator.extractUserAndOrgId(ctx.requestHeader);
+  return logger.child({
+    service: ctx.service.typeName,
+    method: ctx.method.name,
+    userId: authContext.userId,
+    organizationId: authContext.organizationId,
+    ...additionalBindings,
+  });
+};
 
 /**
  * Normalizes labels by removing duplicates.

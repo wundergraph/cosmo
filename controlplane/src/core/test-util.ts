@@ -144,6 +144,9 @@ export function createTestAuthenticator(): {
       authenticate(headers: Headers): Promise<AuthContext> {
         return Promise.resolve(userAuthContext);
       },
+      extractUserAndOrgId(headers) {
+        return Promise.resolve(userAuthContext);
+      },
     },
 
     userTestData: userAuthContext,

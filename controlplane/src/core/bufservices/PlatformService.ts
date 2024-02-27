@@ -175,6 +175,7 @@ import {
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
+  enrichLogger,
   extractOperationNames,
   formatSubscriptionProtocol,
   getHighestPriorityRole,
@@ -195,11 +196,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     Mutations
     */
 
-    createNamespace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createNamespace: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -261,11 +259,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteNamespace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteNamespace: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -388,11 +383,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    renameNamespace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    renameNamespace: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RenameNamespaceResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -440,11 +432,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getNamespaces: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getNamespaces: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetNamespacesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -461,11 +450,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    moveFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    moveFederatedGraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<MoveGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -582,11 +568,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    moveSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    moveSubgraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<MoveGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -701,11 +684,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createFederatedGraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
         req.namespace = req.namespace || DefaultNamespace;
@@ -904,11 +884,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createFederatedSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createFederatedSubgraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1013,11 +990,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    checkSubgraphSchema: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    checkSubgraphSchema: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CheckSubgraphSchemaResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1220,11 +1194,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    fixSubgraphSchema: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    fixSubgraphSchema: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<FixSubgraphSchemaResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1388,11 +1359,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    publishFederatedSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    publishFederatedSubgraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<PublishFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1621,11 +1589,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    forceCheckSuccess: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    forceCheckSuccess: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<ForceCheckSuccessResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1682,11 +1647,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createOperationOverrides: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createOperationOverrides: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOperationOverridesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1754,11 +1716,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    removeOperationOverrides: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    removeOperationOverrides: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveOperationOverridesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1814,11 +1773,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    removeOperationIgnoreAllOverride: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    removeOperationIgnoreAllOverride: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveOperationIgnoreAllOverrideResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1882,11 +1838,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createOperationIgnoreAllOverride: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createOperationIgnoreAllOverride: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOperationIgnoreAllOverrideResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1952,11 +1905,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOperationOverrides: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getOperationOverrides: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOperationOverridesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2011,11 +1961,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getAllOverrides: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getAllOverrides: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAllOverridesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2058,11 +2005,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteFederatedGraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2128,11 +2072,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteFederatedSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteFederatedSubgraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2290,11 +2231,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateFederatedGraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2418,11 +2356,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateSubgraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2554,11 +2489,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    checkFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    checkFederatedGraph: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CheckFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2657,11 +2589,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createFederatedGraphToken: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createFederatedGraphToken: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateFederatedGraphTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2748,11 +2677,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    inviteUser: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    inviteUser: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<InviteUserResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -2930,11 +2856,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createAPIKey: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createAPIKey: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3008,11 +2931,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteAPIKey: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteAPIKey: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3077,11 +2997,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    removeOrganizationMember: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    removeOrganizationMember: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3237,11 +3154,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    removeInvitation: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    removeInvitation: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3334,11 +3248,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    migrateFromApollo: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    migrateFromApollo: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<MigrateFromApolloResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3585,11 +3496,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createOrganizationWebhookConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createOrganizationWebhookConfig: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3629,11 +3537,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateOrganizationWebhookConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateOrganizationWebhookConfig: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3673,11 +3578,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteOrganizationWebhookConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteOrganizationWebhookConfig: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3726,11 +3628,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteOrganization: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteOrganization: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3819,11 +3718,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    leaveOrganization: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    leaveOrganization: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<LeaveOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -3922,11 +3818,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateOrganizationDetails: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateOrganizationDetails: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateOrganizationDetailsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4044,11 +3937,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateOrgMemberRole: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateOrgMemberRole: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4263,11 +4153,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteRouterToken: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteRouterToken: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteRouterTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4341,11 +4228,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createIntegration: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createIntegration: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4429,11 +4313,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateIntegrationConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateIntegrationConfig: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4492,11 +4373,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteIntegration: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteIntegration: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4546,11 +4424,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createOIDCProvider: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createOIDCProvider: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4593,11 +4468,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteOIDCProvider: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteOIDCProvider: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4654,7 +4526,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    publishPersistedOperations: (req, ctx) => {
+    publishPersistedOperations: async (req, ctx) => {
       /**
        * Receives a federated graph name and a list of persisted operation contents.
        * First, it validates that the graph exists and all the operations are valid,
@@ -4662,10 +4534,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
        * the operations has never been seen before, we create an entry in the database
        * with it.
        */
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
         req.namespace = req.namespace || DefaultNamespace;
@@ -4842,11 +4711,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    acceptOrDeclineInvitation: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    acceptOrDeclineInvitation: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4948,11 +4814,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateRBACSettings: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateRBACSettings: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateRBACSettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4981,11 +4844,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    addSubgraphMember: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    addSubgraphMember: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<AddSubgraphMemberResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5065,11 +4925,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    removeSubgraphMember: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    removeSubgraphMember: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<RemoveSubgraphMemberResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5140,11 +4997,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    addReadme: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    addReadme: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<AddReadmeResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5173,11 +5027,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     /*
     Queries
     */
-    getSubgraphs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getSubgraphs: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5211,11 +5062,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getSubgraphByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getSubgraphByName: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5253,11 +5101,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getFederatedGraphs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getFederatedGraphs: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFederatedGraphsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5315,11 +5160,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getFederatedGraphsBySubgraphLabels: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getFederatedGraphsBySubgraphLabels: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5364,11 +5206,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getFederatedGraphSDLByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getFederatedGraphSDLByName: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
       return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
@@ -5404,11 +5243,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getLatestValidSubgraphSDLByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getLatestValidSubgraphSDLByName: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
       return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -5446,11 +5282,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getLatestSubgraphSDLByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getLatestSubgraphSDLByName: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
       return handleError<PlainMessage<GetLatestSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -5473,11 +5306,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getFederatedGraphByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getFederatedGraphByName: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFederatedGraphByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5557,11 +5387,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getFederatedGraphChangelog: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getFederatedGraphChangelog: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5639,11 +5466,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getChecksByFederatedGraphName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getChecksByFederatedGraphName: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5723,11 +5547,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getCheckSummary: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getCheckSummary: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetCheckSummaryResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5782,11 +5603,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getCheckOperations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getCheckOperations: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetCheckOperationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -5862,11 +5680,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getAnalyticsView: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getAnalyticsView: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAnalyticsViewResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -5925,11 +5740,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getDashboardAnalyticsView: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getDashboardAnalyticsView: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetDashboardAnalyticsViewResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -5999,11 +5811,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getGraphMetrics: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getGraphMetrics: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetGraphMetricsResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -6058,11 +5867,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getMetricsErrorRate: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getMetricsErrorRate: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetMetricsErrorRateResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -6118,11 +5924,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getTrace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getTrace: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetTraceResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -6147,11 +5950,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOrganizationMembers: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getOrganizationMembers: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationMembersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6173,11 +5973,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getLatestValidRouterConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getLatestValidRouterConfig: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6218,11 +6015,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getAPIKeys: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getAPIKeys: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAPIKeysResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6239,11 +6033,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    whoAmI: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    whoAmI: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<WhoAmIResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6270,11 +6061,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOrganizationWebhookConfigs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getOrganizationWebhookConfigs: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6291,11 +6079,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOrganizationWebhookMeta: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getOrganizationWebhookMeta: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationWebhookMetaResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6313,11 +6098,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     // generates a temporary router token to fetch the router config only. Should only be used while fetching router config.
-    generateRouterToken: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    generateRouterToken: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GenerateRouterTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6383,11 +6165,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getRouterTokens: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getRouterTokens: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetRouterTokensResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6438,11 +6217,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOrganizationIntegrations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getOrganizationIntegrations: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6459,11 +6235,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    isGitHubAppInstalled: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    isGitHubAppInstalled: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6515,11 +6288,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getFieldUsage: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getFieldUsage: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetFieldUsageResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6579,11 +6349,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOperationContent: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getOperationContent: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOperationContentResponse>>(logger, async () => {
         await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6625,11 +6392,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOIDCProvider: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getOIDCProvider: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6664,11 +6428,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getPersistedOperations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getPersistedOperations: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetPersistedOperationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6700,11 +6461,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getRouters: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getRouters: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetRoutersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6785,11 +6543,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getClients: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getClients: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetClientsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6816,11 +6571,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOrganizationRequestsCount: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getOrganizationRequestsCount: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6846,11 +6598,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     // returns the pending invites of a user
-    getInvitations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getInvitations: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetInvitationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6865,11 +6614,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getCompositions: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getCompositions: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetCompositionsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -6957,11 +6703,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getCompositionDetails: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getCompositionDetails: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetCompositionDetailsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7018,11 +6761,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getSdlBySchemaVersion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getSdlBySchemaVersion: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSdlBySchemaVersionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7042,11 +6782,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getChangelogBySchemaVersion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getChangelogBySchemaVersion: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetChangelogBySchemaVersionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7069,11 +6806,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getUserAccessibleResources: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getUserAccessibleResources: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetUserAccessibleResourcesResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7130,11 +6864,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getSubgraphMembers: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getSubgraphMembers: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphMembersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7161,11 +6892,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateAISettings: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateAISettings: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateAISettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7186,11 +6914,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getBillingPlans: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getBillingPlans: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetBillingPlansResponse>>(logger, async () => {
         const billingRepo = new BillingRepository(opts.db);
@@ -7204,11 +6929,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getAuditLogs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getAuditLogs: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAuditLogsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7299,12 +7021,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createOrganization: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-        organizationName: req.name,
-      });
+    createOrganization: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7448,11 +7166,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createCheckoutSession: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createCheckoutSession: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7484,11 +7199,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    upgradePlan: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    upgradePlan: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpgradePlanResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7538,11 +7250,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createBillingPortalSession: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createBillingPortalSession: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateBillingPortalSessionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7575,11 +7284,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    createDiscussion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    createDiscussion: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<CreateDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7608,11 +7314,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    replyToDiscussion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    replyToDiscussion: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<ReplyToDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7651,11 +7354,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getAllDiscussions: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getAllDiscussions: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetAllDiscussionsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7699,11 +7399,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateDiscussionComment: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    updateDiscussionComment: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<UpdateDiscussionCommentResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7740,11 +7437,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    deleteDiscussionComment: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    deleteDiscussionComment: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<DeleteDiscussionCommentResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7805,11 +7499,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getDiscussion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getDiscussion: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7875,11 +7566,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getDiscussionSchemas: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getDiscussionSchemas: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetDiscussionSchemasResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7924,11 +7612,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    setDiscussionResolution: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    setDiscussionResolution: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<SetDiscussionResolutionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -7956,11 +7641,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getSubgraphMetrics: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getSubgraphMetrics: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphMetricsResponse>>(logger, async () => {
         if (!opts.chClient) {
@@ -8017,11 +7699,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getSubgraphMetricsErrorRate: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+    getSubgraphMetricsErrorRate: async (req, ctx) => {
+      const logger = await enrichLogger(ctx, opts.logger, opts.authenticator);
 
       return handleError<PlainMessage<GetSubgraphMetricsErrorRateResponse>>(logger, async () => {
         if (!opts.chClient) {
