@@ -21,13 +21,13 @@ import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getLatestSubgraphSDLByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { getLatestSubgraphSDL } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 
 const SubgraphSchemaPage: NextPageWithLayout = () => {
   const graph = useSubgraph();
   const { data, error, refetch, isLoading } = useQuery({
-    ...getLatestSubgraphSDLByName.useQuery({
+    ...getLatestSubgraphSDL.useQuery({
       name: graph?.subgraph?.name,
       namespace: graph?.subgraph?.namespace,
     }),

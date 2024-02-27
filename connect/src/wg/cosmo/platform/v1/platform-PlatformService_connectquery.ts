@@ -5,7 +5,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateDiscussionRequest, CreateDiscussionResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteDiscussionCommentRequest, DeleteDiscussionCommentResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllDiscussionsRequest, GetAllDiscussionsResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetConfigRequest, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetDiscussionRequest, GetDiscussionResponse, GetDiscussionSchemasRequest, GetDiscussionSchemasResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLByNameRequest, GetLatestSubgraphSDLByNameResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, ReplyToDiscussionRequest, ReplyToDiscussionResponse, SetDiscussionResolutionRequest, SetDiscussionResolutionResponse, UpdateAISettingsRequest, UpdateAISettingsResponse, UpdateDiscussionCommentRequest, UpdateDiscussionCommentResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateRBACSettingsRequest, UpdateRBACSettingsResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateDiscussionRequest, CreateDiscussionResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteDiscussionCommentRequest, DeleteDiscussionCommentResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllDiscussionsRequest, GetAllDiscussionsResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetConfigRequest, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetDiscussionRequest, GetDiscussionResponse, GetDiscussionSchemasRequest, GetDiscussionSchemasResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLRequest, GetLatestSubgraphSDLResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphSDLFromLatestCompositionRequest, GetSubgraphSDLFromLatestCompositionResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, ReplyToDiscussionRequest, ReplyToDiscussionResponse, SetDiscussionResolutionRequest, SetDiscussionResolutionResponse, UpdateAISettingsRequest, UpdateAISettingsResponse, UpdateDiscussionCommentRequest, UpdateDiscussionCommentResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateRBACSettingsRequest, UpdateRBACSettingsResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { GetConfigResponse } from "../../node/v1/node_pb.js";
 import { createQueryService, createUnaryHooks, UnaryFunctionsWithHooks } from "@connectrpc/connect-query";
@@ -326,25 +326,25 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     * GetLatestValidSubgraphSDLByName returns the latest valid SDL of the subgraph by name.
+     * GetSubgraphSDLFromLatestComposition returns the latest valid SDL of the subgraph composed with the federated graph.
      *
-     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetLatestValidSubgraphSDLByName
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphSDLFromLatestComposition
      */
-    getLatestValidSubgraphSDLByName: {
-      name: "GetLatestValidSubgraphSDLByName",
-      I: GetLatestValidSubgraphSDLByNameRequest,
-      O: GetLatestValidSubgraphSDLByNameResponse,
+    getSubgraphSDLFromLatestComposition: {
+      name: "GetSubgraphSDLFromLatestComposition",
+      I: GetSubgraphSDLFromLatestCompositionRequest,
+      O: GetSubgraphSDLFromLatestCompositionResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * GetLatestSubgraphSDLByName returns the latest SDL of the subgraph by name.
+     * GetLatestSubgraphSDL returns the latest SDL of the subgraph by name.
      *
-     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDLByName
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDL
      */
-    getLatestSubgraphSDLByName: {
-      name: "GetLatestSubgraphSDLByName",
-      I: GetLatestSubgraphSDLByNameRequest,
-      O: GetLatestSubgraphSDLByNameResponse,
+    getLatestSubgraphSDL: {
+      name: "GetLatestSubgraphSDL",
+      I: GetLatestSubgraphSDLRequest,
+      O: GetLatestSubgraphSDLResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -403,7 +403,7 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     * RemoveOperationOverride removes a change from the safelist for an operation
+     * RemoveOperationOverride removes a change from the safe-list for an operation
      *
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides
      */
@@ -425,7 +425,7 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     * RemoveOperationIgnoreAllOverride removes the ignore all override for the operartion
+     * RemoveOperationIgnoreAllOverride removes the ignore all override for the operation
      *
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride
      */
@@ -436,7 +436,7 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     * GetOperationOverrides retireves all overrides for an operation hash
+     * GetOperationOverrides retrieves all overrides for an operation hash
      *
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationOverrides
      */
@@ -1372,18 +1372,18 @@ export const getSubgraphs: UnaryFunctionsWithHooks<GetSubgraphsRequest, GetSubgr
 export const getSubgraphByName: UnaryFunctionsWithHooks<GetSubgraphByNameRequest, GetSubgraphByNameResponse> = {   ...$queryService.getSubgraphByName,  ...createUnaryHooks($queryService.getSubgraphByName)};
 
 /**
- * GetLatestValidSubgraphSDLByName returns the latest valid SDL of the subgraph by name.
+ * GetSubgraphSDLFromLatestComposition returns the latest valid SDL of the subgraph composed with the federated graph.
  *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetLatestValidSubgraphSDLByName
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphSDLFromLatestComposition
  */
-export const getLatestValidSubgraphSDLByName: UnaryFunctionsWithHooks<GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse> = {   ...$queryService.getLatestValidSubgraphSDLByName,  ...createUnaryHooks($queryService.getLatestValidSubgraphSDLByName)};
+export const getSubgraphSDLFromLatestComposition: UnaryFunctionsWithHooks<GetSubgraphSDLFromLatestCompositionRequest, GetSubgraphSDLFromLatestCompositionResponse> = {   ...$queryService.getSubgraphSDLFromLatestComposition,  ...createUnaryHooks($queryService.getSubgraphSDLFromLatestComposition)};
 
 /**
- * GetLatestSubgraphSDLByName returns the latest SDL of the subgraph by name.
+ * GetLatestSubgraphSDL returns the latest SDL of the subgraph by name.
  *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDLByName
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDL
  */
-export const getLatestSubgraphSDLByName: UnaryFunctionsWithHooks<GetLatestSubgraphSDLByNameRequest, GetLatestSubgraphSDLByNameResponse> = {   ...$queryService.getLatestSubgraphSDLByName,  ...createUnaryHooks($queryService.getLatestSubgraphSDLByName)};
+export const getLatestSubgraphSDL: UnaryFunctionsWithHooks<GetLatestSubgraphSDLRequest, GetLatestSubgraphSDLResponse> = {   ...$queryService.getLatestSubgraphSDL,  ...createUnaryHooks($queryService.getLatestSubgraphSDL)};
 
 /**
  * GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph
@@ -1421,7 +1421,7 @@ export const forceCheckSuccess: UnaryFunctionsWithHooks<ForceCheckSuccessRequest
 export const createOperationOverrides: UnaryFunctionsWithHooks<CreateOperationOverridesRequest, CreateOperationOverridesResponse> = {   ...$queryService.createOperationOverrides,  ...createUnaryHooks($queryService.createOperationOverrides)};
 
 /**
- * RemoveOperationOverride removes a change from the safelist for an operation
+ * RemoveOperationOverride removes a change from the safe-list for an operation
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides
  */
@@ -1435,14 +1435,14 @@ export const removeOperationOverrides: UnaryFunctionsWithHooks<RemoveOperationOv
 export const createOperationIgnoreAllOverride: UnaryFunctionsWithHooks<CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse> = {   ...$queryService.createOperationIgnoreAllOverride,  ...createUnaryHooks($queryService.createOperationIgnoreAllOverride)};
 
 /**
- * RemoveOperationIgnoreAllOverride removes the ignore all override for the operartion
+ * RemoveOperationIgnoreAllOverride removes the ignore all override for the operation
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride
  */
 export const removeOperationIgnoreAllOverride: UnaryFunctionsWithHooks<RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse> = {   ...$queryService.removeOperationIgnoreAllOverride,  ...createUnaryHooks($queryService.removeOperationIgnoreAllOverride)};
 
 /**
- * GetOperationOverrides retireves all overrides for an operation hash
+ * GetOperationOverrides retrieves all overrides for an operation hash
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationOverrides
  */
