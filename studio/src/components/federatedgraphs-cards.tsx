@@ -157,7 +157,6 @@ const MigrationDialog = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         className={cn({
-          "flex justify-center": isEmptyState,
           "h-[254px]": !isEmptyState,
         })}
       >
@@ -579,7 +578,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           >
             {parsedURL()}
           </p>
-          <div className="mb-3 flex items-center gap-x-5">
+          <div className="mb-3 flex flex-wrap items-center gap-x-5">
             <div className="flex items-center gap-x-2">
               <Component2Icon className="h-4 w-4 text-[#0284C7]" />
               <p className="text-sm">
@@ -605,7 +604,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           </div>
           <TooltipProvider>
             <Tooltip delayDuration={200}>
-              <TooltipTrigger className="mt-auto flex items-center text-xs">
+              <TooltipTrigger className="mt-auto flex items-start text-xs">
                 <div className="flex h-4 w-4 items-center justify-center">
                   <ComposeStatusBulb
                     validGraph={graph.isComposable && !!graph.lastUpdatedAt}
@@ -613,19 +612,19 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                   />
                 </div>
 
-                <span className="ml-1 text-muted-foreground">
+                <p className="ml-1 text-left text-muted-foreground">
                   {graph.lastUpdatedAt ? (
-                    <div className="flex gap-x-1 ">
-                      <p>Schema last updated</p>
+                    <>
+                      Schema last updated{" "}
                       <TimeAgo
                         date={getTime(parseISO(graph.lastUpdatedAt))}
                         tooltip={false}
                       />
-                    </div>
+                    </>
                   ) : (
                     "Not ready"
                   )}
-                </span>
+                </p>
               </TooltipTrigger>
               <TooltipContent>
                 <ComposeStatusMessage

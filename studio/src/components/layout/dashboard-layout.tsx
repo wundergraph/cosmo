@@ -195,7 +195,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
           >
             {children}
           </SideNav>
-          <main className="flex-1 pt-4 lg:pt-0">{children}</main>
+          <main className="flex-1 lg:pt-0">{children}</main>
         </div>
       </div>
     )
@@ -208,6 +208,7 @@ export const getDashboardLayout = (
   subtitle: React.ReactNode,
   items?: React.ReactNode,
   toolbar?: React.ReactNode,
+  breadcrumbs?: React.ReactNode[],
 ) => {
   return (
     <DashboardLayout>
@@ -217,6 +218,7 @@ export const getDashboardLayout = (
           subtitle={subtitle}
           items={items}
           toolbar={toolbar}
+          breadcrumbs={breadcrumbs}
         >
           {page}
         </TitleLayout>

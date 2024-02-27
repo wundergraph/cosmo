@@ -56,43 +56,44 @@ export const NamespaceSelector = () => {
   }
 
   return (
-    <Toolbar className="flex-nowrap py-0 lg:w-auto">
-      <Select
+    <Select
+      value={namespace}
+      onValueChange={(namespace) => {
+        applyParams({ namespace });
+        setNamespace(namespace);
+      }}
+    >
+      <SelectTrigger
+        className="flex h-8 max-w-[180px] gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 lg:max-w-xs"
         value={namespace}
-        onValueChange={(namespace) => {
-          applyParams({ namespace });
-          setNamespace(namespace);
-        }}
       >
-        <SelectTrigger className="lg:w-64" value={namespace}>
-          <SelectValue aria-label={namespace}>
-            Namespace: {namespace}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent align="end">
-          <SelectGroup>
-            <SelectLabel>Namespaces</SelectLabel>
-            <p className="max-w-xs px-2 text-sm text-muted-foreground">
-              Easily switch between namespaces. Learn more{" "}
-              <Link
-                target="_blank"
-                className="text-primary"
-                href={`${docsBaseURL}/cli/essentials#namespaces`}
-              >
-                here.
-              </Link>{" "}
-            </p>
-            <SelectSeparator />
-            {namespaces.map((ns) => {
-              return (
-                <SelectItem key={ns} value={ns}>
-                  {ns}
-                </SelectItem>
-              );
-            })}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </Toolbar>
+        <SelectValue asChild aria-label={namespace}>
+          <p className="mr-2 w-full truncate text-start">{namespace}</p>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent align="start">
+        <SelectGroup>
+          <SelectLabel>Namespaces</SelectLabel>
+          <p className="max-w-xs px-2 text-sm text-muted-foreground">
+            Easily switch between namespaces. Learn more{" "}
+            <Link
+              target="_blank"
+              className="text-primary"
+              href={`${docsBaseURL}/cli/essentials#namespaces`}
+            >
+              here.
+            </Link>{" "}
+          </p>
+          <SelectSeparator />
+          {namespaces.map((ns) => {
+            return (
+              <SelectItem key={ns} value={ns}>
+                {ns}
+              </SelectItem>
+            );
+          })}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 };

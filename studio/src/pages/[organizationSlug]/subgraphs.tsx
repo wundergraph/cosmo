@@ -53,7 +53,8 @@ SubgraphsDashboardPage.getLayout = (page) => {
     "Subgraphs",
     "An overview of all subgraphs",
     undefined,
-    <NamespaceSelector />,
+    undefined,
+    [<NamespaceSelector key="0" />],
   );
 };
 

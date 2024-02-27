@@ -52,7 +52,8 @@ GraphsDashboardPage.getLayout = (page) => {
     "Federated Graphs",
     "An overview of all your federated graphs",
     undefined,
-    <NamespaceSelector />,
+    undefined,
+    [<NamespaceSelector key="0" />],
   );
 };
 
