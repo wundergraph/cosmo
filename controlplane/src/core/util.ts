@@ -69,8 +69,12 @@ export const enrichLogger = async (
     method: ctx.method.name,
     userId: authContext.userId,
     organizationId: authContext.organizationId,
-    ...req,
-    ...additionalBindings,
+    req: {
+      ...req,
+    },
+    additional: {
+      ...additionalBindings,
+    },
   });
 };
 
