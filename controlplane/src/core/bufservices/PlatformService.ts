@@ -1038,6 +1038,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1051,6 +1053,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1065,6 +1069,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1087,6 +1093,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: schemaCheckID,
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1216,6 +1224,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
           operationUsageStats: isInspectable ? collectOperationUsageStats(inspectedOperations) : undefined,
           compositionErrors,
+          checkId: schemaCheckID,
+          checkedFederatedGraphs: result.compositions.map((c) => ({
+            id: c.id,
+            name: c.name,
+            namespace: c.namespace,
+            organizationSlug: authContext.organizationSlug,
+          })),
         };
       });
     },

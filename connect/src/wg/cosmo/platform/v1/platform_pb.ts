@@ -1140,6 +1140,61 @@ export class CheckOperationUsageStats extends Message<CheckOperationUsageStats> 
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.CheckedFederatedGraphs
+ */
+export class CheckedFederatedGraphs extends Message<CheckedFederatedGraphs> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string organization_slug = 4;
+   */
+  organizationSlug = "";
+
+  constructor(data?: PartialMessage<CheckedFederatedGraphs>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CheckedFederatedGraphs";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "organization_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckedFederatedGraphs {
+    return new CheckedFederatedGraphs().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckedFederatedGraphs {
+    return new CheckedFederatedGraphs().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckedFederatedGraphs {
+    return new CheckedFederatedGraphs().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CheckedFederatedGraphs | PlainMessage<CheckedFederatedGraphs> | undefined, b: CheckedFederatedGraphs | PlainMessage<CheckedFederatedGraphs> | undefined): boolean {
+    return proto3.util.equals(CheckedFederatedGraphs, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.CheckSubgraphSchemaResponse
  */
 export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResponse> {
@@ -1171,6 +1226,16 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   operationUsageStats?: CheckOperationUsageStats;
 
+  /**
+   * @generated from field: string check_id = 6;
+   */
+  checkId = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CheckedFederatedGraphs checked_federated_graphs = 7;
+   */
+  checkedFederatedGraphs: CheckedFederatedGraphs[] = [];
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1184,6 +1249,8 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 3, name: "nonBreakingChanges", kind: "message", T: SchemaChange, repeated: true },
     { no: 4, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 5, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStats },
+    { no: 6, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "checked_federated_graphs", kind: "message", T: CheckedFederatedGraphs, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {

@@ -8,7 +8,7 @@ import { Command, program } from 'commander';
 import logSymbols from 'log-symbols';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { baseHeaders } from '../../../core/config.js';
+import { baseHeaders, config } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { useGitHub } from '../../../github.js';
 
@@ -103,6 +103,11 @@ export default (opts: BaseCommandOptions) => {
     let success = false;
     let finalStatement = '';
 
+    let studioCheckDestination = '';
+    if (resp.checkId && resp.checkedFederatedGraphs.length > 0) {
+      studioCheckDestination = `Open in studio: ${config.webURL}/${resp.checkedFederatedGraphs[0].organizationSlug}/${resp.checkedFederatedGraphs[0].namespace}/graph/${resp.checkedFederatedGraphs[0].name}/checks/${resp.checkId}`;
+    }
+
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
         if (
@@ -110,7 +115,7 @@ export default (opts: BaseCommandOptions) => {
           resp.breakingChanges.length === 0 &&
           resp.compositionErrors.length === 0
         ) {
-          console.log('\nDetected no changes.\n');
+          console.log(`\nDetected no changes.\n${studioCheckDestination}\n`);
 
           success = true;
 
@@ -188,13 +193,20 @@ export default (opts: BaseCommandOptions) => {
         }
 
         if (success) {
-          console.log('\n' + logSymbols.success + pc.green(` Schema check passed. ${finalStatement}`) + '\n');
+          console.log(
+            '\n' +
+              logSymbols.success +
+              pc.green(` Schema check passed. ${finalStatement}`) +
+              '\n' +
+              studioCheckDestination +
+              '\n',
+          );
         } else {
           program.error(
             '\n' +
               logSymbols.error +
               pc.red(
-                ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.`,
+                ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}\n`,
               ) +
               '\n',
           );
