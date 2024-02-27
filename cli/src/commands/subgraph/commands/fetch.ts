@@ -25,7 +25,7 @@ export default (opts: BaseCommandOptions) => {
     let response: Response | undefined;
 
     if (options.graphName) {
-      const res = await opts.client.platform.getLatestValidSubgraphSDLByName(
+      const res = await opts.client.platform.getSubgraphSDLFromLatestComposition(
         {
           name,
           fedGraphName: options.graphName,
@@ -39,7 +39,7 @@ export default (opts: BaseCommandOptions) => {
       subgraphSDL = res.sdl ?? '';
       response = res.response;
     } else {
-      const resp = await opts.client.platform.getLatestSubgraphSDLByName(
+      const resp = await opts.client.platform.getLatestSubgraphSDL(
         {
           name,
           namespace: options.namespace,

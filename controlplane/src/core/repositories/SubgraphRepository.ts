@@ -912,7 +912,7 @@ export class SubgraphRepository {
    * Returns the latest valid schema version of a subgraph that was composed with a federated graph.
    * @param data
    */
-  public async getLatestValidComposedSchemaVersion(data: { subgraphTargetId: string; federatedGraphTargetId: string }) {
+  public async getSDLFromLatestComposition(data: { subgraphTargetId: string; federatedGraphTargetId: string }) {
     const fedRepo = new FederatedGraphRepository(this.db, this.organizationId);
     const fedGraphSchemaVersion = await fedRepo.getLatestValidSchemaVersion({ targetId: data.federatedGraphTargetId });
     if (!fedGraphSchemaVersion) {
