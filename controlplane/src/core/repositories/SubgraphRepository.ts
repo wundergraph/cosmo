@@ -952,32 +952,6 @@ export class SubgraphRepository {
     };
   }
 
-  /**
-   * Returns the latest published schema version of a subgraph.
-   * @param data
-   */
-  public async getLatestSchemaVersion(data: { subgraphTargetId: string }) {
-    const latestValidVersion = await this.db
-      .select({
-        schemaSDL: schemaVersion.schemaSDL,
-        schemaVersionId: schemaVersion.id,
-      })
-      .from(subgraphs)
-      .innerJoin(subgraphs, eq(schemaVersion.id, subgraphs.schemaVersionId))
-      .where(and(eq(subgraphs.targetId, data.subgraphTargetId)))
-      .limit(1)
-      .execute();
-
-    if (latestValidVersion.length === 0) {
-      return undefined;
-    }
-
-    return {
-      schema: latestValidVersion[0].schemaSDL,
-      schemaVersionId: latestValidVersion[0].schemaVersionId,
-    };
-  }
-
   public async getAccessibleSubgraphs(userId: string): Promise<SubgraphDTO[]> {
     const graphs = await this.db
       .selectDistinctOn([targets.id], { targetId: targets.id, name: targets.name })

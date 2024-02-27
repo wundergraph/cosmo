@@ -1,8 +1,9 @@
 import { writeFile } from 'node:fs/promises';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { Response } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Command } from 'commander';
 import { join } from 'pathe';
 import pc from 'picocolors';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import program from '../../index.js';
@@ -20,33 +21,54 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-o, --out [string]', 'Destination file for the SDL.');
   command.action(async (name, options) => {
-    const resp = await opts.client.platform.getLatestValidSubgraphSDLByName(
-      {
-        name,
-        fedGraphName: options.graphName,
-        namespace: options.namespace,
-      },
-      {
-        headers: baseHeaders,
-      },
-    );
+    let subgraphSDL = '';
+    let response: Response | undefined;
 
-    if (resp.response?.code === EnumStatusCode.ERR_FREE_TRIAL_EXPIRED) {
-      program.error(resp.response.details || 'Free trial has concluded. Please talk to sales to upgrade your plan.');
+    if (options.graphName) {
+      const res = await opts.client.platform.getLatestValidSubgraphSDLByName(
+        {
+          name,
+          fedGraphName: options.graphName,
+          namespace: options.namespace,
+        },
+        {
+          headers: baseHeaders,
+        },
+      );
+
+      subgraphSDL = res.sdl ?? '';
+      response = res.response;
+    } else {
+      const resp = await opts.client.platform.getLatestSubgraphSDLByName(
+        {
+          name,
+          namespace: options.namespace,
+        },
+        {
+          headers: baseHeaders,
+        },
+      );
+
+      subgraphSDL = resp.sdl ?? '';
+      response = resp.response;
     }
 
-    if (resp.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
+    if (response?.code === EnumStatusCode.ERR_FREE_TRIAL_EXPIRED) {
+      program.error(response.details || 'Free trial has concluded. Please talk to sales to upgrade your plan.');
+    }
+
+    if (response?.code === EnumStatusCode.ERR_NOT_FOUND) {
       console.log(`${pc.red(`No valid SDL could be fetched for subgraph ${pc.bold(name)}`)}`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
+      if (response?.details) {
+        console.log(pc.red(pc.bold(response?.details)));
       }
       process.exit(1);
     }
 
     if (options.out) {
-      await writeFile(join(process.cwd(), options.out), resp.sdl ?? '');
+      await writeFile(join(process.cwd(), options.out), subgraphSDL ?? '');
     } else {
-      console.log(resp.sdl);
+      console.log(subgraphSDL);
     }
   });
 

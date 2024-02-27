@@ -128,7 +128,6 @@ import {
   GraphApiKeyJwtPayload,
   GraphCompositionDTO,
   PublishedOperationData,
-  SchemaChangeType,
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
@@ -1038,6 +1037,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1051,6 +1052,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1065,6 +1068,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1087,6 +1092,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: schemaCheckID,
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1216,6 +1223,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
           operationUsageStats: isInspectable ? collectOperationUsageStats(inspectedOperations) : undefined,
           compositionErrors,
+          checkId: schemaCheckID,
+          checkedFederatedGraphs: result.compositions.map((c) => ({
+            id: c.id,
+            name: c.name,
+            namespace: c.namespace,
+            organizationSlug: authContext.organizationSlug,
+          })),
         };
       });
     },
@@ -5405,6 +5419,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getLatestValidSubgraphSDLByName: (req, ctx) => {
+      req.namespace = req.namespace || DefaultNamespace;
+
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
@@ -5412,43 +5428,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-
-        req.namespace = req.namespace || DefaultNamespace;
+        const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const subgraph = await subgraphRepo.byName(req.name, req.namespace);
-        if (!subgraph) {
+        const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName, req.namespace);
+        if (!subgraph || !federatedGraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Subgraph '${req.name}' not found`,
             },
           };
         }
 
-        let schemaVersion: { schema: string | null; schemaVersionId: string } | undefined;
-
-        if (req.fedGraphName) {
-          const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-          const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName, req.namespace);
-          if (!federatedGraph) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_NOT_FOUND,
-                details: `Federated graph '${req.fedGraphName}' not found`,
-              },
-            };
-          }
-
-          schemaVersion = await subgraphRepo.getLatestValidComposedSchemaVersion({
-            subgraphTargetId: subgraph.targetId,
-            federatedGraphTargetId: federatedGraph.targetId,
-          });
-        } else {
-          schemaVersion = await subgraphRepo.getLatestSchemaVersion({
-            subgraphTargetId: subgraph.targetId,
-          });
-        }
-
+        const schemaVersion = await subgraphRepo.getLatestValidComposedSchemaVersion({
+          subgraphTargetId: subgraph.targetId,
+          federatedGraphTargetId: federatedGraph.targetId,
+        });
         if (!schemaVersion) {
           return {
             response: {
@@ -5468,10 +5463,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getLatestSubgraphSDLByName: (req, ctx) => {
+      req.namespace = req.namespace || DefaultNamespace;
+
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
+
       return handleError<PlainMessage<GetLatestSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -6195,6 +6193,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getLatestValidRouterConfig: (req, ctx) => {
+      req.namespace = req.namespace || DefaultNamespace;
+
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
@@ -6203,8 +6203,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-
-        req.namespace = req.namespace || DefaultNamespace;
 
         const federatedGraph = await fedGraphRepo.byName(req.graphName, req.namespace);
         if (!federatedGraph) {
