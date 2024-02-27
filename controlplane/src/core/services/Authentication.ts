@@ -31,6 +31,16 @@ export class Authentication implements Authenticator {
 
   public async extractUserAndOrgId(headers: Headers): Promise<{ userId?: string; organizationId?: string }> {
     try {
+      const authorization = headers.get('authorization');
+      if (authorization) {
+        const token = authorization.replace(/^bearer\s+/i, '');
+        if (token.startsWith('cosmo')) {
+          return await this.keyAuth.authenticate(token);
+        }
+        const organizationSlug = headers.get('cosmo-org-slug');
+        return await this.accessTokenAuth.authenticate(token, organizationSlug);
+      }
+
       const user = await this.webAuth.authenticate(headers);
       const organization = await this.orgRepo.bySlug(user.organizationSlug);
       return {
