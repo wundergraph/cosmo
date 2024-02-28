@@ -2238,9 +2238,9 @@ export class GetSubgraphByNameResponse extends Message<GetSubgraphByNameResponse
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetLatestValidSubgraphSDLByNameRequest
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionRequest
  */
-export class GetLatestValidSubgraphSDLByNameRequest extends Message<GetLatestValidSubgraphSDLByNameRequest> {
+export class GetSubgraphSDLFromLatestCompositionRequest extends Message<GetSubgraphSDLFromLatestCompositionRequest> {
   /**
    * @generated from field: string name = 1;
    */
@@ -2256,40 +2256,40 @@ export class GetLatestValidSubgraphSDLByNameRequest extends Message<GetLatestVal
    */
   namespace = "";
 
-  constructor(data?: PartialMessage<GetLatestValidSubgraphSDLByNameRequest>) {
+  constructor(data?: PartialMessage<GetSubgraphSDLFromLatestCompositionRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetLatestValidSubgraphSDLByNameRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestValidSubgraphSDLByNameRequest {
-    return new GetLatestValidSubgraphSDLByNameRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphSDLFromLatestCompositionRequest {
+    return new GetSubgraphSDLFromLatestCompositionRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetLatestValidSubgraphSDLByNameRequest {
-    return new GetLatestValidSubgraphSDLByNameRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphSDLFromLatestCompositionRequest {
+    return new GetSubgraphSDLFromLatestCompositionRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetLatestValidSubgraphSDLByNameRequest {
-    return new GetLatestValidSubgraphSDLByNameRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphSDLFromLatestCompositionRequest {
+    return new GetSubgraphSDLFromLatestCompositionRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetLatestValidSubgraphSDLByNameRequest | PlainMessage<GetLatestValidSubgraphSDLByNameRequest> | undefined, b: GetLatestValidSubgraphSDLByNameRequest | PlainMessage<GetLatestValidSubgraphSDLByNameRequest> | undefined): boolean {
-    return proto3.util.equals(GetLatestValidSubgraphSDLByNameRequest, a, b);
+  static equals(a: GetSubgraphSDLFromLatestCompositionRequest | PlainMessage<GetSubgraphSDLFromLatestCompositionRequest> | undefined, b: GetSubgraphSDLFromLatestCompositionRequest | PlainMessage<GetSubgraphSDLFromLatestCompositionRequest> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphSDLFromLatestCompositionRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetLatestValidSubgraphSDLByNameResponse
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionResponse
  */
-export class GetLatestValidSubgraphSDLByNameResponse extends Message<GetLatestValidSubgraphSDLByNameResponse> {
+export class GetSubgraphSDLFromLatestCompositionResponse extends Message<GetSubgraphSDLFromLatestCompositionResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
@@ -2305,40 +2305,40 @@ export class GetLatestValidSubgraphSDLByNameResponse extends Message<GetLatestVa
    */
   versionId?: string;
 
-  constructor(data?: PartialMessage<GetLatestValidSubgraphSDLByNameResponse>) {
+  constructor(data?: PartialMessage<GetSubgraphSDLFromLatestCompositionResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetLatestValidSubgraphSDLByNameResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "sdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "version_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestValidSubgraphSDLByNameResponse {
-    return new GetLatestValidSubgraphSDLByNameResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphSDLFromLatestCompositionResponse {
+    return new GetSubgraphSDLFromLatestCompositionResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetLatestValidSubgraphSDLByNameResponse {
-    return new GetLatestValidSubgraphSDLByNameResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphSDLFromLatestCompositionResponse {
+    return new GetSubgraphSDLFromLatestCompositionResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetLatestValidSubgraphSDLByNameResponse {
-    return new GetLatestValidSubgraphSDLByNameResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphSDLFromLatestCompositionResponse {
+    return new GetSubgraphSDLFromLatestCompositionResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetLatestValidSubgraphSDLByNameResponse | PlainMessage<GetLatestValidSubgraphSDLByNameResponse> | undefined, b: GetLatestValidSubgraphSDLByNameResponse | PlainMessage<GetLatestValidSubgraphSDLByNameResponse> | undefined): boolean {
-    return proto3.util.equals(GetLatestValidSubgraphSDLByNameResponse, a, b);
+  static equals(a: GetSubgraphSDLFromLatestCompositionResponse | PlainMessage<GetSubgraphSDLFromLatestCompositionResponse> | undefined, b: GetSubgraphSDLFromLatestCompositionResponse | PlainMessage<GetSubgraphSDLFromLatestCompositionResponse> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphSDLFromLatestCompositionResponse, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetLatestSubgraphSDLByNameRequest
+ * @generated from message wg.cosmo.platform.v1.GetLatestSubgraphSDLRequest
  */
-export class GetLatestSubgraphSDLByNameRequest extends Message<GetLatestSubgraphSDLByNameRequest> {
+export class GetLatestSubgraphSDLRequest extends Message<GetLatestSubgraphSDLRequest> {
   /**
    * @generated from field: string name = 1;
    */
@@ -2349,39 +2349,39 @@ export class GetLatestSubgraphSDLByNameRequest extends Message<GetLatestSubgraph
    */
   namespace = "";
 
-  constructor(data?: PartialMessage<GetLatestSubgraphSDLByNameRequest>) {
+  constructor(data?: PartialMessage<GetLatestSubgraphSDLRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetLatestSubgraphSDLByNameRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetLatestSubgraphSDLRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestSubgraphSDLByNameRequest {
-    return new GetLatestSubgraphSDLByNameRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestSubgraphSDLRequest {
+    return new GetLatestSubgraphSDLRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetLatestSubgraphSDLByNameRequest {
-    return new GetLatestSubgraphSDLByNameRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetLatestSubgraphSDLRequest {
+    return new GetLatestSubgraphSDLRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetLatestSubgraphSDLByNameRequest {
-    return new GetLatestSubgraphSDLByNameRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetLatestSubgraphSDLRequest {
+    return new GetLatestSubgraphSDLRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetLatestSubgraphSDLByNameRequest | PlainMessage<GetLatestSubgraphSDLByNameRequest> | undefined, b: GetLatestSubgraphSDLByNameRequest | PlainMessage<GetLatestSubgraphSDLByNameRequest> | undefined): boolean {
-    return proto3.util.equals(GetLatestSubgraphSDLByNameRequest, a, b);
+  static equals(a: GetLatestSubgraphSDLRequest | PlainMessage<GetLatestSubgraphSDLRequest> | undefined, b: GetLatestSubgraphSDLRequest | PlainMessage<GetLatestSubgraphSDLRequest> | undefined): boolean {
+    return proto3.util.equals(GetLatestSubgraphSDLRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetLatestSubgraphSDLByNameResponse
+ * @generated from message wg.cosmo.platform.v1.GetLatestSubgraphSDLResponse
  */
-export class GetLatestSubgraphSDLByNameResponse extends Message<GetLatestSubgraphSDLByNameResponse> {
+export class GetLatestSubgraphSDLResponse extends Message<GetLatestSubgraphSDLResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
@@ -2397,33 +2397,33 @@ export class GetLatestSubgraphSDLByNameResponse extends Message<GetLatestSubgrap
    */
   versionId?: string;
 
-  constructor(data?: PartialMessage<GetLatestSubgraphSDLByNameResponse>) {
+  constructor(data?: PartialMessage<GetLatestSubgraphSDLResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetLatestSubgraphSDLByNameResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.GetLatestSubgraphSDLResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "sdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "version_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestSubgraphSDLByNameResponse {
-    return new GetLatestSubgraphSDLByNameResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestSubgraphSDLResponse {
+    return new GetLatestSubgraphSDLResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetLatestSubgraphSDLByNameResponse {
-    return new GetLatestSubgraphSDLByNameResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetLatestSubgraphSDLResponse {
+    return new GetLatestSubgraphSDLResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetLatestSubgraphSDLByNameResponse {
-    return new GetLatestSubgraphSDLByNameResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetLatestSubgraphSDLResponse {
+    return new GetLatestSubgraphSDLResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetLatestSubgraphSDLByNameResponse | PlainMessage<GetLatestSubgraphSDLByNameResponse> | undefined, b: GetLatestSubgraphSDLByNameResponse | PlainMessage<GetLatestSubgraphSDLByNameResponse> | undefined): boolean {
-    return proto3.util.equals(GetLatestSubgraphSDLByNameResponse, a, b);
+  static equals(a: GetLatestSubgraphSDLResponse | PlainMessage<GetLatestSubgraphSDLResponse> | undefined, b: GetLatestSubgraphSDLResponse | PlainMessage<GetLatestSubgraphSDLResponse> | undefined): boolean {
+    return proto3.util.equals(GetLatestSubgraphSDLResponse, a, b);
   }
 }
 

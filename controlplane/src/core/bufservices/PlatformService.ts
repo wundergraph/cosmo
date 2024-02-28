@@ -58,14 +58,11 @@ import {
   GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
-  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetInvitationsResponse,
-  GetLatestSubgraphSDLByNameResponse,
-  GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
   GetNamespacesResponse,
   GetOIDCProviderResponse,
@@ -116,6 +113,9 @@ import {
   WhoAmIResponse,
   GetRoutersResponse,
   Router,
+  GetLatestSubgraphSDLResponse,
+  GetSubgraphSDLFromLatestCompositionResponse,
+  GetFederatedGraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
@@ -129,7 +129,6 @@ import {
   GraphApiKeyJwtPayload,
   GraphCompositionDTO,
   PublishedOperationData,
-  SchemaChangeType,
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
@@ -5368,9 +5367,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getLatestValidSubgraphSDLByName: (req, ctx) => {
+    getSubgraphSDLFromLatestComposition: (req, ctx) => {
+      req.namespace = req.namespace || DefaultNamespace;
+
       let logger = getLogger(ctx, opts.logger);
-      return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
+
+      return handleError<PlainMessage<GetSubgraphSDLFromLatestCompositionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
@@ -5387,7 +5389,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion({
+        const schemaVersion = await subgraphRepo.getSDLFromLatestComposition({
           subgraphTargetId: subgraph.targetId,
           federatedGraphTargetId: federatedGraph.targetId,
         });
@@ -5409,9 +5411,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getLatestSubgraphSDLByName: (req, ctx) => {
+    getLatestSubgraphSDL: (req, ctx) => {
+      req.namespace = req.namespace || DefaultNamespace;
+
       let logger = getLogger(ctx, opts.logger);
-      return handleError<PlainMessage<GetLatestSubgraphSDLByNameResponse>>(logger, async () => {
+
+      return handleError<PlainMessage<GetLatestSubgraphSDLResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
@@ -6125,6 +6130,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getLatestValidRouterConfig: (req, ctx) => {
+      req.namespace = req.namespace || DefaultNamespace;
+
       let logger = getLogger(ctx, opts.logger);
 
       return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
@@ -6132,8 +6139,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-
-        req.namespace = req.namespace || DefaultNamespace;
 
         const federatedGraph = await fedGraphRepo.byName(req.graphName, req.namespace);
         if (!federatedGraph) {

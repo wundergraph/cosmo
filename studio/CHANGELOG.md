@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/studio@0.68.0...studio@0.69.0) (2024-02-27)
+
+### Bug Fixes
+
+* invitations bug ([#570](https://github.com/wundergraph/cosmo/issues/570)) ([74c506a](https://github.com/wundergraph/cosmo/commit/74c506ad906046c631e0986b6ee8662e62c3efa2)) (@JivusAyrus)
+* ui improvements ([#576](https://github.com/wundergraph/cosmo/issues/576)) ([5e19d64](https://github.com/wundergraph/cosmo/commit/5e19d642a507efa326e9050918b7ce0d952aae01)) (@thisisnithin)
+
+### Features
+
+* **cli:** new command to fetch latest published subgraph SDL ([#575](https://github.com/wundergraph/cosmo/issues/575)) ([09a0ab5](https://github.com/wundergraph/cosmo/commit/09a0ab54cccae6f46c1e585cf12fa9321f44e9ed)) (@StarpTech)
+* default vars for run query in trace page ([#577](https://github.com/wundergraph/cosmo/issues/577)) ([5da9991](https://github.com/wundergraph/cosmo/commit/5da99915f6c337a70087945169155b8b003ea559)) (@thisisnithin)
+
 # [0.68.0](https://github.com/wundergraph/cosmo/compare/studio@0.67.0...studio@0.68.0) (2024-02-20)
 
 ### Bug Fixes
