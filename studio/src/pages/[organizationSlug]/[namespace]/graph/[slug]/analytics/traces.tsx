@@ -1,5 +1,6 @@
 import { AnalyticsDataTable } from "@/components/analytics/data-table";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
+import TraceDetails from "@/components/analytics/trace-details";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { EmptyState } from "@/components/empty-state";
 import {
@@ -8,34 +9,37 @@ import {
   GraphPageLayout,
 } from "@/components/layout/graph-layout";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Spacer } from "@/components/ui/spacer";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NextPageWithLayout } from "@/lib/page";
+import { useParseSchema } from "@/lib/schema-helpers";
+import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { ArrowRightIcon, SizeIcon } from "@radix-ui/react-icons";
+import { useHotkeys } from "@saas-ui/use-hotkeys";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { Table } from "@tanstack/react-table";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  getAnalyticsView,
+  getFederatedGraphSDLByName,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useRef, useState } from "react";
-import { useHotkeys } from "@saas-ui/use-hotkeys";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
-import TracePage from "./[traceID]";
-import { CopyButton } from "@/components/ui/copy-button";
-import { Table } from "@tanstack/react-table";
-import { Kbd } from "@/components/ui/kbd";
-import { Spacer } from "@/components/ui/spacer";
-import { cn } from "@/lib/utils";
-import { ArrowRightIcon, SizeIcon } from "@radix-ui/react-icons";
 
 // For the network call we read purely from the query with useAnalyticsQueryState
 // The data table should only set url params and not the state for filters and pagination
@@ -83,6 +87,15 @@ const TracesPage: NextPageWithLayout = () => {
     refetchInterval: refreshInterval,
   });
 
+  const { data: sdlData } = useQuery({
+    ...getFederatedGraphSDLByName.useQuery({
+      name: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    }),
+  });
+
+  const { ast } = useParseSchema(sdlData?.sdl);
+
   const rowData =
     data?.view?.rows.map((each) => {
       const entries = Object.entries(each.value);
@@ -123,7 +136,7 @@ const TracesPage: NextPageWithLayout = () => {
         pageCount={data?.view?.pages ?? Number(page) + 1}
         refresh={() => refetch()}
       />
-      <TraceSheet data={rowData} />
+      <TraceSheet data={rowData} ast={ast} />
     </div>
   );
 };
@@ -268,7 +281,7 @@ const TraceSheet: React.FC<any> = (props) => {
             </TooltipContent>
           </Tooltip>
         </SheetHeader>
-        {traceId && <TracePage />}
+        {traceId && <TraceDetails ast={props.ast} />}
       </SheetContent>
     </Sheet>
   );
