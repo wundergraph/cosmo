@@ -1,13 +1,15 @@
 import { randomFill } from 'node:crypto';
-import pino from 'pino';
-import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { uid } from 'uid/secure';
+import { HandlerContext } from '@connectrpc/connect';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { formatISO, subHours } from 'date-fns';
+import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
-import { Label, ResponseMessage, DateRange } from '../types/index.js';
+import { uid } from 'uid/secure';
 import { MemberRole } from '../db/models.js';
+import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
+import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -19,12 +21,16 @@ const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
  * Otherwise, the error is rethrown so that it can be handled by the connect framework.
  */
 export async function handleError<T extends ResponseMessage>(
-  logger: pino.BaseLogger,
+  ctx: HandlerContext,
+  defaultLogger: FastifyBaseLogger,
   fn: () => Promise<T> | T,
 ): Promise<T> {
   try {
     return await fn();
   } catch (error: any) {
+    // Get enriched logger here. Enriching logger happens within the above function call.
+    const logger = getLogger(ctx, defaultLogger);
+
     if (isAuthenticationError(error)) {
       return {
         response: {
@@ -53,6 +59,31 @@ export async function handleError<T extends ResponseMessage>(
     throw error;
   }
 }
+
+export const fastifyLoggerId = Symbol('logger');
+
+export const getLogger = (ctx: HandlerContext, defaultLogger: FastifyBaseLogger) => {
+  return ctx.values.get<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: defaultLogger });
+};
+
+export const enrichLogger = (
+  ctx: HandlerContext,
+  logger: FastifyBaseLogger,
+  authContext: Partial<AuthContext & GraphKeyAuthContext>,
+) => {
+  const newLogger = logger.child({
+    service: ctx.service.typeName,
+    method: ctx.method.name,
+    actor: {
+      userId: authContext.userId,
+      organizationId: authContext.organizationId,
+    },
+  });
+
+  ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
+
+  return newLogger;
+};
 
 /**
  * Normalizes labels by removing duplicates.
