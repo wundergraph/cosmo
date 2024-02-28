@@ -5,7 +5,6 @@ import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
-import pino from 'pino';
 import { uid } from 'uid/secure';
 import { MemberRole } from '../db/models.js';
 import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
@@ -62,10 +61,6 @@ export async function handleError<T extends ResponseMessage>(
 
 export const fastifyLoggerId = Symbol('logger');
 
-export const setLogger = (ctx: HandlerContext, logger: FastifyBaseLogger) => {
-  return ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: logger }, logger);
-};
-
 export const getLogger = (ctx: HandlerContext, defaultLogger: FastifyBaseLogger) => {
   return ctx.values.get<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: defaultLogger });
 };
@@ -75,7 +70,7 @@ export const enrichLogger = (
   logger: FastifyBaseLogger,
   authContext: Partial<AuthContext & GraphKeyAuthContext>,
 ) => {
-  return logger.child({
+  const newLogger = logger.child({
     service: ctx.service.typeName,
     method: ctx.method.name,
     actor: {
@@ -83,6 +78,12 @@ export const enrichLogger = (
       organizationId: authContext.organizationId,
     },
   });
+
+  ctx.values
+    .delete({ id: fastifyLoggerId, defaultValue: newLogger })
+    .set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
+
+  return newLogger;
 };
 
 /**
