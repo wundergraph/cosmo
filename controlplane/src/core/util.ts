@@ -25,11 +25,11 @@ export async function handleError<T extends ResponseMessage>(
   defaultLogger: FastifyBaseLogger,
   fn: () => Promise<T> | T,
 ): Promise<T> {
-  const logger = getLogger(ctx, defaultLogger);
-
   try {
     return await fn();
   } catch (error: any) {
+    const logger = getLogger(ctx, defaultLogger);
+
     if (isAuthenticationError(error)) {
       return {
         response: {

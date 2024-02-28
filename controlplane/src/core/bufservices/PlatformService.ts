@@ -446,6 +446,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
+        throw new Error('test');
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const namespaces = await namespaceRepo.list();
