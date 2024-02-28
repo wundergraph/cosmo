@@ -54,10 +54,10 @@ body:
       label: What happened?
       description: Please provide as much detail as you reasonably can.
       value: |
-        ## If possible, please create a PR with a failing test to illustrate the issue clearly.
-        ## Otherwise, please attach a minimum reproduction through a GitHub repository that includes
-        ## essential information such as the relevant subgraph SDLs.
-        ## Please also make sure that the instructions for the reproduction are clear, tested, and fully accurate.
+        If possible, please create a PR with a failing test to illustrate the issue clearly.
+        Otherwise, please attach a minimum reproduction through a GitHub repository that includes
+        essential information such as the relevant subgraph SDLs.
+        Please also make sure that the instructions for the reproduction are clear, tested, and fully accurate.
         
         ## Description
 
