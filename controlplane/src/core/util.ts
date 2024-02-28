@@ -28,6 +28,7 @@ export async function handleError<T extends ResponseMessage>(
   try {
     return await fn();
   } catch (error: any) {
+    // Get enriched logger here. Enriching logger happens within the above function call.
     const logger = getLogger(ctx, defaultLogger);
 
     if (isAuthenticationError(error)) {
