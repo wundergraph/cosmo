@@ -80,9 +80,7 @@ export const enrichLogger = (
     },
   });
 
-  ctx.values
-    .delete({ id: fastifyLoggerId, defaultValue: newLogger })
-    .set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
+  ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
 
   return newLogger;
 };
