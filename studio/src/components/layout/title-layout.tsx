@@ -26,8 +26,9 @@ export const TitleLayout = ({
   return (
     <div
       className={cn("flex flex-col", {
-        "h-[calc(100vh_-_136px)]": disableStarBanner === "false",
-        "h-[calc(100vh_-_104px)]": disableStarBanner !== "false",
+        "h-[calc(100vh_-_136px)] lg:h-[calc(100vh_-_32px)]":
+          disableStarBanner === "false",
+        "h-[calc(100vh_-_104px)] lg:h-screen": disableStarBanner !== "false",
       })}
     >
       <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">
