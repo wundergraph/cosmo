@@ -15,7 +15,6 @@ const maxAuthCacheTtl = 30 * 1000; // 30 seconds
 export interface Authenticator {
   authenticate(headers: Headers): Promise<AuthContext>;
   authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext>;
-  extractUserAndOrgId(headers: Headers): Promise<{ userId?: string; organizationId?: string }>;
 }
 
 export class Authentication implements Authenticator {
@@ -28,29 +27,6 @@ export class Authentication implements Authenticator {
     private graphKeyAuth: GraphApiTokenAuthenticator,
     private orgRepo: OrganizationRepository,
   ) {}
-
-  public async extractUserAndOrgId(headers: Headers): Promise<{ userId?: string; organizationId?: string }> {
-    try {
-      const authorization = headers.get('authorization');
-      if (authorization) {
-        const token = authorization.replace(/^bearer\s+/i, '');
-        if (token.startsWith('cosmo')) {
-          return await this.keyAuth.authenticate(token);
-        }
-        const organizationSlug = headers.get('cosmo-org-slug');
-        return await this.accessTokenAuth.authenticate(token, organizationSlug);
-      }
-
-      const user = await this.webAuth.authenticate(headers);
-      const organization = await this.orgRepo.bySlug(user.organizationSlug);
-      return {
-        userId: user.userId,
-        organizationId: organization?.id,
-      };
-    } catch {
-      return {};
-    }
-  }
 
   /**
    * Authenticate a user for an organization.

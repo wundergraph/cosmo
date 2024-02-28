@@ -1,13 +1,14 @@
 import { randomFill } from 'node:crypto';
-import pino, { Logger } from 'pino';
-import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { uid } from 'uid/secure';
-import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { formatISO, subHours } from 'date-fns';
-import { parse, visit } from 'graphql';
 import { HandlerContext } from '@connectrpc/connect';
-import { Label, ResponseMessage, DateRange } from '../types/index.js';
+import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { formatISO, subHours } from 'date-fns';
+import { FastifyBaseLogger } from 'fastify';
+import { parse, visit } from 'graphql';
+import pino from 'pino';
+import { uid } from 'uid/secure';
 import { MemberRole } from '../db/models.js';
+import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { Authenticator } from './services/Authentication.js';
 
@@ -56,8 +57,13 @@ export async function handleError<T extends ResponseMessage>(
   }
 }
 
-export const enrichLogger = async (ctx: HandlerContext, logger: Logger, authenticator: Authenticator) => {
-  const authContext = await authenticator.extractUserAndOrgId(ctx.requestHeader);
+export const fastifyLoggerId = Symbol('logger');
+
+export const getLogger = (ctx: HandlerContext, defaultLogger: FastifyBaseLogger) => {
+  return ctx.values.get<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: defaultLogger });
+};
+
+export const enrichLogger = (ctx: HandlerContext, logger: FastifyBaseLogger, authContext: AuthContext) => {
   return logger.child({
     service: ctx.service.typeName,
     method: ctx.method.name,
