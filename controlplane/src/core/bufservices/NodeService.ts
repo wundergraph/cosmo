@@ -12,20 +12,18 @@ import { FederatedGraphRepository } from '../repositories/FederatedGraphReposito
 import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../routes.js';
-import { handleError } from '../util.js';
-import { FederatedGraphDTO } from 'src/types/index.js';
+import { enrichLogger, getLogger, handleError, setLogger } from '../util.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeService>> {
   const registrationInfoCache = lru<PlainMessage<RegistrationInfo>>(1000, 300_000);
   return {
     selfRegister: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      const logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<SelfRegisterResponse>>(logger, async () => {
+      return handleError<PlainMessage<SelfRegisterResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
+        setLogger(ctx, enrichLogger(ctx, logger, authContext));
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
@@ -76,13 +74,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
     },
 
     getLatestValidRouterConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      const logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetConfigResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
+        setLogger(ctx, enrichLogger(ctx, logger, authContext));
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const federatedGraph = await fedGraphRepo.byId(authContext.federatedGraphId);

@@ -10,7 +10,7 @@ import { uid } from 'uid/secure';
 import { MemberRole } from '../db/models.js';
 import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
-import { Authenticator } from './services/Authentication.js';
+import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -22,9 +22,12 @@ const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
  * Otherwise, the error is rethrown so that it can be handled by the connect framework.
  */
 export async function handleError<T extends ResponseMessage>(
-  logger: pino.BaseLogger,
+  ctx: HandlerContext,
+  defaultLogger: FastifyBaseLogger,
   fn: () => Promise<T> | T,
 ): Promise<T> {
+  const logger = getLogger(ctx, defaultLogger);
+
   try {
     return await fn();
   } catch (error: any) {
@@ -59,11 +62,19 @@ export async function handleError<T extends ResponseMessage>(
 
 export const fastifyLoggerId = Symbol('logger');
 
+export const setLogger = (ctx: HandlerContext, logger: FastifyBaseLogger) => {
+  return ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: logger }, logger);
+};
+
 export const getLogger = (ctx: HandlerContext, defaultLogger: FastifyBaseLogger) => {
   return ctx.values.get<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: defaultLogger });
 };
 
-export const enrichLogger = (ctx: HandlerContext, logger: FastifyBaseLogger, authContext: AuthContext) => {
+export const enrichLogger = (
+  ctx: HandlerContext,
+  logger: FastifyBaseLogger,
+  authContext: Partial<AuthContext & GraphKeyAuthContext>,
+) => {
   return logger.child({
     service: ctx.service.typeName,
     method: ctx.method.name,
