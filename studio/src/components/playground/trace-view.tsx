@@ -277,7 +277,7 @@ const Trace = ({
           id: planId,
           type: "plan",
           durationSinceStart: plannerStats.duration_since_start_nanoseconds,
-          durationLoad: plannerStats.planning_time_nanoseconds,
+          durationLoad: plannerStats.duration_nanoseconds,
           children: [traceTree],
         } as FetchNode;
         traceTree = plan;
