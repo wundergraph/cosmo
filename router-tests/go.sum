@@ -283,8 +283,7 @@ github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb h1:cPZlYdYy
 github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb/go.mod h1:UvBQ8qqolI/SC+f5Ww75SHR4QR/L5BpDoSswL1zZwZ0=
 github.com/wundergraph/cosmo/router v0.0.0-20240130110106-5afda68c8d0d h1:mxt6wnZhvG8Wrgd543tgXvLLHL+/2fBZpaCRKZU/rus=
 github.com/wundergraph/cosmo/router v0.0.0-20240130110106-5afda68c8d0d/go.mod h1:TDryeIPZWEL4bYyNJh+O2XrJjmSFrG4gK4EM0jcg6yc=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.8 h1:q5lBzmMRXaR8JWB1QZFZoa323aQujBaCvYSKh+bvW+8=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.8/go.mod h1:26OPLppZhb4zc9RCfuLPn1Zfv3hNs/fiN4U6d9pLOw4=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.9 h1:0SwvTh31AnH67hZReDFdyBvy4HVPOBinRs0Z0Rem1vE=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=
