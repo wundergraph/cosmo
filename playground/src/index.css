@@ -119,7 +119,7 @@ html {
 
 @layer utilities {
   .scrollbar-custom {
-    @apply transition-colors scrollbar-thin scrollbar-thumb-rounded-md scrollbar-thumb-secondary hover:scrollbar-thumb-muted;
+    @apply transition-colors scrollbar-thin scrollbar-thumb-stone-300 scrollbar-thumb-rounded-md hover:scrollbar-thumb-stone-400 dark:scrollbar-thumb-secondary/80 dark:hover:scrollbar-thumb-muted;
   }
 }
 
@@ -201,7 +201,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
   animation: rotation 1s linear infinite;
 }
 .loader::after {
-  content: "";
+  content: '';
   box-sizing: border-box;
   position: absolute;
   left: 50%;
@@ -227,7 +227,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .trace-ul > ul:before {
   border-left: 1px solid #d1d5db;
   display: inline-block;
-  content: "";
+  content: '';
   position: absolute;
   left: -1px;
 }
@@ -235,7 +235,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
   position: absolute;
   left: -1rem;
   top: 18px;
-  content: "";
+  content: '';
   height: 1px;
   width: 1rem;
   background-color: #d1d5db;
