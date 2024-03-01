@@ -178,9 +178,17 @@ export const FetchWaterfall = ({
                 {!hasChildren && <CubeIcon className="h-4 w-4 flex-shrink-0" />}
               </>
             </Button>
-            {["plan", "parallel", "serial", "parallelListItem"].includes(
-              fetch.type,
-            ) ? (
+            {[
+              "graphql",
+              "parse",
+              "normalize",
+              "validate",
+              "plan",
+              "execute",
+              "parallel",
+              "serial",
+              "parallelListItem",
+            ].includes(fetch.type) ? (
               <div className="-translate-y-px px-2.5 py-2 text-xs text-muted-foreground">
                 {sentenceCase(fetch.type)}
               </div>
@@ -227,7 +235,12 @@ export const FetchWaterfall = ({
             type="button"
             onClick={() => setShowDetails(!showDetails)}
             disabled={[
+              "graphql",
+              "parse",
+              "normalize",
+              "validate",
               "plan",
+              "execute",
               "parallel",
               "serial",
               "parallelListItem",
