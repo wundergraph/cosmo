@@ -19,23 +19,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
-
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
+	"github.com/hashicorp/go-retryablehttp"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
-	"github.com/wundergraph/cosmo/router/core"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 var (
@@ -233,20 +233,20 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	countriesServer := httptest.NewServer(countries)
 
 	replacements := map[string]string{
-		"EmployeesURL":    gqlURL(employeesServer),
-		"FamilyURL":       gqlURL(familyServer),
-		"HobbiesURL":      gqlURL(hobbiesServer),
-		"ProductsURL":     gqlURL(productsServer),
-		"Test1URL":        gqlURL(test1Server),
-		"AvailabilityURL": gqlURL(availabilityServer),
-		"MoodURL":         gqlURL(moodServer),
-		"CountriesURL":    gqlURL(countriesServer),
+		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
 	}
 
 	replaced := configJSONTemplate
 
 	for k, v := range replacements {
-		replaced = strings.ReplaceAll(replaced, fmt.Sprintf("{{ .%s }}", k), v)
+		replaced = strings.ReplaceAll(replaced, k, v)
 	}
 
 	var routerConfig nodev1.RouterConfig
@@ -387,6 +387,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EnableExecutionPlanCacheResponseHeader: true,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
+			PrintQueryPlans:            true,
 		},
 		EpollKqueuePollTimeout:    300 * time.Millisecond,
 		EpollKqueueConnBufferSize: 1,

@@ -25,6 +25,17 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1"
 )
 
+const (
+	EmployeesDefaultDemoURL    = "http://localhost:4001/graphql"
+	FamilyDefaultDemoURL       = "http://localhost:4002/graphql"
+	HobbiesDefaultDemoURL      = "http://localhost:4003/graphql"
+	ProductsDefaultDemoURL     = "http://localhost:4004/graphql"
+	Test1DefaultDemoURL        = "http://localhost:4006/graphql"
+	AvailabilityDefaultDemoURL = "http://localhost:4007/graphql"
+	MoodDefaultDemoURL         = "http://localhost:4008/graphql"
+	CountriesDefaultDemoURL    = "http://localhost:4009/graphql"
+)
+
 type Ports struct {
 	Employees    int
 	Family       int
