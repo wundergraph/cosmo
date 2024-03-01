@@ -1,7 +1,11 @@
-import { federateSubgraphs, FederationResultContainer, Subgraph } from '@wundergraph/composition';
-import pc from 'picocolors';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
+import boxen from 'boxen';
 import { program } from 'commander';
-import { config } from './core/config.js';
+import yaml from 'js-yaml';
+import pc from 'picocolors';
+import { config, configDir, configFile } from './core/config.js';
+import { KeycloakToken } from './commands/auth/utils.js';
 
 export interface Header {
   key: string;
@@ -73,3 +77,69 @@ export function checkAPIKey() {
     );
   }
 }
+
+export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
+
+export const readConfigFile = (): ConfigData => {
+  if (!existsSync(configFile)) {
+    return {};
+  }
+
+  const data = yaml.load(readFileSync(configFile, 'utf8'));
+
+  return data ?? {};
+};
+
+export const updateConfigFile = (newData: ConfigData) => {
+  const existingData = readConfigFile();
+  const updatedData = yaml.dump({
+    ...existingData,
+    ...newData,
+  });
+
+  writeFileSync(configFile, updatedData);
+};
+
+export const checkForUpdates = async () => {
+  try {
+    if (config.disableUpdateCheck === 'true') {
+      return;
+    }
+
+    const currentTime = Date.now();
+
+    const configFileData = readConfigFile();
+    if (configFileData.lastUpdateCheck && currentTime - configFileData.lastUpdateCheck < 24 * 60 * 60 * 1000) {
+      return;
+    }
+
+    const response = await fetch(`https://registry.npmjs.org/wgc/latest`);
+    const latestVersion = (await response.json()).version;
+
+    if (config.version === latestVersion) {
+      return;
+    }
+
+    const message = `Update available! ${pc.red(config.version)} → ${pc.green(latestVersion)}
+Changelog: https://github.com/wundergraph/cosmo/releases/tag/wgc@${latestVersion}
+Run npm i -g wgc@latest`;
+
+    console.log(
+      boxen(message, {
+        padding: 1,
+        margin: 1,
+        align: 'center',
+        borderColor: 'yellow',
+        borderStyle: 'round',
+      }),
+    );
+
+    updateConfigFile({
+      lastUpdateCheck: currentTime,
+    });
+  } catch (e: any) {
+    throw new Error(
+      `Failed to check for updates. You can disable update check by setting env DISABLE_UPDATE_CHECK=true. ${e.message}`,
+    );
+  }
+};

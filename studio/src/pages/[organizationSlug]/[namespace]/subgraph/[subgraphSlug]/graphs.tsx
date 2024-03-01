@@ -16,6 +16,11 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useSubgraph } from "@/hooks/use-subgraph";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
@@ -116,6 +121,15 @@ export const FederatedGraphsTable = ({
                   </TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">
+                      {labelMatchers.length === 0 && (
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>-</TooltipTrigger>
+                          <TooltipContent>
+                            This graph will only compose subgraphs without
+                            labels
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       {labelMatchers.map((l) => {
                         return (
                           <Badge variant="secondary" key={l}>

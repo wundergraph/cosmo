@@ -6,7 +6,7 @@ This guide assumes you have already installed the following software:
 
 - make (should be installed on all linux / IOS systems)
 - [golang](https://go.dev/dl/) `>= 1.18`
-- [pnpm](https://pnpm.io/installation) >= 7.4.0
+- [pnpm](https://pnpm.io/installation) >= 8.7.0
 - Node.js [LTS](https://nodejs.org/en/about/releases/). You can also pnpm to [install](https://pnpm.io/cli/env) Node.js.
 - [docker desktop](https://docs.docker.com/desktop/) (includes: engine, buildkit & compose) **or**:
 - [docker engine](https://docs.docker.com/engine/) with:
@@ -54,4 +54,4 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 
 ### Pull Requests
 
-We merge all pull requests in `squash merge` mode. You're not enforced to use [conventional commit standard](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#why-use-conventional-commits) across all your commits but it's a good practice and avoid mistakes. At the end it's important that the squashed commit message follow the standard.
+We merge all pull requests in `squash merge` mode. You're not enforced to use [conventional commit standard](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#why-use-conventional-commits) across all your commits, but it's a good practice and avoid mistakes. At the end it's important that the squashed commit message follow the standard.

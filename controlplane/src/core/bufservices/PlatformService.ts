@@ -58,14 +58,11 @@ import {
   GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
-  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetInvitationsResponse,
-  GetLatestSubgraphSDLByNameResponse,
-  GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
   GetNamespacesResponse,
   GetOIDCProviderResponse,
@@ -116,19 +113,22 @@ import {
   WhoAmIResponse,
   GetRoutersResponse,
   Router,
+  GetLatestSubgraphSDLResponse,
+  GetSubgraphSDLFromLatestCompositionResponse,
+  GetFederatedGraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
+import { FastifyBaseLogger } from 'fastify';
 import {
   DateRange,
   FederatedGraphDTO,
   GraphApiKeyJwtPayload,
   GraphCompositionDTO,
   PublishedOperationData,
-  SchemaChangeType,
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
@@ -175,9 +175,11 @@ import {
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
+  enrichLogger,
   extractOperationNames,
   formatSubscriptionProtocol,
   getHighestPriorityRole,
+  getLogger,
   handleError,
   isValidLabelMatchers,
   isValidLabels,
@@ -196,13 +198,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     */
 
     createNamespace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateNamespaceResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateNamespaceResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -262,13 +263,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteNamespace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteNamespaceResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteNamespaceResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -389,13 +389,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     renameNamespace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<RenameNamespaceResponse>>(logger, async () => {
+      return handleError<PlainMessage<RenameNamespaceResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const isValid = isValidNamespaceName(req.name);
@@ -441,13 +440,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getNamespaces: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetNamespacesResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetNamespacesResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const namespaces = await namespaceRepo.list();
@@ -462,13 +460,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     moveFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<MoveGraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<MoveGraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
@@ -583,13 +580,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     moveSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<MoveGraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<MoveGraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
@@ -702,15 +698,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateFederatedGraphResponse>>(ctx, logger, async () => {
         req.namespace = req.namespace || DefaultNamespace;
 
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
@@ -905,13 +900,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createFederatedSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
@@ -1014,13 +1008,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     checkSubgraphSchema: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CheckSubgraphSchemaResponse>>(logger, async () => {
+      return handleError<PlainMessage<CheckSubgraphSchemaResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
@@ -1038,6 +1031,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1051,6 +1046,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1065,6 +1062,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1087,6 +1086,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             breakingChanges: [],
             nonBreakingChanges: [],
             compositionErrors: [],
+            checkId: schemaCheckID,
+            checkedFederatedGraphs: [],
           };
         }
 
@@ -1216,18 +1217,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
           operationUsageStats: isInspectable ? collectOperationUsageStats(inspectedOperations) : undefined,
           compositionErrors,
+          checkId: schemaCheckID,
+          checkedFederatedGraphs: result.compositions.map((c) => ({
+            id: c.id,
+            name: c.name,
+            namespace: c.namespace,
+            organizationSlug: authContext.organizationSlug,
+          })),
         };
       });
     },
 
     fixSubgraphSchema: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<FixSubgraphSchemaResponse>>(logger, async () => {
+      return handleError<PlainMessage<FixSubgraphSchemaResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const compositionRepo = new GraphCompositionRepository(opts.db);
@@ -1389,13 +1396,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     publishFederatedSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<PublishFederatedSubgraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<PublishFederatedSubgraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
           authContext.organizationId,
@@ -1489,16 +1495,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          if (req.labels.length === 0) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `At least one label is required to create a new subgraph`,
-              },
-              compositionErrors: [],
-            };
-          }
-
           if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
             return {
               response: {
@@ -1545,6 +1541,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           {
             targetId: subgraph.targetId,
             labels: req.labels,
+            unsetLabels: req.unsetLabels ?? false,
             routingUrl: req.routingUrl,
             subscriptionUrl: req.subscriptionUrl,
             schemaSDL: subgraphSchemaSDL,
@@ -1631,13 +1628,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     forceCheckSuccess: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<ForceCheckSuccessResponse>>(logger, async () => {
+      return handleError<PlainMessage<ForceCheckSuccessResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
@@ -1692,13 +1688,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOperationOverrides: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateOperationOverridesResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateOperationOverridesResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
@@ -1764,13 +1759,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeOperationOverrides: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<RemoveOperationOverridesResponse>>(logger, async () => {
+      return handleError<PlainMessage<RemoveOperationOverridesResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -1824,13 +1818,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeOperationIgnoreAllOverride: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<RemoveOperationIgnoreAllOverrideResponse>>(logger, async () => {
+      return handleError<PlainMessage<RemoveOperationIgnoreAllOverrideResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -1892,13 +1885,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOperationIgnoreAllOverride: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateOperationIgnoreAllOverrideResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateOperationIgnoreAllOverrideResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -1962,13 +1954,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOperationOverrides: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetOperationOverridesResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetOperationOverridesResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         if (!authContext.hasWriteAccess) {
@@ -2021,13 +2012,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAllOverrides: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetAllOverridesResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetAllOverridesResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         if (!authContext.hasWriteAccess) {
@@ -2068,13 +2058,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteFederatedGraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteFederatedGraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -2138,13 +2127,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteFederatedSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteFederatedSubgraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteFederatedSubgraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
@@ -2300,13 +2288,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateFederatedGraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateFederatedGraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
         const orgWebhooks = new OrganizationWebhookService(
@@ -2371,6 +2358,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           readme: req.readme,
           blobStorage: opts.blobStorage,
           namespaceId: federatedGraph.namespaceId,
+          unsetLabelMatchers: req.unsetLabelMatchers ?? false,
         });
 
         if (errors) {
@@ -2427,13 +2415,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateSubgraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateSubgraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateSubgraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
         const orgWebhooks = new OrganizationWebhookService(
@@ -2502,6 +2489,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           {
             targetId: subgraph.targetId,
             labels: req.labels,
+            unsetLabels: req.unsetLabels ?? false,
             subscriptionUrl: req.subscriptionUrl,
             routingUrl: req.routingUrl,
             subscriptionProtocol: req.subscriptionProtocol
@@ -2562,13 +2550,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     checkFederatedGraph: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CheckFederatedGraphResponse>>(logger, async () => {
+      return handleError<PlainMessage<CheckFederatedGraphResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
@@ -2665,13 +2652,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createFederatedGraphToken: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateFederatedGraphTokenResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateFederatedGraphTokenResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -2726,6 +2712,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           token: tokenValue,
           federatedGraphId: graph.id,
           tokenName: req.tokenName,
+          createdBy: authContext.userId,
           organizationId: authContext.organizationId,
         });
 
@@ -2755,13 +2742,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     inviteUser: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<InviteUserResponse>>(logger, async () => {
+      return handleError<PlainMessage<InviteUserResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
@@ -2937,13 +2923,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createAPIKey: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateAPIKeyResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const apiKeyRepo = new ApiKeyRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -3015,13 +3000,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteAPIKey: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteAPIKeyResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const apiKeyRepo = new ApiKeyRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
@@ -3084,13 +3068,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeOrganizationMember: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
+      return handleError<PlainMessage<RemoveInvitationResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
         const userRepo = new UserRepository(opts.db);
@@ -3244,13 +3227,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeInvitation: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
+      return handleError<PlainMessage<RemoveInvitationResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
@@ -3341,13 +3323,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     migrateFromApollo: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<MigrateFromApolloResponse>>(logger, async () => {
+      return handleError<PlainMessage<MigrateFromApolloResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
@@ -3555,6 +3536,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           federatedGraphId: migratedGraph.id,
           tokenName: migratedGraph.name,
           organizationId: authContext.organizationId,
+          createdBy: authContext.userId,
         });
 
         await auditLogRepo.addAuditLog({
@@ -3591,13 +3573,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOrganizationWebhookConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -3635,13 +3616,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateOrganizationWebhookConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -3679,13 +3659,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteOrganizationWebhookConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -3732,13 +3711,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteOrganization: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteOrganizationResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteOrganizationResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const memberships = await orgRepo.memberships({ userId: authContext.userId });
         const orgCount = memberships.length;
@@ -3825,13 +3803,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     leaveOrganization: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<LeaveOrganizationResponse>>(logger, async () => {
+      return handleError<PlainMessage<LeaveOrganizationResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -3928,13 +3905,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateOrganizationDetails: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateOrganizationDetailsResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateOrganizationDetailsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -4050,13 +4026,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateOrgMemberRole: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const oidcRepo = new OidcRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
@@ -4269,13 +4244,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteRouterToken: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteRouterTokenResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteRouterTokenResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -4347,13 +4321,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createIntegration: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateIntegrationResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -4435,13 +4408,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateIntegrationConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -4498,13 +4470,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteIntegration: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteIntegrationResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -4552,13 +4523,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOIDCProvider: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateOIDCProviderResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateOIDCProviderResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const oidcProvider = new OidcProvider();
 
         if (!authContext.isAdmin) {
@@ -4599,13 +4569,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteOIDCProvider: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteOIDCProviderResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const oidcRepo = new OidcRepository(opts.db);
         const oidcProvider = new OidcProvider();
@@ -4667,15 +4636,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
        * the operations has never been seen before, we create an entry in the database
        * with it.
        */
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
+      return handleError<PlainMessage<PublishPersistedOperationsResponse>>(ctx, logger, async () => {
         req.namespace = req.namespace || DefaultNamespace;
 
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         if (!authContext.hasWriteAccess) {
           return {
             response: {
@@ -4848,13 +4816,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     acceptOrDeclineInvitation: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
+      return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
         const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
@@ -4954,13 +4921,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateRBACSettings: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateRBACSettingsResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateRBACSettingsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.isAdmin) {
@@ -4987,13 +4953,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     addSubgraphMember: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<AddSubgraphMemberResponse>>(logger, async () => {
+      return handleError<PlainMessage<AddSubgraphMemberResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -5071,13 +5036,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     removeSubgraphMember: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<RemoveSubgraphMemberResponse>>(logger, async () => {
+      return handleError<PlainMessage<RemoveSubgraphMemberResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -5146,13 +5110,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     addReadme: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<AddReadmeResponse>>(logger, async () => {
+      return handleError<PlainMessage<AddReadmeResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const targetRepo = new TargetRepository(opts.db, authContext.organizationId);
 
         const target = await targetRepo.byName(req.targetName, req.namespace);
@@ -5179,13 +5142,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     Queries
     */
     getSubgraphs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetSubgraphsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetSubgraphsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const repo = new SubgraphRepository(opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
@@ -5217,13 +5179,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetSubgraphByNameResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetSubgraphByNameResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
         const subgraph = await subgraphRepo.byName(req.name, req.namespace);
@@ -5259,13 +5220,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetFederatedGraphsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetFederatedGraphsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
@@ -5321,13 +5281,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphsBySubgraphLabels: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
@@ -5370,12 +5329,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphSDLByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-      return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
+      let logger = getLogger(ctx, opts.logger);
+      return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
@@ -5409,13 +5367,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getLatestValidSubgraphSDLByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-      return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
+    getSubgraphSDLFromLatestComposition: (req, ctx) => {
+      req.namespace = req.namespace || DefaultNamespace;
+
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetSubgraphSDLFromLatestCompositionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
@@ -5429,7 +5389,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion({
+        const schemaVersion = await subgraphRepo.getSDLFromLatestComposition({
           subgraphTargetId: subgraph.targetId,
           federatedGraphTargetId: federatedGraph.targetId,
         });
@@ -5451,13 +5411,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getLatestSubgraphSDLByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-      return handleError<PlainMessage<GetLatestSubgraphSDLByNameResponse>>(logger, async () => {
+    getLatestSubgraphSDL: (req, ctx) => {
+      req.namespace = req.namespace || DefaultNamespace;
+
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetLatestSubgraphSDLResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraph = await subgraphRepo.byName(req.name, req.namespace);
         if (!subgraph) {
@@ -5479,13 +5441,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetFederatedGraphByNameResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetFederatedGraphByNameResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
@@ -5563,13 +5524,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFederatedGraphChangelog: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
@@ -5645,13 +5605,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getChecksByFederatedGraphName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
@@ -5729,13 +5688,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getCheckSummary: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetCheckSummaryResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetCheckSummaryResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
@@ -5788,13 +5746,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getCheckOperations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetCheckOperationsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetCheckOperationsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
@@ -5868,12 +5825,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAnalyticsView: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetAnalyticsViewResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetAnalyticsViewResponse>>(ctx, logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -5882,6 +5836,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
@@ -5931,12 +5887,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getDashboardAnalyticsView: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetDashboardAnalyticsViewResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetDashboardAnalyticsViewResponse>>(ctx, logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -5948,6 +5901,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
@@ -6005,12 +5960,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getGraphMetrics: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetGraphMetricsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetGraphMetricsResponse>>(ctx, logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -6020,6 +5972,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
@@ -6064,12 +6018,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getMetricsErrorRate: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetMetricsErrorRateResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetMetricsErrorRateResponse>>(ctx, logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -6079,6 +6030,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
@@ -6124,12 +6077,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getTrace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetTraceResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetTraceResponse>>(ctx, logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -6139,6 +6089,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const traceRepo = new TraceRepository(opts.chClient);
 
         const spans = await traceRepo.getTrace(req.id, authContext.organizationId);
@@ -6153,13 +6105,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationMembers: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetOrganizationMembersResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetOrganizationMembersResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
 
@@ -6179,16 +6130,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getLatestValidRouterConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      req.namespace = req.namespace || DefaultNamespace;
 
-      return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetConfigResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        logger = enrichLogger(ctx, logger, authContext);
 
-        req.namespace = req.namespace || DefaultNamespace;
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const federatedGraph = await fedGraphRepo.byName(req.graphName, req.namespace);
         if (!federatedGraph) {
@@ -6224,13 +6174,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAPIKeys: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetAPIKeysResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetAPIKeysResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const apiKeyRepo = new ApiKeyRepository(opts.db);
 
         const apiKeys = await apiKeyRepo.getAPIKeys({ organizationID: authContext.organizationId });
@@ -6245,13 +6194,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     whoAmI: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<WhoAmIResponse>>(logger, async () => {
+      return handleError<PlainMessage<WhoAmIResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const organization = await orgRepo.byId(authContext.organizationId);
@@ -6276,13 +6224,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationWebhookConfigs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const configs = await orgRepo.getWebhookConfigs(authContext.organizationId);
@@ -6297,13 +6244,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationWebhookMeta: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetOrganizationWebhookMetaResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetOrganizationWebhookMetaResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const eventsMeta = await orgRepo.getWebhookMeta(req.id, authContext.organizationId);
@@ -6319,13 +6265,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     // generates a temporary router token to fetch the router config only. Should only be used while fetching router config.
     generateRouterToken: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GenerateRouterTokenResponse>>(logger, async () => {
+      return handleError<PlainMessage<GenerateRouterTokenResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -6389,13 +6334,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getRouterTokens: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetRouterTokensResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetRouterTokensResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
@@ -6431,19 +6375,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          tokens,
+          // Don't return the token, only the metadata
+          tokens: tokens.map(({ token, ...rest }) => ({
+            id: rest.id,
+            name: rest.name,
+            createdAt: rest.createdAt,
+            lastUsedAt: rest.lastUsedAt || '',
+            creatorEmail: rest.creatorEmail || '',
+          })),
         };
       });
     },
 
     getOrganizationIntegrations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const integrations = await orgRepo.getIntegrations(authContext.organizationId);
@@ -6458,13 +6408,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     isGitHubAppInstalled: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(logger, async () => {
+      return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepository = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!opts.githubApp) {
@@ -6514,13 +6463,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getFieldUsage: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetFieldUsageResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetFieldUsageResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         if (!opts.chClient) {
@@ -6578,13 +6526,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOperationContent: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetOperationContentResponse>>(logger, async () => {
-        await opts.authenticator.authenticate(ctx.requestHeader);
+      return handleError<PlainMessage<GetOperationContentResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
 
         if (!opts.chClient) {
           return {
@@ -6624,13 +6570,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOIDCProvider: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetOIDCProviderResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetOIDCProviderResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const oidcRepo = new OidcRepository(opts.db);
 
         await opts.keycloakClient.authenticateClient();
@@ -6663,13 +6608,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getPersistedOperations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetPersistedOperationsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetPersistedOperationsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const federatedGraph = await fedRepo.byName(req.federatedGraphName, req.namespace);
 
@@ -6699,13 +6643,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getRouters: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetRoutersResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetRoutersResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
 
         if (!opts.chClient) {
           return {
@@ -6784,13 +6726,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getClients: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetClientsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetClientsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
         if (!federatedGraph) {
@@ -6815,13 +6756,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getOrganizationRequestsCount: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
 
         if (!opts.chClient) {
           return {
@@ -6845,13 +6784,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     // returns the pending invites of a user
     getInvitations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetInvitationsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetInvitationsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
 
         return {
@@ -6864,13 +6802,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getCompositions: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetCompositionsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetCompositionsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const graphCompositionRepository = new GraphCompositionRepository(opts.db);
@@ -6956,13 +6893,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getCompositionDetails: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetCompositionDetailsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetCompositionDetailsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const compositionRepo = new GraphCompositionRepository(opts.db);
 
@@ -7017,13 +6953,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSdlBySchemaVersion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetSdlBySchemaVersionResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetSdlBySchemaVersionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const sdl = await fedRepo.getSdlBasedOnSchemaVersion({
@@ -7041,13 +6976,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getChangelogBySchemaVersion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetChangelogBySchemaVersionResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetChangelogBySchemaVersionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const changelogs = await fedRepo.fetchChangelogByVersion({
@@ -7068,13 +7002,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getUserAccessibleResources: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetUserAccessibleResourcesResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetUserAccessibleResourcesResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
@@ -7129,13 +7062,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphMembers: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetSubgraphMembersResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetSubgraphMembersResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
         // check if the subgraph exists
@@ -7160,13 +7092,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateAISettings: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateAISettingsResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateAISettingsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const enabled = await orgRepo.updateFeature({
@@ -7185,12 +7116,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getBillingPlans: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      const logger = ctx.values.get<FastifyBaseLogger>({ id: Symbol('logger'), defaultValue: opts.logger });
 
-      return handleError<PlainMessage<GetBillingPlansResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetBillingPlansResponse>>(ctx, logger, async () => {
         const billingRepo = new BillingRepository(opts.db);
 
         return {
@@ -7203,13 +7131,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAuditLogs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetAuditLogsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetAuditLogsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const orgRepo = new OrganizationRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -7298,14 +7225,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createOrganization: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-        organizationName: req.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateOrganizationResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateOrganizationResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const billingRepo = new BillingRepository(opts.db);
         const plans = await billingRepo.listPlans();
 
@@ -7447,13 +7372,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createCheckoutSession: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateCheckoutSessionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const billingRepo = new BillingRepository(opts.db);
         const billingService = new BillingService(opts.db, billingRepo);
 
@@ -7483,13 +7407,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     upgradePlan: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpgradePlanResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpgradePlanResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const billingRepo = new BillingRepository(opts.db);
         const billingService = new BillingService(opts.db, billingRepo);
         const auditLogRepository = new AuditLogRepository(opts.db);
@@ -7537,13 +7460,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createBillingPortalSession: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateBillingPortalSessionResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateBillingPortalSessionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const billingRepo = new BillingRepository(opts.db);
         const billingService = new BillingService(opts.db, billingRepo);
 
@@ -7574,13 +7496,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     createDiscussion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<CreateDiscussionResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateDiscussionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
         const canCreateDiscussion = await discussionRepo.canAccessTarget(req.targetId);
@@ -7607,13 +7528,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     replyToDiscussion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<ReplyToDiscussionResponse>>(logger, async () => {
+      return handleError<PlainMessage<ReplyToDiscussionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
         const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
@@ -7650,13 +7570,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getAllDiscussions: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetAllDiscussionsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetAllDiscussionsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
         const canReply = await discussionRepo.canAccessTarget(req.targetId);
@@ -7698,13 +7617,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     updateDiscussionComment: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateDiscussionCommentResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateDiscussionCommentResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
         const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
@@ -7739,13 +7657,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     deleteDiscussionComment: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteDiscussionCommentResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteDiscussionCommentResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -7804,13 +7721,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getDiscussion: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetDiscussionResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetDiscussionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
         const exists = await discussionRepo.exists(req.discussionId);
@@ -7874,13 +7790,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getDiscussionSchemas: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetDiscussionSchemasResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetDiscussionSchemasResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
         const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
@@ -7923,13 +7838,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     setDiscussionResolution: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<SetDiscussionResolutionResponse>>(logger, async () => {
+      return handleError<PlainMessage<SetDiscussionResolutionResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
         const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
@@ -7955,12 +7869,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphMetrics: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetSubgraphMetricsResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetSubgraphMetricsResponse>>(ctx, logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -7970,6 +7881,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphMetricsRepo = new SubgraphMetricsRepository(opts.chClient, opts.db);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
@@ -8016,12 +7929,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
 
     getSubgraphMetricsErrorRate: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
+      let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<GetSubgraphMetricsErrorRateResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetSubgraphMetricsErrorRateResponse>>(ctx, logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -8031,6 +7941,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
         const subgraphMetricsRepo = new SubgraphMetricsRepository(opts.chClient, opts.db);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);

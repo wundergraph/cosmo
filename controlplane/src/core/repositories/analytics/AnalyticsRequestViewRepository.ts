@@ -8,6 +8,7 @@ import {
   AnalyticsViewResultFilter,
   AnalyticsViewRow,
   AnalyticsViewRowValue,
+  CustomOptions,
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
@@ -132,7 +133,7 @@ export class AnalyticsRequestViewRepository {
       columnName: 'traceId',
       title: 'Trace ID',
       options: [],
-      customOptions: true,
+      customOptions: CustomOptions.Text,
     },
     operationName: {
       dbField: 'OperationName',
@@ -147,7 +148,7 @@ export class AnalyticsRequestViewRepository {
       columnName: 'operationHash',
       title: 'Operation Hash',
       options: [],
-      customOptions: true,
+      customOptions: CustomOptions.Text,
     },
     statusCode: {
       dbField: 'StatusCode',
@@ -168,7 +169,7 @@ export class AnalyticsRequestViewRepository {
       columnName: 'operationPersistedId',
       title: 'Operation Persisted ID',
       options: [],
-      customOptions: true,
+      customOptions: CustomOptions.Text,
     },
     operationType: {
       dbField: 'OperationType',
@@ -198,56 +199,16 @@ export class AnalyticsRequestViewRepository {
       dbClause: 'where',
       title: 'Duration',
       columnName: 'durationInNano',
-      options: [
-        {
-          operator: AnalyticsViewFilterOperator.LESS_THAN,
-          label: '< 1s',
-          value: '1000000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL,
-          label: '>= 1s',
-          value: '1000000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.LESS_THAN_OR_EQUAL,
-          label: '< 5s',
-          value: '5000000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL,
-          label: '>= 5s',
-          value: '5000000000',
-        },
-      ],
+      options: [],
+      customOptions: CustomOptions.Range,
     },
     p95: {
       dbField: 'quantilesMerge(0.95)(DurationQuantiles)[1]',
       dbClause: 'having',
       title: 'P95 Latency',
       columnName: 'p95',
-      options: [
-        {
-          operator: AnalyticsViewFilterOperator.LESS_THAN,
-          label: '< 150ms',
-          value: '150000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.LESS_THAN,
-          label: '< 1000ms',
-          value: '1000000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.LESS_THAN,
-          label: '< 2000ms',
-          value: '2000000000',
-        },
-        {
-          operator: AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL,
-          label: '>= 2000ms',
-          value: '2000000000',
-        },
-      ],
+      options: [],
+      customOptions: CustomOptions.Range,
     },
     clientName: {
       dbField: 'ClientName',
@@ -679,7 +640,9 @@ export class AnalyticsRequestViewRepository {
         return filters.filter((f) => f.field !== 'p95');
       }
       case AnalyticsViewGroupName.OperationName: {
-        return filters.filter((f) => !['durationInNano', 'clientName', 'statusMessages'].includes(f.field));
+        return filters.filter(
+          (f) => !['durationInNano', 'clientName', 'clientVersion', 'statusMessages'].includes(f.field),
+        );
       }
       case AnalyticsViewGroupName.Client: {
         return filters.filter((f) => ['clientName', 'p95', 'clientVersion'].includes(f.field));

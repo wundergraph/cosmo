@@ -159,13 +159,14 @@ export class SubgraphRepository {
     data: {
       targetId: string;
       routingUrl?: string;
-      labels?: Label[];
+      labels: Label[];
       subscriptionUrl?: string;
       schemaSDL?: string;
       subscriptionProtocol?: SubscriptionProtocol;
       updatedBy: string;
       readme?: string;
       namespaceId: string;
+      unsetLabels: boolean;
     },
     blobStorage: BlobStorage,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
@@ -237,8 +238,8 @@ export class SubgraphRepository {
         labelChanged = hasLabelsChanged(subgraph.labels, data.labels);
       }
 
-      if (labelChanged && data.labels) {
-        const newLabels = normalizeLabels(data.labels);
+      if (labelChanged || data.unsetLabels) {
+        const newLabels = data.unsetLabels ? [] : normalizeLabels(data.labels);
 
         // update labels of the subgraph
         await tx
@@ -874,6 +875,11 @@ export class SubgraphRepository {
       conditions.push(sql.raw(`labels && '{${labelsSQL}}'`));
     }
 
+    // Only get subgraphs that do not have any labels if the label matchers are empty.
+    if (data.labelMatchers.length === 0) {
+      conditions.push(eq(targets.labels, []));
+    }
+
     const subgraphs = await this.db
       .select({ id: schema.subgraphs.id, name: schema.targets.name, targetId: schema.targets.id })
       .from(targets)
@@ -902,8 +908,11 @@ export class SubgraphRepository {
     return subgraphDTOs;
   }
 
-  // returns the latest valid schema version of a subgraph
-  public async getLatestValidSchemaVersion(data: { subgraphTargetId: string; federatedGraphTargetId: string }) {
+  /**
+   * Returns the latest valid schema version of a subgraph that was composed with a federated graph.
+   * @param data
+   */
+  public async getSDLFromLatestComposition(data: { subgraphTargetId: string; federatedGraphTargetId: string }) {
     const fedRepo = new FederatedGraphRepository(this.db, this.organizationId);
     const fedGraphSchemaVersion = await fedRepo.getLatestValidSchemaVersion({ targetId: data.federatedGraphTargetId });
     if (!fedGraphSchemaVersion) {

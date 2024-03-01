@@ -69,9 +69,11 @@ type Config struct {
 	Subgraphs                          SubgraphsConfig
 	RouterOptions                      []core.Option
 	OverrideGraphQLPath                string
+	OverrideAbsinthePath               string
 	ModifyRouterConfig                 func(routerConfig *nodev1.RouterConfig)
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
+	DisableWebSockets                  bool
 }
 
 type SubgraphsConfig struct {
@@ -288,6 +290,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		graphQLPath = cfg.OverrideGraphQLPath
 	}
 
+	absinthePath := "/absinthe/socket"
+	if cfg.OverrideAbsinthePath != "" {
+		absinthePath = cfg.OverrideAbsinthePath
+	}
+
 	if cfg.Subgraphs.Employees.CloseOnStart {
 		employeesServer.Close()
 	}
@@ -316,6 +323,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	e := &Environment{
 		t:                    t,
 		graphQLPath:          graphQLPath,
+		absinthePath:         absinthePath,
 		Context:              ctx,
 		cancel:               cancel,
 		Router:               rr,
@@ -412,6 +420,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	if testConfig.OverrideGraphQLPath != "" {
 		routerOpts = append(routerOpts, core.WithGraphQLPath(testConfig.OverrideGraphQLPath))
 	}
+	if !testConfig.DisableWebSockets {
+		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
+			Enabled: true,
+			AbsintheProtocol: config.AbsintheProtocolConfiguration{
+				Enabled:     true,
+				HandlerPath: "/absinthe/socket",
+			},
+			ForwardUpgradeHeaders:     true,
+			ForwardUpgradeQueryParams: true,
+			ForwardInitialPayload:     true,
+		}))
+	}
 	return core.NewRouter(routerOpts...)
 }
 
@@ -465,8 +485,9 @@ func gqlURL(srv *httptest.Server) string {
 }
 
 type Environment struct {
-	t           testing.TB
-	graphQLPath string
+	t            testing.TB
+	graphQLPath  string
+	absinthePath string
 
 	Context              context.Context
 	cancel               context.CancelCauseFunc
@@ -478,6 +499,12 @@ type Environment struct {
 	Nats                 *natsserver.Server
 	NC                   *nats.Conn
 	SubgraphRequestCount *SubgraphRequestCount
+
+	extraURLQueryValues url.Values
+}
+
+func (e *Environment) SetExtraURLQueryValues(values url.Values) {
+	e.extraURLQueryValues = values
 }
 
 func (e *Environment) Shutdown() {
@@ -597,13 +624,28 @@ func (e *Environment) MakeRequest(method, path string, header http.Header, body 
 }
 
 func (e *Environment) GraphQLRequestURL() string {
-	u, err := url.JoinPath(e.RouterURL, e.graphQLPath)
+	urlStr, err := url.JoinPath(e.RouterURL, e.graphQLPath)
 	require.NoError(e.t, err)
-	return u
+	if e.extraURLQueryValues != nil {
+		u, err := url.Parse(urlStr)
+		require.NoError(e.t, err)
+		u.RawQuery = e.extraURLQueryValues.Encode()
+		urlStr = u.String()
+	}
+	return urlStr
 }
 
 func (e *Environment) GraphQLSubscriptionURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
+	require.NoError(e.t, err)
+	u.Scheme = "ws"
+	return u.String()
+}
+
+func (e *Environment) AbsintheSubscriptionURL() string {
+	joined, err := url.JoinPath(e.RouterURL, e.absinthePath)
+	require.NoError(e.t, err)
+	u, err := url.Parse(joined)
 	require.NoError(e.t, err)
 	u.Scheme = "ws"
 	return u.String()
@@ -644,8 +686,8 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websoc
 	var err error
 
 	for i := 0; i < maxSocketRetries; i++ {
-		url := e.GraphQLSubscriptionURL()
-		conn, resp, err := dialer.Dial(url, header)
+		urlStr := e.GraphQLSubscriptionURL()
+		conn, resp, err := dialer.Dial(urlStr, header)
 
 		if resp != nil && err == nil {
 			return conn, resp, err
@@ -680,6 +722,54 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initial
 	err = conn.ReadJSON(&ack)
 	require.NoError(e.t, err)
 	require.Equal(e.t, "connection_ack", ack.Type)
+	return conn
+}
+
+func (e *Environment) AbsintheWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
+	dialer := websocket.Dialer{
+		// Subprotocols: []string{"absinthe"}, explicitly removed as this needs to be added by the absinthe handler
+	}
+
+	waitBetweenRetriesInMs := rand.Intn(10)
+	timeToSleep := time.Duration(waitBetweenRetriesInMs) * time.Millisecond
+
+	var err error
+
+	for i := 0; i < maxSocketRetries; i++ {
+		u := e.AbsintheSubscriptionURL()
+
+		conn, resp, err := dialer.Dial(u, header)
+
+		if resp != nil && err == nil {
+			return conn, resp, err
+		}
+
+		if errors.Is(err, websocket.ErrBadHandshake) {
+			return conn, resp, err
+		}
+
+		// Make sure that on the final attempt we won't wait
+		if i != maxSocketRetries {
+			time.Sleep(timeToSleep)
+			timeToSleep *= 2
+		}
+	}
+
+	return nil, nil, err
+}
+
+func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initialPayload json.RawMessage) *websocket.Conn {
+	conn, _, err := e.AbsintheWebsocketDialWithRetry(header)
+	require.NoError(e.t, err)
+	e.t.Cleanup(func() {
+		_ = conn.Close()
+	})
+	err = conn.WriteJSON(initialPayload)
+	require.NoError(e.t, err)
+	var ack json.RawMessage
+	err = conn.ReadJSON(&ack)
+	require.NoError(e.t, err)
+	require.Equal(e.t, string(ack), `["1","1","__absinthe__:control","phx_reply",{"status":"ok","response":{}}]`)
 	return conn
 }
 

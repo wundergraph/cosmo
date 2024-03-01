@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { baseHeaders } from '../../../core/config.js';
@@ -20,7 +20,7 @@ export default (opts: BaseCommandOptions) => {
     '-r, --routing-url <url>',
     'The routing url of your subgraph. This is the url that the subgraph will be accessible at.',
   );
-  command.requiredOption(
+  command.option(
     '--label [labels...]',
     'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
@@ -42,12 +42,11 @@ export default (opts: BaseCommandOptions) => {
     if (options.readme) {
       readmeFile = resolve(process.cwd(), options.readme);
       if (!existsSync(readmeFile)) {
-        console.log(
+        program.error(
           pc.red(
             pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
           ),
         );
-        return;
       }
     }
 
@@ -55,7 +54,7 @@ export default (opts: BaseCommandOptions) => {
       {
         name,
         namespace: options.namespace,
-        labels: options.label.map((label: string) => splitLabel(label)),
+        labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
         routingUrl: options.routingUrl,
         headers: options.header,
         // If the argument is provided but the URL is not, clear it

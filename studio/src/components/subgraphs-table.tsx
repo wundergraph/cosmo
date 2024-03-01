@@ -61,6 +61,7 @@ import {
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 import { cn } from "@/lib/utils";
+import { PiAsterisk } from "react-icons/pi";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const router = useRouter();
@@ -318,11 +319,12 @@ const AddSubgraphUsers = ({
     <div className="flex items-center justify-end px-2">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
+          asChild
           disabled={!isAdmin && !(creatorUserId && creatorUserId === user?.id)}
         >
-          <TooltipProvider>
+          <div>
             <Tooltip delayDuration={100}>
-              <TooltipTrigger>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -339,7 +341,7 @@ const AddSubgraphUsers = ({
                   : "Only admins or the creator of the subgraph can add users."}
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </div>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -418,18 +420,22 @@ export const SubgraphsTable = ({
                 )}`;
               }
               return (
-                <TableRow
-                  key={name}
-                  className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
-                >
+                <TableRow key={name} className="py-1 even:bg-secondary/20">
                   <TableCell className="px-4 font-medium">{name}</TableCell>
-                  <TableCell className="px-4 text-muted-foreground hover:text-current">
-                    <Link target="_blank" rel="noreferrer" href={routingURL}>
-                      {routingURL}
-                    </Link>
+                  <TableCell className="px-4 text-muted-foreground">
+                    {routingURL}
                   </TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">
+                      {labels.length === 0 && (
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>-</TooltipTrigger>
+                          <TooltipContent>
+                            Only graphs with empty label matchers will compose
+                            this subgraph
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       {labels.map(({ key, value }) => {
                         return (
                           <Badge variant="secondary" key={key + value}>
@@ -457,23 +463,19 @@ export const SubgraphsTable = ({
                     <Tooltip delayDuration={200}>
                       <TooltipTrigger asChild>
                         <Button asChild variant="ghost" size="icon-sm">
-                          <Link href={analyticsPath}>
+                          <Link
+                            onClick={(e) => e.stopPropagation()}
+                            href={analyticsPath}
+                          >
                             <ChartBarIcon className="h-4 w-4" />
                           </Link>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Analytics</TooltipContent>
                     </Tooltip>
-                    <Tooltip delayDuration={200}>
-                      <TooltipTrigger asChild>
-                        <Button asChild variant="ghost" size="icon-sm">
-                          <Link href={path}>
-                            <EyeIcon className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>View Subgraph</TooltipContent>
-                    </Tooltip>
+                    <Button asChild variant="ghost" size="sm" className="table-action">
+                      <Link href={path}>View</Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               );

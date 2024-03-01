@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import Table from 'cli-table3';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -30,6 +30,10 @@ export default (opts: BaseCommandOptions) => {
     [],
   );
   command.option(
+    '--unset-labels',
+    'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
+  );
+  command.option(
     '--header [headers...]',
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
     [],
@@ -46,12 +50,11 @@ export default (opts: BaseCommandOptions) => {
   command.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
-      console.log(
+      program.error(
         pc.red(
           pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
         ),
       );
-      return;
     }
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
@@ -68,6 +71,7 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
+        unsetLabels: !!options.unsetLabels,
       },
       {
         headers: baseHeaders,

@@ -4,6 +4,64 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.73.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.72.0...controlplane@0.73.0) (2024-02-29)
+
+### Features
+
+* enrich logger for platform calls ([#579](https://github.com/wundergraph/cosmo/issues/579)) ([47836bf](https://github.com/wundergraph/cosmo/commit/47836bfd8a5d55195651928b4ea9c1f5e7bbf580)) (@thisisnithin)
+
+# [0.72.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.71.1...controlplane@0.72.0) (2024-02-27)
+
+### Bug Fixes
+
+* omit invalid group filters ([#580](https://github.com/wundergraph/cosmo/issues/580)) ([c271e94](https://github.com/wundergraph/cosmo/commit/c271e9437e7a779dc7384f700a08e12e2a113c25)) (@thisisnithin)
+
+### Features
+
+* **cli:** new command to fetch latest published subgraph SDL ([#575](https://github.com/wundergraph/cosmo/issues/575)) ([09a0ab5](https://github.com/wundergraph/cosmo/commit/09a0ab54cccae6f46c1e585cf12fa9321f44e9ed)) (@StarpTech)
+* show link to studio page on subgraph check ([#578](https://github.com/wundergraph/cosmo/issues/578)) ([701d81c](https://github.com/wundergraph/cosmo/commit/701d81c764b12bb1a2ec308634e69aaffb9e7e3e)) (@thisisnithin)
+
+## [0.71.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.71.1...controlplane@0.71.2) (2024-02-23)
+
+**Note:** Version bump only for package controlplane
+
+## [0.71.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.71.0...controlplane@0.71.1) (2024-02-20)
+
+**Note:** Version bump only for package controlplane
+
+# [0.71.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.70.0...controlplane@0.71.0) (2024-02-20)
+
+### Features
+
+* implement slider for analytics duration ([#539](https://github.com/wundergraph/cosmo/issues/539)) ([3f4a0ee](https://github.com/wundergraph/cosmo/commit/3f4a0eeb58daa36ddf0be4bfc20959b53b6d0928)) (@JivusAyrus)
+
+# [0.70.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.69.0...controlplane@0.70.0) (2024-02-20)
+
+### Bug Fixes
+
+* link to changelog in slack update ([#557](https://github.com/wundergraph/cosmo/issues/557)) ([300b4fc](https://github.com/wundergraph/cosmo/commit/300b4fcd6cce8142b19fade20ebd8fcc94317bd7)) (@thisisnithin)
+
+### Features
+
+* support empty labels and label matchers ([#555](https://github.com/wundergraph/cosmo/issues/555)) ([8bb857c](https://github.com/wundergraph/cosmo/commit/8bb857c94f8165676b2ca5101c199f3bc0648d10)) (@thisisnithin)
+
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.68.2...controlplane@0.69.0) (2024-02-19)
+
+### Bug Fixes
+
+* don't expose token on wgc list command ([#550](https://github.com/wundergraph/cosmo/issues/550)) ([357ffae](https://github.com/wundergraph/cosmo/commit/357ffae4362c3c37dc955d40363da40cd985bf3f)) (@StarpTech)
+* send only summary for large slack notifications ([#556](https://github.com/wundergraph/cosmo/issues/556)) ([732dbc5](https://github.com/wundergraph/cosmo/commit/732dbc5cdf99c5ab742cf7dcf8339b516956bfdd)) (@thisisnithin)
+
+### Features
+
+* upgrade to latest gpt3.5 model ([#549](https://github.com/wundergraph/cosmo/issues/549)) ([3a44d02](https://github.com/wundergraph/cosmo/commit/3a44d022cd781fcd3435ac9f1d062597e51a2274)) (@StarpTech)
+
+## [0.68.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.68.1...controlplane@0.68.2) (2024-02-18)
+
+### Bug Fixes
+
+* remove duplicated columns ([#547](https://github.com/wundergraph/cosmo/issues/547)) ([36e683a](https://github.com/wundergraph/cosmo/commit/36e683aa21dd8b5ae77ea8fda9d0d07b8e820733)) (@StarpTech)
+
 ## [0.68.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.68.0...controlplane@0.68.1) (2024-02-16)
 
 ### Bug Fixes

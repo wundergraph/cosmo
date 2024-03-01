@@ -123,7 +123,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 
 	var exporter sdkmetric.Exporter
 	switch exp.Exporter {
-	case otelconfig.ExporterDefault, otelconfig.ExporterOLTPHTTP:
+	case otelconfig.ExporterOLTPHTTP:
 		opts := []otlpmetrichttp.Option{
 			// Includes host and port
 			otlpmetrichttp.WithEndpoint(u.Host),
@@ -219,6 +219,7 @@ func getResource(ctx context.Context, serviceName, serviceVersion string, servic
 		resource.WithAttributes(semconv.ServiceVersionKey.String(serviceVersion)),
 		resource.WithAttributes(semconv.ServiceInstanceID(serviceInstanceID)),
 		resource.WithProcessPID(),
+		resource.WithOSType(),
 		resource.WithTelemetrySDK(),
 		resource.WithHost(),
 	)

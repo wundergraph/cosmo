@@ -32,6 +32,25 @@ const Attribute = ({ name, value }: { name: string; value: any }) => {
   );
 };
 
+const mapFetchType = (type: string) => {
+  switch (type) {
+    case 'graphql':
+      return 'GraphQL';
+    case 'parse':
+      return 'Operation - Parse';
+    case 'normalize':
+      return 'Operation - Normalize';
+    case 'validate':
+      return 'Operation - Validate';
+    case 'plan':
+      return 'Operation - Plan';
+    case 'execute':
+      return 'Operation - Execute';
+    default:
+      return sentenceCase(type);
+  }
+};
+
 export const FetchWaterfall = ({
   fetch,
   parentFetch,
@@ -145,9 +164,19 @@ export const FetchWaterfall = ({
                 {!hasChildren && <CubeIcon className="h-4 w-4 flex-shrink-0" />}
               </>
             </Button>
-            {['plan', 'parallel', 'serial', 'parallelListItem'].includes(fetch.type) ? (
+            {[
+              'graphql',
+              'parse',
+              'normalize',
+              'validate',
+              'plan',
+              'execute',
+              'parallel',
+              'serial',
+              'parallelListItem',
+            ].includes(fetch.type) ? (
               <div className="-translate-y-px px-2.5 py-2 text-xs text-muted-foreground">
-                {sentenceCase(fetch.type)}
+                {mapFetchType(fetch.type)}
               </div>
             ) : (
               <button
@@ -185,7 +214,17 @@ export const FetchWaterfall = ({
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
-            disabled={['plan', 'parallel', 'serial', 'parallelListItem'].includes(fetch.type)}
+            disabled={[
+              'graphql',
+              'parse',
+              'normalize',
+              'validate',
+              'plan',
+              'execute',
+              'parallel',
+              'serial',
+              'parallelListItem',
+            ].includes(fetch.type)}
             className="group relative flex flex-1 items-center group-hover:brightness-90 disabled:cursor-not-allowed "
           >
             {!['parallel', 'serial', 'parallelListItem'].includes(fetch.type) && (

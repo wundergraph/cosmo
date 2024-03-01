@@ -34,6 +34,7 @@ export const config = {
   kcRealm: process.env.KC_REALM || 'cosmo',
   cdnURL: process.env.CDN_URL || 'https://cosmo-cdn.wundergraph.com',
   version: info.version,
+  disableUpdateCheck: process.env.DISABLE_UPDATE_CHECK || 'false',
 };
 
 export const baseHeaders: HeadersInit = {

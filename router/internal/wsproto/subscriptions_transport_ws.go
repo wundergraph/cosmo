@@ -24,7 +24,7 @@ const (
 	subscriptionsTransportWSMessageTypeComplete            = subscriptionsTransportWSMessageType("complete")
 
 	// Again, this is not a typo. Somehow they managed to give each protocol name to the other's subprotocol identifier.
-	subscriptionsTransportWSSubprotocol = "graphql-ws"
+	SubscriptionsTransportWSSubprotocol = "graphql-ws"
 )
 
 var _ Proto = (*subscriptionsTransportWSProtocol)(nil)
@@ -47,7 +47,7 @@ func newSubscriptionsTransportWSProtocol(conn JSONConn) *subscriptionsTransportW
 }
 
 func (p *subscriptionsTransportWSProtocol) Subprotocol() string {
-	return subscriptionsTransportWSSubprotocol
+	return SubscriptionsTransportWSSubprotocol
 }
 
 func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error) {

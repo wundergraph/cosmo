@@ -1,6 +1,9 @@
 dev:
 	go run cmd/router/main.go
 
+update-snapshot:
+	UPDATE_SNAPS=true go test -race ./...
+
 test:
 	go test -race ./...
 
@@ -9,7 +12,7 @@ lint:
 	staticcheck ./...
 
 bump-engine:
-	go get github.com/wundergraph/graphql-go-tools/v2@master
+	go get github.com/wundergraph/graphql-go-tools/v2@upgrade
 	go mod tidy
 	cd .. && go work sync
 

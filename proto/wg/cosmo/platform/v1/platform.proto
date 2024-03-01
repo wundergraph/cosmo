@@ -40,6 +40,7 @@ message PublishFederatedSubgraphRequest {
   // url used for subscriptions
   optional string subscription_url = 7;
   string namespace = 8;
+  optional bool unset_labels = 9;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -135,6 +136,13 @@ message CheckOperationUsageStats {
   uint32 safeOperations = 4;
 }
 
+message CheckedFederatedGraphs {
+  string id = 1;
+  string name = 2;
+  string namespace = 3;
+  string organization_slug = 4;
+}
+
 message CheckSubgraphSchemaResponse {
   Response response = 1;
   repeated SchemaChange breakingChanges = 2;
@@ -143,6 +151,8 @@ message CheckSubgraphSchemaResponse {
   // Contains the operation usage stats for the operations that are impacted by the schema changes.
   // Can be undefined when the schema changes are not inspectable by real traffic breaking change detection.
   CheckOperationUsageStats operationUsageStats = 5;
+  string check_id = 6;
+  repeated CheckedFederatedGraphs checked_federated_graphs = 7;
 }
 
 message FixSubgraphSchemaResponse {
@@ -265,24 +275,24 @@ message GetSubgraphByNameResponse {
   repeated SubgraphMember members = 3;
 }
 
-message GetLatestValidSubgraphSDLByNameRequest {
+message GetSubgraphSDLFromLatestCompositionRequest {
   string name = 1;
   string fedGraphName = 2;
   string namespace = 3;
 }
 
-message GetLatestValidSubgraphSDLByNameResponse {
+message GetSubgraphSDLFromLatestCompositionResponse {
   Response response = 1;
   optional string sdl = 2;
   optional string version_id = 3;
 }
 
-message GetLatestSubgraphSDLByNameRequest {
+message GetLatestSubgraphSDLRequest {
   string name = 1;
   string namespace = 2;
 }
 
-message GetLatestSubgraphSDLByNameResponse {
+message GetLatestSubgraphSDLResponse {
   Response response = 1;
   optional string sdl = 2;
   optional string version_id = 3;
@@ -426,6 +436,7 @@ message UpdateSubgraphRequest {
   optional string subscription_url = 6;
   optional string readme = 7;
   string namespace = 8;
+  optional bool unset_labels = 9;
 }
 
 message UpdateSubgraphResponse {
@@ -439,6 +450,7 @@ message UpdateFederatedGraphRequest {
   repeated string label_matchers = 3;
   optional string readme = 4;
   string namespace = 5;
+  optional bool unset_label_matchers = 6;
 }
 
 message UpdateFederatedGraphResponse {
@@ -523,11 +535,16 @@ message AnalyticsViewColumn {
   optional bool is_cta = 6;
 }
 
+enum CustomOptions {
+  Text = 0;
+  Range = 1;
+}
+
 message AnalyticsViewResultFilter {
   string columnName = 1;
   string title = 2;
   repeated AnalyticsViewResultFilterOption options = 3;
-  optional bool custom_options = 4;
+  optional CustomOptions custom_options = 4;
 }
 
 message AnalyticsViewResultFilterOption {
@@ -771,8 +788,9 @@ message WhoAmIResponse {
 message RouterToken {
   string id = 1;
   string name = 2;
-  string token = 3;
-  string createdAt = 4;
+  string createdAt = 3;
+  string lastUsedAt = 4;
+  string creatorEmail = 5;
 }
 
 message GenerateRouterTokenRequest {
@@ -1808,10 +1826,10 @@ service PlatformService {
   rpc GetSubgraphs(GetSubgraphsRequest) returns (GetSubgraphsResponse) {}
   // GetSubgraphByName returns the subgraph by name.
   rpc GetSubgraphByName(GetSubgraphByNameRequest) returns (GetSubgraphByNameResponse) {}
-  // GetLatestValidSubgraphSDLByName returns the latest valid SDL of the subgraph by name.
-  rpc GetLatestValidSubgraphSDLByName(GetLatestValidSubgraphSDLByNameRequest) returns (GetLatestValidSubgraphSDLByNameResponse) {}
-  // GetLatestSubgraphSDLByName returns the latest SDL of the subgraph by name.
-  rpc GetLatestSubgraphSDLByName(GetLatestSubgraphSDLByNameRequest) returns (GetLatestSubgraphSDLByNameResponse) {}
+  // GetSubgraphSDLFromLatestComposition returns the latest valid SDL of the subgraph composed with the federated graph.
+  rpc GetSubgraphSDLFromLatestComposition(GetSubgraphSDLFromLatestCompositionRequest) returns (GetSubgraphSDLFromLatestCompositionResponse) {}
+  // GetLatestSubgraphSDL returns the latest SDL of the subgraph by name.
+  rpc GetLatestSubgraphSDL(GetLatestSubgraphSDLRequest) returns (GetLatestSubgraphSDLResponse) {}
 
   // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph
   rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
@@ -1823,13 +1841,13 @@ service PlatformService {
   rpc ForceCheckSuccess(ForceCheckSuccessRequest) returns (ForceCheckSuccessResponse) {}
   // CreateOperationOverrides marks if the given set of changes as safe for an operation
   rpc CreateOperationOverrides(CreateOperationOverridesRequest) returns (CreateOperationOverridesResponse) {}
-  // RemoveOperationOverride removes a change from the safelist for an operation
+  // RemoveOperationOverride removes a change from the safe-list for an operation
   rpc RemoveOperationOverrides(RemoveOperationOverridesRequest) returns (RemoveOperationOverridesResponse) {}
   // CreateOperationIgnoreAllOverride adds an ignore all override for the operation
   rpc CreateOperationIgnoreAllOverride(CreateOperationIgnoreAllOverrideRequest) returns (CreateOperationIgnoreAllOverrideResponse) {}
-  // RemoveOperationIgnoreAllOverride removes the ignore all override for the operartion
+  // RemoveOperationIgnoreAllOverride removes the ignore all override for the operation
   rpc RemoveOperationIgnoreAllOverride(RemoveOperationIgnoreAllOverrideRequest) returns (RemoveOperationIgnoreAllOverrideResponse) {}
-  // GetOperationOverrides retireves all overrides for an operation hash
+  // GetOperationOverrides retrieves all overrides for an operation hash
   rpc GetOperationOverrides(GetOperationOverridesRequest) returns (GetOperationOverridesResponse) {}
   // GetAllOverrides returns all overrides for operations within a namespace
   rpc GetAllOverrides(GetAllOverridesRequest) returns (GetAllOverridesResponse) {}

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Table from 'cli-table3';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { baseHeaders } from '../../../core/config.js';
@@ -20,7 +20,7 @@ export default (opts: BaseCommandOptions) => {
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',
   );
-  command.requiredOption(
+  command.option(
     '--label-matcher [labels...]',
     'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
   );
@@ -30,12 +30,11 @@ export default (opts: BaseCommandOptions) => {
     if (options.readme) {
       readmeFile = resolve(process.cwd(), options.readme);
       if (!existsSync(readmeFile)) {
-        console.log(
+        program.error(
           pc.red(
             pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
           ),
         );
-        return;
       }
     }
 

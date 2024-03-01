@@ -1,7 +1,7 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyBaseLogger } from 'fastify';
 import { S3Client } from '@aws-sdk/client-s3';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { cors } from '@connectrpc/connect';
+import { cors, createContextValues } from '@connectrpc/connect';
 import fastifyCors from '@fastify/cors';
 import { pino, stdTimeFunctions, LoggerOptions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
@@ -35,6 +35,7 @@ import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
+import { fastifyLoggerId } from './util.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -351,6 +352,9 @@ export default async function build(opts: BuildConfig) {
       readmeQueue,
       stripeSecretKey: opts.stripe?.secret,
     }),
+    contextValues(req) {
+      return createContextValues().set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: req.log }, req.log);
+    },
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
     compressMinBytes: 1024,

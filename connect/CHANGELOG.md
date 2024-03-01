@@ -4,6 +4,31 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.59.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.58.0...@wundergraph/cosmo-connect@0.59.0) (2024-02-27)
+
+### Features
+
+* **cli:** new command to fetch latest published subgraph SDL ([#575](https://github.com/wundergraph/cosmo/issues/575)) ([09a0ab5](https://github.com/wundergraph/cosmo/commit/09a0ab54cccae6f46c1e585cf12fa9321f44e9ed)) (@StarpTech)
+* show link to studio page on subgraph check ([#578](https://github.com/wundergraph/cosmo/issues/578)) ([701d81c](https://github.com/wundergraph/cosmo/commit/701d81c764b12bb1a2ec308634e69aaffb9e7e3e)) (@thisisnithin)
+
+# [0.58.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.57.0...@wundergraph/cosmo-connect@0.58.0) (2024-02-20)
+
+### Features
+
+* implement slider for analytics duration ([#539](https://github.com/wundergraph/cosmo/issues/539)) ([3f4a0ee](https://github.com/wundergraph/cosmo/commit/3f4a0eeb58daa36ddf0be4bfc20959b53b6d0928)) (@JivusAyrus)
+
+# [0.57.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.56.1...@wundergraph/cosmo-connect@0.57.0) (2024-02-20)
+
+### Features
+
+* support empty labels and label matchers ([#555](https://github.com/wundergraph/cosmo/issues/555)) ([8bb857c](https://github.com/wundergraph/cosmo/commit/8bb857c94f8165676b2ca5101c199f3bc0648d10)) (@thisisnithin)
+
+## [0.56.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.56.0...@wundergraph/cosmo-connect@0.56.1) (2024-02-19)
+
+### Bug Fixes
+
+* don't expose token on wgc list command ([#550](https://github.com/wundergraph/cosmo/issues/550)) ([357ffae](https://github.com/wundergraph/cosmo/commit/357ffae4362c3c37dc955d40363da40cd985bf3f)) (@StarpTech)
+
 # [0.56.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.55.1...@wundergraph/cosmo-connect@0.56.0) (2024-02-16)
 
 ### Features

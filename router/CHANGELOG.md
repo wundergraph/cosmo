@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.69.1](https://github.com/wundergraph/cosmo/compare/router@0.69.0...router@0.69.1) (2024-02-27)
+
+**Note:** Version bump only for package router
+
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/router@0.68.1...router@0.69.0) (2024-02-21)
+
+### Features
+
+* add option to redact IP in traces and logs ([#561](https://github.com/wundergraph/cosmo/issues/561)) ([6c63730](https://github.com/wundergraph/cosmo/commit/6c6373087df4520d1c8695a0ee8b2a8514cc3c0a)) (@StarpTech)
+
+## [0.68.1](https://github.com/wundergraph/cosmo/compare/router@0.68.0...router@0.68.1) (2024-02-19)
+
+### Bug Fixes
+
+* listen port in config ([#553](https://github.com/wundergraph/cosmo/issues/553)) ([e0345bc](https://github.com/wundergraph/cosmo/commit/e0345bc02eafd96f553760e58510415c9c4fb654)) (@thisisnithin)
+* router listen address default port ([#551](https://github.com/wundergraph/cosmo/issues/551)) ([8315997](https://github.com/wundergraph/cosmo/commit/8315997a48b1c5622f5017aef5b26a772f8cebcf)) (@thisisnithin)
+
+# [0.68.0](https://github.com/wundergraph/cosmo/compare/router@0.67.0...router@0.68.0) (2024-02-18)
+
+### Features
+
+* **metrics:** collect OS type and enrich traces with resource instan… ([#546](https://github.com/wundergraph/cosmo/issues/546)) ([746b117](https://github.com/wundergraph/cosmo/commit/746b1175270b07fd7f3b9a9ae2077ee7dcc471c3)) (@StarpTech)
+
+# [0.67.0](https://github.com/wundergraph/cosmo/compare/router@0.66.3...router@0.67.0) (2024-02-17)
+
+### Features
+
+* add support for absinthe WebSocket protocol ([#541](https://github.com/wundergraph/cosmo/issues/541)) ([740e960](https://github.com/wundergraph/cosmo/commit/740e960d48560f92854e63feec97c9dd62e29b01)) (@jensneuse)
+* use json schema to validate and document router config ([#545](https://github.com/wundergraph/cosmo/issues/545)) ([ec700ba](https://github.com/wundergraph/cosmo/commit/ec700bae0224d3d0180b8d56800f48c9002dcee5)) (@StarpTech)
+
 ## [0.66.3](https://github.com/wundergraph/cosmo/compare/router@0.66.2...router@0.66.3) (2024-02-16)
 
 ### Bug Fixes
