@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -141,7 +142,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
 		}
 
-		traceTimings := rtrace.NewTraceTimings(r.Context())
+		traceTimings := art.NewTraceTimings(r.Context())
 
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
 
@@ -357,7 +358,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			r = validatedReq
 		}
 
-		rtrace.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
+		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
 		requestContext := buildRequestContext(w, r, opContext, requestLogger)
 		metrics.AddOperationContext(opContext)
