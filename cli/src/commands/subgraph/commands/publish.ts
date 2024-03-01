@@ -57,12 +57,21 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    const schema = await readFile(schemaFile);
+    if(schema.length === 0){
+      program.error(
+        pc.red(
+          pc.bold(`The schema file '${pc.bold(schemaFile)}' is empty. Please provide a valid schema.`),
+        ),
+      );
+    }
+
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
         name,
         namespace: options.namespace,
         // Publish schema only
-        schema: await readFile(schemaFile),
+        schema,
         // Optional when subgraph does not exist yet
         routingUrl: options.routingUrl,
         headers: options.header,

@@ -30,11 +30,18 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    const schema = await readFile(schemaFile);
+    if (schema.length === 0) {
+      program.error(
+        pc.red(pc.bold(`The schema file '${pc.bold(schemaFile)}' is empty. Please provide a valid schema.`)),
+      );
+    }
+
     const resp = await opts.client.platform.fixSubgraphSchema(
       {
         subgraphName: name,
         namespace: options.namespace,
-        schema: await readFile(schemaFile),
+        schema,
       },
       {
         headers: baseHeaders,
