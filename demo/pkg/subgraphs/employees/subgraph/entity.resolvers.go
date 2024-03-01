@@ -22,20 +22,6 @@ func (r *entityResolver) FindCosmoByUpc(ctx context.Context, upc string) (*model
 	return cosmo, nil
 }
 
-// FindDetailsByID is the resolver for the findDetailsByID field.
-func (r *entityResolver) FindDetailsByID(ctx context.Context, id int) (*model.Details, error) {
-	employee, err := r.FindEmployeeByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if employee == nil {
-		return nil, nil
-	}
-
-	return employee.Details, nil
-}
-
 // FindEmployeeByID is the resolver for the findEmployeeByID field.
 func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
 	if id < 1 {

@@ -79,14 +79,11 @@ type CountryKey struct {
 }
 
 type Details struct {
-	ID            int      `json:"id"`
 	Forename      string   `json:"forename"`
 	Location      *Country `json:"location"`
 	Surname       string   `json:"surname"`
 	PastLocations []*City  `json:"pastLocations"`
 }
-
-func (Details) IsEntity() {}
 
 type Employee struct {
 	Details   *Details `json:"details"`

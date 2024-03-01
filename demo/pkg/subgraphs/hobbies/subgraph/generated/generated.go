@@ -528,17 +528,10 @@ interface Hobby {
   employees: [Employee!]! @goField(forceResolver: true)
 }
 
-# Hobbies is on both Employee and details because it exposed a bug
 type Employee @key(fields: "id") {
   id: Int!
   hobbies: [Hobby!]
-  # details: Details! @shareable @goField(forceResolver: true)
 }
-
-# type Details @key(fields: "id") {
-#   id: Int!
-#   hobbies: [Hobby!]
-# }
 
 type SDK @key(fields: "upc") {
   upc: ID!

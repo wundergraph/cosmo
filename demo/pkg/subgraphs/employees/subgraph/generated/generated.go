@@ -80,7 +80,6 @@ type ComplexityRoot struct {
 
 	Details struct {
 		Forename      func(childComplexity int) int
-		ID            func(childComplexity int) int
 		Location      func(childComplexity int) int
 		PastLocations func(childComplexity int) int
 		Surname       func(childComplexity int) int
@@ -106,7 +105,6 @@ type ComplexityRoot struct {
 	Entity struct {
 		FindConsultancyByUpc func(childComplexity int, upc string) int
 		FindCosmoByUpc       func(childComplexity int, upc string) int
-		FindDetailsByID      func(childComplexity int, id int) int
 		FindEmployeeByID     func(childComplexity int, id int) int
 		FindSDKByUpc         func(childComplexity int, upc string) int
 	}
@@ -163,7 +161,6 @@ type EngineerResolver interface {
 type EntityResolver interface {
 	FindConsultancyByUpc(ctx context.Context, upc string) (*model.Consultancy, error)
 	FindCosmoByUpc(ctx context.Context, upc string) (*model.Cosmo, error)
-	FindDetailsByID(ctx context.Context, id int) (*model.Details, error)
 	FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error)
 	FindSDKByUpc(ctx context.Context, upc string) (*model.Sdk, error)
 }
@@ -281,13 +278,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Details.Forename(childComplexity), true
-
-	case "Details.id":
-		if e.complexity.Details.ID == nil {
-			break
-		}
-
-		return e.complexity.Details.ID(childComplexity), true
 
 	case "Details.location":
 		if e.complexity.Details.Location == nil {
@@ -410,18 +400,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Entity.FindCosmoByUpc(childComplexity, args["upc"].(string)), true
-
-	case "Entity.findDetailsByID":
-		if e.complexity.Entity.FindDetailsByID == nil {
-			break
-		}
-
-		args, err := ec.field_Entity_findDetailsByID_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Entity.FindDetailsByID(childComplexity, args["id"].(int)), true
 
 	case "Entity.findEmployeeByID":
 		if e.complexity.Entity.FindEmployeeByID == nil {
@@ -806,8 +784,7 @@ type Operator implements RoleType {
   operatorType: [OperationType!]!
 }
 
-type Details @key(fields: "id") {
-  id: Int!
+type Details {
   forename: String! @shareable
   location: Country!
   surname: String! @shareable
@@ -915,13 +892,12 @@ type SDK implements IProduct @key(fields: "upc") {
 `, BuiltIn: true},
 	{Name: "../../federation/entity.graphql", Input: `
 # a union of all types that use the @key directive
-union _Entity = Consultancy | Cosmo | Country | Details | Employee | SDK
+union _Entity = Consultancy | Cosmo | Country | Employee | SDK
 
 # fake type to build resolver interfaces for users to implement
 type Entity {
 		findConsultancyByUpc(upc: ID!,): Consultancy!
 	findCosmoByUpc(upc: ID!,): Cosmo!
-	findDetailsByID(id: Int!,): Details!
 	findEmployeeByID(id: Int!,): Employee!
 	findSDKByUpc(upc: ID!,): SDK!
 
@@ -970,21 +946,6 @@ func (ec *executionContext) field_Entity_findCosmoByUpc_args(ctx context.Context
 		}
 	}
 	args["upc"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Entity_findDetailsByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
 	return args, nil
 }
 
@@ -1633,50 +1594,6 @@ func (ec *executionContext) fieldContext_CountryKey_name(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Details_id(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Details_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Details_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Details",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Details_forename(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Details_forename(ctx, field)
 	if err != nil {
@@ -1904,8 +1821,6 @@ func (ec *executionContext) fieldContext_Employee_details(ctx context.Context, f
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Details_id(ctx, field)
 			case "forename":
 				return ec.fieldContext_Details_forename(ctx, field)
 			case "location":
@@ -2492,73 +2407,6 @@ func (ec *executionContext) fieldContext_Entity_findCosmoByUpc(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Entity_findCosmoByUpc_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Entity_findDetailsByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Entity_findDetailsByID(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Entity().FindDetailsByID(rctx, fc.Args["id"].(int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Details)
-	fc.Result = res
-	return ec.marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Entity_findDetailsByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Entity",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Details_id(ctx, field)
-			case "forename":
-				return ec.fieldContext_Details_forename(ctx, field)
-			case "location":
-				return ec.fieldContext_Details_location(ctx, field)
-			case "surname":
-				return ec.fieldContext_Details_surname(ctx, field)
-			case "pastLocations":
-				return ec.fieldContext_Details_pastLocations(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Details", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Entity_findDetailsByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5840,13 +5688,6 @@ func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, 
 			return graphql.Null
 		}
 		return ec._Country(ctx, sel, obj)
-	case model.Details:
-		return ec._Details(ctx, sel, &obj)
-	case *model.Details:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._Details(ctx, sel, obj)
 	case model.Employee:
 		return ec._Employee(ctx, sel, &obj)
 	case *model.Employee:
@@ -6087,7 +5928,7 @@ func (ec *executionContext) _CountryKey(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
-var detailsImplementors = []string{"Details", "_Entity"}
+var detailsImplementors = []string{"Details"}
 
 func (ec *executionContext) _Details(ctx context.Context, sel ast.SelectionSet, obj *model.Details) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, detailsImplementors)
@@ -6098,11 +5939,6 @@ func (ec *executionContext) _Details(ctx context.Context, sel ast.SelectionSet, 
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Details")
-		case "id":
-			out.Values[i] = ec._Details_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "forename":
 			out.Values[i] = ec._Details_forename(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -6348,28 +6184,6 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 					}
 				}()
 				res = ec._Entity_findCosmoByUpc(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "findDetailsByID":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Entity_findDetailsByID(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -7500,10 +7314,6 @@ func (ec *executionContext) marshalNDepartment2ᚕgithubᚗcomᚋwundergraphᚋc
 	}
 
 	return ret
-}
-
-func (ec *executionContext) marshalNDetails2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v model.Details) graphql.Marshaler {
-	return ec._Details(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {

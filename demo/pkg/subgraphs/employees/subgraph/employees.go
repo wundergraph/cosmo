@@ -13,7 +13,6 @@ func strPtr(s string) *string {
 var employees = []*model.Employee{
 	{
 		Details: &model.Details{
-			ID:       1,
 			Forename: "Jens",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -54,7 +53,6 @@ var employees = []*model.Employee{
 	},
 	{
 		Details: &model.Details{
-			ID:       2,
 			Forename: "Dustin",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -95,7 +93,6 @@ var employees = []*model.Employee{
 	},
 	{
 		Details: &model.Details{
-			ID:       3,
 			Forename: "Stefan",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -135,7 +132,6 @@ var employees = []*model.Employee{
 	},
 	{
 		Details: &model.Details{
-			ID:       4,
 			Forename: "Björn",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -179,7 +175,6 @@ var employees = []*model.Employee{
 	{
 		ID: 5,
 		Details: &model.Details{
-			ID:       5,
 			Forename: "Sergiy",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -219,7 +214,6 @@ var employees = []*model.Employee{
 	},
 	{
 		Details: &model.Details{
-			ID:       7,
 			Forename: "Suvij",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -260,7 +254,6 @@ var employees = []*model.Employee{
 	},
 	{
 		Details: &model.Details{
-			ID:       8,
 			Forename: "Nithin",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -301,7 +294,6 @@ var employees = []*model.Employee{
 	},
 	{
 		Details: &model.Details{
-			ID:       10,
 			Forename: "Eelco",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -342,7 +334,6 @@ var employees = []*model.Employee{
 	},
 	{
 		Details: &model.Details{
-			ID:       11,
 			Forename: "Alexandra",
 			Location: &model.Country{
 				Key: &model.CountryKey{
@@ -385,7 +376,6 @@ var employees = []*model.Employee{
 	},
 	{
 		Details: &model.Details{
-			ID:       12,
 			Forename: "David",
 			Location: &model.Country{
 				Key: &model.CountryKey{

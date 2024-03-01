@@ -85,8 +85,7 @@ enum Nationality {
   UKRAINIAN
 }
 
-type Details @key(fields: "id") {
-  id: Int!
+type Details {
   forename: String! @shareable
   middlename: String @deprecated
   surname: String! @shareable

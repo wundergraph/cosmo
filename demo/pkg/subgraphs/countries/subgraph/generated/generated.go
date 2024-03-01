@@ -240,7 +240,9 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `type Country @key(fields: "key { name }") {
+	{Name: "../schema.graphqls", Input: `# Using a nested key field simply because it can showcase potential bug
+# vectors / Federation capabilities.
+type Country @key(fields: "key { name }") {
   key: CountryKey!
   language: String
 }
