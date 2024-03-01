@@ -26,6 +26,25 @@ const bigintE3 = BigInt(1e3);
 const bigintE2 = BigInt(1e2);
 const initialCollapsedSpanDepth = 4;
 
+const mapFetchType = (type: string) => {
+  switch (type) {
+    case "graphql":
+      return "GraphQL";
+    case "parse":
+      return "Operation - Parse";
+    case "normalize":
+      return "Operation - Normalize";
+    case "validate":
+      return "Operation - Validate";
+    case "plan":
+      return "Operation - Plan";
+    case "execute":
+      return "Operation - Execute";
+    default:
+      return sentenceCase(type);
+  }
+};
+
 const Attribute = ({ name, value }: { name: string; value: any }) => {
   return (
     <TooltipProvider>
@@ -178,11 +197,19 @@ export const FetchWaterfall = ({
                 {!hasChildren && <CubeIcon className="h-4 w-4 flex-shrink-0" />}
               </>
             </Button>
-            {["plan", "parallel", "serial", "parallelListItem"].includes(
-              fetch.type,
-            ) ? (
+            {[
+              "graphql",
+              "parse",
+              "normalize",
+              "validate",
+              "plan",
+              "execute",
+              "parallel",
+              "serial",
+              "parallelListItem",
+            ].includes(fetch.type) ? (
               <div className="-translate-y-px px-2.5 py-2 text-xs text-muted-foreground">
-                {sentenceCase(fetch.type)}
+                {mapFetchType(fetch.type)}
               </div>
             ) : (
               <button
@@ -227,7 +254,12 @@ export const FetchWaterfall = ({
             type="button"
             onClick={() => setShowDetails(!showDetails)}
             disabled={[
+              "graphql",
+              "parse",
+              "normalize",
+              "validate",
               "plan",
+              "execute",
               "parallel",
               "serial",
               "parallelListItem",

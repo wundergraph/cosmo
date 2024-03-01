@@ -11,6 +11,9 @@ const (
 	RequestTraceHeader = "X-WG-Trace"
 	// RequestTraceQueryParameter is the query parameter used to enable request tracing
 	RequestTraceQueryParameter                      = "wg_trace"
+	requestTraceOptionExcludeParseStats             = "exclude_parse_stats"
+	requestTraceOptionExcludeNormalizeStats         = "exclude_normalize_stats"
+	requestTraceOptionExcludeValidateStats          = "exclude_validate_stats"
 	requestTraceOptionExcludePlannerStats           = "exclude_planner_stats"
 	requestTraceOptionExcludeRawInputData           = "exclude_raw_input_data"
 	requestTraceOptionExcludeInput                  = "exclude_input"
@@ -43,6 +46,12 @@ func ParseRequestTraceOptions(r *http.Request) (options resolve.TraceOptions) {
 	options.IncludeTraceOutputInResponseExtensions = true
 	for i := range values {
 		switch values[i] {
+		case requestTraceOptionExcludeParseStats:
+			options.ExcludeParseStats = true
+		case requestTraceOptionExcludeNormalizeStats:
+			options.ExcludeNormalizeStats = true
+		case requestTraceOptionExcludeValidateStats:
+			options.ExcludeValidateStats = true
 		case requestTraceOptionExcludePlannerStats:
 			options.ExcludePlannerStats = true
 		case requestTraceOptionExcludeRawInputData:

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -98,11 +99,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		var (
 			// In GraphQL the statusCode does not always express the error state of the request
 			// we use this flag to determine if we have an error for the request metrics
-			finalErr       error
-			writtenBytes   int
-			statusCode     = http.StatusOK
-			traceOptions   = resolve.TraceOptions{}
-			tracePlanStart int64
+			finalErr     error
+			writtenBytes int
+			statusCode   = http.StatusOK
+			traceOptions = resolve.TraceOptions{}
 		)
 
 		routerSpan := trace.SpanFromContext(r.Context())
@@ -113,6 +113,36 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			otel.WgClientVersion.String(clientInfo.Version),
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		}
+
+		if h.enableRequestTracing {
+			if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
+				_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+					return h.routerPublicKey, nil
+				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
+				if err != nil {
+					err := errors.New("invalid request token. Router version 0.42.1 or above is required to use request tracing in production")
+					finalErr = err
+					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+					writeRequestErrors(r.Context(), http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
+					return
+				}
+
+				// Enable ART after successful request token validation
+				traceOptions = ParseRequestTraceOptions(r)
+			} else if h.developmentMode {
+				// In development, without request signing, we enable ART
+				traceOptions = ParseRequestTraceOptions(r)
+			} else {
+				// In production, without request signing, we disable ART because it's not safe to use
+				traceOptions.DisableAll()
+			}
+		}
+
+		if traceOptions.Enable {
+			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
+		}
+
+		traceTimings := art.NewTraceTimings(r.Context())
 
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
 
@@ -144,6 +174,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		* Parse the operation
 		 */
 
+		if !traceOptions.ExcludeParseStats {
+			traceTimings.StartParse()
+		}
+
 		engineParseCtx, engineParseSpan := h.tracer.Start(r.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
 		)
@@ -174,6 +208,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		engineParseSpan.End()
 
+		if !traceOptions.ExcludeParseStats {
+			traceTimings.EndParse()
+		}
+
 		// Set the router span name after we have the operation name
 		routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Name, operationKit.parsedOperation.Type))
 
@@ -192,6 +230,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		* Normalize the operation
 		 */
 
+		if !traceOptions.ExcludeNormalizeStats {
+			traceTimings.StartNormalize()
+		}
+
 		engineNormalizeCtx, engineNormalizeSpan := h.tracer.Start(r.Context(), "Operation - Normalize",
 			trace.WithSpanKind(trace.SpanKindInternal),
 		)
@@ -208,6 +250,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		engineNormalizeSpan.End()
+
+		if !traceOptions.ExcludeNormalizeStats {
+			traceTimings.EndNormalize()
+		}
 
 		if h.traceExportVariables {
 			// At this stage the variables are normalized
@@ -228,6 +274,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		* Validate the operation
 		 */
 
+		if !traceOptions.ExcludeValidateStats {
+			traceTimings.StartValidate()
+		}
+
 		engineValidateCtx, engineValidateSpan := h.tracer.Start(r.Context(), "Operation - Validate",
 			trace.WithSpanKind(trace.SpanKindInternal),
 		)
@@ -242,39 +292,22 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		if h.enableRequestTracing {
-			if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-				_, err = jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
-					return h.routerPublicKey, nil
-				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
-				if err != nil {
-					err := errors.New("invalid request token. Router version 0.42.1 or above is required to use request tracing in production")
-					finalErr = err
-					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-					writeRequestErrors(r.Context(), http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
-					return
-				}
-
-				// Enable ART after successful request token validation
-				traceOptions = ParseRequestTraceOptions(r)
-			} else if h.developmentMode {
-				// In development, without request signing, we enable ART
-				traceOptions = ParseRequestTraceOptions(r)
-			} else {
-				// In production, without request signing, we disable ART because it's not safe to use
-				traceOptions.DisableAll()
-			}
-		}
-
-		if traceOptions.Enable {
-			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
-		}
-
 		engineValidateSpan.End()
+
+		if !traceOptions.ExcludeValidateStats {
+			traceTimings.EndValidate()
+		}
 
 		/**
 		* Plan the operation
 		 */
+
+		// If the request has a query parameter wg_trace=true we skip the cache
+		// and always plan the operation
+		// this allows us to "write" to the plan
+		if !traceOptions.ExcludePlannerStats {
+			traceTimings.StartPlanning()
+		}
 
 		enginePlanSpanCtx, enginePlanSpan := h.tracer.Start(r.Context(), "Operation - Plan",
 			trace.WithSpanKind(trace.SpanKindInternal),
@@ -297,6 +330,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
 
 		enginePlanSpan.End()
+
+		if !traceOptions.ExcludePlannerStats {
+			traceTimings.EndPlanning()
+		}
 
 		// If we have authenticators, we try to authenticate the request
 		if len(h.accessController.authenticators) > 0 {
@@ -321,22 +358,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			r = validatedReq
 		}
 
-		// If the request has a query parameter wg_trace=true we skip the cache
-		// and always plan the operation
-		// this allows us to "write" to the plan
-		if !traceOptions.ExcludePlannerStats {
-			tracePlanStart = resolve.GetDurationNanoSinceTraceStart(r.Context())
-		}
-
-		if !traceOptions.ExcludePlannerStats {
-			planningTime := resolve.GetDurationNanoSinceTraceStart(r.Context()) - tracePlanStart
-			resolve.SetPlannerStats(r.Context(), resolve.PlannerStats{
-				DurationSinceStartNano:   tracePlanStart,
-				DurationSinceStartPretty: time.Duration(tracePlanStart).String(),
-				PlanningTimeNano:         planningTime,
-				PlanningTimePretty:       time.Duration(planningTime).String(),
-			})
-		}
+		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
 		requestContext := buildRequestContext(w, r, opContext, requestLogger)
 		metrics.AddOperationContext(opContext)
