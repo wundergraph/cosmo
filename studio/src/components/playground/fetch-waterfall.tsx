@@ -26,6 +26,25 @@ const bigintE3 = BigInt(1e3);
 const bigintE2 = BigInt(1e2);
 const initialCollapsedSpanDepth = 4;
 
+const mapFetchType = (type: string) => {
+  switch (type) {
+    case "graphql":
+      return "GraphQL";
+    case "parse":
+      return "Operation - Parse";
+    case "normalize":
+      return "Operation - Normalize";
+    case "validate":
+      return "Operation - Validate";
+    case "plan":
+      return "Operation - Plan";
+    case "execute":
+      return "Operation - Execute";
+    default:
+      return sentenceCase(type);
+  }
+};
+
 const Attribute = ({ name, value }: { name: string; value: any }) => {
   return (
     <TooltipProvider>
@@ -190,7 +209,7 @@ export const FetchWaterfall = ({
               "parallelListItem",
             ].includes(fetch.type) ? (
               <div className="-translate-y-px px-2.5 py-2 text-xs text-muted-foreground">
-                {sentenceCase(fetch.type)}
+                {mapFetchType(fetch.type)}
               </div>
             ) : (
               <button
