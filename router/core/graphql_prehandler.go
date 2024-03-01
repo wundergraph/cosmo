@@ -255,7 +255,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if h.traceExportVariables {
-			// At this stage the variables are norfmt.Printf("test: %d", resolve.GetDurationNanoSinceTraceStart(tt.ctx))malized
+			// At this stage the variables are normalized
 			routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Variables)))
 		}
 
