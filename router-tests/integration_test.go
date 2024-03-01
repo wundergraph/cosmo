@@ -17,7 +17,9 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
+	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
@@ -59,13 +61,13 @@ func (t *testQuery) Data() []byte {
 	return data
 }
 
-func normalizeJSON(tb testing.TB, data []byte) string {
+func normalizeJSON(tb testing.TB, data []byte) []byte {
 	var v interface{}
 	err := json.Unmarshal(data, &v)
 	require.NoError(tb, err)
 	normalized, err := json.MarshalIndent(v, "", "  ")
 	require.NoError(tb, err)
-	return string(normalized)
+	return normalized
 }
 
 func TestIntegration(t *testing.T) {
@@ -426,18 +428,28 @@ func TestOperationSelection(t *testing.T) {
 func TestTestdataQueries(t *testing.T) {
 	t.Parallel()
 
-	queries := filepath.Join("testdata", "queries")
-	entries, err := os.ReadDir(queries)
+	testDir := filepath.Join("testdata", "queries")
+	entries, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			t.Fatalf("unexpected file in %s: %s", queries, entry.Name())
+		fileName := entry.Name()
+		ext := filepath.Ext(fileName)
+		name := strings.TrimSuffix(fileName, ext)
+
+		if ext != ".graphql" {
+			continue
 		}
-		name := entry.Name()
+
 		t.Run(name, func(t *testing.T) {
+			g := goldie.New(
+				t,
+				goldie.WithFixtureDir("testdata/queries"),
+				goldie.WithNameSuffix(".json"),
+				goldie.WithDiffEngine(goldie.ColoredDiff),
+			)
+
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-				testDir := filepath.Join(queries, name)
-				queryData, err := os.ReadFile(filepath.Join(testDir, "query.graphql"))
+				queryData, err := os.ReadFile(filepath.Join(testDir, fmt.Sprintf("%s.graphql", name)))
 				require.NoError(t, err)
 				payload := map[string]any{
 					"query": string(queryData),
@@ -450,12 +462,9 @@ func TestTestdataQueries(t *testing.T) {
 				require.Equal(t, http.StatusOK, res.StatusCode)
 				result, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
-				expectedData, err := os.ReadFile(filepath.Join(testDir, "result.json"))
-				require.NoError(t, err)
 
-				expected := normalizeJSON(t, expectedData)
 				actual := normalizeJSON(t, result)
-				require.Equal(t, expected, actual)
+				g.Assert(t, name, actual)
 			})
 		})
 	}
