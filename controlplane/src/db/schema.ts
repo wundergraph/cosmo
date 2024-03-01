@@ -442,6 +442,7 @@ export const schemaChecks = pgTable('schema_checks', {
   isComposable: boolean('is_composable').default(false),
   isDeleted: boolean('is_deleted').default(false),
   hasBreakingChanges: boolean('has_breaking_changes').default(false),
+  hasLintErrors: boolean('has_lint_errors').default(false),
   hasClientTraffic: boolean('has_client_traffic').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1198,5 +1199,68 @@ export const discussionThreadRelations = relations(discussionThread, ({ one }) =
   discussion: one(discussions, {
     fields: [discussionThread.discussionId],
     references: [discussions.id],
+  }),
+}));
+
+export const lintRulesEnum = pgEnum('lint_rules', [
+  'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
+  'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
+  'SHOULD_NOT_HAVE_TYPE_PREFIX',
+  'SHOULD_NOT_HAVE_TYPE_SUFFIX',
+  'SHOULD_NOT_HAVE_INPUT_PREFIX',
+  'SHOULD_HAVE_INPUT_SUFFIX',
+  'SHOULD_NOT_HAVE_ENUM_PREFIX',
+  'SHOULD_NOT_HAVE_ENUM_SUFFIX',
+  'SHOULD_NOT_HAVE_INTERFACE_PREFIX',
+  'SHOULD_NOT_HAVE_INTERFACE_SUFFIX',
+  'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
+  'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
+  'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
+  'ORDER_FIELDS',
+  'ORDER_ENUM_VALUES',
+  'ORDER_DEFINITIONS',
+  'ALL_TYPES_REQUIRE_DESCRIPTION',
+  'ROOT_FIELDS_REQUIRE_DESCRIPTION',
+  'REQUIRE_DEPRECATION_REASON',
+  'REQUIRE_DEPRECATION_DATE',
+  'UNIQUE_ENUM_VALUES',
+  'UNIQUE_TYPE_NAMES',
+] as const);
+
+export const lintSeverityEnum = pgEnum('lint_severity', ['warn', 'error'] as const);
+
+export const namespaceLintCheckConfig = pgTable('namespace_lint_check_config', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  namespaceId: uuid('namespace_id')
+    .notNull()
+    .references(() => namespaces.id, {
+      onDelete: 'cascade',
+    }),
+  lintRule: lintRulesEnum('lint_rule').notNull(),
+  severityLevel: lintSeverityEnum('severity_level').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const namespaceLintCheckConfigRelations = relations(namespaceLintCheckConfig, ({ one }) => ({
+  namespace: one(namespaces),
+}));
+
+export const schemaCheckLintAction = pgTable('schema_check_lint_action', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaCheckId: uuid('schema_check_id')
+    .notNull()
+    .references(() => schemaChecks.id, {
+      onDelete: 'cascade',
+    }),
+  message: text('message'),
+  isError: boolean('is_error').default(false),
+  location: customJson<{ line: number; column: number; endLine?: number; endColumn?: number }>('location').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const schemaCheckLintActionRelations = relations(schemaCheckLintAction, ({ one }) => ({
+  check: one(schemaChecks, {
+    fields: [schemaCheckLintAction.schemaCheckId],
+    references: [schemaChecks.id],
   }),
 }));

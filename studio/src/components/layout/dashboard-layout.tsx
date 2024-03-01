@@ -109,6 +109,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
         icon: <Component2Icon className="h-4 w-4" />,
+      },
+      {
+        title: "Lint Policy",
+        href: basePath + "/lint-policy",
+        icon: <AiOutlineAudit className="h-4 w-4" />,
         separator: true,
       },
       {

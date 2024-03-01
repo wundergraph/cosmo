@@ -100,6 +100,13 @@ export default (opts: BaseCommandOptions) => {
       wordWrap: true,
     });
 
+    const lintIssuesTable = new Table({
+      head: [pc.bold(pc.white('SEVERITY')), pc.bold(pc.white('ERROR_MESSAGE'))],
+      colWidths: [10, 150],
+      colAligns: ['center'],
+      wordWrap: true,
+    });
+
     let success = false;
     let finalStatement = '';
 
@@ -113,7 +120,9 @@ export default (opts: BaseCommandOptions) => {
         if (
           resp.nonBreakingChanges.length === 0 &&
           resp.breakingChanges.length === 0 &&
-          resp.compositionErrors.length === 0
+          resp.compositionErrors.length === 0 &&
+          resp.lintErrors.length === 0 &&
+          resp.lintWarnings.length === 0
         ) {
           console.log(`\nDetected no changes.\n${studioCheckDestination}\n`);
 
@@ -190,6 +199,18 @@ export default (opts: BaseCommandOptions) => {
             ]);
           }
           console.log(compositionErrorsTable.toString());
+        }
+
+        if (resp.lintErrors.length > 0 || resp.lintWarnings.length > 0) {
+          success = resp.lintErrors.length === 0;
+          console.log(pc.red('\nDetected lint issues:'));
+          for (const error of resp.lintErrors) {
+            lintIssuesTable.push([logSymbols.error, error.message]);
+          }
+          for (const warning of resp.lintWarnings) {
+            lintIssuesTable.push([logSymbols.warning, warning.message]);
+          }
+          console.log(lintIssuesTable.toString());
         }
 
         if (success) {

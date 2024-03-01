@@ -5,6 +5,7 @@ import {
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
 import { ChangesTable } from "@/components/checks/changes-table";
+import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
 import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
@@ -243,6 +244,7 @@ const CheckDetails = ({
     data.check.isComposable,
     data.check.isBreaking,
     data.check.hasClientTraffic,
+    data.check.hasLintErrors,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -366,6 +368,17 @@ const CheckDetails = ({
                 <InfoTooltip>
                   Describes if the proposed schema affects any client operations
                   based on real usage data.
+                </InfoTooltip>
+              </Badge>
+
+              <Badge
+                variant="outline"
+                className="flex items-center space-x-1.5  py-2"
+              >
+                {getCheckIcon(!data.check.hasLintErrors)}
+                <span className="flex-1 truncate">Lint Errors</span>
+                <InfoTooltip>
+                  Describes if the proposed schema contains linting errors.
                 </InfoTooltip>
               </Badge>
             </dd>
@@ -526,6 +539,18 @@ const CheckDetails = ({
                     Operations
                   </Link>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="lintIssues"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{ query: { ...router.query, tab: "lintIssues" } }}
+                  >
+                    <PiBracketsCurlyBold className="flex-shrink-0" />
+                    Lint Issues
+                  </Link>
+                </TabsTrigger>
                 {!data.check.isDeleted && (
                   <TabsTrigger
                     value="schema"
@@ -640,6 +665,15 @@ const CheckDetails = ({
               </TabsContent>
               <TabsContent value="operations" className="w-full">
                 <CheckOperations />
+              </TabsContent>
+              <TabsContent
+                value="lintIssues"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <LintIssuesTable
+                  lintIssues={data.lintIssues}
+                  caption={`${data.lintIssues.length} issues found`}
+                />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
                 <div className="right-8 top-5 px-4 md:absolute md:px-0">

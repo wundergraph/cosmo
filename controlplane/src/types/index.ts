@@ -1,3 +1,4 @@
+import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
 
 export type FeatureIds =
@@ -107,6 +108,7 @@ export interface SchemaCheckDTO {
     repositorySlug: string;
     checkRunId: number;
   };
+  hasLintErrors: boolean;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -443,3 +445,60 @@ export type TimeFilters = {
   granule: string;
   dateRange: DateRange<number>;
 };
+
+export enum LintRuleType {
+  FIELD_NAMES_SHOULD_BE_CAMEL_CASE = 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
+  TYPE_NAMES_SHOULD_BE_PASCAL_CASE = 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
+  SHOULD_NOT_HAVE_TYPE_PREFIX = 'SHOULD_NOT_HAVE_TYPE_PREFIX',
+  SHOULD_NOT_HAVE_TYPE_SUFFIX = 'SHOULD_NOT_HAVE_TYPE_SUFFIX',
+  SHOULD_NOT_HAVE_INPUT_PREFIX = 'SHOULD_NOT_HAVE_INPUT_PREFIX',
+  SHOULD_HAVE_INPUT_SUFFIX = 'SHOULD_HAVE_INPUT_SUFFIX',
+  SHOULD_NOT_HAVE_ENUM_PREFIX = 'SHOULD_NOT_HAVE_ENUM_PREFIX',
+  SHOULD_NOT_HAVE_ENUM_SUFFIX = 'SHOULD_NOT_HAVE_ENUM_SUFFIX',
+  SHOULD_NOT_HAVE_INTERFACE_PREFIX = 'SHOULD_NOT_HAVE_INTERFACE_PREFIX',
+  SHOULD_NOT_HAVE_INTERFACE_SUFFIX = 'SHOULD_NOT_HAVE_INTERFACE_SUFFIX',
+  ENUM_VALUES_SHOULD_BE_UPPER_CASE = 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
+  DISALLOW_CASE_INSENSITIVE_ENUM_VALUES = 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
+  NO_TYPENAME_PREFIX_IN_TYPE_FIELDS = 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
+  ORDER_FIELDS = 'ORDER_FIELDS',
+  ORDER_ENUM_VALUES = 'ORDER_ENUM_VALUES',
+  ORDER_DEFINITIONS = 'ORDER_DEFINITIONS',
+  ALL_TYPES_REQUIRE_DESCRIPTION = 'ALL_TYPES_REQUIRE_DESCRIPTION',
+  ROOT_FIELDS_REQUIRE_DESCRIPTION = 'ROOT_FIELDS_REQUIRE_DESCRIPTION',
+  REQUIRE_DEPRECATION_REASON = 'REQUIRE_DEPRECATION_REASON',
+  REQUIRE_DEPRECATION_DATE = 'REQUIRE_DEPRECATION_DATE',
+  UNIQUE_ENUM_VALUES = 'UNIQUE_ENUM_VALUES',
+  UNIQUE_TYPE_NAMES = 'UNIQUE_TYPE_NAMES',
+}
+
+export type Severity = 1 | 2;
+export type LintSeverityLevel = 'warn' | 'error';
+export type RuleLevel = Severity | LintSeverityLevel;
+export type RuleLevelAndOptions<Options extends any[] = any[]> = Prepend<Partial<Options>, RuleLevel>;
+export type RuleEntry<Options extends any[] = any[]> = RuleLevel | RuleLevelAndOptions<Options>;
+
+export interface RulesConfig {
+  [rule: string]: RuleEntry;
+}
+
+export interface LintIssueResult {
+  ruleId: string | undefined;
+  severity: LintSeverity;
+  message: string;
+  issueLocation: {
+    line: number;
+    column: number;
+    endLine?: number;
+    endColumn?: number;
+  };
+}
+
+export interface SchemaLintDTO {
+  severity: LintSeverityLevel;
+  ruleName: LintRuleType;
+}
+
+export interface SchemaLintIssues {
+  warnings: LintIssueResult[];
+  errors: LintIssueResult[];
+}
