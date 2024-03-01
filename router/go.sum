@@ -284,8 +284,6 @@ github.com/ugorji/go/codec v1.2.11 h1:BMaWp1Bb6fHwEtbplGBGJ498wD+LKlNSl25MjdZY4d
 github.com/ugorji/go/codec v1.2.11/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
 github.com/vektah/gqlparser/v2 v2.5.10 h1:6zSM4azXC9u4Nxy5YmdmGu4uKamfwsdKTwp5zsEealU=
 github.com/vektah/gqlparser/v2 v2.5.10/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.9 h1:0SwvTh31AnH67hZReDFdyBvy4HVPOBinRs0Z0Rem1vE=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.9/go.mod h1:26OPLppZhb4zc9RCfuLPn1Zfv3hNs/fiN4U6d9pLOw4=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.10 h1:oi8feLD9WLWAE0Ajpn0IJR7EMT5NNKux0jeoiaERKQA=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.10/go.mod h1:26OPLppZhb4zc9RCfuLPn1Zfv3hNs/fiN4U6d9pLOw4=
 github.com/yusufpapurcu/wmi v1.2.3 h1:E1ctvB7uKFMOJw3fdOW32DwGE9I7t++CRUEMKvFoFiw=
