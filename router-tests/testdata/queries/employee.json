@@ -1,52 +1,52 @@
 {
-    "data": {
-      "employee": {
-        "id": 1,
-        "details": {
-          "forename": "Jens",
-          "location": {
-            "language": "German"
-          }
-        },
-        "hobbies": [
-          {
-            "__typename": "Exercise"
-          },
-          {
-            "__typename": "Gaming"
-          },
-          {
-            "__typename": "Other"
-          },
-          {
-            "__typename": "Programming"
-          },
-          {
-            "__typename": "Travelling"
-          }
-        ]
+  "data": {
+    "employee": {
+      "id": 1,
+      "details": {
+        "forename": "Jens",
+        "location": {
+          "language": "German"
+        }
       },
-      "teammates": [
+      "hobbies": [
         {
-          "id": 4,
-          "details": {
-            "forename": "Björn"
-          },
-          "products": [
-            "FINANCE",
-            "HUMAN_RESOURCES",
-            "MARKETING"
-          ]
+          "__typename": "Exercise"
         },
         {
-          "id": 11,
-          "details": {
-            "forename": "Alexandra"
-          },
-          "products": [
-            "FINANCE"
-          ]
+          "__typename": "Gaming"
+        },
+        {
+          "__typename": "Other"
+        },
+        {
+          "__typename": "Programming"
+        },
+        {
+          "__typename": "Travelling"
         }
       ]
-    }
+    },
+    "teammates": [
+      {
+        "id": 4,
+        "details": {
+          "forename": "Björn"
+        },
+        "products": [
+          "FINANCE",
+          "HUMAN_RESOURCES",
+          "MARKETING"
+        ]
+      },
+      {
+        "id": 11,
+        "details": {
+          "forename": "Alexandra"
+        },
+        "products": [
+          "FINANCE"
+        ]
+      }
+    ]
+  }
 }

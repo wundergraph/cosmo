@@ -62,12 +62,10 @@ func (t *testQuery) Data() []byte {
 }
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {
-	var v interface{}
-	err := json.Unmarshal(data, &v)
+	buf := new(bytes.Buffer)
+	err := json.Indent(buf, data, "", "  ")
 	require.NoError(tb, err)
-	normalized, err := json.MarshalIndent(v, "", "  ")
-	require.NoError(tb, err)
-	return normalized
+	return buf.Bytes()
 }
 
 func TestIntegration(t *testing.T) {
