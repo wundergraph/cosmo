@@ -67,6 +67,9 @@ query {
       ... on Travelling {
         countriesLived {
           language
+          key {
+            name
+          }
         }
       }
     }

@@ -443,7 +443,7 @@ func TestTestdataQueries(t *testing.T) {
 				t,
 				goldie.WithFixtureDir("testdata/queries"),
 				goldie.WithNameSuffix(".json"),
-				goldie.WithDiffEngine(goldie.ColoredDiff),
+				goldie.WithDiffEngine(goldie.ClassicDiff),
 			)
 
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {

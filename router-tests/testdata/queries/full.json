@@ -16,7 +16,10 @@
           "pets": null
         },
         "role": {
-          "departments": ["ENGINEERING", "MARKETING"],
+          "departments": [
+            "ENGINEERING",
+            "MARKETING"
+          ],
           "title": [
             "Founder",
             "CEO"
@@ -28,11 +31,11 @@
             "category": "SPORT"
           },
           {
+            "yearsOfExperience": 20,
             "genres": [
               "FPS"
             ],
-            "name": "Counter Strike",
-            "yearsOfExperience": 20
+            "name": "Counter Strike"
           },
           {
             "name": "WunderGraph"
@@ -45,8 +48,18 @@
           },
           {
             "countriesLived": [
-              "ENGLAND",
-              "GERMANY"
+              {
+                "language": "English",
+                "key": {
+                  "name": "England"
+                }
+              },
+              {
+                "language": "German",
+                "key": {
+                  "name": "Germany"
+                }
+              }
             ]
           }
         ],
@@ -73,7 +86,9 @@
           "pets": null
         },
         "role": {
-          "departments": ["ENGINEERING"],
+          "departments": [
+            "ENGINEERING"
+          ],
           "title": [
             "Co-founder",
             "Tech Lead"
@@ -85,11 +100,11 @@
             "category": "STRENGTH_TRAINING"
           },
           {
+            "yearsOfExperience": 0.5,
             "genres": [
               "FPS"
             ],
-            "name": "Counter Strike",
-            "yearsOfExperience": 0.5
+            "name": "Counter Strike"
           },
           {
             "languages": [
@@ -125,7 +140,9 @@
           ]
         },
         "role": {
-          "departments": ["MARKETING"],
+          "departments": [
+            "MARKETING"
+          ],
           "title": [
             "Co-founder",
             "Head of Growth"
@@ -143,8 +160,18 @@
           },
           {
             "countriesLived": [
-              "AMERICA",
-              "SERBIA"
+              {
+                "language": "English",
+                "key": {
+                  "name": "America"
+                }
+              },
+              {
+                "language": "Serbian",
+                "key": {
+                  "name": "Serbia"
+                }
+              }
             ]
           }
         ],
@@ -180,7 +207,10 @@
           ]
         },
         "role": {
-          "departments": ["OPERATIONS", "MARKETING"],
+          "departments": [
+            "OPERATIONS",
+            "MARKETING"
+          ],
           "title": [
             "Co-founder",
             "COO"
@@ -212,8 +242,18 @@
           },
           {
             "countriesLived": [
-              "AMERICA",
-              "GERMANY"
+              {
+                "language": "English",
+                "key": {
+                  "name": "America"
+                }
+              },
+              {
+                "language": "German",
+                "key": {
+                  "name": "Germany"
+                }
+              }
             ]
           }
         ],
@@ -299,7 +339,9 @@
           ]
         },
         "role": {
-          "departments": ["ENGINEERING"],
+          "departments": [
+            "ENGINEERING"
+          ],
           "title": [
             "Senior GO Engineer"
           ],
@@ -336,7 +378,9 @@
           "pets": null
         },
         "role": {
-          "departments": ["ENGINEERING"],
+          "departments": [
+            "ENGINEERING"
+          ],
           "title": [
             "Software Engineer"
           ],
@@ -344,11 +388,11 @@
         },
         "hobbies": [
           {
+            "yearsOfExperience": 9.5,
             "genres": [
               "BOARD"
             ],
-            "name": "Chess",
-            "yearsOfExperience": 9.5
+            "name": "Chess"
           },
           {
             "name": "Watching anime"
@@ -374,7 +418,9 @@
           "pets": null
         },
         "role": {
-          "departments": ["ENGINEERING"],
+          "departments": [
+            "ENGINEERING"
+          ],
           "title": [
             "Software Engineer"
           ],
@@ -385,14 +431,14 @@
             "category": "STRENGTH_TRAINING"
           },
           {
+            "yearsOfExperience": 17,
             "genres": [
               "ADVENTURE",
               "RPG",
               "SIMULATION",
               "STRATEGY"
             ],
-            "name": "Miscellaneous",
-            "yearsOfExperience": 17
+            "name": "Miscellaneous"
           },
           {
             "name": "Watching anime"
@@ -424,7 +470,9 @@
           ]
         },
         "role": {
-          "departments": ["ENGINEERING"],
+          "departments": [
+            "ENGINEERING"
+          ],
           "title": [
             "Senior Frontend Engineer"
           ],
@@ -450,12 +498,42 @@
           },
           {
             "countriesLived": [
-              "GERMANY",
-              "INDONESIA",
-              "NETHERLANDS",
-              "PORTUGAL",
-              "SPAIN",
-              "THAILAND"
+              {
+                "language": "German",
+                "key": {
+                  "name": "Germany"
+                }
+              },
+              {
+                "language": "Indonesian",
+                "key": {
+                  "name": "Indonesia"
+                }
+              },
+              {
+                "language": "Dutch",
+                "key": {
+                  "name": "Netherlands"
+                }
+              },
+              {
+                "language": "Portuguese",
+                "key": {
+                  "name": "Portugal"
+                }
+              },
+              {
+                "language": "Spanish",
+                "key": {
+                  "name": "Spain"
+                }
+              },
+              {
+                "language": "Thai",
+                "key": {
+                  "name": "Thailand"
+                }
+              }
             ]
           }
         ],
@@ -480,9 +558,11 @@
           "pets": null
         },
         "role": {
-          "departments": ["OPERATIONS"],
+          "departments": [
+            "OPERATIONS"
+          ],
           "title": [
-            "Accounting & Finance"
+            "Accounting \u0026 Finance"
           ],
           "operatorType": [
             "FINANCE"
@@ -519,7 +599,9 @@
           ]
         },
         "role": {
-          "departments": ["ENGINEERING"],
+          "departments": [
+            "ENGINEERING"
+          ],
           "title": [
             "Software Engineer"
           ],
@@ -538,6 +620,7 @@
             "category": "STRENGTH_TRAINING"
           },
           {
+            "yearsOfExperience": 25.5,
             "genres": [
               "ADVENTURE",
               "BOARD",
@@ -547,14 +630,28 @@
               "SIMULATION",
               "STRATEGY"
             ],
-            "name": "Miscellaneous",
-            "yearsOfExperience": 25.5
+            "name": "Miscellaneous"
           },
           {
             "countriesLived": [
-              "ENGLAND",
-              "KOREA",
-              "TAIWAN"
+              {
+                "language": "English",
+                "key": {
+                  "name": "England"
+                }
+              },
+              {
+                "language": "Korean",
+                "key": {
+                  "name": "Korea"
+                }
+              },
+              {
+                "language": "Taiwanese",
+                "key": {
+                  "name": "Taiwan"
+                }
+              }
             ]
           }
         ],
