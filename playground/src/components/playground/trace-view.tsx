@@ -223,10 +223,7 @@ const Trace = ({
 
       gStartTimeNano = BigInt(parsedResponse.extensions.trace.info.trace_start_unix * 1e9);
 
-      const plannerStats = parsedResponse.extensions.trace.info.planner_stats;
-      const planId = Date.now().toString();
-
-      let traceTree = parseJson(parsedResponse.extensions.trace, plannerStats ? planId : undefined);
+      const traceTree = parseJson(parsedResponse.extensions.trace, 'plan');
 
       if (traceTree) {
         fetchMap.set(traceTree.id, traceTree);
@@ -241,43 +238,80 @@ const Trace = ({
         }
       });
 
-      if (plannerStats) {
-        const plan = {
-          id: planId,
-          type: 'plan',
-          durationSinceStart: plannerStats.duration_since_start_nanoseconds,
-          durationLoad: plannerStats.planning_time_nanoseconds,
-          children: [traceTree],
-        } as FetchNode;
-        traceTree = plan;
+      const parseStats = parsedResponse.extensions.trace.info.parse_stats;
+      const normalizeStats = parsedResponse.extensions.trace.info.normalize_stats;
+      const validateStats = parsedResponse.extensions.trace.info.validate_stats;
+      const plannerStats = parsedResponse.extensions.trace.info.planner_stats;
 
-        tempNodes.unshift({
-          id: plan.id,
-          type: 'multi',
-          data: {
-            ...plan,
-          },
-          connectable: false,
-          deletable: false,
-          position: {
-            x: 0,
-            y: 0,
-          },
-        });
+      const parse = {
+        id: 'parse',
+        type: 'parse',
+        durationSinceStart: parseStats.duration_since_start_nanoseconds,
+        durationLoad: parseStats.duration_nanoseconds,
+      } as FetchNode;
 
-        tempEdges.unshift({
-          id: `edge-${plan.id}-${plan.parentId}`,
-          source: `${plan.parentId}`,
-          animated: true,
-          target: `${plan.id}`,
-          type: 'fetch',
-          data: {
-            ...plan,
-          },
-        });
-      }
+      const normalize = {
+        id: 'normalize',
+        type: 'normalize',
+        durationSinceStart: normalizeStats.duration_since_start_nanoseconds,
+        durationLoad: normalizeStats.duration_nanoseconds,
+      } as FetchNode;
 
-      setTree(traceTree);
+      const validate = {
+        id: 'validate',
+        type: 'validate',
+        durationSinceStart: validateStats.duration_since_start_nanoseconds,
+        durationLoad: validateStats.duration_nanoseconds,
+      } as FetchNode;
+
+      const plan = {
+        id: 'plan',
+        type: 'plan',
+        durationSinceStart: plannerStats.duration_since_start_nanoseconds,
+        durationLoad: plannerStats.duration_nanoseconds,
+      } as FetchNode;
+
+      const execute = {
+        id: 'execute',
+        type: 'execute',
+        durationSinceStart: traceTree?.durationSinceStart,
+        durationLoad: Number(gEndTimeNano - gStartTimeNano) - (traceTree?.durationSinceStart ?? 0),
+        children: [traceTree],
+      } as FetchNode;
+
+      const root = {
+        id: 'root',
+        type: 'graphql',
+        durationLoad: Number(gEndTimeNano - gStartTimeNano),
+        children: [parse, normalize, validate, plan, execute],
+      } as FetchNode;
+
+      tempNodes.unshift({
+        id: plan.id,
+        type: 'multi',
+        data: {
+          ...plan,
+        },
+        connectable: false,
+        deletable: false,
+        position: {
+          x: 0,
+          y: 0,
+        },
+      });
+
+      tempEdges.unshift({
+        id: `edge-${plan.id}-${plan.parentId}`,
+        source: `${plan.parentId}`,
+        animated: true,
+        target: `${plan.id}`,
+        type: 'fetch',
+        data: {
+          ...plan,
+        },
+      });
+
+      setTree(root);
       setNodes(tempNodes);
       setEdges(tempEdges);
       setGlobalStartTime(gStartTimeNano);
