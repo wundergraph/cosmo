@@ -250,8 +250,8 @@ enum ProductNamesEnum {
         ruleId: 'require-description',
         severity: 0,
         message: 'Description is required for type "B"',
-        issueLocation: { line: 1, column: 6, endLine: 1, endColumn: 7 }
-      }
+        issueLocation: { line: 1, column: 6, endLine: 1, endColumn: 7 },
+      },
     ]);
   });
 
@@ -273,14 +273,14 @@ enum ProductNamesEnum {
         ruleId: 'no-typename-prefix',
         severity: 0,
         message: 'Field "userId" starts with the name of the parent type "User"',
-        issueLocation: { line: 2, column: 3, endLine: 2, endColumn: 9 }
+        issueLocation: { line: 2, column: 3, endLine: 2, endColumn: 9 },
       },
       {
         ruleId: 'naming-convention',
         severity: 0,
         message: 'Field "first_name" should be in camelCase format',
-        issueLocation: { line: 3, column: 3, endLine: 3, endColumn: 13 }
-      }
+        issueLocation: { line: 3, column: 3, endLine: 3, endColumn: 13 },
+      },
     ]);
   });
 
@@ -307,14 +307,14 @@ input InputUser{
         ruleId: 'naming-convention',
         severity: 0,
         message: 'Input type "User" should have one of the following suffixes: Input',
-        issueLocation: { line: 1, column: 7, endLine: 1, endColumn: 11 }
+        issueLocation: { line: 1, column: 7, endLine: 1, endColumn: 11 },
       },
       {
         ruleId: 'naming-convention',
         severity: 0,
         message: 'Input type "InputUser" should not have "Input" prefix',
-        issueLocation: { line: 6, column: 7, endLine: 6, endColumn: 16 }
-      }
+        issueLocation: { line: 6, column: 7, endLine: 6, endColumn: 16 },
+      },
     ]);
   });
 
@@ -328,7 +328,7 @@ input InputUser{
     ];
 
     const rulesConfig = createRulesConfig(rules);
-    
+
     expect(rulesConfig).toStrictEqual({
       'naming-convention': [
         'warn',
