@@ -4,6 +4,23 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.73.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.72.0...controlplane@0.73.0) (2024-02-29)
+
+### Features
+
+* enrich logger for platform calls ([#579](https://github.com/wundergraph/cosmo/issues/579)) ([47836bf](https://github.com/wundergraph/cosmo/commit/47836bfd8a5d55195651928b4ea9c1f5e7bbf580)) (@thisisnithin)
+
+# [0.72.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.71.1...controlplane@0.72.0) (2024-02-27)
+
+### Bug Fixes
+
+* omit invalid group filters ([#580](https://github.com/wundergraph/cosmo/issues/580)) ([c271e94](https://github.com/wundergraph/cosmo/commit/c271e9437e7a779dc7384f700a08e12e2a113c25)) (@thisisnithin)
+
+### Features
+
+* **cli:** new command to fetch latest published subgraph SDL ([#575](https://github.com/wundergraph/cosmo/issues/575)) ([09a0ab5](https://github.com/wundergraph/cosmo/commit/09a0ab54cccae6f46c1e585cf12fa9321f44e9ed)) (@StarpTech)
+* show link to studio page on subgraph check ([#578](https://github.com/wundergraph/cosmo/issues/578)) ([701d81c](https://github.com/wundergraph/cosmo/commit/701d81c764b12bb1a2ec308634e69aaffb9e7e3e)) (@thisisnithin)
+
 ## [0.71.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.71.1...controlplane@0.71.2) (2024-02-23)
 
 **Note:** Version bump only for package controlplane

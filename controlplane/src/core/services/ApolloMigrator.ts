@@ -1,5 +1,5 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import pino, { BaseLogger } from 'pino';
+import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphDTO, MigrationSubgraph } from '../../types/index.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
@@ -10,7 +10,7 @@ export default class ApolloMigrator {
   apiKey = '';
   organizationSlug = '';
   variantName = '';
-  logger: pino.Logger;
+  logger: FastifyBaseLogger;
   userId = '';
   userEmail = '';
 
@@ -25,7 +25,7 @@ export default class ApolloMigrator {
     apiKey: string;
     organizationSlug: string;
     variantName: string;
-    logger: pino.Logger;
+    logger: FastifyBaseLogger;
     userId: string;
     userEmail: string;
   }) {

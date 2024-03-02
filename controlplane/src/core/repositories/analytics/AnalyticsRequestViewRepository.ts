@@ -640,7 +640,9 @@ export class AnalyticsRequestViewRepository {
         return filters.filter((f) => f.field !== 'p95');
       }
       case AnalyticsViewGroupName.OperationName: {
-        return filters.filter((f) => !['durationInNano', 'clientName', 'statusMessages'].includes(f.field));
+        return filters.filter(
+          (f) => !['durationInNano', 'clientName', 'clientVersion', 'statusMessages'].includes(f.field),
+        );
       }
       case AnalyticsViewGroupName.Client: {
         return filters.filter((f) => ['clientName', 'p95', 'clientVersion'].includes(f.field));

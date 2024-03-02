@@ -243,6 +243,9 @@ export const CheckOperations = () => {
               (c) => !c.hasOverride,
             );
 
+            const firstSeenFormatted = formatDateTime(new Date(firstSeenAt));
+            const lastSeenAtFormatted = formatDateTime(new Date(lastSeenAt));
+
             return (
               <AccordionItem id={hash} key={hash} value={hash}>
                 <AccordionTrigger className="px-2 hover:bg-secondary/30 hover:no-underline">
@@ -277,8 +280,9 @@ export const CheckOperations = () => {
                   <div className="mt-2 flex flex-col gap-y-6 px-2">
                     <div className="items-center justify-between space-y-6 md:flex-row xl:flex xl:space-y-0">
                       <p className="text-muted-foreground">
-                        First seen at {formatDateTime(new Date(firstSeenAt))}{" "}
-                        and last seen at {formatDateTime(new Date(lastSeenAt))}
+                        {firstSeenFormatted === lastSeenAtFormatted
+                          ? `Last seen at ${lastSeenAtFormatted}`
+                          : `First seen at ${firstSeenFormatted} and last seen at ${lastSeenAtFormatted}`}
                       </p>
                       <div className="flex items-center gap-x-2">
                         <OperationContentDialog hash={hash} />
