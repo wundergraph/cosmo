@@ -137,14 +137,6 @@ const lintCategories = [
         description:
           "Should provide the deletion date on @deprecated directive.",
       },
-      {
-        name: "UNIQUE_ENUM_VALUES",
-        description: "Enum values should be unique.",
-      },
-      {
-        name: "UNIQUE_TYPE_NAMES",
-        description: "Type names should be unique.",
-      },
     ],
   },
 ];
@@ -216,10 +208,9 @@ const LintPolicyPage: NextPageWithLayout = () => {
         <div className="flex flex-col gap-y-1">
           <span>Lint Rules</span>
           <p className="text-sm text-muted-foreground">
-            API keys are used to authenticate the Cosmo CLI for local
-            development or CI/CD.{" "}
+            Configure the linter rules and its severity levels for the lint check performed during each check operation.{" "}
             <Link
-              href={docsBaseURL + "/studio/api-keys"}
+              href={docsBaseURL + "/studio/lint-policy"}
               className="text-primary"
               target="_blank"
               rel="noreferrer"
@@ -243,7 +234,7 @@ const LintPolicyPage: NextPageWithLayout = () => {
                 onSuccess: (d) => {
                   if (d.response?.code === EnumStatusCode.OK) {
                     toast({
-                      description: "Lint Policy applied succesfully",
+                      description: "Lint Policy applied succesfully.",
                       duration: 3000,
                     });
                   } else if (d.response?.details) {

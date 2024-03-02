@@ -35,16 +35,18 @@ export class SchemaLintRepository {
   }) {
     await this.db.delete(namespaceLintCheckConfig).where(eq(namespaceLintCheckConfig.namespaceId, namespaceId));
 
-    await this.db.insert(namespaceLintCheckConfig).values(
-      lintConfigs.map((l) => {
-        return {
-          namespaceId,
-          lintRule: l.ruleName as LintRuleType,
-          severityLevel:
-            l.severityLevel === LintSeverity.error ? ('error' as LintSeverityLevel) : ('warn' as LintSeverityLevel),
-        };
-      }),
-    );
+    if (lintConfigs.length > 0) {
+      await this.db.insert(namespaceLintCheckConfig).values(
+        lintConfigs.map((l) => {
+          return {
+            namespaceId,
+            lintRule: l.ruleName as LintRuleType,
+            severityLevel:
+              l.severityLevel === LintSeverity.error ? ('error' as LintSeverityLevel) : ('warn' as LintSeverityLevel),
+          };
+        }),
+      );
+    }
   }
 
   public async addSchemaCheckLintIssues({
@@ -54,16 +56,18 @@ export class SchemaLintRepository {
     schemaCheckId: string;
     lintIssues: LintIssueResult[];
   }) {
-    await this.db.insert(schemaCheckLintAction).values(
-      lintIssues.map((l) => {
-        return {
-          schemaCheckId,
-          message: l.message,
-          location: l.issueLocation,
-          isError: l.severity === LintSeverity.error,
-        };
-      }),
-    );
+    if (lintIssues.length > 0) {
+      await this.db.insert(schemaCheckLintAction).values(
+        lintIssues.map((l) => {
+          return {
+            schemaCheckId,
+            message: l.message,
+            location: l.issueLocation,
+            isError: l.severity === LintSeverity.error,
+          };
+        }),
+      );
+    }
   }
 
   public async getSchemaCheckLintIsssues({ schemaCheckId }: { schemaCheckId: string }): Promise<LintIssueResult[]> {
@@ -73,7 +77,8 @@ export class SchemaLintRepository {
         location: schemaCheckLintAction.location,
         isError: schemaCheckLintAction.isError,
       })
-      .from(schemaCheckLintAction);
+      .from(schemaCheckLintAction)
+      .where(eq(schemaCheckLintAction.schemaCheckId, schemaCheckId));
 
     return lintIssues.map((l) => {
       return {

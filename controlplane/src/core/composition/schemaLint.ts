@@ -29,8 +29,7 @@ const getRuleName = (rule: LintRuleType): string => {
     case 'ORDER_DEFINITIONS': {
       return 'alphabetize';
     }
-    case 'ALL_TYPES_REQUIRE_DESCRIPTION':
-    case 'ROOT_FIELDS_REQUIRE_DESCRIPTION': {
+    case 'ALL_TYPES_REQUIRE_DESCRIPTION': {
       return 'require-description';
     }
     case 'REQUIRE_DEPRECATION_REASON': {
@@ -38,12 +37,6 @@ const getRuleName = (rule: LintRuleType): string => {
     }
     case 'REQUIRE_DEPRECATION_DATE': {
       return 'require-deprecation-date';
-    }
-    case 'UNIQUE_ENUM_VALUES': {
-      return 'unique-enum-value-names';
-    }
-    case 'UNIQUE_TYPE_NAMES': {
-      return 'unique-type-names';
     }
     default: {
       throw new Error(`Rule ${rule} doesnt exist`);
@@ -178,22 +171,19 @@ export const createRulesConfig = (rules: SchemaLintDTO[]) => {
             const inputObjectTypeConfig = ruleOptions.InputObjectTypeDefinition;
             ruleOptions = {
               ...ruleOptions,
-              InputObjectTypeDefinition: { ...inputObjectTypeConfig, requiredSuffixes: ['Input', 'input'] },
+              InputObjectTypeDefinition: { ...inputObjectTypeConfig, requiredSuffixes: ['Input'] },
             };
           } else {
             ruleOptions = {
               ...ruleOptions,
-              InputObjectTypeDefinition: { requiredSuffixes: ['Input', 'input'] },
+              InputObjectTypeDefinition: { requiredSuffixes: ['Input'] },
             };
           }
 
           ruleConfig[1] = ruleOptions;
           break;
         } else {
-          rulesConfig[ruleName] = [
-            rule.severity,
-            { InputObjectTypeDefinition: { requiredSuffixes: ['Input', 'input'] } },
-          ];
+          rulesConfig[ruleName] = [rule.severity, { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] } }];
         }
         break;
       }
@@ -330,9 +320,7 @@ export const createRulesConfig = (rules: SchemaLintDTO[]) => {
       case 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES':
       case 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS':
       case 'REQUIRE_DEPRECATION_REASON':
-      case 'REQUIRE_DEPRECATION_DATE':
-      case 'UNIQUE_ENUM_VALUES':
-      case 'UNIQUE_TYPE_NAMES': {
+      case 'REQUIRE_DEPRECATION_DATE': {
         const ruleName = getRuleName(rule.ruleName);
         rulesConfig[ruleName] = [rule.severity];
         break;
@@ -400,21 +388,6 @@ export const createRulesConfig = (rules: SchemaLintDTO[]) => {
         }
         break;
       }
-      case 'ROOT_FIELDS_REQUIRE_DESCRIPTION': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          ruleOptions = {
-            ...ruleOptions,
-            rootField: true,
-          };
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { rootField: true }];
-        }
-        break;
-      }
       default: {
         throw new Error(`Rule ${rule} doesnt exist`);
       }
@@ -424,9 +397,7 @@ export const createRulesConfig = (rules: SchemaLintDTO[]) => {
 };
 
 const directiveDefinitions = `
-directive @tag(
-  name: String!
-) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 directive @requiresScopes(scopes: [[String!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
@@ -437,6 +408,7 @@ directive @key(fields: String!) repeatable on OBJECT
 directive @provides(fields: String!) on FIELD_DEFINITION
 directive @requires(fields: String!) on FIELD_DEFINITION
 directive @override(from: String!) on FIELD_DEFINITION
+
 
 `;
 
@@ -457,7 +429,7 @@ export const schemaLintCheck = ({
   }
 
   const lintIssues = linter.verify(
-    directiveDefinitions + schema,
+    schema,
     {
       parser: '@graphql-eslint/eslint-plugin',
       parserOptions: { schema: directiveDefinitions + schema },

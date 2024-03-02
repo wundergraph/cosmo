@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { Cross1Icon, GlobeIcon } from "@radix-ui/react-icons";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
+import { Cross1Icon, EyeOpenIcon } from "@radix-ui/react-icons";
 import {
   LintIssue,
   LintSeverity,
@@ -7,6 +8,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { CiWarning } from "react-icons/ci";
+import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import {
   Table,
@@ -28,6 +30,16 @@ export const LintIssuesTable = ({
   caption?: React.ReactNode;
 }) => {
   const router = useRouter();
+
+  if (lintIssues.length === 0) {
+    return (
+      <EmptyState
+        icon={<CheckCircleIcon className="text-success" />}
+        title="Lint Check Successful"
+        description="There are no lint issues in the proposed schema."
+      />
+    );
+  }
   return (
     <TableWrapper>
       <Table>
@@ -35,7 +47,7 @@ export const LintIssuesTable = ({
           <TableRow>
             <TableHead className="w-[200px]">Severity</TableHead>
             <TableHead>Message</TableHead>
-            <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
+            <TableHead className="w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -51,7 +63,7 @@ export const LintIssuesTable = ({
                     : "text-yellow-600",
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-x-2">
                   {l.severity === LintSeverity.error ? (
                     <Cross1Icon />
                   ) : (
@@ -73,18 +85,17 @@ export const LintIssuesTable = ({
                         className="table-action"
                       >
                         <Link
-                          href={{
-                            pathname: `/[organizationSlug]/[namespace]/graph/[slug]/checks/[checkId]`,
-                            query: {
-                              organizationSlug: router.query.organizationSlug,
-                              namespace: router.query.namespace,
-                              slug: router.query.slug,
-                              checkId: router.query.checkId,
-                              tab: "schema",
-                            },
-                          }}
+                          href={`/${router.query.organizationSlug}/${
+                            router.query.namespace
+                          }/graph/${router.query.slug}/checks/${
+                            router.query.checkId
+                          }?tab=schema${
+                            l.issueLocation?.line
+                              ? `#L${l.issueLocation?.line}`
+                              : ""
+                          }`}
                         >
-                          <GlobeIcon />
+                          <EyeOpenIcon />
                         </Link>
                       </Button>
                     </TooltipTrigger>

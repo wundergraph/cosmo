@@ -549,6 +549,14 @@ const CheckDetails = ({
                   >
                     <PiBracketsCurlyBold className="flex-shrink-0" />
                     Lint Issues
+                    {data.lintIssues.length ? (
+                      <Badge
+                        variant="muted"
+                        className="bg-white px-1.5 text-current dark:bg-gray-900/60"
+                      >
+                        {data.lintIssues.length}
+                      </Badge>
+                    ) : null}
                   </Link>
                 </TabsTrigger>
                 {!data.check.isDeleted && (
@@ -685,7 +693,7 @@ const CheckDetails = ({
                   />
                 </div>
                 <div className="scrollbar-custom h-full w-full overflow-auto">
-                  <CodeViewer code={sdl} disableLinking />
+                  <CodeViewer code={sdl} />
                 </div>
               </TabsContent>
             </div>
