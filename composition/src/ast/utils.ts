@@ -26,13 +26,7 @@ import {
   UnionTypeDefinitionNode,
   UnionTypeExtensionNode,
 } from 'graphql';
-import {
-  MutableEnumValueDefinitionNode,
-  MutableFieldDefinitionNode,
-  MutableInputValueDefinitionNode,
-  MutableTypeDefinitionNode,
-  ObjectLikeTypeNode,
-} from './ast';
+import { ObjectLikeTypeNode } from './ast';
 import {
   ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
@@ -59,7 +53,7 @@ import {
   UNION_UPPER,
 } from '../utils/string-constants';
 import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/errors';
-import { DirectiveContainer, EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
+import { EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
   if (!node.directives?.length) {
@@ -287,21 +281,6 @@ export function extractExecutableDirectiveLocations(
   return set;
 }
 
-export function mergeExecutableDirectiveLocations(
-  nodes: readonly NameNode[] | NameNode[],
-  directiveContainer: DirectiveContainer,
-): Set<string> {
-  const mergedSet = new Set<string>();
-  for (const node of nodes) {
-    const name = node.value;
-    if (directiveContainer.executableLocations.has(name)) {
-      mergedSet.add(name);
-    }
-  }
-  directiveContainer.executableLocations = mergedSet;
-  return mergedSet;
-}
-
 export function pushPersistedDirectivesAndGetNode<T extends NodeContainer>(container: T): T['node'] {
   const persistedDirectives: ConstDirectiveNode[] = [...container.directives.tags.values()];
   const deprecatedDirective = container.directives.deprecated.directive;
@@ -365,22 +344,6 @@ export function formatDescription(description?: StringValueNode): StringValueNod
     }
   }
   return { ...description, value: value, block: true };
-}
-
-export function setLongestDescriptionForNode(
-  existingNode:
-    | MutableFieldDefinitionNode
-    | MutableEnumValueDefinitionNode
-    | MutableInputValueDefinitionNode
-    | MutableTypeDefinitionNode,
-  newDescription?: StringValueNode,
-) {
-  if (!newDescription) {
-    return;
-  }
-  if (!existingNode.description || newDescription.value.length > existingNode.description.value.length) {
-    existingNode.description = { ...newDescription, block: true };
-  }
 }
 
 export function lexicographicallySortArgumentNodes(fieldNode: FieldNode): ArgumentNode[] | undefined {

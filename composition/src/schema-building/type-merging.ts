@@ -17,11 +17,10 @@ export type MergedTypeResult = {
 function getMergedTypeNode(
   current: TypeNode,
   other: TypeNode,
-  parentName: string,
-  childName: string,
+  hostPath: string,
   mostRestrictive: boolean,
 ): MergedTypeResult {
-  other = deepCopyTypeNode(other, parentName, childName); // current is already a deep copy
+  other = deepCopyTypeNode(other, hostPath); // current is already a deep copy
   // The first type of the pair to diverge in restriction takes precedence in all future differences.
   // If the other type of the pair also diverges, it's a src error.
   // To keep the output link intact, it is not possible to spread assign "lastTypeNode".
@@ -54,7 +53,7 @@ function getMergedTypeNode(
           other = (other as NonNullTypeNode).type;
           continue;
         default:
-          throw federationUnexpectedNodeKindError(parentName, childName);
+          throw federationUnexpectedNodeKindError(hostPath);
       }
     }
     if (current.kind === Kind.NON_NULL_TYPE) {
@@ -91,30 +90,24 @@ function getMergedTypeNode(
     return { typeErrors: [current.kind, other.kind] };
   }
   throw new Error(
-    `Field ${parentName}.${childName} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`,
+    `Field ${hostPath} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`,
   );
 }
 
 export function getLeastRestrictiveMergedTypeNode(
   current: TypeNode,
   other: TypeNode,
-  parentName: string,
-  childName: string,
+  hostPath: string,
 ): MergedTypeResult {
-  return getMergedTypeNode(current, other, parentName, childName, false);
+  return getMergedTypeNode(current, other, hostPath, false);
 }
 
 export function getMostRestrictiveMergedTypeNode(
   current: TypeNode,
   other: TypeNode,
-  parentName: string,
-  fieldName: string,
+  hostPath: string,
 ): MergedTypeResult {
-  return getMergedTypeNode(current, other, parentName, fieldName, true);
-}
-
-export function isTypeRequired(node: TypeNode): boolean {
-  return node.kind === Kind.NON_NULL_TYPE;
+  return getMergedTypeNode(current, other, hostPath, true);
 }
 
 export function getNamedTypeForChild(childPath: string, typeNode: TypeNode): string {

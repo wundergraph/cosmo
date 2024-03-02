@@ -1,8 +1,6 @@
 import { DocumentNode, GraphQLSchema, OperationTypeNode, visit } from 'graphql';
 import { FederationFactory } from '../federation/federation-factory';
 import {
-  addConcreteTypesForImplementedInterfaces,
-  addConcreteTypesForUnion,
   isNodeExternal,
   isNodeInterfaceObject,
   isNodeShareable,
@@ -14,8 +12,8 @@ import { getNamedTypeForChild } from '../schema-building/type-merging';
 import { EntityInterfaceSubgraphData, getOrThrowError } from '../utils/utils';
 import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
 import { ConfigurationDataByTypeName } from '../router-configuration/router-configuration';
-import { ParentDefinitionData } from '../schema-building/type-definition-data';
-import { ParentExtensionData } from '../schema-building/type-extension-data';
+import { ParentDefinitionData, PersistedDirectiveDefinitionData } from '../schema-building/type-definition-data';
+import { ObjectExtensionData } from '../schema-building/type-extension-data';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -32,8 +30,9 @@ export type InternalSubgraph = {
   name: string;
   operationTypes: Map<string, OperationTypeNode>;
   overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
-  parentDataByTypeName: Map<string, ParentDefinitionData>;
-  parentExtensionDataByTypeName: Map<string, ParentExtensionData>;
+  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
+  parentExtensionDataByTypeName: Map<string, ObjectExtensionData>;
+  persistedDirectiveDefinitionDataByDirectiveName: Map<string, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
   url: string;
 };
@@ -61,49 +60,45 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
   subgraph: InternalSubgraph,
 ) {
   subgraph.definitions = visit(subgraph.definitions, {
-    DirectiveDefinition: {
-      enter(node) {
-        factory.upsertDirectiveNode(node);
-      },
-    },
-    InterfaceTypeDefinition: {
-      enter(node) {
-        const parentTypeName = node.name.value;
-        factory.upsertParentNode(node);
-        if (!isObjectLikeNodeEntity(node)) {
-          return false;
-        }
-        if (!factory.graph.hasNode(parentTypeName)) {
-          factory.graph.addNode(parentTypeName);
-        }
-      },
-    },
+    // DirectiveDefinition: {
+    //   enter(node) {
+    //     factory.upsertDirectiveNode(node);
+    //   },
+    // },
+    // InterfaceTypeDefinition: {
+    //   enter(node) {
+    //     const parentTypeName = node.name.value;
+    //     factory.upsertParentNode(node);
+    //     if (!isObjectLikeNodeEntity(node)) {
+    //       return false;
+    //     }
+    //   },
+    // },
     ObjectTypeDefinition: {
       enter(node) {
-        const typeName = node.name.value;
-        const operationType = subgraph.operationTypes.get(typeName);
-        const parentTypeName = operationType
-          ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
-          : typeName;
-        if (!factory.graph.hasNode(parentTypeName)) {
-          factory.graph.addNode(parentTypeName);
-        }
-        if (isNodeInterfaceObject(node)) {
-          return false;
-        }
-        const entityContainer = factory.entityContainersByTypeName.get(typeName);
-        if (entityContainer && !isObjectLikeNodeEntity(node)) {
-          factory.validateKeyFieldSetsForImplicitEntity(entityContainer);
-        }
-        addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
-        if (typeName == parentTypeName) {
-          return false;
-        }
-        factory.renamedTypeNameByOriginalTypeName.set(typeName, parentTypeName);
-        return {
-          ...node,
-          name: stringToNameNode(parentTypeName),
-        };
+        // const typeName = node.name.value;
+        // const operationType = subgraph.operationTypes.get(typeName);
+        // const parentTypeName = operationType
+        //   ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
+        //   : typeName;
+        // // if (!factory.graph.hasNode(parentTypeName)) {
+        // //   factory.graph.addNode(parentTypeName);
+        // // }
+        // if (isNodeInterfaceObject(node)) {
+        //   return false;
+        // }
+        // const entityContainer = factory.entityContainersByTypeName.get(typeName);
+        // if (entityContainer && !isObjectLikeNodeEntity(node)) {
+        //   factory.validateKeyFieldSetsForImplicitEntity(entityContainer);
+        // }
+        // if (typeName == parentTypeName) {
+        //   return false;
+        // }
+        // factory.renamedTypeNameByOriginalTypeName.set(typeName, parentTypeName);
+        // return {
+        //   ...node,
+        //   name: stringToNameNode(parentTypeName),
+        // };
       },
     },
     ObjectTypeExtension: {
@@ -113,10 +108,6 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
         const parentTypeName = operationType
           ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
           : name;
-        addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
-        if (!factory.graph.hasNode(parentTypeName)) {
-          factory.graph.addNode(parentTypeName);
-        }
         if (name !== parentTypeName) {
           return {
             ...node,
@@ -124,12 +115,6 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
           };
         }
         return false;
-      },
-    },
-    UnionTypeDefinition: {
-      enter(node) {
-        factory.upsertParentNode(node);
-        addConcreteTypesForUnion(node, factory.abstractToConcreteTypeNames);
       },
     },
   });
@@ -142,29 +127,7 @@ export function walkSubgraphToFederate(
 ) {
   let overriddenFieldNames: Set<string> | undefined;
   visit(subgraph, {
-    Directive: {
-      enter() {
-        return false;
-      },
-    },
-    EnumTypeDefinition: {
-      enter(node) {
-        factory.parentTypeName = node.name.value;
-        factory.upsertParentNode(node);
-      },
-      leave() {
-        factory.parentTypeName = '';
-      },
-    },
-    EnumValueDefinition: {
-      enter(node) {
-        factory.childName = node.name.value;
-        factory.upsertValueNode(node);
-      },
-      leave() {
-        factory.childName = '';
-      },
-    },
+    // TODO handle service and entities fields
     FieldDefinition: {
       enter(node) {
         const fieldName = node.name.value;
@@ -190,7 +153,7 @@ export function walkSubgraphToFederate(
         if (entity && !entity.fieldNames.has(fieldName)) {
           return;
         }
-        const concreteTypeNames = factory.abstractToConcreteTypeNames.get(fieldNamedTypeName);
+        const concreteTypeNames = factory.concreteTypeNamesByAbstractTypeName.get(fieldNamedTypeName);
         if (concreteTypeNames) {
           for (const concreteTypeName of concreteTypeNames) {
             factory.graph.addEdge(factory.parentTypeName, concreteTypeName);
@@ -203,30 +166,6 @@ export function walkSubgraphToFederate(
       },
       leave() {
         factory.childName = '';
-      },
-    },
-    InputObjectTypeDefinition: {
-      enter(node) {
-        factory.parentTypeName = node.name.value;
-        factory.isParentInputObject = true;
-        factory.upsertParentNode(node);
-      },
-      leave() {
-        factory.parentTypeName = '';
-        factory.isParentInputObject = false;
-      },
-    },
-    InputValueDefinition: {
-      enter(node) {
-        if (factory.isParentInputObject) {
-          factory.childName = node.name.value;
-        }
-        factory.upsertValueNode(node);
-      },
-      leave() {
-        if (factory.isParentInputObject) {
-          factory.childName = '';
-        }
       },
     },
     InterfaceTypeDefinition: {
@@ -242,8 +181,8 @@ export function walkSubgraphToFederate(
     },
     ObjectTypeDefinition: {
       enter(node) {
-        factory.areFieldsExternal = isNodeExternal(node);
-        factory.areFieldsShareable = !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
+        // factory.areFieldsExternal = isNodeExternal(node);
+        // factory.areFieldsShareable = !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.isParentRootType = factory.isObjectRootType(node);
         factory.parentTypeName = node.name.value;
@@ -283,11 +222,6 @@ export function walkSubgraphToFederate(
         factory.isCurrentParentExtensionType = false;
         factory.parentTypeName = '';
         factory.isParentRootType = false;
-      },
-    },
-    ScalarTypeDefinition: {
-      enter(node) {
-        factory.upsertParentNode(node);
       },
     },
   });

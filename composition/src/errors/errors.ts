@@ -20,6 +20,7 @@ import {
 } from '../utils/utils';
 import { ObjectContainer, RootTypeFieldData } from '../federation/utils';
 import { QUOTATION_JOIN, UNION } from '../utils/string-constants';
+import { ObjectDefinitionData } from '../schema-building/type-definition-data';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -30,27 +31,22 @@ export function incompatibleExtensionError(typeName: string, baseKind: Kind, ext
   );
 }
 
+// TODO
 export function incompatibleArgumentTypesError(
   argName: string,
-  parentName: string,
-  childName: string,
+  hostPath: string,
   expectedType: string,
   actualType: string,
 ): Error {
   return new Error(
-    `Incompatible types when merging two instances of argument "${argName}" for "${parentName}.${childName}":\n` +
+    `Incompatible types when merging two instances of argument "${argName}" for "${hostPath}":\n` +
       ` Expected type "${expectedType}" but received "${actualType}"`,
   );
 }
 
-export function incompatibleChildTypesError(
-  parentName: string,
-  childName: string,
-  expectedType: string,
-  actualType: string,
-): Error {
+export function incompatibleChildTypesError(childPath: string, expectedType: string, actualType: string): Error {
   return new Error(
-    `Incompatible types when merging two instances of "${parentName}.${childName}":\n` +
+    `Incompatible types when merging two instances of "${childPath}":\n` +
       ` Expected type "${expectedType}" but received "${actualType}"`,
   );
 }
@@ -65,6 +61,14 @@ export function incompatibleArgumentDefaultValueError(
   return new Error(
     `Incompatible default values when merging two instances of argument "${argName} for "${parentName}.${childName}":\n` +
       ` Expected value "${expectedValue}" but received "${actualValue}"`,
+  );
+}
+
+export function incompatibleInputValueDefaultValuesError(prefix: string, path: string, defaultValues: string[]) {
+  return new Error(
+    `The ${prefix} defined on path "${path}" defines incompatible default values across subgraphs:\n "` +
+      defaultValues.join(QUOTATION_JOIN) +
+      `"`,
   );
 }
 
@@ -175,6 +179,43 @@ export function operationDefinitionError(typeName: string, operationType: Operat
   );
 }
 
+export function invalidFieldShareabilityError(objectData: ObjectDefinitionData, invalidFieldNames: Set<string>): Error {
+  const parentTypeName = objectData.name;
+  const errorMessages: string[] = [];
+  for (const [fieldName, fieldData] of objectData.fieldDataByFieldName) {
+    if (!invalidFieldNames.has(fieldName)) {
+      continue;
+    }
+    const shareableSubgraphs: string[] = [];
+    const nonShareableSubgraphs: string[] = [];
+    for (const [subgraphName, isShareable] of fieldData.isShareableBySubgraphName) {
+      isShareable ? shareableSubgraphs.push(subgraphName) : nonShareableSubgraphs.push(subgraphName);
+    }
+    if (shareableSubgraphs.length < 1) {
+      errorMessages.push(
+        `\n The field "${fieldName}" is defined in the following subgraphs: "${[...fieldData.subgraphNames].join(
+          '", "',
+        )}".` + `\n However, it is not declared "@shareable" in any of them.`,
+      );
+    } else {
+      errorMessages.push(
+        `\n The field "${fieldName}" is defined and declared "@shareable" in the following subgraph` +
+          (shareableSubgraphs.length > 1 ? 's' : '') +
+          `: "` +
+          shareableSubgraphs.join(QUOTATION_JOIN) +
+          `".` +
+          `\n However, it is not declared "@shareable" in the following subgraph` +
+          (nonShareableSubgraphs.length > 1 ? 's' : '') +
+          `: "${nonShareableSubgraphs.join(QUOTATION_JOIN)}".`,
+      );
+    }
+  }
+  return new Error(
+    `The object "${parentTypeName}" defines the same fields in multiple subgraphs without the "@shareable" directive:` +
+      `${errorMessages.join('\n')}`,
+  );
+}
+
 export function shareableFieldDefinitionsError(parent: ObjectContainer, children: Set<string>): Error {
   const parentTypeName = parent.node.name.value;
   const errorMessages: string[] = [];
@@ -267,9 +308,11 @@ export function undefinedTypeError(typeName: string): Error {
   return new Error(`The type "${typeName}" was referenced in the schema, but it was never defined.`);
 }
 
-export const federationUnexpectedNodeKindError = (parentName: string, fieldName: string) =>
-  new Error(`Unexpected node kind for field "${parentName}.${fieldName}".`);
+// TODO
+export const federationUnexpectedNodeKindError = (hostPath: string) =>
+  new Error(`Unexpected node kind for field "${hostPath}".`);
 
+// TODO
 export const federationInvalidParentTypeError = (parentName: string, fieldName: string) =>
   new Error(`Could not find parent type "${parentName}" for field "${fieldName}".`);
 
@@ -279,10 +322,41 @@ export const federationRequiredInputFieldError = (parentName: string, fieldName:
       `consequently, "${fieldName}" must be defined in all subgraphs that also define "${parentName}".`,
   );
 
+// TODO add subgraphs
+export function invalidRequiredInputFieldError(parentTypeName: string, requiredFields: string[]): Error {
+  return new Error(
+    `The input object "${parentTypeName}" is invalid because the following fields are required in some subgraphs` +
+      ` but undefined in others:\n "` +
+      requiredFields.join(QUOTATION_JOIN) +
+      `"\n` +
+      `If an input object field is required in any one subgraph, it must be at least defined as optional` +
+      ` on all other definitions of that input object in all other subgraphs.`,
+  );
+}
+
+// TODO add subgraphs
+export function invalidRequiredArgumentError(fieldPath: string, requiredArguments: string[]): Error {
+  return new Error(
+    `The field "${fieldPath}" is invalid because the following arguments are required in some subgraphs` +
+      ` but undefined in others:\n "` +
+      requiredArguments.join(QUOTATION_JOIN) +
+      `"\n` +
+      `If an argument is required in any one subgraph, it must be at least defined as optional` +
+      ` on all other definitions of that input object in all other subgraphs.`,
+  );
+}
+
 export function invalidRepeatedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
   return (
     `The definition for the directive "${directiveName}" does not define it as repeatable, ` +
     `but the same directive is declared more than once on type "${hostPath}".`
+  );
+}
+
+export function invalidRepeatedFederatedDirectiveErrorMessage(directiveName: string, hostPath: string): Error {
+  return new Error(
+    `The definition for the directive "${directiveName}" does not define it as repeatable,` +
+      ` but the directive has been declared on more than one instance of the type "${hostPath}".`,
   );
 }
 
@@ -406,24 +480,27 @@ export function fieldTypeMergeFatalError(fieldName: string) {
   );
 }
 
-export function argumentTypeMergeFatalError(argumentName: string, fieldName: string) {
+// TODO
+export function argumentTypeMergeFatalError(argumentName: string, hostPath: string) {
   return new Error(
-    `Fatal: Unsuccessfully merged the cross-subgraph types of argument "${argumentName}" on field "${fieldName}"` +
+    `Fatal: Unsuccessfully merged the cross-subgraph types of argument "${argumentName}" on "${hostPath}"` +
       ` without producing a type error object.`,
   );
 }
 
-export function unexpectedArgumentKindFatalError(argumentName: string, fieldName: string) {
-  return new Error(`Fatal: Unexpected type for argument "${argumentName}" on field "${fieldName}".`);
+export function unexpectedArgumentKindFatalError(argumentName: string, hostPath: string) {
+  return new Error(
+    `Fatal: Unexpected type received for argument "${argumentName}" at path "${hostPath}(${argumentName}: ...)".`,
+  );
 }
 
 export function unexpectedDirectiveLocationError(locationName: string): Error {
   return new Error(`Fatal: Unknown directive location "${locationName}".`);
 }
 
-export function unexpectedTypeNodeKindFatalError(childPath: string): Error {
+export function unexpectedTypeNodeKindFatalError(typePath: string): Error {
   return new Error(
-    `Fatal: Expected all constituent types of "${childPath}" to be one of the following: ` +
+    `Fatal: Expected all constituent types at path "${typePath}" to be one of the following: ` +
       `"LIST_TYPE", "NAMED_TYPE", or "NON_NULL_TYPE".`,
   );
 }

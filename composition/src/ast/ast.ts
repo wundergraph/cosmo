@@ -24,7 +24,16 @@ import {
   UnionTypeDefinitionNode,
 } from 'graphql';
 import { formatDescription } from './utils';
-import { deepCopyTypeNode } from '../schema-building/ast';
+import {
+  deepCopyTypeNode,
+  MutableDirectiveDefinitionNode,
+  MutableEnumNode,
+  MutableInputObjectNode,
+  MutableInterfaceNode,
+  MutableObjectNode,
+  MutableScalarNode,
+  MutableUnionNode,
+} from '../schema-building/ast';
 
 function deepCopyFieldsAndInterfaces(
   node: InterfaceTypeDefinitionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
@@ -50,25 +59,26 @@ export type ConstValueNodeWithValue =
   | BooleanValueNode
   | EnumValueNode;
 
-export type MutableDirectiveDefinitionNode = {
-  arguments?: InputValueDefinitionNode[];
-  description?: StringValueNode;
-  kind: Kind.DIRECTIVE_DEFINITION;
-  locations: NameNode[];
-  name: NameNode;
-  repeatable: boolean;
-};
+// //TODO move out
+// export type MutableDirectiveDefinitionNode = {
+//   arguments?: InputValueDefinitionNode[];
+//   description?: StringValueNode;
+//   kind: Kind.DIRECTIVE_DEFINITION;
+//   locations: NameNode[];
+//   name: NameNode;
+//   repeatable: boolean;
+// };
 
-export function directiveDefinitionNodeToMutable(node: DirectiveDefinitionNode): MutableDirectiveDefinitionNode {
-  return {
-    arguments: node.arguments ? [...node.arguments] : undefined,
-    description: formatDescription(node.description),
-    kind: node.kind,
-    locations: [...node.locations],
-    name: { ...node.name },
-    repeatable: node.repeatable,
-  };
-}
+// export function directiveDefinitionNodeToMutable(node: DirectiveDefinitionNode): MutableDirectiveDefinitionNode {
+//   return {
+//     arguments: node.arguments ? [...node.arguments] : undefined,
+//     description: formatDescription(node.description),
+//     kind: node.kind,
+//     locations: [...node.locations],
+//     name: { ...node.name },
+//     repeatable: node.repeatable,
+//   };
+// }
 
 export type MutableEnumTypeDefinitionNode = {
   description?: StringValueNode;
@@ -132,7 +142,7 @@ export function fieldDefinitionNodeToMutable(
     description: formatDescription(node.description),
     kind: node.kind,
     name: { ...node.name },
-    type: deepCopyTypeNode(node.type, parentName, node.name.value),
+    type: deepCopyTypeNode(node.type, `${parentName}.${node.name.value}`),
   };
 }
 
@@ -162,12 +172,12 @@ export function inputObjectTypeDefinitionNodeToMutable(
 }
 
 export type MutableInputValueDefinitionNode = {
-  defaultValue?: ConstValueNode;
-  description?: StringValueNode;
-  directives?: ConstDirectiveNode[];
   kind: Kind.INPUT_VALUE_DEFINITION;
   name: NameNode;
   type: TypeNode;
+  defaultValue?: ConstValueNode;
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
 };
 
 export function inputValueDefinitionNodeToMutable(
@@ -180,7 +190,7 @@ export function inputValueDefinitionNodeToMutable(
     directives: node.directives ? [...node.directives] : undefined,
     kind: node.kind,
     name: { ...node.name },
-    type: deepCopyTypeNode(node.type, parentName, node.name.value),
+    type: deepCopyTypeNode(node.type, `${parentName}.${node.name.value}`),
   };
 }
 
@@ -304,13 +314,21 @@ export function unionTypeDefinitionNodeToMutable(node: UnionTypeDefinitionNode):
 }
 
 export type MutableTypeDefinitionNode =
+  | DirectiveDefinitionNode
+  | ScalarTypeDefinitionNode
   | MutableDirectiveDefinitionNode
   | MutableEnumTypeDefinitionNode
   | MutableInputObjectTypeDefinitionNode
   | MutableInterfaceTypeDefinitionNode
   | MutableObjectTypeDefinitionNode
   | MutableScalarTypeDefinitionNode
-  | MutableUnionTypeDefinitionNode;
+  | MutableUnionTypeDefinitionNode
+  | MutableEnumNode
+  | MutableInputObjectNode
+  | MutableInterfaceNode
+  | MutableObjectNode
+  | MutableScalarNode
+  | MutableUnionNode;
 
 export type ObjectLikeTypeNode =
   | InterfaceTypeDefinitionNode

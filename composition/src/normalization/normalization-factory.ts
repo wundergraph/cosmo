@@ -21,6 +21,7 @@ import {
 import {
   areBaseAndExtensionKindsCompatible,
   EnumTypeNode,
+  extractExecutableDirectiveLocations,
   extractInterfaces,
   InterfaceTypeNode,
   isNodeInterfaceObject,
@@ -118,6 +119,7 @@ import {
   FIELDS,
   FROM,
   KEY,
+  N_A,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PARENTS,
@@ -149,17 +151,21 @@ import {
   FieldData,
   ParentDefinitionData,
   ParentWithFieldsData,
+  PersistedDirectiveDefinitionData,
   SchemaData,
 } from '../schema-building/type-definition-data';
 import {
   EnumExtensionData,
   ExtensionWithFieldsData,
   InputObjectExtensionData,
+  ObjectExtensionData,
   ParentExtensionData,
   ScalarExtensionData,
   UnionExtensionData,
 } from '../schema-building/type-extension-data';
 import {
+  addExtensionWithFieldsDataByNode,
+  addPersistedDirectiveDefinitionDataByNode,
   convertKindForExtension,
   extractDirectives,
   getDirectiveValidationErrors,
@@ -169,20 +175,23 @@ import {
   getScalarNodeByData,
   getSchemaNodeByData,
   getUnionNodeByData,
-  upsertExtensionWithFieldsDataByNode,
 } from '../schema-building/utils';
+import { MultiGraph } from 'graphology';
 
 export type NormalizationResult = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
+  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   configurationDataMap: ConfigurationDataByTypeName;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityContainerByTypeName: EntityContainerByTypeName;
-  parentExtensionDataByTypeName: Map<string, ParentExtensionData>;
+  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
+  parentExtensionDataByTypeName: Map<string, ObjectExtensionData>;
   isVersionTwo: boolean;
   keyFieldNamesByParentTypeName: Map<string, Set<string>>;
   operationTypes: Map<string, OperationTypeNode>;
   overridesByTargetSubgraphName: Map<string, Map<string, Set<string>>>;
   parentDataByTypeName: Map<string, ParentDefinitionData>;
+  persistedDirectiveDefinitionDataByDirectiveName: Map<string, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
   subgraphAST: DocumentNode;
   subgraphString: string;
@@ -195,7 +204,9 @@ export type NormalizationResultContainer = {
 
 export type BatchNormalizationContainer = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
+  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   entityContainerByTypeName: EntityContainerByTypeName;
+  graph: MultiGraph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   errors?: Error[];
   warnings?: string[];
@@ -206,26 +217,31 @@ export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationR
   if (error || !documentNode) {
     return { errors: [subgraphInvalidSyntaxError(error)] };
   }
-  const normalizationFactory = new NormalizationFactory();
+  const normalizationFactory = new NormalizationFactory(new MultiGraph());
   return normalizationFactory.normalize(documentNode);
 }
 
-export function normalizeSubgraph(document: DocumentNode, subgraphName?: string): NormalizationResultContainer {
-  const normalizationFactory = new NormalizationFactory(subgraphName);
+export function normalizeSubgraph(
+  document: DocumentNode,
+  graph?: MultiGraph,
+  subgraphName?: string,
+): NormalizationResultContainer {
+  const normalizationFactory = new NormalizationFactory(graph || new MultiGraph(), subgraphName);
   return normalizationFactory.normalize(document);
 }
 
 export class NormalizationFactory {
-  abstractToConcreteTypeNames = new Map<string, Set<string>>();
-  directiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>();
   argumentName = '';
   authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
   childName = '';
+  concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
   configurationDataMap = new Map<string, ConfigurationData>();
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
+  directiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>();
   errors: Error[] = [];
   entityContainerByTypeName: EntityContainerByTypeName = new Map<string, EntityContainer>();
   entityInterfaces = new Map<string, EntityInterfaceSubgraphData>();
+  graph: MultiGraph;
   parentExtensionDataByTypeName = new Map<string, ParentExtensionData>();
   interfaceTypeNamesWithAuthorizationDirectives = new Set<string>();
   isCurrentParentExtension = false;
@@ -248,13 +264,14 @@ export class NormalizationFactory {
   referencedDirectiveNames = new Set<string>();
   referencedTypeNames = new Set<string>();
   warnings: string[] = [];
-  subgraphName?: string;
+  subgraphName: string;
 
-  constructor(subgraphName?: string) {
+  constructor(graph: MultiGraph, subgraphName?: string) {
     for (const [baseDirectiveName, baseDirectiveDefinition] of BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME) {
       this.directiveDefinitionByDirectiveName.set(baseDirectiveName, baseDirectiveDefinition);
     }
-    this.subgraphName = subgraphName;
+    this.graph = graph;
+    this.subgraphName = subgraphName || N_A;
     this.schemaDefinition = {
       directivesByDirectiveName: new Map<string, ConstDirectiveNode[]>(),
       kind: Kind.SCHEMA_DEFINITION,
@@ -509,6 +526,7 @@ export class NormalizationFactory {
 
   handleExtensionWithFields(
     node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
+    isRootType = false,
   ): false | void {
     this.isCurrentParentExtension = true;
     const extension = this.parentExtensionDataByTypeName.get(this.parentTypeName);
@@ -530,13 +548,15 @@ export class NormalizationFactory {
       return;
     }
     const isEntity = isObjectLikeNodeEntity(node);
-    upsertExtensionWithFieldsDataByNode(
+    addExtensionWithFieldsDataByNode(
       this.parentExtensionDataByTypeName,
       node,
       this.errors,
       this.directiveDefinitionByDirectiveName,
       this.handledRepeatedDirectivesByHostPath,
       isEntity,
+      isRootType,
+      this.subgraphName,
     );
     // TODO re-assess this line
     if (node.kind === Kind.INTERFACE_TYPE_DEFINITION || node.kind === Kind.INTERFACE_TYPE_EXTENSION || !isEntity) {
@@ -573,7 +593,7 @@ export class NormalizationFactory {
           if (originalTypeName === implementationTypeName) {
             return true;
           }
-          const concreteTypes = this.abstractToConcreteTypeNames.get(originalTypeName);
+          const concreteTypes = this.concreteTypeNamesByAbstractTypeName.get(originalTypeName);
           if (!concreteTypes) {
             return false;
           }
@@ -706,11 +726,7 @@ export class NormalizationFactory {
     }
     if (implementationErrorsMap.size) {
       this.errors.push(
-        unimplementedInterfaceFieldsError(
-          container.typeName,
-          kindToTypeString(container.kind),
-          implementationErrorsMap,
-        ),
+        unimplementedInterfaceFieldsError(container.name, kindToTypeString(container.kind), implementationErrorsMap),
       );
     }
   }
@@ -821,7 +837,7 @@ export class NormalizationFactory {
       if (!interfaceAuthorizationData) {
         continue;
       }
-      const concreteTypeNames = this.abstractToConcreteTypeNames.get(interfaceTypeName);
+      const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(interfaceTypeName);
       for (const concreteTypeName of concreteTypeNames || []) {
         const concreteAuthorizationData = getValueOrDefault(
           this.authorizationDataByParentTypeName,
@@ -879,8 +895,8 @@ export class NormalizationFactory {
       );
     }
 
-    const validExtensionOrphans = new Set<string>();
-    const parentsToIgnore = new Set<string>();
+    const validParentExtensionOrphansByTypeName = new Map<string, ObjectExtensionData>();
+    const handledParentTypeNames = new Set<string>();
     for (const [extensionTypeName, parentExtensionData] of this.parentExtensionDataByTypeName) {
       const isEntity = this.entityContainerByTypeName.has(extensionTypeName);
       const configurationData: ConfigurationData = {
@@ -902,7 +918,7 @@ export class NormalizationFactory {
           this.errors.push(noBaseTypeExtensionError(extensionTypeName));
         } else {
           this.validateInterfaceImplementations(parentExtensionData);
-          validExtensionOrphans.add(extensionTypeName);
+          validParentExtensionOrphansByTypeName.set(extensionTypeName, parentExtensionData);
           definitions.push(
             getParentWithFieldsNodeByData(
               parentExtensionData,
@@ -1031,10 +1047,10 @@ export class NormalizationFactory {
           throw unexpectedKindFatalError(extensionTypeName);
       }
       // At this point, the base type has been dealt with, so it doesn't need to be dealt with again
-      parentsToIgnore.add(extensionTypeName);
+      handledParentTypeNames.add(extensionTypeName);
     }
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
-      if (parentsToIgnore.has(parentTypeName)) {
+      if (handledParentTypeNames.has(parentTypeName)) {
         continue;
       }
       switch (parentDefinitionData.kind) {
@@ -1087,7 +1103,7 @@ export class NormalizationFactory {
           const entityInterfaceData = this.entityInterfaces.get(parentTypeName);
           if (entityInterfaceData) {
             entityInterfaceData.concreteTypeNames =
-              this.abstractToConcreteTypeNames.get(parentTypeName) || new Set<string>();
+              this.concreteTypeNamesByAbstractTypeName.get(parentTypeName) || new Set<string>();
             configurationData.isInterfaceObject = entityInterfaceData.isInterfaceObject;
             configurationData.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
           }
@@ -1177,7 +1193,7 @@ export class NormalizationFactory {
           if (
             !BASE_SCALARS.has(fieldTypeName) &&
             !this.parentDefinitionDataByTypeName.has(fieldTypeName) &&
-            !validExtensionOrphans.has(fieldTypeName)
+            !validParentExtensionOrphansByTypeName.has(fieldTypeName)
           ) {
             this.errors.push(undefinedTypeError(fieldTypeName));
           }
@@ -1213,6 +1229,26 @@ export class NormalizationFactory {
       // this is where keys, provides, and requires are added to the ConfigurationData
       validateAndAddDirectivesWithFieldSetToConfigurationData(this, parentContainer, fieldSetContainers);
     }
+    const persistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
+    for (const directiveDefinitionNode of this.directiveDefinitionByDirectiveName.values()) {
+      // TODO @composeDirective directives would also be handled here
+      const executableLocations = extractExecutableDirectiveLocations(
+        directiveDefinitionNode.locations,
+        new Set<string>(),
+      );
+      if (executableLocations.size < 1) {
+        continue;
+      }
+      addPersistedDirectiveDefinitionDataByNode(
+        persistedDirectiveDefinitionDataByDirectiveName,
+        directiveDefinitionNode,
+        this.errors,
+        this.directiveDefinitionByDirectiveName,
+        this.handledRepeatedDirectivesByHostPath,
+        executableLocations,
+        this.subgraphName,
+      );
+    }
     if (this.errors.length > 0) {
       return { errors: this.errors };
     }
@@ -1225,15 +1261,18 @@ export class NormalizationFactory {
         authorizationDataByParentTypeName: this.authorizationDataByParentTypeName,
         // configurationDataMap is map of ConfigurationData per type name.
         // It is an Intermediate configuration object that will be converted to an engine configuration in the router
+        concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
         configurationDataMap: this.configurationDataMap,
         entityContainerByTypeName: this.entityContainerByTypeName,
         entityInterfaces: this.entityInterfaces,
-        parentExtensionDataByTypeName: this.parentExtensionDataByTypeName,
+        parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+        parentExtensionDataByTypeName: validParentExtensionOrphansByTypeName,
         isVersionTwo: this.isSubgraphVersionTwo,
         keyFieldNamesByParentTypeName: this.keyFieldNamesByParentTypeName,
         operationTypes: this.operationTypeNames,
         overridesByTargetSubgraphName: this.overridesByTargetSubgraphName,
         parentDataByTypeName: this.parentDefinitionDataByTypeName,
+        persistedDirectiveDefinitionDataByDirectiveName,
         subgraphAST: newAST,
         subgraphString: print(newAST),
         schema: buildASTSchema(newAST, { assumeValid: true }),
@@ -1244,6 +1283,7 @@ export class NormalizationFactory {
 
 export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContainer {
   const authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
+  const concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
   const entityContainerByTypeName: EntityContainerByTypeName = new Map<string, EntityContainer>();
   const internalSubgraphBySubgraphName = new Map<string, InternalSubgraph>();
   const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
@@ -1262,13 +1302,14 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       recordSubgraphName(subgraph.name, subgraphNames, nonUniqueSubgraphNames);
     }
   }
+  const graph = new MultiGraph();
   for (let i = 0; i < subgraphs.length; i++) {
     const subgraph = subgraphs[i];
     const subgraphName = subgraph.name || `subgraph-${i}-${Date.now()}`;
     if (!subgraph.name) {
       invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
     }
-    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions, subgraph.name);
+    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions, graph, subgraph.name);
     if (errors) {
       validationErrors.push(subgraphValidationError(subgraphName, errors));
       continue;
@@ -1283,6 +1324,17 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     for (const authorizationData of normalizationResult.authorizationDataByParentTypeName.values()) {
       upsertAuthorizationData(authorizationDataByParentTypeName, authorizationData, invalidOrScopesHostPaths);
     }
+    for (const [
+      abstractTypeName,
+      incomingConcreteTypeNames,
+    ] of normalizationResult.concreteTypeNamesByAbstractTypeName) {
+      const existingConcreteTypeNames = concreteTypeNamesByAbstractTypeName.get(abstractTypeName);
+      if (!existingConcreteTypeNames) {
+        concreteTypeNamesByAbstractTypeName.set(abstractTypeName, new Set<string>(incomingConcreteTypeNames));
+        continue;
+      }
+      addIterableValuesToSet(incomingConcreteTypeNames, existingConcreteTypeNames);
+    }
     for (const entityContainer of normalizationResult.entityContainerByTypeName.values()) {
       upsertEntityContainer(entityContainerByTypeName, entityContainer);
     }
@@ -1291,13 +1343,15 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
         configurationDataMap: normalizationResult.configurationDataMap,
         definitions: normalizationResult.subgraphAST,
         entityInterfaces: normalizationResult.entityInterfaces,
-        parentExtensionDataByTypeName: normalizationResult.parentExtensionDataByTypeName,
         keyFieldNamesByParentTypeName: normalizationResult.keyFieldNamesByParentTypeName,
         isVersionTwo: normalizationResult.isVersionTwo,
         name: subgraphName,
         operationTypes: normalizationResult.operationTypes,
         overriddenFieldNamesByParentTypeName: new Map<string, Set<string>>(),
-        parentDataByTypeName: normalizationResult.parentDataByTypeName,
+        parentDefinitionDataByTypeName: normalizationResult.parentDataByTypeName,
+        parentExtensionDataByTypeName: normalizationResult.parentExtensionDataByTypeName,
+        persistedDirectiveDefinitionDataByDirectiveName:
+          normalizationResult.persistedDirectiveDefinitionDataByDirectiveName,
         schema: normalizationResult.schema,
         url: subgraph.url,
       });
@@ -1359,8 +1413,10 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   if (allErrors.length > 0) {
     return {
       authorizationDataByParentTypeName,
+      concreteTypeNamesByAbstractTypeName,
       entityContainerByTypeName,
       errors: allErrors,
+      graph,
       internalSubgraphBySubgraphName,
       ...(warnings.length > 0 ? { warnings } : {}),
     };
@@ -1385,7 +1441,9 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   }
   return {
     authorizationDataByParentTypeName,
+    concreteTypeNamesByAbstractTypeName,
     entityContainerByTypeName: entityContainerByTypeName,
+    graph,
     internalSubgraphBySubgraphName: internalSubgraphBySubgraphName,
     ...(warnings.length > 0 ? { warnings } : {}),
   };

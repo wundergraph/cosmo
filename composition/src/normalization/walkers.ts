@@ -34,6 +34,7 @@ import {
   addConcreteTypesForUnion,
   isNodeExtension,
   isObjectLikeNodeEntity,
+  operationTypeNodeToDefaultType,
   SchemaNode,
 } from '../ast/utils';
 import { extractFieldSetValue, newFieldSetContainer } from './utils';
@@ -42,7 +43,7 @@ import {
   ENTITIES_FIELD,
   ENTITY_UNION,
   EXTENSIONS,
-  N_A,
+  OPERATION_TO_DEFAULT,
   PARENT_DEFINITION_DATA_MAP,
   PARENT_EXTENSION_DATA_MAP,
   PARENTS,
@@ -53,33 +54,55 @@ import {
   SERVICE_OBJECT,
 } from '../utils/string-constants';
 import {
+  addEnumDefinitionDataByNode,
+  addEnumExtensionDataByNode,
+  addEnumValueDataByNode,
+  addFieldDataByNode,
   addInheritedDirectivesToFieldData,
+  addInputObjectDefinitionDataByNode,
+  addInputObjectExtensionDataByNode,
+  addInputValueDataByNode,
+  addInterfaceDefinitionDataByNode,
+  addObjectDefinitionDataByNode,
+  addScalarDefinitionDataByNode,
+  addScalarExtensionDataByNode,
+  addUnionDefinitionDataByNode,
+  addUnionExtensionDataByNode,
   extractArguments,
   extractDirectives,
   extractUniqueUnionMembers,
+  getRenamedTypeName,
   isTypeNameRootType,
   removeInheritableDirectivesFromParentWithFieldsData,
-  upsertEnumDefinitionDataByNode,
-  upsertEnumExtensionDataByNode,
-  upsertEnumValueDataByNode,
-  upsertFieldDataByNode,
-  upsertInputObjectDefinitionDataByNode,
-  upsertInputObjectExtensionDataByNode,
-  upsertInputValueDataByNode,
-  upsertInterfaceDefinitionDataByNode,
-  upsertObjectDefinitionDataByNode,
-  upsertScalarDefinitionDataByNode,
-  upsertScalarExtensionDataByNode,
-  upsertUnionDefinitionDataByNode,
-  upsertUnionExtensionDataByNode,
 } from '../schema-building/utils';
-import { ArgumentData } from '../schema-building/type-definition-data';
+import {
+  InputValueData,
+  InterfaceDefinitionData,
+  ObjectDefinitionData,
+  ParentWithFieldsData,
+} from '../schema-building/type-definition-data';
+import { FederationFactory } from '../federation/federation-factory';
+import { ObjectExtensionData } from '../schema-building/type-extension-data';
+import { InternalSubgraph } from '../subgraph/subgraph';
 
 // Walker to collect schema definition and directive definitions
 export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, document: DocumentNode) {
   const definedDirectives = new Set<string>();
   const schemaNodes: SchemaNode[] = [];
   visit(document, {
+    Directive: {
+      enter(node) {
+        const name = node.name.value;
+        if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
+          nf.isSubgraphVersionTwo = true;
+          return false;
+        }
+        if (BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
+          return false;
+        }
+        nf.referencedDirectiveNames.add(name);
+      },
+    },
     DirectiveDefinition: {
       enter(node) {
         const name = node.name.value;
@@ -156,19 +179,6 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
 export function upsertParentsAndChildren(nf: NormalizationFactory, document: DocumentNode) {
   let isParentRootType = false;
   visit(document, {
-    Directive: {
-      enter(node) {
-        const name = node.name.value;
-        if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
-          nf.isSubgraphVersionTwo = true;
-          return false;
-        }
-        if (BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
-          return false;
-        }
-        nf.referencedDirectiveNames.add(name);
-      },
-    },
     EnumTypeDefinition: {
       enter(node) {
         nf.parentTypeName = node.name.value;
@@ -181,7 +191,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           node,
           new Map<string, ConstDirectiveNode[]>(),
         );
-        upsertEnumDefinitionDataByNode(nf.parentDefinitionDataByTypeName, node, directivesByDirectiveName);
+        addEnumDefinitionDataByNode(nf.parentDefinitionDataByTypeName, node, directivesByDirectiveName);
       },
       leave() {
         nf.parentTypeName = '';
@@ -206,7 +216,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           node,
           new Map<string, ConstDirectiveNode[]>(),
         );
-        upsertEnumExtensionDataByNode(nf.parentExtensionDataByTypeName, node, directivesByDirectiveName);
+        addEnumExtensionDataByNode(nf.parentExtensionDataByTypeName, node, directivesByDirectiveName);
       },
       leave() {
         nf.parentTypeName = '';
@@ -231,7 +241,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.errors.push(error);
           return;
         }
-        upsertEnumValueDataByNode(
+        addEnumValueDataByNode(
           parent.enumValueDataByValueName,
           node,
           nf.errors,
@@ -277,14 +287,14 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return;
         }
         const argumentDataByArgumentName = extractArguments(
-          new Map<string, ArgumentData>(),
+          new Map<string, InputValueData>(),
           node,
           nf.errors,
           nf.directiveDefinitionByDirectiveName,
           nf.handledRepeatedDirectivesByHostPath,
           nf.parentsWithChildArguments,
           nf.parentTypeName,
-          nf.subgraphName || N_A,
+          nf.subgraphName,
         );
         const directivesByDirectiveName = nf.extractDirectivesAndAuthorization(
           node,
@@ -293,14 +303,14 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
             new Map<string, ConstDirectiveNode[]>(),
           ),
         );
-        const fieldData = upsertFieldDataByNode(
+        const fieldData = addFieldDataByNode(
           parentData.fieldDataByFieldName,
           node,
           nf.errors,
           argumentDataByArgumentName,
           directivesByDirectiveName,
           nf.parentTypeName,
-          nf.subgraphName || N_A,
+          nf.subgraphName,
           nf.isSubgraphVersionTwo,
         );
         const entityContainer = nf.entityContainerByTypeName.get(nf.parentTypeName);
@@ -353,7 +363,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return false;
         }
         nf.lastParentNodeKind = node.kind;
-        upsertInputObjectDefinitionDataByNode(
+        addInputObjectDefinitionDataByNode(
           nf.parentDefinitionDataByTypeName,
           node,
           nf.errors,
@@ -387,7 +397,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           );
           return;
         }
-        upsertInputObjectExtensionDataByNode(
+        addInputObjectExtensionDataByNode(
           nf.parentExtensionDataByTypeName,
           node,
           nf.errors,
@@ -414,9 +424,10 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         }
         nf.childName = name;
         nf.lastChildNodeKind = node.kind;
-        const valueRootTypeName = getNamedTypeForChild(`${nf.parentTypeName}.${name}`, node.type);
-        if (!BASE_SCALARS.has(valueRootTypeName)) {
-          nf.referencedTypeNames.add(valueRootTypeName);
+        const valuePath = `${nf.parentTypeName}.${name}`;
+        const namedInputValueTypeName = getNamedTypeForChild(valuePath, node.type);
+        if (!BASE_SCALARS.has(namedInputValueTypeName)) {
+          nf.referencedTypeNames.add(namedInputValueTypeName);
         }
         const parent = nf.isCurrentParentExtension
           ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.parentTypeName, EXTENSIONS)
@@ -428,13 +439,14 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.errors.push(duplicateValueExtensionError('input', nf.parentTypeName, name));
           return;
         }
-        upsertInputValueDataByNode(
+        addInputValueDataByNode(
           parent.inputValueDataByValueName,
           node,
-          nf.errors,
           nf.directiveDefinitionByDirectiveName,
           nf.handledRepeatedDirectivesByHostPath,
-          nf.parentTypeName,
+          valuePath,
+          nf.subgraphName,
+          nf.errors,
         );
       },
       leave() {
@@ -459,14 +471,17 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return false;
         }
         const isEntity = isObjectLikeNodeEntity(node);
-        upsertInterfaceDefinitionDataByNode(
+        if (isEntity && !nf.graph.hasNode(typeName)) {
+          nf.graph.addNode(typeName);
+        }
+        addInterfaceDefinitionDataByNode(
           nf.parentDefinitionDataByTypeName,
           node,
           nf.errors,
           nf.directiveDefinitionByDirectiveName,
           nf.handledRepeatedDirectivesByHostPath,
           isEntity,
-          nf.subgraphName || N_A,
+          nf.subgraphName,
         );
         if (!isEntity) {
           return;
@@ -518,20 +533,24 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return false;
         }
         isParentRootType = isTypeNameRootType(typeName, nf.operationTypeNames);
+        const renamedTypeName = getRenamedTypeName(typeName, nf.operationTypeNames);
+        if (!nf.graph.hasNode(renamedTypeName)) {
+          nf.graph.addNode(renamedTypeName);
+        }
         nf.parentTypeName = typeName;
         nf.lastParentNodeKind = node.kind;
-        addConcreteTypesForImplementedInterfaces(node, nf.abstractToConcreteTypeNames);
+        addConcreteTypesForImplementedInterfaces(node, nf.concreteTypeNamesByAbstractTypeName);
         nf.handleInterfaceObject(node);
         // handling for @extends directive
         if (isNodeExtension(node)) {
-          return nf.handleExtensionWithFields(node);
+          return nf.handleExtensionWithFields(node, isParentRootType);
         }
         if (nf.parentDefinitionDataByTypeName.has(typeName)) {
           nf.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), typeName));
           return false;
         }
         const isEntity = isObjectLikeNodeEntity(node);
-        upsertObjectDefinitionDataByNode(
+        addObjectDefinitionDataByNode(
           nf.parentDefinitionDataByTypeName,
           node,
           nf.errors,
@@ -571,9 +590,13 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return false;
         }
         isParentRootType = isTypeNameRootType(nf.parentTypeName, nf.operationTypeNames);
+        const renamedTypeName = getRenamedTypeName(nf.parentTypeName, nf.operationTypeNames);
+        if (!nf.graph.hasNode(renamedTypeName)) {
+          nf.graph.addNode(renamedTypeName);
+        }
         nf.lastParentNodeKind = node.kind;
-        addConcreteTypesForImplementedInterfaces(node, nf.abstractToConcreteTypeNames);
-        return nf.handleExtensionWithFields(node);
+        addConcreteTypesForImplementedInterfaces(node, nf.concreteTypeNamesByAbstractTypeName);
+        return nf.handleExtensionWithFields(node, isParentRootType);
       },
       leave() {
         removeInheritableDirectivesFromParentWithFieldsData(
@@ -602,7 +625,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           node,
           new Map<string, ConstDirectiveNode[]>(),
         );
-        upsertScalarDefinitionDataByNode(nf.parentDefinitionDataByTypeName, node, directivesByDirectiveName);
+        addScalarDefinitionDataByNode(nf.parentDefinitionDataByTypeName, node, directivesByDirectiveName);
       },
       leave() {
         nf.parentTypeName = '';
@@ -629,7 +652,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           node,
           new Map<string, ConstDirectiveNode[]>(),
         );
-        upsertScalarExtensionDataByNode(nf.parentExtensionDataByTypeName, node, directivesByDirectiveName);
+        addScalarExtensionDataByNode(nf.parentExtensionDataByTypeName, node, directivesByDirectiveName);
         return false;
       },
       leave() {
@@ -650,13 +673,13 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         }
 
         nf.lastParentNodeKind = node.kind;
-        upsertUnionDefinitionDataByNode(
+        addUnionDefinitionDataByNode(
           nf.parentDefinitionDataByTypeName,
           node,
           nf.errors,
           nf.directiveDefinitionByDirectiveName,
           nf.handledRepeatedDirectivesByHostPath,
-          nf.abstractToConcreteTypeNames,
+          nf.concreteTypeNamesByAbstractTypeName,
           nf.referencedTypeNames,
         );
       },
@@ -677,7 +700,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return false;
         }
         nf.lastParentNodeKind = node.kind;
-        addConcreteTypesForUnion(node, nf.abstractToConcreteTypeNames);
+        addConcreteTypesForUnion(node, nf.concreteTypeNamesByAbstractTypeName);
         if (extension) {
           if (extension.kind !== Kind.UNION_TYPE_EXTENSION) {
             nf.errors.push(incompatibleExtensionKindsError(node, extension.kind));
@@ -696,18 +719,18 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
             extension.memberByMemberTypeName,
             nf.errors,
             nf.parentTypeName,
-            nf.abstractToConcreteTypeNames,
+            nf.concreteTypeNamesByAbstractTypeName,
             nf.referencedTypeNames,
           );
           return false;
         }
-        upsertUnionExtensionDataByNode(
+        addUnionExtensionDataByNode(
           nf.parentExtensionDataByTypeName,
           node,
           nf.errors,
           nf.directiveDefinitionByDirectiveName,
           nf.handledRepeatedDirectivesByHostPath,
-          nf.abstractToConcreteTypeNames,
+          nf.concreteTypeNamesByAbstractTypeName,
           nf.referencedTypeNames,
         );
         return false;
@@ -817,6 +840,135 @@ export function consolidateAuthorizationDirectives(nf: NormalizationFactory, def
       leave() {
         nf.parentTypeName = '';
         parentAuthorizationData = undefined;
+      },
+    },
+  });
+}
+
+export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgraph: InternalSubgraph) {
+  let parentData: ParentWithFieldsData | undefined;
+  let isParentRootType = false;
+  let overriddenFieldNames: Set<string> | undefined;
+  visit(subgraph.definitions, {
+    FieldDefinition: {
+      enter(node) {
+        const fieldName = node.name.value;
+        if (isParentRootType && (fieldName === SERVICE_FIELD || fieldName === ENTITIES_FIELD)) {
+          parentData!.fieldDataByFieldName.delete(fieldName);
+          return false;
+        }
+        const parentTypeName = parentData!.name;
+        const fieldData = getOrThrowError(
+          parentData!.fieldDataByFieldName,
+          fieldName,
+          `${parentTypeName}.fieldDataByFieldName`,
+        );
+        if (overriddenFieldNames?.has(fieldName)) {
+          // overridden fields should not trigger shareable errors
+          fieldData.isShareableBySubgraphName.delete(subgraph.name);
+          return false;
+        }
+        const fieldPath = `${parentTypeName}.${fieldName}`;
+        if (!ff.graph.hasNode(parentData!.name) || ff.graphEdges.has(fieldPath)) {
+          return false;
+        }
+        ff.graphEdges.add(fieldPath);
+        // If the parent node is never an entity, add the child edge
+        // Otherwise, only add the child edge if the child is a field on a subgraph where the object is an entity
+        // TODO resolvable false
+        const entity = ff.entityContainersByTypeName.get(parentTypeName);
+        if (entity && !entity.fieldNames.has(fieldName)) {
+          return false;
+        }
+        const concreteTypeNames = ff.concreteTypeNamesByAbstractTypeName.get(fieldData.namedTypeName);
+        if (concreteTypeNames) {
+          for (const concreteTypeName of concreteTypeNames) {
+            ff.graph.addEdge(parentTypeName, concreteTypeName);
+          }
+        }
+        if (!ff.graph.hasNode(fieldData.namedTypeName)) {
+          return;
+        }
+        ff.graph.addEdge(parentTypeName, fieldData.namedTypeName);
+      },
+    },
+    InterfaceTypeDefinition: {
+      enter(node) {
+        const parentTypeName = node.name.value;
+        if (!ff.entityInterfaceFederationDataByTypeName.get(parentTypeName)) {
+          return false;
+        }
+        parentData = getOrThrowError(
+          subgraph.parentDefinitionDataByTypeName,
+          parentTypeName,
+          'parentDefinitionDataByTypeName',
+        ) as InterfaceDefinitionData;
+        // TODO rename root fields references
+      },
+      leave() {},
+    },
+    ObjectTypeDefinition: {
+      enter(node) {
+        const originalTypeName = node.name.value;
+        const operationType = subgraph.operationTypes.get(originalTypeName);
+        const parentTypeName = operationType
+          ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
+          : originalTypeName;
+        parentData = getOrThrowError(
+          subgraph.parentDefinitionDataByTypeName,
+          originalTypeName,
+          'parentDefinitionDataByTypeName',
+        ) as ObjectDefinitionData;
+        isParentRootType = parentData.isRootType;
+        if (ff.entityInterfaceFederationDataByTypeName.get(originalTypeName)) {
+          return;
+        }
+        const entityContainer = ff.entityContainersByTypeName.get(originalTypeName);
+        // if (entityContainer && !isObjectLikeNodeEntity(node)) {
+        if (entityContainer && !parentData.isEntity) {
+          ff.validateKeyFieldSetsForImplicitEntity(entityContainer);
+        }
+        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(originalTypeName);
+        if (originalTypeName === parentTypeName) {
+          return;
+        }
+        ff.renamedTypeNameByOriginalTypeName.set(originalTypeName, parentTypeName);
+        parentData.name = parentTypeName;
+        subgraph.parentDefinitionDataByTypeName.set(parentTypeName, parentData);
+        subgraph.parentDefinitionDataByTypeName.delete(originalTypeName);
+      },
+      leave() {
+        parentData = undefined;
+        isParentRootType = false;
+        overriddenFieldNames = undefined;
+      },
+    },
+    ObjectTypeExtension: {
+      enter(node) {
+        const originalTypeName = node.name.value;
+        const operationType = subgraph.operationTypes.get(originalTypeName);
+        const parentTypeName = operationType
+          ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
+          : originalTypeName;
+        parentData = getOrThrowError(
+          subgraph.parentExtensionDataByTypeName,
+          originalTypeName,
+          'parentDefinitionDataByTypeName',
+        ) as ObjectExtensionData;
+        isParentRootType = parentData.isRootType;
+        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(originalTypeName);
+        if (originalTypeName === parentTypeName) {
+          return;
+        }
+        ff.renamedTypeNameByOriginalTypeName.set(originalTypeName, parentTypeName);
+        parentData.name = parentTypeName;
+        subgraph.parentExtensionDataByTypeName.set(parentTypeName, parentData);
+        subgraph.parentExtensionDataByTypeName.delete(originalTypeName);
+      },
+      leave() {
+        parentData = undefined;
+        isParentRootType = false;
+        overriddenFieldNames = undefined;
       },
     },
   });

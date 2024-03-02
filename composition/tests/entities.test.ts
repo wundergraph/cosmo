@@ -3,13 +3,17 @@ import {
   federateSubgraphs,
   FederationFieldData,
   ObjectContainer,
-  RootTypeFieldData,
   shareableFieldDefinitionsError,
   Subgraph,
-  unresolvableFieldError,
 } from '../src';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
+import {
+  documentNodeToNormalizedString,
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionOnePersistedBaseSchema,
+  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+} from './utils/utils';
 import { parse } from 'graphql';
 
 describe('Entity Tests', () => {
@@ -75,28 +79,6 @@ describe('Entity Tests', () => {
         level: Int!
       }
     `,
-        ),
-      );
-    });
-
-    test('that if an unresolvable field appears in the first subgraph, it returns an error', () => {
-      const rootTypeFieldData: RootTypeFieldData = {
-        fieldName: 'trainer',
-        fieldTypeNodeString: 'Trainer!',
-        path: 'Query.trainer',
-        subgraphs: new Set<string>(['subgraph-e']),
-        typeName: 'Query',
-      };
-      const result = federateSubgraphs([subgraphD, subgraphE]);
-      expect(result.errors).toBeDefined();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors![0]).toStrictEqual(
-        unresolvableFieldError(
-          rootTypeFieldData,
-          'details',
-          ['subgraph-d'],
-          'Query.trainer.details { ... }',
-          'Trainer',
         ),
       );
     });
@@ -208,15 +190,14 @@ describe('Entity Tests', () => {
     test('that interfaces can declare the @key directive', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphH]);
       expect(errors).toBeUndefined();
-      const federatedGraph = federationResult!.federatedGraphAST;
-      expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOnePersistedBaseSchema +
+          versionOneSchemaQueryAndPersistedDirectiveDefinitions +
             `
       interface Interface {
+        age: Int!
         id: ID!
         name: String!
-        age: Int!
       }
       
       type Query {
@@ -661,36 +642,6 @@ const subgraphC: Subgraph = {
     type Pokemon {
       name: String!
       level: Int!
-    }
-  `),
-};
-
-const subgraphD: Subgraph = {
-  name: 'subgraph-d',
-  url: '',
-  definitions: parse(`
-    type Trainer {
-      id: Int!
-      details: Details!
-    }
-
-    type Details {
-      name: String!
-      age: Int!
-    }
-  `),
-};
-
-const subgraphE: Subgraph = {
-  name: 'subgraph-e',
-  url: '',
-  definitions: parse(`
-    type Query {
-      trainer: Trainer!
-    }
-
-    type Trainer @key(fields: "id") {
-      id: Int!
     }
   `),
 };

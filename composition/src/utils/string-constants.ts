@@ -7,6 +7,7 @@ export const DEFAULT_MUTATION = 'Mutation';
 export const DEFAULT_QUERY = 'Query';
 export const DEFAULT_SUBSCRIPTION = 'Subscription';
 export const DEPRECATED = 'deprecated';
+export const DEPRECATED_DEFAULT_ARGUMENT_VALUE = 'No longer supported';
 export const DIRECTIVE_DEFINITION = 'directive definition';
 export const ENTITIES = 'entities';
 export const ENTITIES_FIELD = '_entities';

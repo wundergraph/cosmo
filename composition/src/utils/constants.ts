@@ -61,7 +61,7 @@ export const BASE_SCALARS = new Set<string>([
 /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
  FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 */
-const DEPRECATED_DEFINITION: DirectiveDefinitionNode = {
+export const DEPRECATED_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -250,10 +250,10 @@ const SPECIFIED_BY_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-/* directive @tag(name: String!) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
-   INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
+/* directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION
+  | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 */
-const TAG_DEFINITION: DirectiveDefinitionNode = {
+export const TAG_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -296,7 +296,7 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
 ]);
 
 // @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
+export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([
     ENUM_UPPER,
@@ -331,7 +331,7 @@ const COMPOSE_DIRECTIVE_DEFINITION: DirectiveDefinitionNode = {
 /* directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
    INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
 */
-const INACCESSIBLE_DEFINITION: DirectiveDefinitionNode = {
+export const INACCESSIBLE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([
     ARGUMENT_DEFINITION_UPPER,
@@ -412,7 +412,7 @@ const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-const REQUIRES_SCOPES_DEFINITION: DirectiveDefinitionNode = {
+export const REQUIRES_SCOPES_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,

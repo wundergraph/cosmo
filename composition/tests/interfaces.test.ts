@@ -10,10 +10,9 @@ import {
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
-  documentNodeToNormalizedString,
   normalizeString,
-  versionOneBaseSchema,
-  versionTwoPersistedBaseSchema,
+  schemaToSortedNormalizedString,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 
 describe('Interface tests', () => {
@@ -233,33 +232,34 @@ describe('Interface tests', () => {
     test('that interfaces merge by union', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
-      const federatedGraph = federationResult!.federatedGraphAST!;
-      expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema +
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
       interface Character {
-        name: String!
         age: Int!
         isFriend: Boolean!
+        name: String!
       }
 
       type Query {
         dummy: String!
       }
 
-      type Trainer implements Character {
+      type Rival implements Character {
+        age: Int!
+        isFriend: Boolean!
         name: String!
+      }
+      
+      type Trainer implements Character {
         age: Int!
         badges: Int!
         isFriend: Boolean!
+        name: String!
       }
 
-      type Rival implements Character {
-        name: String!
-        age: Int!
-        isFriend: Boolean!
-      }
+      scalar openfed__Scope
     `,
         ),
       );
@@ -268,14 +268,14 @@ describe('Interface tests', () => {
     test('that interfaces and implementations merge by union', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema +
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
       interface Character {
-        name: String!
         age: Int!
         isFriend: Boolean!
+        name: String!
       }
       
       interface Human {
@@ -287,11 +287,13 @@ describe('Interface tests', () => {
       }
 
       type Trainer implements Character & Human {
-        name: String!
         age: Int!
         badges: Int!
         isFriend: Boolean!
+        name: String!
       }
+      
+      scalar openfed__Scope
     `,
         ),
       );
@@ -300,27 +302,29 @@ describe('Interface tests', () => {
     test('that nested interfaces merge by union', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema +
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
       interface Character {
         isFriend: Boolean!
+      }
+
+      interface Human implements Character {
+        isFriend: Boolean!
+        name: String!
       }
 
       type Query {
         dummy: String!
       }
 
-      interface Human implements Character {
-        name: String!
-        isFriend: Boolean!
-      }
-
       type Trainer implements Character & Human {
-        name: String!
         isFriend: Boolean!
+        name: String!
       }
+      
+      scalar openfed__Scope
     `,
         ),
       );

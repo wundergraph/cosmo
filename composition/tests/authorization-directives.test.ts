@@ -10,10 +10,9 @@ import {
 } from '../src';
 import { parse } from 'graphql';
 import {
-  documentNodeToNormalizedString,
   normalizeString,
   schemaToSortedNormalizedString,
-  versionTwoPersistedBaseSchema,
+  versionTwoPersistedDirectiveDefinitions,
   versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 
@@ -159,19 +158,21 @@ describe('Authorization directives tests', () => {
     test('that @authenticated is persisted in the federated schema', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema +
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
+          type Object {
+            age: Int!
+            id: ID! @authenticated
+            name: String! @authenticated
+          }
+          
           type Query {
             object: Object!
           }
           
-          type Object {
-            id: ID! @authenticated
-            name: String! @authenticated
-            age: Int!
-          }
+          scalar openfed__Scope
         `,
         ),
       );
@@ -180,19 +181,21 @@ describe('Authorization directives tests', () => {
     test('that @requiresScopes is persisted in the federated schema', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphC]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema +
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
           type Object {
-            id: ID! @requiresScopes(scopes: [["read:object"]])
             age: Int!
+            id: ID! @requiresScopes(scopes: [["read:object"]])
             name: String! @requiresScopes(scopes: [["read:object"]])
           }
           
           type Query {
             object: Object!
           }
+          
+          scalar openfed__Scope
         `,
         ),
       );
@@ -259,25 +262,31 @@ describe('Authorization directives tests', () => {
           requiredScopes: [],
         },
       ]);
-      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema +
+          `
+        schema {
+          query: Query
+        }` +
+            versionTwoPersistedDirectiveDefinitions +
             `
-          type Query {
-            entities: [Entity!]!
-            scalar: Scalar
-            entity: Entity!
-            scalarTwo: Scalar @authenticated
-          }
+        type Entity {
+          age: Int!
+          id: ID! @authenticated @requiresScopes(scopes: [["read:object"]])
+          name: String! @authenticated @requiresScopes(scopes: [["read:object"]])
+        }
+        
+        type Query {
+          entities: [Entity!]!
+          entity: Entity!
+          scalar: Scalar
+          scalarTwo: Scalar @authenticated
+        }
 
-          type Entity {
-            id: ID! @authenticated @requiresScopes(scopes: [["read:object"]])
-            name: String! @authenticated @requiresScopes(scopes: [["read:object"]])
-            age: Int!
-          }
-
-          scalar Scalar
-        `,
+        scalar Scalar
+        
+        scalar openfed__Scope
+      `,
         ),
       );
     });
@@ -390,28 +399,28 @@ describe('Authorization directives tests', () => {
         normalizeString(
           versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
-          type Entity implements Interface {
-            age: Int! @authenticated @requiresScopes(scopes: [["read:object", "read:sensitive", "read:field"], ["read:object", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]])
-            id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private", "read:object", "read:sensitive", "read:field"], ["read:interface", "read:private", "read:object", "read:field"], ["read:interface", "read:private", "read:all", "read:sensitive", "read:field"], ["read:interface", "read:private", "read:all", "read:field"], ["read:all", "read:object", "read:sensitive", "read:field"], ["read:all", "read:object", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]])
-            scalar: Scalar! @requiresScopes(scopes: [["read:scalar", "read:interface", "read:private"], ["read:scalar", "read:all"]])
-            scalarTwo: Scalar! @authenticated @requiresScopes(scopes: [["read:object", "read:scalars", "read:sensitive", "read:field"], ["read:object", "read:scalars", "read:private", "read:field"], ["read:all", "read:scalars", "read:sensitive", "read:field"], ["read:all", "read:scalars", "read:private", "read:field"]])
-          }
-          
-          interface Interface {
-            age: Int! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field"], ["read:private", "read:field"]])
-            id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private", "read:sensitive", "read:field"], ["read:interface", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]])
-            scalar: Scalar! @requiresScopes(scopes: [["read:interface", "read:private", "read:scalar"], ["read:all", "read:scalar"]])
-            scalarTwo: Scalar! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field", "read:scalars"], ["read:private", "read:field", "read:scalars"]])
-          }
-          
-          type Query {
-            entity: Entity!
-            scalar: Scalar! @requiresScopes(scopes: [["read:scalar"]])
-          }
+        type Entity implements Interface {
+          age: Int! @authenticated @requiresScopes(scopes: [["read:object", "read:sensitive", "read:field"], ["read:object", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]])
+          id: ID! @requiresScopes(scopes: [["read:interface", "read:private", "read:object", "read:sensitive", "read:field"], ["read:interface", "read:private", "read:object", "read:field"], ["read:interface", "read:private", "read:all", "read:sensitive", "read:field"], ["read:interface", "read:private", "read:all", "read:field"], ["read:all", "read:object", "read:sensitive", "read:field"], ["read:all", "read:object", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]]) @authenticated
+          scalar: Scalar! @requiresScopes(scopes: [["read:scalar", "read:interface", "read:private"], ["read:scalar", "read:all"]])
+          scalarTwo: Scalar! @authenticated @requiresScopes(scopes: [["read:object", "read:scalars", "read:sensitive", "read:field"], ["read:object", "read:scalars", "read:private", "read:field"], ["read:all", "read:scalars", "read:sensitive", "read:field"], ["read:all", "read:scalars", "read:private", "read:field"]])
+        }
+        
+        interface Interface {
+          age: Int! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field"], ["read:private", "read:field"]])
+          id: ID! @requiresScopes(scopes: [["read:interface", "read:private", "read:sensitive", "read:field"], ["read:interface", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]]) @authenticated
+          scalar: Scalar! @requiresScopes(scopes: [["read:interface", "read:private", "read:scalar"], ["read:all", "read:scalar"]])
+          scalarTwo: Scalar! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field", "read:scalars"], ["read:private", "read:field", "read:scalars"]])
+        }
+        
+        type Query {
+          entity: Entity!
+          scalar: Scalar! @requiresScopes(scopes: [["read:scalar"]])
+        }
 
-          scalar Scalar
-          
-          scalar openfed__Scope
+        scalar Scalar
+        
+        scalar openfed__Scope
       `,
         ),
       );
@@ -525,28 +534,28 @@ describe('Authorization directives tests', () => {
         normalizeString(
           versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
-          type Entity implements Interface {
-            age: Int! @authenticated @requiresScopes(scopes: [["read:object", "read:sensitive", "read:field"], ["read:object", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]])
-            id: ID! @authenticated @requiresScopes(scopes: [["read:object", "read:sensitive", "read:field", "read:interface", "read:private"], ["read:object", "read:sensitive", "read:field", "read:all"], ["read:object", "read:private", "read:field", "read:interface"], ["read:object", "read:private", "read:field", "read:all"], ["read:all", "read:sensitive", "read:field", "read:interface", "read:private"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field", "read:interface"], ["read:all", "read:private", "read:field"]])
-            scalar: Scalar! @requiresScopes(scopes: [["read:scalar", "read:interface", "read:private"], ["read:scalar", "read:all"]])
-            scalarTwo: Scalar! @authenticated @requiresScopes(scopes: [["read:object", "read:scalars", "read:sensitive", "read:field"], ["read:object", "read:scalars", "read:private", "read:field"], ["read:all", "read:scalars", "read:sensitive", "read:field"], ["read:all", "read:scalars", "read:private", "read:field"]])
-          }
-          
-          interface Interface {
-            age: Int! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field"], ["read:private", "read:field"]])
-            id: ID! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field", "read:interface", "read:private"], ["read:sensitive", "read:field", "read:all"], ["read:private", "read:field", "read:interface"], ["read:private", "read:field", "read:all"]])
-            scalar: Scalar! @requiresScopes(scopes: [["read:interface", "read:private", "read:scalar"], ["read:all", "read:scalar"]])
-            scalarTwo: Scalar! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field", "read:scalars"], ["read:private", "read:field", "read:scalars"]])
-          }
-          
-          type Query {
-            entity: Entity!
-            scalar: Scalar! @requiresScopes(scopes: [["read:scalar"]])
-          }
+        type Entity implements Interface {
+          age: Int! @authenticated @requiresScopes(scopes: [["read:object", "read:sensitive", "read:field"], ["read:object", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]])
+          id: ID! @authenticated @requiresScopes(scopes: [["read:object", "read:sensitive", "read:field", "read:interface", "read:private"], ["read:object", "read:sensitive", "read:field", "read:all"], ["read:object", "read:private", "read:field", "read:interface"], ["read:object", "read:private", "read:field", "read:all"], ["read:all", "read:sensitive", "read:field", "read:interface", "read:private"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field", "read:interface"], ["read:all", "read:private", "read:field"]])
+          scalar: Scalar! @requiresScopes(scopes: [["read:scalar", "read:interface", "read:private"], ["read:scalar", "read:all"]])
+          scalarTwo: Scalar! @authenticated @requiresScopes(scopes: [["read:object", "read:scalars", "read:sensitive", "read:field"], ["read:object", "read:scalars", "read:private", "read:field"], ["read:all", "read:scalars", "read:sensitive", "read:field"], ["read:all", "read:scalars", "read:private", "read:field"]])
+        }
+        
+        interface Interface {
+          age: Int! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field"], ["read:private", "read:field"]])
+          id: ID! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field", "read:interface", "read:private"], ["read:sensitive", "read:field", "read:all"], ["read:private", "read:field", "read:interface"], ["read:private", "read:field", "read:all"]])
+          scalar: Scalar! @requiresScopes(scopes: [["read:interface", "read:private", "read:scalar"], ["read:all", "read:scalar"]])
+          scalarTwo: Scalar! @authenticated @requiresScopes(scopes: [["read:sensitive", "read:field", "read:scalars"], ["read:private", "read:field", "read:scalars"]])
+        }
+        
+        type Query {
+          entity: Entity!
+          scalar: Scalar! @requiresScopes(scopes: [["read:scalar"]])
+        }
 
-          scalar Scalar
-          
-          scalar openfed__Scope
+        scalar Scalar
+        
+        scalar openfed__Scope
       `,
         ),
       );
@@ -603,7 +612,7 @@ describe('Authorization directives tests', () => {
             `
           type Entity {
             age: Int! @authenticated
-            id: ID! @authenticated @requiresScopes(scopes: [["read:subgraph-i"]])
+            id: ID! @requiresScopes(scopes: [["read:subgraph-i"]]) @authenticated
             isEntity: Boolean! @authenticated @requiresScopes(scopes: [["read:subgraph-j"]])
             name: String! @requiresScopes(scopes: [["read:subgraph-i"]])
             scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:object", "read:scalar"], ["read:private", "read:object", "read:subgraph-j"], ["read:field", "read:object", "read:scalar"], ["read:field", "read:object", "read:subgraph-j"]])
@@ -670,21 +679,21 @@ describe('Authorization directives tests', () => {
         normalizeString(
           versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
-          type Entity {
-            age: Int! @authenticated
-            id: ID! @authenticated @requiresScopes(scopes: [["read:subgraph-i"]])
-            isEntity: Boolean! @authenticated @requiresScopes(scopes: [["read:subgraph-j"]])
-            name: String! @requiresScopes(scopes: [["read:subgraph-i"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:object", "read:scalar"], ["read:private", "read:object", "read:subgraph-j"], ["read:field", "read:object", "read:scalar"], ["read:field", "read:object", "read:subgraph-j"]])
-          }
-          
-          type Query {
-            entity: Entity!
-          }
-          
-          scalar Scalar
-          
-          scalar openfed__Scope
+        type Entity {
+          age: Int! @authenticated
+          id: ID! @authenticated @requiresScopes(scopes: [["read:subgraph-i"]])
+          isEntity: Boolean! @authenticated @requiresScopes(scopes: [["read:subgraph-j"]])
+          name: String! @requiresScopes(scopes: [["read:subgraph-i"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:object", "read:scalar"], ["read:private", "read:object", "read:subgraph-j"], ["read:field", "read:object", "read:scalar"], ["read:field", "read:object", "read:subgraph-j"]])
+        }
+        
+        type Query {
+          entity: Entity!
+        }
+        
+        scalar Scalar
+        
+        scalar openfed__Scope
       `,
         ),
       );
@@ -816,41 +825,41 @@ describe('Authorization directives tests', () => {
         normalizeString(
           versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
-          type EntityOne implements Interface {
-            id: ID! @requiresScopes(scopes: [["read:entity", "read:interface", "read:private"]])
-            name: String! @requiresScopes(scopes: [["read:entity"]])
-            newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
-          }
-          
-          type EntityThree implements Interface {
-            id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private"]])
-            isEntity: Boolean! @requiresScopes(scopes: [["read:entity"]])
-            newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
-          }
-          
-          type EntityTwo implements Interface {
-            age: Int! @authenticated
-            id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private"]])
-            newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
-          }
-          
-          
-          interface Interface {
-            id: ID! @requiresScopes(scopes: [["read:interface", "read:private"]])
-            newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
-          }
-          
-          type Query {
-            entities: [Interface!]!
-          }
-          
-          scalar Scalar
-          
-          scalar openfed__Scope
+        type EntityOne implements Interface {
+          id: ID! @requiresScopes(scopes: [["read:entity", "read:interface", "read:private"]])
+          name: String! @requiresScopes(scopes: [["read:entity"]])
+          newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
+        }
+        
+        type EntityThree implements Interface {
+          id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private"]])
+          isEntity: Boolean! @requiresScopes(scopes: [["read:entity"]])
+          newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
+        }
+        
+        type EntityTwo implements Interface {
+          age: Int! @authenticated
+          id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private"]])
+          newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
+        }
+        
+        
+        interface Interface {
+          id: ID! @requiresScopes(scopes: [["read:interface", "read:private"]])
+          newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
+        }
+        
+        type Query {
+          entities: [Interface!]!
+        }
+        
+        scalar Scalar
+        
+        scalar openfed__Scope
       `,
         ),
       );
@@ -982,41 +991,41 @@ describe('Authorization directives tests', () => {
         normalizeString(
           versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
             `
-          type EntityOne implements Interface {
-            id: ID! @requiresScopes(scopes: [["read:entity", "read:interface", "read:private"]])
-            name: String! @requiresScopes(scopes: [["read:entity"]])
-            newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
-          }
-          
-          type EntityThree implements Interface {
-            id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private"]])
-            isEntity: Boolean! @requiresScopes(scopes: [["read:entity"]])
-            newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
-          }
-          
-          type EntityTwo implements Interface {
-            age: Int! @authenticated
-            id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private"]])
-            newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
-          }
-          
-          
-          interface Interface {
-            id: ID! @requiresScopes(scopes: [["read:private", "read:interface"]])
-            newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
-          }
-          
-          type Query {
-            entities: [Interface!]!
-          }
-          
-          scalar Scalar
-          
-          scalar openfed__Scope
+        type EntityOne implements Interface {
+          id: ID! @requiresScopes(scopes: [["read:entity", "read:interface", "read:private"]])
+          name: String! @requiresScopes(scopes: [["read:entity"]])
+          newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
+        }
+        
+        type EntityThree implements Interface {
+          id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private"]])
+          isEntity: Boolean! @requiresScopes(scopes: [["read:entity"]])
+          newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
+        }
+        
+        type EntityTwo implements Interface {
+          age: Int! @authenticated
+          id: ID! @authenticated @requiresScopes(scopes: [["read:interface", "read:private"]])
+          newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
+        }
+        
+        
+        interface Interface {
+          id: ID! @requiresScopes(scopes: [["read:private", "read:interface"]])
+          newField: String! @authenticated @requiresScopes(scopes: [["read:private"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:scalar"], ["read:private", "read:field"]])
+        }
+        
+        type Query {
+          entities: [Interface!]!
+        }
+        
+        scalar Scalar
+        
+        scalar openfed__Scope
       `,
         ),
       );

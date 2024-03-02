@@ -7,24 +7,23 @@ import {
   duplicateOverriddenFieldsError,
   equivalentSourceAndTargetOverrideErrorMessage,
   federateSubgraphs,
-  FederationFieldData,
+  FieldData,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
+  invalidFieldShareabilityError,
   normalizeSubgraph,
-  ObjectContainer,
-  shareableFieldDefinitionsError,
+  ObjectDefinitionData,
   Subgraph,
   subgraphValidationError,
 } from '../src';
 import {
-  documentNodeToNormalizedString,
   normalizeString,
   schemaToSortedNormalizedString,
-  versionTwoPersistedBaseSchema,
   versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 import { OVERRIDE } from '../src/utils/string-constants';
 import { invalidOverrideTargetSubgraphNameWarning } from '../src/warnings/warnings';
+import { MultiGraph } from 'graphology';
 
 describe('@override directive tests', () => {
   test('that a warning is returned if @override targets an unknown subgraph name', () => {
@@ -32,19 +31,21 @@ describe('@override directive tests', () => {
     expect(errors).toBeUndefined();
     expect(warnings).toBeDefined();
     expect(warnings![0]).toStrictEqual(invalidOverrideTargetSubgraphNameWarning('subgraph-z', 'Entity', ['age']));
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
+      type Entity {
+        age: Int!
+        id: ID!
+        name: String!
+      }
+      
       type Query {
         query: Entity!
       }
       
-      type Entity {
-        id: ID!
-        name: String!
-        age: Int!
-      }
+      scalar openfed__Scope
     `,
       ),
     );
@@ -61,7 +62,7 @@ describe('@override directive tests', () => {
   });
 
   test('that an error is returned if the source and target subgraph name for @override are equivalent', () => {
-    const { errors } = normalizeSubgraph(subgraphQ.definitions, 'subgraph-q');
+    const { errors } = normalizeSubgraph(subgraphQ.definitions, new MultiGraph(), 'subgraph-q');
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
       invalidDirectiveError(OVERRIDE, 'Entity.name', [
@@ -442,22 +443,21 @@ describe('@override directive tests', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphC, subgraphE]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      shareableFieldDefinitionsError(
+      invalidFieldShareabilityError(
         {
-          node: { name: { value: 'Entity' } },
-          fields: new Map<string, FederationFieldData>([
+          fieldDataByFieldName: new Map<string, FieldData>([
             [
               'name',
               {
-                node: { name: { value: 'name' } },
-                subgraphsByShareable: new Map<string, boolean>([
+                isShareableBySubgraphName: new Map<string, boolean>([
                   ['subgraph-c', false],
                   ['subgraph-e', true],
                 ]),
-              } as FederationFieldData,
+              } as FieldData,
             ],
           ]),
-        } as ObjectContainer,
+          name: 'Entity',
+        } as ObjectDefinitionData,
         new Set<string>(['name']),
       ),
     );
@@ -467,22 +467,21 @@ describe('@override directive tests', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphI, subgraphJ]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      shareableFieldDefinitionsError(
+      invalidFieldShareabilityError(
         {
-          node: { name: { value: 'Entity' } },
-          fields: new Map<string, FederationFieldData>([
+          fieldDataByFieldName: new Map<string, FieldData>([
             [
               'name',
               {
-                node: { name: { value: 'name' } },
-                subgraphsByShareable: new Map<string, boolean>([
+                isShareableBySubgraphName: new Map<string, boolean>([
                   ['subgraph-a', false],
                   ['subgraph-j', true],
                 ]),
-              } as FederationFieldData,
+              } as FieldData,
             ],
           ]),
-        } as ObjectContainer,
+          name: 'Entity',
+        } as ObjectDefinitionData,
         new Set<string>(['name']),
       ),
     );

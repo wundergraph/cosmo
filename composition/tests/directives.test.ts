@@ -3,10 +3,9 @@ import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
-  documentNodeToNormalizedString,
   normalizeString,
   schemaToSortedNormalizedString,
-  versionOnePersistedBaseSchema,
+  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 
 describe('Directive tests', () => {
@@ -81,20 +80,28 @@ describe('Directive tests', () => {
     test('that @specifiedBy is supported', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOnePersistedBaseSchema +
+          versionOneSchemaQueryAndPersistedDirectiveDefinitions +
             `
-          type Query {
-            json: JSON!
-            field: String!
-          }
-          
-          scalar JSON
-        `,
+        scalar JSON
+        
+        type Query {
+          field: String!
+          json: JSON!
+        }
+      `,
         ),
       );
     });
+  });
+
+  test('that directives', () => {
+    const { errors, federationResult } = federateSubgraphs([
+      { name: 'a', url: '', definitions: parse(`directive @test on OBJECT type Query { dummy: String! }`) },
+      { name: 'b', url: '', definitions: parse(`directive @test(a: String!) on OBJECT`) },
+    ]);
+    expect(errors).toBeUndefined();
   });
 
   test('that schema directives are supported', () => {

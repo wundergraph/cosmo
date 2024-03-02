@@ -1,7 +1,6 @@
 import { ConstDirectiveNode, DocumentNode, GraphQLSchema, Kind } from 'graphql';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
 import {
-  MutableDirectiveDefinitionNode,
   MutableEnumTypeDefinitionNode,
   MutableEnumValueDefinitionNode,
   MutableFieldDefinitionNode,
@@ -90,15 +89,6 @@ export type ArgumentContainer = {
 };
 
 export type ArgumentMap = Map<string, ArgumentContainer>;
-
-export type DirectiveContainer = {
-  arguments: ArgumentMap;
-  executableLocations: Set<string>;
-  node: MutableDirectiveDefinitionNode;
-  subgraphNames: Set<string>;
-};
-
-export type DirectiveMap = Map<string, DirectiveContainer>;
 
 export type EnumContainer = {
   appearances: number;

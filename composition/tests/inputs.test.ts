@@ -1,16 +1,19 @@
-import { federateSubgraphs, federationRequiredInputFieldError, Subgraph } from '../src';
+import { federateSubgraphs, invalidRequiredInputFieldError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+} from './utils/utils';
 
 describe('Input federation tests', () => {
   test('that inputs merge by intersection if the removed fields are nullable', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
           `
       type Query {
         dummy: String!
@@ -26,12 +29,30 @@ describe('Input federation tests', () => {
   });
 
   test('that a required input object field that is omitted from the federated graph returns an error', () => {
-    const parentName = 'TechnicalMachine';
-    const fieldName = 'move';
     const { errors } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(federationRequiredInputFieldError(parentName, fieldName));
+    expect(errors![0]).toStrictEqual(invalidRequiredInputFieldError('TechnicalMachine', ['move', 'number']));
+  });
+
+  test('that @deprecated is persisted on an input value field', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphD]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          `
+      input Input {
+        id: ID
+        name: String @deprecated(reason: "use id")
+      }
+      
+      type Query {
+        dummy: String!
+      }
+    `,
+      ),
+    );
   });
 });
 
@@ -70,6 +91,21 @@ const subgraphC: Subgraph = {
   definitions: parse(`
     input TechnicalMachine {
       name: String!
+    }
+  `),
+};
+
+const subgraphD: Subgraph = {
+  name: 'subgraph-d',
+  url: '',
+  definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+    
+    input Input {
+      name: String @deprecated(reason: "use id")
+      id: ID
     }
   `),
 };
