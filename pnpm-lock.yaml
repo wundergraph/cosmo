@@ -786,8 +786,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       tailwind-scrollbar:
-        specifier: ^3.0.5
-        version: 3.0.5(tailwindcss@3.3.5)
+        specifier: ^3.1.0
+        version: 3.1.0(tailwindcss@3.3.5)
       tailwindcss:
         specifier: ^3.3.5
         version: 3.3.5(ts-node@10.9.1)
@@ -20200,8 +20200,8 @@ packages:
       '@babel/runtime': 7.23.4
     dev: false
 
-  /tailwind-scrollbar@3.0.5(tailwindcss@3.3.5):
-    resolution: {integrity: sha512-0ZwxTivevqq9BY9fRP9zDjHl7Tu+J5giBGbln+0O1R/7nHtBUKnjQcA1aTIhK7Oyjp6Uc/Dj6/dn8Dq58k5Uww==}
+  /tailwind-scrollbar@3.1.0(tailwindcss@3.3.5):
+    resolution: {integrity: sha512-pmrtDIZeHyu2idTejfV59SbaJyvp1VRjYxAjZBH0jnyrPRo6HL1kD5Glz8VPagasqr6oAx6M05+Tuw429Z8jxg==}
     engines: {node: '>=12.13.0'}
     peerDependencies:
       tailwindcss: 3.x
