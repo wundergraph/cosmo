@@ -76,7 +76,7 @@ func (Dog) IsAnimal() {}
 
 type Employee struct {
 	ID      int      `json:"id"`
-	Details *Details `json:"details"`
+	Details *Details `json:"details,omitempty"`
 }
 
 func (Employee) IsEntity() {}

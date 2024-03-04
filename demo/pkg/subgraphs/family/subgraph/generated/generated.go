@@ -566,7 +566,7 @@ type Details {
 
 type Employee @key(fields: "id") {
   id: Int!
-  details: Details! @shareable
+  details: Details @shareable
 }
 
 input SearchInput {
@@ -1640,14 +1640,11 @@ func (ec *executionContext) _Employee_details(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.Details)
 	fc.Result = res
-	return ec.marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
+	return ec.marshalODetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_details(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4553,9 +4550,6 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "details":
 			out.Values[i] = ec._Employee_details(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5254,16 +5248,6 @@ func (ec *executionContext) marshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋd
 	return v
 }
 
-func (ec *executionContext) marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Details(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNDogBreed2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDogBreed(ctx context.Context, v interface{}) (model.DogBreed, error) {
 	var res model.DogBreed
 	err := res.UnmarshalGQL(v)
@@ -5848,6 +5832,13 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) marshalODetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Details(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx context.Context, v interface{}) (*model.MaritalStatus, error) {
