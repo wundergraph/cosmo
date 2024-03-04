@@ -1,9 +1,9 @@
 import {
   ConfigurationData,
   federateSubgraphs,
-  FederationFieldData,
-  ObjectContainer,
-  shareableFieldDefinitionsError,
+  FieldData,
+  invalidFieldShareabilityError,
+  ObjectDefinitionData,
   Subgraph,
 } from '../src';
 import { describe, expect, test } from 'vitest';
@@ -213,72 +213,67 @@ describe('Entity Tests', () => {
       expect(errors).toBeDefined();
       expect(errors!.length).toBe(2);
       expect(errors![0]).toStrictEqual(
-        shareableFieldDefinitionsError(
+        invalidFieldShareabilityError(
           {
-            node: { name: { value: 'Entity' } },
-            fields: new Map<string, FederationFieldData>([
+            name: 'Entity',
+            fieldDataByFieldName: new Map<string, FieldData>([
               [
                 'id',
                 {
-                  node: { name: { value: 'id' } },
-                  subgraphsByShareable: new Map<string, boolean>([
+                  isShareableBySubgraphName: new Map<string, boolean>([
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FederationFieldData,
+                } as FieldData,
               ],
               [
                 'object',
                 {
-                  node: { name: { value: 'object' } },
-                  subgraphsByShareable: new Map<string, boolean>([
+                  isShareableBySubgraphName: new Map<string, boolean>([
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FederationFieldData,
+                } as FieldData,
               ],
               [
                 'age',
                 {
-                  node: { name: { value: 'age' } },
-                  subgraphsByShareable: new Map<string, boolean>([
+                  isShareableBySubgraphName: new Map<string, boolean>([
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FederationFieldData,
+                } as FieldData,
               ],
             ]),
-          } as ObjectContainer,
+          } as ObjectDefinitionData,
           new Set<string>(['id', 'object', 'age']),
         ),
       );
       expect(errors![1]).toStrictEqual(
-        shareableFieldDefinitionsError(
+        invalidFieldShareabilityError(
           {
-            node: { name: { value: 'Object' } },
-            fields: new Map<string, FederationFieldData>([
+            name: 'Object',
+            fieldDataByFieldName: new Map<string, FieldData>([
               [
                 'id',
                 {
-                  node: { name: { value: 'id' } },
-                  subgraphsByShareable: new Map<string, boolean>([
+                  isShareableBySubgraphName: new Map<string, boolean>([
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FederationFieldData,
+                } as FieldData,
               ],
               [
                 'name',
                 {
-                  node: { name: { value: 'name' } },
-                  subgraphsByShareable: new Map<string, boolean>([
+                  isShareableBySubgraphName: new Map<string, boolean>([
                     ['subgraph-l', true],
                     ['subgraph-m', false],
                   ]),
-                } as FederationFieldData,
+                } as FieldData,
               ],
             ]),
-          } as ObjectContainer,
+          } as ObjectDefinitionData,
           new Set<string>(['id', 'name']),
         ),
       );

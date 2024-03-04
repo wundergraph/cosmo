@@ -8,6 +8,7 @@ import {
   InputObjectTypeDefinitionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
+  InterfaceTypeExtensionNode,
   Kind,
   NamedTypeNode,
   NameNode,
@@ -19,7 +20,7 @@ import {
   UnionTypeDefinitionNode,
 } from 'graphql';
 import { formatDescription } from '../ast/utils';
-import { federationUnexpectedNodeKindError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
+import { maximumTypeNestingExceededFatalError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
 import { MAXIMUM_TYPE_NESTING } from '../utils/constants';
 
 export type MutableDirectiveDefinitionNode = {
@@ -276,7 +277,6 @@ export function getMutableUnionNode(node: UnionTypeDefinitionNode): MutableUnion
   };
 }
 
-// TODO refactor errors
 export function deepCopyTypeNode(node: TypeNode, hostPath: string): TypeNode {
   const deepCopy: MutableIntermediateTypeNode = { kind: node.kind };
   let lastTypeNode = deepCopy;
@@ -297,11 +297,33 @@ export function deepCopyTypeNode(node: TypeNode, hostPath: string): TypeNode {
         lastTypeNode = lastTypeNode.type;
         node = node.type;
         continue;
-      default:
-        throw federationUnexpectedNodeKindError(hostPath);
     }
   }
-  throw new Error(
-    `Field ${hostPath} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`,
-  );
+  throw maximumTypeNestingExceededFatalError(hostPath, MAXIMUM_TYPE_NESTING);
+}
+
+export type MutableTypeDefinitionNode =
+  | MutableDirectiveDefinitionNode
+  | MutableEnumNode
+  | MutableInputObjectNode
+  | MutableInterfaceNode
+  | MutableObjectNode
+  | MutableScalarNode
+  | MutableUnionNode;
+
+export type ObjectLikeTypeNode =
+  | InterfaceTypeDefinitionNode
+  | InterfaceTypeExtensionNode
+  | ObjectTypeDefinitionNode
+  | ObjectTypeExtensionNode;
+
+export function getNamedTypeForChild(typeNode: TypeNode): string {
+  switch (typeNode.kind) {
+    case Kind.NAMED_TYPE:
+      return typeNode.name.value;
+    case Kind.LIST_TYPE:
+    // intentional fallthrough
+    case Kind.NON_NULL_TYPE:
+      return getNamedTypeForChild(typeNode.type);
+  }
 }

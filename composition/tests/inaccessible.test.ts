@@ -2,12 +2,12 @@ import { describe, expect, test } from 'vitest';
 import {
   allFieldDefinitionsAreInaccessibleError,
   federateSubgraphs,
-  FederationFieldData,
+  FieldData,
   ImplementationErrors,
   InvalidFieldImplementation,
+  invalidFieldShareabilityError,
   normalizeSubgraph,
-  ObjectContainer,
-  shareableFieldDefinitionsError,
+  ObjectDefinitionData,
   Subgraph,
   unimplementedInterfaceFieldsError,
 } from '../src';
@@ -45,22 +45,21 @@ describe('@inaccessible tests', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      shareableFieldDefinitionsError(
+      invalidFieldShareabilityError(
         {
-          node: { name: { value: 'Entity' } },
-          fields: new Map<string, FederationFieldData>([
+          name: 'Entity',
+          fieldDataByFieldName: new Map<string, FieldData>([
             [
               'name',
               {
-                node: { name: { value: 'name' } },
-                subgraphsByShareable: new Map<string, boolean>([
+                isShareableBySubgraphName: new Map<string, boolean>([
                   ['subgraph-a', true],
                   ['subgraph-c', false],
                 ]),
-              } as FederationFieldData,
+              } as FieldData,
             ],
           ]),
-        } as ObjectContainer,
+        } as ObjectDefinitionData,
         new Set<string>(['name']),
       ),
     );

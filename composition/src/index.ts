@@ -1,4 +1,3 @@
-export * from './ast/ast';
 export * from './ast/utils';
 export * from './errors/errors';
 export * from './federation/federation-factory';
@@ -15,3 +14,4 @@ export * from './schema-building/utils';
 export * from './subgraph/subgraph';
 export * from './utils/utils';
 export * from './warnings/warnings';
+export { createMultiGraphAndRenameRootTypes } from './federation/walkers';

@@ -37,7 +37,6 @@ import {
   VARIABLE_DEFINITION_UPPER,
 } from '../utils/string-constants';
 import { NormalizationFactory } from './normalization-factory';
-import { getNamedTypeForChild } from '../schema-building/type-merging';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
@@ -65,6 +64,7 @@ import {
 import { BASE_SCALARS } from '../utils/constants';
 import { RequiredFieldConfiguration } from '../router-configuration/router-configuration';
 import { FieldData, ParentWithFieldsData, UnionDefinitionData } from '../schema-building/type-definition-data';
+import { getNamedTypeForChild } from '../schema-building/ast';
 
 export type FieldSetContainer = {
   keys: Set<string>;
@@ -243,11 +243,11 @@ type NonRepeatableFieldSetValidationResult = {
 
 export function getNormalizedFieldSet(documentNode: DocumentNode): string {
   /*
-  1. Lexicographically sort the DocumentNode
-  2. Convert to a string
-  3. Replace consecutive whitespace with a single space
-  4. Remove the leading and trailing "{ " and " }", respectively
-   */
+    1. Lexicographically sort the DocumentNode
+    2. Convert to a string
+    3. Replace consecutive whitespace with a single space
+    4. Remove the leading and trailing "{ " and " }", respectively
+  */
   return print(lexicographicallySortDocumentNode(documentNode)).replaceAll(/\s+/g, ' ').slice(2, -2);
 }
 
@@ -296,9 +296,9 @@ function validateNonRepeatableFieldSet(
         const fieldName = node.name.value;
         fieldPath = `${parentTypeName}.${fieldName}`;
         lastFieldName = fieldName;
-        const fieldContainer = parentData.fieldDataByFieldName.get(fieldName);
+        const fieldData = parentData.fieldDataByFieldName.get(fieldName);
         // undefined if the field does not exist on the parent
-        if (!fieldContainer) {
+        if (!fieldData) {
           errorMessage = undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName);
           return BREAK;
         }
@@ -307,7 +307,7 @@ function validateNonRepeatableFieldSet(
           return BREAK;
         }
         definedFields[currentDepth].add(fieldName);
-        const namedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
+        const namedTypeName = getNamedTypeForChild(fieldData.node.type);
         // The base scalars are not in the parents map
         if (BASE_SCALARS.has(namedTypeName)) {
           return;
@@ -400,12 +400,12 @@ function validateNonRepeatableFieldSet(
             errorMessage = unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName);
             return BREAK;
           }
-          const fieldContainer = parentContainer.fieldDataByFieldName.get(lastFieldName);
-          if (!fieldContainer) {
+          const fieldData = parentContainer.fieldDataByFieldName.get(lastFieldName);
+          if (!fieldData) {
             errorMessage = undefinedFieldInFieldSetErrorMessage(fieldSet, fieldPath, lastFieldName);
             return BREAK;
           }
-          const fieldNamedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
+          const fieldNamedTypeName = getNamedTypeForChild(fieldData.node.type);
           // If the child is not found, it's a base scalar. Undefined types would have already been handled.
           const childContainer = factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
           const childKind = childContainer ? childContainer.kind : Kind.SCALAR_TYPE_DEFINITION;
@@ -531,7 +531,7 @@ function validateKeyFieldSets(
             fieldNames.add(fieldName);
           }
           getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
-          const namedTypeName = getNamedTypeForChild(fieldPath, fieldData.node.type);
+          const namedTypeName = getNamedTypeForChild(fieldData.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
             return;
@@ -581,7 +581,7 @@ function validateKeyFieldSets(
               errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, fieldPath, lastFieldName));
               return BREAK;
             }
-            const fieldNamedTypeName = getNamedTypeForChild(fieldPath, fieldData.node.type);
+            const fieldNamedTypeName = getNamedTypeForChild(fieldData.node.type);
             // If the child is not found, it's a base scalar. Undefined types would have already been handled.
             const namedTypeData = nf.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
             const namedTypeKind = namedTypeData ? namedTypeData.kind : Kind.SCALAR_TYPE_DEFINITION;
@@ -663,7 +663,7 @@ function getFieldSetParent(
     fieldName,
     `${parentTypeName}.fieldDataByFieldName`,
   );
-  const fieldNamedTypeName = getNamedTypeForChild(`${parentTypeName}.${fieldName}`, fieldData.node.type);
+  const fieldNamedTypeName = getNamedTypeForChild(fieldData.node.type);
 
   if (!factory.entityContainerByTypeName.has(fieldNamedTypeName)) {
     return {};

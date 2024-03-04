@@ -1,99 +1,31 @@
 import { MultiGraph } from 'graphology';
+import { BREAK, buildASTSchema, DirectiveDefinitionNode, DocumentNode, Kind, NamedTypeNode, visit } from 'graphql';
 import {
-  BREAK,
-  buildASTSchema,
-  ConstDirectiveNode,
-  ConstValueNode,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  EnumValueDefinitionNode,
-  FieldDefinitionNode,
-  InputValueDefinitionNode,
-  Kind,
-  NamedTypeNode,
-  ObjectTypeDefinitionNode,
-  ObjectTypeExtensionNode,
-  TypeDefinitionNode,
-  TypeNode,
-  visit,
-} from 'graphql';
-import {
-  ConstValueNodeWithValue,
-  enumTypeDefinitionNodeToMutable,
-  enumValueDefinitionNodeToMutable,
-  fieldDefinitionNodeToMutable,
-  inputObjectTypeDefinitionNodeToMutable,
-  inputValueDefinitionNodeToMutable,
-  interfaceTypeDefinitionNodeToMutable,
-  MutableInputValueDefinitionNode,
+  getNamedTypeForChild,
+  MutableEnumValueNode,
+  MutableFieldNode,
+  MutableInputValueNode,
   MutableTypeDefinitionNode,
-  objectTypeDefinitionNodeToMutable,
-  objectTypeExtensionNodeToMutable,
-  scalarTypeDefinitionNodeToMutable,
-  unionTypeDefinitionNodeToMutable,
-} from '../ast/ast';
-import {
-  extractInterfaces,
-  isKindAbstract,
-  isNodeExternal,
-  isNodeShareable,
-  pushPersistedDirectivesAndGetNode,
-  safeParse,
-  stringToNamedTypeNode,
-} from '../ast/utils';
+} from '../schema-building/ast';
+import { isKindAbstract, safeParse, stringToNamedTypeNode } from '../ast/utils';
 import {
   allFieldDefinitionsAreInaccessibleError,
-  argumentTypeMergeFatalError,
-  federationInvalidParentTypeError,
-  fieldTypeMergeFatalError,
-  incompatibleArgumentDefaultValueError,
-  incompatibleArgumentDefaultValueTypeError,
-  incompatibleArgumentTypesError,
-  incompatibleChildTypesError,
   incompatibleParentKindFatalError,
   incompatibleSharedEnumError,
-  invalidDeprecatedDirectiveError,
   invalidFieldShareabilityError,
-  invalidRequiredArgumentsError,
-  invalidRequiredInputFieldError,
-  invalidTagDirectiveError,
-  invalidUnionError,
+  invalidRequiredInputValueError,
   minimumSubgraphRequirementError,
   noConcreteTypesForAbstractTypeError,
   noQueryRootTypeError,
   orScopesLimitError,
   undefinedEntityInterfaceImplementationsError,
   undefinedTypeError,
-  unexpectedArgumentKindFatalError,
-  unexpectedKindFatalError,
   unexpectedObjectResponseType,
   unexpectedParentKindErrorMessage,
   unimplementedInterfaceFieldsError,
   unresolvableFieldError,
 } from '../errors/errors';
-import {
-  getLeastRestrictiveMergedTypeNode,
-  getMostRestrictiveMergedTypeNode,
-  getNamedTypeForChild,
-} from '../schema-building/type-merging';
-import {
-  ArgumentContainer,
-  ArgumentMap,
-  DeprecatedDirectiveContainer,
-  EnumValueContainer,
-  ExtensionContainer,
-  FederationFieldData,
-  FederationResultContainer,
-  InputValueContainer,
-  InterfaceContainer,
-  MergeMethod,
-  newPersistedDirectivesContainer,
-  ObjectContainer,
-  ParentContainer,
-  ParentMap,
-  PersistedDirectivesContainer,
-  RootTypeFieldData,
-} from './utils';
+import { FederationResultContainer, RootTypeFieldData } from './utils';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../subgraph/subgraph';
 import {
   AUTHENTICATED,
@@ -102,10 +34,8 @@ import {
   DEFAULT_SUBSCRIPTION,
   DEPRECATED,
   ENTITIES,
-  EXTENSIONS,
-  FIELD,
   INACCESSIBLE,
-  PARENTS,
+  INPUT_OBJECT,
   QUERY,
   REQUIRES_SCOPES,
   ROOT_TYPES,
@@ -120,13 +50,14 @@ import {
   EntityContainerByTypeName,
   EntityInterfaceFederationData,
   getAllMutualEntries,
+  getEntriesNotInHashSet,
   getOrThrowError,
   getValueOrDefault,
   hasSimplePath,
   ImplementationErrors,
   InvalidEntityInterface,
   InvalidFieldImplementation,
-  InvalidRequiredArgument,
+  InvalidRequiredInputValueData,
   kindToTypeString,
   mapToArrayOfValues,
   maxOrScopes,
@@ -170,15 +101,17 @@ import {
   isFieldExternalInAllMutualSubgraphs,
   isShareabilityOfAllFieldInstancesValid,
   isTypeRequired,
+  isTypeValidImplementation,
+  MergeMethod,
   pushAuthorizationDirectives,
   upsertObjectExtensionData,
   upsertParentDefinitionData,
   upsertPersistedDirectiveDefinitionData,
   upsertValidObjectExtensionData,
 } from '../schema-building/utils';
-import { MutableEnumValueNode, MutableFieldNode, MutableInputValueNode } from '../schema-building/ast';
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
-import { createMultiGraphAndRenameRootTypes } from '../normalization/walkers';
+
+import { createMultiGraphAndRenameRootTypes } from './walkers';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -197,7 +130,6 @@ export class FederationFactory {
   entityContainersByTypeName: EntityContainerByTypeName;
   errors: Error[] = [];
   evaluatedObjectLikesBySubgraph = new Map<string, Set<string>>();
-  extensions = new Map<string, ExtensionContainer>();
   graph: MultiGraph;
   graphEdges = new Set<string>();
   graphPaths = new Map<string, boolean>();
@@ -212,7 +144,6 @@ export class FederationFactory {
   outputFieldTypeNames = new Set<string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   objectExtensionDataByTypeName = new Map<string, ObjectExtensionData>();
-  parents: ParentMap = new Map<string, ParentContainer>();
   persistedDirectiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>([
     [AUTHENTICATED, AUTHENTICATED_DEFINITION],
     [DEPRECATED, DEPRECATED_DEFINITION],
@@ -242,602 +173,6 @@ export class FederationFactory {
     this.graph = graph;
     this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
     this.warnings = warnings || [];
-  }
-
-  isObjectRootType(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode): boolean {
-    return this.rootTypeNames.has(node.name.value);
-  }
-
-  validateArgumentDefaultValues(
-    argName: string,
-    existingDefaultValue: ConstValueNodeWithValue,
-    newDefaultValue: ConstValueNode,
-  ) {
-    if (existingDefaultValue.kind !== newDefaultValue.kind) {
-      // This should be caught by subgraph validation
-      this.errors.push(
-        incompatibleArgumentDefaultValueTypeError(
-          argName,
-          this.parentTypeName,
-          this.childName,
-          existingDefaultValue.kind,
-          newDefaultValue.kind,
-        ),
-      );
-    }
-    if ('value' in newDefaultValue && existingDefaultValue.value !== newDefaultValue.value) {
-      this.errors.push(
-        incompatibleArgumentDefaultValueError(
-          argName,
-          this.parentTypeName,
-          this.childName,
-          existingDefaultValue.value,
-          newDefaultValue.value,
-        ),
-      );
-    }
-  }
-
-  compareAndValidateArgumentDefaultValues(existingArg: ArgumentContainer, newArg: InputValueDefinitionNode) {
-    const newDefaultValue = newArg.defaultValue;
-    existingArg.node.defaultValue = existingArg.node.defaultValue || newDefaultValue;
-    if (!existingArg.node.defaultValue || !newDefaultValue) {
-      existingArg.includeDefaultValue = false;
-      return;
-    }
-    const argumentName = existingArg.node.name.value;
-    const existingDefaultValue = existingArg.node.defaultValue;
-    switch (existingDefaultValue.kind) {
-      case Kind.LIST: // TODO
-        break;
-      case Kind.NULL:
-        break;
-      case Kind.OBJECT:
-        break;
-      // BOOLEAN, ENUM, FLOAT, INT, and STRING intentionally fall through
-      case Kind.BOOLEAN:
-      case Kind.ENUM:
-      case Kind.FLOAT:
-      case Kind.INT:
-      case Kind.STRING:
-        this.validateArgumentDefaultValues(argumentName, existingDefaultValue, newDefaultValue);
-        break;
-      default:
-        throw unexpectedArgumentKindFatalError(argumentName, this.childName);
-    }
-  }
-
-  upsertRequiredSubgraph(set: Set<string>, isRequired: boolean): Set<string> {
-    if (isRequired) {
-      set.add(this.currentSubgraphName);
-    }
-    return set;
-  }
-
-  upsertExtensionPersistedDirectives(
-    extensionDirectives: PersistedDirectivesContainer,
-    baseDirectives: PersistedDirectivesContainer,
-  ) {
-    // Add unique tag directives
-    for (const [tagValue, tagDirectiveNode] of extensionDirectives.tags) {
-      baseDirectives.tags.set(tagValue, tagDirectiveNode);
-    }
-    // Push other directives
-    for (const [directiveName, directiveNodes] of extensionDirectives.directives) {
-      const existingDirectives = baseDirectives.directives.get(directiveName);
-      if (!existingDirectives) {
-        baseDirectives.directives.set(directiveName, directiveNodes);
-        continue;
-      }
-      existingDirectives.push(...directiveNodes);
-    }
-    // If the extension has no deprecated directive, there's nothing further to do
-    const extensionDeprecatedDirective = extensionDirectives.deprecated.directive;
-    const extensionDeprecatedReason = extensionDirectives.deprecated.reason;
-    if (!extensionDeprecatedDirective || !extensionDeprecatedReason) {
-      return;
-    }
-    // If there is no reason or the existing reason is longer, return
-    if (
-      baseDirectives.deprecated.directive &&
-      baseDirectives.deprecated.reason &&
-      extensionDeprecatedReason.length < baseDirectives.deprecated.reason.length
-    ) {
-      return;
-    }
-    // Only update if the new reason is longer
-    baseDirectives.deprecated.directive = extensionDeprecatedDirective;
-    baseDirectives.deprecated.reason = extensionDeprecatedReason;
-  }
-
-  upsertExtensionFieldArguments(extensionFieldArguments: ArgumentMap, baseFieldArguments: ArgumentMap) {
-    for (const [argumentName, extensionArgumentContainer] of extensionFieldArguments) {
-      const existingArgumentContainer = baseFieldArguments.get(argumentName);
-      if (!existingArgumentContainer) {
-        // If the argument doesn't exist on the base field, simply add it
-        baseFieldArguments.set(argumentName, extensionArgumentContainer);
-        continue;
-      }
-      if (extensionArgumentContainer.requiredSubgraphs.size > 0) {
-        // If the argument is required on any extensions, add it to the base requiredSubgraphs set
-        addIterableValuesToSet(
-          extensionArgumentContainer.requiredSubgraphs,
-          existingArgumentContainer.requiredSubgraphs,
-        );
-      }
-      // Add the subgraphs in which the extensions' arguments are found to the base subgraphs set
-      addIterableValuesToSet(extensionArgumentContainer.subgraphs, existingArgumentContainer.subgraphs);
-      const hostPath = `${this.parentTypeName}.${this.childName}(${argumentName}: ...)`;
-      // Set the most restrictive type for the argument
-      const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
-        existingArgumentContainer.node.type,
-        extensionArgumentContainer.node.type,
-        hostPath,
-      );
-      if (typeNode) {
-        existingArgumentContainer.node.type = typeNode;
-      } else {
-        if (!typeErrors || typeErrors.length < 2) {
-          throw argumentTypeMergeFatalError(argumentName, this.childName);
-        }
-        this.errors.push(incompatibleArgumentTypesError(argumentName, hostPath, typeErrors[0], typeErrors[1]));
-      }
-      this.compareAndValidateArgumentDefaultValues(existingArgumentContainer, extensionArgumentContainer.node);
-      this.upsertExtensionPersistedDirectives(
-        extensionArgumentContainer.directives,
-        existingArgumentContainer.directives,
-      );
-    }
-  }
-
-  // TODO validation of default values
-  upsertArguments(node: DirectiveDefinitionNode | FieldDefinitionNode, argumentMap: ArgumentMap): ArgumentMap {
-    if (!node.arguments) {
-      return argumentMap;
-    }
-    for (const argumentNode of node.arguments) {
-      const argName = argumentNode.name.value;
-      const argPath = `${node.name.value}(${argName}...)`;
-      this.namedInputValueTypeNames.add(getNamedTypeForChild(argPath, argumentNode.type));
-      const isRequired = isTypeRequired(argumentNode.type);
-      const existingArgumentContainer = argumentMap.get(argName);
-      if (!existingArgumentContainer) {
-        argumentMap.set(argName, {
-          directives: this.extractPersistedDirectives(argumentNode.directives || [], newPersistedDirectivesContainer()),
-          includeDefaultValue: !!argumentNode.defaultValue,
-          node: inputValueDefinitionNodeToMutable(argumentNode, this.childName),
-          requiredSubgraphs: this.upsertRequiredSubgraph(new Set<string>(), isRequired),
-          subgraphs: new Set<string>([this.currentSubgraphName]),
-        });
-        continue;
-      }
-      this.extractPersistedDirectives(argumentNode.directives || [], existingArgumentContainer.directives);
-      this.upsertRequiredSubgraph(existingArgumentContainer.requiredSubgraphs, isRequired);
-      existingArgumentContainer.subgraphs.add(this.currentSubgraphName);
-      const hostPath = `${this.parentTypeName}.${this.childName}(${argName}: ...)`;
-      const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
-        existingArgumentContainer.node.type,
-        argumentNode.type,
-        hostPath,
-      );
-      if (typeNode) {
-        existingArgumentContainer.node.type = typeNode;
-      } else {
-        if (!typeErrors || typeErrors.length < 2) {
-          throw argumentTypeMergeFatalError(argName, this.childName);
-        }
-        this.errors.push(incompatibleArgumentTypesError(argName, hostPath, typeErrors[0], typeErrors[1]));
-      }
-      this.compareAndValidateArgumentDefaultValues(existingArgumentContainer, argumentNode);
-    }
-    return argumentMap;
-  }
-
-  isFieldEntityKey(): boolean {
-    const parent = this.keyFieldNamesByParentTypeName.get(this.parentTypeName);
-    if (parent) {
-      return parent.has(this.childName);
-    }
-    return false;
-  }
-
-  isFieldExternal(node: FieldDefinitionNode): boolean {
-    return this.areFieldsExternal || isNodeExternal(node);
-  }
-
-  isFieldShareable(node: FieldDefinitionNode): boolean {
-    return (
-      !this.isCurrentSubgraphVersionTwo || this.areFieldsShareable || this.isFieldEntityKey() || isNodeShareable(node)
-    );
-  }
-
-  // upsertDirectiveNode(node: DirectiveDefinitionNode) {
-  //   const directiveName = node.name.value;
-  //   const directiveDefinition = this.directiveDefinitions.get(directiveName);
-  //   if (directiveDefinition) {
-  //     if (!this.executableDirectives.has(directiveName)) {
-  //       return;
-  //     }
-  //     if (
-  //       mergeExecutableDirectiveLocations(node.locations, directiveDefinition).size < 1) {
-  //       this.executableDirectives.delete(directiveName);
-  //       return;
-  //     }
-  //     this.upsertArguments(node, directiveDefinition.arguments);
-  //     setLongestDescriptionForNode(directiveDefinition.node, node.description);
-  //     directiveDefinition.node.repeatable = directiveDefinition.node.repeatable && node.repeatable;
-  //     directiveDefinition.subgraphNames.add(this.currentSubgraphName);
-  //     return;
-  //   }
-  //   const executableLocations = extractExecutableDirectiveLocations(node.locations, new Set<string>());
-  //   this.directiveDefinitions.set(directiveName, {
-  //     arguments: this.upsertArguments(node, new Map<string, ArgumentContainer>()),
-  //     executableLocations,
-  //     node: directiveDefinitionNodeToMutable(node),
-  //     subgraphNames: new Set<string>([this.currentSubgraphName]),
-  //   });
-  //   if (executableLocations.size > 0) {
-  //     this.executableDirectives.add(directiveName);
-  //   }
-  // }
-
-  isShareabilityOfAllFieldInstancesValid(fieldContainer: FederationFieldData) {
-    let shareableFields = 0;
-    let unshareableFields = 0;
-    for (const [subgraphName, isShareable] of fieldContainer.subgraphsByShareable) {
-      /*
-        shareability is ignored if:
-        1. the field is external
-        2. the field is overridden by another subgraph (in which case it has not been upserted)
-       */
-      if (fieldContainer.subgraphsByExternal.get(subgraphName)) {
-        continue;
-      }
-      if (isShareable) {
-        if (unshareableFields) {
-          return false;
-        }
-        shareableFields += 1;
-        continue;
-      }
-      unshareableFields += 1;
-      if (shareableFields || unshareableFields > 1) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  upsertFieldNode(node: FieldDefinitionNode) {
-    const parent = this.isCurrentParentExtensionType
-      ? getOrThrowError(this.extensions, this.parentTypeName, EXTENSIONS)
-      : getOrThrowError(this.parents, this.parentTypeName, PARENTS);
-    if (
-      parent.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-      parent.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
-      parent.kind !== Kind.OBJECT_TYPE_EXTENSION
-    ) {
-      throw unexpectedKindFatalError(this.parentTypeName);
-    }
-    const fieldMap = parent.fields;
-    const isFieldExternal = this.isFieldExternal(node);
-    const isFieldShareable = this.isFieldShareable(node);
-    const fieldPath = `${this.parentTypeName}.${this.childName}`;
-    const fieldRootTypeName = getNamedTypeForChild(fieldPath, node.type);
-    const existingFieldContainer = fieldMap.get(this.childName);
-    if (existingFieldContainer) {
-      this.extractPersistedDirectives(node.directives || [], existingFieldContainer.directives);
-      existingFieldContainer.subgraphNames.add(this.currentSubgraphName);
-      existingFieldContainer.subgraphsByShareable.set(this.currentSubgraphName, isFieldShareable);
-      existingFieldContainer.subgraphsByExternal.set(this.currentSubgraphName, isFieldExternal);
-      const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
-        existingFieldContainer.node.type,
-        node.type,
-        `${this.parentTypeName}.${this.childName}`,
-      );
-      if (typeNode) {
-        existingFieldContainer.node.type = typeNode;
-      } else {
-        if (!typeErrors || typeErrors.length < 2) {
-          throw fieldTypeMergeFatalError(this.childName);
-        }
-        this.errors.push(incompatibleChildTypesError(fieldPath, typeErrors[0], typeErrors[1]));
-      }
-      this.upsertArguments(node, existingFieldContainer.arguments);
-      /* A field is valid if one of the following is true:
-        1. The field is an interface
-        2. The field is external
-        3. Non-external fields are ALL shareable
-        4. All other fields besides the current field are external
-      */
-      if (
-        this.isCurrentParentInterface ||
-        isFieldExternal ||
-        (existingFieldContainer.isShareable && isFieldShareable) ||
-        this.isShareabilityOfAllFieldInstancesValid(existingFieldContainer) ||
-        this.entityInterfaceFederationDataByTypeName.has(this.parentTypeName) // TODO handle shareability with interfaceObjects
-      ) {
-        return;
-      }
-      const shareableErrorTypeNames = this.shareableErrorTypeNames.get(this.parentTypeName);
-      if (shareableErrorTypeNames) {
-        shareableErrorTypeNames.add(this.childName);
-      } else {
-        this.shareableErrorTypeNames.set(this.parentTypeName, new Set<string>([this.childName]));
-      }
-      return;
-    }
-    this.namedOutputTypeNames.add(fieldRootTypeName);
-    fieldMap.set(this.childName, {
-      arguments: this.upsertArguments(node, new Map<string, ArgumentContainer>()),
-      directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-      isShareable: isFieldShareable,
-      node: fieldDefinitionNodeToMutable(node, this.parentTypeName),
-      namedTypeName: fieldRootTypeName,
-      subgraphNames: new Set<string>([this.currentSubgraphName]),
-      subgraphsByShareable: new Map<string, boolean>([[this.currentSubgraphName, isFieldShareable]]),
-      subgraphsByExternal: new Map<string, boolean>([[this.currentSubgraphName, isFieldExternal]]),
-    });
-  }
-
-  upsertValueNode(node: EnumValueDefinitionNode | InputValueDefinitionNode) {
-    const parent = this.parents.get(this.parentTypeName);
-    switch (node.kind) {
-      case Kind.ENUM_VALUE_DEFINITION:
-        if (!parent) {
-          // This should never happen
-          throw federationInvalidParentTypeError(this.parentTypeName, this.childName);
-        }
-        if (parent.kind !== Kind.ENUM_TYPE_DEFINITION) {
-          throw incompatibleParentKindFatalError(this.parentTypeName, Kind.ENUM_TYPE_DEFINITION, parent.kind);
-        }
-        const enumValues = parent.values;
-        const enumValueContainer = enumValues.get(this.childName);
-        if (enumValueContainer) {
-          this.extractPersistedDirectives(node.directives || [], enumValueContainer.directives);
-          enumValueContainer.appearances += 1;
-          return;
-        }
-        enumValues.set(this.childName, {
-          appearances: 1,
-          directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          node: enumValueDefinitionNodeToMutable(node),
-        });
-        return;
-      case Kind.INPUT_VALUE_DEFINITION:
-        if (!parent || !this.isParentInputObject) {
-          // these are arguments to a directive
-          return;
-        }
-        if (parent.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
-          throw incompatibleParentKindFatalError(this.parentTypeName, Kind.INPUT_OBJECT_TYPE_DEFINITION, parent.kind);
-        }
-        const inputValues = parent.fields;
-        const inputValueContainer = inputValues.get(this.childName);
-        const valuePath = `${this.parentTypeName}.${this.childName}`;
-        if (inputValueContainer) {
-          this.extractPersistedDirectives(node.directives || [], inputValueContainer.directives);
-          inputValueContainer.appearances += 1;
-          const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
-            inputValueContainer.node.type,
-            node.type,
-            valuePath,
-          );
-          if (typeNode) {
-            inputValueContainer.node.type = typeNode;
-          } else {
-            if (!typeErrors || typeErrors.length < 2) {
-              throw fieldTypeMergeFatalError(this.childName);
-            }
-            this.errors.push(incompatibleChildTypesError(valuePath, typeErrors[0], typeErrors[1]));
-          }
-          return;
-        }
-        const inputValueNamedType = getNamedTypeForChild(valuePath, node.type);
-        this.namedInputValueTypeNames.add(inputValueNamedType);
-        inputValues.set(this.childName, {
-          appearances: 1,
-          directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          includeDefaultValue: !!node.defaultValue,
-          node: inputValueDefinitionNodeToMutable(node, this.parentTypeName),
-        });
-        return;
-      default:
-        throw unexpectedKindFatalError(this.childName);
-    }
-  }
-
-  upsertInterfaceObjectParentNode(node: ObjectTypeDefinitionNode) {
-    const parentTypeName = node.name.value;
-    const parent = this.parents.get(parentTypeName);
-    if (parent) {
-      if (parent.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
-      }
-      this.extractPersistedDirectives(node.directives || [], parent.directives);
-      extractInterfaces(node, parent.interfaces);
-      parent.subgraphNames.add(this.currentSubgraphName);
-      return;
-    }
-    this.parents.set(parentTypeName, {
-      directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-      fields: new Map<string, FederationFieldData>(),
-      interfaces: extractInterfaces(node, new Set<string>()),
-      kind: Kind.INTERFACE_TYPE_DEFINITION,
-      node: interfaceTypeDefinitionNodeToMutable({
-        ...node,
-        kind: Kind.INTERFACE_TYPE_DEFINITION,
-      }),
-      subgraphNames: new Set<string>([this.currentSubgraphName]),
-    });
-  }
-
-  upsertParentNode(node: TypeDefinitionNode) {
-    const parentTypeName = node.name.value;
-    const parent = this.parents.get(parentTypeName);
-    if (parent) {
-      this.extractPersistedDirectives(node.directives || [], parent.directives);
-    }
-    switch (node.kind) {
-      case Kind.ENUM_TYPE_DEFINITION:
-        if (parent) {
-          if (parent.kind !== node.kind) {
-            throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
-          }
-          parent.appearances += 1;
-          return;
-        }
-        this.parents.set(parentTypeName, {
-          appearances: 1,
-          directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          values: new Map<string, EnumValueContainer>(),
-          kind: node.kind,
-          node: enumTypeDefinitionNodeToMutable(node),
-        });
-        return;
-      case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-        if (parent) {
-          if (parent.kind !== node.kind) {
-            throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
-          }
-          parent.appearances += 1;
-          return;
-        }
-        this.parents.set(parentTypeName, {
-          appearances: 1,
-          directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          fields: new Map<string, InputValueContainer>(),
-          kind: node.kind,
-          node: inputObjectTypeDefinitionNodeToMutable(node),
-        });
-        return;
-      case Kind.INTERFACE_TYPE_DEFINITION:
-        if (parent) {
-          if (parent.kind !== node.kind) {
-            throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
-          }
-          extractInterfaces(node, parent.interfaces);
-          parent.subgraphNames.add(this.currentSubgraphName);
-          return;
-        }
-        this.parents.set(parentTypeName, {
-          directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          fields: new Map<string, FederationFieldData>(),
-          interfaces: extractInterfaces(node, new Set<string>()),
-          kind: node.kind,
-          node: interfaceTypeDefinitionNodeToMutable(node),
-          subgraphNames: new Set<string>([this.currentSubgraphName]),
-        });
-        return;
-      case Kind.SCALAR_TYPE_DEFINITION:
-        if (parent) {
-          if (parent.kind !== node.kind) {
-            throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
-          }
-          return;
-        }
-        this.parents.set(parentTypeName, {
-          directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          kind: node.kind,
-          node: scalarTypeDefinitionNodeToMutable(node),
-        });
-        return;
-      case Kind.OBJECT_TYPE_DEFINITION:
-        if (parent) {
-          if (parent.kind !== node.kind) {
-            throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
-          }
-          extractInterfaces(node, parent.interfaces);
-          parent.subgraphNames.add(this.currentSubgraphName);
-          return;
-        }
-        this.parents.set(parentTypeName, {
-          directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          fields: new Map<string, FederationFieldData>(),
-          interfaces: extractInterfaces(node, new Set<string>()),
-          isRootType: this.isParentRootType,
-          kind: node.kind,
-          node: objectTypeDefinitionNodeToMutable(node),
-          subgraphNames: new Set<string>([this.currentSubgraphName]),
-        });
-        return;
-      case Kind.UNION_TYPE_DEFINITION:
-        if (parent) {
-          if (parent.kind !== node.kind) {
-            throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
-          }
-          if (!node.types || node.types.length < 1) {
-            this.errors.push(invalidUnionError(parent.node.name.value));
-            return;
-          }
-          node.types?.forEach((member) => parent.members.add(member.name.value));
-          return;
-        }
-        this.parents.set(parentTypeName, {
-          directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-          kind: node.kind,
-          members: new Set<string>(node.types?.map((member) => member.name.value)),
-          node: unionTypeDefinitionNodeToMutable(node),
-        });
-        return;
-    }
-  }
-
-  upsertExtensionNode(node: ObjectTypeExtensionNode) {
-    const extension = this.extensions.get(this.parentTypeName);
-    if (extension) {
-      if (extension.kind !== Kind.OBJECT_TYPE_EXTENSION) {
-        throw incompatibleParentKindFatalError(this.parentTypeName, Kind.OBJECT_TYPE_EXTENSION, extension.kind);
-      }
-      extension.subgraphNames.add(this.currentSubgraphName);
-      extractInterfaces(node, extension.interfaces);
-      this.extractPersistedDirectives(node.directives || [], extension.directives);
-      return;
-    }
-    // build a new extension
-    const interfaces = extractInterfaces(node, new Set<string>());
-    this.extensions.set(this.parentTypeName, {
-      directives: this.extractPersistedDirectives(node.directives || [], newPersistedDirectivesContainer()),
-      fields: new Map<string, FederationFieldData>(),
-      interfaces,
-      isRootType: this.isParentRootType,
-      kind: Kind.OBJECT_TYPE_EXTENSION,
-      node: objectTypeExtensionNodeToMutable(node),
-      subgraphNames: new Set<string>([this.currentSubgraphName]),
-    });
-  }
-
-  isTypeValidImplementation(originalType: TypeNode, implementationType: TypeNode): boolean {
-    if (originalType.kind === Kind.NON_NULL_TYPE) {
-      if (implementationType.kind !== Kind.NON_NULL_TYPE) {
-        return false;
-      }
-      return this.isTypeValidImplementation(originalType.type, implementationType.type);
-    }
-    if (implementationType.kind === Kind.NON_NULL_TYPE) {
-      return this.isTypeValidImplementation(originalType, implementationType.type);
-    }
-    switch (originalType.kind) {
-      case Kind.NAMED_TYPE:
-        if (implementationType.kind === Kind.NAMED_TYPE) {
-          const originalTypeName = originalType.name.value;
-          const implementationTypeName = implementationType.name.value;
-          if (originalTypeName === implementationTypeName) {
-            return true;
-          }
-          const concreteTypes = this.concreteTypeNamesByAbstractTypeName.get(originalTypeName);
-          if (!concreteTypes) {
-            return false;
-          }
-          return concreteTypes.has(implementationTypeName);
-        }
-        return false;
-      default:
-        if (implementationType.kind === Kind.LIST_TYPE) {
-          return this.isTypeValidImplementation(originalType.type, implementationType.type);
-        }
-        return false;
-    }
   }
 
   getValidImplementedInterfaces(data: DefinitionWithFieldsData): NamedTypeNode[] {
@@ -876,7 +211,13 @@ export class FederationFactory {
           unimplementedArguments: new Set<string>(),
         };
         // The implemented field type must be equally or more restrictive than the original interface field type
-        if (!this.isTypeValidImplementation(interfaceField.node.type, fieldData.node.type)) {
+        if (
+          !isTypeValidImplementation(
+            interfaceField.node.type,
+            fieldData.node.type,
+            this.concreteTypeNamesByAbstractTypeName,
+          )
+        ) {
           hasErrors = true;
           hasNestedErrors = true;
           invalidFieldImplementation.implementedResponseType = printTypeNode(fieldData.node.type);
@@ -929,260 +270,6 @@ export class FederationFactory {
       );
     }
     return interfaces;
-  }
-
-  getAndValidateImplementedInterfaces(container: ObjectContainer | InterfaceContainer): NamedTypeNode[] {
-    const interfaces: NamedTypeNode[] = [];
-    if (container.interfaces.size < 1) {
-      return interfaces;
-    }
-    const implementationErrorsMap = new Map<string, ImplementationErrors>();
-    for (const interfaceName of container.interfaces) {
-      interfaces.push(stringToNamedTypeNode(interfaceName));
-      const interfaceContainer = this.parents.get(interfaceName);
-      if (!interfaceContainer) {
-        this.errors.push(undefinedTypeError(interfaceName));
-        continue;
-      }
-      if (interfaceContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        throw incompatibleParentKindFatalError(interfaceName, Kind.INTERFACE_TYPE_DEFINITION, interfaceContainer.kind);
-      }
-      const implementationErrors: ImplementationErrors = {
-        invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
-        unimplementedFields: [],
-      };
-      let hasErrors = false;
-      for (const [fieldName, interfaceField] of interfaceContainer.fields) {
-        let hasNestedErrors = false;
-        const containerField = container.fields.get(fieldName);
-        if (!containerField) {
-          hasErrors = true;
-          implementationErrors.unimplementedFields.push(fieldName);
-          continue;
-        }
-        const invalidFieldImplementation: InvalidFieldImplementation = {
-          invalidAdditionalArguments: new Set<string>(),
-          invalidImplementedArguments: [],
-          originalResponseType: printTypeNode(interfaceField.node.type),
-          unimplementedArguments: new Set<string>(),
-        };
-        // The implemented field type must be equally or more restrictive than the original interface field type
-        if (!this.isTypeValidImplementation(interfaceField.node.type, containerField.node.type)) {
-          hasErrors = true;
-          hasNestedErrors = true;
-          invalidFieldImplementation.implementedResponseType = printTypeNode(containerField.node.type);
-        }
-        const handledArguments = new Set<string>();
-        for (const [argumentName, inputValueContainer] of interfaceField.arguments) {
-          const interfaceArgument = inputValueContainer.node;
-          handledArguments.add(argumentName);
-          const containerArgument = containerField.arguments.get(argumentName)?.node;
-          // The type implementing the interface must include all arguments with no variation for that argument
-          if (!containerArgument) {
-            hasErrors = true;
-            hasNestedErrors = true;
-            invalidFieldImplementation.unimplementedArguments.add(argumentName);
-            continue;
-          }
-          // Implemented arguments should be the exact same type
-          const actualType = printTypeNode(containerArgument.type);
-          const expectedType = printTypeNode(interfaceArgument.type);
-          if (expectedType !== actualType) {
-            hasErrors = true;
-            hasNestedErrors = true;
-            invalidFieldImplementation.invalidImplementedArguments.push({ actualType, argumentName, expectedType });
-          }
-        }
-        // Additional arguments must be optional (nullable)
-        for (const [argumentName, inputValueContainer] of containerField.arguments) {
-          const argumentNode = inputValueContainer.node;
-          if (handledArguments.has(argumentName)) {
-            continue;
-          }
-          if (argumentNode.type.kind !== Kind.NON_NULL_TYPE) {
-            continue;
-          }
-          hasErrors = true;
-          hasNestedErrors = true;
-          invalidFieldImplementation.invalidAdditionalArguments.add(argumentName);
-        }
-        if (hasNestedErrors) {
-          implementationErrors.invalidFieldImplementations.set(fieldName, invalidFieldImplementation);
-        }
-      }
-      if (hasErrors) {
-        implementationErrorsMap.set(interfaceName, implementationErrors);
-      }
-    }
-    if (implementationErrorsMap.size) {
-      this.errors.push(
-        unimplementedInterfaceFieldsError(
-          container.node.name.value,
-          kindToTypeString(container.kind),
-          implementationErrorsMap,
-        ),
-      );
-    }
-    return interfaces;
-  }
-
-  // TODO extract
-  // mergeArguments(
-  //   container: FederationFieldData | DirectiveContainer,
-  //   args: MutableInputValueDefinitionNode[],
-  //   errors: InvalidRequiredArgument[],
-  //   argumentNames?: string[],
-  // ) {
-  //   for (const argumentContainer of container.arguments.values()) {
-  //     const missingSubgraphs = getEntriesNotInHashSet(container.subgraphNames, argumentContainer.subgraphs);
-  //     const argumentName = argumentContainer.node.name.value;
-  //     if (missingSubgraphs.length > 0) {
-  //       // Required arguments must be defined in all subgraphs that define the field
-  //       if (argumentContainer.requiredSubgraphs.size > 0) {
-  //         errors.push({
-  //           argumentName,
-  //           missingSubgraphs,
-  //           requiredSubgraphs: [...argumentContainer.requiredSubgraphs],
-  //         });
-  //       }
-  //       // If the argument is always optional, but it's not defined in all subgraphs that define the field,
-  //       // the argument should not be included in the federated graph
-  //       continue;
-  //     }
-  //     argumentContainer.node.defaultValue = argumentContainer.includeDefaultValue
-  //       ? argumentContainer.node.defaultValue
-  //       : undefined;
-  //     args.push(pushPersistedDirectivesAndGetNode(argumentContainer));
-  //     if (argumentNames) {
-  //       argumentNames.push(argumentName);
-  //     }
-  //   }
-  // }
-
-  // addValidExecutableDirectiveDefinition(
-  //   directiveName: string,
-  //   directiveContainer: DirectiveContainer,
-  //   definitions: MutableTypeDefinitionNode[],
-  // ) {
-  //   if (!this.executableDirectives.has(directiveName)) {
-  //     return;
-  //   }
-  //   if (this.internalSubgraphBySubgraphName.size !== directiveContainer.subgraphNames.size) {
-  //     return;
-  //   }
-  //   directiveContainer.node.locations = setToNameNodeArray(directiveContainer.executableLocations);
-  //   if (!directiveContainer.arguments) {
-  //     definitions.push(directiveContainer.node);
-  //     return;
-  //   }
-  //   const args: MutableInputValueDefinitionNode[] = [];
-  //   const errors: InvalidRequiredArgument[] = [];
-  //   this.mergeArguments(directiveContainer, args, errors);
-  //   if (errors.length > 0) {
-  //     this.errors.push(invalidRequiredArgumentsError(DIRECTIVE_DEFINITION, directiveName, errors));
-  //     return;
-  //   }
-  //   directiveContainer.node.arguments = args;
-  //   definitions.push(directiveContainer.node);
-  // }
-
-  getMergedFieldDefinitionNode(fieldContainer: FederationFieldData, parentTypeName: string): FieldDefinitionNode {
-    pushPersistedDirectivesAndGetNode(fieldContainer);
-    if (fieldContainer.arguments.size < 1) {
-      return fieldContainer.node;
-    }
-    const fieldName = fieldContainer.node.name.value;
-    const fieldPath = `${parentTypeName}.${fieldName}`;
-    const args: MutableInputValueDefinitionNode[] = [];
-    const errors: InvalidRequiredArgument[] = [];
-    const argumentNames: string[] = [];
-    // this.mergeArguments(fieldContainer, args, errors, argumentNames);
-    if (errors.length > 0) {
-      this.errors.push(invalidRequiredArgumentsError(FIELD, fieldPath, errors));
-    } else if (argumentNames.length > 0) {
-      this.fieldConfigurationByFieldPath.set(`${parentTypeName}.${fieldName}`, {
-        argumentNames,
-        fieldName,
-        typeName: parentTypeName,
-      });
-    }
-    fieldContainer.node.arguments = args;
-    return fieldContainer.node;
-  }
-
-  // the deprecated directive with the longest reason is kept
-  upsertDeprecatedDirective(directive: ConstDirectiveNode, deprecatedDirectiveContainer: DeprecatedDirectiveContainer) {
-    if (!directive.arguments || directive.arguments.length < 1) {
-      deprecatedDirectiveContainer.directive = directive;
-      return;
-    }
-    if (directive.arguments.length !== 1) {
-      this.errors.push(invalidDeprecatedDirectiveError);
-      return;
-    }
-    const reasonArgument = directive.arguments[0].value;
-    if (reasonArgument.kind !== Kind.STRING) {
-      this.errors.push(invalidDeprecatedDirectiveError);
-      return;
-    }
-    if (
-      deprecatedDirectiveContainer.reason &&
-      reasonArgument.value.length < deprecatedDirectiveContainer.reason.length
-    ) {
-      return;
-    }
-    deprecatedDirectiveContainer.reason = reasonArgument.value;
-    deprecatedDirectiveContainer.directive = directive;
-  }
-
-  // tags with the same name string are merged
-  mergeTagDirectives(directive: ConstDirectiveNode, map: Map<string, ConstDirectiveNode>) {
-    // the directive has been validated in the normalizer
-    if (!directive.arguments || directive.arguments.length !== 1) {
-      this.errors.push(invalidTagDirectiveError); // should never happen
-      return;
-    }
-    const nameArgument = directive.arguments[0].value;
-    if (nameArgument.kind !== Kind.STRING) {
-      this.errors.push(invalidTagDirectiveError); // should never happen
-      return;
-    }
-    map.set(nameArgument.value, directive);
-  }
-
-  extractPersistedDirectives(
-    directives: readonly ConstDirectiveNode[],
-    container: PersistedDirectivesContainer,
-  ): PersistedDirectivesContainer {
-    if (directives.length < 1) {
-      return container;
-    }
-    for (const directive of directives) {
-      const directiveName = directive.name.value;
-      if (!this.persistedDirectiveDefinitions.has(directiveName)) {
-        continue;
-      }
-      if (directiveName == DEPRECATED) {
-        this.upsertDeprecatedDirective(directive, container.deprecated);
-        continue;
-      }
-      if (directiveName === TAG) {
-        this.mergeTagDirectives(directive, container.tags);
-        continue;
-      }
-      const existingDirectives = container.directives.get(directiveName);
-      if (!existingDirectives) {
-        container.directives.set(directiveName, [directive]);
-        continue;
-      }
-      // Naïvely ignore non-repeatable directives
-      // const definition = getOrThrowError(this.directiveDefinitions, directiveName, 'directiveDefinitions');
-      // if (!definition.node.repeatable) {
-      //   continue;
-      // }
-      existingDirectives.push(directive);
-    }
-    return container;
   }
 
   isFieldResolvableByEntityAncestor(
@@ -1502,21 +589,15 @@ export class FederationFactory {
         Field: {
           enter(node) {
             const parentContainer = parentContainers[currentDepth];
-            const parentTypeName = parentContainer.name;
             // If an object-like was just visited, a selection set should have been entered
             if (shouldDefineSelectionSet) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
             const fieldName = node.name.value;
-            const fieldPath = `${parentTypeName}.${fieldName}`;
-            const fieldContainer = parentContainer.fieldDataByFieldName.get(fieldName);
+            const fieldData = parentContainer.fieldDataByFieldName.get(fieldName);
             // undefined if the field does not exist on the parent
-            if (
-              !fieldContainer ||
-              fieldContainer.argumentDataByArgumentName.size ||
-              definedFields[currentDepth].has(fieldName)
-            ) {
+            if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
@@ -1526,7 +607,7 @@ export class FederationFactory {
             if (currentDepth === 0) {
               keyFieldNames.add(fieldName);
             }
-            const namedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
+            const namedTypeName = getNamedTypeForChild(fieldData.node.type);
             // The base scalars are not in the parents map
             if (BASE_SCALARS.has(namedTypeName)) {
               return;
@@ -1704,8 +785,8 @@ export class FederationFactory {
           DEPRECATED_DEFINITION,
           INACCESSIBLE_DEFINITION,
           REQUIRES_SCOPES_DEFINITION,
-          SCOPE_SCALAR_DEFINITION,
           TAG_DEFINITION,
+          SCOPE_SCALAR_DEFINITION,
         ]
       : [DEPRECATED_DEFINITION, TAG_DEFINITION];
     for (const data of persistedDirectiveDefinitionDataByDirectiveName.values()) {
@@ -1913,10 +994,10 @@ export class FederationFactory {
           );
           break;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          const invalidRequiredFieldNames: string[] = [];
+          const invalidRequiredInputs: InvalidRequiredInputValueData[] = [];
           const inputValueNodes: MutableInputValueNode[] = [];
           for (const [inputValueName, inputValueData] of parentDefinitionData.inputValueDataByValueName) {
-            if (parentDefinitionData.appearances === inputValueData.subgraphNames.size) {
+            if (parentDefinitionData.subgraphNames.size === inputValueData.subgraphNames.size) {
               inputValueNodes.push(
                 getNodeWithPersistedDirectivesByInputValueData(
                   inputValueData,
@@ -1925,11 +1006,20 @@ export class FederationFactory {
                 ),
               );
             } else if (isTypeRequired(inputValueData.type)) {
-              invalidRequiredFieldNames.push(inputValueName);
+              invalidRequiredInputs.push({
+                inputValueName,
+                missingSubgraphs: getEntriesNotInHashSet(
+                  parentDefinitionData.subgraphNames,
+                  inputValueData.subgraphNames,
+                ),
+                requiredSubgraphs: [...inputValueData.requiredSubgraphNames],
+              });
             }
           }
-          if (invalidRequiredFieldNames.length > 0) {
-            this.errors.push(invalidRequiredInputFieldError(parentTypeName, invalidRequiredFieldNames));
+          if (invalidRequiredInputs.length > 0) {
+            this.errors.push(
+              invalidRequiredInputValueError(INPUT_OBJECT, parentTypeName, invalidRequiredInputs, false),
+            );
             break;
           }
           parentDefinitionData.node.fields = inputValueNodes;

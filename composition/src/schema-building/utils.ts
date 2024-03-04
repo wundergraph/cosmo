@@ -1,5 +1,6 @@
 import {
   ConstDirectiveNode,
+  ConstValueNode,
   DirectiveDefinitionNode,
   EnumTypeDefinitionNode,
   EnumTypeExtensionNode,
@@ -53,8 +54,10 @@ import {
   getMutableScalarNode,
   getMutableTypeNode,
   getMutableUnionNode,
+  getNamedTypeForChild,
   MutableFieldNode,
   MutableInputValueNode,
+  MutableTypeDefinitionNode,
 } from './ast';
 import {
   formatDescription,
@@ -77,14 +80,14 @@ import {
   incompatibleArgumentTypesError,
   incompatibleChildTypesError,
   incompatibleInputValueDefaultValuesError,
+  incompatibleInputValueDefaultValueTypeError,
   incompatibleParentKindFatalError,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidRepeatedDirectiveErrorMessage,
   invalidRepeatedFederatedDirectiveErrorMessage,
-  invalidRequiredArgumentError,
-  invalidRequiredArgumentsError,
+  invalidRequiredInputValueError,
   noBaseTypeExtensionError,
   noDefinedUnionMembersError,
   undefinedDirectiveErrorMessage,
@@ -94,12 +97,16 @@ import {
 } from '../errors/errors';
 import {
   AUTHENTICATED,
+  BOOLEAN_SCALAR,
   DEPRECATED,
   DEPRECATED_DEFAULT_ARGUMENT_VALUE,
   DIRECTIVE_DEFINITION,
   EXTERNAL,
+  FIELD,
+  FLOAT_SCALAR,
   IGNORED_PARENT_DIRECTIVES,
   INACCESSIBLE,
+  INT_SCALAR,
   KEY,
   MUTATION,
   QUERY,
@@ -107,6 +114,7 @@ import {
   REQUIRES_SCOPES,
   ROOT_TYPES,
   SHAREABLE,
+  STRING_SCALAR,
   SUBSCRIPTION,
   TAG,
 } from '../utils/string-constants';
@@ -119,11 +127,7 @@ import {
   ScalarExtensionData,
   UnionExtensionData,
 } from './type-extension-data';
-import {
-  getLeastRestrictiveMergedTypeNode,
-  getMostRestrictiveMergedTypeNode,
-  getNamedTypeForChild,
-} from './type-merging';
+import { getLeastRestrictiveMergedTypeNode, getMostRestrictiveMergedTypeNode } from './type-merging';
 import { areNodeKindAndDirectiveLocationCompatible, getDirectiveDefinitionArgumentSets } from '../normalization/utils';
 import {
   addIterableValuesToSet,
@@ -135,7 +139,7 @@ import {
   getAllMutualEntries,
   getEntriesNotInHashSet,
   getValueOrDefault,
-  InvalidRequiredArgument,
+  InvalidRequiredInputValueData,
   mapToArrayOfValues,
 } from '../utils/utils';
 import {
@@ -143,8 +147,8 @@ import {
   INHERITABLE_DIRECTIVE_NAMES,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
-import { MutableInputValueDefinitionNode, MutableTypeDefinitionNode } from '../ast/ast';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
+import { printTypeNode } from '@graphql-tools/merge';
 
 function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -390,39 +394,34 @@ export function isTypeRequired(node: TypeNode): boolean {
   return node.kind === Kind.NON_NULL_TYPE;
 }
 
-// export function addArgumentDataByNode(
-//   argumentDataByArgumentName: Map<string, InputValueData>,
-//   node: InputValueDefinitionNode,
-//   errors: Error[],
-//   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
-//   handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
-//   parentTypeName: string,
-//   subgraphName: string,
-//   fieldName?: string,
-// ) {
-//   const name = node.name.value;
-//   const hostPath = fieldName ? `${parentTypeName}.${fieldName}` : parentTypeName;
-//   argumentDataByArgumentName.set(name, {
-//     directivesByDirectiveName: extractDirectives(
-//       node,
-//       new Map<string, ConstDirectiveNode[]>(),
-//       directiveDefinitionByDirectiveName,
-//       handledRepeatedDirectivesByHostPath,
-//       `${hostPath}(${name}: ...)`,
-//       errors,
-//       true,
-//     ),
-//     includeDefaultValue: !!node.defaultValue,
-//     name,
-//     node: getMutableInputValueNode(node, hostPath),
-//     persistedDirectivesData: newPersistedDirectivesData(),
-//     requiredSubgraphNames: new Set<string>(isTypeRequired(node.type) ? [subgraphName] : []),
-//     subgraphNames: new Set<string>([subgraphName]),
-//     type: getMutableTypeNode(node.type, hostPath),
-//     defaultValue: node.defaultValue,
-//     description: formatDescription(node.description),
-//   });
-// }
+// TODO replace naïve comparison
+function areDefaultValuesCompatible(typeNode: TypeNode, incomingDefaultValue: ConstValueNode): boolean {
+  switch (typeNode.kind) {
+    case Kind.LIST_TYPE:
+      return incomingDefaultValue.kind === Kind.LIST || incomingDefaultValue.kind === Kind.NULL;
+    case Kind.NAMED_TYPE:
+      if (incomingDefaultValue.kind === Kind.NULL) {
+        return true;
+      }
+      switch (typeNode.name.value) {
+        case BOOLEAN_SCALAR:
+          return incomingDefaultValue.kind === Kind.BOOLEAN;
+        case FLOAT_SCALAR:
+          return incomingDefaultValue.kind === Kind.INT || incomingDefaultValue.kind === Kind.FLOAT;
+        case INT_SCALAR:
+          return incomingDefaultValue.kind === Kind.INT;
+        case STRING_SCALAR:
+          return incomingDefaultValue.kind === Kind.STRING;
+        default:
+          return true;
+      }
+    case Kind.NON_NULL_TYPE:
+      if (incomingDefaultValue.kind === Kind.NULL) {
+        return false;
+      }
+      return areDefaultValuesCompatible(typeNode.type, incomingDefaultValue);
+  }
+}
 
 function compareAndValidateInputValueDefaultValues(
   existingData: InputValueData,
@@ -431,7 +430,6 @@ function compareAndValidateInputValueDefaultValues(
 ) {
   if (!existingData.defaultValue) {
     // TODO warning if default value in incoming
-    existingData.defaultValue = incomingData.defaultValue;
     return;
   }
   if (!incomingData.defaultValue) {
@@ -442,12 +440,14 @@ function compareAndValidateInputValueDefaultValues(
   const existingDefaultValueString = print(existingData.defaultValue);
   const incomingDefaultValueString = print(incomingData.defaultValue);
   if (existingDefaultValueString !== incomingDefaultValueString) {
-    const prefix = `${existingData.isArgument ? 'argument' : 'input value'} "${existingData.name}"`;
     errors.push(
-      incompatibleInputValueDefaultValuesError(prefix, existingData.path, [
+      incompatibleInputValueDefaultValuesError(
+        `${existingData.isArgument ? 'argument' : 'input value'} "${existingData.name}"`,
+        existingData.path,
+        [...incomingData.subgraphNames],
         existingDefaultValueString,
         incomingDefaultValueString,
-      ]),
+      ),
     );
     return;
   }
@@ -548,7 +548,7 @@ export function addFieldDataByNode(
     isShareableBySubgraphName: new Map<string, boolean>([[subgraphName, isNodeExternalOrShareableResult.isShareable]]),
     node: getMutableFieldNode(node, fieldPath),
     name,
-    namedTypeName: getNamedTypeForChild(fieldPath, node.type),
+    namedTypeName: getNamedTypeForChild(node.type),
     parentTypeName,
     persistedDirectivesData: newPersistedDirectivesData(),
     subgraphNames: new Set<string>([subgraphName]),
@@ -616,13 +616,13 @@ export function addExtensionWithFieldsDataByNode(
 export function addInputObjectDefinitionDataByNode(
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>,
   node: InputObjectTypeDefinitionNode,
-  errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
   handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
+  subgraphName: string,
+  errors: Error[],
 ) {
   const name = node.name.value;
   parentDefinitionDataByTypeName.set(name, {
-    appearances: 1,
     directivesByDirectiveName: extractDirectives(
       node,
       new Map<string, ConstDirectiveNode[]>(),
@@ -636,6 +636,7 @@ export function addInputObjectDefinitionDataByNode(
     node: getMutableInputObjectNode(node),
     persistedDirectivesData: newPersistedDirectivesData(),
     name,
+    subgraphNames: new Set<string>([subgraphName]),
     description: formatDescription(node.description),
   });
 }
@@ -643,9 +644,9 @@ export function addInputObjectDefinitionDataByNode(
 export function addInputObjectExtensionDataByNode(
   parentExtensionDataByTypeName: Map<string, ParentExtensionData>,
   node: InputObjectTypeExtensionNode,
-  errors: Error[],
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
   handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
+  errors: Error[],
 ) {
   const name = node.name.value;
   parentExtensionDataByTypeName.set(name, {
@@ -674,6 +675,16 @@ export function addInputValueDataByNode(
   isArgument = false,
 ) {
   const name = node.name.value;
+  if (node.defaultValue && !areDefaultValuesCompatible(node.type, node.defaultValue)) {
+    errors.push(
+      incompatibleInputValueDefaultValueTypeError(
+        (isArgument ? 'argument' : 'input field') + ` "${name}"`,
+        path,
+        printTypeNode(node.type),
+        print(node.defaultValue),
+      ),
+    );
+  }
   inputValueDataByValueName.set(name, {
     directivesByDirectiveName: extractDirectives(
       node,
@@ -825,7 +836,7 @@ export function upsertPersistedDirectiveDefinitionData(
     }
     const argumentDataByArgumentName = new Map<string, InputValueData>();
     for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
-      namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.path, inputValueData.type));
+      namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
       upsertInputValueData(
         argumentDataByArgumentName,
         inputValueData,
@@ -855,7 +866,7 @@ export function upsertPersistedDirectiveDefinitionData(
     return;
   }
   for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
-    namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.path, inputValueData.type));
+    namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
     upsertInputValueData(
       existingData.argumentDataByArgumentName,
       inputValueData,
@@ -1428,7 +1439,7 @@ function upsertFieldData(
         name: stringToNameNode(inputValueData.name),
         type: inputValueData.type,
       };
-      namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.path, inputValueData.type));
+      namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
       extractPersistedDirectives(
         inputValueData.persistedDirectivesData,
         inputValueData.directivesByDirectiveName,
@@ -1448,7 +1459,7 @@ function upsertFieldData(
     errors.push(incompatibleChildTypesError(fieldPath, typeErrors[0], typeErrors[1]));
   }
   for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
-    namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.path, inputValueData.type));
+    namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
     upsertInputValueData(
       existingData.argumentDataByArgumentName,
       inputValueData,
@@ -1556,7 +1567,7 @@ export function upsertParentDefinitionData(
             name: stringToNameNode(inputValueData.name),
             type: inputValueData.type,
           };
-          namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.path, inputValueData.type));
+          namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
           extractPersistedDirectives(
             inputValueData.persistedDirectivesData,
             inputValueData.directivesByDirectiveName,
@@ -1588,7 +1599,7 @@ export function upsertParentDefinitionData(
               name: stringToNameNode(inputValueData.name),
               type: inputValueData.type,
             };
-            namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.path, inputValueData.type));
+            namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
             extractPersistedDirectives(
               inputValueData.persistedDirectivesData,
               inputValueData.directivesByDirectiveName,
@@ -1621,9 +1632,9 @@ export function upsertParentDefinitionData(
       }
       return;
     case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-      existingData.appearances += 1;
+      addIterableValuesToSet((incomingData as InputObjectDefinitionData).subgraphNames, existingData.subgraphNames);
       for (const inputValueData of (incomingData as InputObjectDefinitionData).inputValueDataByValueName.values()) {
-        namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.path, inputValueData.type));
+        namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
         upsertInputValueData(
           existingData.inputValueDataByValueName,
           inputValueData,
@@ -1698,7 +1709,7 @@ export function upsertObjectExtensionData(
           name: stringToNameNode(inputValueData.name),
           type: inputValueData.type,
         };
-        namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.path, inputValueData.type));
+        namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
         extractPersistedDirectives(
           inputValueData.persistedDirectivesData,
           inputValueData.directivesByDirectiveName,
@@ -1932,11 +1943,11 @@ export function getValidFieldArgumentNodes(
 ): MutableInputValueNode[] {
   const argumentNodes: MutableInputValueNode[] = [];
   const argumentNames: string[] = [];
-  const invalidRequiredArgumentNames: string[] = [];
+  const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
   const fieldPath = `${fieldData.parentTypeName}.${fieldData.name}`;
-  for (const [inputValueName, inputValueData] of fieldData.argumentDataByArgumentName) {
+  for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
     if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
-      argumentNames.push(inputValueName);
+      argumentNames.push(argumentName);
       argumentNodes.push(
         getNodeWithPersistedDirectivesByInputValueData(
           inputValueData,
@@ -1945,11 +1956,15 @@ export function getValidFieldArgumentNodes(
         ),
       );
     } else if (isTypeRequired(inputValueData.type)) {
-      invalidRequiredArgumentNames.push(inputValueName);
+      invalidRequiredArguments.push({
+        inputValueName: argumentName,
+        missingSubgraphs: getEntriesNotInHashSet(fieldData.subgraphNames, inputValueData.subgraphNames),
+        requiredSubgraphs: [...inputValueData.requiredSubgraphNames],
+      });
     }
   }
-  if (invalidRequiredArgumentNames.length > 0) {
-    errors.push(invalidRequiredArgumentError(fieldPath, invalidRequiredArgumentNames));
+  if (invalidRequiredArguments.length > 0) {
+    errors.push(invalidRequiredInputValueError(FIELD, fieldPath, invalidRequiredArguments));
   } else if (argumentNames.length > 0) {
     fieldConfigurationByFieldPath.set(fieldPath, {
       argumentNames,
@@ -1960,20 +1975,20 @@ export function getValidFieldArgumentNodes(
   return argumentNodes;
 }
 function addValidatedArgumentNodes(
-  argumentNodes: MutableInputValueDefinitionNode[],
+  argumentNodes: MutableInputValueNode[],
   hostData: PersistedDirectiveDefinitionData,
   persistedDirectiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
   errors: Error[],
   argumentNamesForFieldConfiguration?: Set<string>,
 ): boolean {
-  const invalidRequiredArgumentErrors: InvalidRequiredArgument[] = [];
+  const invalidRequiredArgumentErrors: InvalidRequiredInputValueData[] = [];
   for (const [argumentName, argumentData] of hostData.argumentDataByArgumentName) {
     const missingSubgraphs = getEntriesNotInHashSet(hostData.subgraphNames, argumentData.subgraphNames);
     if (missingSubgraphs.length > 0) {
       // Required arguments must be defined in all subgraphs that define the field
       if (argumentData.requiredSubgraphNames.size > 0) {
         invalidRequiredArgumentErrors.push({
-          argumentName,
+          inputValueName: argumentName,
           missingSubgraphs,
           requiredSubgraphs: [...argumentData.requiredSubgraphNames],
         });
@@ -1991,7 +2006,7 @@ function addValidatedArgumentNodes(
   }
   if (invalidRequiredArgumentErrors.length > 0) {
     errors.push(
-      invalidRequiredArgumentsError(DIRECTIVE_DEFINITION, `@${hostData.name}`, invalidRequiredArgumentErrors),
+      invalidRequiredInputValueError(DIRECTIVE_DEFINITION, `@${hostData.name}`, invalidRequiredArgumentErrors),
     );
     return false;
   }
@@ -2004,7 +2019,7 @@ export function addValidPersistedDirectiveDefinitionNodeByData(
   persistedDirectiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
   errors: Error[],
 ) {
-  const argumentNodes: MutableInputValueDefinitionNode[] = [];
+  const argumentNodes: MutableInputValueNode[] = [];
   if (!addValidatedArgumentNodes(argumentNodes, data, persistedDirectiveDefinitionByDirectiveName, errors)) {
     return;
   }
@@ -2058,4 +2073,51 @@ export function isFieldExternalInAllMutualSubgraphs(subgraphs: Set<string>, fiel
     return false;
   }
   return true;
+}
+
+export enum MergeMethod {
+  UNION,
+  INTERSECTION,
+  CONSISTENT,
+}
+
+export function isTypeValidImplementation(
+  originalType: TypeNode,
+  implementationType: TypeNode,
+  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>,
+): boolean {
+  if (originalType.kind === Kind.NON_NULL_TYPE) {
+    if (implementationType.kind !== Kind.NON_NULL_TYPE) {
+      return false;
+    }
+    return isTypeValidImplementation(originalType.type, implementationType.type, concreteTypeNamesByAbstractTypeName);
+  }
+  if (implementationType.kind === Kind.NON_NULL_TYPE) {
+    return isTypeValidImplementation(originalType, implementationType.type, concreteTypeNamesByAbstractTypeName);
+  }
+  switch (originalType.kind) {
+    case Kind.NAMED_TYPE:
+      if (implementationType.kind === Kind.NAMED_TYPE) {
+        const originalTypeName = originalType.name.value;
+        const implementationTypeName = implementationType.name.value;
+        if (originalTypeName === implementationTypeName) {
+          return true;
+        }
+        const concreteTypes = concreteTypeNamesByAbstractTypeName.get(originalTypeName);
+        if (!concreteTypes) {
+          return false;
+        }
+        return concreteTypes.has(implementationTypeName);
+      }
+      return false;
+    default:
+      if (implementationType.kind === Kind.LIST_TYPE) {
+        return isTypeValidImplementation(
+          originalType.type,
+          implementationType.type,
+          concreteTypeNamesByAbstractTypeName,
+        );
+      }
+      return false;
+  }
 }

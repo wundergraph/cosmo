@@ -47,7 +47,6 @@ import {
   SCOPE_SCALAR_DEFINITION,
   VERSION_TWO_DIRECTIVE_DEFINITIONS,
 } from '../utils/constants';
-import { getNamedTypeForChild } from '../schema-building/type-merging';
 import {
   addIterableValuesToSet,
   AuthorizationData,
@@ -75,7 +74,6 @@ import {
   upsertFieldAuthorizationData,
 } from '../utils/utils';
 import {
-  duplicateArgumentsError,
   duplicateEnumValueDefinitionError,
   duplicateFieldDefinitionError,
   duplicateInterfaceExtensionError,
@@ -139,7 +137,6 @@ import {
   EventType,
 } from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
-import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode, ObjectLikeTypeNode } from '../ast/ast';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
 import { invalidOverrideTargetSubgraphNameWarning } from '../warnings/warnings';
 import {
@@ -175,8 +172,10 @@ import {
   getScalarNodeByData,
   getSchemaNodeByData,
   getUnionNodeByData,
+  isTypeValidImplementation,
 } from '../schema-building/utils';
 import { MultiGraph } from 'graphology';
+import { getNamedTypeForChild, ObjectLikeTypeNode } from '../schema-building/ast';
 
 export type NormalizationResult = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -299,37 +298,10 @@ export class NormalizationFactory {
     }
   }
 
-  extractArguments(
-    node: FieldDefinitionNode,
-    argumentDataByArgumentName: Map<string, MutableInputValueDefinitionNode>,
-    fieldPath: string,
-  ): Map<string, MutableInputValueDefinitionNode> {
-    if (!node.arguments) {
-      return argumentDataByArgumentName;
-    }
-    this.parentsWithChildArguments.add(this.parentTypeName);
-    const duplicatedArguments = new Set<string>();
-    for (const argumentNode of node.arguments) {
-      const argumentName = argumentNode.name.value;
-      if (argumentDataByArgumentName.has(argumentName)) {
-        duplicatedArguments.add(argumentName);
-        continue;
-      }
-      argumentDataByArgumentName.set(
-        argumentName,
-        inputValueDefinitionNodeToMutable(argumentNode, this.parentTypeName),
-      );
-    }
-    if (duplicatedArguments.size > 0) {
-      this.errors.push(duplicateArgumentsError(fieldPath, [...duplicatedArguments]));
-    }
-    return argumentDataByArgumentName;
-  }
-
   validateArguments(fieldData: FieldData, fieldPath: string) {
     const invalidArguments: InvalidArgument[] = [];
     for (const [argumentName, argumentNode] of fieldData.argumentDataByArgumentName) {
-      const namedType = getNamedTypeForChild(fieldPath + `(${argumentName}...)`, argumentNode.type);
+      const namedType = getNamedTypeForChild(argumentNode.type);
       const { hasUnhandledError, typeString } = this.validateInputNamedType(namedType);
       if (hasUnhandledError) {
         invalidArguments.push({ argumentName, namedType, typeString, typeName: printTypeNode(argumentNode.type) });
@@ -575,39 +547,6 @@ export class NormalizationFactory {
     });
   }
 
-  isTypeValidImplementation(originalType: TypeNode, implementationType: TypeNode): boolean {
-    if (originalType.kind === Kind.NON_NULL_TYPE) {
-      if (implementationType.kind !== Kind.NON_NULL_TYPE) {
-        return false;
-      }
-      return this.isTypeValidImplementation(originalType.type, implementationType.type);
-    }
-    if (implementationType.kind === Kind.NON_NULL_TYPE) {
-      return this.isTypeValidImplementation(originalType, implementationType.type);
-    }
-    switch (originalType.kind) {
-      case Kind.NAMED_TYPE:
-        if (implementationType.kind === Kind.NAMED_TYPE) {
-          const originalTypeName = originalType.name.value;
-          const implementationTypeName = implementationType.name.value;
-          if (originalTypeName === implementationTypeName) {
-            return true;
-          }
-          const concreteTypes = this.concreteTypeNamesByAbstractTypeName.get(originalTypeName);
-          if (!concreteTypes) {
-            return false;
-          }
-          return concreteTypes.has(implementationTypeName);
-        }
-        return false;
-      default:
-        if (implementationType.kind === Kind.LIST_TYPE) {
-          return this.isTypeValidImplementation(originalType.type, implementationType.type);
-        }
-        return false;
-    }
-  }
-
   extractKeyFieldSets(node: ObjectLikeTypeNode, fieldSetContainer: FieldSetContainer) {
     const rawFieldSets = fieldSetContainer.keys;
     const parentTypeName = node.name.value;
@@ -679,7 +618,13 @@ export class NormalizationFactory {
           unimplementedArguments: new Set<string>(),
         };
         // The implemented field type must be equally or more restrictive than the original interface field type
-        if (!this.isTypeValidImplementation(interfaceField.node.type, containerField.node.type)) {
+        if (
+          !isTypeValidImplementation(
+            interfaceField.node.type,
+            containerField.node.type,
+            this.concreteTypeNamesByAbstractTypeName,
+          )
+        ) {
           hasErrors = true;
           hasNestedErrors = true;
           invalidFieldImplementation.implementedResponseType = printTypeNode(containerField.node.type);
@@ -1146,7 +1091,7 @@ export class NormalizationFactory {
       const node = this.schemaDefinition.operationTypes.get(operationType);
       const defaultTypeName = getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT);
       // If an operation type name was not declared, use the default
-      const operationTypeName = node ? getNamedTypeForChild(`schema.${operationType}`, node.type) : defaultTypeName;
+      const operationTypeName = node ? getNamedTypeForChild(node.type) : defaultTypeName;
       // If a custom type is used, the default type should not be defined
       if (
         operationTypeName !== defaultTypeName &&
@@ -1156,19 +1101,19 @@ export class NormalizationFactory {
         this.errors.push(invalidRootTypeDefinitionError(operationType, operationTypeName, defaultTypeName));
         continue;
       }
-      const object = this.parentDefinitionDataByTypeName.get(operationTypeName);
-      const extension = this.parentExtensionDataByTypeName.get(operationTypeName);
+      const objectData = this.parentDefinitionDataByTypeName.get(operationTypeName);
+      const extensionData = this.parentExtensionDataByTypeName.get(operationTypeName);
       // Node is truthy if an operation type was explicitly declared
       if (node) {
         // If the type is not defined in the schema, it's always an error
-        if (!object && !extension) {
+        if (!objectData && !extensionData) {
           this.errors.push(undefinedTypeError(operationTypeName));
           continue;
         }
         // Add the explicitly defined type to the map for the federation-factory
         this.operationTypeNames.set(operationTypeName, operationType);
       }
-      if (!object && !extension) {
+      if (!objectData && !extensionData) {
         continue;
       }
       const rootNode = this.configurationDataMap.get(operationTypeName);
@@ -1176,20 +1121,19 @@ export class NormalizationFactory {
         rootNode.isRootNode = true;
         rootNode.typeName = defaultTypeName;
       }
-      const containers = [object, extension];
-      for (const container of containers) {
-        if (!container) {
+      const parentDatas = [objectData, extensionData];
+      for (const parentData of parentDatas) {
+        if (!parentData) {
           continue;
         }
-        if (container.kind !== Kind.OBJECT_TYPE_DEFINITION && container.kind !== Kind.OBJECT_TYPE_EXTENSION) {
-          this.errors.push(operationDefinitionError(operationTypeName, operationType, container.kind));
+        if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.OBJECT_TYPE_EXTENSION) {
+          this.errors.push(operationDefinitionError(operationTypeName, operationType, parentData.kind));
           continue;
         }
         // Root types fields whose response type is an extension orphan could be valid through a federated graph
         // However, the field would have to be shareable to ever be valid TODO
-        for (const [fieldName, fieldData] of container.fieldDataByFieldName) {
-          const fieldPath = `${operationTypeName}.${fieldName}`;
-          const fieldTypeName = getNamedTypeForChild(fieldPath, fieldData.node.type);
+        for (const fieldData of parentData.fieldDataByFieldName.values()) {
+          const fieldTypeName = getNamedTypeForChild(fieldData.node.type);
           if (
             !BASE_SCALARS.has(fieldTypeName) &&
             !this.parentDefinitionDataByTypeName.has(fieldTypeName) &&

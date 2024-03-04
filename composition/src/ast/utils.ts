@@ -1,10 +1,8 @@
 import {
   ArgumentNode,
-  ConstDirectiveNode,
   DocumentNode,
   EnumTypeDefinitionNode,
   EnumTypeExtensionNode,
-  FieldDefinitionNode,
   FieldNode,
   InputObjectTypeDefinitionNode,
   InputObjectTypeExtensionNode,
@@ -26,13 +24,12 @@ import {
   UnionTypeDefinitionNode,
   UnionTypeExtensionNode,
 } from 'graphql';
-import { ObjectLikeTypeNode } from './ast';
 import {
   ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
+  EXECUTABLE_DIRECTIVE_LOCATIONS,
   EXTENDS,
-  EXTERNAL,
   FIELD_DEFINITION_UPPER,
   FRAGMENT_DEFINITION_UPPER,
   FRAGMENT_SPREAD_UPPER,
@@ -44,16 +41,14 @@ import {
   KEY,
   MUTATION,
   OBJECT_UPPER,
-  OVERRIDE,
   QUERY,
   SCALAR_UPPER,
   SCHEMA_UPPER,
-  SHAREABLE,
   SUBSCRIPTION,
   UNION_UPPER,
 } from '../utils/string-constants';
 import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/errors';
-import { EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
+import { ObjectLikeTypeNode } from '../schema-building/ast';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
   if (!node.directives?.length) {
@@ -108,48 +103,6 @@ export function extractInterfaces(
     interfaces.add(name);
   }
   return interfaces;
-}
-
-export function isNodeShareable(
-  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | FieldDefinitionNode,
-): boolean {
-  if (!node.directives) {
-    return false;
-  }
-  for (const directive of node.directives) {
-    if (directive.name.value === SHAREABLE) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export function isNodeExternal(
-  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | FieldDefinitionNode,
-): boolean {
-  if (!node.directives) {
-    return false;
-  }
-  for (const directive of node.directives) {
-    if (directive.name.value === EXTERNAL) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export function isNodeOverridden(
-  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | FieldDefinitionNode,
-): boolean {
-  if (!node.directives) {
-    return false;
-  }
-  for (const directive of node.directives) {
-    if (directive.name.value === OVERRIDE) {
-      return true;
-    }
-  }
-  return false;
 }
 
 export function areBaseAndExtensionKindsCompatible(baseKind: Kind, extensionKind: Kind, typeName: string): boolean {
@@ -279,19 +232,6 @@ export function extractExecutableDirectiveLocations(
     }
   }
   return set;
-}
-
-export function pushPersistedDirectivesAndGetNode<T extends NodeContainer>(container: T): T['node'] {
-  const persistedDirectives: ConstDirectiveNode[] = [...container.directives.tags.values()];
-  const deprecatedDirective = container.directives.deprecated.directive;
-  if (deprecatedDirective) {
-    persistedDirectives.push(deprecatedDirective);
-  }
-  for (const directives of container.directives.directives.values()) {
-    persistedDirectives.push(...directives);
-  }
-  container.node.directives = persistedDirectives;
-  return container.node;
 }
 
 export function addConcreteTypesForImplementedInterfaces(

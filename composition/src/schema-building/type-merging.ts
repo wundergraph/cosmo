@@ -1,5 +1,5 @@
 import { Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode, TypeNode } from 'graphql';
-import { federationUnexpectedNodeKindError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
+import { maximumTypeNestingExceededFatalError } from '../errors/errors';
 import { deepCopyTypeNode, MutableIntermediateTypeNode } from './ast';
 import { MAXIMUM_TYPE_NESTING } from '../utils/constants';
 
@@ -52,8 +52,6 @@ function getMergedTypeNode(
           current = current.type;
           other = (other as NonNullTypeNode).type;
           continue;
-        default:
-          throw federationUnexpectedNodeKindError(hostPath);
       }
     }
     if (current.kind === Kind.NON_NULL_TYPE) {
@@ -89,9 +87,7 @@ function getMergedTypeNode(
     // At least one of the types must be a non-null wrapper, or the types are inconsistent
     return { typeErrors: [current.kind, other.kind] };
   }
-  throw new Error(
-    `Field ${hostPath} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`,
-  );
+  throw maximumTypeNestingExceededFatalError(hostPath, MAXIMUM_TYPE_NESTING);
 }
 
 export function getLeastRestrictiveMergedTypeNode(
@@ -108,17 +104,4 @@ export function getMostRestrictiveMergedTypeNode(
   hostPath: string,
 ): MergedTypeResult {
   return getMergedTypeNode(current, other, hostPath, true);
-}
-
-export function getNamedTypeForChild(childPath: string, typeNode: TypeNode): string {
-  switch (typeNode.kind) {
-    case Kind.NAMED_TYPE:
-      return typeNode.name.value;
-    case Kind.LIST_TYPE:
-    // intentional fallthrough
-    case Kind.NON_NULL_TYPE:
-      return getNamedTypeForChild(childPath, typeNode.type);
-    default:
-      throw unexpectedTypeNodeKindFatalError(childPath);
-  }
 }

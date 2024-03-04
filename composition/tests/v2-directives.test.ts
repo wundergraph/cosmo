@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, ObjectContainer, shareableFieldDefinitionsError, stringToNameNode, Subgraph } from '../src';
+import { federateSubgraphs, FieldData, invalidFieldShareabilityError, ObjectDefinitionData, Subgraph } from '../src';
 import {
   documentNodeToNormalizedString,
   normalizeString,
@@ -58,22 +58,21 @@ describe('V2 Directives Tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      shareableFieldDefinitionsError(
+      invalidFieldShareabilityError(
         {
-          node: { name: stringToNameNode('Entity') },
-          fields: new Map<string, any>([
+          name: 'Entity',
+          fieldDataByFieldName: new Map<string, FieldData>([
             [
               'age',
               {
-                node: { name: stringToNameNode('age'), subgraphs: new Set<string>(['subgraph-c']) },
-                subgraphsByShareable: new Map<string, boolean>([
+                isShareableBySubgraphName: new Map<string, boolean>([
                   ['subgraph-c', true],
                   ['subgraph-d', false],
                 ]),
-              },
+              } as FieldData,
             ],
           ]),
-        } as ObjectContainer,
+        } as ObjectDefinitionData,
         new Set<string>(['age']),
       ),
     );

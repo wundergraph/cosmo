@@ -59,13 +59,13 @@ export type FieldData = {
 };
 
 export type InputObjectDefinitionData = {
-  appearances: number;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   inputValueDataByValueName: Map<string, InputValueData>;
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
   name: string;
   node: MutableInputObjectNode;
   persistedDirectivesData: PersistedDirectivesData;
+  subgraphNames: Set<string>;
   description?: StringValueNode;
 };
 
@@ -101,8 +101,8 @@ export type ObjectDefinitionData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   fieldDataByFieldName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
-  isEntity: boolean; // TODO required?
-  isRootType: boolean; // TODO required?
+  isEntity: boolean;
+  isRootType: boolean;
   kind: Kind.OBJECT_TYPE_DEFINITION;
   name: string;
   node: MutableObjectNode;

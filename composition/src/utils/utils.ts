@@ -171,10 +171,8 @@ export type ImplementationErrors = {
   unimplementedFields: string[];
 };
 
-export type ImplementationErrorsMap = Map<string, ImplementationErrors>;
-
-export type InvalidRequiredArgument = {
-  argumentName: string;
+export type InvalidRequiredInputValueData = {
+  inputValueName: string;
   missingSubgraphs: string[];
   requiredSubgraphs: string[];
 };

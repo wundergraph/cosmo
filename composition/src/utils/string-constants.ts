@@ -1,7 +1,8 @@
 export const ANY_SCALAR = '_Any';
+export const ARGUMENT = 'argument';
 export const AUTHENTICATED = 'authenticated';
 export const ARGUMENT_DEFINITION_UPPER = 'ARGUMENT_DEFINITION';
-export const BOOLEAN_TYPE = 'Boolean';
+export const BOOLEAN_SCALAR = 'Boolean';
 export const COMPOSE_DIRECTIVE = 'composeDirective';
 export const DEFAULT_MUTATION = 'Mutation';
 export const DEFAULT_QUERY = 'Query';
@@ -25,15 +26,18 @@ export const FIELD_UPPER = 'FIELD';
 export const FIELD_SET_SCALAR = 'openfed__FieldSet';
 export const FIELDS = 'fields';
 export const FIELD_DEFINITION_UPPER = 'FIELD_DEFINITION';
+export const FLOAT_SCALAR = 'Float';
 export const FRAGMENT_DEFINITION_UPPER = 'FRAGMENT_DEFINITION';
 export const FRAGMENT_SPREAD_UPPER = 'FRAGMENT_SPREAD';
-export const FRAGMENT_REPRESENTATION = ' { ... }';
 export const FROM = 'from';
+export const INACCESSIBLE = 'inaccessible';
 export const INLINE_FRAGMENT = 'inlineFragment';
 export const INLINE_FRAGMENT_UPPER = 'INLINE_FRAGMENT';
+export const INPUT_FIELD = 'input field';
 export const INPUT_FIELD_DEFINITION_UPPER = 'INPUT_FIELD_DEFINITION';
+export const INPUT_OBJECT = 'input object';
 export const INPUT_OBJECT_UPPER = 'INPUT_OBJECT';
-export const INACCESSIBLE = 'inaccessible';
+export const INT_SCALAR = 'Int';
 export const INTERFACE_UPPER = 'INTERFACE';
 export const INTERFACE_OBJECT = 'interfaceObject';
 export const LINK = 'link';
@@ -77,5 +81,14 @@ export const UNION_UPPER = 'UNION';
 export const URL_LOWER = 'url';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
 
-export const ROOT_TYPES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
+export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
+  FIELD_UPPER,
+  FRAGMENT_DEFINITION_UPPER,
+  FRAGMENT_SPREAD_UPPER,
+  INLINE_FRAGMENT_UPPER,
+  MUTATION_UPPER,
+  QUERY_UPPER,
+  SUBSCRIPTION_UPPER,
+]);
 export const IGNORED_PARENT_DIRECTIVES = new Set<string>([AUTHENTICATED, EXTENDS, REQUIRES_SCOPES]);
+export const ROOT_TYPES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
