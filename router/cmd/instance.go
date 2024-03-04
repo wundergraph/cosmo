@@ -145,6 +145,11 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			Enabled:  cfg.TLS.Server.Enabled,
 			CertFile: cfg.TLS.Server.CertFile,
 			KeyFile:  cfg.TLS.Server.KeyFile,
+			ClientAuth: &core.TlsClientAuthConfig{
+				Enabled:  cfg.TLS.Server.ClientAuth.Enabled,
+				CertFile: cfg.TLS.Server.ClientAuth.CertFile,
+				Required: cfg.TLS.Server.ClientAuth.Required,
+			},
 		}),
 		core.WithDevelopmentMode(cfg.DevelopmentMode),
 		core.WithTracing(traceConfig(&cfg.Telemetry)),

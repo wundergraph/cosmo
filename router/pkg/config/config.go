@@ -289,10 +289,18 @@ type TLSServerConfiguration struct {
 	Enabled  bool   `yaml:"enabled" default:"false" envconfig:"TLS_SERVER_ENABLED"`
 	CertFile string `yaml:"cert_file,omitempty" envconfig:"TLS_SERVER_CERT_FILE"`
 	KeyFile  string `yaml:"key_file,omitempty" envconfig:"TLS_SERVER_KEY_FILE"`
+
+	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
+}
+
+type TLSClientAuthConfiguration struct {
+	Enabled  bool   `yaml:"enabled" default:"false" envconfig:"TLS_CLIENT_AUTH_ENABLED"`
+	CertFile string `yaml:"cert_file,omitempty" envconfig:"TLS_CLIENT_AUTH_CERT_FILE"`
+	Required bool   `yaml:"required" default:"true" envconfig:"TLS_CLIENT_AUTH_REQUIRED"`
 }
 
 type TLSConfiguration struct {
-	Server TLSServerConfiguration `yaml:"router"`
+	Server TLSServerConfiguration `yaml:"server"`
 }
 
 type Config struct {

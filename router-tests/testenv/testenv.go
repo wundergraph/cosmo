@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -259,11 +261,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	client.Logger = nil
 	client.RetryMax = 10
 	client.RetryWaitMin = 100 * time.Millisecond
-	client.HTTPClient = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, ns)
 	if err != nil {
@@ -275,6 +272,29 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	go func() {
 		if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
+
+			cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+			require.NoError(t, err)
+
+			caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+				t.Fatalf("could not append ca cert to pool")
+			}
+
+			client.HTTPClient = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						RootCAs:      caCertPool,
+						Certificates: []tls.Certificate{cert},
+					},
+				},
+			}
+
 			if err := svr.HttpServer().ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				t.Errorf("could not start tls router: %s", err)
 			}

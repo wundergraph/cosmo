@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -67,7 +69,6 @@ type (
 		Config
 		activeServer   *server
 		modules        []Module
-		mu             sync.RWMutex
 		WebsocketStats WebSocketsStatistics
 	}
 
@@ -91,10 +92,18 @@ type (
 		Method  IPAnonymizationMethod
 	}
 
+	TlsClientAuthConfig struct {
+		Enabled  bool
+		Required bool
+		CertFile string
+	}
+
 	TlsConfig struct {
 		Enabled  bool
 		CertFile string
 		KeyFile  string
+
+		ClientAuth *TlsClientAuthConfig
 	}
 
 	// Config defines the configuration options for the Router.
@@ -199,7 +208,6 @@ func (r *server) BaseURL() string {
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{
 		WebsocketStats: NewNoopWebSocketStats(),
-		mu:             sync.RWMutex{},
 	}
 
 	for _, opt := range opts {
@@ -331,16 +339,42 @@ func NewRouter(opts ...Option) (*Router, error) {
 		if r.tlsConfig.CertFile == "" {
 			return nil, errors.New("tls cert file not provided")
 		}
+
 		if r.tlsConfig.KeyFile == "" {
 			return nil, errors.New("tls key file not provided")
 		}
+
+		var caCertPool *x509.CertPool
+		clientAuthMode := tls.NoClientCert
+
+		if r.tlsConfig.ClientAuth != nil && r.tlsConfig.ClientAuth.Enabled {
+			caCert, err := os.ReadFile(r.tlsConfig.CertFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read cert file: %w", err)
+			}
+
+			// Create a CA an empty cert pool and add the CA cert to it to serve as authority to validate client certs
+			caPool := x509.NewCertPool()
+			if ok := caPool.AppendCertsFromPEM(caCert); !ok {
+				return nil, errors.New("failed to append cert to pool")
+			}
+			caCertPool = caPool
+
+			if r.tlsConfig.ClientAuth.Required {
+				clientAuthMode = tls.RequireAndVerifyClientCert
+			}
+		}
+
+		// Load the server cert and private key
 		cer, err := tls.LoadX509KeyPair(r.tlsConfig.CertFile, r.tlsConfig.KeyFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
 		}
 
 		r.tlsServerConfig = &tls.Config{
+			ClientCAs:    caCertPool,
 			Certificates: []tls.Certificate{cer},
+			ClientAuth:   clientAuthMode,
 		}
 	}
 
@@ -495,39 +529,32 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 
 func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterConfig) error {
 
-	r.mu.Lock()
-
 	if _, err := r.UpdateServer(ctx, cfg); err != nil {
-		r.mu.Unlock()
 		return err
 	}
 
+	// read here to avoid race condition
 	version := r.activeServer.routerConfig.GetVersion()
 
-	defer func() {
-		r.mu.Lock()
-		defer r.mu.Unlock()
+	// Start new server
+	go func() {
+		r.logger.Info("Server listening",
+			zap.String("listen_addr", r.listenAddr),
+			zap.Bool("playground", r.playground),
+			zap.Bool("introspection", r.introspection),
+			zap.String("config_version", cfg.GetVersion()),
+		)
 
-		r.activeServer.healthChecks.SetReady(false)
+		r.activeServer.healthChecks.SetReady(true)
+
+		// This is a blocking call
+		if err := r.activeServer.listenAndServe(); err != nil {
+			r.activeServer.healthChecks.SetReady(false)
+			r.logger.Error("Failed to start new server", zap.Error(err))
+		}
+
 		r.logger.Info("Server stopped", zap.String("config_version", version))
 	}()
-
-	r.logger.Info("Server listening",
-		zap.String("listen_addr", r.listenAddr),
-		zap.Bool("playground", r.playground),
-		zap.Bool("introspection", r.introspection),
-		zap.String("config_version", cfg.GetVersion()),
-	)
-
-	r.activeServer.healthChecks.SetReady(true)
-
-	r.mu.Unlock()
-
-	// This is a blocking call
-	if err := r.activeServer.listenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		r.logger.Error("Failed to start new server", zap.Error(err))
-		return err
-	}
 
 	return nil
 }
@@ -767,11 +794,10 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	go func() {
-		if err := r.updateServerAndStart(ctx, routerConfig); err != nil {
-			r.logger.Error("Failed to start server with initial config", zap.Error(err))
-		}
-	}()
+	if err := r.updateServerAndStart(ctx, routerConfig); err != nil {
+		r.logger.Error("Failed to start server with initial config", zap.Error(err))
+		return err
+	}
 
 	r.logger.Info("Polling for router config updates in the background")
 
@@ -1179,10 +1205,15 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 func (r *server) listenAndServe() error {
 	if r.tlsConfig != nil && r.tlsConfig.Enabled {
 		// Leave the cert and key empty to use the default ones
-		return r.server.ListenAndServeTLS("", "")
+		if err := r.server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
 	} else {
-		return r.server.ListenAndServe()
+		if err := r.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
 	}
+	return nil
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.

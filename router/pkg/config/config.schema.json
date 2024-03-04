@@ -49,6 +49,7 @@
         "server": {
           "type": "object",
           "description": "The configuration for the server TLS. The server TLS is used to enable the TLS for the server. Useful e.g. if you want to establish a secure connection from the Load-Balancer to the router.",
+          "additionalProperties": false,
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -61,6 +62,36 @@
             "key_file": {
               "type": "string",
               "description": "The path to the key file. The key file is used to enable the TLS."
+            },
+            "client_auth": {
+              "type": "object",
+              "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the TLS.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the client authentication. The default value is false."
+                },
+                "required": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Require the client authentication. The default value is true."
+                },
+                "cert_file": {
+                  "type": "string",
+                  "description": "The path to the certificate file. The certificate file is used to enable the client authentication."
+                }
+              },
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "required": ["cert_file"]
+              }
             }
           },
           "if": {
