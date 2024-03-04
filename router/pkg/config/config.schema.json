@@ -67,7 +67,7 @@
             },
             "client_auth": {
               "type": "object",
-              "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the TLS.",
+              "description": "The configuration for the client authentication (mTLS). The client authentication is used to authenticate the clients using the TLS.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
@@ -77,12 +77,12 @@
                 "verify": {
                   "type": "boolean",
                   "default": true,
-                  "description": "Verify the client certificate. The default value is true."
+                  "description": "Require clients to present a valid certificate that is verified. The default value is true."
                 },
                 "cert_file": {
                   "type": "string",
                   "format": "file-path",
-                  "description": "The path to the certificate file. The certificate file is used to enable the client authentication."
+                  "description": "The path to the certificate file. The certificate file against which the client certificates are verified."
                 }
               },
               "if": {
