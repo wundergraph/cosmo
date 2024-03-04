@@ -1,3 +1,9 @@
+directive @goField(
+	forceResolver: Boolean
+	name: String
+	omittable: Boolean
+) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+
 type Query {
   employee(id: Int!): Employee
   employees: [Employee!]!
@@ -25,6 +31,7 @@ enum Department {
 interface RoleType {
   departments: [Department!]!
   title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum EngineerType {
@@ -39,13 +46,15 @@ interface Identifiable {
 
 type Engineer implements RoleType {
   departments: [Department!]!
-  engineerType: EngineerType!
   title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
+  engineerType: EngineerType!
 }
 
 type Marketer implements RoleType {
   departments: [Department!]!
   title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum OperationType {
@@ -55,25 +64,32 @@ enum OperationType {
 
 type Operator implements RoleType {
   departments: [Department!]!
-  operatorType: [OperationType!]!
   title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
+  operatorType: [OperationType!]!
 }
 
-enum Country {
-  AMERICA
-  ENGLAND
-  GERMANY
-  INDIA
-  NETHERLANDS
-  PORTUGAL
-  SPAIN
-  UKRAINE
-}
-
-type Details @shareable {
-  forename: String!
+type Details {
+  forename: String! @shareable
   location: Country!
-  surname: String!
+  surname: String! @shareable
+  pastLocations: [City!]!
+}
+
+type City {
+  type: String!
+  name: String!
+  country: Country
+}
+
+# Using a nested key field simply because it can showcase potential bug
+# vectors / Federation capabilities.
+type Country @key(fields: "key { name }", resolvable: false) {
+  key: CountryKey!
+}
+
+type CountryKey {
+  name: String!
 }
 
 type Employee implements Identifiable @key(fields: "id") {
@@ -81,7 +97,7 @@ type Employee implements Identifiable @key(fields: "id") {
   id: Int!
   tag: String!
   role: RoleType!
-  notes: String
+  notes: String @shareable
   updatedAt: String!
   startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
 }

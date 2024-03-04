@@ -60,6 +60,11 @@ dev-setup-no-infra: prerequisites
 	make generate-go
 	pnpm -r run --filter '!studio' build
 
+build-pnpm:
+	pnpm install
+	pnpm generate
+	pnpm -r run --filter '!studio' build
+
 migrate:
 	pnpm -r run --filter './controlplane' migrate
 

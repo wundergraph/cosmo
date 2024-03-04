@@ -19,23 +19,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
-
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
+	"github.com/hashicorp/go-retryablehttp"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
-	"github.com/wundergraph/cosmo/router/core"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 var (
@@ -86,6 +86,7 @@ type SubgraphsConfig struct {
 	Test1            SubgraphConfig
 	Availability     SubgraphConfig
 	Mood             SubgraphConfig
+	Countries        SubgraphConfig
 }
 
 type SubgraphConfig struct {
@@ -139,6 +140,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Test1:        atomic.NewInt64(0),
 		Availability: atomic.NewInt64(0),
 		Mood:         atomic.NewInt64(0),
+		Countries:    atomic.NewInt64(0),
 	}
 
 	employees := &Subgraph{
@@ -211,6 +213,16 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Mood.Delay,
 	}
 
+	countries := &Subgraph{
+		handler:          subgraphs.CountriesHandler(subgraphOptions(t, ns)),
+		middleware:       cfg.Subgraphs.Countries.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Countries,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Countries.Delay,
+	}
+
 	employeesServer := httptest.NewServer(employees)
 	familyServer := httptest.NewServer(family)
 	hobbiesServer := httptest.NewServer(hobbies)
@@ -218,21 +230,23 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	test1Server := httptest.NewServer(test1)
 	availabilityServer := httptest.NewServer(availability)
 	moodServer := httptest.NewServer(mood)
+	countriesServer := httptest.NewServer(countries)
 
 	replacements := map[string]string{
-		"EmployeesURL":    gqlURL(employeesServer),
-		"FamilyURL":       gqlURL(familyServer),
-		"HobbiesURL":      gqlURL(hobbiesServer),
-		"ProductsURL":     gqlURL(productsServer),
-		"Test1URL":        gqlURL(test1Server),
-		"AvailabilityURL": gqlURL(availabilityServer),
-		"MoodURL":         gqlURL(moodServer),
+		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
 	}
 
 	replaced := configJSONTemplate
 
 	for k, v := range replacements {
-		replaced = strings.ReplaceAll(replaced, fmt.Sprintf("{{ .%s }}", k), v)
+		replaced = strings.ReplaceAll(replaced, k, v)
 	}
 
 	var routerConfig nodev1.RouterConfig
@@ -302,6 +316,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.Subgraphs.Mood.CloseOnStart {
 		moodServer.Close()
 	}
+	if cfg.Subgraphs.Countries.CloseOnStart {
+		countriesServer.Close()
+	}
 
 	e := &Environment{
 		t:                    t,
@@ -324,6 +341,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			test1Server,
 			availabilityServer,
 			moodServer,
+			countriesServer,
 		},
 	}
 	e.waitForRouterConnection(ctx)
@@ -369,6 +387,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EnableExecutionPlanCacheResponseHeader: true,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
+			PrintQueryPlans:            false,
 		},
 		EpollKqueuePollTimeout:    300 * time.Millisecond,
 		EpollKqueueConnBufferSize: 1,
@@ -511,6 +530,7 @@ type SubgraphRequestCount struct {
 	Test1        *atomic.Int64
 	Availability *atomic.Int64
 	Mood         *atomic.Int64
+	Countries    *atomic.Int64
 }
 
 type GraphQLRequest struct {

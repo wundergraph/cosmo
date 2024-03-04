@@ -27,8 +27,17 @@ var employees = []*model.Employee{
 				},
 			},
 			model.Travelling{
-				CountriesLived: []model.Country{
-					model.CountryEngland, model.CountryGermany,
+				CountriesLived: []*model.Country{
+					{
+						Key: &model.CountryKey{
+							Name: "England",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Germany",
+						},
+					},
 				},
 			},
 		},
@@ -69,8 +78,17 @@ var employees = []*model.Employee{
 				Name: "Reading",
 			},
 			model.Travelling{
-				CountriesLived: []model.Country{
-					model.CountryAmerica, model.CountrySerbia,
+				CountriesLived: []*model.Country{
+					{
+						Key: &model.CountryKey{
+							Name: "America",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Serbia",
+						},
+					},
 				},
 			},
 		},
@@ -90,8 +108,17 @@ var employees = []*model.Employee{
 				YearsOfExperience: 20.0,
 			},
 			model.Travelling{
-				CountriesLived: []model.Country{
-					model.CountryAmerica, model.CountryGermany,
+				CountriesLived: []*model.Country{
+					{
+						Key: &model.CountryKey{
+							Name: "America",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Germany",
+						},
+					},
 				},
 			},
 		},
@@ -168,9 +195,38 @@ var employees = []*model.Employee{
 				Name: "saas-ui",
 			},
 			model.Travelling{
-				CountriesLived: []model.Country{
-					model.CountryGermany, model.CountryIndonesia, model.CountryNetherlands,
-					model.CountryPortugal, model.CountrySpain, model.CountryThailand,
+				CountriesLived: []*model.Country{
+					{
+						Key: &model.CountryKey{
+							Name: "Germany",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Indonesia",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Netherlands",
+						},
+					},
+
+					{
+						Key: &model.CountryKey{
+							Name: "Portugal",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Spain",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Thailand",
+						},
+					},
 				},
 			},
 		},
@@ -203,8 +259,22 @@ var employees = []*model.Employee{
 				YearsOfExperience: 25.5,
 			},
 			model.Travelling{
-				CountriesLived: []model.Country{
-					model.CountryEngland, model.CountryKorea, model.CountryTaiwan,
+				CountriesLived: []*model.Country{
+					{
+						Key: &model.CountryKey{
+							Name: "England",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Korea",
+						},
+					},
+					{
+						Key: &model.CountryKey{
+							Name: "Taiwan",
+						},
+					},
 				},
 			},
 		},

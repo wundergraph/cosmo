@@ -12,6 +12,16 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
 
+// Employees is the resolver for the employees field.
+func (r *engineerResolver) Employees(ctx context.Context, obj *model.Engineer) ([]*model.Employee, error) {
+	return r.Resolver.Employees(ctx, obj)
+}
+
+// Employees is the resolver for the employees field.
+func (r *marketerResolver) Employees(ctx context.Context, obj *model.Marketer) ([]*model.Employee, error) {
+	return r.Resolver.Employees(ctx, obj)
+}
+
 // UpdateEmployeeTag is the resolver for the updateEmployeeTag field.
 func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag string) (*model.Employee, error) {
 	if id < 1 {
@@ -39,6 +49,11 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 		}
 	}
 	return nil, nil
+}
+
+// Employees is the resolver for the employees field.
+func (r *operatorResolver) Employees(ctx context.Context, obj *model.Operator) ([]*model.Employee, error) {
+	return r.Resolver.Employees(ctx, obj)
 }
 
 // Employee is the resolver for the employee field.
@@ -141,8 +156,17 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 	return ch, nil
 }
 
+// Engineer returns generated.EngineerResolver implementation.
+func (r *Resolver) Engineer() generated.EngineerResolver { return &engineerResolver{r} }
+
+// Marketer returns generated.MarketerResolver implementation.
+func (r *Resolver) Marketer() generated.MarketerResolver { return &marketerResolver{r} }
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
+
+// Operator returns generated.OperatorResolver implementation.
+func (r *Resolver) Operator() generated.OperatorResolver { return &operatorResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
@@ -150,6 +174,9 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
+type engineerResolver struct{ *Resolver }
+type marketerResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
+type operatorResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }

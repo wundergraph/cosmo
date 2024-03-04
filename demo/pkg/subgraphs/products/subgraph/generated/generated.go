@@ -577,7 +577,8 @@ type Cosmo @key(fields: "upc") {
 type Documentation {
   url(product: ProductName!): String!
   urls(products: [ProductName!]!): [String!]!
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
 	directive @composeDirective(name: String!) repeatable on SCHEMA

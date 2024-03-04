@@ -18,6 +18,7 @@ var (
 	test1        = flag.Int("test1", 4006, "Port for test1 subgraph")
 	availability = flag.Int("availability", 4007, "Port for availability subgraph")
 	mood         = flag.Int("mood", 4008, "Port for mood subgraph")
+	countries    = flag.Int("countries", 4009, "Port for countries subgraph")
 )
 
 func main() {
@@ -31,6 +32,7 @@ func main() {
 			Test1:        *test1,
 			Availability: *availability,
 			Mood:         *mood,
+			Countries:    *countries,
 		},
 		EnableDebug: *debug,
 	}

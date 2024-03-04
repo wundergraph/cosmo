@@ -16,4 +16,7 @@ test-stability:
 clean-testcache:
 	go clean -testcache
 
+update-test-config:
+	./update-config.sh
+
 .PHONY: test test-no-race
