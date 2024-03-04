@@ -7,7 +7,7 @@ import {
 import { ChangesTable } from "@/components/checks/changes-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
-import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
+import { CodeViewerActions, CodeViewerWithVirtualizer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -693,7 +693,7 @@ const CheckDetails = ({
                   />
                 </div>
                 <div className="scrollbar-custom h-full w-full overflow-auto">
-                  <CodeViewer code={sdl} />
+                  <CodeViewerWithVirtualizer code={sdl} disablePrettier />
                 </div>
               </TabsContent>
             </div>

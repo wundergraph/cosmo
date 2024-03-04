@@ -101,9 +101,13 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const lintIssuesTable = new Table({
-      head: [pc.bold(pc.white('SEVERITY')), pc.bold(pc.white('ERROR_MESSAGE'))],
-      colWidths: [10, 150],
-      colAligns: ['center'],
+      head: [
+        pc.bold(pc.white('SEVERITY')),
+        pc.bold(pc.white('ERROR_MESSAGE')),
+        pc.bold(pc.white('ISSUE_LOCATION (LINE NUMBER)')),
+      ],
+      colWidths: [10, 120, 40],
+      colAligns: ['center', 'left', 'center'],
       wordWrap: true,
     });
 
@@ -205,10 +209,10 @@ export default (opts: BaseCommandOptions) => {
           success = resp.lintErrors.length === 0;
           console.log(pc.red('\nDetected lint issues:'));
           for (const error of resp.lintErrors) {
-            lintIssuesTable.push([logSymbols.error, error.message]);
+            lintIssuesTable.push([logSymbols.error, error.message, error.issueLocation?.line]);
           }
           for (const warning of resp.lintWarnings) {
-            lintIssuesTable.push([logSymbols.warning, warning.message]);
+            lintIssuesTable.push([logSymbols.warning, warning.message, warning.issueLocation?.line]);
           }
           console.log(lintIssuesTable.toString());
         }
