@@ -386,7 +386,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
 		Debug: config.EngineDebugConfiguration{
-			ReportWebSocketConnections: false,
+			ReportWebSocketConnections: true,
 			PrintQueryPlans:            false,
 		},
 		EpollKqueuePollTimeout:    300 * time.Millisecond,
