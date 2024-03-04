@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
+	"encoding/json"
 	"log"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 
 	"github.com/wundergraph/cosmo/composition-go"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
@@ -48,7 +51,12 @@ func main() {
 	countriesServer := httptest.NewServer(countries)
 	defer countriesServer.Close()
 
-	employeeUpdatedSchema, err := os.ReadFile(filepath.Join("..", "..", "pkg", "subgraphs", "employeeupdated", "subgraph", "schema.graphqls"))
+	// get directory of this file
+	_, b, _, _ := runtime.Caller(0)
+	currentDir := filepath.Dir(b)
+
+	employeeUpdatedSchemaPath, _ := filepath.Abs(filepath.Join(currentDir, "..", "..", "pkg", "subgraphs", "employeeupdated", "subgraph", "schema.graphqls"))
+	employeeUpdatedSchema, err := os.ReadFile(employeeUpdatedSchemaPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -107,27 +115,32 @@ func main() {
 	routerConfigJSON = rex.ReplaceAllStringFunc(routerConfigJSON, func(s string) string {
 		switch s {
 		case sgs[0].URL:
-			return "{{ .EmployeesURL }}"
+			return subgraphs.EmployeesDefaultDemoURL
 		case sgs[1].URL:
-			return "{{ .FamilyURL }}"
+			return subgraphs.FamilyDefaultDemoURL
 		case sgs[2].URL:
-			return "{{ .HobbiesURL }}"
+			return subgraphs.HobbiesDefaultDemoURL
 		case sgs[3].URL:
-			return "{{ .ProductsURL }}"
+			return subgraphs.ProductsDefaultDemoURL
 		case sgs[4].URL:
-			return "{{ .Test1URL }}"
+			return subgraphs.Test1DefaultDemoURL
 		case sgs[5].URL:
-			return "{{ .AvailabilityURL }}"
+			return subgraphs.AvailabilityDefaultDemoURL
 		case sgs[6].URL:
-			return "{{ .MoodURL }}"
+			return subgraphs.MoodDefaultDemoURL
 		case sgs[7].URL:
-			return "{{ .CountriesURL }}"
+			return subgraphs.CountriesDefaultDemoURL
 		default:
 			return s
 		}
 	})
 
-	err = os.WriteFile(filepath.Join("..", "..", "..", "router-tests", "testenv", "testdata", "config.json"), []byte(routerConfigJSON), os.ModePerm)
+	testEnvConfigFilePath, _ := filepath.Abs(filepath.Join(currentDir, "..", "..", "..", "router-tests", "testenv", "testdata", "config.json"))
+
+	prettyCfg := &bytes.Buffer{}
+	_ = json.Indent(prettyCfg, []byte(routerConfigJSON), "", "  ")
+
+	err = os.WriteFile(testEnvConfigFilePath, prettyCfg.Bytes(), os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}

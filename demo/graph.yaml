@@ -32,3 +32,6 @@ subgraphs:
     routing_url: http://localhost:4009/graphql
     schema:
       file: ./pkg/subgraphs/countries/subgraph/schema.graphqls
+  - name: employeeupdated
+    schema:
+      file: ./pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
