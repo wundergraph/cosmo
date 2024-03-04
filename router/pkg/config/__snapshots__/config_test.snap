@@ -171,6 +171,13 @@
  "RouterConfigPath": "",
  "RouterRegistration": true,
  "ShutdownDelay": 15000000000,
+ "TLS": {
+  "Server": {
+   "CertFile": "",
+   "Enabled": false,
+   "KeyFile": ""
+  }
+ },
  "Telemetry": {
   "Metrics": {
    "OTLP": {
@@ -375,6 +382,13 @@
  "RouterConfigPath": "",
  "RouterRegistration": true,
  "ShutdownDelay": 60000000000,
+ "TLS": {
+  "Server": {
+   "CertFile": "",
+   "Enabled": false,
+   "KeyFile": ""
+  }
+ },
  "Telemetry": {
   "Metrics": {
    "OTLP": {
