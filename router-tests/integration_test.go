@@ -271,6 +271,13 @@ func TestTracing(t *testing.T) {
 			cfg.EnableRequestTracing = true
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
+		g := goldie.New(
+			t,
+			goldie.WithFixtureDir("testdata"),
+			goldie.WithNameSuffix(".json"),
+			goldie.WithDiffEngine(goldie.ClassicDiff),
+		)
+
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query: bigEmployeesQuery,
 			Header: http.Header{
@@ -279,22 +286,18 @@ func TestTracing(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
-		require.NoError(t, err)
+
 		// we generate a random port for the test server, so we need to replace the port in the tracing json
 		rex, err := regexp.Compile(`http://127.0.0.1:\d+/graphql`)
 		require.NoError(t, err)
-		tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
 		resultBody := rex.ReplaceAllString(res.Body, "http://localhost/graphql")
 		// all nodes have UUIDs, so we need to replace them with a static UUID
 		rex2, err := regexp.Compile(`"id":"[a-f0-9\-]{36}"`)
 		require.NoError(t, err)
-		tracingJson = rex2.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
 		resultBody = rex2.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
-		require.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
-		if t.Failed() {
-			t.Log(resultBody)
-		}
+		resultBody = prettifyJSON(t, resultBody)
+
+		g.Assert(t, "tracing", []byte(resultBody))
 		// make the request again, but with "enable_predictable_debug_timings" disabled
 		// compare the result and ensure that the timings are different
 		res2, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -312,17 +315,18 @@ func TestTracing(t *testing.T) {
 		tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
 		require.NoError(t, err)
 		require.NotNilf(t, tracing, "tracing should not be nil: %s", body)
-		require.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, string(body)))
+
+		newResultBody := prettifyJSON(t, string(body))
+
+		testBody := g.GoldenFileName(t, "tracing")
+		require.NotEqual(t, testBody, newResultBody)
 	})
 }
 
 func prettifyJSON(t *testing.T, jsonStr string) string {
-	var v interface{}
-	err := json.Unmarshal([]byte(jsonStr), &v)
-	require.NoError(t, err)
-	normalized, err := json.MarshalIndent(v, "", "  ")
-	require.NoError(t, err)
-	return string(normalized)
+	res := &bytes.Buffer{}
+	require.NoError(t, json.Indent(res, []byte(jsonStr), "", "  "))
+	return res.String()
 }
 
 func TestOperationSelection(t *testing.T) {
