@@ -1,0 +1,10 @@
+# Using a nested key field simply because it can showcase potential bug
+# vectors / Federation capabilities.
+type Country @key(fields: "key { name }") {
+  key: CountryKey!
+  language: String
+}
+
+type CountryKey {
+  name: String!
+}
