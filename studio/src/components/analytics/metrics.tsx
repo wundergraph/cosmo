@@ -477,7 +477,7 @@ export const RequestMetricsCard = (props: {
         title="Highest RPM"
         items={top}
         formatter={formatter}
-        queryParams={top.length > 1 ? { group: "OperationName" } : {}}
+        queryParams={{ group: "OperationName" }}
         isSubgraphAnalytics={props.isSubgraphAnalytics}
       />
     </Card>
@@ -530,11 +530,7 @@ export const LatencyMetricsCard = (props: {
         title="Highest latency"
         items={top}
         formatter={formatter}
-        queryParams={
-          top.length > 1
-            ? { group: "OperationName", sort: "p95", sortDir: "desc" }
-            : {}
-        }
+        queryParams={{ group: "OperationName", sort: "p95", sortDir: "desc" }}
         isSubgraphAnalytics={props.isSubgraphAnalytics}
       />
     </Card>
@@ -582,11 +578,11 @@ export const ErrorMetricsCard = (props: {
         title="Highest error percentage"
         items={top}
         formatter={formatter}
-        queryParams={
-          top.length > 1
-            ? { group: "OperationName", sort: "errorsWithRate" }
-            : {}
-        }
+        queryParams={{
+          group: "OperationName",
+          sort: "errorsWithRate",
+          sortDir: "desc",
+        }}
         isSubgraphAnalytics={props.isSubgraphAnalytics}
       />
     </Card>
