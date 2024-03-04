@@ -110,49 +110,20 @@ describe('Directive tests', () => {
         name: 'test',
         url: '',
         definitions: parse(`
-# @contact isn't being printed to the generated-schema.graphql file
-# See https://github.com/apollographql/federation/issues/1847
-extend schema
-  @contact(
-    name: "Manage X Team"
-    url: "https://company.enterprise.com"
-    description: "tag @oncall-manage-x for urgent issues."
-  )
-  @link(
-    url: "https://specs.apollo.dev/federation/v2.3"
-    import: [
-      "@key"
-      "@extends"
-      "@shareable"
-      "@inaccessible"
-      "@override"
-      "@external"
-      "@provides"
-      "@requires"
-      "@tag"
-      "@composeDirective"
-      "@interfaceObject"
-    ]
-  )
-directive @contact(
-  "Contact title of the subgraph owner"
-  name: String!
-  "URL where the subgraph's owner can be reached"
-  url: String
-  "Other relevant notes can be included here; supports markdown links"
-  description: String
-) on SCHEMA
-
-
-type Query {
-  couponsByUserId(merchantId: ID!): [Coupon!]
-}
-
-type Coupon @key(fields: "id") {
-  id: ID!
-  code: String
-  description: String
-}
+          extend schema @schemaDirective(name: "name", url: "url", description: "description")
+          
+          directive @schemaDirective(
+            "Description for the name argument"
+            name: String!
+            "Description for the url argument"
+            url: String
+            "Description for the description argument"
+            description: String
+          ) on SCHEMA
+          
+          type Query {
+            dummy: String!
+          }
       `),
       },
     ]);
