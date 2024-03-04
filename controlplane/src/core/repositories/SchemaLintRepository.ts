@@ -1,9 +1,9 @@
-import { LintConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as schema from 'src/db/schema.js';
-import { namespaceLintCheckConfig, schemaCheckLintAction } from 'src/db/schema.js';
-import { LintIssueResult, LintRuleType, LintSeverityLevel, SchemaLintDTO } from 'src/types/index.js';
+import { LintConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import * as schema from '../../db/schema.js';
+import { namespaceLintCheckConfig, schemaCheckLintAction } from '../../db/schema.js';
+import { LintRuleType, SchemaLintDTO, LintSeverityLevel, LintIssueResult } from '../../types/index.js';
 
 export class SchemaLintRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
