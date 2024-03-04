@@ -402,7 +402,7 @@ export const TraceView = () => {
   useEffect(() => {
     try {
       const res = JSON.parse(activeResponse);
-      if (!res.data.__schema) {
+      if (!res.data || !res.data?.__schema) {
         setResponse(activeResponse);
         setIsNotIntrospection(true);
       }
