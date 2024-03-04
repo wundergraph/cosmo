@@ -9,7 +9,9 @@ query {
       forename
       surname
       # resolved through employees subgraph
-      location
+      location {
+        language
+      }
       # resolved through family subgraph
       hasChildren
       # maritalStatus can return null
@@ -63,10 +65,61 @@ query {
         languages
       }
       ... on Travelling {
-        countriesLived
+        countriesLived {
+          language
+          key {
+            name
+          }
+        }
       }
     }
     # resolved through products subgraph
     products
+  }
+  # can return null
+  employee(id: 1) {
+    # resolved through employees subgraph
+    id
+    details {
+      forename
+      location {
+        language
+      }
+    }
+  }
+  teammates(team: OPERATIONS) {
+    # resolved through employees subgraph
+    id
+    ...EmployeeNameFragment
+    # resolved through products subgraph
+    products
+  }
+  productTypes {
+    ... on Documentation {
+      url(product: SDK)
+      urls(products: [COSMO, MARKETING])
+    }
+    ... on Consultancy {
+      lead {
+        ...EmployeeNameFragment
+      }
+      name
+    }
+  }
+  a: findEmployees(criteria: {
+    hasPets: true, nationality: UKRAINIAN, nested: { maritalStatus: ENGAGED }
+  }) {
+    ...EmployeeNameFragment
+  }
+  b: findEmployees(criteria: {
+    hasPets: true, nationality: GERMAN, nested: { maritalStatus: MARRIED, hasChildren: true }
+  }) {
+    ...EmployeeNameFragment
+  }
+}
+
+fragment EmployeeNameFragment on Employee {
+  details {
+    forename
   }
 }

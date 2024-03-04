@@ -5,7 +5,12 @@ query {
     id
     details {
       forename
-      location
+      location {
+        language
+      }
+    }
+    hobbies {
+      __typename
     }
   }
   teammates(team: OPERATIONS) {

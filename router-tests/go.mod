@@ -13,6 +13,7 @@ require (
 	github.com/nats-io/nats.go v1.31.0
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/redis/go-redis/v9 v9.4.0
+	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/stretchr/testify v1.8.4
 	github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/router v0.0.0-20240130110106-5afda68c8d0d
@@ -86,6 +87,7 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
+	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sosodev/duration v1.1.0 // indirect
 	github.com/tidwall/gjson v1.17.0 // indirect
@@ -96,7 +98,7 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/urfave/cli/v2 v2.27.1 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.9 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.10 // indirect
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect
