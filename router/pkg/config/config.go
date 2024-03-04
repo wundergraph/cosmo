@@ -285,6 +285,16 @@ type AnonymizeIpConfiguration struct {
 	Method  string `yaml:"method" default:"redact" envconfig:"SECURITY_ANONYMIZE_IP_METHOD"`
 }
 
+type TLSServerConfiguration struct {
+	Enabled  bool   `yaml:"enabled" default:"false" envconfig:"TLS_SERVER_ENABLED"`
+	CertFile string `yaml:"cert_file,omitempty" envconfig:"TLS_SERVER_CERT_FILE"`
+	KeyFile  string `yaml:"key_file,omitempty" envconfig:"TLS_SERVER_KEY_FILE"`
+}
+
+type TLSConfiguration struct {
+	Server TLSServerConfiguration `yaml:"router"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -295,6 +305,7 @@ type Config struct {
 	CORS           CORS             `yaml:"cors,omitempty"`
 	Cluster        Cluster          `yaml:"cluster,omitempty"`
 	Compliance     ComplianceConfig `yaml:"compliance,omitempty"`
+	TLS            TLSConfiguration `yaml:"tls,omitempty"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

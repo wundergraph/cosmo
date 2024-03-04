@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -64,9 +65,9 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		activeServer *server
-		modules      []Module
-
+		activeServer   *server
+		modules        []Module
+		mu             sync.RWMutex
 		WebsocketStats WebSocketsStatistics
 	}
 
@@ -88,6 +89,12 @@ type (
 	IPAnonymizationConfig struct {
 		Enabled bool
 		Method  IPAnonymizationMethod
+	}
+
+	TlsConfig struct {
+		Enabled  bool
+		CertFile string
+		KeyFile  string
 	}
 
 	// Config defines the configuration options for the Router.
@@ -140,6 +147,9 @@ type (
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
+		tlsServerConfig *tls.Config
+		tlsConfig       *TlsConfig
+
 		// Poller
 		configPoller configpoller.ConfigPoller
 		selfRegister selfregister.SelfRegister
@@ -160,6 +170,7 @@ type (
 	Server interface {
 		HttpServer() *http.Server
 		HealthChecks() health.Checker
+		BaseURL() string
 	}
 
 	// server is the main router instance.
@@ -179,11 +190,16 @@ type (
 	Option func(svr *Router)
 )
 
+func (r *server) BaseURL() string {
+	return r.baseURL
+}
+
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{
 		WebsocketStats: NewNoopWebSocketStats(),
+		mu:             sync.RWMutex{},
 	}
 
 	for _, opt := range opts {
@@ -305,7 +321,28 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
-	r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
+	if r.tlsConfig != nil && r.tlsConfig.Enabled {
+		r.baseURL = fmt.Sprintf("https://%s", r.listenAddr)
+	} else {
+		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
+	}
+
+	if r.tlsConfig != nil && r.tlsConfig.Enabled {
+		if r.tlsConfig.CertFile == "" {
+			return nil, errors.New("tls cert file not provided")
+		}
+		if r.tlsConfig.KeyFile == "" {
+			return nil, errors.New("tls key file not provided")
+		}
+		cer, err := tls.LoadX509KeyPair(r.tlsConfig.CertFile, r.tlsConfig.KeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
+		}
+
+		r.tlsServerConfig = &tls.Config{
+			Certificates: []tls.Certificate{cer},
+		}
+	}
 
 	// Add default tracing exporter if needed
 	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
@@ -442,6 +479,7 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 		return nil, err
 	}
 
+	// Shutdown old server
 	if r.activeServer != nil {
 		if err := r.activeServer.Shutdown(ctx); err != nil {
 			r.logger.Error("Could not shutdown router", zap.Error(err))
@@ -457,32 +495,39 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 
 func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterConfig) error {
 
+	r.mu.Lock()
+
 	if _, err := r.UpdateServer(ctx, cfg); err != nil {
+		r.mu.Unlock()
 		return err
 	}
 
-	// read here to avoid race condition
 	version := r.activeServer.routerConfig.GetVersion()
 
-	// Start new server
-	go func() {
-		r.logger.Info("Server listening",
-			zap.String("listen_addr", r.listenAddr),
-			zap.Bool("playground", r.playground),
-			zap.Bool("introspection", r.introspection),
-			zap.String("config_version", cfg.GetVersion()),
-		)
+	defer func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
 
-		r.activeServer.healthChecks.SetReady(true)
-
-		// This is a blocking call
-		if err := r.activeServer.listenAndServe(); err != nil {
-			r.activeServer.healthChecks.SetReady(true)
-			r.logger.Error("Failed to start new server", zap.Error(err))
-		}
-
+		r.activeServer.healthChecks.SetReady(false)
 		r.logger.Info("Server stopped", zap.String("config_version", version))
 	}()
+
+	r.logger.Info("Server listening",
+		zap.String("listen_addr", r.listenAddr),
+		zap.Bool("playground", r.playground),
+		zap.Bool("introspection", r.introspection),
+		zap.String("config_version", cfg.GetVersion()),
+	)
+
+	r.activeServer.healthChecks.SetReady(true)
+
+	r.mu.Unlock()
+
+	// This is a blocking call
+	if err := r.activeServer.listenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		r.logger.Error("Failed to start new server", zap.Error(err))
+		return err
+	}
 
 	return nil
 }
@@ -722,10 +767,11 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.updateServerAndStart(ctx, routerConfig); err != nil {
-		r.logger.Error("Failed to start server with initial config", zap.Error(err))
-		return err
-	}
+	go func() {
+		if err := r.updateServerAndStart(ctx, routerConfig); err != nil {
+			r.logger.Error("Failed to start server with initial config", zap.Error(err))
+		}
+	}()
 
 	r.logger.Info("Polling for router config updates in the background")
 
@@ -1123,6 +1169,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		ReadHeaderTimeout: 20 * time.Second,
 		Handler:           httpRouter,
 		ErrorLog:          zap.NewStdLog(r.logger),
+		TLSConfig:         r.tlsServerConfig,
 	}
 
 	return ro, nil
@@ -1130,11 +1177,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 // listenAndServe starts the server and blocks until the server is shutdown.
 func (r *server) listenAndServe() error {
-	if err := r.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
+	if r.tlsConfig != nil && r.tlsConfig.Enabled {
+		// Leave the cert and key empty to use the default ones
+		return r.server.ListenAndServeTLS("", "")
+	} else {
+		return r.server.ListenAndServe()
 	}
-
-	return nil
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
@@ -1563,6 +1611,12 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
 	return func(r *Router) {
 		r.Config.webSocketConfiguration = cfg
+	}
+}
+
+func WithTLSConfig(cfg *TlsConfig) Option {
+	return func(r *Router) {
+		r.tlsConfig = cfg
 	}
 }
 
