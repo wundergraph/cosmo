@@ -348,7 +348,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		clientAuthMode := tls.NoClientCert
 
 		if r.tlsConfig.ClientAuth != nil && r.tlsConfig.ClientAuth.Enabled {
-			caCert, err := os.ReadFile(r.tlsConfig.CertFile)
+			caCert, err := os.ReadFile(r.tlsConfig.ClientAuth.CertFile)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read cert file: %w", err)
 			}

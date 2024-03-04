@@ -57,10 +57,12 @@
             },
             "cert_file": {
               "type": "string",
+              "format": "file-path",
               "description": "The path to the certificate file. The certificate file is used to enable the TLS."
             },
             "key_file": {
               "type": "string",
+              "format": "file-path",
               "description": "The path to the key file. The key file is used to enable the TLS."
             },
             "client_auth": {
@@ -79,6 +81,7 @@
                 },
                 "cert_file": {
                   "type": "string",
+                  "format": "file-path",
                   "description": "The path to the certificate file. The certificate file is used to enable the client authentication."
                 }
               },

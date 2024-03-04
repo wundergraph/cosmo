@@ -15,7 +15,7 @@ func TestTLS(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("TestTLSPlayground", func(t *testing.T) {
+	t.Run("TestPlayground", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -39,12 +39,70 @@ func TestTLS(t *testing.T) {
 		})
 	})
 
-	t.Run("TestTLSQuery", func(t *testing.T) {
+	t.Run("TestQuery", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
 				Enabled:  true,
 				CertFile: "testdata/tls/cert.pem",
 				KeyFile:  "testdata/tls/key.pem",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+		})
+	})
+}
+
+func TestMTLS(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("TestPlayground", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			TLSConfig: &core.TlsConfig{
+				Enabled:  true,
+				CertFile: "testdata/tls/cert.pem",
+				KeyFile:  "testdata/tls/key.pem",
+				ClientAuth: &core.TlsClientAuthConfig{
+					Enabled:  true,
+					Required: true,
+					CertFile: "testdata/tls/cert.pem",
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodGet, "/", http.Header{
+				"Accept": []string{"text/html"},
+			}, nil)
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Contains(t, res.Header.Get("Content-Type"), "text/html")
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			require.Contains(t, string(body), `WunderGraph Playground`)
+		})
+	})
+
+	t.Run("TestQuery", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			TLSConfig: &core.TlsConfig{
+				Enabled:  true,
+				CertFile: "testdata/tls/cert.pem",
+				KeyFile:  "testdata/tls/key.pem",
+				ClientAuth: &core.TlsClientAuthConfig{
+					Enabled:  true,
+					Required: true,
+					CertFile: "testdata/tls/cert.pem",
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
