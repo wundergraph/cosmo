@@ -71,7 +71,7 @@ func TestMTLS(t *testing.T) {
 				KeyFile:  "testdata/tls/key.pem",
 				ClientAuth: &core.TlsClientAuthConfig{
 					Enabled:  true,
-					Required: true,
+					Verify:   true,
 					CertFile: "testdata/tls/cert.pem",
 				},
 			},
@@ -100,8 +100,29 @@ func TestMTLS(t *testing.T) {
 				KeyFile:  "testdata/tls/key.pem",
 				ClientAuth: &core.TlsClientAuthConfig{
 					Enabled:  true,
-					Required: true,
+					Verify:   true,
 					CertFile: "testdata/tls/cert.pem",
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+		})
+	})
+
+	t.Run("Client verification not required", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			TLSConfig: &core.TlsConfig{
+				Enabled:  true,
+				CertFile: "testdata/tls/cert.pem",
+				KeyFile:  "testdata/tls/key.pem",
+				ClientAuth: &core.TlsClientAuthConfig{
+					Enabled: true,
+					Verify:  false,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

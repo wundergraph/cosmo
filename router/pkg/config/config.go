@@ -296,7 +296,7 @@ type TLSServerConfiguration struct {
 type TLSClientAuthConfiguration struct {
 	Enabled  bool   `yaml:"enabled" default:"false" envconfig:"TLS_CLIENT_AUTH_ENABLED"`
 	CertFile string `yaml:"cert_file,omitempty" envconfig:"TLS_CLIENT_AUTH_CERT_FILE"`
-	Required bool   `yaml:"required" default:"true" envconfig:"TLS_CLIENT_AUTH_REQUIRED"`
+	Verify   bool   `yaml:"verify" default:"true" envconfig:"TLS_CLIENT_AUTH_VERIFY"`
 }
 
 type TLSConfiguration struct {

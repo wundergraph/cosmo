@@ -74,10 +74,10 @@
                   "type": "boolean",
                   "description": "Enable the client authentication. The default value is false."
                 },
-                "required": {
+                "verify": {
                   "type": "boolean",
                   "default": true,
-                  "description": "Require the client authentication. The default value is true."
+                  "description": "Verify the client certificate. The default value is true."
                 },
                 "cert_file": {
                   "type": "string",
