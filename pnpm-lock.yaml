@@ -652,7 +652,7 @@ importers:
         version: 2.2.2
       '@t3-oss/env-nextjs':
         specifier: ^0.4.1
-        version: 0.4.1(typescript@5.1.3)(zod@3.22.3)
+        version: 0.4.1(typescript@5.1.3)(zod@3.22.4)
       '@tanstack/react-query':
         specifier: ^5.4.3
         version: 5.4.3(react-dom@18.2.0)(react@18.2.0)
@@ -807,8 +807,8 @@ importers:
         specifier: ^1.8.1
         version: 1.8.1(react@18.2.0)
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^3.22.4
+        version: 3.22.4
     devDependencies:
       '@tailwindcss/typography':
         specifier: ^0.5.9
@@ -9176,25 +9176,25 @@ packages:
       tslib: 2.6.1
     dev: false
 
-  /@t3-oss/env-core@0.4.1(typescript@5.1.3)(zod@3.22.3):
+  /@t3-oss/env-core@0.4.1(typescript@5.1.3)(zod@3.22.4):
     resolution: {integrity: sha512-JZI8vxlHwtiZO7OYS3qSX9Ngt7UcdqsugLwhBwx7UVi5wp1PtRo2tzMyNoBEGbfHdmkd2QU9IbvYjqtaLUA7TQ==}
     peerDependencies:
       typescript: '>=4.7.2'
       zod: ^3.0.0
     dependencies:
       typescript: 5.1.3
-      zod: 3.22.3
+      zod: 3.22.4
     dev: false
 
-  /@t3-oss/env-nextjs@0.4.1(typescript@5.1.3)(zod@3.22.3):
+  /@t3-oss/env-nextjs@0.4.1(typescript@5.1.3)(zod@3.22.4):
     resolution: {integrity: sha512-lDbewJvZwOW7bFwHzdKtAH4+YcVTvGU7UEJfHwlb1RqVe9ejPrKn6ax2OGv/nFji1JXGKecKYHz3Xkpru6TFbw==}
     peerDependencies:
       typescript: '>=4.7.2'
       zod: ^3.0.0
     dependencies:
-      '@t3-oss/env-core': 0.4.1(typescript@5.1.3)(zod@3.22.3)
+      '@t3-oss/env-core': 0.4.1(typescript@5.1.3)(zod@3.22.4)
       typescript: 5.1.3
-      zod: 3.22.3
+      zod: 3.22.4
     dev: false
 
   /@tailwindcss/typography@0.5.9(tailwindcss@3.3.5):
@@ -22496,10 +22496,6 @@ packages:
       zod: ^3.22.4
     dependencies:
       zod: 3.22.4
-    dev: false
-
-  /zod@3.22.3:
-    resolution: {integrity: sha512-EjIevzuJRiRPbVH4mGc8nApb/lVLKVpmUhAaR5R5doKGfAnGJ6Gr3CViAVjP+4FWSxCsybeWQdcgCtbX+7oZug==}
     dev: false
 
   /zod@3.22.4:
