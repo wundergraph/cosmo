@@ -477,7 +477,7 @@ export class FederatedGraphRepository {
                           sql.raw(
                             `${targetLabelMatchers.labelMatcher.name} && ARRAY[${uniqueLabels.map(
                               (ul) => "'" + joinLabel(ul) + "'",
-                            )}]`,
+                            )}]::TEXT[]`,
                           ),
                         ),
                       ),
