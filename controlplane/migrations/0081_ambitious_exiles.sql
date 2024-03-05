@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS "schema_check_lint_action" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "namespaces" ADD COLUMN "enable_linting" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "schema_checks" ADD COLUMN "has_lint_errors" boolean DEFAULT false;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "namespace_lint_check_config" ADD CONSTRAINT "namespace_lint_check_config_namespace_id_namespaces_id_fk" FOREIGN KEY ("namespace_id") REFERENCES "namespaces"("id") ON DELETE cascade ON UPDATE no action;

@@ -1,5 +1,5 @@
 {
-  "id": "b233870d-1126-451b-9007-9d49f6193a5e",
+  "id": "dfc325d2-53af-404e-a2a5-dd4c6376e2e5",
   "prevId": "86c179ca-210c-4daf-bb9e-ed052b5aec34",
   "version": "5",
   "dialect": "pg",
@@ -1441,6 +1441,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "enable_linting": {
+          "name": "enable_linting",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
