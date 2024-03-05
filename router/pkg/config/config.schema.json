@@ -70,6 +70,7 @@
               "type": "object",
               "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the provided certificate.",
               "additionalProperties": false,
+              "required": ["cert_file"],
               "properties": {
                 "required": {
                   "type": "boolean",
@@ -81,16 +82,6 @@
                   "format": "file-path",
                   "description": "The path to the certificate file. The certificate file against which the client certificates are verified."
                 }
-              },
-              "if": {
-                "properties": {
-                  "required": {
-                    "const": true
-                  }
-                }
-              },
-              "then": {
-                "required": ["cert_file"]
               }
             }
           },
