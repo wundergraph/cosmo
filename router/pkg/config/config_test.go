@@ -1,12 +1,13 @@
 package config
 
 import (
-	"github.com/gkampitakis/go-snaps/snaps"
-	"github.com/santhosh-tekuri/jsonschema/v5"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfigRequiredValues(t *testing.T) {
@@ -113,7 +114,14 @@ func TestLoadFullConfig(t *testing.T) {
 	cfg, err := LoadConfig("./fixtures/full.yaml", "")
 	require.NoError(t, err)
 
-	snaps.MatchJSON(t, cfg.Config)
+	g := goldie.New(
+		t,
+		goldie.WithFixtureDir("testdata"),
+		goldie.WithNameSuffix(".json"),
+		goldie.WithDiffEngine(goldie.ClassicDiff),
+	)
+
+	g.AssertJson(t, "config_full", cfg.Config)
 }
 
 func TestDefaults(t *testing.T) {
@@ -121,9 +129,14 @@ func TestDefaults(t *testing.T) {
 	_ = os.Unsetenv("ROUTER_REGISTRATION")
 
 	cfg, err := LoadConfig("./fixtures/minimal.yaml", "")
-
 	require.NoError(t, err)
 
-	snaps.MatchJSON(t, cfg.Config)
+	g := goldie.New(
+		t,
+		goldie.WithFixtureDir("testdata"),
+		goldie.WithNameSuffix(".json"),
+		goldie.WithDiffEngine(goldie.ClassicDiff),
+	)
 
+	g.AssertJson(t, "config_defaults", cfg.Config)
 }

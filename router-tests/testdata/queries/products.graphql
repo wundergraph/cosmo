@@ -52,7 +52,9 @@ fragment EmployeeFragment on Employee {
   id
   details {
     forename
-    location
+    location {
+      language
+    }
     maritalStatus
   }
   role {
