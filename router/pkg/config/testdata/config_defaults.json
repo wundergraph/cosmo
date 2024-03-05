@@ -70,9 +70,8 @@
       "CertFile": "",
       "KeyFile": "",
       "ClientAuth": {
-        "Enabled": false,
         "CertFile": "",
-        "Verify": true
+        "Verify": false
       }
     }
   },

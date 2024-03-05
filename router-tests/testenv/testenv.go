@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-cleanhttp"
 	"io"
 	"log"
 	"math/rand"
@@ -300,14 +301,15 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 				t.Fatalf("could not append ca cert to pool")
 			}
 
-			client.HTTPClient = &http.Client{
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						RootCAs:      caCertPool,
-						Certificates: []tls.Certificate{cert},
-					},
-				},
+			// Retain the default transport settings, but disable HTTP/2 because it slows down the tests
+			httpClient := cleanhttp.DefaultPooledClient()
+			httpClient.Transport.(*http.Transport).ForceAttemptHTTP2 = false
+			httpClient.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
+				RootCAs:      caCertPool,
+				Certificates: []tls.Certificate{cert},
 			}
+
+			client.HTTPClient = httpClient
 
 			if err := svr.HttpServer().ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				t.Errorf("could not start tls router: %s", err)

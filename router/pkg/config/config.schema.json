@@ -45,10 +45,11 @@
     "tls": {
       "type": "object",
       "additionalProperties": false,
+      "description": "The configuration for the TLS. The TLS is used to enable the TLS for the router.",
       "properties": {
         "server": {
           "type": "object",
-          "description": "The configuration for the server TLS. The server TLS is used to enable the TLS for the server. Useful e.g. if you want to establish a secure connection from the Load-Balancer to the router.",
+          "description": "The configuration for the server TLS. Useful e.g. if you want to establish a secure connection from the Load-Balancer to the router.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -67,17 +68,13 @@
             },
             "client_auth": {
               "type": "object",
-              "description": "The configuration for the client authentication (mTLS). The client authentication is used to authenticate the clients using the TLS.",
+              "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the provided certificate.",
               "additionalProperties": false,
               "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Enable the client authentication. The default value is false."
-                },
                 "verify": {
                   "type": "boolean",
                   "default": true,
-                  "description": "Require clients to present a valid certificate that is verified. The default value is true."
+                  "description": "Require clients to present a valid certificate that is verified. The default value is false. It is recommended to enable the client authentication to enforce mutual TLS."
                 },
                 "cert_file": {
                   "type": "string",
@@ -87,7 +84,7 @@
               },
               "if": {
                 "properties": {
-                  "enabled": {
+                  "verify": {
                     "const": true
                   }
                 }

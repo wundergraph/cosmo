@@ -93,7 +93,6 @@ type (
 	}
 
 	TlsClientAuthConfig struct {
-		Enabled  bool
 		Verify   bool
 		CertFile string
 	}
@@ -347,7 +346,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		var caCertPool *x509.CertPool
 		clientAuthMode := tls.NoClientCert
 
-		if r.tlsConfig.ClientAuth != nil && r.tlsConfig.ClientAuth.Enabled && r.tlsConfig.ClientAuth.CertFile != "" {
+		if r.tlsConfig.ClientAuth != nil && r.tlsConfig.ClientAuth.Verify {
 			caCert, err := os.ReadFile(r.tlsConfig.ClientAuth.CertFile)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read cert file: %w", err)
@@ -363,6 +362,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 			if r.tlsConfig.ClientAuth.Verify {
 				clientAuthMode = tls.RequireAndVerifyClientCert
 			}
+
+			r.logger.Debug("Client auth enabled", zap.String("mode", clientAuthMode.String()))
 		}
 
 		// Load the server cert and private key
