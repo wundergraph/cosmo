@@ -141,6 +141,15 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			AllowHeaders:     cfg.CORS.AllowHeaders,
 			MaxAge:           cfg.CORS.MaxAge,
 		}),
+		core.WithTLSConfig(&core.TlsConfig{
+			Enabled:  cfg.TLS.Server.Enabled,
+			CertFile: cfg.TLS.Server.CertFile,
+			KeyFile:  cfg.TLS.Server.KeyFile,
+			ClientAuth: &core.TlsClientAuthConfig{
+				CertFile: cfg.TLS.Server.ClientAuth.CertFile,
+				Required: cfg.TLS.Server.ClientAuth.Required,
+			},
+		}),
 		core.WithDevelopmentMode(cfg.DevelopmentMode),
 		core.WithTracing(traceConfig(&cfg.Telemetry)),
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
