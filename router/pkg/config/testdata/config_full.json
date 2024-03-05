@@ -86,6 +86,18 @@
       "Method": "redact"
     }
   },
+  "TLS": {
+    "Server": {
+      "Enabled": false,
+      "CertFile": "",
+      "KeyFile": "",
+      "ClientAuth": {
+        "Enabled": false,
+        "CertFile": "",
+        "Verify": true
+      }
+    }
+  },
   "Modules": {
     "myModule": {
       "value": 1
