@@ -182,12 +182,6 @@ const SeverityDropdown = ({
 };
 
 const countLintConfigsByCategory = (lintConfigs: LintConfig[]) => {
-  const countByCategory = {
-    "Naming Convention": 0,
-    "Alphabetical Sort": 0,
-    Others: 0,
-  };
-
   let countNamingConventionRules = 0;
   let countAlphabeticalSortRules = 0;
   let countOtherRules = 0;
