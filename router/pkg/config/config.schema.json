@@ -84,7 +84,7 @@
               },
               "if": {
                 "properties": {
-                  "verify": {
+                  "required": {
                     "const": true
                   }
                 }
