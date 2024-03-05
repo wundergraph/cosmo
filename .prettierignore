@@ -25,3 +25,5 @@ CHANGELOG.md
 
 
 controlplane/migrations
+
+composition/tests/unstaged-tests
