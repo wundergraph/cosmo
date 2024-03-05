@@ -283,7 +283,7 @@ func TestMTLS(t *testing.T) {
 		})
 	})
 
-	t.Run("Can skip client authentication also when cert is specified", func(t *testing.T) {
+	t.Run("Can skip client auth verification also when cert is specified", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
