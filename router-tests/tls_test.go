@@ -45,6 +45,26 @@ func TestTLS(t *testing.T) {
 		})
 	})
 
+	t.Run("Should be able to establish a HTTP2 connection when TLS is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			TLSConfig: &core.TlsConfig{
+				Enabled:  true,
+				CertFile: "testdata/tls/cert.pem",
+				KeyFile:  "testdata/tls/key.pem",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodGet, "/", http.Header{
+				"Accept": []string{"text/html"},
+			}, nil)
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Contains(t, res.Proto, "HTTP/2")
+		})
+	})
+
 	t.Run("TestPlayground", func(t *testing.T) {
 		t.Parallel()
 

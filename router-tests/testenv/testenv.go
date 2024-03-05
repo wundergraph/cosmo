@@ -301,9 +301,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 				t.Fatalf("could not append ca cert to pool")
 			}
 
-			// Retain the default transport settings, but disable HTTP/2 because it slows down the tests
+			// Retain the default transport settings
 			httpClient := cleanhttp.DefaultPooledClient()
-			httpClient.Transport.(*http.Transport).ForceAttemptHTTP2 = false
 			httpClient.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
 				RootCAs:      caCertPool,
 				Certificates: []tls.Certificate{cert},
