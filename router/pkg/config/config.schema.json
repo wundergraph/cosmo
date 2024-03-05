@@ -42,6 +42,62 @@
       "default": false,
       "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs."
     },
+    "tls": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for the TLS. The TLS is used to enable the TLS for the router.",
+      "properties": {
+        "server": {
+          "type": "object",
+          "description": "The configuration for the server TLS. Useful e.g. if you want to establish a secure connection from the Load-Balancer to the router.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the TLS. The default value is false."
+            },
+            "cert_file": {
+              "type": "string",
+              "format": "file-path",
+              "description": "The path to the certificate file. The certificate file is used to enable the TLS."
+            },
+            "key_file": {
+              "type": "string",
+              "format": "file-path",
+              "description": "The path to the key file. The key file is used to enable the TLS."
+            },
+            "client_auth": {
+              "type": "object",
+              "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the provided certificate.",
+              "additionalProperties": false,
+              "required": ["cert_file"],
+              "properties": {
+                "required": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Require clients to present a valid certificate that is verified. The default value is false. It is recommended to enable the client authentication to enforce mutual TLS. If false and a cert is provided, the client authentication is optional but in case the client presents a certificate, it will be verified."
+                },
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the certificate file. The certificate file against which the client certificates are verified."
+                }
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": ["cert_file", "key_file"]
+          }
+        }
+      }
+    },
     "websocket": {
       "type": "object",
       "description": "The configuration for the WebSocket transport. The WebSocket transport is used to enable the WebSocket transport for the GraphQL subscriptions.",
