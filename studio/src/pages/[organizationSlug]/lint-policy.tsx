@@ -8,6 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader } from "@/components/ui/loader";
@@ -180,6 +181,38 @@ const SeverityDropdown = ({
   );
 };
 
+const countLintConfigsByCategory = (lintConfigs: LintConfig[]) => {
+  const countByCategory = {
+    "Naming Convention": 0,
+    "Alphabetical Sort": 0,
+    Others: 0,
+  };
+
+  let countNamingConventionRules = 0;
+  let countAlphabeticalSortRules = 0;
+  let countOtherRules = 0;
+
+  const namingConventionRules = lintCategories[0].rules.map((l) => l.name);
+  const alphabeticalSortRules = lintCategories[1].rules.map((l) => l.name);
+  const otherRules = lintCategories[2].rules.map((l) => l.name);
+
+  for (const l of lintConfigs) {
+    if (namingConventionRules.includes(l.ruleName)) {
+      countNamingConventionRules += 1;
+    } else if (alphabeticalSortRules.includes(l.ruleName)) {
+      countAlphabeticalSortRules += 1;
+    } else if (otherRules.includes(l.ruleName)) {
+      countOtherRules += 1;
+    }
+  }
+
+  return [
+    countNamingConventionRules,
+    countAlphabeticalSortRules,
+    countOtherRules,
+  ];
+};
+
 const LintPolicyPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
   const [namespace] = useLocalStorage("namespace", "default");
@@ -197,19 +230,19 @@ const LintPolicyPage: NextPageWithLayout = () => {
     configureNamespaceLintConfig.useMutation(),
   );
 
-  const { mutate } = useMutation(
-    enableLintingForTheNamespace.useMutation(),
-  );
+  const { mutate } = useMutation(enableLintingForTheNamespace.useMutation());
 
   const { toast } = useToast();
 
   const [linterEnabled, setLinterEnabled] = useState(false);
   const [selectedLintRules, setSelectedLintRules] = useState<LintConfig[]>([]);
+  const [countByCategory, setCountByCategory] = useState<number[]>();
 
   useEffect(() => {
     if (!data) return;
     setSelectedLintRules(data.configs);
     setLinterEnabled(data.linterEnabled);
+    setCountByCategory(countLintConfigsByCategory(data.configs));
   }, [data]);
 
   if (isLoading) return <Loader fullscreen />;
@@ -354,7 +387,20 @@ const LintPolicyPage: NextPageWithLayout = () => {
                     disabled={!data.linterEnabled}
                   >
                     <div className="flex w-full flex-col items-start gap-y-1">
-                      <span className="text-lg">{lintCategory.title}</span>
+                      <div className="flex items-center gap-x-2">
+                        <span className="text-lg">{lintCategory.title}</span>
+                        {data.linterEnabled &&
+                          countByCategory && (
+                            <Badge
+                              variant="muted"
+                              className="mt-[2px] h-[18px] px-2 text-xs"
+                            >
+                              {`${countByCategory[index]} of ${
+                                lintCategory.rules.length
+                              }`}
+                            </Badge>
+                          )}
+                      </div>
                       <span className="text-sm text-muted-foreground">
                         {lintCategory.description}
                       </span>
