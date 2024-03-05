@@ -55,13 +55,13 @@ func TestTLS(t *testing.T) {
 				KeyFile:  "testdata/tls/key.pem",
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res, err := xEnv.MakeRequest(http.MethodGet, "/", http.Header{
-				"Accept": []string{"text/html"},
-			}, nil)
-			require.NoError(t, err)
-			defer res.Body.Close()
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
 
 			require.Contains(t, res.Proto, "HTTP/2")
+			require.JSONEq(t, employeesIDData, res.Body)
 		})
 	})
 

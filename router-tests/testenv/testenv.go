@@ -582,6 +582,7 @@ type GraphQLRequest struct {
 type TestResponse struct {
 	Body     string
 	Response *http.Response
+	Proto    string
 }
 
 func (e *Environment) waitForRouterConnection(ctx context.Context) {
@@ -632,6 +633,7 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 	return &TestResponse{
 		Body:     strings.TrimSpace(body),
 		Response: resp,
+		Proto:    resp.Proto,
 	}, nil
 }
 
