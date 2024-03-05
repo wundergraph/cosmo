@@ -38,6 +38,7 @@ import {
   DeleteOIDCProviderResponse,
   DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
+  EnableLintingForTheNamespaceResponse,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GenerateRouterTokenResponse,
@@ -1236,18 +1237,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         }
 
-        const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
         let warningLintIssues: SchemaLintIssues = { warnings: [], errors: [] };
         let errorLintIssues: SchemaLintIssues = { warnings: [], errors: [] };
-        if (newSchemaSDL !== '' && lintConfigs.length > 0) {
-          warningLintIssues = await schemaLintCheck({
-            schema: newSchemaSDL,
-            rulesInput: lintConfigs.filter((l) => l.severity === 'warn'),
-          });
-          errorLintIssues = await schemaLintCheck({
-            schema: newSchemaSDL,
-            rulesInput: lintConfigs.filter((l) => l.severity === 'error'),
-          });
+        if (namespace.enableLinting && newSchemaSDL !== '') {
+          const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
+          if (lintConfigs.length > 0) {
+            warningLintIssues = await schemaLintCheck({
+              schema: newSchemaSDL,
+              rulesInput: lintConfigs.filter((l) => l.severity === 'warn'),
+            });
+            errorLintIssues = await schemaLintCheck({
+              schema: newSchemaSDL,
+              rulesInput: lintConfigs.filter((l) => l.severity === 'error'),
+            });
+          }
         }
 
         await schemaLintRepo.addSchemaCheckLintIssues({
@@ -5194,6 +5197,34 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    enableLintingForTheNamespace: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<EnableLintingForTheNamespaceResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+          };
+        }
+
+        await namespaceRepo.toggleEnableLinting({ name: req.namespace, enableLinting: req.enableLinting });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
     configureNamespaceLintConfig: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
@@ -8103,6 +8134,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Namespace '${req.namespace}' not found`,
             },
             configs: [],
+            linterEnabled: false,
           };
         }
 
@@ -8118,6 +8150,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               severityLevel: l.severity === 'error' ? LintSeverity.error : LintSeverity.warn,
             } as LintConfig;
           }),
+          linterEnabled: namespace.enableLinting,
         };
       });
     },

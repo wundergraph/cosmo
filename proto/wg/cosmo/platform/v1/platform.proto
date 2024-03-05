@@ -1797,7 +1797,17 @@ message GetNamespaceLintConfigRequest {
 
 message GetNamespaceLintConfigResponse {
   Response response = 1;
-  repeated LintConfig configs = 2;
+  bool linterEnabled = 2;
+  repeated LintConfig configs = 3;
+}
+
+message EnableLintingForTheNamespaceRequest {
+  string namespace = 1;
+  bool enableLinting = 2;
+}
+
+message EnableLintingForTheNamespaceResponse {
+  Response response = 1;
 }
 
 message LintConfig {
@@ -2044,6 +2054,8 @@ service PlatformService {
 
   rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
 
+  // EnableLintingForTheNamespace enables the lint check for the namespace passed.
+  rpc EnableLintingForTheNamespace(EnableLintingForTheNamespaceRequest) returns (EnableLintingForTheNamespaceResponse) {}
   // ConfigureNamespaceLintConfig configures the lint config of the organization.
   rpc ConfigureNamespaceLintConfig(ConfigureNamespaceLintConfigRequest) returns (ConfigureNamespaceLintConfigResponse) {}
   // GetNamespaceLintConfig returns the lint config of the organization.

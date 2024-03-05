@@ -241,6 +241,7 @@ export const namespaces = pgTable(
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    enableLinting: boolean('enable_linting').default(false).notNull(),
   },
   (t) => {
     return {

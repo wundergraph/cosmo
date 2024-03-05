@@ -14247,7 +14247,12 @@ export class GetNamespaceLintConfigResponse extends Message<GetNamespaceLintConf
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.LintConfig configs = 2;
+   * @generated from field: bool linterEnabled = 2;
+   */
+  linterEnabled = false;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.LintConfig configs = 3;
    */
   configs: LintConfig[] = [];
 
@@ -14260,7 +14265,8 @@ export class GetNamespaceLintConfigResponse extends Message<GetNamespaceLintConf
   static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceLintConfigResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "configs", kind: "message", T: LintConfig, repeated: true },
+    { no: 2, name: "linterEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "configs", kind: "message", T: LintConfig, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceLintConfigResponse {
@@ -14277,6 +14283,86 @@ export class GetNamespaceLintConfigResponse extends Message<GetNamespaceLintConf
 
   static equals(a: GetNamespaceLintConfigResponse | PlainMessage<GetNamespaceLintConfigResponse> | undefined, b: GetNamespaceLintConfigResponse | PlainMessage<GetNamespaceLintConfigResponse> | undefined): boolean {
     return proto3.util.equals(GetNamespaceLintConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.EnableLintingForTheNamespaceRequest
+ */
+export class EnableLintingForTheNamespaceRequest extends Message<EnableLintingForTheNamespaceRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: bool enableLinting = 2;
+   */
+  enableLinting = false;
+
+  constructor(data?: PartialMessage<EnableLintingForTheNamespaceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.EnableLintingForTheNamespaceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "enableLinting", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableLintingForTheNamespaceRequest {
+    return new EnableLintingForTheNamespaceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnableLintingForTheNamespaceRequest {
+    return new EnableLintingForTheNamespaceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnableLintingForTheNamespaceRequest {
+    return new EnableLintingForTheNamespaceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EnableLintingForTheNamespaceRequest | PlainMessage<EnableLintingForTheNamespaceRequest> | undefined, b: EnableLintingForTheNamespaceRequest | PlainMessage<EnableLintingForTheNamespaceRequest> | undefined): boolean {
+    return proto3.util.equals(EnableLintingForTheNamespaceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.EnableLintingForTheNamespaceResponse
+ */
+export class EnableLintingForTheNamespaceResponse extends Message<EnableLintingForTheNamespaceResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<EnableLintingForTheNamespaceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.EnableLintingForTheNamespaceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableLintingForTheNamespaceResponse {
+    return new EnableLintingForTheNamespaceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnableLintingForTheNamespaceResponse {
+    return new EnableLintingForTheNamespaceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnableLintingForTheNamespaceResponse {
+    return new EnableLintingForTheNamespaceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EnableLintingForTheNamespaceResponse | PlainMessage<EnableLintingForTheNamespaceResponse> | undefined, b: EnableLintingForTheNamespaceResponse | PlainMessage<EnableLintingForTheNamespaceResponse> | undefined): boolean {
+    return proto3.util.equals(EnableLintingForTheNamespaceResponse, a, b);
   }
 }
 

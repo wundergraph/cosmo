@@ -575,6 +575,13 @@
       "when": 1709413707743,
       "tag": "0081_chubby_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "5",
+      "when": 1709648749498,
+      "tag": "0082_clumsy_mastermind",
+      "breakpoints": true
     }
   ]
 }

@@ -7,7 +7,9 @@ import {
 import { ChangesTable } from "@/components/checks/changes-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
-import { CodeViewerActions, CodeViewerWithVirtualizer } from "@/components/code-viewer";
+import {
+  CodeViewerActions
+} from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -15,6 +17,10 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import {
+  DecorationCollection,
+  SDLViewerMonaco,
+} from "@/components/schema/sdl-viewer-monaco";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -57,7 +63,10 @@ import {
   getCheckSummary,
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetCheckSummaryResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  GetCheckSummaryResponse,
+  LintIssue,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import React, { useContext, useMemo } from "react";
@@ -174,6 +183,32 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   );
 };
 
+const getDecorationCollection = (
+  lintIssues: LintIssue[],
+): DecorationCollection[] => {
+  const decorationCollection: DecorationCollection[] = [];
+
+  for (const l of lintIssues) {
+    if (!l.issueLocation) continue;
+    decorationCollection.push({
+      range: {
+        startLineNumber: l.issueLocation.line,
+        endLineNumber: l.issueLocation.endLine || l.issueLocation.line,
+        startColumn: l.issueLocation.column,
+        endColumn: l.issueLocation.endColumn || l.issueLocation.column,
+      },
+      options: {
+        hoverMessage: { value: l.message },
+        inlineClassName:
+          "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
+        isWholeLine: l.issueLocation.endLine === undefined,
+      },
+    });
+  }
+
+  return decorationCollection;
+};
+
 const CheckDetails = ({
   data,
   refetch,
@@ -190,6 +225,7 @@ const CheckDetails = ({
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;
+  const hash = router.asPath.split("#")?.[1];
 
   const { data: allGraphsData } = useQuery(getFederatedGraphs.useQuery());
 
@@ -693,7 +729,14 @@ const CheckDetails = ({
                   />
                 </div>
                 <div className="scrollbar-custom h-full w-full overflow-auto">
-                  <CodeViewerWithVirtualizer code={sdl} disablePrettier />
+                  <SDLViewerMonaco
+                    schema={sdl}
+                    disablePrettier
+                    decorationCollections={getDecorationCollection(
+                      data.lintIssues,
+                    )}
+                    line={hash ? Number(hash.slice(1)) : undefined}
+                  />
                 </div>
               </TabsContent>
             </div>
