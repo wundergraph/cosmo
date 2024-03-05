@@ -71,10 +71,10 @@
               "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the provided certificate.",
               "additionalProperties": false,
               "properties": {
-                "verify": {
+                "required": {
                   "type": "boolean",
-                  "default": true,
-                  "description": "Require clients to present a valid certificate that is verified. The default value is false. It is recommended to enable the client authentication to enforce mutual TLS."
+                  "default": false,
+                  "description": "Require clients to present a valid certificate that is verified. The default value is false. It is recommended to enable the client authentication to enforce mutual TLS. If false and a cert is provided, the client authentication is optional but in case the client presents a certificate, it will be verified."
                 },
                 "cert_file": {
                   "type": "string",

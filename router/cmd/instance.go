@@ -147,7 +147,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			KeyFile:  cfg.TLS.Server.KeyFile,
 			ClientAuth: &core.TlsClientAuthConfig{
 				CertFile: cfg.TLS.Server.ClientAuth.CertFile,
-				Verify:   cfg.TLS.Server.ClientAuth.Verify,
+				Required: cfg.TLS.Server.ClientAuth.Required,
 			},
 		}),
 		core.WithDevelopmentMode(cfg.DevelopmentMode),

@@ -71,7 +71,7 @@
       "KeyFile": "",
       "ClientAuth": {
         "CertFile": "",
-        "Verify": false
+        "Required": false
       }
     }
   },

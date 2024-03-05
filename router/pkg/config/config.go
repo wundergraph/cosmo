@@ -287,7 +287,7 @@ type AnonymizeIpConfiguration struct {
 
 type TLSClientAuthConfiguration struct {
 	CertFile string `yaml:"cert_file,omitempty" envconfig:"TLS_CLIENT_AUTH_CERT_FILE"`
-	Verify   bool   `yaml:"verify" default:"false" envconfig:"TLS_CLIENT_AUTH_VERIFY"`
+	Required bool   `yaml:"required" default:"false" envconfig:"TLS_CLIENT_AUTH_REQUIRED"`
 }
 
 type TLSServerConfiguration struct {

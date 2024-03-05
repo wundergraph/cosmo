@@ -207,7 +207,7 @@ func TestMTLS(t *testing.T) {
 				CertFile: "testdata/tls/cert.pem",
 				KeyFile:  "testdata/tls/key.pem",
 				ClientAuth: &core.TlsClientAuthConfig{
-					Verify:   true,
+					Required: true,
 					CertFile: "testdata/tls/cert.pem",
 				},
 			},
@@ -235,7 +235,7 @@ func TestMTLS(t *testing.T) {
 				CertFile: "testdata/tls/cert.pem",
 				KeyFile:  "testdata/tls/key.pem",
 				ClientAuth: &core.TlsClientAuthConfig{
-					Verify:   true,
+					Required: true,
 					CertFile: "testdata/tls/cert.pem",
 				},
 			},
@@ -256,7 +256,7 @@ func TestMTLS(t *testing.T) {
 				CertFile: "testdata/tls/cert.pem",
 				KeyFile:  "testdata/tls/key.pem",
 				ClientAuth: &core.TlsClientAuthConfig{
-					Verify: false, // Default
+					Required: false, // Default
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -264,6 +264,71 @@ func TestMTLS(t *testing.T) {
 				Query: `query { employees { id } }`,
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
+		})
+	})
+
+	t.Run("Client verification can be optional when client does not send a certificate. If it does it must be valid.", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			TLSConfig: &core.TlsConfig{
+				Enabled:  true,
+				CertFile: "testdata/tls/cert.pem",
+				KeyFile:  "testdata/tls/key.pem",
+				ClientAuth: &core.TlsClientAuthConfig{
+					Required: false,
+					CertFile: "testdata/tls/cert.pem",
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			// Valid client certificate
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			// No client certificate
+			client := &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						InsecureSkipVerify: true,
+					},
+				},
+			}
+
+			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
+			require.NoError(t, err)
+
+			_, err = client.Do(req)
+			require.NoError(t, err)
+
+			// Invalid client certificate
+			cert, err := tls.LoadX509KeyPair("testdata/tls/cert-2.pem", "testdata/tls/key-2.pem")
+			require.NoError(t, err)
+
+			caCert, err := os.ReadFile("testdata/tls/cert-2.pem")
+			require.NoError(t, err)
+
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+				t.Fatalf("could not append ca cert to pool")
+			}
+
+			client = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						RootCAs:      caCertPool,
+						Certificates: []tls.Certificate{cert},
+					},
+				},
+			}
+			_, err = client.Do(req)
+
+			var urlErr *url.Error
+			require.ErrorAs(t, err, &urlErr)
+
+			require.ErrorContains(t, urlErr, "tls: failed to verify certificate: x509: certificate signed by unknown authority")
 		})
 	})
 
@@ -276,7 +341,7 @@ func TestMTLS(t *testing.T) {
 				CertFile: "testdata/tls/cert.pem",
 				KeyFile:  "testdata/tls/key.pem",
 				ClientAuth: &core.TlsClientAuthConfig{
-					Verify:   true,
+					Required: true,
 					CertFile: "testdata/tls/cert.pem",
 				},
 			},
@@ -312,7 +377,7 @@ func TestMTLS(t *testing.T) {
 				CertFile: "testdata/tls/cert.pem",
 				KeyFile:  "testdata/tls/key.pem",
 				ClientAuth: &core.TlsClientAuthConfig{
-					Verify:   false,
+					Required: false,
 					CertFile: "testdata/tls/cert.pem",
 				},
 			},
