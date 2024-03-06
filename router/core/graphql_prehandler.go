@@ -353,7 +353,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
 				finalErr = err
-				requestLogger.Error(err.Error())
+				requestLogger.Error("failed to authenticate request", zap.Error(err))
 
 				rtrace.AttachErrToSpan(authenticateSpan, err)
 				authenticateSpan.End()
@@ -458,7 +458,7 @@ func (h *PreHandler) writeOperationError(ctx context.Context, w http.ResponseWri
 			writeInternalError(ctx, w, requestLogger)
 		}
 	default: // If we have an unknown error, we log it and return an internal server error
-		requestLogger.Error(err.Error())
+		requestLogger.Error("unknown operation error", zap.Error(err))
 		writeInternalError(ctx, w, requestLogger)
 	}
 }
