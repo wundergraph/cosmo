@@ -10,8 +10,12 @@ import { describe, expect, test } from 'vitest';
 import {
   documentNodeToNormalizedString,
   normalizeString,
+  schemaQueryDefinition,
+  schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
   versionTwoPersistedBaseSchema,
+  versionTwoPersistedDirectiveDefinitions,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -64,343 +68,352 @@ describe('FederationFactory tests', () => {
     const { errors, federationResult } = federateSubgraphs([demoEmployees, demoFamily, demoHobbies, demoProducts]);
     expect(errors).toBeUndefined();
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        `
+      schema {
+        query: Query
+        mutation: Mutation
+        subscription: Subscription
+      }
+      ` +
+          versionTwoPersistedDirectiveDefinitions +
           `
-        interface RoleType {
-          departments: [Department!]!
-          title: [String!]!
-        }
-        
-        interface Identifiable {
-          id: Int!
-        }
-        
-        union Products = Consultancy | Cosmo | SDK | Documentation
-        
-        interface IProduct {
-          upc: ID!
-          engineers: [Employee!]!
-        }
-        
-        interface Animal {
-          class: Class!
-          gender: Gender!
-        }
-        
-        interface Experience {
-          yearsOfExperience: Float!
-        }
-        
-        union Hobby = Exercise | Flying | Gaming | Programming | Travelling | Other
-        
-        interface TopSecretFact {
-          description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
-          factType: TopSecretFactType @authenticated
-        }
-        
-        type Query {
-          employee(id: Int!): Employee
-          employees: [Employee!]!
-          products: [Products!]!
-          teammates(team: Department!): [Employee!]!
-          findEmployees(criteria: SearchInput): [Employee!]!
-          productTypes: [Products!]!
-          topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
-          factTypes: [TopSecretFactType!] @authenticated
-        }
-        
-        type Mutation {
-          updateEmployeeTag(id: Int!, tag: String!): Employee
-        }
-        
-        type Subscription {
-          """\`currentTime\` will return a stream of \`Time\` objects."""
-          currentTime: Time!
-        }
-        
-        enum Department {
-          ENGINEERING
-          MARKETING
-          OPERATIONS
-        }
-        
-        enum EngineerType {
-          BACKEND
-          FRONTEND
-          FULLSTACK
-        }
-        
-        enum OperationType {
-          FINANCE
-          HUMAN_RESOURCES
-        }
-        
-        enum Country {
-          AMERICA
-          ENGLAND
-          GERMANY
-          INDIA
-          NETHERLANDS
-          PORTUGAL
-          SPAIN
-          UKRAINE
-          INDONESIA
-          KOREA
-          SERBIA
-          TAIWAN
-          THAILAND
-        }
-        
-        type Details {
-          forename: String!
-          location: Country!
-          surname: String!
-          middlename: String @deprecated
-          hasChildren: Boolean!
-          maritalStatus: MaritalStatus
-          nationality: Nationality!
-          pets: [Pet]
-        }
-        
-        type Time {
-          unixTime: Int!
-          timeStamp: String!
-        }
-        
-        type Consultancy {
-          upc: ID!
-          lead: Employee!
-          name: ProductName!
-        }
-        
-        enum Class {
-          FISH
-          MAMMAL
-          REPTILE
-        }
-        
-        enum Gender {
-          FEMALE
-          MALE
-          UNKNOWN
-        }
-        
-        enum CatType {
-          HOME
-          STREET
-        }
-        
-        enum DogBreed {
-          GOLDEN_RETRIEVER
-          POODLE
-          ROTTWEILER
-          YORKSHIRE_TERRIER
-        }
-        
-        enum MaritalStatus {
-          ENGAGED
-          MARRIED
-        }
-        
-        enum Nationality {
-          AMERICAN
-          DUTCH
-          ENGLISH
-          GERMAN
-          INDIAN
-          SPANISH
-          UKRAINIAN
-        }
-        
-        input SearchInput {
-          hasPets: Boolean
-          nationality: Nationality
-          nested: NestedSearchInput
-        }
-        
-        input NestedSearchInput {
-          maritalStatus: MaritalStatus
-          hasChildren: Boolean
-        }
-        
-        enum ExerciseType {
-          CALISTHENICS
-          HIKING
-          SPORT
-          STRENGTH_TRAINING
-        }
-        
-        type Exercise {
-          category: ExerciseType!
-        }
-        
-        enum GameGenre {
-          ADVENTURE
-          BOARD
-          FPS
-          CARD
-          RPG
-          ROGUELITE
-          SIMULATION
-          STRATEGY
-        }
-        
-        type Other {
-          name: String!
-        }
-        
-        enum ProgrammingLanguage {
-          CSHARP
-          GO
-          RUST
-          TYPESCRIPT
-        }
-        
-        type Programming {
-          languages: [ProgrammingLanguage!]!
-        }
-        
-        type Travelling {
-          countriesLived: [Country!]!
-        }
-        
-        enum TopSecretFactType {
-          DIRECTIVE
-          ENTITY
-          MISCELLANEOUS
-        }
-        
-        scalar FactContent
-        
-        enum ProductName {
-          CONSULTANCY
-          COSMO
-          ENGINE
-          FINANCE
-          HUMAN_RESOURCES
-          MARKETING
-          SDK
-        }
-        
-        type Documentation {
-          url(product: ProductName!): String!
-          urls(products: [ProductName!]!): [String!]!
-        }
-        
-        interface Pet implements Animal {
-          class: Class!
-          gender: Gender!
-          name: String!
-        }
-        
-        type Engineer implements RoleType {
-          departments: [Department!]!
-          engineerType: EngineerType!
-          title: [String!]!
-        }
-        
-        type Marketer implements RoleType {
-          departments: [Department!]!
-          title: [String!]!
-        }
-        
-        type Operator implements RoleType {
-          departments: [Department!]!
-          operatorType: [OperationType!]!
-          title: [String!]!
-        }
+      type Alligator implements Animal & Pet {
+        class: Class!
+        dangerous: String!
+        gender: Gender!
+        name: String!
+      }
+      
+      interface Animal {
+        class: Class!
+        gender: Gender!
+      }
+      
+      type Cat implements Animal & Pet {
+        class: Class!
+        gender: Gender!
+        name: String!
+        type: CatType!
+      }
+      
+      enum CatType {
+        HOME
+        STREET
+      }
+      
+      enum Class {
+        FISH
+        MAMMAL
+        REPTILE
+      }
+      
+      type Consultancy {
+        lead: Employee!
+        name: ProductName!
+        upc: ID!
+      }
+      
+      type Cosmo implements IProduct {
+        engineers: [Employee!]!
+        lead: Employee!
+        name: ProductName!
+        repositoryURL: String!
+        upc: ID!
+      }
+      
+      enum Country {
+        AMERICA
+        ENGLAND
+        GERMANY
+        INDIA
+        INDONESIA
+        KOREA
+        NETHERLANDS
+        PORTUGAL
+        SERBIA
+        SPAIN
+        TAIWAN
+        THAILAND
+        UKRAINE
+      }
+      
+      enum Department {
+        ENGINEERING
+        MARKETING
+        OPERATIONS
+      }
+      
+      type Details {
+        forename: String!
+        hasChildren: Boolean!
+        location: Country!
+        maritalStatus: MaritalStatus
+        middlename: String @deprecated(reason: "No longer supported")
+        nationality: Nationality!
+        pets: [Pet]
+        surname: String!
+      }
+      
+      type DirectiveFact implements TopSecretFact {
+        description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+        factType: TopSecretFactType @authenticated
+        title: String! @authenticated
+      }
+      
+      type Documentation {
+        url(product: ProductName!): String!
+        urls(products: [ProductName!]!): [String!]!
+      }
+      
+      type Dog implements Animal & Pet {
+        breed: DogBreed!
+        class: Class!
+        gender: Gender!
+        name: String!
+      }
+      
+      enum DogBreed {
+        GOLDEN_RETRIEVER
+        POODLE
+        ROTTWEILER
+        YORKSHIRE_TERRIER
+      }
+      
+      type Employee implements Identifiable {
+        details: Details
+        hobbies: [Hobby!]!
+        id: Int!
+        notes: String
+        products: [ProductName!]!
+        role: RoleType!
+        startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+        tag: String!
+        updatedAt: String!
+      }
+      
+      type Engineer implements RoleType {
+        departments: [Department!]!
+        engineerType: EngineerType!
+        title: [String!]!
+      }
+      
+      enum EngineerType {
+        BACKEND
+        FRONTEND
+        FULLSTACK
+      }
+      
+      type EntityFact implements TopSecretFact {
+        description: FactContent! @authenticated @requiresScopes(scopes: [["read:entity", "read:scalar"], ["read:entity", "read:all"]])
+        factType: TopSecretFactType @authenticated @requiresScopes(scopes: [["read:entity"]])
+        title: String! @requiresScopes(scopes: [["read:entity"]])
+      }
+      
+      type Exercise {
+        category: ExerciseType!
+      }
+      
+      enum ExerciseType {
+        CALISTHENICS
+        HIKING
+        SPORT
+        STRENGTH_TRAINING
+      }
+      
+      interface Experience {
+        yearsOfExperience: Float!
+      }
+      
+      scalar FactContent
 
-        type Employee implements Identifiable {
-          details: Details
-          id: Int!
-          tag: String!
-          role: RoleType!
-          updatedAt: String!
-          startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
-          hobbies: [Hobby!]!
-          products: [ProductName!]!
-          notes: String
-        }
-        
-        type Cosmo implements IProduct {
-          upc: ID!
-          engineers: [Employee!]!
-          lead: Employee!
-          name: ProductName!
-          repositoryURL: String!
-        }
-        
-        type SDK implements IProduct {
-          upc: ID!
-          engineers: [Employee!]!
-          owner: Employee!
-          clientLanguages: [ProgrammingLanguage!]!
-        }
-        
-        type Alligator implements Pet & Animal {
-          class: Class!
-          dangerous: String!
-          gender: Gender!
-          name: String!
-        }
-        
-        type Cat implements Pet & Animal {
-          class: Class!
-          gender: Gender!
-          name: String!
-          type: CatType!
-        }
-        
-        type Dog implements Pet & Animal {
-          breed: DogBreed!
-          class: Class!
-          gender: Gender!
-          name: String!
-        }
-        
-        type Mouse implements Pet & Animal {
-          class: Class!
-          gender: Gender!
-          name: String!
-        }
-        
-        type Pony implements Pet & Animal {
-          class: Class!
-          gender: Gender!
-          name: String!
-        }
-        
-        type Flying implements Experience {
-          planeModels: [String!]!
-          yearsOfExperience: Float!
-        }
-        
-        type Gaming implements Experience {
-          genres: [GameGenre!]!
-          name: String!
-          yearsOfExperience: Float!
-        }
-        
-        type DirectiveFact implements TopSecretFact {
-          title: String! @authenticated
-          description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
-          factType: TopSecretFactType @authenticated
-        }
-        
-        type EntityFact implements TopSecretFact {
-          title: String! @requiresScopes(scopes: [["read:entity"]])
-          description: FactContent! @authenticated @requiresScopes(scopes: [["read:entity", "read:scalar"], ["read:entity", "read:all"]])
-          factType: TopSecretFactType @authenticated @requiresScopes(scopes: [["read:entity"]])
-        }
-        
-        type MiscellaneousFact implements TopSecretFact {
-          title: String!
-          description: FactContent! @authenticated @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]])
-          factType: TopSecretFactType @authenticated
-        }
-      `,
+      type Flying implements Experience {
+        planeModels: [String!]!
+        yearsOfExperience: Float!
+      }
+      
+      enum GameGenre {
+        ADVENTURE
+        BOARD
+        CARD
+        FPS
+        ROGUELITE
+        RPG
+        SIMULATION
+        STRATEGY
+      }
+      
+      type Gaming implements Experience {
+        genres: [GameGenre!]!
+        name: String!
+        yearsOfExperience: Float!
+      }
+      
+      enum Gender {
+        FEMALE
+        MALE
+        UNKNOWN
+      }
+      
+      union Hobby = Exercise | Flying | Gaming | Other | Programming | Travelling
+      
+      interface IProduct {
+        engineers: [Employee!]!
+        upc: ID!
+      }
+      
+      interface Identifiable {
+        id: Int!
+      }
+      
+      enum MaritalStatus {
+        ENGAGED
+        MARRIED
+      }
+      
+      type Marketer implements RoleType {
+        departments: [Department!]!
+        title: [String!]!
+      }
+
+      type MiscellaneousFact implements TopSecretFact {
+        description: FactContent! @authenticated @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]])
+        factType: TopSecretFactType @authenticated
+        title: String!
+      }
+      
+      type Mouse implements Animal & Pet {
+        class: Class!
+        gender: Gender!
+        name: String!
+      }
+
+      type Mutation {
+        updateEmployeeTag(id: Int!, tag: String!): Employee
+      }
+      
+      enum Nationality {
+        AMERICAN
+        DUTCH
+        ENGLISH
+        GERMAN
+        INDIAN
+        SPANISH
+        UKRAINIAN
+      }
+      
+      input NestedSearchInput {
+        hasChildren: Boolean
+        maritalStatus: MaritalStatus
+      }
+      
+      enum OperationType {
+        FINANCE
+        HUMAN_RESOURCES
+      }
+      
+      type Operator implements RoleType {
+        departments: [Department!]!
+        operatorType: [OperationType!]!
+        title: [String!]!
+      }
+      
+      type Other {
+        name: String!
+      }
+      
+      interface Pet implements Animal {
+        class: Class!
+        gender: Gender!
+        name: String!
+      }
+      
+      type Pony implements Animal & Pet {
+        class: Class!
+        gender: Gender!
+        name: String!
+      }
+
+      enum ProductName {
+        CONSULTANCY
+        COSMO
+        ENGINE
+        FINANCE
+        HUMAN_RESOURCES
+        MARKETING
+        SDK
+      }
+      
+      union Products = Consultancy | Cosmo | Documentation | SDK
+
+      type Programming {
+        languages: [ProgrammingLanguage!]!
+      }
+      
+      enum ProgrammingLanguage {
+        CSHARP
+        GO
+        RUST
+        TYPESCRIPT
+      }
+      
+      type Query {
+        employee(id: Int!): Employee
+        employees: [Employee!]!
+        factTypes: [TopSecretFactType!] @authenticated
+        findEmployees(criteria: SearchInput): [Employee!]!
+        productTypes: [Products!]!
+        products: [Products!]!
+        teammates(team: Department!): [Employee!]!
+        topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
+      }
+
+      interface RoleType {
+        departments: [Department!]!
+        title: [String!]!
+      }
+
+      type SDK implements IProduct {
+        clientLanguages: [ProgrammingLanguage!]!
+        engineers: [Employee!]!
+        owner: Employee!
+        upc: ID!
+      }
+      
+      input SearchInput {
+        hasPets: Boolean
+        nationality: Nationality
+        nested: NestedSearchInput
+      }
+
+      type Subscription {
+        """\`currentTime\` will return a stream of \`Time\` objects."""
+        currentTime: Time!
+      }
+      
+      type Time {
+        timeStamp: String!
+        unixTime: Int!
+      }
+      
+      interface TopSecretFact {
+        description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+        factType: TopSecretFactType @authenticated
+      }
+      
+      enum TopSecretFactType {
+        DIRECTIVE
+        ENTITY
+        MISCELLANEOUS
+      }
+
+      type Travelling {
+        countriesLived: [Country!]!
+      }
+      
+      scalar openfed__Scope
+    `,
       ),
     );
   });
@@ -408,81 +421,83 @@ describe('FederationFactory tests', () => {
   test('that subgraphs are federated #1', () => {
     const { errors, federationResult } = federateSubgraphs([pandas, products, reviews, users]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      interface SkuItf {
-        sku: String
+      type Panda {
+        favoriteFood: String @tag(name: "nom-nom-nom")
+        name: ID!
       }
       
-      type Query {
-        allPandas: [Panda]
-        panda(name: ID!): Panda
-        allProducts: [ProductItf]
-        product(id: ID!): ProductItf
-        review(id: Int!): Review
-      }
-
-      type Panda {
-        name: ID!
-        favoriteFood: String @tag(name: "nom-nom-nom")
-      }
-
-      enum ShippingClass {
-        STANDARD
-        EXPRESS
-      }
-
-      type ProductVariation {
-        id: ID!
+      type Product implements ProductItf & SkuItf {
+        createdBy: User
+        dimensions: ProductDimension
+        hidden: String
+        id: ID! @tag(name: "hi-from-products")
         name: String
+        oldField: String
+        package: String
+        reviews: [Review!]!
+        reviewsCount: Int!
+        reviewsScore: Float!
+        sku: String
+        variation: ProductVariation
       }
 
       type ProductDimension {
         size: String
         weight: Float
       }
-
-      type User {
-        email: ID! @tag(name: "test-from-users")
-        totalProductsCreated: Int
+      
+      interface ProductItf implements SkuItf {
+        createdBy: User
+        dimensions: ProductDimension
+        id: ID!
         name: String
+        oldField: String @deprecated(reason: "refactored out")
+        package: String
+        reviews: [Review!]!
+        reviewsCount: Int!
+        reviewsScore: Float!
+        sku: String
+        variation: ProductVariation
+      }
+
+      type ProductVariation {
+        id: ID!
+        name: String
+      }
+      
+      type Query {
+        allPandas: [Panda]
+        allProducts: [ProductItf]
+        panda(name: ID!): Panda
+        product(id: ID!): ProductItf
+        review(id: Int!): Review
       }
 
       type Review {
-        id: Int!
         body: String!
-      }
-
-      interface ProductItf implements SkuItf {
-        id: ID!
-        sku: String
-        name: String
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
-        createdBy: User
-        oldField: String @deprecated(reason: "refactored out")
-        reviewsCount: Int!
-        reviewsScore: Float!
-        reviews: [Review!]!
+        id: Int!
       }
       
-      type Product implements ProductItf & SkuItf {
-        id: ID! @tag(name: "hi-from-products")
-        sku: String
-        name: String
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
-        createdBy: User
-        hidden: String
-        oldField: String
-        reviewsCount: Int!
-        reviewsScore: Float!
-        reviews: [Review!]!
+      enum ShippingClass {
+        EXPRESS
+        STANDARD
       }
+      
+      interface SkuItf {
+        sku: String
+      }
+
+      type User {
+        email: ID! @tag(name: "test-from-users")
+        name: String
+        totalProductsCreated: Int
+      }
+      
+      scalar openfed__Scope
     `,
       ),
     );
@@ -491,10 +506,22 @@ describe('FederationFactory tests', () => {
   test('that subgraphs are federated #2', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
+      type Move {
+        hasEffect: Boolean!
+        name: String!
+        pp: Int!
+      }
+
+      type Pokemon {
+        level: Int!
+        moves: [Move!]!
+        name: String
+      }
+
       type Query {
         pokemon: [Pokemon]
         trainer: [Trainer!]!
@@ -505,18 +532,9 @@ describe('FederationFactory tests', () => {
         name: String
         pokemon: [Pokemon!]!
       }
-
-      type Pokemon {
-        name: String
-        level: Int!
-        moves: [Move!]!
-      }
-
-      type Move {
-        name: String!
-        pp: Int!
-        hasEffect: Boolean!
-      }`,
+      
+      scalar openfed__Scope
+      `,
       ),
     );
   });
@@ -614,15 +632,16 @@ describe('FederationFactory tests', () => {
   test('that valid executable directives are merged and persisted in the federated graph', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphK, subgraphL]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        schemaQueryDefinition +
           `
-        directive @executableDirective(requiredArgInAll: String!, requiredArgInSome: Int!, optionalArgInAll: Float) on FIELD
+        directive @executableDirective(optionalArgInAll: Float, requiredArgInAll: String!, requiredArgInSome: Int!) on FIELD
+        directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION  
         
         type Query {
           dummy: String
-        }  
+        }
       `,
       ),
     );
@@ -631,21 +650,15 @@ describe('FederationFactory tests', () => {
   test('that all nested entity keys are considered to be shareable', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphM, subgraphN]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-    type Query {
-      user: User!
+    type InnerNestedObject {
+      fieldOne: String!
+      fieldTwo: Int!
     }
-    
-    type User {
-      name: String!
-      nestedObjectOne: NestedObjectOne!
-      nestedObjectTwo: NestedObjectTwo!
-      age: Int!
-    }
-    
+
     type NestedObjectOne {
       name: String!
     }
@@ -653,11 +666,19 @@ describe('FederationFactory tests', () => {
     type NestedObjectTwo {
       innerNestedObject: InnerNestedObject!
     }
-    
-    type InnerNestedObject {
-      fieldOne: String!
-      fieldTwo: Int!
+
+    type Query {
+      user: User!
     }
+    
+    type User {
+      age: Int!
+      name: String!
+      nestedObjectOne: NestedObjectOne!
+      nestedObjectTwo: NestedObjectTwo!
+    }
+    
+    scalar openfed__Scope
       `,
       ),
     );

@@ -1,29 +1,30 @@
 import {
   duplicateArgumentsError,
   federateSubgraphs,
-  incompatibleArgumentDefaultValueError,
-  incompatibleArgumentDefaultValueTypeError,
   incompatibleArgumentTypesError,
+  incompatibleInputValueDefaultValuesError,
+  incompatibleInputValueDefaultValueTypeError,
   invalidArgumentsError,
-  InvalidRequiredArgument,
-  invalidRequiredArgumentsError,
+  InvalidRequiredInputValueData,
+  invalidRequiredInputValueError,
   normalizeSubgraphFromString,
   Subgraph,
+  subgraphValidationError,
 } from '../src';
-import { Kind, parse } from 'graphql';
+import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
-  documentNodeToNormalizedString,
   normalizeString,
-  versionOnePersistedBaseSchema,
-  versionTwoPersistedBaseSchema,
+  schemaToSortedNormalizedString,
+  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 import { FIELD } from '../src/utils/string-constants';
 
 describe('Argument federation tests', () => {
-  const argName = 'input';
-  const parentName = 'Object';
-  const childName = 'field';
+  const argumentName = 'input';
+  const prefix = 'argument "input"';
+  const argumentPath = 'Object.field(input: ...)';
 
   test('that equal arguments merge', () => {
     const { errors, federationResult } = federateSubgraphs([
@@ -31,17 +32,18 @@ describe('Argument federation tests', () => {
       subgraphWithArgument('subgraph-b', 'String'),
     ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-            type Query {
-              dummy: String!
-            }
-
-            type Object {
-              field(input: String): String
-            }
+        type Object {
+          field(input: String): String
+        }
+        type Query {
+          dummy: String!
+        }
+        
+        scalar openfed__Scope
     `,
       ),
     );
@@ -53,17 +55,19 @@ describe('Argument federation tests', () => {
       subgraphWithArgument('subgraph-b', 'Float'),
     ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-        type Query {
-          dummy: String!
-        }
-    
-        type Object {
-          field(input: Float!): String
-        }
+      type Object {
+        field(input: Float!): String
+      }
+      
+      type Query {
+        dummy: String!
+      }
+  
+      scalar openfed__Scope
     `,
       ),
     );
@@ -75,17 +79,19 @@ describe('Argument federation tests', () => {
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Int', '1337'),
     ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-        type Query {
-          dummy: String!
-        }
+      type Object {
+        field(input: Int): String
+      }
+      
+      type Query {
+        dummy: String!
+      }
 
-        type Object {
-          field(input: Int): String
-        }
+      scalar openfed__Scope
     `,
       ),
     );
@@ -97,17 +103,19 @@ describe('Argument federation tests', () => {
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Boolean', 'false'),
     ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-        type Query {
-          dummy: String!
-        }
+      type Object {
+        field(input: Boolean = false): String
+      }
+      
+      type Query {
+        dummy: String!
+      }
 
-        type Object {
-          field(input: Boolean = false): String
-        }
+      scalar openfed__Scope
     `,
       ),
     );
@@ -119,7 +127,7 @@ describe('Argument federation tests', () => {
       subgraphWithArgument('subgraph-b', 'Float'),
     ]);
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(incompatibleArgumentTypesError(argName, parentName, childName, 'String', 'Float'));
+    expect(errors![0]).toStrictEqual(incompatibleArgumentTypesError(argumentName, argumentPath, 'String', 'Float'));
   });
 
   test('that if arguments have different string-converted default values, an error is returned`', () => {
@@ -131,7 +139,7 @@ describe('Argument federation tests', () => {
     ]);
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      incompatibleArgumentDefaultValueError(argName, parentName, childName, expectedType, actualType),
+      incompatibleInputValueDefaultValuesError(prefix, argumentPath, ['subgraph-b'], expectedType, actualType),
     );
   });
 
@@ -142,7 +150,7 @@ describe('Argument federation tests', () => {
     ]);
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      incompatibleArgumentDefaultValueError(argName, parentName, childName, true, false),
+      incompatibleInputValueDefaultValuesError(prefix, argumentPath, ['subgraph-b'], 'true', 'false'),
     );
   });
 
@@ -151,31 +159,35 @@ describe('Argument federation tests', () => {
       subgraphWithArgumentAndDefaultValue('subgraph-a', 'Boolean', '1'),
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Boolean', 'false'),
     ]);
-    expect(errors).toHaveLength(2);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      incompatibleArgumentDefaultValueTypeError(argName, parentName, childName, Kind.INT, Kind.BOOLEAN),
+      subgraphValidationError('subgraph-a', [
+        incompatibleInputValueDefaultValueTypeError(prefix, argumentPath, 'Boolean', '1'),
+      ]),
     );
-    expect(errors![1]).toStrictEqual(incompatibleArgumentDefaultValueError(argName, parentName, childName, '1', false));
   });
 
   test('that if an argument is optional but not included in all subgraphs, it is not present in the federated graph', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
       interface Interface {
-        field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean): String
+        field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
+      }
+    
+      type Object implements Interface {
+        field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
       }
       
       type Query {
         dummy: String!
       }
-    
-      type Object implements Interface {
-        field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean): String
-      }
+      
+      scalar openfed__Scope
     `,
       ),
     );
@@ -185,32 +197,32 @@ describe('Argument federation tests', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(2);
-    const errorArrayOne: InvalidRequiredArgument[] = [
+    const errorArrayOne: InvalidRequiredInputValueData[] = [
       {
-        argumentName: 'requiredInAll',
+        inputValueName: 'requiredInAll',
         missingSubgraphs: ['subgraph-c'],
         requiredSubgraphs: ['subgraph-a'],
       },
       {
-        argumentName: 'requiredOrOptionalInAll',
-        missingSubgraphs: ['subgraph-c'],
-        requiredSubgraphs: ['subgraph-a'],
-      },
-    ];
-    expect(errors![0]).toStrictEqual(invalidRequiredArgumentsError(FIELD, 'Interface.field', errorArrayOne));
-    const errorArrayTwo: InvalidRequiredArgument[] = [
-      {
-        argumentName: 'requiredInAll',
-        missingSubgraphs: ['subgraph-c'],
-        requiredSubgraphs: ['subgraph-a'],
-      },
-      {
-        argumentName: 'requiredOrOptionalInAll',
+        inputValueName: 'requiredOrOptionalInAll',
         missingSubgraphs: ['subgraph-c'],
         requiredSubgraphs: ['subgraph-a'],
       },
     ];
-    expect(errors![1]).toStrictEqual(invalidRequiredArgumentsError(FIELD, 'Object.field', errorArrayTwo));
+    expect(errors![0]).toStrictEqual(invalidRequiredInputValueError(FIELD, 'Interface.field', errorArrayOne));
+    const errorArrayTwo: InvalidRequiredInputValueData[] = [
+      {
+        inputValueName: 'requiredInAll',
+        missingSubgraphs: ['subgraph-c'],
+        requiredSubgraphs: ['subgraph-a'],
+      },
+      {
+        inputValueName: 'requiredOrOptionalInAll',
+        missingSubgraphs: ['subgraph-c'],
+        requiredSubgraphs: ['subgraph-a'],
+      },
+    ];
+    expect(errors![1]).toStrictEqual(invalidRequiredInputValueError(FIELD, 'Object.field', errorArrayTwo));
   });
 
   test('that if an argument is not a valid input type or defined more than once, an error is returned', () => {
@@ -255,37 +267,60 @@ describe('Argument federation tests', () => {
   test('that arguments are accounted for when merging extension and base definitions', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphD, subgraphE, subgraphF]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
           `
+      type Entity implements Interface @tag(name: "subgraph-f") {
+        field(
+          four: String = null @tag(name: "object"), 
+          one: Int = null @tag(name: "extension"), 
+          three: String = null @deprecated(reason: "just because"), 
+          two: Int = null @tag(name: "object") @tag(name: "extension")
+        ): String
+        id: ID!
+      }
+      
       interface Interface {
-        field(one: Int = null, two: Int = null, three: String = null, four: String = null): String
+        field(four: String = null, one: Int = null, three: String = null, two: Int = null): String
       }
       
       type Query {
         dummy: String!
       }
-      
-      type Entity implements Interface @tag(name: "subgraph-f") {
-        id: ID!
-        field(
-          one: Int = null @tag(name: "extension"), 
-          two: Int = null @tag(name: "object") @tag(name: "extension"), 
-          three: String = null @deprecated(reason: "just because"), 
-          four: String = null @tag(name: "object")
-        ): String
-      }
    `,
       ),
     );
   });
+
+  test('that an error is returned if a required argument uses a null default value', () => {
+    const { errors } = federateSubgraphs([subgraphWithArgument('subgraph', 'String! = null')]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      subgraphValidationError('subgraph', [
+        incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String!', 'null'),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a required argument defines an incompatible default value', () => {
+    const { errors } = federateSubgraphs([subgraphWithArgument('subgraph', 'String = 1')]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      subgraphValidationError('subgraph', [
+        incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String', '1'),
+      ]),
+    );
+  });
 });
 
-const subgraphWithArgument = (name: string, typeName: string): Subgraph => ({
-  name,
-  url: '',
-  definitions: parse(`
+function subgraphWithArgument(name: string, typeName: string): Subgraph {
+  return {
+    name,
+    url: '',
+    definitions: parse(`
     type Query {
       dummy: String! @shareable
     }
@@ -294,7 +329,8 @@ const subgraphWithArgument = (name: string, typeName: string): Subgraph => ({
       field(input: ${typeName}): String
     }
   `),
-});
+  };
+}
 
 const subgraphWithArgumentAndDefaultValue = (name: string, typeName: string, defaultValue: string): Subgraph => ({
   name,
@@ -390,7 +426,7 @@ const subgraphE = {
   `),
 };
 
-const subgraphF = {
+const subgraphF: Subgraph = {
   name: 'subgraph-f',
   url: '',
   definitions: parse(`

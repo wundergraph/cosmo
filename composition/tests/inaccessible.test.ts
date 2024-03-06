@@ -2,34 +2,40 @@ import { describe, expect, test } from 'vitest';
 import {
   allFieldDefinitionsAreInaccessibleError,
   federateSubgraphs,
-  FederationFieldData,
+  FieldData,
   ImplementationErrors,
   InvalidFieldImplementation,
+  invalidFieldShareabilityError,
   normalizeSubgraph,
-  ObjectContainer,
-  shareableFieldDefinitionsError,
+  ObjectDefinitionData,
   Subgraph,
   unimplementedInterfaceFieldsError,
 } from '../src';
 import { parse } from 'graphql';
-import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+} from './utils/utils';
 
 describe('@inaccessible tests', () => {
   test('that inaccessible fields are not included in the federated graph', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
+      type Entity {
+        age: Int!
+        id: ID!
+      }
+      
       type Query {
         entity: Entity!
       }
       
-      type Entity {
-        id: ID!
-        age: Int!
-      }
+      scalar openfed__Scope
     `,
       ),
     );
@@ -39,22 +45,21 @@ describe('@inaccessible tests', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      shareableFieldDefinitionsError(
+      invalidFieldShareabilityError(
         {
-          node: { name: { value: 'Entity' } },
-          fields: new Map<string, FederationFieldData>([
+          name: 'Entity',
+          fieldDataByFieldName: new Map<string, FieldData>([
             [
               'name',
               {
-                node: { name: { value: 'name' } },
-                subgraphsByShareable: new Map<string, boolean>([
+                isShareableBySubgraphName: new Map<string, boolean>([
                   ['subgraph-a', true],
                   ['subgraph-c', false],
                 ]),
-              } as FederationFieldData,
+              } as FieldData,
             ],
           ]),
-        } as ObjectContainer,
+        } as ObjectDefinitionData,
         new Set<string>(['name']),
       ),
     );
@@ -63,10 +68,14 @@ describe('@inaccessible tests', () => {
   test('that composition is successful if a field is declared @inaccessible in both the interface definition and its implementation,', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphD]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
+      type Entity implements Interface {
+        id: ID!
+      }
+      
       interface Interface {
         id: ID!
       }
@@ -75,9 +84,7 @@ describe('@inaccessible tests', () => {
         entity: Entity!
       }
       
-      type Entity implements Interface {
-        id: ID!
-      }
+      scalar openfed__Scope
     `,
       ),
     );
@@ -86,10 +93,16 @@ describe('@inaccessible tests', () => {
   test('that composition is successful if a field is declared @inaccessible in the interface but not in the implementation,', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphH]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
+      type Entity implements Interface {
+        age: Int!
+        id: ID!
+        name: String!
+      }
+      
       interface Interface {
         id: ID!
       }
@@ -98,11 +111,7 @@ describe('@inaccessible tests', () => {
         entity: Entity!
       }
       
-      type Entity implements Interface {
-        id: ID!
-        age: Int!
-        name: String!
-      }
+      scalar openfed__Scope
     `,
       ),
     );

@@ -11,15 +11,16 @@ import {
   EntityInterfaceFederationData,
   getEntriesNotInHashSet,
   getOrThrowError,
-  ImplementationErrorsMap,
+  ImplementationErrors,
   InvalidArgument,
   InvalidEntityInterface,
-  InvalidRequiredArgument,
+  InvalidRequiredInputValueData,
   kindToTypeString,
   numberToOrdinal,
 } from '../utils/utils';
-import { ObjectContainer, RootTypeFieldData } from '../federation/utils';
-import { QUOTATION_JOIN, UNION } from '../utils/string-constants';
+import { RootTypeFieldData } from '../federation/utils';
+import { ARGUMENT, INPUT_FIELD, QUOTATION_JOIN, UNION } from '../utils/string-constants';
+import { ObjectDefinitionData } from '../schema-building/type-definition-data';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -32,52 +33,50 @@ export function incompatibleExtensionError(typeName: string, baseKind: Kind, ext
 
 export function incompatibleArgumentTypesError(
   argName: string,
-  parentName: string,
-  childName: string,
+  hostPath: string,
   expectedType: string,
   actualType: string,
 ): Error {
   return new Error(
-    `Incompatible types when merging two instances of argument "${argName}" for "${parentName}.${childName}":\n` +
+    `Incompatible types when merging two instances of argument "${argName}" on path "${hostPath}":\n` +
       ` Expected type "${expectedType}" but received "${actualType}"`,
   );
 }
 
-export function incompatibleChildTypesError(
-  parentName: string,
-  childName: string,
-  expectedType: string,
-  actualType: string,
+export function incompatibleInputValueDefaultValueTypeError(
+  prefix: string,
+  path: string,
+  typeString: string,
+  defaultValue: string,
 ): Error {
   return new Error(
-    `Incompatible types when merging two instances of "${parentName}.${childName}":\n` +
+    `The ${prefix} of type "${typeString}" defined on path "${path}" is` +
+      ` incompatible with the default value of "${defaultValue}".`,
+  );
+}
+
+export function incompatibleChildTypesError(childPath: string, expectedType: string, actualType: string): Error {
+  return new Error(
+    `Incompatible types when merging two instances of "${childPath}":\n` +
       ` Expected type "${expectedType}" but received "${actualType}"`,
   );
 }
 
-export function incompatibleArgumentDefaultValueError(
-  argName: string,
-  parentName: string,
-  childName: string,
-  expectedValue: string | boolean,
-  actualValue: string | boolean,
-): Error {
+export function incompatibleInputValueDefaultValuesError(
+  prefix: string,
+  path: string,
+  subgraphNames: string[],
+  expectedDefaultValue: string,
+  actualDefaultValue: string,
+) {
   return new Error(
-    `Incompatible default values when merging two instances of argument "${argName} for "${parentName}.${childName}":\n` +
-      ` Expected value "${expectedValue}" but received "${actualValue}"`,
-  );
-}
-
-export function incompatibleArgumentDefaultValueTypeError(
-  argName: string,
-  parentName: string,
-  childName: string,
-  expectedType: Kind,
-  actualType: Kind,
-): Error {
-  return new Error(
-    `Incompatible default values when merging two instances of argument "${argName} for "${parentName}.${childName}":\n` +
-      ` Expected type "${expectedType}" but received "${actualType}"`,
+    `Expected the ${prefix} defined on path "${path}" to define the default value "${expectedDefaultValue}".\n"` +
+      `However, the default value "${actualDefaultValue}" is defined in the following subgraph` +
+      (subgraphNames.length > 1 ? 's' : '') +
+      `:\n "` +
+      subgraphNames.join(QUOTATION_JOIN) +
+      `"\n` +
+      'If an instance defines a default value, that default value must be consistently defined across all subgraphs.',
   );
 }
 
@@ -117,13 +116,6 @@ export function duplicateDirectiveDefinitionError(directiveName: string) {
 
 export function duplicateEnumValueDefinitionError(valueName: string, typeName: string): Error {
   return new Error(`Extension error:\n Value "${valueName}" already exists on enum "${typeName}".`);
-}
-
-export function duplicateFieldExtensionError(typeName: string, childName: string) {
-  return new Error(
-    `Extension error:\n` +
-      ` More than one extension attempts to extend type "${typeName}" with the field "${childName}".`,
-  );
 }
 
 export function duplicateInterfaceExtensionError(interfaceName: string, typeName: string): Error {
@@ -175,22 +167,21 @@ export function operationDefinitionError(typeName: string, operationType: Operat
   );
 }
 
-export function shareableFieldDefinitionsError(parent: ObjectContainer, children: Set<string>): Error {
-  const parentTypeName = parent.node.name.value;
+export function invalidFieldShareabilityError(objectData: ObjectDefinitionData, invalidFieldNames: Set<string>): Error {
+  const parentTypeName = objectData.name;
   const errorMessages: string[] = [];
-  for (const field of parent.fields.values()) {
-    const fieldName = field.node.name.value;
-    if (!children.has(fieldName)) {
+  for (const [fieldName, fieldData] of objectData.fieldDataByFieldName) {
+    if (!invalidFieldNames.has(fieldName)) {
       continue;
     }
     const shareableSubgraphs: string[] = [];
     const nonShareableSubgraphs: string[] = [];
-    for (const [subgraphName, isShareable] of field.subgraphsByShareable) {
+    for (const [subgraphName, isShareable] of fieldData.isShareableBySubgraphName) {
       isShareable ? shareableSubgraphs.push(subgraphName) : nonShareableSubgraphs.push(subgraphName);
     }
     if (shareableSubgraphs.length < 1) {
       errorMessages.push(
-        `\n The field "${fieldName}" is defined in the following subgraphs: "${[...field.subgraphNames].join(
+        `\n The field "${fieldName}" is defined in the following subgraphs: "${[...fieldData.subgraphNames].join(
           '", "',
         )}".` + `\n However, it is not declared "@shareable" in any of them.`,
       );
@@ -199,11 +190,11 @@ export function shareableFieldDefinitionsError(parent: ObjectContainer, children
         `\n The field "${fieldName}" is defined and declared "@shareable" in the following subgraph` +
           (shareableSubgraphs.length > 1 ? 's' : '') +
           `: "` +
-          shareableSubgraphs.join('", "') +
+          shareableSubgraphs.join(QUOTATION_JOIN) +
           `".` +
           `\n However, it is not declared "@shareable" in the following subgraph` +
           (nonShareableSubgraphs.length > 1 ? 's' : '') +
-          `: "${nonShareableSubgraphs.join('", "')}".`,
+          `: "${nonShareableSubgraphs.join(QUOTATION_JOIN)}".`,
       );
     }
   }
@@ -217,13 +208,6 @@ export function undefinedDirectiveErrorMessage(directiveName: string, hostPath: 
   return (
     `The directive "${directiveName}" is declared on "${hostPath}",` +
     ` but the directive is not defined in the schema.`
-  );
-}
-
-export function undefinedEntityKeyErrorMessage(fieldName: string, objectName: string): string {
-  return (
-    ` The "fields" argument defines "${fieldName}" as part of a key, but the field "${fieldName}" is not` +
-    ` defined on the object "${objectName}".`
   );
 }
 
@@ -267,12 +251,6 @@ export function undefinedTypeError(typeName: string): Error {
   return new Error(`The type "${typeName}" was referenced in the schema, but it was never defined.`);
 }
 
-export const federationUnexpectedNodeKindError = (parentName: string, fieldName: string) =>
-  new Error(`Unexpected node kind for field "${parentName}.${fieldName}".`);
-
-export const federationInvalidParentTypeError = (parentName: string, fieldName: string) =>
-  new Error(`Could not find parent type "${parentName}" for field "${fieldName}".`);
-
 export const federationRequiredInputFieldError = (parentName: string, fieldName: string) =>
   new Error(
     `Input object field "${parentName}.${fieldName}" is required in at least one subgraph; ` +
@@ -286,21 +264,16 @@ export function invalidRepeatedDirectiveErrorMessage(directiveName: string, host
   );
 }
 
-export function invalidUnionError(unionName: string): Error {
-  return new Error(`Union "${unionName}" must have at least one member.`);
+export function invalidRepeatedFederatedDirectiveErrorMessage(directiveName: string, hostPath: string): Error {
+  return new Error(
+    `The definition for the directive "${directiveName}" does not define it as repeatable,` +
+      ` but the directive has been declared on more than one instance of the type "${hostPath}".`,
+  );
 }
 
 export function duplicateUnionMemberError(memberTypeName: string, unionTypeName: string): Error {
   return new Error(`Member "${memberTypeName}" must only be defined on union "${unionTypeName}" once.`);
 }
-
-export const invalidDeprecatedDirectiveError = new Error(`
-  Expected the @deprecated directive to have a single optional argument "reason" of the type "String!"
-`);
-
-export const invalidTagDirectiveError = new Error(`
-  Expected the @tag directive to have a single required argument "name" of the type "String!"
-`);
 
 export function invalidDirectiveError(directiveName: string, hostPath: string, errorMessages: string[]): Error {
   return new Error(
@@ -388,6 +361,14 @@ export function invalidKeyDirectivesError(parentTypeName: string, errorMessages:
   );
 }
 
+// Cannot use the constant for maximum type nesting or there will be a cyclical import
+export function maximumTypeNestingExceededFatalError(path: string, maximumTypeNesting: number): Error {
+  return new Error(
+    `Fatal: The type defined at path "${path}" has more than ${maximumTypeNesting} layers of nesting,` +
+      ` or there is a cyclical error.`,
+  );
+}
+
 export function unexpectedKindFatalError(typeName: string) {
   return new Error(`Fatal: Unexpected type for "${typeName}"`);
 }
@@ -406,24 +387,13 @@ export function fieldTypeMergeFatalError(fieldName: string) {
   );
 }
 
-export function argumentTypeMergeFatalError(argumentName: string, fieldName: string) {
-  return new Error(
-    `Fatal: Unsuccessfully merged the cross-subgraph types of argument "${argumentName}" on field "${fieldName}"` +
-      ` without producing a type error object.`,
-  );
-}
-
-export function unexpectedArgumentKindFatalError(argumentName: string, fieldName: string) {
-  return new Error(`Fatal: Unexpected type for argument "${argumentName}" on field "${fieldName}".`);
-}
-
 export function unexpectedDirectiveLocationError(locationName: string): Error {
   return new Error(`Fatal: Unknown directive location "${locationName}".`);
 }
 
-export function unexpectedTypeNodeKindFatalError(childPath: string): Error {
+export function unexpectedTypeNodeKindFatalError(typePath: string): Error {
   return new Error(
-    `Fatal: Expected all constituent types of "${childPath}" to be one of the following: ` +
+    `Fatal: Expected all constituent types at path "${typePath}" to be one of the following: ` +
       `"LIST_TYPE", "NAMED_TYPE", or "NON_NULL_TYPE".`,
   );
 }
@@ -501,10 +471,10 @@ export function subgraphInvalidSyntaxError(error?: Error): Error {
 export function unimplementedInterfaceFieldsError(
   parentTypeName: string,
   parentTypeString: string,
-  implementationErrorsMap: ImplementationErrorsMap,
+  implementationErrorsByInterfaceTypeName: Map<string, ImplementationErrors>,
 ): Error {
   const messages: string[] = [];
-  for (const [interfaceName, implementationErrors] of implementationErrorsMap) {
+  for (const [interfaceName, implementationErrors] of implementationErrorsByInterfaceTypeName) {
     let message =
       ` The implementation of interface "${interfaceName}" by "${parentTypeName}"` + ` is invalid because:\n`;
     const unimplementedFieldsLength = implementationErrors.unimplementedFields.length;
@@ -561,26 +531,28 @@ export function unimplementedInterfaceFieldsError(
   );
 }
 
-export function invalidRequiredArgumentsError(
+export function invalidRequiredInputValueError(
   typeString: string,
   path: string,
-  errors: InvalidRequiredArgument[],
+  errors: InvalidRequiredInputValueData[],
+  isArgument = true,
 ): Error {
+  const inputValueTypeString = isArgument ? ARGUMENT : INPUT_FIELD;
   let message = `The ${typeString} "${path}" could not be federated because:\n`;
   for (const error of errors) {
     message +=
-      ` The argument "${error.argumentName}" is required in the following subgraph` +
+      ` The ${inputValueTypeString} "${error.inputValueName}" is required in the following subgraph` +
       (error.requiredSubgraphs.length > 1 ? 's' : '') +
       ': "' +
       error.requiredSubgraphs.join(`", "`) +
       `"\n` +
-      ` However, the argument "${error.argumentName}" is not defined in the following subgraph` +
+      ` However, the ${inputValueTypeString} "${error.inputValueName}" is not defined in the following subgraph` +
       (error.missingSubgraphs.length > 1 ? 's' : '') +
       ': "' +
       error.missingSubgraphs.join(`", "`) +
       `"\n` +
-      ` If an argument is required on a ${typeString} in any one subgraph, it must be at least defined as optional` +
-      ` on all other definitions of that ${typeString} in all other subgraphs.\n`;
+      ` If an ${inputValueTypeString} is required on a ${typeString} in any one subgraph, it must be at least defined` +
+      ` as optional on all other definitions of that ${typeString} in all other subgraphs.\n`;
   }
   return new Error(message);
 }

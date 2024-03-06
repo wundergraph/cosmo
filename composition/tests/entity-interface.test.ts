@@ -7,7 +7,11 @@ import {
   undefinedEntityInterfaceImplementationsError,
 } from '../src';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+} from './utils/utils';
 
 import { parse } from 'graphql';
 
@@ -15,26 +19,27 @@ describe('Entity Interface Tests', () => {
   test('that an @interfaceObject does not need to contribute new fields', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      interface Interface {
+      type Entity implements Interface {
+        age: Int!
         id: ID!
         name: String!
+      }
+      
+      interface Interface {
         age: Int!
+        id: ID!
+        name: String!
       }
       
       type Query {
         dummy: String!
       }
-
-      type Entity implements Interface {
-        id: ID!
-        name: String!
-        age: Int!
-      }
+      
+      scalar openfed__Scope
     `,
       ),
     );
@@ -43,25 +48,27 @@ describe('Entity Interface Tests', () => {
   test('that fields contributed by an interface object are added to each concrete type', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      interface Interface {
+      type Entity implements Interface {
+        age: Int!
         id: ID!
         name: String!
+      }
+      
+      interface Interface {
         age: Int!
+        id: ID!
+        name: String!
       }
       
       type Query {
         interface: Interface!
       }
 
-      type Entity implements Interface {
-        id: ID!
-        name: String!
-        age: Int!
-      }
+      scalar openfed__Scope
     `,
       ),
     );

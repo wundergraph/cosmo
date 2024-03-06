@@ -99,9 +99,9 @@ export function numberToOrdinal(num: number): string {
   }
 }
 
-export function addIterableValuesToSet<T>(iterable: T[] | Iterable<T>, set: Set<T>) {
-  for (const value of iterable) {
-    set.add(value);
+export function addIterableValuesToSet<T>(source: T[] | Iterable<T>, target: Set<T>) {
+  for (const value of source) {
+    target.add(value);
   }
 }
 
@@ -171,10 +171,8 @@ export type ImplementationErrors = {
   unimplementedFields: string[];
 };
 
-export type ImplementationErrorsMap = Map<string, ImplementationErrors>;
-
-export type InvalidRequiredArgument = {
-  argumentName: string;
+export type InvalidRequiredInputValueData = {
+  inputValueName: string;
   missingSubgraphs: string[];
   requiredSubgraphs: string[];
 };
@@ -569,4 +567,10 @@ export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstD
 
 export function isNodeKindInterface(kind: Kind) {
   return kind === Kind.INTERFACE_TYPE_DEFINITION || kind === Kind.INTERFACE_TYPE_EXTENSION;
+}
+
+export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
+  for (const [key, value] of source) {
+    target.set(key, value);
+  }
 }

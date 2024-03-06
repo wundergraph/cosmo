@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { normalizeSubgraphFromString } from '../src';
-import { normalizeString, schemaToSortedNormalizedString, versionTwoDirectiveDefinitions } from './utils/utils';
+import { federateSubgraphs, normalizeSubgraphFromString, Subgraph } from '../src';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionTwoDirectiveDefinitions,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+} from './utils/utils';
+import { parse } from 'graphql';
 
 describe('@shareable directive tests', () => {
   describe('Normalization tests', () => {
@@ -102,4 +108,200 @@ describe('@shareable directive tests', () => {
       );
     });
   });
+  describe('Federation tests', () => {
+    test('that @shareable functions with extensions correctly #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB, subgraphC]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+        type Entity implements Interface {
+          field: String!
+          id: ID!
+        }
+        
+        interface Interface {
+          field: String!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope`,
+        ),
+      );
+    });
+
+    test('that @shareable functions with extensions correctly #1.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC, subgraphB]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+        type Entity implements Interface {
+          field: String!
+          id: ID!
+        }
+        
+        interface Interface {
+          field: String!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope`,
+        ),
+      );
+    });
+
+    test('that @shareable functions with extensions correctly #1.3', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphA, subgraphC]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+        type Entity implements Interface {
+          field: String!
+          id: ID!
+        }
+        
+        interface Interface {
+          field: String!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope`,
+        ),
+      );
+    });
+
+    test('that @shareable functions with extensions correctly #1.4', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphC, subgraphA]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+        type Entity implements Interface {
+          field: String!
+          id: ID!
+        }
+        
+        interface Interface {
+          field: String!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope`,
+        ),
+      );
+    });
+
+    test('that @shareable functions with extensions correctly #1.5', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphA, subgraphB]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+        type Entity implements Interface {
+          field: String!
+          id: ID!
+        }
+        
+        interface Interface {
+          field: String!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope`,
+        ),
+      );
+    });
+
+    test('that @shareable functions with extensions correctly #1.6', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphB, subgraphA]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+        type Entity implements Interface {
+          field: String!
+          id: ID!
+        }
+        
+        interface Interface {
+          field: String!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope`,
+        ),
+      );
+    });
+  });
 });
+
+const subgraphA: Subgraph = {
+  name: 'subgraph-a',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      field: String! @shareable
+    }
+  `),
+};
+
+const subgraphB: Subgraph = {
+  name: 'subgraph-b',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      field: String!
+    }
+    
+    extend type Entity implements Interface @key(fields: "id") {
+      id: ID!
+      field: String! @external
+    }
+  `),
+};
+
+const subgraphC: Subgraph = {
+  name: 'subgraph-c',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      field: String!
+    }
+    
+    extend type Entity implements Interface @key(fields: "id") @shareable {
+      id: ID!
+      field: String!
+    }
+  `),
+};

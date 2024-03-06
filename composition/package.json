@@ -25,10 +25,11 @@
   "dependencies": {
     "@graphql-tools/merge": "^9.0.0",
     "@graphql-tools/schema": "^10.0.0",
-    "@graphql-tools/utils": "^10.0.1",
+    "@graphql-tools/utils": "^10.1.0",
     "graphology": "^0.25.1",
     "graphology-simple-path": "^0.2.0",
     "graphql": "^16.7.1",
+    "pathe": "^1.1.1",
     "vitest": "^0.34.1"
   },
   "devDependencies": {

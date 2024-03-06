@@ -3,7 +3,7 @@ import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } f
 import {
   ARGUMENT_DEFINITION_UPPER,
   AUTHENTICATED,
-  BOOLEAN_TYPE,
+  BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
   DEPRECATED,
   ENUM_UPPER,
@@ -45,6 +45,7 @@ import {
   UNION_UPPER,
   URL_LOWER,
 } from './string-constants';
+import { MutableDirectiveDefinitionNode, MutableScalarNode } from '../schema-building/ast';
 
 export const BASE_SCALARS = new Set<string>([
   '_Any',
@@ -61,9 +62,10 @@ export const BASE_SCALARS = new Set<string>([
 /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
  FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 */
-const DEPRECATED_DEFINITION: DirectiveDefinitionNode = {
+export const DEPRECATED_DEFINITION: MutableDirectiveDefinitionNode = {
   arguments: [
     {
+      directives: [],
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(REASON),
       type: stringToNamedTypeNode(STRING_SCALAR),
@@ -183,7 +185,7 @@ const KEY_DEFINITION: DirectiveDefinitionNode = {
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(RESOLVABLE),
-      type: stringToNamedTypeNode(BOOLEAN_TYPE),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
       defaultValue: {
         kind: Kind.BOOLEAN,
         value: true,
@@ -250,12 +252,13 @@ const SPECIFIED_BY_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-/* directive @tag(name: String!) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
-   INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
+/* directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION
+  | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 */
-const TAG_DEFINITION: DirectiveDefinitionNode = {
+export const TAG_DEFINITION: MutableDirectiveDefinitionNode = {
   arguments: [
     {
+      directives: [],
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(NAME),
       type: {
@@ -296,7 +299,8 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
 ]);
 
 // @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
+export const AUTHENTICATED_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([
     ENUM_UPPER,
@@ -331,7 +335,8 @@ const COMPOSE_DIRECTIVE_DEFINITION: DirectiveDefinitionNode = {
 /* directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
    INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
 */
-const INACCESSIBLE_DEFINITION: DirectiveDefinitionNode = {
+export const INACCESSIBLE_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([
     ARGUMENT_DEFINITION_UPPER,
@@ -412,9 +417,10 @@ const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-const REQUIRES_SCOPES_DEFINITION: DirectiveDefinitionNode = {
+export const REQUIRES_SCOPES_DEFINITION: MutableDirectiveDefinitionNode = {
   arguments: [
     {
+      directives: [],
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(SCOPES),
       type: {
@@ -496,7 +502,7 @@ export const FIELD_SET_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
   name: stringToNameNode(FIELD_SET_SCALAR),
 };
 
-export const SCOPE_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
+export const SCOPE_SCALAR_DEFINITION: MutableScalarNode = {
   kind: Kind.SCALAR_TYPE_DEFINITION,
   name: stringToNameNode(SCOPE_SCALAR),
 };
