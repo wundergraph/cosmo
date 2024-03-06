@@ -70,7 +70,7 @@ resource "aws_cloudwatch_log_group" "cosmo_router" {
 resource "aws_ecs_task_definition" "cosmo_router" {
   family                   = "${var.name}-task-def"
   requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc" # use `awsvpc` when using own VPC
+  network_mode             = "awsvpc"
   cpu                      = var.cpu
   memory                   = var.memory
 
