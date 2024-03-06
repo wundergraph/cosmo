@@ -7,7 +7,9 @@ import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
+  // eslint-disable-next-line camelcase
   DataSourceCustom_Events,
+  // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
   DataSourceKind,
   EngineConfiguration,
