@@ -1030,6 +1030,49 @@ describe('Authorization directives tests', () => {
         ),
       );
     });
+
+    test('that the federated graph and its router configuration are generated correctly with renamed root types', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphO, subgraphP]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+        enum Enum {
+          VALUE
+        }
+        
+        type Query {
+          enum: Enum! @authenticated @requiresScopes(scopes: [["read:query", "read:enum"]])
+          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:query", "read:scalar"], ["read:query", "read:field"]])
+        }
+        
+        scalar Scalar
+        
+        scalar openfed__Scope
+      `,
+        ),
+      );
+      expect(federationResult!.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: 'enum',
+          typeName: 'Query',
+          requiresAuthentication: true,
+          requiredScopes: [['read:query', 'read:enum']],
+        },
+        {
+          argumentNames: [],
+          fieldName: 'scalar',
+          typeName: 'Query',
+          requiresAuthentication: true,
+          requiredScopes: [
+            ['read:query', 'read:scalar'],
+            ['read:query', 'read:field'],
+          ],
+        },
+      ]);
+    });
   });
 });
 
@@ -1294,5 +1337,47 @@ const subgraphN: Subgraph = {
     }
     
     scalar Scalar @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:field"]])
+  `),
+};
+
+const subgraphO: Subgraph = {
+  name: 'subgraph-o',
+  url: '',
+  definitions: parse(`
+     schema {
+      query: Queries
+    }
+    
+    type Queries @shareable @requiresScopes(scopes: [["read:query"]]) {
+      enum: Enum!
+      scalar: Scalar!
+    }
+    
+    enum Enum {
+      VALUE
+    }
+    
+    scalar Scalar @requiresScopes(scopes: [["read:scalar"], ["read:field"]])
+  `),
+};
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: MyQuery
+    }
+    
+    type MyQuery @shareable {
+      enum: Enum! @authenticated
+      scalar: Scalar!
+    }
+    
+    enum Enum @requiresScopes(scopes: [["read:enum"]]) {
+      VALUE
+    }
+    
+    scalar Scalar @authenticated
   `),
 };

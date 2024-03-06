@@ -364,7 +364,7 @@ export function invalidKeyDirectivesError(parentTypeName: string, errorMessages:
 // Cannot use the constant for maximum type nesting or there will be a cyclical import
 export function maximumTypeNestingExceededFatalError(path: string, maximumTypeNesting: number): Error {
   return new Error(
-    `The type defined at path "${path}" has more than ${maximumTypeNesting} layers of nesting,` +
+    `Fatal: The type defined at path "${path}" has more than ${maximumTypeNesting} layers of nesting,` +
       ` or there is a cyclical error.`,
   );
 }

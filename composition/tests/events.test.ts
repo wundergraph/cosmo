@@ -6,9 +6,27 @@ describe('events Configuration tests', () => {
     const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphA);
     expect(errors).toBeUndefined();
     expect(normalizationResult).toBeDefined();
-    const configurationDataMap = normalizationResult!.configurationDataMap;
+    const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
     expect(configurationDataMap).toStrictEqual(
       new Map<string, ConfigurationData>([
+        [
+          'Query',
+          {
+            fieldNames: new Set<string>(['findEntity']),
+            isRootNode: true,
+            typeName: 'Query',
+            events: [{ fieldName: 'findEntity', topic: 'findEntity.{{ args.id }}', type: 'request' }],
+          },
+        ],
+        [
+          'Mutation',
+          {
+            fieldNames: new Set<string>(['updateEntity']),
+            isRootNode: true,
+            typeName: 'Mutation',
+            events: [{ fieldName: 'updateEntity', topic: 'updateEntity.{{ args.id }}', type: 'publish' }],
+          },
+        ],
         [
           'Subscription',
           {
@@ -23,24 +41,6 @@ describe('events Configuration tests', () => {
                 sourceId: 'kafka',
               },
             ],
-          },
-        ],
-        [
-          'Mutation',
-          {
-            fieldNames: new Set<string>(['updateEntity']),
-            isRootNode: true,
-            typeName: 'Mutation',
-            events: [{ fieldName: 'updateEntity', topic: 'updateEntity.{{ args.id }}', type: 'publish' }],
-          },
-        ],
-        [
-          'Query',
-          {
-            fieldNames: new Set<string>(['findEntity']),
-            isRootNode: true,
-            typeName: 'Query',
-            events: [{ fieldName: 'findEntity', topic: 'findEntity.{{ args.id }}', type: 'request' }],
           },
         ],
         [
@@ -60,11 +60,11 @@ describe('events Configuration tests', () => {
     const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphB);
     expect(errors).toBeUndefined();
     expect(normalizationResult).toBeDefined();
-    const configurationDataMap = normalizationResult!.configurationDataMap;
+    const configurationDataMap = normalizationResult!.configurationDataByParentTypeName;
     expect(configurationDataMap).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
-          'Subscriptions',
+          'Subscription',
           {
             fieldNames: new Set<string>(['entitySubscription']),
             isRootNode: true,

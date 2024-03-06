@@ -1,7 +1,7 @@
 import { MultiGraph } from 'graphology';
 import { BREAK, buildASTSchema, DirectiveDefinitionNode, DocumentNode, Kind, NamedTypeNode, visit } from 'graphql';
 import {
-  getNamedTypeForChild,
+  getTypeNodeNamedTypeName,
   MutableEnumValueNode,
   MutableFieldNode,
   MutableInputValueNode,
@@ -140,7 +140,6 @@ export class FederationFactory {
   isCurrentParentExtensionType = false;
   isParentRootType = false;
   isParentInputObject = false;
-  keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
   outputFieldTypeNames = new Set<string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   objectExtensionDataByTypeName = new Map<string, ObjectExtensionData>();
@@ -154,7 +153,6 @@ export class FederationFactory {
   rootTypeNames = new Set<string>([DEFAULT_MUTATION, DEFAULT_QUERY, DEFAULT_SUBSCRIPTION]);
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   shareableErrorTypeNames = new Map<string, Set<string>>();
-  renamedTypeNameByOriginalTypeName = new Map<string, string>();
   warnings: string[];
 
   constructor(
@@ -558,7 +556,7 @@ export class FederationFactory {
       );
     }
     const configurationData = getOrThrowError(
-      internalSubgraph.configurationDataMap,
+      internalSubgraph.configurationDataByParentTypeName,
       entityContainer.typeName,
       'internalSubgraph.configurationDataMap',
     );
@@ -607,7 +605,7 @@ export class FederationFactory {
             if (currentDepth === 0) {
               keyFieldNames.add(fieldName);
             }
-            const namedTypeName = getNamedTypeForChild(fieldData.node.type);
+            const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
             // The base scalars are not in the parents map
             if (BASE_SCALARS.has(namedTypeName)) {
               return;
@@ -680,35 +678,6 @@ export class FederationFactory {
     if (keys.length > 0) {
       configurationData.isRootNode = true;
       configurationData.keys = keys;
-    }
-  }
-
-  handleAuthorizationDataForRenamedTypes() {
-    for (const [originalTypeName, renamedTypeName] of this.renamedTypeNameByOriginalTypeName) {
-      const originalAuthorizationData = this.authorizationDataByParentTypeName.get(originalTypeName);
-      if (!originalAuthorizationData) {
-        continue;
-      }
-      originalAuthorizationData.typeName = renamedTypeName;
-      const renamedAuthorizationData = this.authorizationDataByParentTypeName.get(renamedTypeName);
-      if (!renamedAuthorizationData) {
-        this.authorizationDataByParentTypeName.set(renamedTypeName, originalAuthorizationData);
-      } else {
-        for (const [
-          fieldName,
-          incomingFieldAuthorizationData,
-        ] of renamedAuthorizationData.fieldAuthorizationDataByFieldName) {
-          if (
-            !upsertFieldAuthorizationData(
-              originalAuthorizationData.fieldAuthorizationDataByFieldName,
-              incomingFieldAuthorizationData,
-            )
-          ) {
-            this.invalidOrScopesHostPaths.add(`${renamedTypeName}.${fieldName}`);
-          }
-        }
-      }
-      this.authorizationDataByParentTypeName.delete(originalTypeName);
     }
   }
 
@@ -797,13 +766,6 @@ export class FederationFactory {
         this.errors,
       );
     }
-    // for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
-    //   this.isCurrentSubgraphVersionTwo = subgraph.isVersionTwo;
-    //   this.currentSubgraphName = subgraph.name;
-    //   this.keyFieldNamesByParentTypeName = subgraph.keyFieldNamesByParentTypeName;
-    // walkSubgraphToFederate(subgraph.definitions, subgraph.overriddenFieldNamesByParentTypeName, this);
-    // }
-    this.handleAuthorizationDataForRenamedTypes();
     for (const [typeName, entityInterfaceData] of this.entityInterfaceFederationDataByTypeName) {
       subtractSourceSetFromTargetSet(
         entityInterfaceData.interfaceFieldNames,
@@ -823,7 +785,7 @@ export class FederationFactory {
           this.internalSubgraphBySubgraphName,
           subgraphName,
           'internalSubgraphBySubgraphName',
-        ).configurationDataMap;
+        ).configurationDataByParentTypeName;
         const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(typeName);
         if (!concreteTypeNames) {
           continue;
@@ -1305,7 +1267,7 @@ export class FederationFactory {
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
-        configurationDataMap: subgraph.configurationDataMap,
+        configurationDataMap: subgraph.configurationDataByParentTypeName,
         schema: subgraph.schema,
       });
     }

@@ -35,6 +35,7 @@ import {
   InputObjectDefinitionData,
   InputValueData,
   NodeData,
+  ObjectDefinitionData,
   ParentDefinitionData,
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
@@ -54,7 +55,7 @@ import {
   getMutableScalarNode,
   getMutableTypeNode,
   getMutableUnionNode,
-  getNamedTypeForChild,
+  getTypeNodeNamedTypeName,
   MutableFieldNode,
   MutableInputValueNode,
   MutableTypeDefinitionNode,
@@ -149,6 +150,8 @@ import {
 } from '../utils/constants';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
+
+export type ObjectData = ObjectDefinitionData | ObjectExtensionData;
 
 function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -357,15 +360,17 @@ export function extractArguments(
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
   handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   parentsWithChildArguments: Set<string>,
-  parentTypeName: string,
+  originalParentTypeName: string,
+  renamedParentTypeName: string,
   subgraphName: string,
 ): Map<string, InputValueData> {
   if (!node.arguments?.length) {
     return argumentDataByArgumentName;
   }
   const fieldName = node.name.value;
-  const fieldPath = `${parentTypeName}.${fieldName}`;
-  parentsWithChildArguments.add(parentTypeName);
+  const originalFieldPath = `${originalParentTypeName}.${fieldName}`;
+  const renamedFieldPath = `${renamedParentTypeName}.${fieldName}`;
+  parentsWithChildArguments.add(originalParentTypeName);
   const duplicatedArguments = new Set<string>();
   for (const argumentNode of node.arguments) {
     const argumentName = argumentNode.name.value;
@@ -378,14 +383,14 @@ export function extractArguments(
       argumentNode,
       directiveDefinitionByDirectiveName,
       handledRepeatedDirectivesByHostPath,
-      `${fieldPath}(${argumentName}: ...)`,
+      `${originalFieldPath}(${argumentName}: ...)`,
       subgraphName,
       errors,
-      true,
+      `${renamedFieldPath}(${argumentName}: ...)`,
     );
   }
   if (duplicatedArguments.size > 0) {
-    errors.push(duplicateArgumentsError(fieldPath, [...duplicatedArguments]));
+    errors.push(duplicateArgumentsError(originalFieldPath, [...duplicatedArguments]));
   }
   return argumentDataByArgumentName;
 }
@@ -443,7 +448,7 @@ function compareAndValidateInputValueDefaultValues(
     errors.push(
       incompatibleInputValueDefaultValuesError(
         `${existingData.isArgument ? 'argument' : 'input value'} "${existingData.name}"`,
-        existingData.path,
+        existingData.originalPath,
         [...incomingData.subgraphNames],
         existingDefaultValueString,
         incomingDefaultValueString,
@@ -530,12 +535,13 @@ export function addFieldDataByNode(
   errors: Error[],
   argumentDataByArgumentName: Map<string, InputValueData>,
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
-  parentTypeName: string,
+  originalParentTypeName: string,
+  renamedParentTypeName: string,
   subgraphName: string,
   isSubgraphVersionTwo: boolean,
 ): FieldData {
   const name = node.name.value;
-  const fieldPath = `${parentTypeName}.${name}`;
+  const fieldPath = `${originalParentTypeName}.${name}`;
   const isNodeExternalOrShareableResult = isNodeExternalOrShareable(
     node,
     !isSubgraphVersionTwo,
@@ -548,9 +554,10 @@ export function addFieldDataByNode(
     isShareableBySubgraphName: new Map<string, boolean>([[subgraphName, isNodeExternalOrShareableResult.isShareable]]),
     node: getMutableFieldNode(node, fieldPath),
     name,
-    namedTypeName: getNamedTypeForChild(node.type),
-    parentTypeName,
+    namedTypeName: getTypeNodeNamedTypeName(node.type),
+    originalParentTypeName,
     persistedDirectivesData: newPersistedDirectivesData(),
+    renamedParentTypeName,
     subgraphNames: new Set<string>([subgraphName]),
     type: getMutableTypeNode(node.type, fieldPath),
     directivesByDirectiveName,
@@ -569,6 +576,7 @@ export function addExtensionWithFieldsDataByNode(
   isEntity: boolean,
   isRootType: boolean,
   subgraphName: string,
+  renamedTypeName?: string,
 ) {
   const name = node.name.value;
   const kind = convertKindForExtension(node);
@@ -608,6 +616,7 @@ export function addExtensionWithFieldsDataByNode(
         name,
         node: getMutableObjectExtensionNode(node as ObjectTypeExtensionNode),
         persistedDirectivesData: newPersistedDirectivesData(),
+        renamedTypeName: renamedTypeName || name,
         subgraphNames: new Set<string>([subgraphName]),
       });
   }
@@ -669,17 +678,19 @@ export function addInputValueDataByNode(
   node: InputValueDefinitionNode,
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
   handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
-  path: string,
+  originalPath: string,
   subgraphName: string,
   errors: Error[],
-  isArgument = false,
+  renamedPath?: string,
 ) {
   const name = node.name.value;
+  // Only arguments have renamed paths
+  const isArgument = !!renamedPath;
   if (node.defaultValue && !areDefaultValuesCompatible(node.type, node.defaultValue)) {
     errors.push(
       incompatibleInputValueDefaultValueTypeError(
         (isArgument ? 'argument' : 'input field') + ` "${name}"`,
-        path,
+        originalPath,
         printTypeNode(node.type),
         print(node.defaultValue),
       ),
@@ -692,18 +703,19 @@ export function addInputValueDataByNode(
       errors,
       directiveDefinitionByDirectiveName,
       handledRepeatedDirectivesByHostPath,
-      path,
+      originalPath,
       isArgument,
     ),
     includeDefaultValue: !!node.defaultValue,
     isArgument,
     name,
-    node: getMutableInputValueNode(node, path),
-    path: path,
+    node: getMutableInputValueNode(node, originalPath),
+    originalPath,
     persistedDirectivesData: newPersistedDirectivesData(),
+    renamedPath: renamedPath || originalPath,
     requiredSubgraphNames: new Set<string>(isTypeRequired(node.type) ? [subgraphName] : []),
     subgraphNames: new Set<string>([subgraphName]),
-    type: getMutableTypeNode(node.type, path),
+    type: getMutableTypeNode(node.type, originalPath),
     defaultValue: node.defaultValue, // TODO validate
     description: formatDescription(node.description),
   });
@@ -749,6 +761,7 @@ export function addObjectDefinitionDataByNode(
   isEntity: boolean,
   isRootType: boolean,
   subgraphName: string,
+  renamedTypeName?: string,
 ) {
   const name = node.name.value;
   parentDefinitionDataByTypeName.set(name, {
@@ -768,6 +781,7 @@ export function addObjectDefinitionDataByNode(
     name,
     node: getMutableObjectNode(node),
     persistedDirectivesData: newPersistedDirectivesData(),
+    renamedTypeName: renamedTypeName || name,
     subgraphNames: new Set<string>([subgraphName]),
     description: formatDescription(node.description),
   });
@@ -785,15 +799,16 @@ export function addPersistedDirectiveDefinitionDataByNode(
   const name = node.name.value;
   const argumentDataByArgumentName = new Map<string, InputValueData>();
   for (const argumentNode of node.arguments || []) {
+    const originalPath = `@${name}(${argumentNode.name.value}: ...)`;
     addInputValueDataByNode(
       argumentDataByArgumentName,
       argumentNode,
       directiveDefinitionByDirectiveName,
       handledRepeatedDirectivesByHostPath,
-      `@${name}(${argumentNode.name.value}: ...)`,
+      originalPath,
       subgraphName,
       errors,
-      true,
+      originalPath,
     );
   }
   persistedDirectiveDefinitionDataByDirectiveName.set(name, {
@@ -836,7 +851,7 @@ export function upsertPersistedDirectiveDefinitionData(
     }
     const argumentDataByArgumentName = new Map<string, InputValueData>();
     for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
-      namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
+      namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
       upsertInputValueData(
         argumentDataByArgumentName,
         inputValueData,
@@ -866,7 +881,7 @@ export function upsertPersistedDirectiveDefinitionData(
     return;
   }
   for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
-    namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
+    namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
     upsertInputValueData(
       existingData.argumentDataByArgumentName,
       inputValueData,
@@ -1012,7 +1027,7 @@ export function isTypeNameRootType(typeName: string, operationByTypeName: Map<st
   return ROOT_TYPES.has(typeName) || operationByTypeName.has(typeName);
 }
 
-export function getRenamedTypeName(typeName: string, operationByTypeName: Map<string, OperationTypeNode>): string {
+export function getRenamedRootTypeName(typeName: string, operationByTypeName: Map<string, OperationTypeNode>): string {
   const operationTypeNode = operationByTypeName.get(typeName);
   if (!operationTypeNode) {
     return typeName;
@@ -1083,7 +1098,7 @@ function addAuthorizationDirectivesToFieldData(
   authorizationDataByParentTypeName: Map<string, AuthorizationData>,
   fieldData: FieldData,
 ) {
-  const authorizationData = authorizationDataByParentTypeName.get(fieldData.parentTypeName);
+  const authorizationData = authorizationDataByParentTypeName.get(fieldData.originalParentTypeName);
   if (!authorizationData) {
     return;
   }
@@ -1439,7 +1454,7 @@ function upsertFieldData(
         name: stringToNameNode(inputValueData.name),
         type: inputValueData.type,
       };
-      namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
+      namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
       extractPersistedDirectives(
         inputValueData.persistedDirectivesData,
         inputValueData.directivesByDirectiveName,
@@ -1448,7 +1463,7 @@ function upsertFieldData(
     }
     return;
   }
-  const fieldPath = `${existingData.parentTypeName}.${existingData.name}`;
+  const fieldPath = `${existingData.renamedParentTypeName}.${existingData.name}`;
   const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(existingData.type, incomingData.type, fieldPath);
   if (typeNode) {
     existingData.type = typeNode;
@@ -1459,7 +1474,7 @@ function upsertFieldData(
     errors.push(incompatibleChildTypesError(fieldPath, typeErrors[0], typeErrors[1]));
   }
   for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
-    namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
+    namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
     upsertInputValueData(
       existingData.argumentDataByArgumentName,
       inputValueData,
@@ -1503,7 +1518,7 @@ function upsertInputValueData(
   const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
     existingData.type,
     incomingData.type,
-    existingData.path,
+    existingData.originalPath,
   );
   if (typeNode) {
     existingData.type = typeNode;
@@ -1512,8 +1527,10 @@ function upsertInputValueData(
       throw fieldTypeMergeFatalError(existingData.name);
     }
     existingData.isArgument
-      ? errors.push(incompatibleArgumentTypesError(existingData.name, existingData.path, typeErrors[0], typeErrors[1]))
-      : errors.push(incompatibleChildTypesError(existingData.path, typeErrors[0], typeErrors[1]));
+      ? errors.push(
+          incompatibleArgumentTypesError(existingData.name, existingData.renamedPath, typeErrors[0], typeErrors[1]),
+        )
+      : errors.push(incompatibleChildTypesError(existingData.renamedPath, typeErrors[0], typeErrors[1]));
   }
   compareAndValidateInputValueDefaultValues(existingData, incomingData, errors);
 }
@@ -1567,7 +1584,7 @@ export function upsertParentDefinitionData(
             name: stringToNameNode(inputValueData.name),
             type: inputValueData.type,
           };
-          namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
+          namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
           extractPersistedDirectives(
             inputValueData.persistedDirectivesData,
             inputValueData.directivesByDirectiveName,
@@ -1599,7 +1616,7 @@ export function upsertParentDefinitionData(
               name: stringToNameNode(inputValueData.name),
               type: inputValueData.type,
             };
-            namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
+            namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
             extractPersistedDirectives(
               inputValueData.persistedDirectivesData,
               inputValueData.directivesByDirectiveName,
@@ -1634,7 +1651,7 @@ export function upsertParentDefinitionData(
     case Kind.INPUT_OBJECT_TYPE_DEFINITION:
       addIterableValuesToSet((incomingData as InputObjectDefinitionData).subgraphNames, existingData.subgraphNames);
       for (const inputValueData of (incomingData as InputObjectDefinitionData).inputValueDataByValueName.values()) {
-        namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
+        namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
         upsertInputValueData(
           existingData.inputValueDataByValueName,
           inputValueData,
@@ -1709,7 +1726,7 @@ export function upsertObjectExtensionData(
           name: stringToNameNode(inputValueData.name),
           type: inputValueData.type,
         };
-        namedInputValueTypeNames.add(getNamedTypeForChild(inputValueData.type));
+        namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
         extractPersistedDirectives(
           inputValueData.persistedDirectivesData,
           inputValueData.directivesByDirectiveName,
@@ -1801,6 +1818,7 @@ export function upsertValidObjectExtensionData(
           name: stringToNameNode(incomingData.name),
         },
         persistedDirectivesData: incomingData.persistedDirectivesData,
+        renamedTypeName: incomingData.renamedTypeName,
         subgraphNames: incomingData.subgraphNames,
       });
       return;
@@ -1944,7 +1962,7 @@ export function getValidFieldArgumentNodes(
   const argumentNodes: MutableInputValueNode[] = [];
   const argumentNames: string[] = [];
   const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
-  const fieldPath = `${fieldData.parentTypeName}.${fieldData.name}`;
+  const fieldPath = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
   for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
     if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
       argumentNames.push(argumentName);
@@ -1969,7 +1987,7 @@ export function getValidFieldArgumentNodes(
     fieldConfigurationByFieldPath.set(fieldPath, {
       argumentNames,
       fieldName: fieldData.name,
-      typeName: fieldData.parentTypeName,
+      typeName: fieldData.renamedParentTypeName,
     });
   }
   return argumentNodes;

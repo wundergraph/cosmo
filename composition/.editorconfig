@@ -1,0 +1,2 @@
+[*.{graphql,graphqls,gql}]
+trim_trailing_whitespace=false

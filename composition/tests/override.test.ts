@@ -496,7 +496,7 @@ describe('@override directive tests', () => {
     expect(e).toBeDefined();
     const g = internalSubgraphBySubgraphName.get('subgraph-f');
     expect(g).toBeDefined();
-    expect(a!.configurationDataMap).toStrictEqual(
+    expect(a!.configurationDataByParentTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Query',
@@ -517,7 +517,7 @@ describe('@override directive tests', () => {
         ],
       ]),
     );
-    expect(e!.configurationDataMap).toStrictEqual(
+    expect(e!.configurationDataByParentTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Entity',
@@ -530,7 +530,7 @@ describe('@override directive tests', () => {
         ],
       ]),
     );
-    expect(g!.configurationDataMap).toStrictEqual(
+    expect(g!.configurationDataByParentTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
           'Entity',
@@ -554,6 +554,156 @@ describe('@override directive tests', () => {
         invalidDirectiveError(OVERRIDE, hostPath, [
           invalidDirectiveLocationErrorMessage(hostPath, Kind.ARGUMENT, OVERRIDE),
         ]),
+      ]),
+    );
+  });
+
+  test('that an overridden field still contributes to type merging #1.1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphR, subgraphS]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
+      type Entity {
+        id: ID!
+        name(argOne: Int!): String
+      }
+      
+      type Query {
+        entities: [Entity!]!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
+  test('that an overridden field still contributes to type merging #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphS, subgraphR]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
+      type Entity {
+        id: ID!
+        name(argOne: Int!): String
+      }
+      
+      type Query {
+        entities: [Entity!]!
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
+  test('that renamed root type fields are successfully overridden #1.1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphT, subgraphU]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
+      type Query {
+        fieldOne(argOne: Int!): [String]
+        fieldTwo: Int
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    expect(federationResult!.fieldConfigurations).toStrictEqual([
+      {
+        argumentNames: ['argOne'],
+        fieldName: 'fieldOne',
+        typeName: 'Query',
+      },
+    ]);
+    const t = federationResult!.subgraphConfigBySubgraphName.get('subgraph-t');
+    expect(t).toBeDefined();
+    expect(t!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Query',
+          {
+            fieldNames: new Set<string>(['fieldOne']),
+            isRootNode: true,
+            typeName: 'Query',
+          },
+        ],
+      ]),
+    );
+    const u = federationResult!.subgraphConfigBySubgraphName.get('subgraph-u');
+    expect(u).toBeDefined();
+    expect(u!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Query',
+          {
+            fieldNames: new Set<string>(['fieldTwo']),
+            isRootNode: true,
+            typeName: 'Query',
+          },
+        ],
+      ]),
+    );
+  });
+
+  test('that renamed root type fields are successfully overridden #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphU, subgraphT]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          `
+      type Query {
+        fieldOne(argOne: Int!): [String]
+        fieldTwo: Int
+      }
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    expect(federationResult!.fieldConfigurations).toStrictEqual([
+      {
+        argumentNames: ['argOne'],
+        fieldName: 'fieldOne',
+        typeName: 'Query',
+      },
+    ]);
+    const t = federationResult!.subgraphConfigBySubgraphName.get('subgraph-t');
+    expect(t).toBeDefined();
+    expect(t!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Query',
+          {
+            fieldNames: new Set<string>(['fieldOne']),
+            isRootNode: true,
+            typeName: 'Query',
+          },
+        ],
+      ]),
+    );
+    const u = federationResult!.subgraphConfigBySubgraphName.get('subgraph-u');
+    expect(u).toBeDefined();
+    expect(u!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Query',
+          {
+            fieldNames: new Set<string>(['fieldTwo']),
+            isRootNode: true,
+            typeName: 'Query',
+          },
+        ],
       ]),
     );
   });
@@ -778,6 +928,62 @@ const subgraphQ: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       name: String! @override(from: "subgraph-q")
+    }
+  `),
+};
+
+const subgraphR: Subgraph = {
+  name: 'subgraph-r',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name(argOne: Int): String! @override(from: "subgraph-s")
+    }
+  `),
+};
+
+const subgraphS: Subgraph = {
+  name: 'subgraph-s',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name(argOne: Int!): String
+    }
+  `),
+};
+
+const subgraphT: Subgraph = {
+  name: 'subgraph-t',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: Queries
+    }
+    
+    type Queries @shareable {
+      fieldOne(argOne: Int!): [String!]! @override(from: "subgraph-u")
+      fieldTwo: Int!
+    }
+  `),
+};
+
+const subgraphU: Subgraph = {
+  name: 'subgraph-u',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: MyQuery
+    }
+    
+    type MyQuery @shareable {
+      fieldOne(argOne: Int): [String]
+      fieldTwo(argOne: Float): Int  @override(from: "subgraph-t")
     }
   `),
 };

@@ -51,8 +51,9 @@ export type FieldData = {
   name: string;
   namedTypeName: string;
   node: MutableFieldNode;
-  parentTypeName: string;
+  originalParentTypeName: string;
   persistedDirectivesData: PersistedDirectivesData;
+  renamedParentTypeName: string;
   subgraphNames: Set<string>;
   type: MutableTypeNode;
   description?: StringValueNode;
@@ -75,7 +76,8 @@ export type InputValueData = {
   isArgument: boolean;
   name: string;
   node: MutableInputValueNode;
-  path: string;
+  originalPath: string;
+  renamedPath: string;
   persistedDirectivesData: PersistedDirectivesData;
   requiredSubgraphNames: Set<string>;
   subgraphNames: Set<string>;
@@ -107,6 +109,7 @@ export type ObjectDefinitionData = {
   name: string;
   node: MutableObjectNode;
   persistedDirectivesData: PersistedDirectivesData;
+  renamedTypeName: string;
   subgraphNames: Set<string>;
   description?: StringValueNode;
 };

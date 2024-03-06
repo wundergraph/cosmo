@@ -32,5 +32,3 @@ export type ConfigurationData = {
   keys?: RequiredFieldConfiguration[];
   requires?: RequiredFieldConfiguration[];
 };
-
-export type ConfigurationDataByTypeName = Map<string, ConfigurationData>;

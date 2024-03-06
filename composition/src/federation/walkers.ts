@@ -71,7 +71,9 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
         ) as InterfaceDefinitionData;
         // TODO rename root fields references
       },
-      leave() {},
+      leave() {
+        parentData = undefined;
+      },
     },
     ObjectTypeDefinition: {
       enter(node) {
@@ -90,7 +92,6 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
           return;
         }
         const entityContainer = ff.entityContainersByTypeName.get(originalTypeName);
-        // if (entityContainer && !isObjectLikeNodeEntity(node)) {
         if (entityContainer && !parentData.isEntity) {
           ff.validateKeyFieldSetsForImplicitEntity(entityContainer);
         }
@@ -98,7 +99,6 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
         if (originalTypeName === parentTypeName) {
           return;
         }
-        ff.renamedTypeNameByOriginalTypeName.set(originalTypeName, parentTypeName);
         parentData.name = parentTypeName;
         subgraph.parentDefinitionDataByTypeName.set(parentTypeName, parentData);
         subgraph.parentDefinitionDataByTypeName.delete(originalTypeName);
@@ -126,7 +126,6 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
         if (originalTypeName === parentTypeName) {
           return;
         }
-        ff.renamedTypeNameByOriginalTypeName.set(originalTypeName, parentTypeName);
         parentData.name = parentTypeName;
         subgraph.parentExtensionDataByTypeName.set(parentTypeName, parentData);
         subgraph.parentExtensionDataByTypeName.delete(originalTypeName);

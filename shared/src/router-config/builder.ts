@@ -1,15 +1,13 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { FieldConfiguration, ConfigurationDataByTypeName } from '@wundergraph/composition';
+import { ConfigurationData, FieldConfiguration } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
-  // eslint-disable-next-line camelcase
   DataSourceCustom_Events,
-  // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
   DataSourceKind,
   EngineConfiguration,
@@ -18,7 +16,7 @@ import {
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { generateFieldConfigurations, configurationDataMapToDataSourceConfiguration } from './graphql-configuration.js';
+import { configurationDataMapToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { normalizationFailureError } from './errors.js';
 
 export interface Input {
@@ -46,7 +44,7 @@ export interface ComposedSubgraph {
   subscriptionUrl: string;
   subscriptionProtocol: SubscriptionProtocol;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataMap?: ConfigurationDataByTypeName;
+  configurationDataMap?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
 }

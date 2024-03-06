@@ -19,6 +19,7 @@ export type ObjectExtensionData = {
   name: string;
   node: MutableObjectExtensionNode;
   persistedDirectivesData: PersistedDirectivesData;
+  renamedTypeName: string;
   subgraphNames: Set<string>;
 };
 
@@ -26,7 +27,7 @@ export type InputObjectExtensionData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   inputValueDataByValueName: Map<string, InputValueData>;
   kind: Kind.INPUT_OBJECT_TYPE_EXTENSION;
-  name: String;
+  name: string;
 };
 
 export type InterfaceExtensionData = {

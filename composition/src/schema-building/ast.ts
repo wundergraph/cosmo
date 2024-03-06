@@ -231,7 +231,6 @@ export type MutableNonNullTypeNode = {
   type: MutableNamedTypeNode | MutableListTypeNode;
 };
 
-// TODO errors
 export function getMutableTypeNode(node: TypeNode, typePath: string): MutableTypeNode {
   const deepCopy: MutableIntermediateTypeNode = { kind: node.kind };
   let lastTypeNode = deepCopy;
@@ -256,9 +255,7 @@ export function getMutableTypeNode(node: TypeNode, typePath: string): MutableTyp
         throw unexpectedTypeNodeKindFatalError(typePath);
     }
   }
-  throw new Error(
-    `The type at path ${typePath} has more than ${MAXIMUM_TYPE_NESTING} layers of nesting, or there is a cyclical error.`,
-  );
+  throw maximumTypeNestingExceededFatalError(typePath, MAXIMUM_TYPE_NESTING);
 }
 
 export type MutableUnionNode = {
@@ -317,13 +314,13 @@ export type ObjectLikeTypeNode =
   | ObjectTypeDefinitionNode
   | ObjectTypeExtensionNode;
 
-export function getNamedTypeForChild(typeNode: TypeNode): string {
+export function getTypeNodeNamedTypeName(typeNode: TypeNode): string {
   switch (typeNode.kind) {
     case Kind.NAMED_TYPE:
       return typeNode.name.value;
     case Kind.LIST_TYPE:
     // intentional fallthrough
     case Kind.NON_NULL_TYPE:
-      return getNamedTypeForChild(typeNode.type);
+      return getTypeNodeNamedTypeName(typeNode.type);
   }
 }

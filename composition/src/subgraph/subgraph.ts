@@ -1,6 +1,6 @@
 import { DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
 import { EntityInterfaceSubgraphData } from '../utils/utils';
-import { ConfigurationDataByTypeName } from '../router-configuration/router-configuration';
+import { ConfigurationData } from '../router-configuration/router-configuration';
 import { ParentDefinitionData, PersistedDirectiveDefinitionData } from '../schema-building/type-definition-data';
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
 
@@ -11,7 +11,7 @@ export type Subgraph = {
 };
 
 export type InternalSubgraph = {
-  configurationDataMap: ConfigurationDataByTypeName;
+  configurationDataByParentTypeName: Map<string, ConfigurationData>;
   definitions: DocumentNode;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   isVersionTwo: boolean;
@@ -27,7 +27,7 @@ export type InternalSubgraph = {
 };
 
 export type SubgraphConfig = {
-  configurationDataMap: ConfigurationDataByTypeName;
+  configurationDataMap: Map<string, ConfigurationData>;
   schema: GraphQLSchema;
 };
 
