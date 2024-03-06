@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -165,7 +166,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		body, err := h.operationProcessor.ReadBody(buf, r.Body)
 		if err != nil {
 			finalErr = err
-			requestLogger.Error(err.Error())
+
+			// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
+			// It means that EOF was encountered in the middle of reading the body. This is not a server error.
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
+			} else {
+				requestLogger.Error("failed to read request body", zap.Error(err))
+			}
+
 			writeRequestErrors(r.Context(), http.StatusBadRequest, graphql.RequestErrorsFromError(err), w, requestLogger)
 			return
 		}
@@ -344,7 +353,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
 				finalErr = err
-				requestLogger.Error(err.Error())
+				requestLogger.Error("failed to authenticate request", zap.Error(err))
 
 				rtrace.AttachErrToSpan(authenticateSpan, err)
 				authenticateSpan.End()
@@ -449,7 +458,7 @@ func (h *PreHandler) writeOperationError(ctx context.Context, w http.ResponseWri
 			writeInternalError(ctx, w, requestLogger)
 		}
 	default: // If we have an unknown error, we log it and return an internal server error
-		requestLogger.Error(err.Error())
+		requestLogger.Error("unknown operation error", zap.Error(err))
 		writeInternalError(ctx, w, requestLogger)
 	}
 }
