@@ -89,3 +89,7 @@ type SDK @key(fields: "upc") {
   upc: ID!
   clientLanguages: [ProgrammingLanguage!]!
 }
+
+type Subscription {
+  countHob(max: Int! intervalMilliseconds: Int!): Int!
+}
