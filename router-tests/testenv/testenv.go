@@ -3,11 +3,15 @@ package testenv
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-cleanhttp"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -74,6 +78,7 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DisableWebSockets                  bool
+	TLSConfig                          *core.TlsConfig
 }
 
 type SubgraphsConfig struct {
@@ -266,10 +271,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
-	routerURL := fmt.Sprintf("http://%s", listenerAddr)
 
 	client := retryablehttp.NewClient()
 	client.Logger = nil
+	client.RetryMax = 10
+	client.RetryWaitMin = 100 * time.Millisecond
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, ns)
 	if err != nil {
@@ -280,8 +286,37 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	require.NoError(t, err)
 
 	go func() {
-		if err := svr.HttpServer().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			t.Errorf("could not start router: %s", err)
+		if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
+
+			cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+			require.NoError(t, err)
+
+			caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+				t.Fatalf("could not append ca cert to pool")
+			}
+
+			// Retain the default transport settings
+			httpClient := cleanhttp.DefaultPooledClient()
+			httpClient.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
+				RootCAs:      caCertPool,
+				Certificates: []tls.Certificate{cert},
+			}
+
+			client.HTTPClient = httpClient
+
+			if err := svr.HttpServer().ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				t.Errorf("could not start tls router: %s", err)
+			}
+		} else {
+			if err := svr.HttpServer().ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				t.Errorf("could not start router: %s", err)
+			}
 		}
 	}()
 
@@ -327,7 +362,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Context:              ctx,
 		cancel:               cancel,
 		Router:               rr,
-		RouterURL:            routerURL,
+		RouterURL:            svr.BaseURL(),
 		RouterClient:         client.StandardClient(),
 		CDN:                  cdn,
 		Nats:                 ns,
@@ -344,7 +379,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			countriesServer,
 		},
 	}
+
 	e.waitForRouterConnection(ctx)
+
 	return e, nil
 }
 
@@ -408,6 +445,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithEngineExecutionConfig(engineExecutionConfig),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
+		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithEvents(config.EventsConfiguration{
 			Sources: []config.EventSource{
 				{
@@ -544,20 +582,16 @@ type GraphQLRequest struct {
 type TestResponse struct {
 	Body     string
 	Response *http.Response
+	Proto    string
 }
 
 func (e *Environment) waitForRouterConnection(ctx context.Context) {
-	// Wait for the router to be ready
-	client := &http.Client{
-		Transport: http.DefaultTransport,
-		Timeout:   time.Millisecond * 100,
-	}
 	for {
 		select {
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for router to be ready")
 		default:
-			resp, err := client.Get(e.RouterURL)
+			resp, err := e.RouterClient.Get(e.RouterURL)
 			if err == nil {
 				_ = resp.Body.Close()
 				return
@@ -584,11 +618,7 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 	if request.Header != nil {
 		req.Header = request.Header
 	}
-	client := &http.Client{
-		Transport: http.DefaultTransport,
-		Timeout:   time.Second * 5,
-	}
-	resp, err := client.Do(req)
+	resp, err := e.RouterClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -603,6 +633,7 @@ func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse,
 	return &TestResponse{
 		Body:     strings.TrimSpace(body),
 		Response: resp,
+		Proto:    resp.Proto,
 	}, nil
 }
 
@@ -611,17 +642,14 @@ func (e *Environment) MakeRequest(method, path string, header http.Header, body 
 	if err != nil {
 		return nil, err
 	}
+
 	req, err := http.NewRequestWithContext(e.Context, method, requestURL, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header = header
-	client := &http.Client{
-		Transport: http.DefaultTransport,
-		Timeout:   time.Second * 5,
-	}
-	return client.Do(req)
 
+	return e.RouterClient.Do(req)
 }
 
 func (e *Environment) GraphQLRequestURL() string {

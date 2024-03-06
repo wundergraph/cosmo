@@ -1,3 +1,5 @@
+SHELL := bash
+
 test:
 	go test -race ./...
 
@@ -8,10 +10,9 @@ lint:
 	go vet ./...
 	staticcheck ./...
 
+LOOPS=20
 test-stability:
-	for number in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 ; do \
-		make clean-testcache && make test ; \
-	done
+	for ((i=1; i <= ${LOOPS}; ++i)) do make test; done
 
 clean-testcache:
 	go clean -testcache
@@ -19,4 +20,4 @@ clean-testcache:
 update-test-config:
 	./update-config.sh
 
-.PHONY: test test-no-race
+.PHONY: test test-no-race lint test-stability clean-testcache update-test-config
