@@ -169,8 +169,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
 			// It means that EOF was encountered in the middle of reading the body. This is not a server error.
-			if !errors.Is(err, io.ErrUnexpectedEOF) {
-				requestLogger.Error(err.Error())
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
+			} else {
+				requestLogger.Error("failed to read request body", zap.Error(err))
 			}
 
 			writeRequestErrors(r.Context(), http.StatusBadRequest, graphql.RequestErrorsFromError(err), w, requestLogger)
