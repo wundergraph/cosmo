@@ -1,7 +1,11 @@
 import { federateSubgraphs, incompatibleSharedEnumError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+} from './utils/utils';
 
 describe('Enum federation tests', () => {
   const parentName = 'Instruction';
@@ -9,21 +13,22 @@ describe('Enum federation tests', () => {
   test('that enums merge by union if unused in inputs or arguments', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
+      enum Instruction {
+        FIGHT
+        ITEM
+        POKEMON
+        RUN
+      }
+      
       type Query {
         dummy: String!
       }
 
-      enum Instruction {
-        FIGHT
-        POKEMON
-        ITEM
-        RUN
-      }
+      scalar openfed__Scope
     `,
       ),
     );
@@ -32,23 +37,24 @@ describe('Enum federation tests', () => {
   test('that enums merge by intersection if used as an input', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      type Query {
-        dummy: String!
-      }
-
       enum Instruction {
         FIGHT
         POKEMON
+      }
+      
+      type Query {
+        dummy: String!
       }
 
       input TrainerBattle {
         actions: Instruction!
       }
+      
+      scalar openfed__Scope
     `,
       ),
     );
@@ -57,22 +63,23 @@ describe('Enum federation tests', () => {
   test('that enums merge by intersection if used as an argument', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphF]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      type Query {
-        dummy: String!
-      }
-
-      enum Instruction {
-        FIGHT
-      }
-
       type BattleAction {
         baseAction(input: Instruction): Boolean!
       }
+      
+      enum Instruction {
+        FIGHT
+      }
+      
+      type Query {
+        dummy: String!
+      }
+      
+      scalar openfed__Scope
     `,
       ),
     );
@@ -81,36 +88,39 @@ describe('Enum federation tests', () => {
   test('that enums must be consistent if used as both an input and output', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      type Query {
-        dummy: String!
+      type BattleAction {
+        baseAction: Instruction!
       }
 
       enum Instruction {
         FIGHT
-        POKEMON
         ITEM
+        POKEMON
+      }
+
+      type Query {
+        dummy: String!
       }
 
       input TrainerBattle {
         actions: Instruction!
       }
-
-      type BattleAction {
-        baseAction: Instruction!
-      }
+      
+      scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that inconsistent enums used as both an input and output throws an error', () => {
-    const result = federateSubgraphs([subgraphC, subgraphE]);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).toStrictEqual(incompatibleSharedEnumError(parentName));
+    const { errors } = federateSubgraphs([subgraphC, subgraphE]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(incompatibleSharedEnumError(parentName));
   });
 });
 

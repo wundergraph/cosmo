@@ -1,57 +1,36 @@
-import BarList from "@/components/analytics/barlist";
-import { ChartTooltip } from "@/components/analytics/charts";
-import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
-import { DeltaBadge } from "@/components/analytics/delta-badge";
-import {
-  AnalyticsFilter,
-  AnalyticsFilters,
-} from "@/components/analytics/filters";
-import { optionConstructor } from "@/components/analytics/getDataTableFilters";
-import { useRange } from "@/components/analytics/use-range";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { EmptyState } from "@/components/empty-state";
-import { InfoTooltip } from "@/components/info-tooltip";
-import { GraphContext } from "@/components/layout/graph-layout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader } from "@/components/ui/loader";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import useWindowSize from "@/hooks/use-window-size";
-import {
-  formatDurationMetric,
-  formatMetric,
-  formatPercentMetric,
-} from "@/lib/format-metric";
-import { useChartData } from "@/lib/insights-helpers";
-import { cn } from "@/lib/utils";
-import {
-  ChevronRightIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getMetricsErrorRate } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import BarList from '@/components/analytics/barlist';
+import { ChartTooltip } from '@/components/analytics/charts';
+import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
+import { DeltaBadge } from '@/components/analytics/delta-badge';
+import { AnalyticsFilter, AnalyticsFilters } from '@/components/analytics/filters';
+import { optionConstructor } from '@/components/analytics/getDataTableFilters';
+import { useRange } from '@/components/analytics/use-range';
+import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { EmptyState } from '@/components/empty-state';
+import { InfoTooltip } from '@/components/info-tooltip';
+import { GraphContext } from '@/components/layout/graph-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader } from '@/components/ui/loader';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import useWindowSize from '@/hooks/use-window-size';
+import { formatDurationMetric, formatMetric, formatPercentMetric } from '@/lib/format-metric';
+import { useChartData } from '@/lib/insights-helpers';
+import { cn } from '@/lib/utils';
+import { ChevronRightIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getMetricsErrorRate } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import {
   AnalyticsViewResultFilter,
   MetricsDashboardMetric,
   MetricsTopItem,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { differenceInHours, formatISO } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import React, { useCallback, useContext, useId, useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  Legend,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { differenceInHours, formatISO } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import React, { useCallback, useContext, useId, useMemo } from 'react';
+import { Area, AreaChart, Legend, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 
 export const getInfoTip = (range?: number) => {
   switch (range) {

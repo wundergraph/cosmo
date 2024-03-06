@@ -341,7 +341,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -368,7 +368,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -434,7 +434,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -487,7 +487,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -581,7 +581,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -692,7 +692,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -740,7 +740,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -783,7 +783,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Object',
@@ -807,7 +807,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -858,7 +858,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -901,7 +901,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -983,7 +983,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1079,7 +1079,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1117,7 +1117,7 @@ describe('openfed_FieldSet Tests', () => {
       `);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',

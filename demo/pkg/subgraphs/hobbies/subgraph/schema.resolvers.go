@@ -6,6 +6,7 @@ package subgraph
 
 import (
 	"context"
+	"time"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies/subgraph/model"
@@ -36,6 +37,26 @@ func (r *programmingResolver) Employees(ctx context.Context, obj *model.Programm
 	return r.Resolver.Employees(obj)
 }
 
+// CountHob is the resolver for the countHob field.
+func (r *subscriptionResolver) CountHob(ctx context.Context, max int, intervalMilliseconds int) (<-chan int, error) {
+	ch := make(chan int)
+
+	go func() {
+		defer close(ch)
+
+		for i := 0; i <= max; i++ {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- i:
+				time.Sleep(time.Duration(intervalMilliseconds) * time.Millisecond)
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
 // Employees is the resolver for the employees field.
 func (r *travellingResolver) Employees(ctx context.Context, obj *model.Travelling) ([]*model.Employee, error) {
 	return r.Resolver.Employees(obj)
@@ -56,6 +77,9 @@ func (r *Resolver) Other() generated.OtherResolver { return &otherResolver{r} }
 // Programming returns generated.ProgrammingResolver implementation.
 func (r *Resolver) Programming() generated.ProgrammingResolver { return &programmingResolver{r} }
 
+// Subscription returns generated.SubscriptionResolver implementation.
+func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
+
 // Travelling returns generated.TravellingResolver implementation.
 func (r *Resolver) Travelling() generated.TravellingResolver { return &travellingResolver{r} }
 
@@ -64,4 +88,5 @@ type flyingResolver struct{ *Resolver }
 type gamingResolver struct{ *Resolver }
 type otherResolver struct{ *Resolver }
 type programmingResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }
 type travellingResolver struct{ *Resolver }

@@ -1,23 +1,16 @@
-import { cn } from "@/lib/utils";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { BiRename } from "react-icons/bi";
-import { LuNetwork } from "react-icons/lu";
-import { useMovable } from "react-move-hook";
-import { Edge, Node, ReactFlowProvider } from "reactflow";
-import { EmptyState } from "../empty-state";
-import { Card } from "../ui/card";
-import { CLI } from "../ui/cli";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import { FetchFlow } from "./fetch-flow";
-import { FetchWaterfall } from "./fetch-waterfall";
-import { FetchNode, LoadStats } from "./types";
+import { cn } from '@/lib/utils';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { BiRename } from 'react-icons/bi';
+import { LuNetwork } from 'react-icons/lu';
+import { useMovable } from 'react-move-hook';
+import { Edge, Node, ReactFlowProvider } from 'reactflow';
+import { EmptyState } from '../empty-state';
+import { Card } from '../ui/card';
+import { CLI } from '../ui/cli';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { FetchFlow } from './fetch-flow';
+import { FetchWaterfall } from './fetch-waterfall';
+import { FetchNode, LoadStats } from './types';
 
 const initialPaneWidth = 360;
 

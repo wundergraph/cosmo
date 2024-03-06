@@ -1,7 +1,3 @@
-directive @tag(
-  name: String!
-) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
 directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 
 directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
@@ -10,11 +6,11 @@ directive @requiresScopes(
   scopes: [[openfed__Scope!]!]!
 ) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 
-scalar openfed__Scope
+directive @tag(
+  name: String!
+) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 
-interface SkuItf {
-  sku: String
-}
+scalar openfed__Scope
 
 type Query {
   allPandas: [Panda]
@@ -27,6 +23,10 @@ type Query {
 type Panda {
   name: ID!
   favoriteFood: String
+}
+
+interface SkuItf {
+  sku: String
 }
 
 enum ShippingClass {
@@ -78,8 +78,8 @@ type Product implements ProductItf & SkuItf {
   dimensions: ProductDimension
   createdBy: User
   hidden: String
+  reviewsScore: Float!
   oldField: String
   reviewsCount: Int!
-  reviewsScore: Float!
   reviews: [Review!]!
 }
