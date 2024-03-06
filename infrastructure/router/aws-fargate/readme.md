@@ -1,0 +1,9 @@
+# Cosmo Router on AWS Fargate
+
+This directory contains the necessary files to deploy the Cosmo Router on AWS Fargate.
+
+Please note that this template deploys the Cosmo Router in the default VPC. It serves as a general setup example on AWS and should be customized to fit your project's specific requirements.
+
+## Secret Configuration
+
+The router needs the `GRAPH_API_TOKEN` secret defined (see [wgc router token create](https://cosmo-docs.wundergraph.com/cli/router/token/create) for further information). Please create a secret via the AWS [Secret Manager](https://aws.amazon.com/secrets-manager/), place the generated value there and pass the ARN of that secret as a variable to your `terraform` CLI commands.

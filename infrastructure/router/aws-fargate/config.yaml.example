@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json
+
+#
+# Cosmo Router Configuration
+#
+
+version: "1"
+
+log_level: "info"
+json_log: true
+listen_addr: 0.0.0.0:${PORT}
+playground_enabled: true
+introspection_enabled: true
+
+graph:
+  token: ${GRAPH_API_TOKEN}
+
+compliance:
+  anonymize_ip:
+    method: redact
