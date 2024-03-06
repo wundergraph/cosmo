@@ -12,7 +12,7 @@ lint:
 
 LOOPS=20
 test-stability:
-	for ((i=1; i <= ${LOOPS}; ++i)) do make test; done
+	for ((i=1; i <= ${LOOPS}; ++i)) do make clean-testcache;make test; done
 
 clean-testcache:
 	go clean -testcache
