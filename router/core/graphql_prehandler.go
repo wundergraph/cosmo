@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -165,7 +166,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		body, err := h.operationProcessor.ReadBody(buf, r.Body)
 		if err != nil {
 			finalErr = err
-			requestLogger.Error(err.Error())
+
+			// This error is expected when the client defines (Content-Length) and aborts the request before
+			// It means that EOF was encountered in the middle of reading a fixed-size block or data structure.
+			if !errors.Is(err, io.ErrUnexpectedEOF) {
+				requestLogger.Error(err.Error())
+			}
+
 			writeRequestErrors(r.Context(), http.StatusBadRequest, graphql.RequestErrorsFromError(err), w, requestLogger)
 			return
 		}
