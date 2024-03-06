@@ -20,6 +20,8 @@ type Subscription {
   `currentTime` will return a stream of `Time` objects.
   """
   currentTime: Time!
+  countEmp(max: Int! intervalMilliseconds: Int!): Int!
+  countEmp2(max: Int! intervalMilliseconds: Int!): Int!
 }
 
 enum Department {

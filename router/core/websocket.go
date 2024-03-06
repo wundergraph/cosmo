@@ -403,7 +403,6 @@ func (h *WebsocketHandler) runPoller() {
 					h.removeConnection(conn, handler, fd)
 					continue
 				}
-
 				err = h.HandleMessage(handler, msg)
 				if err != nil {
 					h.logger.Debug("Handling websocket message", zap.Error(err))
@@ -731,6 +730,7 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 	if !exists {
 		return h.requestError(fmt.Errorf("no subscription was registered for ID %q", msg.ID))
 	}
+	h.subscriptions.Delete(msg.ID)
 	subscriptionID, ok := value.(int64)
 	if !ok {
 		return h.requestError(fmt.Errorf("invalid subscription state for ID %q", msg.ID))

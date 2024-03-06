@@ -895,6 +895,37 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	}
 }
 
+func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Duration) {
+	e.t.Helper()
+
+	report := e.Router.WebsocketStats.GetReport()
+	if report.Triggers == desiredCount {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sub := e.Router.WebsocketStats.Subscribe(ctx)
+
+	for {
+		select {
+		case <-ctx.Done():
+			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+			return
+		case report, ok := <-sub:
+			if !ok {
+				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+				return
+			}
+			if report.Triggers == desiredCount {
+				return
+			}
+		}
+	}
+
+}
+
 func subgraphOptions(t testing.TB, ns *natsserver.Server) *subgraphs.SubgraphOptions {
 	nc, err := nats.Connect(ns.ClientURL())
 	require.NoError(t, err)
