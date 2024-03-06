@@ -383,17 +383,14 @@ const LintPolicyPage: NextPageWithLayout = () => {
                     <div className="flex w-full flex-col items-start gap-y-1">
                       <div className="flex items-center gap-x-2">
                         <span className="text-lg">{lintCategory.title}</span>
-                        {data.linterEnabled &&
-                          countByCategory && (
-                            <Badge
-                              variant="muted"
-                              className="mt-[2px] h-[18px] px-2 text-xs"
-                            >
-                              {`${countByCategory[index]} of ${
-                                lintCategory.rules.length
-                              }`}
-                            </Badge>
-                          )}
+                        {countByCategory && (
+                          <Badge
+                            variant="muted"
+                            className="mt-[2px] h-[18px] px-2 text-xs"
+                          >
+                            {`${countByCategory[index]} of ${lintCategory.rules.length}`}
+                          </Badge>
+                        )}
                       </div>
                       <span className="text-sm text-muted-foreground">
                         {lintCategory.description}

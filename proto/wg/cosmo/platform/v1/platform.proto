@@ -156,7 +156,7 @@ message LintLocation{
 }
 
 message LintIssue{
-  optional string ruleId = 1;
+  optional string lintRuleType = 1;
   LintSeverity severity = 2;
   string message = 3;
   LintLocation issueLocation = 4;

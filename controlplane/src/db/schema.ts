@@ -1250,6 +1250,7 @@ export const schemaCheckLintAction = pgTable('schema_check_lint_action', {
     .references(() => schemaChecks.id, {
       onDelete: 'cascade',
     }),
+  lintRuleType: lintRulesEnum('lint_rule_type'),
   message: text('message'),
   isError: boolean('is_error').default(false),
   location: customJson<{ line: number; column: number; endLine?: number; endColumn?: number }>('location').notNull(),

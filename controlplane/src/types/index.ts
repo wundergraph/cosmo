@@ -479,7 +479,7 @@ export interface RulesConfig {
 }
 
 export interface LintIssueResult {
-  ruleId: string | undefined;
+  lintRuleType: LintRuleType | undefined;
   severity: LintSeverity;
   message: string;
   issueLocation: {

@@ -1237,25 +1237,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         }
 
-        let warningLintIssues: SchemaLintIssues = { warnings: [], errors: [] };
-        let errorLintIssues: SchemaLintIssues = { warnings: [], errors: [] };
+        let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
         if (namespace.enableLinting && newSchemaSDL !== '') {
           const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
           if (lintConfigs.length > 0) {
-            warningLintIssues = await schemaLintCheck({
+            lintIssues = await schemaLintCheck({
               schema: newSchemaSDL,
-              rulesInput: lintConfigs.filter((l) => l.severity === 'warn'),
-            });
-            errorLintIssues = await schemaLintCheck({
-              schema: newSchemaSDL,
-              rulesInput: lintConfigs.filter((l) => l.severity === 'error'),
+              rulesInput: lintConfigs,
             });
           }
         }
 
         await schemaLintRepo.addSchemaCheckLintIssues({
           schemaCheckId: schemaCheckID,
-          lintIssues: [...warningLintIssues.warnings, ...errorLintIssues.errors],
+          lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
         });
 
         // Update the overall schema check with the results
@@ -1263,7 +1258,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           schemaCheckID,
           hasClientTraffic,
           hasBreakingChanges,
-          hasLintErrors: errorLintIssues.errors.length > 0,
+          hasLintErrors: lintIssues.errors.length > 0,
         });
 
         return {
@@ -1281,8 +1276,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespace: c.namespace,
             organizationSlug: authContext.organizationSlug,
           })),
-          lintWarnings: warningLintIssues.warnings,
-          lintErrors: errorLintIssues.errors,
+          lintWarnings: lintIssues.warnings,
+          lintErrors: lintIssues.errors,
         };
       });
     },

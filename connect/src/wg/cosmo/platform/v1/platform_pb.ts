@@ -1274,9 +1274,9 @@ export class LintLocation extends Message<LintLocation> {
  */
 export class LintIssue extends Message<LintIssue> {
   /**
-   * @generated from field: optional string ruleId = 1;
+   * @generated from field: optional string lintRuleType = 1;
    */
-  ruleId?: string;
+  lintRuleType?: string;
 
   /**
    * @generated from field: wg.cosmo.platform.v1.LintSeverity severity = 2;
@@ -1301,7 +1301,7 @@ export class LintIssue extends Message<LintIssue> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.LintIssue";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "ruleId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "lintRuleType", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "severity", kind: "enum", T: proto3.getEnumType(LintSeverity) },
     { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "issueLocation", kind: "message", T: LintLocation },

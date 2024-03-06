@@ -60,6 +60,7 @@ export class SchemaLintRepository {
       await this.db.insert(schemaCheckLintAction).values(
         lintIssues.map((l) => {
           return {
+            lintRuleType: l.lintRuleType || null,
             schemaCheckId,
             message: l.message,
             location: l.issueLocation,
@@ -76,13 +77,14 @@ export class SchemaLintRepository {
         message: schemaCheckLintAction.message,
         location: schemaCheckLintAction.location,
         isError: schemaCheckLintAction.isError,
+        lintRuleType: schemaCheckLintAction.lintRuleType,
       })
       .from(schemaCheckLintAction)
       .where(eq(schemaCheckLintAction.schemaCheckId, schemaCheckId));
 
     return lintIssues.map((l) => {
       return {
-        ruleId: undefined,
+        lintRuleType: l.lintRuleType || undefined,
         issueLocation: l.location,
         message: l.message,
         severity: l.isError ? LintSeverity.error : LintSeverity.warn,

@@ -575,6 +575,13 @@
       "when": 1709676926593,
       "tag": "0081_ambitious_exiles",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "5",
+      "when": 1709739595103,
+      "tag": "0082_gorgeous_sleeper",
+      "breakpoints": true
     }
   ]
 }

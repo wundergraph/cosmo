@@ -7,9 +7,7 @@ import {
 import { ChangesTable } from "@/components/checks/changes-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
-import {
-  CodeViewerActions
-} from "@/components/code-viewer";
+import { CodeViewerActions } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -198,7 +196,9 @@ const getDecorationCollection = (
         endColumn: l.issueLocation.endColumn || l.issueLocation.column,
       },
       options: {
-        hoverMessage: { value: l.message },
+        hoverMessage: {
+          value: `${l.message}. (Rule: ${l.lintRuleType ? l.lintRuleType : ""})`,
+        },
         inlineClassName:
           "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
         isWholeLine: l.issueLocation.endLine === undefined,

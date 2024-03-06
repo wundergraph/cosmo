@@ -1,9 +1,9 @@
 import { Linter } from 'eslint';
 import { parseForESLint, rules } from '@graphql-eslint/eslint-plugin';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { LintIssueResult, LintRuleType, RulesConfig, SchemaLintDTO, SchemaLintIssues } from 'src/types/index.js';
+import { LintIssueResult, LintRuleType, RulesConfig, SchemaLintDTO, SchemaLintIssues } from '../../types/index.js';
 
-const getRuleName = (rule: LintRuleType): string => {
+const getRuleModule = (rule: LintRuleType) => {
   switch (rule) {
     case 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE':
     case 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE':
@@ -16,27 +16,27 @@ const getRuleName = (rule: LintRuleType): string => {
     case 'SHOULD_NOT_HAVE_INTERFACE_PREFIX':
     case 'SHOULD_NOT_HAVE_INTERFACE_SUFFIX':
     case 'ENUM_VALUES_SHOULD_BE_UPPER_CASE': {
-      return 'naming-convention';
+      return rules['naming-convention'];
     }
     case 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES': {
-      return 'no-case-insensitive-enum-values-duplicates';
+      return rules['no-case-insensitive-enum-values-duplicates'];
     }
     case 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS': {
-      return 'no-typename-prefix';
+      return rules['no-typename-prefix'];
     }
     case 'ORDER_FIELDS':
     case 'ORDER_ENUM_VALUES':
     case 'ORDER_DEFINITIONS': {
-      return 'alphabetize';
+      return rules.alphabetize;
     }
     case 'ALL_TYPES_REQUIRE_DESCRIPTION': {
-      return 'require-description';
+      return rules['require-description'];
     }
     case 'REQUIRE_DEPRECATION_REASON': {
-      return 'require-deprecation-reason';
+      return rules['require-deprecation-reason'];
     }
     case 'REQUIRE_DEPRECATION_DATE': {
-      return 'require-deprecation-date';
+      return rules['require-deprecation-date'];
     }
     default: {
       throw new Error(`Rule ${rule} doesnt exist`);
@@ -47,345 +47,97 @@ const getRuleName = (rule: LintRuleType): string => {
 export const createRulesConfig = (rules: SchemaLintDTO[]) => {
   const rulesConfig: RulesConfig = {};
   for (const rule of rules) {
-    switch (rule.ruleName) {
+    const ruleName = rule.ruleName;
+    switch (ruleName) {
       case 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          ruleOptions = {
-            ...ruleOptions,
-            FieldDefinition: { style: 'camelCase' },
-          };
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { FieldDefinition: { style: 'camelCase' } }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { FieldDefinition: { style: 'camelCase' } }];
         break;
       }
       case 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('ObjectTypeDefinition' in ruleOptions) {
-            const objectTypeConfig = ruleOptions.ObjectTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              ObjectTypeDefinition: { ...objectTypeConfig, style: 'PascalCase' },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              ObjectTypeDefinition: { style: 'PascalCase' },
-            };
-          }
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { ObjectTypeDefinition: { style: 'PascalCase' } }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { ObjectTypeDefinition: { style: 'PascalCase' } }];
         break;
       }
       case 'SHOULD_NOT_HAVE_TYPE_PREFIX': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('ObjectTypeDefinition' in ruleOptions) {
-            const objectTypeConfig = ruleOptions.ObjectTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              ObjectTypeDefinition: { ...objectTypeConfig, forbiddenPrefixes: ['Type', 'type'] },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] } }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] } }];
         break;
       }
       case 'SHOULD_NOT_HAVE_TYPE_SUFFIX': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('ObjectTypeDefinition' in ruleOptions) {
-            const objectTypeConfig = ruleOptions.ObjectTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              ObjectTypeDefinition: { ...objectTypeConfig, forbiddenSuffixes: ['Type', 'type'] },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] } }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] } }];
         break;
       }
       case 'SHOULD_NOT_HAVE_INPUT_PREFIX': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('InputObjectTypeDefinition' in ruleOptions) {
-            const inputObjectTypeConfig = ruleOptions.InputObjectTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              InputObjectTypeDefinition: { ...inputObjectTypeConfig, forbiddenPrefixes: ['Input', 'input'] },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-          break;
-        } else {
-          rulesConfig[ruleName] = [
-            rule.severity,
-            { InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] } },
-          ];
-        }
+        rulesConfig[ruleName] = [
+          rule.severity,
+          { InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] } },
+        ];
         break;
       }
       case 'SHOULD_HAVE_INPUT_SUFFIX': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('InputObjectTypeDefinition' in ruleOptions) {
-            const inputObjectTypeConfig = ruleOptions.InputObjectTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              InputObjectTypeDefinition: { ...inputObjectTypeConfig, requiredSuffixes: ['Input'] },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              InputObjectTypeDefinition: { requiredSuffixes: ['Input'] },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-          break;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] } }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] } }];
         break;
       }
       case 'SHOULD_NOT_HAVE_ENUM_PREFIX': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('EnumTypeDefinition' in ruleOptions) {
-            const enumTypeConfig = ruleOptions.EnumTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              EnumTypeDefinition: { ...enumTypeConfig, forbiddenPrefixes: ['Enum', 'enum', 'ENUM'] },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              EnumTypeDefinition: { forbiddenPrefixes: ['Enum', 'enum', 'ENUM'] },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [
-            rule.severity,
-            { EnumTypeDefinition: { forbiddenPrefixes: ['Enum', 'enum', 'ENUM'] } },
-          ];
-        }
+        rulesConfig[ruleName] = [
+          rule.severity,
+          { EnumTypeDefinition: { forbiddenPrefixes: ['Enum', 'enum', 'ENUM'] } },
+        ];
         break;
       }
       case 'SHOULD_NOT_HAVE_ENUM_SUFFIX': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('EnumTypeDefinition' in ruleOptions) {
-            const enumTypeConfig = ruleOptions.EnumTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              EnumTypeDefinition: { ...enumTypeConfig, forbiddenSuffixes: ['Enum', 'enum'] },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              EnumTypeDefinition: { forbiddenSuffixes: ['Enum', 'enum'] },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { EnumTypeDefinition: { forbiddenSuffixes: ['Enum', 'enum'] } }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { EnumTypeDefinition: { forbiddenSuffixes: ['Enum', 'enum'] } }];
         break;
       }
       case 'SHOULD_NOT_HAVE_INTERFACE_PREFIX': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('InterfaceTypeDefinition' in ruleOptions) {
-            const interfaceTypeConfig = ruleOptions.InterfaceTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              InterfaceTypeDefinition: { ...interfaceTypeConfig, forbiddenPrefixes: ['Interface', 'interface'] },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              InterfaceTypeDefinition: { forbiddenPrefixes: ['Interface', 'interface'] },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [
-            rule.severity,
-            { InterfaceTypeDefinition: { forbiddenPrefixes: ['Interface', 'interface'] } },
-          ];
-        }
+        rulesConfig[ruleName] = [
+          rule.severity,
+          { InterfaceTypeDefinition: { forbiddenPrefixes: ['Interface', 'interface'] } },
+        ];
         break;
       }
       case 'SHOULD_NOT_HAVE_INTERFACE_SUFFIX': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('InterfaceTypeDefinition' in ruleOptions) {
-            const interfaceTypeConfig = ruleOptions.InterfaceTypeDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              InterfaceTypeDefinition: { ...interfaceTypeConfig, forbiddenSuffixes: ['Interface', 'interface'] },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              InterfaceTypeDefinition: { forbiddenSuffixes: ['Interface', 'interface'] },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [
-            rule.severity,
-            { InterfaceTypeDefinition: { forbiddenSuffixes: ['Interface', 'interface'] } },
-          ];
-        }
+        rulesConfig[ruleName] = [
+          rule.severity,
+          { InterfaceTypeDefinition: { forbiddenSuffixes: ['Interface', 'interface'] } },
+        ];
         break;
       }
       case 'ENUM_VALUES_SHOULD_BE_UPPER_CASE': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          if ('EnumValueDefinition' in ruleOptions) {
-            const enumValueDefinition = ruleOptions.EnumValueDefinition;
-            ruleOptions = {
-              ...ruleOptions,
-              EnumValueDefinition: { ...enumValueDefinition, style: 'UPPER_CASE' },
-            };
-          } else {
-            ruleOptions = {
-              ...ruleOptions,
-              EnumValueDefinition: { style: 'UPPER_CASE' },
-            };
-          }
-
-          ruleConfig[1] = ruleOptions;
-          break;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { EnumValueDefinition: { style: 'UPPER_CASE' } }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { EnumValueDefinition: { style: 'UPPER_CASE' } }];
         break;
       }
-      case 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES':
-      case 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS':
-      case 'REQUIRE_DEPRECATION_REASON':
+      case 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES': {
+        rulesConfig[ruleName] = [rule.severity];
+        break;
+      }
+      case 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS': {
+        rulesConfig[ruleName] = [rule.severity];
+        break;
+      }
+      case 'REQUIRE_DEPRECATION_REASON': {
+        rulesConfig[ruleName] = [rule.severity];
+        break;
+      }
       case 'REQUIRE_DEPRECATION_DATE': {
-        const ruleName = getRuleName(rule.ruleName);
         rulesConfig[ruleName] = [rule.severity];
         break;
       }
       case 'ORDER_FIELDS': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          ruleOptions = {
-            ...ruleOptions,
-            fields: ['ObjectTypeDefinition', 'InterfaceTypeDefinition', 'InputObjectTypeDefinition'],
-          };
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [
-            rule.severity,
-            { fields: ['ObjectTypeDefinition', 'InterfaceTypeDefinition', 'InputObjectTypeDefinition'] },
-          ];
-        }
+        rulesConfig[ruleName] = [
+          rule.severity,
+          { fields: ['ObjectTypeDefinition', 'InterfaceTypeDefinition', 'InputObjectTypeDefinition'] },
+        ];
         break;
       }
       case 'ORDER_ENUM_VALUES': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          ruleOptions = {
-            ...ruleOptions,
-            values: ['EnumTypeDefinition'],
-          };
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { values: ['EnumTypeDefinition'] }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { values: ['EnumTypeDefinition'] }];
         break;
       }
       case 'ORDER_DEFINITIONS': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          ruleOptions = {
-            ...ruleOptions,
-            definitions: true,
-          };
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { definitions: true }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { definitions: true }];
         break;
       }
       case 'ALL_TYPES_REQUIRE_DESCRIPTION': {
-        const ruleName = getRuleName(rule.ruleName);
-        if (ruleName in rulesConfig) {
-          const ruleConfig = rulesConfig[ruleName] as any[];
-          let ruleOptions = ruleConfig[1];
-          ruleOptions = {
-            ...ruleOptions,
-            types: true,
-          };
-          ruleConfig[1] = ruleOptions;
-        } else {
-          rulesConfig[ruleName] = [rule.severity, { types: true }];
-        }
+        rulesConfig[ruleName] = [rule.severity, { types: true }];
         break;
       }
       default: {
@@ -424,8 +176,11 @@ export const schemaLintCheck = ({
   const linter = new Linter();
   linter.defineParser('@graphql-eslint/eslint-plugin', { parseForESLint });
 
-  for (const [ruleId, rule] of Object.entries(rules)) {
-    linter.defineRule(ruleId, rule as any);
+  for (const ruleName of Object.keys(LintRuleType)) {
+    const ruleModule = getRuleModule(ruleName as LintRuleType);
+    if (ruleModule) {
+      linter.defineRule(ruleName, ruleModule as any);
+    }
   }
 
   const lintIssues = linter.verify(
@@ -444,7 +199,7 @@ export const schemaLintCheck = ({
   for (const i of lintIssues) {
     if (i.severity === 1) {
       lintWarnings.push({
-        ruleId: i.ruleId || undefined,
+        lintRuleType: (i.ruleId as LintRuleType) || undefined,
         severity: LintSeverity.warn,
         message: i.message,
         issueLocation: {
@@ -456,7 +211,7 @@ export const schemaLintCheck = ({
       });
     } else if (i.severity === 2) {
       lintErrors.push({
-        ruleId: i.ruleId || undefined,
+        lintRuleType: (i.ruleId as LintRuleType) || undefined,
         severity: LintSeverity.error,
         message: i.message,
         issueLocation: {
