@@ -12,7 +12,7 @@ type Query{
 type Mutation {
   addFact(fact: String!): String!
 }  
- 
+
 enum ProductNamesenum {
   VALUE
   Value
@@ -49,25 +49,25 @@ input InputA{
     expect(lintIssues.errors.length).toBe(1);
     expect(lintIssues.warnings).toStrictEqual([
       {
-        ruleId: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
+        lintRuleType: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
         severity: 0,
         message: 'Unexpected case-insensitive enum values duplicates for enum value "Value" in enum "ProductNamesenum"',
         issueLocation: { line: 12, column: 3, endLine: 12, endColumn: 8 },
       },
       {
-        ruleId: 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
+        lintRuleType: 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
         severity: 0,
         message: 'Enumeration value "Value" should be in UPPER_CASE format',
         issueLocation: { line: 12, column: 3, endLine: 12, endColumn: 8 },
       },
       {
-        ruleId: 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
+        lintRuleType: 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
         severity: 0,
         message: 'Type "Employee_A" should be in PascalCase format',
         issueLocation: { line: 20, column: 6, endLine: 20, endColumn: 16 },
       },
       {
-        ruleId: 'SHOULD_NOT_HAVE_INPUT_PREFIX',
+        lintRuleType: 'SHOULD_NOT_HAVE_INPUT_PREFIX',
         severity: 0,
         message: 'Input type "InputA" should not have "Input" prefix',
         issueLocation: { line: 24, column: 7, endLine: 24, endColumn: 13 },
@@ -75,7 +75,7 @@ input InputA{
     ]);
     expect(lintIssues.errors).toStrictEqual([
       {
-        ruleId: 'SHOULD_HAVE_INPUT_SUFFIX',
+        lintRuleType: 'SHOULD_HAVE_INPUT_SUFFIX',
         severity: 1,
         message: 'Input type "InputA" should have one of the following suffixes: Input',
         issueLocation: { line: 24, column: 7, endLine: 24, endColumn: 13 },
@@ -84,7 +84,6 @@ input InputA{
   });
 
   test('Should test enum lint rules', (testContext) => {
-    try {
       const schema = `
 enum ProductNamesEnum {
   VALUE
@@ -108,28 +107,25 @@ enum ProductNamesEnum {
       expect(lintIssues.warnings.length).toBe(3);
       expect(lintIssues.warnings).toStrictEqual([
         {
-          ruleId: 'SHOULD_NOT_HAVE_ENUM_SUFFIX',
+          lintRuleType: 'SHOULD_NOT_HAVE_ENUM_SUFFIX',
           severity: 0,
           message: 'Enumerator "ProductNamesEnum" should not have "Enum" suffix',
           issueLocation: { line: 2, column: 6, endLine: 2, endColumn: 22 },
         },
         {
-          ruleId: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
+          lintRuleType: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
           severity: 0,
           message:
             'Unexpected case-insensitive enum values duplicates for enum value "Value" in enum "ProductNamesEnum"',
           issueLocation: { line: 4, column: 3, endLine: 4, endColumn: 8 },
         },
         {
-          ruleId: 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
+          lintRuleType: 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
           severity: 0,
           message: 'Enumeration value "Value" should be in UPPER_CASE format',
           issueLocation: { line: 4, column: 3, endLine: 4, endColumn: 8 },
         },
       ]);
-    } catch (e) {
-      console.log(e);
-    }
   });
 
   test('Should test alphabetical sort lint rules', (testContext) => {
@@ -161,25 +157,25 @@ enum ProductNamesEnum {
     expect(lintIssues.warnings.length).toBe(4);
     expect(lintIssues.warnings).toStrictEqual([
       {
-        ruleId: 'ORDER_FIELDS',
+        lintRuleType: 'ORDER_FIELDS',
         severity: 0,
         message: 'field "a" should be before field "b"',
         issueLocation: { line: 3, column: 3, endLine: 3, endColumn: 4 },
       },
       {
-        ruleId: 'ORDER_DEFINITIONS',
+        lintRuleType: 'ORDER_DEFINITIONS',
         severity: 0,
         message: 'type "A" should be before type "B"',
         issueLocation: { line: 5, column: 6, endLine: 5, endColumn: 7 },
       },
       {
-        ruleId: 'ORDER_FIELDS',
+        lintRuleType: 'ORDER_FIELDS',
         severity: 0,
         message: 'field "a" should be before field "b"',
         issueLocation: { line: 7, column: 3, endLine: 7, endColumn: 4 },
       },
       {
-        ruleId: 'ORDER_ENUM_VALUES',
+        lintRuleType: 'ORDER_ENUM_VALUES',
         severity: 0,
         message: 'enum value "ENGINE" should be before enum value "VALUE"',
         issueLocation: { line: 11, column: 3, endLine: 11, endColumn: 9 },
@@ -202,13 +198,13 @@ enum ProductNamesEnum {
     expect(lintIssues.warnings.length).toBe(2);
     expect(lintIssues.warnings).toStrictEqual([
       {
-        ruleId: 'REQUIRE_DEPRECATION_DATE',
+        lintRuleType: 'REQUIRE_DEPRECATION_DATE',
         severity: 0,
         message: 'Directive "@deprecated" must have a deletion date for field "b" in type "B"',
         issueLocation: { line: 2, column: 14, endLine: 2, endColumn: 24 },
       },
       {
-        ruleId: 'REQUIRE_DEPRECATION_REASON',
+        lintRuleType: 'REQUIRE_DEPRECATION_REASON',
         severity: 0,
         message: 'Deprecation reason is required for field "b" in type "B".',
         issueLocation: { line: 2, column: 14, endLine: 2, endColumn: 24 },
@@ -230,7 +226,7 @@ enum ProductNamesEnum {
     expect(lintIssues.warnings.length).toBe(1);
     expect(lintIssues.warnings).toStrictEqual([
       {
-        ruleId: 'ALL_TYPES_REQUIRE_DESCRIPTION',
+        lintRuleType: 'ALL_TYPES_REQUIRE_DESCRIPTION',
         severity: 0,
         message: 'Description is required for type "B"',
         issueLocation: { line: 1, column: 6, endLine: 1, endColumn: 7 },
@@ -253,13 +249,13 @@ enum ProductNamesEnum {
     expect(lintIssues.warnings.length).toBe(2);
     expect(lintIssues.warnings).toStrictEqual([
       {
-        ruleId: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
+        lintRuleType: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
         severity: 0,
         message: 'Field "userId" starts with the name of the parent type "User"',
         issueLocation: { line: 2, column: 3, endLine: 2, endColumn: 9 },
       },
       {
-        ruleId: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
+        lintRuleType: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
         severity: 0,
         message: 'Field "first_name" should be in camelCase format',
         issueLocation: { line: 3, column: 3, endLine: 3, endColumn: 13 },
@@ -287,19 +283,19 @@ input InputUser{
     expect(lintIssues.warnings.length).toBe(3);
     expect(lintIssues.warnings).toStrictEqual([
       {
-        ruleId: 'SHOULD_HAVE_INPUT_SUFFIX',
+        lintRuleType: 'SHOULD_HAVE_INPUT_SUFFIX',
         severity: 0,
         message: 'Input type "User" should have one of the following suffixes: Input',
         issueLocation: { line: 1, column: 7, endLine: 1, endColumn: 11 },
       },
       {
-        ruleId: 'SHOULD_HAVE_INPUT_SUFFIX',
+        lintRuleType: 'SHOULD_HAVE_INPUT_SUFFIX',
         severity: 0,
         message: 'Input type "InputUser" should have one of the following suffixes: Input',
         issueLocation: { line: 6, column: 7, endLine: 6, endColumn: 16 },
       },
       {
-        ruleId: 'SHOULD_NOT_HAVE_INPUT_PREFIX',
+        lintRuleType: 'SHOULD_NOT_HAVE_INPUT_PREFIX',
         severity: 0,
         message: 'Input type "InputUser" should not have "Input" prefix',
         issueLocation: { line: 6, column: 7, endLine: 6, endColumn: 16 },
