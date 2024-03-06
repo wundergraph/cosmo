@@ -2,7 +2,7 @@ dev:
 	go run cmd/router/main.go
 
 update-snapshot:
-	UPDATE_SNAPS=true go test -race ./...
+	cd ./pkg/config && go test -update -race ./...
 
 test:
 	go test -race ./...
@@ -20,6 +20,6 @@ VERSION?=dev
 build:
 	CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=$(VERSION)" -a -o router cmd/router/main.go
 
-.PHONY: dev test build lint bump-engine
+.PHONY: dev test build lint bump-engine update-snapshot
 
 

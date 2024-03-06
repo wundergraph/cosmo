@@ -156,6 +156,46 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 	return ch, nil
 }
 
+// CountEmp is the resolver for the countEmp field.
+func (r *subscriptionResolver) CountEmp(ctx context.Context, max int, intervalMilliseconds int) (<-chan int, error) {
+	ch := make(chan int)
+
+	go func() {
+		defer close(ch)
+
+		for i := 0; i <= max; i++ {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- i:
+				time.Sleep(time.Duration(intervalMilliseconds) * time.Millisecond)
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
+// CountEmp2 is the resolver for the countEmp2 field.
+func (r *subscriptionResolver) CountEmp2(ctx context.Context, max int, intervalMilliseconds int) (<-chan int, error) {
+	ch := make(chan int)
+
+	go func() {
+		defer close(ch)
+
+		for i := 0; i <= max; i++ {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- i:
+				time.Sleep(time.Duration(intervalMilliseconds) * time.Millisecond)
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
 // Engineer returns generated.EngineerResolver implementation.
 func (r *Resolver) Engineer() generated.EngineerResolver { return &engineerResolver{r} }
 
