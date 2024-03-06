@@ -57,8 +57,9 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    const schema = await readFile(schemaFile);
-    if (schema.length === 0) {
+    const schemaBuffer = await readFile(schemaFile);
+    const schema = new TextDecoder().decode(schemaBuffer);
+    if (schema.trim().length === 0) {
       program.error(
         pc.red(pc.bold(`The schema file '${pc.bold(schemaFile)}' is empty. Please provide a valid schema.`)),
       );
