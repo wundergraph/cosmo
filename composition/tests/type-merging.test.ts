@@ -15,8 +15,7 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
       nestedStringOne,
       nestedIntOne,
-      parentName,
-      fieldName,
+      `${parentName}.${fieldName}`,
     );
     expect(typeNode).toBeUndefined();
     expect(typeErrors).toHaveLength(2);
@@ -28,8 +27,7 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
       nestedStringOne,
       nestedStringTwo,
-      parentName,
-      fieldName,
+      `${parentName}.${fieldName}`,
     );
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(nestedStringTwo);
@@ -39,8 +37,7 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
       optionalNestedObject,
       requiredNestedObject,
-      parentName,
-      fieldName,
+      `${parentName}.${fieldName}`,
     );
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(optionalNestedObject);
@@ -50,8 +47,7 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
       stringToTypeNode(`[[[Float!]]]!`),
       stringToTypeNode(`[[[Float]!]]!`),
-      parentName,
-      fieldName,
+      `${parentName}.${fieldName}`,
     );
     expect(typeNode).toBeUndefined();
     expect(typeErrors).toHaveLength(2);
@@ -63,8 +59,7 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
       stringToTypeNode(`[[[Float!]]]!`),
       stringToTypeNode(`[[[Float]!]]!`),
-      parentName,
-      fieldName,
+      `${parentName}.${fieldName}`,
     );
     expect(typeNode).toBeUndefined();
     expect(typeErrors).toHaveLength(2);
@@ -76,8 +71,7 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
       nestedStringOne,
       nestedStringTwo,
-      parentName,
-      fieldName,
+      `${parentName}.${fieldName}`,
     );
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(nestedStringOne);
@@ -87,8 +81,7 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
       optionalNestedObject,
       requiredNestedObject,
-      parentName,
-      fieldName,
+      `${parentName}.${fieldName}`,
     );
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(requiredNestedObject);

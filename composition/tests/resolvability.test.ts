@@ -4,23 +4,20 @@ import { describe, expect, test } from 'vitest';
 import {
   documentNodeToNormalizedString,
   normalizeString,
+  schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
-  versionTwoPersistedBaseSchema,
+  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 
 describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      type Query {
-        query: Nested
-      }
-
       type Nested {
         nest: Nested2
       }
@@ -34,9 +31,15 @@ describe('Field resolvability tests', () => {
       }
 
       type Nested4 {
-        name: String
         age: Int
+        name: String
       }
+      
+      type Query {
+        query: Nested
+      }
+      
+      scalar openfed__Scope
     `,
       ),
     );
@@ -58,7 +61,7 @@ describe('Field resolvability tests', () => {
     );
   });
 
-  test('that unresolvable fields return an error', () => {
+  test('that unresolvable fields return an error #1', () => {
     const rootTypeFieldData: RootTypeFieldData = {
       fieldName: 'friend',
       fieldTypeNodeString: 'Friend',
@@ -71,6 +74,50 @@ describe('Field resolvability tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
       unresolvableFieldError(rootTypeFieldData, 'age', ['subgraph-f'], 'Query.friend.age', 'Friend'),
+    );
+  });
+
+  test('that unresolvable fields return an error #2.1', () => {
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'entity',
+      fieldTypeNodeString: 'Entity!',
+      path: 'Query.entity',
+      subgraphs: new Set<string>(['subgraph-w']),
+      typeName: 'Query',
+    };
+    const result = federateSubgraphs([subgraphV, subgraphW]);
+    expect(result.errors).toBeDefined();
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'nestedObject',
+        ['subgraph-v'],
+        'Query.entity.nestedObject { ... }',
+        'Entity',
+      ),
+    );
+  });
+
+  test('that unresolvable fields return an error #2.2', () => {
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'entity',
+      fieldTypeNodeString: 'Entity!',
+      path: 'Query.entity',
+      subgraphs: new Set<string>(['subgraph-w']),
+      typeName: 'Query',
+    };
+    const result = federateSubgraphs([subgraphW, subgraphV]);
+    expect(result.errors).toBeDefined();
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'nestedObject',
+        ['subgraph-v'],
+        'Query.entity.nestedObject { ... }',
+        'Entity',
+      ),
     );
   });
 
@@ -112,19 +159,20 @@ describe('Field resolvability tests', () => {
   test('that shared queries that return a type that is only resolvable over multiple subgraphs are valid', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphD, subgraphE]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
+      type Friend {
+        age: Int!
+        name: String!
+      }
+      
       type Query {
         friend: Friend
       }
-
-      type Friend {
-        name: String!
-        age: Int!
-      }
+      
+      scalar openfed__Scope
     `,
       ),
     );
@@ -133,23 +181,22 @@ describe('Field resolvability tests', () => {
   test('that shared queries that return an interface that is only resolvable over multiple subgraphs are valid', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphI]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      interface Human {
-        name: String!
+      type Friend implements Human {
         age: Int!
+        name: String!
       }
       
-      type Query {
-        humans: [Human]
+      interface Human {
+        age: Int!
+        name: String!
       }
 
-      type Friend implements Human {
-        name: String!
-        age: Int!
+      type Query {
+        humans: [Human]
       }
     `,
       ),
@@ -197,23 +244,22 @@ describe('Field resolvability tests', () => {
   test('that shared queries that return a union that is only resolvable over multiple subgraphs are valid', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphM, subgraphN]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
           `
-      union Human = Friend | Enemy
-      
-      type Query {
-        humans: [Human]
+      type Enemy {
+        name: String!
       }
-
+      
       type Friend {
         name: String!
       }
       
-      type Enemy {
-        name: String!
+      union Human = Enemy | Friend
+      
+      type Query {
+        humans: [Human]
       }
     `,
       ),
@@ -268,26 +314,28 @@ describe('Field resolvability tests', () => {
   test('that a nested self-referential type does not create an infinite validation loop', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphS, subgraphD]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
-        type Query {
-          object: Object!
-          friend: Friend
-        }
-        
-        type Object {
-          nestedObject: NestedObject!
+        type Friend {
+          name: String!
         }
         
         type NestedObject {
           object: Object!
         }
         
-        type Friend {
-          name: String!
+        type Object {
+          nestedObject: NestedObject!
         }
+        
+        type Query {
+          friend: Friend
+          object: Object!
+        }
+        
+        scalar openfed__Scope
     `,
       ),
     );
@@ -296,16 +344,12 @@ describe('Field resolvability tests', () => {
   test('that unreachable interface implementations do not return an error', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphT, subgraphU]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
           `
         interface Interface {
           field: String!
-        }
-
-        type Query {
-          query: Interface!
         }
 
         type Object implements Interface {
@@ -314,6 +358,10 @@ describe('Field resolvability tests', () => {
 
         type OtherObject implements Interface {
           field: String!
+        }
+
+        type Query {
+          query: Interface!
         }
     `,
       ),
@@ -697,6 +745,36 @@ const subgraphU = {
     
     type OtherObject implements Interface {
      field: String!
+    }
+  `),
+};
+
+const subgraphV: Subgraph = {
+  name: 'subgraph-v',
+  url: '',
+  definitions: parse(`
+    type Entity {
+      id: Int!
+      nestedObject: NestedObject!
+    }
+
+    type NestedObject {
+      name: String!
+      age: Int!
+    }
+  `),
+};
+
+const subgraphW: Subgraph = {
+  name: 'subgraph-w',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: Int!
     }
   `),
 };

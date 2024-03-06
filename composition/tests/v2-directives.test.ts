@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, ObjectContainer, shareableFieldDefinitionsError, stringToNameNode, Subgraph } from '../src';
+import { federateSubgraphs, FieldData, invalidFieldShareabilityError, ObjectDefinitionData, Subgraph } from '../src';
 import {
   documentNodeToNormalizedString,
   normalizeString,
+  schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
-  versionTwoPersistedBaseSchema,
+  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 import { parse } from 'graphql';
 
@@ -12,19 +13,21 @@ describe('V2 Directives Tests', () => {
   test('that external fields do not produce shareable errors', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB, subgraphC]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
           `
+        type Entity {
+          age: Int!
+          id: ID!
+          name: String!
+        }
+        
         type Query {
           query: Entity!
         }
         
-        type Entity {
-          id: ID!
-          name: String!
-          age: Int!
-        }
+        scalar openfed__Scope
       `,
       ),
     );
@@ -55,22 +58,21 @@ describe('V2 Directives Tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      shareableFieldDefinitionsError(
+      invalidFieldShareabilityError(
         {
-          node: { name: stringToNameNode('Entity') },
-          fields: new Map<string, any>([
+          name: 'Entity',
+          fieldDataByFieldName: new Map<string, FieldData>([
             [
               'age',
               {
-                node: { name: stringToNameNode('age'), subgraphs: new Set<string>(['subgraph-c']) },
-                subgraphsByShareable: new Map<string, boolean>([
+                isShareableBySubgraphName: new Map<string, boolean>([
                   ['subgraph-c', true],
                   ['subgraph-d', false],
                 ]),
-              },
+              } as FieldData,
             ],
           ]),
-        } as ObjectContainer,
+        } as ObjectDefinitionData,
         new Set<string>(['age']),
       ),
     );
