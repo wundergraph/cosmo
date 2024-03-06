@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-cleanhttp"
 	"io"
 	"log"
 	"math/rand"
@@ -22,6 +21,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-cleanhttp"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
@@ -285,31 +286,33 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	svr, err := rr.NewServer(ctx)
 	require.NoError(t, err)
 
+	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
+
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+		require.NoError(t, err)
+
+		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+			t.Fatalf("could not append ca cert to pool")
+		}
+
+		// Retain the default transport settings
+		httpClient := cleanhttp.DefaultPooledClient()
+		httpClient.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
+			RootCAs:      caCertPool,
+			Certificates: []tls.Certificate{cert},
+		}
+
+		client.HTTPClient = httpClient
+	}
+
 	go func() {
 		if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
-
-			cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
-			require.NoError(t, err)
-
-			caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			caCertPool := x509.NewCertPool()
-			if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-				t.Fatalf("could not append ca cert to pool")
-			}
-
-			// Retain the default transport settings
-			httpClient := cleanhttp.DefaultPooledClient()
-			httpClient.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
-				RootCAs:      caCertPool,
-				Certificates: []tls.Certificate{cert},
-			}
-
-			client.HTTPClient = httpClient
-
 			if err := svr.HttpServer().ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				t.Errorf("could not start tls router: %s", err)
 			}
@@ -921,6 +924,37 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 			}
 		}
 	}
+}
+
+func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Duration) {
+	e.t.Helper()
+
+	report := e.Router.WebsocketStats.GetReport()
+	if report.Triggers == desiredCount {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sub := e.Router.WebsocketStats.Subscribe(ctx)
+
+	for {
+		select {
+		case <-ctx.Done():
+			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+			return
+		case report, ok := <-sub:
+			if !ok {
+				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+				return
+			}
+			if report.Triggers == desiredCount {
+				return
+			}
+		}
+	}
+
 }
 
 func subgraphOptions(t testing.TB, ns *natsserver.Server) *subgraphs.SubgraphOptions {

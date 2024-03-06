@@ -17,6 +17,8 @@ type WebSocketsStatistics interface {
 	ConnectionsDec()
 	SubscriptionCountInc(count int)
 	SubscriptionCountDec(count int)
+	TriggerCountInc(count int)
+	TriggerCountDec(count int)
 }
 
 type WebSocketStats struct {
@@ -26,6 +28,7 @@ type WebSocketStats struct {
 	connections   atomic.Uint64
 	subscriptions atomic.Uint64
 	messagesSent  atomic.Uint64
+	triggers      atomic.Uint64
 	update        chan struct{}
 	subscribers   map[context.Context]chan *UsageReport
 }
@@ -34,6 +37,7 @@ type UsageReport struct {
 	Connections   uint64
 	Subscriptions uint64
 	MessagesSent  uint64
+	Triggers      uint64
 }
 
 func NewWebSocketStats(ctx context.Context, logger *zap.Logger) *WebSocketStats {
@@ -62,6 +66,7 @@ func (s *WebSocketStats) GetReport() *UsageReport {
 		Connections:   s.connections.Load(),
 		Subscriptions: s.subscriptions.Load(),
 		MessagesSent:  s.messagesSent.Load(),
+		Triggers:      s.triggers.Load(),
 	}
 	return report
 }
@@ -129,6 +134,16 @@ func (s *WebSocketStats) SubscriptionCountDec(count int) {
 	s.publish()
 }
 
+func (s *WebSocketStats) TriggerCountInc(count int) {
+	s.triggers.Add(uint64(count))
+	s.publish()
+}
+
+func (s *WebSocketStats) TriggerCountDec(count int) {
+	s.triggers.Sub(uint64(count))
+	s.publish()
+}
+
 type NoopWebSocketStats struct{}
 
 func NewNoopWebSocketStats() *NoopWebSocketStats {
@@ -156,5 +171,9 @@ func (s *NoopWebSocketStats) SubscriptionCountDec(_ int) {}
 func (s *NoopWebSocketStats) SynchronousSubscriptionsInc() {}
 
 func (s *NoopWebSocketStats) SynchronousSubscriptionsDec() {}
+
+func (s *NoopWebSocketStats) TriggerCountInc(count int) {}
+
+func (s *NoopWebSocketStats) TriggerCountDec(count int) {}
 
 var _ WebSocketsStatistics = &WebSocketStats{}

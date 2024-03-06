@@ -78,8 +78,7 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        # enable race once ws issues are fixed
-        run: make test-no-race
+        run: make test
 
       - name: Build
         working-directory: ./router
@@ -148,8 +147,7 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        # enable race once ws issues are fixed
-        run: make test-no-race
+        run: make test
 
       - name: Build
         working-directory: ./router

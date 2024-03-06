@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -344,6 +345,110 @@ func TestWebSockets(t *testing.T) {
 			} else {
 				require.Fail(t, "expected net.Error")
 			}
+		})
+	})
+	t.Run("multiple subscriptions one connection", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			client := graphql.NewSubscriptionClient(xEnv.GraphQLSubscriptionURL()).
+				WithProtocol(graphql.GraphQLWS)
+			completeCount := &atomic.Int64{}
+			client.OnSubscriptionComplete(func(sub graphql.Subscription) {
+				completeCount.Add(1)
+			})
+			go func() {
+				var subscriptionCountEmp struct {
+					CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
+				}
+				var (
+					firstCountEmpID, countEmpID, countEmp2ID, countHobID string
+					firstCountEmp, countEmp, countEmp2, countHob         int
+					err                                                  error
+					variables                                            = map[string]interface{}{
+						"max":      10,
+						"interval": 200,
+					}
+				)
+				firstCountEmpID, err = client.Subscribe(&subscriptionCountEmp, map[string]interface{}{
+					"max":      5,
+					"interval": 100,
+				}, func(dataValue []byte, errValue error) error {
+					require.NoError(t, errValue)
+					data := subscriptionCountEmp
+					err := jsonutil.UnmarshalGraphQL(dataValue, &data)
+					require.NoError(t, err)
+					require.Equal(t, firstCountEmp, data.CountEmp)
+					firstCountEmp++
+					return nil
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, "", firstCountEmpID)
+				countEmpID, err = client.Subscribe(&subscriptionCountEmp, variables, func(dataValue []byte, errValue error) error {
+					require.NoError(t, errValue)
+					data := subscriptionCountEmp
+					err := jsonutil.UnmarshalGraphQL(dataValue, &data)
+					require.NoError(t, err)
+					require.Equal(t, countEmp, data.CountEmp)
+					if countEmp == 5 {
+						err = client.Unsubscribe(countEmpID)
+						require.NoError(t, err)
+					}
+					countEmp++
+					return nil
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, "", countEmpID)
+				var subscriptionCountEmp2 struct {
+					CountEmp int `graphql:"countEmp2(max: $max, intervalMilliseconds: $interval)"`
+				}
+				countEmp2ID, err = client.Subscribe(&subscriptionCountEmp2, variables, func(dataValue []byte, errValue error) error {
+					require.NoError(t, errValue)
+					data := subscriptionCountEmp2
+					err := jsonutil.UnmarshalGraphQL(dataValue, &data)
+					require.NoError(t, err)
+					require.Equal(t, countEmp2, data.CountEmp)
+					if countEmp2 == 5 {
+						err = client.Unsubscribe(countEmp2ID)
+						require.NoError(t, err)
+					}
+					countEmp2++
+					return nil
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, "", countEmp2ID)
+				var subscriptionCountHob struct {
+					CountHob int `graphql:"countHob(max: $max, intervalMilliseconds: $interval)"`
+				}
+				countHobID, err = client.Subscribe(&subscriptionCountHob, variables, func(dataValue []byte, errValue error) error {
+					require.NoError(t, errValue)
+					data := subscriptionCountHob
+					err := jsonutil.UnmarshalGraphQL(dataValue, &data)
+					require.NoError(t, err)
+					require.Equal(t, countHob, data.CountHob)
+					if countHob == 5 {
+						err = client.Unsubscribe(countHobID)
+						require.NoError(t, err)
+					}
+					countHob++
+					return nil
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, "", countHobID)
+			}()
+			go func() {
+				require.NoError(t, client.Run())
+			}()
+			xEnv.WaitForSubscriptionCount(4, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForTriggerCount(0, time.Second*5)
+			// we cannot guarantee that the client will receive the complete message for all subscriptions
+			// this is because only one subscription is completed by the server
+			// the other subscriptions are completed by the client
+			// the client may receive the complete message on time, but we don't own the client implementation
+			require.GreaterOrEqual(t, completeCount.Load(), int64(1))
 		})
 	})
 	t.Run("error", func(t *testing.T) {
