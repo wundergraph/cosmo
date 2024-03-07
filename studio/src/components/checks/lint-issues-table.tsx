@@ -45,8 +45,7 @@ export const LintIssuesTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[70px]">Severity</TableHead>
-            <TableHead className="w-[300px]">Lint Rule</TableHead>
+            <TableHead className="w-[380px]">Severity</TableHead>
             <TableHead>Message</TableHead>
             <TableHead className="w-[5px]"></TableHead>
           </TableRow>
@@ -70,18 +69,13 @@ export const LintIssuesTable = ({
                   ) : (
                     <CiWarning className="h-[15px] w-[15px]" />
                   )}
-                  <span className="block w-[70px] truncate">
-                    {l.severity === LintSeverity.error ? "ERROR" : "WARNING"}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div
-                  className={cn("block w-[300px] items-center truncate", {
-                    "text-center": !l.lintRuleType,
-                  })}
-                >
-                  {l.lintRuleType || "-"}
+                  <div
+                    className={cn("block w-[350px] items-center truncate", {
+                      "text-center": !l.lintRuleType,
+                    })}
+                  >
+                    {l.lintRuleType || "-"}
+                  </div>
                 </div>
               </TableCell>
               <TableCell>{l.message}</TableCell>

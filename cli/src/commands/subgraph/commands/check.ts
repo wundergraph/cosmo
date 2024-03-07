@@ -86,7 +86,6 @@ export default (opts: BaseCommandOptions) => {
 
     const changesTable = new Table({
       head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
-      colWidths: [15, 30, 80],
       wordWrap: true,
     });
 
@@ -101,13 +100,8 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const lintIssuesTable = new Table({
-      head: [
-        pc.bold(pc.white('SEVERITY')),
-        pc.bold(pc.white('ERROR_MESSAGE')),
-        pc.bold(pc.white('ISSUE_LOCATION (LINE NUMBER)')),
-      ],
-      colWidths: [10, 120, 40],
-      colAligns: ['center', 'left', 'center'],
+      head: [pc.bold(pc.white('LINT_RULE')), pc.bold(pc.white('ERROR_MESSAGE')), pc.bold(pc.white('LINE NUMBER'))],
+      colAligns: ['left', 'left', 'center'],
       wordWrap: true,
     });
 
@@ -116,7 +110,11 @@ export default (opts: BaseCommandOptions) => {
 
     let studioCheckDestination = '';
     if (resp.checkId && resp.checkedFederatedGraphs.length > 0) {
-      studioCheckDestination = `Open in studio: ${config.webURL}/${resp.checkedFederatedGraphs[0].organizationSlug}/${resp.checkedFederatedGraphs[0].namespace}/graph/${resp.checkedFederatedGraphs[0].name}/checks/${resp.checkId}`;
+      studioCheckDestination = `${pc.bold('Open in studio')}: ${config.webURL}/${
+        resp.checkedFederatedGraphs[0].organizationSlug
+      }/${resp.checkedFederatedGraphs[0].namespace}/graph/${resp.checkedFederatedGraphs[0].name}/checks/${
+        resp.checkId
+      }`;
     }
 
     switch (resp.response?.code) {
@@ -180,13 +178,21 @@ export default (opts: BaseCommandOptions) => {
 
           if (resp.breakingChanges.length > 0) {
             for (const breakingChange of resp.breakingChanges) {
-              changesTable.push([pc.red('BREAKING'), breakingChange.changeType, breakingChange.message]);
+              changesTable.push([
+                `${logSymbols.error} ${pc.red('BREAKING')}`,
+                breakingChange.changeType,
+                breakingChange.message,
+              ]);
             }
           }
 
           if (resp.nonBreakingChanges.length > 0) {
             for (const nonBreakingChange of resp.nonBreakingChanges) {
-              changesTable.push(['NON-BREAKING', nonBreakingChange.changeType, nonBreakingChange.message]);
+              changesTable.push([
+                `${logSymbols.success} NON-BREAKING`,
+                nonBreakingChange.changeType,
+                nonBreakingChange.message,
+              ]);
             }
           }
 
@@ -207,12 +213,20 @@ export default (opts: BaseCommandOptions) => {
 
         if (resp.lintErrors.length > 0 || resp.lintWarnings.length > 0) {
           success = resp.lintErrors.length === 0;
-          console.log(pc.red('\nDetected lint issues:'));
+          console.log('\nDetected lint issues:');
           for (const error of resp.lintErrors) {
-            lintIssuesTable.push([logSymbols.error, error.message, error.issueLocation?.line]);
+            lintIssuesTable.push([
+              `${logSymbols.error} ${pc.red(error.lintRuleType)}`,
+              error.message,
+              error.issueLocation?.line,
+            ]);
           }
           for (const warning of resp.lintWarnings) {
-            lintIssuesTable.push([logSymbols.warning, warning.message, warning.issueLocation?.line]);
+            lintIssuesTable.push([
+              `${logSymbols.warning} ${pc.yellow(warning.lintRuleType)}`,
+              warning.message,
+              warning.issueLocation?.line,
+            ]);
           }
           console.log(lintIssuesTable.toString());
         }
@@ -222,7 +236,7 @@ export default (opts: BaseCommandOptions) => {
             '\n' +
               logSymbols.success +
               pc.green(` Schema check passed. ${finalStatement}`) +
-              '\n' +
+              '\n\n' +
               studioCheckDestination +
               '\n',
           );
