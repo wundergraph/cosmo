@@ -253,9 +253,9 @@ const LintPolicyPage: NextPageWithLayout = () => {
     );
 
   return (
-    <div className=" mt-2 flex w-full flex-col gap-4">
-      <div className="flex w-full items-center justify-between px-1">
-        <div className="flex flex-col gap-y-1 px-1">
+    <div className="flex w-full flex-col gap-4 border border-1 px-5 pt-5 pb-1 rounded-lg">
+      <div className="flex w-full items-center justify-between">
+        <div className="flex flex-col gap-y-1">
           <span>Enable Linter</span>
           <p className="text-sm text-muted-foreground">
             Run the lint check on all the check operations of this namespace.
@@ -303,9 +303,9 @@ const LintPolicyPage: NextPageWithLayout = () => {
           />
         </div>
       </div>
-      <Separator className="my-2" />
+      {/* <Separator className="my-2" /> */}
       <div className=" flex w-full flex-col gap-4">
-        <div className="flex w-full justify-between px-1">
+        <div className="flex w-full justify-between">
           <div className="flex flex-col gap-y-1">
             <span>Lint Rules</span>
             <p className="text-sm text-muted-foreground">
