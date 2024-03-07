@@ -1,3 +1,6 @@
+
+data "aws_region" "current" {}
+
 resource "aws_iam_role" "cosmo_router_task_execution_role" {
   name               = "${var.name}-execution-role"
   assume_role_policy = jsonencode({
@@ -104,8 +107,8 @@ resource "aws_ecs_task_definition" "cosmo_router" {
           logDriver = "awslogs"
           options = {
             awslogs-group         = "/ecs/${var.name}"
-            awslogs-region        = "eu-north-1"
-            awslogs-stream-prefix = "router"
+            awslogs-region        = 
+data.aws_region.current.name            awslogs-stream-prefix = "router"
           }
         }
 
