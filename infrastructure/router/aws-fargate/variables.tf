@@ -38,15 +38,3 @@ variable "secret_arn" {
   description = "The ARN of the secret where the GRAPH_API_TOKEN is stored."
   type = string
 }
-
-variable "enable_playground" {
-  description = "Enable the playground in the Cosmo Router."
-  type = bool
-  default = true
-}
-
-variable "enable_introspection" {
-  description = "Enables introspection query capabilities."
-  type = bool
-  default = true
-}
