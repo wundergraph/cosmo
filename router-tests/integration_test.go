@@ -654,6 +654,7 @@ func FuzzQuery(f *testing.F) {
 }
 
 func TestPlannerErrorMessage(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		// Error message should contain the invalid argument name instead of a
 		// generic planning error message
@@ -670,6 +671,7 @@ func TestPlannerErrorMessage(t *testing.T) {
 }
 
 func TestConcurrentQueriesWithDelay(t *testing.T) {
+	t.Parallel()
 	const (
 		numQueries   = 20
 		queryDelayMs = 100
@@ -703,6 +705,7 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 }
 
 func TestPartialOriginErrors(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Products: testenv.SubgraphConfig{
@@ -718,6 +721,7 @@ func TestPartialOriginErrors(t *testing.T) {
 }
 
 func TestPartialOriginErrors500(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Products: testenv.SubgraphConfig{
@@ -737,6 +741,7 @@ func TestPartialOriginErrors500(t *testing.T) {
 }
 
 func TestWithOriginErrors(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Employees: testenv.SubgraphConfig{
@@ -752,6 +757,7 @@ func TestWithOriginErrors(t *testing.T) {
 }
 
 func TestWithOriginErrors500(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Employees: testenv.SubgraphConfig{
