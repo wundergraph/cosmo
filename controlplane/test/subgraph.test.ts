@@ -35,7 +35,7 @@ describe('Subgraph', (ctx) => {
     resp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      schema: 'type Query { hello: String! }',
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
@@ -46,7 +46,8 @@ describe('Subgraph', (ctx) => {
   test('Should create a subgraph when subgraph did not exist before on publish', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
-    const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
+    const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
+    const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
 
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -85,7 +86,8 @@ describe('Subgraph', (ctx) => {
   test('Should update subgraph when subgraph already exists on publish', async (testContext) => {
     const { client, nodeClient, server } = await SetupTest({ dbname });
 
-    const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
+    const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
+    const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
 
     const federatedGraphName = genID('fedGraph');
     const label1 = genUniqueLabel('label1');

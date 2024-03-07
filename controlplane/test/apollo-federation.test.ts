@@ -37,8 +37,7 @@ describe('Apollo Federated Graph', (ctx) => {
     const publishPandaResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         type Query {
           allPandas: [Panda]
           panda(name: ID!): Panda
@@ -48,8 +47,7 @@ describe('Apollo Federated Graph', (ctx) => {
             name:ID!
             favoriteFood: String
         }
-      `),
-      ),
+      `,
     });
 
     expect(publishPandaResp.response?.code).toBe(EnumStatusCode.OK);
@@ -66,8 +64,7 @@ describe('Apollo Federated Graph', (ctx) => {
     const publishUsersResp = await client.publishFederatedSubgraph({
       name: usersSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         type User @key(fields: "email") {
           email: ID!
           name: String
@@ -77,8 +74,7 @@ describe('Apollo Federated Graph', (ctx) => {
         type Query {
           user: User
         }
-      `),
-      ),
+      `,
     });
 
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
@@ -95,8 +91,7 @@ describe('Apollo Federated Graph', (ctx) => {
     const publishInventoryResp = await client.publishFederatedSubgraph({
       name: inventorySubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
           directive @tag(name: String!) repeatable on FIELD_DEFINITION
 
           extend type Product @key(fields: "id") {
@@ -114,8 +109,7 @@ describe('Apollo Federated Graph', (ctx) => {
             estimatedDelivery: String
             fastestDelivery: String
           }
-      `),
-      ),
+      `,
     });
 
     expect(publishInventoryResp.response?.code).toBe(EnumStatusCode.OK);
@@ -132,8 +126,7 @@ describe('Apollo Federated Graph', (ctx) => {
     const publishProductsResp = await client.publishFederatedSubgraph({
       name: productsSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         directive @tag(name: String!) repeatable on FIELD_DEFINITION
 
         type Product @key(fields: "id") @key(fields: "sku package") @key(fields: "sku variation { id }"){
@@ -164,8 +157,7 @@ describe('Apollo Federated Graph', (ctx) => {
           email: ID! @external
           totalProductsCreated: Int @external
         }        
-      `),
-      ),
+      `,
     });
 
     expect(publishProductsResp.response?.code).toBe(EnumStatusCode.OK);
