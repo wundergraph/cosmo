@@ -2,7 +2,7 @@
 data "aws_region" "current" {}
 
 resource "aws_iam_role" "cosmo_router_task_execution_role" {
-  name               = "${var.name}-execution-role"
+  name = "${var.name}-execution-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -12,7 +12,7 @@ resource "aws_iam_role" "cosmo_router_task_execution_role" {
           Service = "ecs-tasks.amazonaws.com"
         },
         Effect = "Allow"
-        Sid = ""
+        Sid    = ""
       }
     ]
   })
@@ -32,21 +32,21 @@ resource "aws_iam_role_policy" "cosmo_router" {
         ]
         Effect   = "Allow"
         Resource = var.secret_arn
-    },
-    {
-      Action = [
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ]
-      Effect   = "Allow"
-      Resource = "arn:aws:logs:*:*:*"
-    }
+      },
+      {
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Effect   = "Allow"
+        Resource = "arn:aws:logs:*:*:*"
+      }
     ]
   })
 }
 
 resource "aws_iam_role" "cosmo_router_task_role" {
-  name               = "${var.name}-task-role"
+  name = "${var.name}-task-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -56,7 +56,7 @@ resource "aws_iam_role" "cosmo_router_task_role" {
           Service = "ecs-tasks.amazonaws.com"
         },
         Effect = "Allow",
-        Sid = ""
+        Sid    = ""
       }
     ]
   })
@@ -74,7 +74,7 @@ resource "aws_ecs_task_definition" "cosmo_router" {
   cpu                      = var.cpu
   memory                   = var.memory
 
-  task_role_arn = aws_iam_role.cosmo_router_task_role.arn
+  task_role_arn      = aws_iam_role.cosmo_router_task_role.arn
   execution_role_arn = aws_iam_role.cosmo_router_task_execution_role.arn
 
   runtime_platform {
@@ -87,94 +87,95 @@ resource "aws_ecs_task_definition" "cosmo_router" {
   }
 
   container_definitions = jsonencode([
-      {
-        name      = "${var.name}-container",
-        image     = "ghcr.io/wundergraph/cosmo/router:${var.release}",
-        essential = true
+    {
+      name      = "${var.name}-container",
+      image     = "ghcr.io/wundergraph/cosmo/router:${var.release}",
+      essential = true
 
 
 
-        portMappings = [
-          {
-            name          = "http"
-            containerPort = var.port
-            hostPort      = var.port
-            protocol      = "tcp"
-          },
-        ]
+      portMappings = [
+        {
+          name          = "http"
+          containerPort = var.port
+          hostPort      = var.port
+          protocol      = "tcp"
+        },
+      ]
 
-        logConfiguration = {
-          logDriver = "awslogs"
-          options = {
-            awslogs-group         = "/ecs/${var.name}"
-            awslogs-region        = 
-data.aws_region.current.name            awslogs-stream-prefix = "router"
-          }
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/${var.name}"
+          awslogs-region        = data.aws_region.current.name
+          awslogs-stream-prefix = "router"
         }
-
-        dependsOn = [
-          {
-            condition     = "COMPLETE"
-            containerName = "cosmo-config"
-          }
-        ]
-
-        mountPoints = [
-          {
-            containerPath = "/etc/cosmo"
-            sourceVolume  = "cosmo-config-volume"
-          }
-        ]
-
-        # The Cosmo Router will pick up these environment variables.
-        # They are mentioned in the `config.yaml` that gets mounted into this
-        # container. Subsequently, Cosmo replaces the placeholders in the config file 
-        # with the values from the environment.
-        environment = [
-          {
-            name  = "PORT"
-            value = tostring(var.port)
-          },
-          {
-            name  = "CONFIG_PATH"
-            value = "/etc/cosmo/config.yaml"
-          },
-        ]
-
-        secrets = [
-          {
-            name      = "GRAPH_API_TOKEN"
-            valueFrom = "${var.secret_arn}:GRAPH_API_TOKEN::"
-          }
-        ]
-      },      
-      # Cosmo Configuration Init Container
-      {
-        name  = "cosmo-config"
-        image = "bash:5"
-
-        essential = false
-
-        command = [
-          "-c",
-          "echo $COSMO_CONFIG | base64 -d - | tee /etc/cosmo/config.yaml"
-        ]
-
-        environment = [
-          {
-            name  = "COSMO_CONFIG"
-            value = base64encode(file("${path.module}/config.yaml"))
-          },
-        ]
-
-        mountPoints = [
-          {
-            containerPath = "/etc/cosmo"
-            sourceVolume  = "cosmo-config-volume"
-          }
-        ]
       }
-    ])
+
+      dependsOn = [
+        {
+          condition     = "COMPLETE"
+          containerName = "cosmo-config"
+        }
+      ]
+
+      mountPoints = [
+        {
+          containerPath = "/etc/cosmo"
+          sourceVolume  = "cosmo-config-volume"
+        }
+      ]
+
+      # The Cosmo Router will pick up these environment variables.
+      # They are mentioned in the `config.yaml` that gets mounted into this
+      # container. Subsequently, Cosmo replaces the placeholders in the config file 
+      # with the values from the environment.
+      environment = [
+        {
+          name  = "PORT"
+          value = tostring(var.port)
+        },
+        {
+          name  = "CONFIG_PATH"
+          value = "/etc/cosmo/config.yaml"
+        },
+      ]
+
+      secrets = [
+        {
+          name      = "GRAPH_API_TOKEN"
+          valueFrom = "${var.secret_arn}:GRAPH_API_TOKEN::"
+        }
+      ]
+    },
+    # Cosmo Configuration Init Container
+    {
+      name  = "cosmo-config"
+      image = "bash:5"
+
+      essential = false
+
+      command = [
+        "-c",
+        "echo $COSMO_CONFIG | base64 -d - | tee /etc/cosmo/config.yaml"
+      ]
+
+      environment = [
+        {
+          name  = "COSMO_CONFIG"
+          value = base64encode(file("${path.module}/config.yaml"))
+        },
+      ]
+
+      mountPoints = [
+        {
+          containerPath = "/etc/cosmo"
+          sourceVolume  = "cosmo-config-volume"
+        }
+      ]
+    }
+  ])
 }
 
 resource "aws_ecs_service" "cosmo_router" {
@@ -184,7 +185,7 @@ resource "aws_ecs_service" "cosmo_router" {
   force_new_deployment   = true
   launch_type            = "FARGATE"
   enable_execute_command = true
-  desired_count = 1
+  desired_count          = 1
 
   network_configuration {
     subnets = var.subnets
