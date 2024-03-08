@@ -1,3 +1,4 @@
+import { identifyKoala, resetKoala } from "@/lib/koala";
 import { Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { createConnectTransport } from "@connectrpc/connect-web";
@@ -7,14 +8,8 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { createContext, ReactNode, useEffect, useState } from "react";
+import { ReactNode, createContext, useEffect, useState } from "react";
 import { useCookies } from "react-cookie";
-
-declare global {
-  interface Window {
-    ko: any;
-  }
-}
 
 export const UserContext = createContext<User | undefined>(undefined);
 
@@ -99,10 +94,8 @@ const fetchSession = async () => {
     }
     return null;
   } catch (e) {
-    // Reset koala if custom head scripts are found and user is not authenticated
-    if (process.env.CUSTOM_HEAD_SCRIPTS) {
-      window.ko?.reset();
-    }
+    // Reset koala if user is not authenticated
+    resetKoala();
     throw e;
   }
 };
@@ -174,18 +167,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         invitations: data.invitations,
       });
 
-      // If custom head scripts are available, enable identify call for koala script
-      if (process.env.CUSTOM_HEAD_SCRIPTS) {
-        window.ko?.identify(data.email, {
-          id: data.id,
-          $account: {
-            organizationId: organization.id,
-            organizationName: organization.name,
-            organizationSlug: organization.slug,
-            plan: organization.plan,
-          },
-        });
-      }
+      // Identify call for koala script
+      identifyKoala({
+        id: data.id,
+        email: data.email,
+        organizationId: organization.id,
+        organizationName: organization.name,
+        organizationSlug: organization.slug,
+        plan: organization.plan,
+      });
 
       const organizationSlug = organization.slug;
 

@@ -34,7 +34,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     resp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      schema: 'type Query { hello: String! }',
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
@@ -91,7 +91,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     resp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      schema: 'type Query { hello: String! }',
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
