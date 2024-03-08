@@ -10,6 +10,12 @@ import { useRouter } from "next/router";
 import { createContext, ReactNode, useEffect, useState } from "react";
 import { useCookies } from "react-cookie";
 
+declare global {
+  interface Window {
+    ko: any;
+  }
+}
+
 export const UserContext = createContext<User | undefined>(undefined);
 
 const queryClient = new QueryClient();
@@ -93,6 +99,10 @@ const fetchSession = async () => {
     }
     return null;
   } catch (e) {
+    // Reset koala if custom head scripts are found and user is not authenticated
+    if (process.env.CUSTOM_HEAD_SCRIPTS) {
+      window.ko?.reset();
+    }
     throw e;
   }
 };
@@ -163,6 +173,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         organizations: data.organizations,
         invitations: data.invitations,
       });
+
+      // If custom head scripts are available, enable identify call for koala script
+      if (process.env.CUSTOM_HEAD_SCRIPTS) {
+        window.ko?.identify(data.email, {
+          id: data.id,
+          $account: {
+            organizationId: organization.id,
+            organizationName: organization.name,
+            organizationSlug: organization.slug,
+            plan: organization.plan,
+          },
+        });
+      }
 
       const organizationSlug = organization.slug;
 
