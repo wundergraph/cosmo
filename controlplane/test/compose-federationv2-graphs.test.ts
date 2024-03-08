@@ -21,10 +21,15 @@ describe('ComposeFederationV2Graphs', (ctx) => {
   test('Compose these federation v2 subgraph schemas(pandas, products, reviews, users)', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
-    const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV2/pandas.graphql'));
-    const productsSchema = await readFile(join(process.cwd(), 'test/graphql/federationV2/products.graphql'));
-    const reviewsSchema = await readFile(join(process.cwd(), 'test/graphql/federationV2/reviews.graphql'));
-    const usersSchema = await readFile(join(process.cwd(), 'test/graphql/federationV2/users.graphql'));
+    const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV2/pandas.graphql'));
+    const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV2/products.graphql'));
+    const reviewsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV2/reviews.graphql'));
+    const usersSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV2/users.graphql'));
+
+    const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
+    const productsSchema = new TextDecoder().decode(productsSchemaBuffer);
+    const reviewsSchema = new TextDecoder().decode(reviewsSchemaBuffer);
+    const usersSchema = new TextDecoder().decode(usersSchemaBuffer);
 
     const federatedGraphName = genID();
     const label = genUniqueLabel();

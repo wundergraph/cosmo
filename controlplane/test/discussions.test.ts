@@ -25,7 +25,7 @@ const seed = async (testContext: TestContext) => {
   const publishResp = await client.publishFederatedSubgraph({
     name: subgraphName,
     namespace: 'default',
-    schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+    schema: 'type Query { hello: String! }',
   });
 
   expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
@@ -217,7 +217,7 @@ describe('Discussions', (ctx) => {
     const publishResp = await client.publishFederatedSubgraph({
       name: subgraphs[0].name,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String!, bye: String! }')),
+      schema: 'type Query { hello: String!, bye: String! }',
     });
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
