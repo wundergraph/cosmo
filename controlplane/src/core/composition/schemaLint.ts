@@ -1,7 +1,7 @@
 import { Linter } from 'eslint';
 import { parseForESLint, rules } from '@graphql-eslint/eslint-plugin';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { baseDirectives } from '@wundergraph/composition'
+import { baseDirectives } from '@wundergraph/composition';
 import { LintIssueResult, LintRuleType, RulesConfig, SchemaLintDTO, SchemaLintIssues } from '../../types/index.js';
 
 const getRuleModule = (rule: LintRuleType) => {
