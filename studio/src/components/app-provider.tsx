@@ -100,7 +100,7 @@ const fetchSession = async () => {
     return null;
   } catch (e) {
     // Reset koala if custom head scripts are found and user is not authenticated
-    if (process.env.CUSTOM_HEAD_SCRIPTS) {
+    if (process.env.CUSTOM_HEAD_SCRIPTS && window.ko) {
       window.ko.reset();
     }
     throw e;
