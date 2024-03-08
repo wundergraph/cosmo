@@ -183,7 +183,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             organizationName: organization.name,
             organizationSlug: organization.slug,
             plan: organization.plan,
-            roles: organization.roles,
           },
         });
       }
