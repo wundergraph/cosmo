@@ -156,6 +156,7 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/kelseyhightower/envconfig v1.4.0 h1:Im6hONhd3pLkfDFsbRgu68RDNkGF1r3dvMUtDTo2cv8=
 github.com/kelseyhightower/envconfig v1.4.0/go.mod h1:cccZRl6mQpaq41TPp5QxidR+Sa3axMbJDNb//FQX6Gg=
+github.com/kingledion/go-tools v0.6.0 h1:y8C/4mWoHgLkO45dB+Y/j0o4Y4WUB5lDTAcMPMtFpTg=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.10.3/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/compress v1.17.6 h1:60eq2E/jlfwQXtvZEeBUYADs+BwKBWURIY+Gj2eRGjI=
@@ -213,6 +214,7 @@ github.com/pelletier/go-toml/v2 v2.0.9 h1:uH2qQXheeefCCkuBBSLi7jCiSmj3VRh2+Goq2N
 github.com/pelletier/go-toml/v2 v2.0.9/go.mod h1:tJU2Z3ZkXwnxa4DPO899bsyIoywizdUvyaeZurnPPDc=
 github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5 h1:Ii+DKncOVM8Cu1Hc+ETb5K+23HdAMvESYE3ZJ5b5cMI=
 github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5/go.mod h1:iIss55rKnNBTvrwdmkUpLnDpZoAHvWaiq5+iMmen4AE=
+github.com/phf/go-queue v0.0.0-20170504031614-9abe38d0371d h1:U+PMnTlV2tu7RuMK5etusZG3Cf+rpow5hqQByeCzJ2g=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
@@ -284,8 +286,7 @@ github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb h1:cPZlYdYy
 github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb/go.mod h1:UvBQ8qqolI/SC+f5Ww75SHR4QR/L5BpDoSswL1zZwZ0=
 github.com/wundergraph/cosmo/router v0.0.0-20240130110106-5afda68c8d0d h1:mxt6wnZhvG8Wrgd543tgXvLLHL+/2fBZpaCRKZU/rus=
 github.com/wundergraph/cosmo/router v0.0.0-20240130110106-5afda68c8d0d/go.mod h1:TDryeIPZWEL4bYyNJh+O2XrJjmSFrG4gK4EM0jcg6yc=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.10 h1:oi8feLD9WLWAE0Ajpn0IJR7EMT5NNKux0jeoiaERKQA=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.10/go.mod h1:26OPLppZhb4zc9RCfuLPn1Zfv3hNs/fiN4U6d9pLOw4=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.12 h1:tDq7ghNS3lyf437LuRBNqbM0OoniNW9g5k2C+UXc0cA=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=
