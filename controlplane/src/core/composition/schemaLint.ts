@@ -1,6 +1,7 @@
 import { Linter } from 'eslint';
 import { parseForESLint, rules } from '@graphql-eslint/eslint-plugin';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { baseDirectives } from '@wundergraph/composition'
 import { LintIssueResult, LintRuleType, RulesConfig, SchemaLintDTO, SchemaLintIssues } from '../../types/index.js';
 
 const getRuleModule = (rule: LintRuleType) => {
@@ -148,22 +149,6 @@ export const createRulesConfig = (rules: SchemaLintDTO[]) => {
   return rulesConfig;
 };
 
-const directiveDefinitions = `
-directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-directive @requiresScopes(scopes: [[String!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-directive @deprecated(reason: String) on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
-directive @extends on INTERFACE | OBJECT
-directive @external on FIELD_DEFINITION | OBJECT
-directive @key(fields: String!) repeatable on OBJECT
-directive @provides(fields: String!) on FIELD_DEFINITION
-directive @requires(fields: String!) on FIELD_DEFINITION
-directive @override(from: String!) on FIELD_DEFINITION
-
-
-`;
-
 export const schemaLintCheck = ({
   schema,
   rulesInput,
@@ -187,7 +172,7 @@ export const schemaLintCheck = ({
     schema,
     {
       parser: '@graphql-eslint/eslint-plugin',
-      parserOptions: { schema: directiveDefinitions + schema },
+      parserOptions: { schema: baseDirectives + schema },
       rules: rulesConfig,
     },
     'schema.graphql',

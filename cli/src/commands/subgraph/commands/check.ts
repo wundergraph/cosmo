@@ -126,7 +126,7 @@ export default (opts: BaseCommandOptions) => {
           resp.lintErrors.length === 0 &&
           resp.lintWarnings.length === 0
         ) {
-          console.log(`\nDetected no changes.\n${studioCheckDestination}\n`);
+          console.log(`\nDetected no changes.\nDetected no lint issues.\n\n${studioCheckDestination}\n`);
 
           success = true;
 

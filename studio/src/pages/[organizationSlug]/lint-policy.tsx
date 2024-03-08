@@ -303,7 +303,6 @@ const LintPolicyPage: NextPageWithLayout = () => {
           />
         </div>
       </div>
-      {/* <Separator className="my-2" /> */}
       <div className=" flex w-full flex-col gap-4">
         <div className="flex w-full justify-between">
           <div className="flex flex-col gap-y-1">
@@ -489,7 +488,7 @@ LintPolicyPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Lint Policy",
-    "Configure the rules used for linting this namespace's subgraphs.",
+    "Configure the rules used for linting the subgraphs of the namespace.",
     undefined,
     undefined,
     [<NamespaceSelector key="0" />],
