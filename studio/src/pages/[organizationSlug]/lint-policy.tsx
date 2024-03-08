@@ -27,7 +27,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { cn, countLintConfigsByCategory } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -179,32 +179,6 @@ const SeverityDropdown = ({
       </Select>
     </div>
   );
-};
-
-const countLintConfigsByCategory = (lintConfigs: LintConfig[]) => {
-  let countNamingConventionRules = 0;
-  let countAlphabeticalSortRules = 0;
-  let countOtherRules = 0;
-
-  const namingConventionRules = lintCategories[0].rules.map((l) => l.name);
-  const alphabeticalSortRules = lintCategories[1].rules.map((l) => l.name);
-  const otherRules = lintCategories[2].rules.map((l) => l.name);
-
-  for (const l of lintConfigs) {
-    if (namingConventionRules.includes(l.ruleName)) {
-      countNamingConventionRules += 1;
-    } else if (alphabeticalSortRules.includes(l.ruleName)) {
-      countAlphabeticalSortRules += 1;
-    } else if (otherRules.includes(l.ruleName)) {
-      countOtherRules += 1;
-    }
-  }
-
-  return [
-    countNamingConventionRules,
-    countAlphabeticalSortRules,
-    countOtherRules,
-  ];
 };
 
 const LintPolicyPage: NextPageWithLayout = () => {
