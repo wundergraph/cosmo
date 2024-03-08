@@ -207,6 +207,7 @@ func ValidateConfig(yamlData []byte, schema string) error {
 	}
 
 	c := jsonschema.NewCompiler()
+	c.AssertFormat = true
 	c.Formats["go-duration"] = isGoDuration
 	c.Formats["bytes-string"] = isBytesString
 	c.Formats["url"] = isURL

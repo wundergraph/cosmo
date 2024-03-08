@@ -94,6 +94,7 @@ func TestEventsNew(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -305,6 +306,7 @@ func TestEventsNew(t *testing.T) {
 				require.NoError(t, err)
 			})
 			require.NoError(t, err)
+			require.NoError(t, xEnv.NC.Flush())
 
 			t.Cleanup(func() {
 				err := sub.Unsubscribe()
@@ -326,14 +328,9 @@ func TestEventsNew(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			done := make(chan struct{})
-
-			sub, err := xEnv.NC.Subscribe("updateEmployee.>", func(msg *nats.Msg) {
-				require.Equal(t, "updateEmployee.3", msg.Subject)
-				require.Equal(t, `{"id":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msg.Data))
-				close(done)
-			})
+			sub, err := xEnv.NC.SubscribeSync("updateEmployee.3")
 			require.NoError(t, err)
+			require.NoError(t, xEnv.NC.Flush())
 
 			t.Cleanup(func() {
 				err := sub.Unsubscribe()
@@ -350,11 +347,10 @@ func TestEventsNew(t *testing.T) {
 			// Send a query to receive the response from the NATS message
 			require.JSONEq(t, `{"data":{"updateEmployee": {"success": true}}}`, res.Body)
 
-			select {
-			case <-done:
-			case <-time.After(5 * time.Second):
-				t.Fatal("timeout waiting for NATS message")
-			}
+			msg, err := sub.NextMsg(5 * time.Second)
+			require.NoError(t, err)
+			require.Equal(t, "updateEmployee.3", msg.Subject)
+			require.Equal(t, `{"id":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msg.Data))
 		})
 	})
 }

@@ -1,0 +1,1724 @@
+{
+  "data": {
+    "employees": [
+      {
+        "id": 1,
+        "notes": "Jens notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Programming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "notes": "Dustin notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Programming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "notes": "Stefan notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "notes": "Björn notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Flying",
+            "employees": [
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "notes": "Sergiy notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "notes": "Suvij notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "notes": "Nithin notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "notes": "Eelco notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Programming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "notes": "Alexandra notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Other",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 5,
+                "details": {
+                  "forename": "Sergiy"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 11,
+                "details": {
+                  "forename": "Alexandra"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "notes": "David notes resolved by products",
+        "hobbies": [
+          {
+            "__typename": "Programming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Gaming",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 7,
+                "details": {
+                  "forename": "Suvij"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Travelling",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

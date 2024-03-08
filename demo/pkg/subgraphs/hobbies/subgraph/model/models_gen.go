@@ -15,32 +15,66 @@ type Experience interface {
 
 type Hobby interface {
 	IsHobby()
+	GetEmployees() []*Employee
+}
+
+type Country struct {
+	Key *CountryKey `json:"key"`
+}
+
+func (Country) IsEntity() {}
+
+type CountryKey struct {
+	Name string `json:"name"`
 }
 
 type Employee struct {
 	ID      int     `json:"id"`
-	Hobbies []Hobby `json:"hobbies"`
+	Hobbies []Hobby `json:"hobbies,omitempty"`
 }
 
 func (Employee) IsEntity() {}
 
 type Exercise struct {
-	Category ExerciseType `json:"category"`
+	Employees []*Employee  `json:"employees"`
+	Category  ExerciseType `json:"category"`
 }
 
 func (Exercise) IsHobby() {}
+func (this Exercise) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Flying struct {
-	PlaneModels       []string `json:"planeModels"`
-	YearsOfExperience float64  `json:"yearsOfExperience"`
+	Employees         []*Employee `json:"employees"`
+	PlaneModels       []string    `json:"planeModels"`
+	YearsOfExperience float64     `json:"yearsOfExperience"`
 }
 
 func (Flying) IsExperience()                      {}
 func (this Flying) GetYearsOfExperience() float64 { return this.YearsOfExperience }
 
 func (Flying) IsHobby() {}
+func (this Flying) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Gaming struct {
+	Employees         []*Employee `json:"employees"`
 	Genres            []GameGenre `json:"genres"`
 	Name              string      `json:"name"`
 	YearsOfExperience float64     `json:"yearsOfExperience"`
@@ -50,18 +84,50 @@ func (Gaming) IsExperience()                      {}
 func (this Gaming) GetYearsOfExperience() float64 { return this.YearsOfExperience }
 
 func (Gaming) IsHobby() {}
+func (this Gaming) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Other struct {
-	Name string `json:"name"`
+	Employees []*Employee `json:"employees"`
+	Name      string      `json:"name"`
 }
 
 func (Other) IsHobby() {}
+func (this Other) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Programming struct {
+	Employees []*Employee           `json:"employees"`
 	Languages []ProgrammingLanguage `json:"languages"`
 }
 
 func (Programming) IsHobby() {}
+func (this Programming) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Sdk struct {
 	Upc             string                `json:"upc"`
@@ -71,68 +137,20 @@ type Sdk struct {
 func (Sdk) IsEntity() {}
 
 type Travelling struct {
-	CountriesLived []Country `json:"countriesLived"`
+	Employees      []*Employee `json:"employees"`
+	CountriesLived []*Country  `json:"countriesLived"`
 }
 
 func (Travelling) IsHobby() {}
-
-type Country string
-
-const (
-	CountryAmerica     Country = "AMERICA"
-	CountryEngland     Country = "ENGLAND"
-	CountryGermany     Country = "GERMANY"
-	CountryIndonesia   Country = "INDONESIA"
-	CountryKorea       Country = "KOREA"
-	CountryNetherlands Country = "NETHERLANDS"
-	CountryPortugal    Country = "PORTUGAL"
-	CountrySerbia      Country = "SERBIA"
-	CountrySpain       Country = "SPAIN"
-	CountryTaiwan      Country = "TAIWAN"
-	CountryThailand    Country = "THAILAND"
-)
-
-var AllCountry = []Country{
-	CountryAmerica,
-	CountryEngland,
-	CountryGermany,
-	CountryIndonesia,
-	CountryKorea,
-	CountryNetherlands,
-	CountryPortugal,
-	CountrySerbia,
-	CountrySpain,
-	CountryTaiwan,
-	CountryThailand,
-}
-
-func (e Country) IsValid() bool {
-	switch e {
-	case CountryAmerica, CountryEngland, CountryGermany, CountryIndonesia, CountryKorea, CountryNetherlands, CountryPortugal, CountrySerbia, CountrySpain, CountryTaiwan, CountryThailand:
-		return true
+func (this Travelling) GetEmployees() []*Employee {
+	if this.Employees == nil {
+		return nil
 	}
-	return false
-}
-
-func (e Country) String() string {
-	return string(e)
-}
-
-func (e *Country) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
+	interfaceSlice := make([]*Employee, 0, len(this.Employees))
+	for _, concrete := range this.Employees {
+		interfaceSlice = append(interfaceSlice, concrete)
 	}
-
-	*e = Country(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid Country", str)
-	}
-	return nil
-}
-
-func (e Country) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
+	return interfaceSlice
 }
 
 type ExerciseType string

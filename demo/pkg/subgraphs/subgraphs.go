@@ -16,12 +16,24 @@ import (
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/countries"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1"
+)
+
+const (
+	EmployeesDefaultDemoURL    = "http://localhost:4001/graphql"
+	FamilyDefaultDemoURL       = "http://localhost:4002/graphql"
+	HobbiesDefaultDemoURL      = "http://localhost:4003/graphql"
+	ProductsDefaultDemoURL     = "http://localhost:4004/graphql"
+	Test1DefaultDemoURL        = "http://localhost:4006/graphql"
+	AvailabilityDefaultDemoURL = "http://localhost:4007/graphql"
+	MoodDefaultDemoURL         = "http://localhost:4008/graphql"
+	CountriesDefaultDemoURL    = "http://localhost:4009/graphql"
 )
 
 type Ports struct {
@@ -32,6 +44,7 @@ type Ports struct {
 	Test1        int
 	Availability int
 	Mood         int
+	Countries    int
 }
 
 func (p *Ports) AsArray() []int {
@@ -43,6 +56,7 @@ func (p *Ports) AsArray() []int {
 		p.Test1,
 		p.Availability,
 		p.Mood,
+		p.Countries,
 	}
 }
 
@@ -142,6 +156,10 @@ func MoodHandler(opts *SubgraphOptions) http.Handler {
 	return subgraphHandler(mood.NewSchema(opts.NC))
 }
 
+func CountriesHandler(opts *SubgraphOptions) http.Handler {
+	return subgraphHandler(countries.NewSchema(opts.NC))
+}
+
 func New(config *Config) (*Subgraphs, error) {
 
 	url := nats.DefaultURL
@@ -173,6 +191,9 @@ func New(config *Config) (*Subgraphs, error) {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(nc)); srv != nil {
+		servers = append(servers, srv)
+	}
+	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(nc)); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{

@@ -40,8 +40,11 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Engineer() EngineerResolver
 	Entity() EntityResolver
+	Marketer() MarketerResolver
 	Mutation() MutationResolver
+	Operator() OperatorResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
 }
@@ -50,6 +53,12 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	City struct {
+		Country func(childComplexity int) int
+		Name    func(childComplexity int) int
+		Type    func(childComplexity int) int
+	}
+
 	Consultancy struct {
 		Lead func(childComplexity int) int
 		Upc  func(childComplexity int) int
@@ -61,10 +70,19 @@ type ComplexityRoot struct {
 		Upc       func(childComplexity int) int
 	}
 
+	Country struct {
+		Key func(childComplexity int) int
+	}
+
+	CountryKey struct {
+		Name func(childComplexity int) int
+	}
+
 	Details struct {
-		Forename func(childComplexity int) int
-		Location func(childComplexity int) int
-		Surname  func(childComplexity int) int
+		Forename      func(childComplexity int) int
+		Location      func(childComplexity int) int
+		PastLocations func(childComplexity int) int
+		Surname       func(childComplexity int) int
 	}
 
 	Employee struct {
@@ -79,6 +97,7 @@ type ComplexityRoot struct {
 
 	Engineer struct {
 		Departments  func(childComplexity int) int
+		Employees    func(childComplexity int) int
 		EngineerType func(childComplexity int) int
 		Title        func(childComplexity int) int
 	}
@@ -92,6 +111,7 @@ type ComplexityRoot struct {
 
 	Marketer struct {
 		Departments func(childComplexity int) int
+		Employees   func(childComplexity int) int
 		Title       func(childComplexity int) int
 	}
 
@@ -101,6 +121,7 @@ type ComplexityRoot struct {
 
 	Operator struct {
 		Departments  func(childComplexity int) int
+		Employees    func(childComplexity int) int
 		OperatorType func(childComplexity int) int
 		Title        func(childComplexity int) int
 	}
@@ -121,6 +142,8 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
+		CountEmp    func(childComplexity int, max int, intervalMilliseconds int) int
+		CountEmp2   func(childComplexity int, max int, intervalMilliseconds int) int
 		CurrentTime func(childComplexity int) int
 	}
 
@@ -134,14 +157,23 @@ type ComplexityRoot struct {
 	}
 }
 
+type EngineerResolver interface {
+	Employees(ctx context.Context, obj *model.Engineer) ([]*model.Employee, error)
+}
 type EntityResolver interface {
 	FindConsultancyByUpc(ctx context.Context, upc string) (*model.Consultancy, error)
 	FindCosmoByUpc(ctx context.Context, upc string) (*model.Cosmo, error)
 	FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error)
 	FindSDKByUpc(ctx context.Context, upc string) (*model.Sdk, error)
 }
+type MarketerResolver interface {
+	Employees(ctx context.Context, obj *model.Marketer) ([]*model.Employee, error)
+}
 type MutationResolver interface {
 	UpdateEmployeeTag(ctx context.Context, id int, tag string) (*model.Employee, error)
+}
+type OperatorResolver interface {
+	Employees(ctx context.Context, obj *model.Operator) ([]*model.Employee, error)
 }
 type QueryResolver interface {
 	Employee(ctx context.Context, id int) (*model.Employee, error)
@@ -151,6 +183,8 @@ type QueryResolver interface {
 }
 type SubscriptionResolver interface {
 	CurrentTime(ctx context.Context) (<-chan *model.Time, error)
+	CountEmp(ctx context.Context, max int, intervalMilliseconds int) (<-chan int, error)
+	CountEmp2(ctx context.Context, max int, intervalMilliseconds int) (<-chan int, error)
 }
 
 type executableSchema struct {
@@ -171,6 +205,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "City.country":
+		if e.complexity.City.Country == nil {
+			break
+		}
+
+		return e.complexity.City.Country(childComplexity), true
+
+	case "City.name":
+		if e.complexity.City.Name == nil {
+			break
+		}
+
+		return e.complexity.City.Name(childComplexity), true
+
+	case "City.type":
+		if e.complexity.City.Type == nil {
+			break
+		}
+
+		return e.complexity.City.Type(childComplexity), true
 
 	case "Consultancy.lead":
 		if e.complexity.Consultancy.Lead == nil {
@@ -207,6 +262,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Cosmo.Upc(childComplexity), true
 
+	case "Country.key":
+		if e.complexity.Country.Key == nil {
+			break
+		}
+
+		return e.complexity.Country.Key(childComplexity), true
+
+	case "CountryKey.name":
+		if e.complexity.CountryKey.Name == nil {
+			break
+		}
+
+		return e.complexity.CountryKey.Name(childComplexity), true
+
 	case "Details.forename":
 		if e.complexity.Details.Forename == nil {
 			break
@@ -220,6 +289,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Details.Location(childComplexity), true
+
+	case "Details.pastLocations":
+		if e.complexity.Details.PastLocations == nil {
+			break
+		}
+
+		return e.complexity.Details.PastLocations(childComplexity), true
 
 	case "Details.surname":
 		if e.complexity.Details.Surname == nil {
@@ -283,6 +359,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Engineer.Departments(childComplexity), true
+
+	case "Engineer.employees":
+		if e.complexity.Engineer.Employees == nil {
+			break
+		}
+
+		return e.complexity.Engineer.Employees(childComplexity), true
 
 	case "Engineer.engineerType":
 		if e.complexity.Engineer.EngineerType == nil {
@@ -353,6 +436,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Marketer.Departments(childComplexity), true
 
+	case "Marketer.employees":
+		if e.complexity.Marketer.Employees == nil {
+			break
+		}
+
+		return e.complexity.Marketer.Employees(childComplexity), true
+
 	case "Marketer.title":
 		if e.complexity.Marketer.Title == nil {
 			break
@@ -378,6 +468,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Operator.Departments(childComplexity), true
+
+	case "Operator.employees":
+		if e.complexity.Operator.Employees == nil {
+			break
+		}
+
+		return e.complexity.Operator.Employees(childComplexity), true
 
 	case "Operator.operatorType":
 		if e.complexity.Operator.OperatorType == nil {
@@ -470,6 +567,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.SDK.Upc(childComplexity), true
+
+	case "Subscription.countEmp":
+		if e.complexity.Subscription.CountEmp == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_countEmp_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.CountEmp(childComplexity, args["max"].(int), args["intervalMilliseconds"].(int)), true
+
+	case "Subscription.countEmp2":
+		if e.complexity.Subscription.CountEmp2 == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_countEmp2_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.CountEmp2(childComplexity, args["max"].(int), args["intervalMilliseconds"].(int)), true
 
 	case "Subscription.currentTime":
 		if e.complexity.Subscription.CurrentTime == nil {
@@ -620,7 +741,13 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `type Query {
+	{Name: "../schema.graphqls", Input: `directive @goField(
+	forceResolver: Boolean
+	name: String
+	omittable: Boolean
+) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+
+type Query {
   employee(id: Int!): Employee
   employees: [Employee!]!
   products: [Products!]!
@@ -636,6 +763,8 @@ type Subscription {
   ` + "`" + `currentTime` + "`" + ` will return a stream of ` + "`" + `Time` + "`" + ` objects.
   """
   currentTime: Time!
+  countEmp(max: Int! intervalMilliseconds: Int!): Int!
+  countEmp2(max: Int! intervalMilliseconds: Int!): Int!
 }
 
 enum Department {
@@ -647,6 +776,7 @@ enum Department {
 interface RoleType {
   departments: [Department!]!
   title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum EngineerType {
@@ -661,13 +791,15 @@ interface Identifiable {
 
 type Engineer implements RoleType {
   departments: [Department!]!
-  engineerType: EngineerType!
   title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
+  engineerType: EngineerType!
 }
 
 type Marketer implements RoleType {
   departments: [Department!]!
   title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum OperationType {
@@ -677,25 +809,32 @@ enum OperationType {
 
 type Operator implements RoleType {
   departments: [Department!]!
-  operatorType: [OperationType!]!
   title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
+  operatorType: [OperationType!]!
 }
 
-enum Country {
-  AMERICA
-  ENGLAND
-  GERMANY
-  INDIA
-  NETHERLANDS
-  PORTUGAL
-  SPAIN
-  UKRAINE
-}
-
-type Details @shareable {
-  forename: String!
+type Details {
+  forename: String! @shareable
   location: Country!
-  surname: String!
+  surname: String! @shareable
+  pastLocations: [City!]!
+}
+
+type City {
+  type: String!
+  name: String!
+  country: Country
+}
+
+# Using a nested key field simply because it can showcase potential bug
+# vectors / Federation capabilities.
+type Country @key(fields: "key { name }", resolvable: false) {
+  key: CountryKey!
+}
+
+type CountryKey {
+  name: String!
 }
 
 type Employee implements Identifiable @key(fields: "id") {
@@ -703,7 +842,7 @@ type Employee implements Identifiable @key(fields: "id") {
   id: Int!
   tag: String!
   role: RoleType!
-  notes: String
+  notes: String @shareable
   updatedAt: String!
   startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
 }
@@ -783,7 +922,7 @@ type SDK implements IProduct @key(fields: "upc") {
 `, BuiltIn: true},
 	{Name: "../../federation/entity.graphql", Input: `
 # a union of all types that use the @key directive
-union _Entity = Consultancy | Cosmo | Employee | SDK
+union _Entity = Consultancy | Cosmo | Country | Employee | SDK
 
 # fake type to build resolver interfaces for users to implement
 type Entity {
@@ -954,6 +1093,54 @@ func (ec *executionContext) field_Query_teammates_args(ctx context.Context, rawA
 	return args, nil
 }
 
+func (ec *executionContext) field_Subscription_countEmp2_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["max"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("max"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["max"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["intervalMilliseconds"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("intervalMilliseconds"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["intervalMilliseconds"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_countEmp_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["max"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("max"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["max"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["intervalMilliseconds"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("intervalMilliseconds"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["intervalMilliseconds"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field___Type_enumValues_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -991,6 +1178,139 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _City_type(ctx context.Context, field graphql.CollectedField, obj *model.City) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_City_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_City_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "City",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _City_name(ctx context.Context, field graphql.CollectedField, obj *model.City) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_City_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_City_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "City",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _City_country(ctx context.Context, field graphql.CollectedField, obj *model.City) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_City_country(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Country, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Country)
+	fc.Result = res
+	return ec.marshalOCountry2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountry(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_City_country(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "City",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_Country_key(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Country", field.Name)
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Consultancy_upc(ctx context.Context, field graphql.CollectedField, obj *model.Consultancy) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Consultancy_upc(ctx, field)
@@ -1260,6 +1580,98 @@ func (ec *executionContext) fieldContext_Cosmo_lead(ctx context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _Country_key(ctx context.Context, field graphql.CollectedField, obj *model.Country) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Country_key(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Key, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.CountryKey)
+	fc.Result = res
+	return ec.marshalNCountryKey2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountryKey(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Country_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Country",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_CountryKey_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CountryKey", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CountryKey_name(ctx context.Context, field graphql.CollectedField, obj *model.CountryKey) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CountryKey_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CountryKey_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CountryKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Details_forename(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Details_forename(ctx, field)
 	if err != nil {
@@ -1330,9 +1742,9 @@ func (ec *executionContext) _Details_location(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(model.Country)
+	res := resTmp.(*model.Country)
 	fc.Result = res
-	return ec.marshalNCountry2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountry(ctx, field.Selections, res)
+	return ec.marshalNCountry2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountry(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Details_location(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1342,7 +1754,11 @@ func (ec *executionContext) fieldContext_Details_location(ctx context.Context, f
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Country does not have child fields")
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_Country_key(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Country", field.Name)
 		},
 	}
 	return fc, nil
@@ -1387,6 +1803,58 @@ func (ec *executionContext) fieldContext_Details_surname(ctx context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Details_pastLocations(ctx context.Context, field graphql.CollectedField, obj *model.Details) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Details_pastLocations(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PastLocations, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.City)
+	fc.Result = res
+	return ec.marshalNCity2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCityᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Details_pastLocations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Details",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_City_type(ctx, field)
+			case "name":
+				return ec.fieldContext_City_name(ctx, field)
+			case "country":
+				return ec.fieldContext_City_country(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type City", field.Name)
 		},
 	}
 	return fc, nil
@@ -1437,6 +1905,8 @@ func (ec *executionContext) fieldContext_Employee_details(ctx context.Context, f
 				return ec.fieldContext_Details_location(ctx, field)
 			case "surname":
 				return ec.fieldContext_Details_surname(ctx, field)
+			case "pastLocations":
+				return ec.fieldContext_Details_pastLocations(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Details", field.Name)
 		},
@@ -1749,50 +2219,6 @@ func (ec *executionContext) fieldContext_Engineer_departments(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Engineer_engineerType(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Engineer_engineerType(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.EngineerType, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(model.EngineerType)
-	fc.Result = res
-	return ec.marshalNEngineerType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEngineerType(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Engineer_engineerType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Engineer",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type EngineerType does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Engineer_title(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Engineer_title(ctx, field)
 	if err != nil {
@@ -1832,6 +2258,110 @@ func (ec *executionContext) fieldContext_Engineer_title(ctx context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Engineer_employees(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Engineer_employees(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Engineer().Employees(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Employee)
+	fc.Result = res
+	return ec.marshalNEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Engineer_employees(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Engineer",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "details":
+				return ec.fieldContext_Employee_details(ctx, field)
+			case "id":
+				return ec.fieldContext_Employee_id(ctx, field)
+			case "tag":
+				return ec.fieldContext_Employee_tag(ctx, field)
+			case "role":
+				return ec.fieldContext_Employee_role(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Engineer_engineerType(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Engineer_engineerType(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EngineerType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.EngineerType)
+	fc.Result = res
+	return ec.marshalNEngineerType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEngineerType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Engineer_engineerType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Engineer",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type EngineerType does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2183,6 +2713,66 @@ func (ec *executionContext) fieldContext_Marketer_title(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Marketer_employees(ctx context.Context, field graphql.CollectedField, obj *model.Marketer) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Marketer_employees(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Marketer().Employees(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Employee)
+	fc.Result = res
+	return ec.marshalNEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Marketer_employees(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Marketer",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "details":
+				return ec.fieldContext_Employee_details(ctx, field)
+			case "id":
+				return ec.fieldContext_Employee_id(ctx, field)
+			case "tag":
+				return ec.fieldContext_Employee_tag(ctx, field)
+			case "role":
+				return ec.fieldContext_Employee_role(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_updateEmployeeTag(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_updateEmployeeTag(ctx, field)
 	if err != nil {
@@ -2295,50 +2885,6 @@ func (ec *executionContext) fieldContext_Operator_departments(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Operator_operatorType(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Operator_operatorType(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.OperatorType, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]model.OperationType)
-	fc.Result = res
-	return ec.marshalNOperationType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐOperationTypeᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Operator_operatorType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Operator",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type OperationType does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Operator_title(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Operator_title(ctx, field)
 	if err != nil {
@@ -2378,6 +2924,110 @@ func (ec *executionContext) fieldContext_Operator_title(ctx context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Operator_employees(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Operator_employees(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Operator().Employees(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Employee)
+	fc.Result = res
+	return ec.marshalNEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Operator_employees(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Operator",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "details":
+				return ec.fieldContext_Employee_details(ctx, field)
+			case "id":
+				return ec.fieldContext_Employee_id(ctx, field)
+			case "tag":
+				return ec.fieldContext_Employee_tag(ctx, field)
+			case "role":
+				return ec.fieldContext_Employee_role(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Operator_operatorType(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Operator_operatorType(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OperatorType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]model.OperationType)
+	fc.Result = res
+	return ec.marshalNOperationType2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐOperationTypeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Operator_operatorType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Operator",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type OperationType does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3082,6 +3732,144 @@ func (ec *executionContext) fieldContext_Subscription_currentTime(ctx context.Co
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Time", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_countEmp(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_countEmp(ctx, field)
+	if err != nil {
+		return nil
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().CountEmp(rctx, fc.Args["max"].(int), fc.Args["intervalMilliseconds"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func(ctx context.Context) graphql.Marshaler {
+		select {
+		case res, ok := <-resTmp.(<-chan int):
+			if !ok {
+				return nil
+			}
+			return graphql.WriterFunc(func(w io.Writer) {
+				w.Write([]byte{'{'})
+				graphql.MarshalString(field.Alias).MarshalGQL(w)
+				w.Write([]byte{':'})
+				ec.marshalNInt2int(ctx, field.Selections, res).MarshalGQL(w)
+				w.Write([]byte{'}'})
+			})
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (ec *executionContext) fieldContext_Subscription_countEmp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_countEmp_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_countEmp2(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_countEmp2(ctx, field)
+	if err != nil {
+		return nil
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().CountEmp2(rctx, fc.Args["max"].(int), fc.Args["intervalMilliseconds"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func(ctx context.Context) graphql.Marshaler {
+		select {
+		case res, ok := <-resTmp.(<-chan int):
+			if !ok {
+				return nil
+			}
+			return graphql.WriterFunc(func(w io.Writer) {
+				w.Write([]byte{'{'})
+				graphql.MarshalString(field.Alias).MarshalGQL(w)
+				w.Write([]byte{':'})
+				ec.marshalNInt2int(ctx, field.Selections, res).MarshalGQL(w)
+				w.Write([]byte{'}'})
+			})
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (ec *executionContext) fieldContext_Subscription_countEmp2(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_countEmp2_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5109,6 +5897,13 @@ func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, 
 			return graphql.Null
 		}
 		return ec._Cosmo(ctx, sel, obj)
+	case model.Country:
+		return ec._Country(ctx, sel, &obj)
+	case *model.Country:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Country(ctx, sel, obj)
 	case model.Employee:
 		return ec._Employee(ctx, sel, &obj)
 	case *model.Employee:
@@ -5131,6 +5926,52 @@ func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, 
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
+
+var cityImplementors = []string{"City"}
+
+func (ec *executionContext) _City(ctx context.Context, sel ast.SelectionSet, obj *model.City) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, cityImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("City")
+		case "type":
+			out.Values[i] = ec._City_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._City_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "country":
+			out.Values[i] = ec._City_country(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
 
 var consultancyImplementors = []string{"Consultancy", "Products", "_Entity"}
 
@@ -5225,6 +6066,84 @@ func (ec *executionContext) _Cosmo(ctx context.Context, sel ast.SelectionSet, ob
 	return out
 }
 
+var countryImplementors = []string{"Country", "_Entity"}
+
+func (ec *executionContext) _Country(ctx context.Context, sel ast.SelectionSet, obj *model.Country) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, countryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Country")
+		case "key":
+			out.Values[i] = ec._Country_key(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var countryKeyImplementors = []string{"CountryKey"}
+
+func (ec *executionContext) _CountryKey(ctx context.Context, sel ast.SelectionSet, obj *model.CountryKey) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, countryKeyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CountryKey")
+		case "name":
+			out.Values[i] = ec._CountryKey_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var detailsImplementors = []string{"Details"}
 
 func (ec *executionContext) _Details(ctx context.Context, sel ast.SelectionSet, obj *model.Details) graphql.Marshaler {
@@ -5248,6 +6167,11 @@ func (ec *executionContext) _Details(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "surname":
 			out.Values[i] = ec._Details_surname(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pastLocations":
+			out.Values[i] = ec._Details_pastLocations(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -5354,17 +6278,53 @@ func (ec *executionContext) _Engineer(ctx context.Context, sel ast.SelectionSet,
 		case "departments":
 			out.Values[i] = ec._Engineer_departments(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "engineerType":
-			out.Values[i] = ec._Engineer_engineerType(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "title":
 			out.Values[i] = ec._Engineer_title(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "employees":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Engineer_employees(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "engineerType":
+			out.Values[i] = ec._Engineer_engineerType(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -5533,13 +6493,49 @@ func (ec *executionContext) _Marketer(ctx context.Context, sel ast.SelectionSet,
 		case "departments":
 			out.Values[i] = ec._Marketer_departments(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "title":
 			out.Values[i] = ec._Marketer_title(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "employees":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Marketer_employees(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5623,17 +6619,53 @@ func (ec *executionContext) _Operator(ctx context.Context, sel ast.SelectionSet,
 		case "departments":
 			out.Values[i] = ec._Operator_departments(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "operatorType":
-			out.Values[i] = ec._Operator_operatorType(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "title":
 			out.Values[i] = ec._Operator_title(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "employees":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Operator_employees(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "operatorType":
+			out.Values[i] = ec._Operator_operatorType(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -5901,6 +6933,10 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	switch fields[0].Name {
 	case "currentTime":
 		return ec._Subscription_currentTime(ctx, fields[0])
+	case "countEmp":
+		return ec._Subscription_countEmp(ctx, fields[0])
+	case "countEmp2":
+		return ec._Subscription_countEmp2(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -6327,6 +7363,60 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNCity2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCityᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.City) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCity2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCity(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNCity2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCity(ctx context.Context, sel ast.SelectionSet, v *model.City) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._City(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNConsultancy2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐConsultancy(ctx context.Context, sel ast.SelectionSet, v model.Consultancy) graphql.Marshaler {
 	return ec._Consultancy(ctx, sel, &v)
 }
@@ -6355,14 +7445,24 @@ func (ec *executionContext) marshalNCosmo2ᚖgithubᚗcomᚋwundergraphᚋcosmo�
 	return ec._Cosmo(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNCountry2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, v interface{}) (model.Country, error) {
-	var res model.Country
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
+func (ec *executionContext) marshalNCountry2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, sel ast.SelectionSet, v *model.Country) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Country(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCountry2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, sel ast.SelectionSet, v model.Country) graphql.Marshaler {
-	return v
+func (ec *executionContext) marshalNCountryKey2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountryKey(ctx context.Context, sel ast.SelectionSet, v *model.CountryKey) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CountryKey(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNDepartment2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx context.Context, v interface{}) (model.Department, error) {
@@ -7220,6 +8320,13 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOCountry2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, sel ast.SelectionSet, v *model.Country) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Country(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {

@@ -5,10 +5,11 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { Kind, parse } from 'graphql';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
-  federationRequiredInputFieldError,
   ImplementationErrors,
+  incompatibleArgumentTypesError,
   incompatibleParentKindFatalError,
   InvalidFieldImplementation,
+  invalidRequiredInputValueError,
   noQueryRootTypeError,
   unimplementedInterfaceFieldsError,
 } from '@wundergraph/composition';
@@ -177,10 +178,10 @@ describe('CompositionErrors', (ctx) => {
       `),
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
-      'Incompatible types when merging two instances of argument "n" for "Function.g":\n Expected type "Int" but received "String"',
+    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(
+      incompatibleArgumentTypesError('n', 'Function.g(n: ...)', 'Int', 'String')
     );
   });
 
@@ -418,9 +419,13 @@ describe('CompositionErrors', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0]).toStrictEqual(federationRequiredInputFieldError('InputA', 'b'));
+    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(invalidRequiredInputValueError(
+      'input object',
+      'InputA',
+      [{ inputValueName: 'b', missingSubgraphs: ['subgraph1'], requiredSubgraphs: ['subgraph2'] }],
+      false,
+    ));
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.70.0",
+  "version": "0.70.2",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -111,7 +111,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tiptap-markdown": "^0.8.8",
     "use-deep-compare-effect": "^1.8.1",
-    "zod": "^3.22.3"
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.9",

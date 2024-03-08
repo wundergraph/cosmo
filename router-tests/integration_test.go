@@ -17,7 +17,9 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
+	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
@@ -59,13 +61,11 @@ func (t *testQuery) Data() []byte {
 	return data
 }
 
-func normalizeJSON(tb testing.TB, data []byte) string {
-	var v interface{}
-	err := json.Unmarshal(data, &v)
+func normalizeJSON(tb testing.TB, data []byte) []byte {
+	buf := new(bytes.Buffer)
+	err := json.Indent(buf, data, "", "  ")
 	require.NoError(tb, err)
-	normalized, err := json.MarshalIndent(v, "", "  ")
-	require.NoError(tb, err)
-	return string(normalized)
+	return buf.Bytes()
 }
 
 func TestIntegration(t *testing.T) {
@@ -271,6 +271,13 @@ func TestTracing(t *testing.T) {
 			cfg.EnableRequestTracing = true
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
+		g := goldie.New(
+			t,
+			goldie.WithFixtureDir("testdata"),
+			goldie.WithNameSuffix(".json"),
+			goldie.WithDiffEngine(goldie.ClassicDiff),
+		)
+
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query: bigEmployeesQuery,
 			Header: http.Header{
@@ -279,22 +286,18 @@ func TestTracing(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
-		require.NoError(t, err)
+
 		// we generate a random port for the test server, so we need to replace the port in the tracing json
 		rex, err := regexp.Compile(`http://127.0.0.1:\d+/graphql`)
 		require.NoError(t, err)
-		tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
 		resultBody := rex.ReplaceAllString(res.Body, "http://localhost/graphql")
 		// all nodes have UUIDs, so we need to replace them with a static UUID
 		rex2, err := regexp.Compile(`"id":"[a-f0-9\-]{36}"`)
 		require.NoError(t, err)
-		tracingJson = rex2.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
 		resultBody = rex2.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
-		require.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
-		if t.Failed() {
-			t.Log(resultBody)
-		}
+		resultBody = prettifyJSON(t, resultBody)
+
+		g.Assert(t, "tracing", []byte(resultBody))
 		// make the request again, but with "enable_predictable_debug_timings" disabled
 		// compare the result and ensure that the timings are different
 		res2, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -312,17 +315,18 @@ func TestTracing(t *testing.T) {
 		tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
 		require.NoError(t, err)
 		require.NotNilf(t, tracing, "tracing should not be nil: %s", body)
-		require.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, string(body)))
+
+		newResultBody := prettifyJSON(t, string(body))
+
+		testBody := g.GoldenFileName(t, "tracing")
+		require.NotEqual(t, testBody, newResultBody)
 	})
 }
 
 func prettifyJSON(t *testing.T, jsonStr string) string {
-	var v interface{}
-	err := json.Unmarshal([]byte(jsonStr), &v)
-	require.NoError(t, err)
-	normalized, err := json.MarshalIndent(v, "", "  ")
-	require.NoError(t, err)
-	return string(normalized)
+	res := &bytes.Buffer{}
+	require.NoError(t, json.Indent(res, []byte(jsonStr), "", "  "))
+	return res.String()
 }
 
 func TestOperationSelection(t *testing.T) {
@@ -426,18 +430,28 @@ func TestOperationSelection(t *testing.T) {
 func TestTestdataQueries(t *testing.T) {
 	t.Parallel()
 
-	queries := filepath.Join("testdata", "queries")
-	entries, err := os.ReadDir(queries)
+	testDir := filepath.Join("testdata", "queries")
+	entries, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			t.Fatalf("unexpected file in %s: %s", queries, entry.Name())
+		fileName := entry.Name()
+		ext := filepath.Ext(fileName)
+		name := strings.TrimSuffix(fileName, ext)
+
+		if ext != ".graphql" {
+			continue
 		}
-		name := entry.Name()
+
 		t.Run(name, func(t *testing.T) {
+			g := goldie.New(
+				t,
+				goldie.WithFixtureDir("testdata/queries"),
+				goldie.WithNameSuffix(".json"),
+				goldie.WithDiffEngine(goldie.ClassicDiff),
+			)
+
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-				testDir := filepath.Join(queries, name)
-				queryData, err := os.ReadFile(filepath.Join(testDir, "query.graphql"))
+				queryData, err := os.ReadFile(filepath.Join(testDir, fmt.Sprintf("%s.graphql", name)))
 				require.NoError(t, err)
 				payload := map[string]any{
 					"query": string(queryData),
@@ -450,12 +464,9 @@ func TestTestdataQueries(t *testing.T) {
 				require.Equal(t, http.StatusOK, res.StatusCode)
 				result, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
-				expectedData, err := os.ReadFile(filepath.Join(testDir, "result.json"))
-				require.NoError(t, err)
 
-				expected := normalizeJSON(t, expectedData)
 				actual := normalizeJSON(t, result)
-				require.Equal(t, expected, actual)
+				g.Assert(t, name, actual)
 			})
 		})
 	}
@@ -566,7 +577,9 @@ const (
         languages
       }
       ... on Travelling {
-        countriesLived
+        countriesLived {
+		  language
+		}
       }
       ... on Other {
         name
@@ -574,7 +587,7 @@ const (
     }
   }
 }`
-	bigEmployeesResponse = `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true},"role":{"title":["Founder","CEO"],"departments":["ENGINEERING","MARKETING"]},"hobbies":[{"category":"SPORT"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":20},{"name":"WunderGraph"},{"languages":["GO","TYPESCRIPT"]},{"countriesLived":["ENGLAND","GERMANY"]}]},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false},"role":{"title":["Co-founder","Tech Lead"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":0.5},{"languages":["GO","RUST"]}]},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false},"role":{"title":["Co-founder","Head of Growth"],"departments":["MARKETING"]},"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{"name":"Reading"},{"countriesLived":["AMERICA","SERBIA"]}]},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true},"role":{"title":["Co-founder","COO"],"departments":["OPERATIONS"]},"hobbies":[{"category":"HIKING"},{"planeModels":["Aquila AT01","Cessna C172","Cessna C206","Cirrus SR20","Cirrus SR22","Diamond DA40","Diamond HK36","Diamond DA20","Piper Cub","Pitts Special","Robin DR400"],"yearsOfExperience":20},{"countriesLived":["AMERICA","GERMANY"]}]},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false},"role":{"title":["Senior GO Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Building a house"},{"name":"Forumla 1"},{"name":"Raising cats"}]},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Chess","genres":["BOARD"],"yearsOfExperience":9.5},{"name":"Watching anime"}]},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":17},{"name":"Watching anime"}]},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false},"role":{"title":["Senior Frontend Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{"name":"saas-ui"},{"countriesLived":["GERMANY","INDONESIA","NETHERLANDS","PORTUGAL","SPAIN","THAILAND"]}]},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true},"role":{"title":["Accounting \\u0026 Finance"],"departments":["OPERATIONS"]},"hobbies":[{"name":"Spending time with the family"}]},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":25.5},{"countriesLived":["ENGLAND","KOREA","TAIWAN"]}]}]}}`
+	bigEmployeesResponse = `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true},"role":{"title":["Founder","CEO"],"departments":["ENGINEERING","MARKETING"]},"hobbies":[{"category":"SPORT"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":20},{"name":"WunderGraph"},{"languages":["GO","TYPESCRIPT"]},{"countriesLived":[{"language": "English"},{"language": "German"}]}]},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false},"role":{"title":["Co-founder","Tech Lead"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":0.5},{"languages":["GO","RUST"]}]},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false},"role":{"title":["Co-founder","Head of Growth"],"departments":["MARKETING"]},"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{"name":"Reading"},{"countriesLived":[{"language": "English"},{"language": "Serbian"}]}]},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true},"role":{"title":["Co-founder","COO"],"departments":["OPERATIONS"]},"hobbies":[{"category":"HIKING"},{"planeModels":["Aquila AT01","Cessna C172","Cessna C206","Cirrus SR20","Cirrus SR22","Diamond DA40","Diamond HK36","Diamond DA20","Piper Cub","Pitts Special","Robin DR400"],"yearsOfExperience":20},{"countriesLived":[{"language": "English"},{"language": "German"}]}]},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false},"role":{"title":["Senior GO Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Building a house"},{"name":"Forumla 1"},{"name":"Raising cats"}]},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Chess","genres":["BOARD"],"yearsOfExperience":9.5},{"name":"Watching anime"}]},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":17},{"name":"Watching anime"}]},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false},"role":{"title":["Senior Frontend Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{"name":"saas-ui"},{"countriesLived":[{"language": "German"},{"language": "Indonesian"},{"language": "Dutch"},{"language": "Portuguese"},{"language": "Spanish"},{"language": "Thai"}]}]},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true},"role":{"title":["Accounting \\u0026 Finance"],"departments":["OPERATIONS"]},"hobbies":[{"name":"Spending time with the family"}]},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":25.5},{"countriesLived":["language": "English"},"language": "Korean"},"language": "Taiwanese"}]}]}]}}`
 )
 
 func BenchmarkPb(b *testing.B) {
@@ -641,6 +654,7 @@ func FuzzQuery(f *testing.F) {
 }
 
 func TestPlannerErrorMessage(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		// Error message should contain the invalid argument name instead of a
 		// generic planning error message
@@ -657,6 +671,7 @@ func TestPlannerErrorMessage(t *testing.T) {
 }
 
 func TestConcurrentQueriesWithDelay(t *testing.T) {
+	t.Parallel()
 	const (
 		numQueries   = 20
 		queryDelayMs = 100
@@ -690,6 +705,7 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 }
 
 func TestPartialOriginErrors(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Products: testenv.SubgraphConfig{
@@ -705,6 +721,7 @@ func TestPartialOriginErrors(t *testing.T) {
 }
 
 func TestPartialOriginErrors500(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Products: testenv.SubgraphConfig{
@@ -724,6 +741,7 @@ func TestPartialOriginErrors500(t *testing.T) {
 }
 
 func TestWithOriginErrors(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Employees: testenv.SubgraphConfig{
@@ -739,6 +757,7 @@ func TestWithOriginErrors(t *testing.T) {
 }
 
 func TestWithOriginErrors500(t *testing.T) {
+	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		Subgraphs: testenv.SubgraphsConfig{
 			Employees: testenv.SubgraphConfig{

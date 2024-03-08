@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.70.2](https://github.com/wundergraph/cosmo/compare/studio@0.70.1...studio@0.70.2) (2024-03-06)
+
+**Note:** Version bump only for package studio
+
+## [0.70.1](https://github.com/wundergraph/cosmo/compare/studio@0.70.0...studio@0.70.1) (2024-03-05)
+
+### Bug Fixes
+
+* maintain consistent links ([#594](https://github.com/wundergraph/cosmo/issues/594)) ([18eab16](https://github.com/wundergraph/cosmo/commit/18eab166ad9010eb72d1551609446f2537a63951)) (@JivusAyrus)
+* missing ART visuals on subgraph errors ([#598](https://github.com/wundergraph/cosmo/issues/598)) ([1934d7d](https://github.com/wundergraph/cosmo/commit/1934d7d801ac97ef3cdac2ad74799ca3416bd3c9)) (@thisisnithin)
+
 # [0.70.0](https://github.com/wundergraph/cosmo/compare/studio@0.69.0...studio@0.70.0) (2024-03-01)
 
 ### Bug Fixes

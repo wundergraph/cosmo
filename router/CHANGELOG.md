@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.71.2](https://github.com/wundergraph/cosmo/compare/router@0.71.1...router@0.71.2) (2024-03-06)
+
+### Bug Fixes
+
+* don't log unexpected EOF client issues as errors ([#606](https://github.com/wundergraph/cosmo/issues/606)) ([3844424](https://github.com/wundergraph/cosmo/commit/3844424c5eee1a6c234908275a06d73551d3bdea)) (@StarpTech)
+
+## [0.71.1](https://github.com/wundergraph/cosmo/compare/router@0.71.0...router@0.71.1) (2024-03-06)
+
+### Bug Fixes
+
+* subscription deduplication ([#603](https://github.com/wundergraph/cosmo/issues/603)) ([ca00f46](https://github.com/wundergraph/cosmo/commit/ca00f46878f5294106e293064a6b0d0559a56be7)) (@jensneuse)
+
+# [0.71.0](https://github.com/wundergraph/cosmo/compare/router@0.70.0...router@0.71.0) (2024-03-05)
+
+### Bug Fixes
+
+* missing ART visuals on subgraph errors ([#598](https://github.com/wundergraph/cosmo/issues/598)) ([1934d7d](https://github.com/wundergraph/cosmo/commit/1934d7d801ac97ef3cdac2ad74799ca3416bd3c9)) (@thisisnithin)
+
+### Features
+
+* tls and mTLS server support ([#600](https://github.com/wundergraph/cosmo/issues/600)) ([9a7bdec](https://github.com/wundergraph/cosmo/commit/9a7bdec06097e9008100408faffc098ad6c04285)) (@StarpTech)
+
 # [0.70.0](https://github.com/wundergraph/cosmo/compare/router@0.69.1...router@0.70.0) (2024-03-01)
 
 ### Bug Fixes

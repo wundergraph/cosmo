@@ -11,7 +11,6 @@ require (
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/dustin/go-humanize v1.0.1
-	github.com/gkampitakis/go-snaps v0.5.2
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.3.1
@@ -34,7 +33,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/sjson v1.2.5
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.10
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.11
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -59,6 +58,8 @@ require (
 	google.golang.org/protobuf v1.32.0
 )
 
+require github.com/sebdah/goldie/v2 v2.5.3
+
 require (
 	github.com/99designs/gqlgen v0.17.39 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
@@ -72,8 +73,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/gin-gonic/gin v1.9.1 // indirect
-	github.com/gkampitakis/ciinfo v0.3.0 // indirect
-	github.com/gkampitakis/go-diff v1.3.2 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -91,10 +90,7 @@ require (
 	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/maruel/natural v1.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
@@ -107,6 +103,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/r3labs/sse/v2 v2.8.1 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
+	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
