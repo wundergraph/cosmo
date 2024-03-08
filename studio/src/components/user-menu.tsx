@@ -22,7 +22,14 @@ export const UserMenuMobile = () => {
     <div className="flex flex-col items-center justify-center gap-y-4">
       <p className="text-sm font-bold">{user.email}</p>
       <Button>
-        <Link href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}>
+        <Link
+          onClick={() => {
+            if (process.env.CUSTOM_HEAD_SCRIPTS) {
+              window.ko?.reset();
+            }
+          }}
+          href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}
+        >
           Logout
         </Link>
       </Button>

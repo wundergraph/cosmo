@@ -210,6 +210,16 @@ export default async function build(opts: BuildConfig) {
   let mailerClient: Mailer | undefined;
   if (opts.smtpUsername && opts.smtpPassword) {
     mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
+    try {
+      const verified = await mailerClient.verifyConnection();
+      if (verified) {
+        log.info('Email client ready to send emails');
+      } else {
+        log.error('Email client failed to verify connection');
+      }
+    } catch (error) {
+      log.error(error, 'Email client could not verify connection');
+    }
   }
 
   const bullWorkers: Worker[] = [];
