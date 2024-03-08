@@ -27,8 +27,8 @@ message ResponseStatus {
 message PublishFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
-  // The binary representation of the schema, the content of the file
-  bytes schema = 2;
+  // The string representation of the schema, the content of the file
+  string schema = 2;
   // routing_url is the URL of the service which will be used to route the requests to the subgraph.
   optional string routing_url = 3;
   // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
@@ -69,8 +69,8 @@ message CheckSubgraphSchemaRequest {
 message FixSubgraphSchemaRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
-  // The binary representation of the schema, the content of the file
-  bytes schema = 2;
+  // The string representation of the schema, the content of the file
+  string schema = 2;
   string namespace = 3;
 }
 

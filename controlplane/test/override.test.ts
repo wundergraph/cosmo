@@ -79,7 +79,7 @@ describe('Overrides', (ctx) => {
     const publishResp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
-      schema: Buffer.from(initSchema),
+      schema: initSchema,
     });
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 

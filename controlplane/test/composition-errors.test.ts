@@ -31,8 +31,11 @@ describe('CompositionErrors', (ctx) => {
   test('Should cause a composition error due to extension of the type which doesnt exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
 
-    const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
-    const productsSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
+    const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
+    const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
+
+    const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
+    const productsSchema = new TextDecoder().decode(productsSchemaBuffer);
 
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();

@@ -1,27 +1,13 @@
-import { createPromiseClient } from '@connectrpc/connect';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { createConnectTransport } from '@connectrpc/connect-node';
-import Fastify from 'fastify';
-import { pino } from 'pino';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import database from '../src/core/plugins/database.js';
-import routes from '../src/core/routes.js';
 import {
   afterAllSetup,
   beforeAllSetup,
-  createTestAuthenticator,
   genID,
-  genUniqueLabel,
-  seedTest,
+  genUniqueLabel
 } from '../src/core/test-util.js';
-import Keycloak from '../src/core/services/Keycloak.js';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
-import Mailer from '../src/core/services/Mailer.js';
-import { Authorization } from '../src/core/services/Authorization.js';
-import { InMemoryBlobStorage, SetupTest } from './test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -53,7 +39,7 @@ describe('Federated Graph', (ctx) => {
     const publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      schema: 'type Query { hello: String! }',
     });
 
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
@@ -108,7 +94,7 @@ describe('Federated Graph', (ctx) => {
     const publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      schema: 'type Query { hello: String! }',
     });
 
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
@@ -217,7 +203,7 @@ describe('Federated Graph', (ctx) => {
     let publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      schema: 'type Query { hello: String! }',
     });
 
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
@@ -234,7 +220,7 @@ describe('Federated Graph', (ctx) => {
     publishResp = await client.publishFederatedSubgraph({
       name: subgraph2Name,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { a: String! }')),
+      schema: 'type Query { a: String! }',
     });
 
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
@@ -296,7 +282,7 @@ describe('Federated Graph', (ctx) => {
     let publishResp = await client.publishFederatedSubgraph({
       name: subgraph1Name,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      schema: 'type Query { hello: String! }',
     });
 
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
@@ -304,7 +290,7 @@ describe('Federated Graph', (ctx) => {
     publishResp = await client.publishFederatedSubgraph({
       name: subgraph2Name,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { a: String! }')),
+      schema: 'type Query { a: String! }',
     });
 
     expect(publishResp.response?.code).toBe(EnumStatusCode.OK);

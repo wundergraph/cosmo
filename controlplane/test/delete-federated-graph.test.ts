@@ -43,7 +43,7 @@ describe('DeleteFederatedGraph', (ctx) => {
     const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      schema: 'type Query { hello: String! }',
     });
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);

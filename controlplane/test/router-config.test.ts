@@ -38,8 +38,7 @@ describe('Router Config', (ctx) => {
     const publishPandaResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         type Query {
           allPandas: [Panda]
           panda(name: ID!): Panda
@@ -49,8 +48,7 @@ describe('Router Config', (ctx) => {
             name:ID!
             favoriteFood: String
         }
-      `),
-      ),
+      `,
     });
 
     expect(publishPandaResp.response?.code).toBe(EnumStatusCode.OK);
@@ -67,8 +65,7 @@ describe('Router Config', (ctx) => {
     const publishUsersResp = await client.publishFederatedSubgraph({
       name: usersSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         type User @key(fields: "email") {
           email: ID!
           name: String
@@ -78,8 +75,7 @@ describe('Router Config', (ctx) => {
         type Query {
           user: User
         }
-      `),
-      ),
+      `,
     });
 
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
@@ -96,8 +92,7 @@ describe('Router Config', (ctx) => {
     const publishInventoryResp = await client.publishFederatedSubgraph({
       name: inventorySubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
           directive @tag(name: String!) repeatable on FIELD_DEFINITION
 
           extend type Product @key(fields: "id") {
@@ -115,8 +110,7 @@ describe('Router Config', (ctx) => {
             estimatedDelivery: String
             fastestDelivery: String
           }
-      `),
-      ),
+      `,
     });
 
     expect(publishInventoryResp.response?.code).toBe(EnumStatusCode.OK);
@@ -133,8 +127,7 @@ describe('Router Config', (ctx) => {
     const publishProductsResp = await client.publishFederatedSubgraph({
       name: productsSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         directive @tag(name: String!) repeatable on FIELD_DEFINITION
 
         type Product @key(fields: "id") @key(fields: "sku package") @key(fields: "sku variation { id }"){
@@ -165,8 +158,7 @@ describe('Router Config', (ctx) => {
           email: ID! @external
           totalProductsCreated: Int @external
         }
-      `),
-      ),
+      `,
     });
 
     expect(publishProductsResp.response?.code).toBe(EnumStatusCode.OK);
@@ -243,14 +235,12 @@ describe('Router Config', (ctx) => {
     const publishPandaResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         type Panda {
             name:ID!
             favoriteFood: String
         }
-      `),
-      ),
+      `,
     });
 
     expect(publishPandaResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
@@ -269,16 +259,14 @@ describe('Router Config', (ctx) => {
     let publishUsersResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         type Query {
             username: String
         }
         extend type User{
           name: String
         }
-      `),
-      ),
+      `,
     });
 
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
@@ -320,8 +308,7 @@ describe('Router Config', (ctx) => {
     publishUsersResp = await client.publishFederatedSubgraph({
       name: usersSubgraph,
       namespace: 'default',
-      schema: Uint8Array.from(
-        Buffer.from(`
+      schema: `
         type User @key(fields: "email") {
           email: ID!
           name: String
@@ -331,8 +318,7 @@ describe('Router Config', (ctx) => {
         type Query {
           user: User
         }
-      `),
-      ),
+      `,
     });
 
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);

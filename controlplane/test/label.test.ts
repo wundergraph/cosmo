@@ -98,7 +98,7 @@ describe('Labels', (ctx) => {
       const publishResp = await client.publishFederatedSubgraph({
         name,
         namespace: 'default',
-        schema: Uint8Array.from(Buffer.from(`type Query { name: String! }`)),
+        schema: `type Query { name: String! }`,
       });
       expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
     };
@@ -272,7 +272,7 @@ describe('Labels', (ctx) => {
       const publishResp = await client.publishFederatedSubgraph({
         name,
         namespace: 'default',
-        schema: Uint8Array.from(Buffer.from(`type Query { name: String! }`)),
+        schema: `type Query { name: String! }`,
       });
       expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
     };
@@ -328,7 +328,7 @@ describe('Labels', (ctx) => {
       const publishResp = await client.publishFederatedSubgraph({
         name,
         namespace: 'default',
-        schema: Uint8Array.from(Buffer.from(`type Query { name: String! }`)),
+        schema: `type Query { name: String! }`,
       });
       expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
     };
@@ -413,7 +413,7 @@ describe('Labels', (ctx) => {
       const publishResp = await client.publishFederatedSubgraph({
         name,
         namespace: 'default',
-        schema: Uint8Array.from(Buffer.from(`type Query { name: String! }`)),
+        schema: `type Query { name: String! }`,
       });
       expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
     };
@@ -487,7 +487,7 @@ describe('Labels', (ctx) => {
       const publishResp = await client.publishFederatedSubgraph({
         name,
         namespace: 'default',
-        schema: Uint8Array.from(Buffer.from(`type Query { name: String! }`)),
+        schema: `type Query { name: String! }`,
       });
       expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
     };

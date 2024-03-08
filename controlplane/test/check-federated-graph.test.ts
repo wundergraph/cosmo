@@ -21,9 +21,13 @@ describe('CheckFederatedGraph', (ctx) => {
 
     const federatedGraphName = genID('fedGraph');
 
-    const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
-    const productsSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
-    const usersSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/users.graphql'));
+    const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
+    const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
+    const usersSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/users.graphql'));
+
+    const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
+    const productsSchema = new TextDecoder().decode(productsSchemaBuffer);
+    const usersSchema = new TextDecoder().decode(usersSchemaBuffer);
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
