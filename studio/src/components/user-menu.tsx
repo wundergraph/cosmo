@@ -3,15 +3,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import Link from "next/link";
-import { Button } from "./ui/button";
 import { useUser } from "@/hooks/use-user";
+import { resetKoala } from "@/lib/koala";
+import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Button } from "./ui/button";
 
 export const UserMenuMobile = () => {
   const user = useUser();
@@ -24,9 +23,7 @@ export const UserMenuMobile = () => {
       <Button>
         <Link
           onClick={() => {
-            if (process.env.CUSTOM_HEAD_SCRIPTS) {
-              window.ko?.reset();
-            }
+            resetKoala();
           }}
           href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}
         >
