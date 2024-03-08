@@ -6,7 +6,13 @@ declare global {
   }
 }
 
-const resetKoala = () => window.ko?.reset;
+const resetKoala = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.ko?.reset;
+};
 
 const identifyKoala = ({
   email,
@@ -23,6 +29,10 @@ const identifyKoala = ({
   organizationSlug: string;
   plan?: string;
 }) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
   window.ko?.identify(email, {
     id,
     $account: {
