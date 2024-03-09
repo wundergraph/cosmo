@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
@@ -67,11 +68,19 @@ func TestErrorWhenConfigNotExists(t *testing.T) {
 }
 
 func TestRegexDecoding(t *testing.T) {
-	cfg, err := LoadConfig("./fixtures/regex-decoding.yaml", "")
+	cfg, err := LoadConfig("./fixtures/regex-empty-decoding.yaml", "")
 
 	require.NoError(t, err)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics, 0)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 0)
+
+	cfg, err = LoadConfig("./fixtures/regex-decoding.yaml", "")
+
+	require.NoError(t, err)
+	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics, 2)
+	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
+	require.Equal(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")})
+	require.Equal(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, RegExArray{regexp.MustCompile("^instance")})
 }
 
 func TestErrorWhenEnvVariableConfigNotExists(t *testing.T) {
