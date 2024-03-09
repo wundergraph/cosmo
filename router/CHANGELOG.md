@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.72.0](https://github.com/wundergraph/cosmo/compare/router@0.71.2...router@0.72.0) (2024-03-09)
+
+### Bug Fixes
+
+* **router:** decode empty array of Regex in config ([#613](https://github.com/wundergraph/cosmo/issues/613)) ([73d296a](https://github.com/wundergraph/cosmo/commit/73d296a3cfec82b7d5c9efbe24ee0c389c43beb8)) (@StarpTech)
+
+### Features
+
+* improve planning time of a big queries ([#609](https://github.com/wundergraph/cosmo/issues/609)) ([ddb741b](https://github.com/wundergraph/cosmo/commit/ddb741b39115cbea7863eb89ec7e7e9dcdb11860)) (@devsergiy)
+
 ## [0.71.2](https://github.com/wundergraph/cosmo/compare/router@0.71.1...router@0.71.2) (2024-03-06)
 
 ### Bug Fixes
