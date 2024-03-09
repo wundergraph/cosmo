@@ -47,12 +47,8 @@
         "Enabled": true,
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
-        "ExcludeMetrics": [
-          ""
-        ],
-        "ExcludeMetricLabels": [
-          ""
-        ]
+        "ExcludeMetrics": null,
+        "ExcludeMetricLabels": null
       }
     }
   },
