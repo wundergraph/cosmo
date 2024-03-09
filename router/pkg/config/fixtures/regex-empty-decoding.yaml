@@ -7,5 +7,5 @@ telemetry:
   metrics:
     prometheus:
       # Interpreted as RegEx
-      exclude_metrics: ["^go_.*", "^process_.*"]
-      exclude_metric_labels: ["^instance"]
+      exclude_metrics: []
+      exclude_metric_labels: []
