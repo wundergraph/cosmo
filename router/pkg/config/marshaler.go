@@ -15,6 +15,10 @@ func (b *RegExArray) Decode(value string) error {
 	// Reset the array to not merge environment variables
 	*b = nil
 
+	if value == "" {
+		return nil
+	}
+
 	regStrings := strings.Split(value, ",")
 
 	for _, regString := range regStrings {
