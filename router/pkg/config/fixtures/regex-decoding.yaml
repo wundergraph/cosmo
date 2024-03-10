@@ -1,0 +1,11 @@
+version: '1'
+
+graph:
+  token: "mytoken"
+
+telemetry:
+  metrics:
+    prometheus:
+      # Interpreted as RegEx
+      exclude_metrics: ["^go_.*", "^process_.*"]
+      exclude_metric_labels: ["^instance"]

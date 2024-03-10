@@ -26,7 +26,7 @@ const setupFederatedGraph = async (fedGraphName: string, client: Client) => {
     namespace: 'default',
     labels: [label],
     routingUrl: 'http://localhost:8081',
-    schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+    schema:'type Query { hello: String! }',
   });
 
   expect(publishResp.response?.code).toBe(EnumStatusCode.OK);

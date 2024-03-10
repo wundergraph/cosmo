@@ -1359,7 +1359,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             schema: '',
           };
         }
-        const newSchemaSDL = new TextDecoder().decode(req.schema);
+        const newSchemaSDL = req.schema;
 
         try {
           // Here we check if the schema is valid as a subgraph
@@ -1477,7 +1477,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraphSchemaSDL = new TextDecoder().decode(req.schema);
+        const subgraphSchemaSDL = req.schema;
 
         try {
           // Here we check if the schema is valid as a subgraph SDL

@@ -439,11 +439,11 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
   name = "";
 
   /**
-   * The binary representation of the schema, the content of the file
+   * The string representation of the schema, the content of the file
    *
-   * @generated from field: bytes schema = 2;
+   * @generated from field: string schema = 2;
    */
-  schema = new Uint8Array(0);
+  schema = "";
 
   /**
    * routing_url is the URL of the service which will be used to route the requests to the subgraph.
@@ -499,7 +499,7 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
   static readonly typeName = "wg.cosmo.platform.v1.PublishFederatedSubgraphRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "schema", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 5, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -703,11 +703,11 @@ export class FixSubgraphSchemaRequest extends Message<FixSubgraphSchemaRequest> 
   subgraphName = "";
 
   /**
-   * The binary representation of the schema, the content of the file
+   * The string representation of the schema, the content of the file
    *
-   * @generated from field: bytes schema = 2;
+   * @generated from field: string schema = 2;
    */
-  schema = new Uint8Array(0);
+  schema = "";
 
   /**
    * @generated from field: string namespace = 3;
@@ -723,7 +723,7 @@ export class FixSubgraphSchemaRequest extends Message<FixSubgraphSchemaRequest> 
   static readonly typeName = "wg.cosmo.platform.v1.FixSubgraphSchemaRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "schema", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 

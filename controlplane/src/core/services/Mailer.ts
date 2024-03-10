@@ -15,12 +15,22 @@ export default class Mailer {
     this.client = createTransport({
       host: 'smtp.postmarkapp.com',
       port: 587,
+      // true for 465, false for other ports, will still upgrade to StartTLS
       secure: false,
+      requireTLS: true, // Forces the client to use STARTTLS
       auth: {
         user: username,
         pass: password,
       },
     });
+  }
+
+  /**
+   * Verify the connection to the mail server is working.
+   * (Authenticates with the mail server and returns true if successful, false otherwise)
+   */
+  public verifyConnection() {
+    return this.client.verify();
   }
 
   public async sendInviteEmail({
