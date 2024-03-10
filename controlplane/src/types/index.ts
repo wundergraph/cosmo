@@ -443,3 +443,12 @@ export type TimeFilters = {
   granule: string;
   dateRange: DateRange<number>;
 };
+
+export interface MailerParams {
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpRequireTls: boolean;
+  smtpUsername: string;
+  smtpPassword: string;
+}
