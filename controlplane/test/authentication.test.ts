@@ -50,8 +50,14 @@ describe('Authentication', (ctx) => {
         clientSecret: '',
       },
       s3StorageUrl: 'http://localhost:9000',
-      smtpUsername: '',
-      smtpPassword: '',
+      mailer: {
+        smtpHost: '',
+        smtpPort: 587,
+        smtpUsername: '',
+        smtpPassword: '',
+        smtpSecure: false,
+        smtpRequireTls: true,
+      },
       redis: {
         host: 'localhost',
         port: 6379,
