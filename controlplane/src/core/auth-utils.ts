@@ -1,3 +1,4 @@
+import * as net from 'node:net';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import cookie from 'cookie';
 import axios from 'axios';
@@ -17,7 +18,6 @@ import {
   generateRandomCodeVerifier,
 } from './crypto/jwt.js';
 import { AuthenticationError } from './errors/errors.js';
-import * as net from 'net';
 
 export type AuthUtilsOptions = {
   webBaseUrl: string;
@@ -52,7 +52,9 @@ export default class AuthUtils {
     private opts: AuthUtilsOptions,
   ) {
     this.webUrl = new URL(opts.webBaseUrl);
-    this.webDomain = net.isIPv4(this.webUrl.hostname) ? this.webUrl.hostname : this.webUrl.hostname.replace(/^[^.]+\./g, '');
+    this.webDomain = net.isIPv4(this.webUrl.hostname)
+      ? this.webUrl.hostname
+      : this.webUrl.hostname.replace(/^[^.]+\./g, '');
     this.secureCookie = this.webUrl.protocol === 'https:';
   }
 
