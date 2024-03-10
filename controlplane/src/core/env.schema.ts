@@ -90,19 +90,6 @@ export const envVariables = z
      */
     SMTP_USERNAME: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
-    SMTP_HOST: z.string().optional(),
-    SMTP_PORT: z
-      .string()
-      .default('587')
-      .transform((val) => Number.parseInt(val)),
-    SMTP_SECURE: z
-      .string()
-      .default('false')
-      .transform((val) => val === 'true'),
-    SMTP_REQUIRE_TLS: z
-      .string()
-      .default('true')
-      .transform((val) => val === 'true'),
     /**
      * Billing
      */

@@ -8,7 +8,6 @@ import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
-import { MailerParams } from '../types/index.js';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyDatabase from './plugins/database.js';
@@ -82,14 +81,8 @@ export interface BuildConfig {
   };
   slack: { clientID?: string; clientSecret?: string };
   s3StorageUrl: string;
-  mailer: {
-    smtpHost?: string;
-    smtpPort?: number;
-    smtpSecure: boolean;
-    smtpRequireTls: boolean;
-    smtpUsername?: string;
-    smtpPassword?: string;
-  };
+  smtpUsername?: string;
+  smtpPassword?: string;
   stripe?: {
     secret?: string;
     webhookSecret?: string;
@@ -215,8 +208,8 @@ export default async function build(opts: BuildConfig) {
   });
 
   let mailerClient: Mailer | undefined;
-  if (opts.mailer.smtpUsername && opts.mailer.smtpPassword) {
-    mailerClient = new Mailer(opts.mailer as MailerParams);
+  if (opts.smtpUsername && opts.smtpPassword) {
+    mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
     try {
       const verified = await mailerClient.verifyConnection();
       if (verified) {
