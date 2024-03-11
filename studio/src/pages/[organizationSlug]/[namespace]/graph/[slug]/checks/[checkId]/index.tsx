@@ -5,8 +5,9 @@ import {
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
 import { ChangesTable } from "@/components/checks/changes-table";
+import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
-import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
+import { CodeViewerActions } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -14,6 +15,10 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import {
+  DecorationCollection,
+  SDLViewerMonaco,
+} from "@/components/schema/sdl-viewer-monaco";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -56,7 +61,10 @@ import {
   getCheckSummary,
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetCheckSummaryResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  GetCheckSummaryResponse,
+  LintIssue,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import React, { useContext, useMemo } from "react";
@@ -173,6 +181,34 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   );
 };
 
+const getDecorationCollection = (
+  lintIssues: LintIssue[],
+): DecorationCollection[] => {
+  const decorationCollection: DecorationCollection[] = [];
+
+  for (const l of lintIssues) {
+    if (!l.issueLocation) continue;
+    decorationCollection.push({
+      range: {
+        startLineNumber: l.issueLocation.line,
+        endLineNumber: l.issueLocation.endLine || l.issueLocation.line,
+        startColumn: l.issueLocation.column,
+        endColumn: l.issueLocation.endColumn || l.issueLocation.column,
+      },
+      options: {
+        hoverMessage: {
+          value: `${l.message}. (Rule: ${l.lintRuleType ? l.lintRuleType : ""})`,
+        },
+        inlineClassName:
+          "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
+        isWholeLine: l.issueLocation.endLine === undefined,
+      },
+    });
+  }
+
+  return decorationCollection;
+};
+
 const CheckDetails = ({
   data,
   refetch,
@@ -189,6 +225,7 @@ const CheckDetails = ({
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;
+  const hash = router.asPath.split("#")?.[1];
 
   const { data: allGraphsData } = useQuery(getFederatedGraphs.useQuery());
 
@@ -243,6 +280,7 @@ const CheckDetails = ({
     data.check.isComposable,
     data.check.isBreaking,
     data.check.hasClientTraffic,
+    data.check.hasLintErrors,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -366,6 +404,17 @@ const CheckDetails = ({
                 <InfoTooltip>
                   Describes if the proposed schema affects any client operations
                   based on real usage data.
+                </InfoTooltip>
+              </Badge>
+
+              <Badge
+                variant="outline"
+                className="flex items-center space-x-1.5  py-2"
+              >
+                {getCheckIcon(!data.check.hasLintErrors)}
+                <span className="flex-1 truncate">Lint Errors</span>
+                <InfoTooltip>
+                  Describes if the proposed schema contains linting errors.
                 </InfoTooltip>
               </Badge>
             </dd>
@@ -526,6 +575,26 @@ const CheckDetails = ({
                     Operations
                   </Link>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="lintIssues"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{ query: { ...router.query, tab: "lintIssues" } }}
+                  >
+                    <PiBracketsCurlyBold className="flex-shrink-0" />
+                    Lint Issues
+                    {data.lintIssues.length ? (
+                      <Badge
+                        variant="muted"
+                        className="bg-white px-1.5 text-current dark:bg-gray-900/60"
+                      >
+                        {data.lintIssues.length}
+                      </Badge>
+                    ) : null}
+                  </Link>
+                </TabsTrigger>
                 {!data.check.isDeleted && (
                   <TabsTrigger
                     value="schema"
@@ -641,6 +710,15 @@ const CheckDetails = ({
               <TabsContent value="operations" className="w-full">
                 <CheckOperations />
               </TabsContent>
+              <TabsContent
+                value="lintIssues"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <LintIssuesTable
+                  lintIssues={data.lintIssues}
+                  caption={`${data.lintIssues.length} issues found`}
+                />
+              </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
                 <div className="right-8 top-5 px-4 md:absolute md:px-0">
                   <CodeViewerActions
@@ -651,7 +729,14 @@ const CheckDetails = ({
                   />
                 </div>
                 <div className="scrollbar-custom h-full w-full overflow-auto">
-                  <CodeViewer code={sdl} disableLinking />
+                  <SDLViewerMonaco
+                    schema={sdl}
+                    disablePrettier
+                    decorationCollections={getDecorationCollection(
+                      data.lintIssues,
+                    )}
+                    line={hash ? Number(hash.slice(1)) : undefined}
+                  />
                 </div>
               </TabsContent>
             </div>

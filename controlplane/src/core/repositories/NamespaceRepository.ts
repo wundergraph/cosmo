@@ -68,4 +68,13 @@ export class NamespaceRepository {
       where: eq(schema.namespaces.organizationId, this.organizationId),
     });
   }
+
+  public async toggleEnableLinting(data: { name: string; enableLinting: boolean }) {
+    await this.db
+      .update(schema.namespaces)
+      .set({
+        enableLinting: data.enableLinting,
+      })
+      .where(and(eq(schema.namespaces.name, data.name), eq(schema.namespaces.organizationId, this.organizationId)));
+  }
 }

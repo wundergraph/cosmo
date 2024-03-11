@@ -178,7 +178,7 @@ const LineActions = ({
   );
 };
 
-const useScrollIntoView = (
+export const useScrollIntoView = (
   virtualizer: Virtualizer<any, any>,
   lineNo: number,
 ) => {
@@ -187,8 +187,7 @@ const useScrollIntoView = (
   useEffect(() => {
     const t = setTimeout(() => {
       if (!isMounted && lineNo) {
-        virtualizer.scrollToIndex(81);
-        console.log("done");
+        virtualizer.scrollToIndex(lineNo + 5);
         setIsMounted(true);
       }
     }, 500);

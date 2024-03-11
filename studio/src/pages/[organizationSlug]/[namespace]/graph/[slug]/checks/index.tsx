@@ -21,13 +21,6 @@ import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -44,7 +37,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
-import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { createDateRange } from "@/lib/insights-helpers";
@@ -53,26 +45,14 @@ import {
   CommandLineIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  DoubleArrowLeftIcon,
-  DoubleArrowRightIcon,
-  GitHubLogoIcon,
-} from "@radix-ui/react-icons";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getChecksByFederatedGraphName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  endOfDay,
-  formatDistanceToNow,
-  formatISO,
-  startOfDay,
-  subDays,
-} from "date-fns";
+import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useCallback, useContext } from "react";
+import { useContext } from "react";
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -172,11 +152,13 @@ const ChecksPage: NextPageWithLayout = () => {
                   subgraphName,
                   timestamp,
                   ghDetails,
+                  hasLintErrors,
                 }) => {
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
                     isBreaking,
                     hasClientTraffic,
+                    hasLintErrors,
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;
@@ -229,6 +211,10 @@ const ChecksPage: NextPageWithLayout = () => {
                           <Badge variant="outline" className="gap-2 py-1.5">
                             {getCheckIcon(!hasClientTraffic)}{" "}
                             <span>Operations</span>
+                          </Badge>
+                          <Badge variant="outline" className="gap-2 py-1.5">
+                            {getCheckIcon(!hasLintErrors)}{" "}
+                            <span>Lint Errors</span>
                           </Badge>
                         </div>
                       </TableCell>

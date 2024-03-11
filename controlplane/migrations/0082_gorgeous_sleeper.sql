@@ -1,0 +1,1 @@
+ALTER TABLE "schema_check_lint_action" ADD COLUMN "lint_rule_type" "lint_rules";

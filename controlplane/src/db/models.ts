@@ -2,6 +2,7 @@ import {
   billingPlans,
   billingSubscriptions,
   federatedGraphs,
+  lintRulesEnum,
   memberRoleEnum,
   organizationFeatures,
   schemaCheckChangeAction,
@@ -19,6 +20,7 @@ export type NewOrganizationFeature = typeof organizationFeatures.$inferInsert;
 export type NewBillingSubscription = typeof billingSubscriptions.$inferInsert;
 export type NewBillingPlan = typeof billingPlans.$inferInsert;
 export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
+export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
 
 export type AuditableType =
   | 'organization'
