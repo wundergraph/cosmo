@@ -146,12 +146,11 @@ export class Composer {
    * Optionally, you can pass extra subgraphs to include them in the composition.
    */
   async composeFederatedGraph(federatedGraph: FederatedGraphDTO): Promise<ComposedFederatedGraph> {
+    const subgraphs = await this.subgraphRepo.listByFederatedGraph({
+      federatedGraphTargetId: federatedGraph.targetId,
+      published: true,
+    });
     try {
-      const subgraphs = await this.subgraphRepo.listByFederatedGraph({
-        federatedGraphTargetId: federatedGraph.targetId,
-        published: true,
-      });
-
       // A federated graph must have at least one subgraph. Let the composition fail if there are none.
 
       const { errors, federationResult: result } = composeSubgraphs(
@@ -182,7 +181,17 @@ export class Composer {
         targetID: federatedGraph.targetId,
         fieldConfigurations: [],
         errors: [e],
-        subgraphs: [],
+        subgraphs: subgraphs.map((subgraph) => {
+          return {
+            id: subgraph.id,
+            name: subgraph.name,
+            url: subgraph.routingUrl,
+            sdl: subgraph.schemaSDL,
+            schemaVersionId: subgraph.schemaVersionId,
+            subscriptionUrl: subgraph.subscriptionUrl,
+            subscriptionProtocol: subgraph.subscriptionProtocol,
+          };
+        }),
       };
     }
   }
