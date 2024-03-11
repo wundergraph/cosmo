@@ -3,7 +3,8 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { LintConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { namespaceLintCheckConfig, schemaCheckLintAction } from '../../db/schema.js';
-import { LintRuleType, SchemaLintDTO, LintSeverityLevel, LintIssueResult } from '../../types/index.js';
+import { SchemaLintDTO, LintSeverityLevel, LintIssueResult } from '../../types/index.js';
+import { LintRuleEnum } from '../../db/models.js';
 
 export class SchemaLintRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -20,7 +21,7 @@ export class SchemaLintRepository {
 
     return orgLintConfigs.map((l) => {
       return {
-        ruleName: l.lintRule as LintRuleType,
+        ruleName: l.lintRule as LintRuleEnum,
         severity: l.severityLevel as LintSeverityLevel,
       } as SchemaLintDTO;
     });
@@ -40,7 +41,7 @@ export class SchemaLintRepository {
         lintConfigs.map((l) => {
           return {
             namespaceId,
-            lintRule: l.ruleName as LintRuleType,
+            lintRule: l.ruleName as LintRuleEnum,
             severityLevel:
               l.severityLevel === LintSeverity.error ? ('error' as LintSeverityLevel) : ('warn' as LintSeverityLevel),
           };

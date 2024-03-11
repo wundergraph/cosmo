@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createRulesConfig, schemaLintCheck } from '../src/core/composition/schemaLint.js';
-import { LintRuleType, LintSeverityLevel } from '../src/types/index.js';
+import { LintRules, LintSeverityLevel } from '../src/types/index.js';
+import { LintRuleEnum } from '../src/db/models.js';
 
 describe('Linter Tests', (ctx) => {
   test('Should test schema linting', (testContext) => {
@@ -32,15 +33,15 @@ input InputA{
 }
 `;
 
-    const lintRules: { severity: LintSeverityLevel; ruleName: LintRuleType }[] = [
-      { severity: 'warn', ruleName: LintRuleType.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
-      { severity: 'warn', ruleName: LintRuleType.SHOULD_NOT_HAVE_INPUT_PREFIX },
-      { severity: 'warn', ruleName: LintRuleType.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
-      { severity: 'warn', ruleName: LintRuleType.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
-      { severity: 'error', ruleName: LintRuleType.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
-      { severity: 'error', ruleName: LintRuleType.SHOULD_NOT_HAVE_TYPE_PREFIX },
-      { severity: 'error', ruleName: LintRuleType.SHOULD_NOT_HAVE_TYPE_SUFFIX },
-      { severity: 'error', ruleName: LintRuleType.SHOULD_HAVE_INPUT_SUFFIX },
+    const lintRules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INPUT_PREFIX },
+      { severity: 'warn', ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
+      { severity: 'warn', ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
+      { severity: 'error', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
+      { severity: 'error', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_PREFIX },
+      { severity: 'error', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_SUFFIX },
+      { severity: 'error', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
     ];
 
     const lintIssues = schemaLintCheck({ schema, rulesInput: lintRules });
@@ -84,7 +85,7 @@ input InputA{
   });
 
   test('Should test enum lint rules', (testContext) => {
-      const schema = `
+    const schema = `
 enum ProductNamesEnum {
   VALUE
   Value
@@ -96,36 +97,35 @@ enum ProductNamesEnum {
 }
 `;
 
-      const rules: { severity: LintSeverityLevel; ruleName: LintRuleType }[] = [
-        { severity: 'warn', ruleName: LintRuleType.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
-        { severity: 'warn', ruleName: LintRuleType.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
-        { severity: 'warn', ruleName: LintRuleType.SHOULD_NOT_HAVE_ENUM_SUFFIX },
-      ];
+    const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
+      { severity: 'warn', ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_ENUM_SUFFIX },
+    ];
 
-      const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
+    const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
 
-      expect(lintIssues.warnings.length).toBe(3);
-      expect(lintIssues.warnings).toStrictEqual([
-        {
-          lintRuleType: 'SHOULD_NOT_HAVE_ENUM_SUFFIX',
-          severity: 0,
-          message: 'Enumerator "ProductNamesEnum" should not have "Enum" suffix',
-          issueLocation: { line: 2, column: 6, endLine: 2, endColumn: 22 },
-        },
-        {
-          lintRuleType: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
-          severity: 0,
-          message:
-            'Unexpected case-insensitive enum values duplicates for enum value "Value" in enum "ProductNamesEnum"',
-          issueLocation: { line: 4, column: 3, endLine: 4, endColumn: 8 },
-        },
-        {
-          lintRuleType: 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
-          severity: 0,
-          message: 'Enumeration value "Value" should be in UPPER_CASE format',
-          issueLocation: { line: 4, column: 3, endLine: 4, endColumn: 8 },
-        },
-      ]);
+    expect(lintIssues.warnings.length).toBe(3);
+    expect(lintIssues.warnings).toStrictEqual([
+      {
+        lintRuleType: 'SHOULD_NOT_HAVE_ENUM_SUFFIX',
+        severity: 0,
+        message: 'Enumerator "ProductNamesEnum" should not have "Enum" suffix',
+        issueLocation: { line: 2, column: 6, endLine: 2, endColumn: 22 },
+      },
+      {
+        lintRuleType: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
+        severity: 0,
+        message: 'Unexpected case-insensitive enum values duplicates for enum value "Value" in enum "ProductNamesEnum"',
+        issueLocation: { line: 4, column: 3, endLine: 4, endColumn: 8 },
+      },
+      {
+        lintRuleType: 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
+        severity: 0,
+        message: 'Enumeration value "Value" should be in UPPER_CASE format',
+        issueLocation: { line: 4, column: 3, endLine: 4, endColumn: 8 },
+      },
+    ]);
   });
 
   test('Should test alphabetical sort lint rules', (testContext) => {
@@ -147,10 +147,10 @@ enum ProductNamesEnum {
 }
 `;
 
-    const rules: { severity: LintSeverityLevel; ruleName: LintRuleType }[] = [
-      { severity: 'warn', ruleName: LintRuleType.ORDER_DEFINITIONS },
-      { severity: 'warn', ruleName: LintRuleType.ORDER_FIELDS },
-      { severity: 'warn', ruleName: LintRuleType.ORDER_ENUM_VALUES },
+    const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.ORDER_DEFINITIONS },
+      { severity: 'warn', ruleName: LintRules.ORDER_FIELDS },
+      { severity: 'warn', ruleName: LintRules.ORDER_ENUM_VALUES },
     ];
 
     const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
@@ -190,9 +190,9 @@ enum ProductNamesEnum {
 }
 `;
 
-    const rules: { severity: LintSeverityLevel; ruleName: LintRuleType }[] = [
-      { severity: 'warn', ruleName: LintRuleType.REQUIRE_DEPRECATION_DATE },
-      { severity: 'warn', ruleName: LintRuleType.REQUIRE_DEPRECATION_REASON },
+    const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.REQUIRE_DEPRECATION_DATE },
+      { severity: 'warn', ruleName: LintRules.REQUIRE_DEPRECATION_REASON },
     ];
     const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
     expect(lintIssues.warnings.length).toBe(2);
@@ -219,8 +219,8 @@ enum ProductNamesEnum {
 }
 `;
 
-    const rules: { severity: LintSeverityLevel; ruleName: LintRuleType }[] = [
-      { severity: 'warn', ruleName: LintRuleType.ALL_TYPES_REQUIRE_DESCRIPTION },
+    const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.ALL_TYPES_REQUIRE_DESCRIPTION },
     ];
     const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
     expect(lintIssues.warnings.length).toBe(1);
@@ -241,9 +241,9 @@ enum ProductNamesEnum {
 }
 `;
 
-    const rules: { severity: LintSeverityLevel; ruleName: LintRuleType }[] = [
-      { severity: 'warn', ruleName: LintRuleType.NO_TYPENAME_PREFIX_IN_TYPE_FIELDS },
-      { severity: 'warn', ruleName: LintRuleType.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
+    const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.NO_TYPENAME_PREFIX_IN_TYPE_FIELDS },
+      { severity: 'warn', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
     ];
     const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
     expect(lintIssues.warnings.length).toBe(2);
@@ -275,9 +275,9 @@ input InputUser{
 }
 `;
 
-    const rules: { severity: LintSeverityLevel; ruleName: LintRuleType }[] = [
-      { severity: 'warn', ruleName: LintRuleType.SHOULD_HAVE_INPUT_SUFFIX },
-      { severity: 'warn', ruleName: LintRuleType.SHOULD_NOT_HAVE_INPUT_PREFIX },
+    const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INPUT_PREFIX },
     ];
     const lintIssues = schemaLintCheck({ schema, rulesInput: rules });
     expect(lintIssues.warnings.length).toBe(3);
@@ -304,15 +304,15 @@ input InputUser{
   });
 
   test('Should test creating rules config', (testContext) => {
-    const rules: { severity: LintSeverityLevel; ruleName: LintRuleType }[] = [
-      { severity: 'warn', ruleName: LintRuleType.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
-      { severity: 'warn', ruleName: LintRuleType.SHOULD_NOT_HAVE_INPUT_PREFIX },
-      { severity: 'warn', ruleName: LintRuleType.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
-      { severity: 'warn', ruleName: LintRuleType.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
-      { severity: 'error', ruleName: LintRuleType.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
-      { severity: 'error', ruleName: LintRuleType.SHOULD_NOT_HAVE_TYPE_PREFIX },
-      { severity: 'error', ruleName: LintRuleType.SHOULD_NOT_HAVE_TYPE_SUFFIX },
-      { severity: 'error', ruleName: LintRuleType.SHOULD_HAVE_INPUT_SUFFIX },
+    const rules: { severity: LintSeverityLevel; ruleName: LintRuleEnum }[] = [
+      { severity: 'warn', ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
+      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INPUT_PREFIX },
+      { severity: 'warn', ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
+      { severity: 'warn', ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
+      { severity: 'error', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
+      { severity: 'error', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_PREFIX },
+      { severity: 'error', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_SUFFIX },
+      { severity: 'error', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
     ];
 
     const rulesConfig = createRulesConfig(rules);

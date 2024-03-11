@@ -2,9 +2,10 @@ import { Linter } from 'eslint';
 import { parseForESLint, rules } from '@graphql-eslint/eslint-plugin';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { baseDirectives } from '@wundergraph/composition';
-import { LintIssueResult, LintRuleType, RulesConfig, SchemaLintDTO, SchemaLintIssues } from '../../types/index.js';
+import { LintIssueResult, RulesConfig, SchemaLintDTO, SchemaLintIssues, LintRules } from '../../types/index.js';
+import { LintRuleEnum } from '../../db/models.js';
 
-const getRuleModule = (rule: LintRuleType) => {
+const getRuleModule = (rule: LintRuleEnum) => {
   switch (rule) {
     case 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE':
     case 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE':
@@ -161,8 +162,8 @@ export const schemaLintCheck = ({
   const linter = new Linter();
   linter.defineParser('@graphql-eslint/eslint-plugin', { parseForESLint });
 
-  for (const ruleName of Object.keys(LintRuleType)) {
-    const ruleModule = getRuleModule(ruleName as LintRuleType);
+  for (const ruleName of Object.keys(LintRules)) {
+    const ruleModule = getRuleModule(ruleName as LintRuleEnum);
     if (ruleModule) {
       linter.defineRule(ruleName, ruleModule as any);
     }
@@ -184,7 +185,7 @@ export const schemaLintCheck = ({
   for (const i of lintIssues) {
     if (i.severity === 1) {
       lintWarnings.push({
-        lintRuleType: (i.ruleId as LintRuleType) || undefined,
+        lintRuleType: (i.ruleId as LintRuleEnum) || undefined,
         severity: LintSeverity.warn,
         message: i.message,
         issueLocation: {
@@ -196,7 +197,7 @@ export const schemaLintCheck = ({
       });
     } else if (i.severity === 2) {
       lintErrors.push({
-        lintRuleType: (i.ruleId as LintRuleType) || undefined,
+        lintRuleType: (i.ruleId as LintRuleEnum) || undefined,
         severity: LintSeverity.error,
         message: i.message,
         issueLocation: {
