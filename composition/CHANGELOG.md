@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.19.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.18.5...@wundergraph/composition@0.19.0) (2024-03-11)
+
+### Features
+
+* add configurable schema linting ([#596](https://github.com/wundergraph/cosmo/issues/596)) ([c662485](https://github.com/wundergraph/cosmo/commit/c66248529c5bc13e795725c82ba50dbad79451ae)) (@JivusAyrus)
+
 ## [0.18.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.18.4...@wundergraph/composition@0.18.5) (2024-03-06)
 
 **Note:** Version bump only for package @wundergraph/composition
