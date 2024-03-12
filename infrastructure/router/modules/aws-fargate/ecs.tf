@@ -1,74 +1,9 @@
-
-data "aws_region" "current" {}
-
-resource "aws_iam_role" "cosmo_router_task_execution_role" {
-  name = "${var.name}-execution-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole",
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        },
-        Effect = "Allow"
-        Sid    = ""
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "cosmo_router" {
-  name = "${var.name}-secret-access-policy"
-  role = aws_iam_role.cosmo_router_task_execution_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "kms:Decrypt",
-        ]
-        Effect   = "Allow"
-        Resource = var.secret_arn
-      },
-      {
-        Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Effect   = "Allow"
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role" "cosmo_router_task_role" {
-  name = "${var.name}-task-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole",
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        },
-        Effect = "Allow",
-        Sid    = ""
-      }
-    ]
-  })
-}
-
-resource "aws_cloudwatch_log_group" "cosmo_router" {
-  name              = "/ecs/${var.name}"
-  retention_in_days = 90
+resource "aws_ecs_cluster" "cosmo_router" {
+  name = var.name
 }
 
 resource "aws_ecs_task_definition" "cosmo_router" {
-  family                   = "${var.name}-task-def"
+  family                   = var.name
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = var.cpu
@@ -88,7 +23,7 @@ resource "aws_ecs_task_definition" "cosmo_router" {
 
   container_definitions = jsonencode([
     {
-      name      = "${var.name}-container",
+      name      = var.name
       image     = "ghcr.io/wundergraph/cosmo/router:${var.release}",
       essential = true
 
@@ -164,7 +99,7 @@ resource "aws_ecs_task_definition" "cosmo_router" {
       environment = [
         {
           name  = "COSMO_CONFIG"
-          value = base64encode(file("${path.module}/config.yaml"))
+          value = base64encode(file(var.config_file_path))
         },
       ]
 
@@ -179,27 +114,49 @@ resource "aws_ecs_task_definition" "cosmo_router" {
 }
 
 resource "aws_ecs_service" "cosmo_router" {
-  name                   = var.name
-  cluster                = var.cluster
-  task_definition        = aws_ecs_task_definition.cosmo_router.arn
-  force_new_deployment   = true
-  launch_type            = "FARGATE"
-  enable_execute_command = true
-  desired_count          = 1
+  name                 = var.name
+  cluster              = aws_ecs_cluster.cosmo_router.name
+  task_definition      = aws_ecs_task_definition.cosmo_router.arn
+  force_new_deployment = true
+  launch_type          = "FARGATE"
+  desired_count        = var.min_instances
 
-  network_configuration {
-    subnets = var.subnets
-    # Set `assign_public_ip` to false in a production setup. This is only required here
-    # to allow the container to reach the secret manager API. In a production setup, it is
-    # recommended to have private and public subnets with traffic routed through a NAT Gateway / Internet Gateway.
-    assign_public_ip = true
+  load_balancer {
+    target_group_arn = aws_lb_target_group.cosmo_router.arn
+    container_name   = var.name
+    container_port   = var.port
   }
 
-  # Ignore the desired count after initial creation.
-  # This configuration option is useful when you have autoscaling enabled for your Cosmo Router.
-  # By ignoring the desired count, applying changes to the service will not trigger a potential downscaling.
-  # This can be beneficial to prevent unnecessary disruptions to Cosmo Router's availability.
+  network_configuration {
+    subnets = [aws_default_subnet.default_subnet_a.id, aws_default_subnet.default_subnet_b.id, aws_default_subnet.default_subnet_b.id]
+    # Assign public IP addresses to the container, otherwise they wouldn't be able to reach the internet.
+    # Alternative would be to install a NAT Gateway in the VPC.
+    assign_public_ip = true
+    security_groups  = ["${aws_security_group.cosmo_router_service.id}"]
+  }
+
+  # Ignore the desired count after initial creation. This is required as when you scale up via
+  # the AWS console and apply the Terraform configuration later on, it will try to scale down to the desired count.
   lifecycle {
     ignore_changes = [desired_count]
+  }
+}
+
+resource "aws_security_group" "cosmo_router_service" {
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    # Only allow ingress traffic from the load balancer
+    security_groups = [
+      var.enable_tls ? aws_security_group.cosmo_router_load_balancer_https[0].id : aws_security_group.cosmo_router_load_balancer_http[0].id
+    ]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
