@@ -186,6 +186,9 @@ events:
     default:
       provider: NATS
       url: "nats://localhost:4222"
+    another-nats:
+      provider: NATS
+      url: "nats://localhost:4223"
 
 engine:
   enable_single_flight: true

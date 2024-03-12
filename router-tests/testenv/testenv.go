@@ -451,7 +451,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithEvents(config.EventsConfiguration{
 			Sources: map[string]config.EventSource{
-				"test": {
+				"my-nats": {
 					Provider: "NATS",
 					URL:      nats.ClientURL(),
 				},

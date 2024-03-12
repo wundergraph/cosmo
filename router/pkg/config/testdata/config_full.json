@@ -214,7 +214,7 @@
   "DevelopmentMode": false,
   "Events": {
     "Sources": {
-      "default": {
+      "my-nats": {
         "Provider": "NATS",
         "URL": "nats://localhost:4222"
       }
