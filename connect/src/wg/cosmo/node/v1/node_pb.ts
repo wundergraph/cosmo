@@ -3,16 +3,9 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type {
-  BinaryReadOptions,
-  FieldList,
-  JsonReadOptions,
-  JsonValue,
-  PartialMessage,
-  PlainMessage,
-} from '@bufbuild/protobuf';
-import { Message, proto3, protoInt64 } from '@bufbuild/protobuf';
-import { EnumStatusCode, GraphQLSubscriptionProtocol } from '../../common/common_pb.js';
+import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
+import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -1759,7 +1752,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   url?: ConfigurationVariable;
 
   /**
-   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead.
+   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. 
    *
    * @generated from field: optional bool useSSE = 3;
    */
