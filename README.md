@@ -68,6 +68,11 @@ Password: wunder@123
 - [NodeJS LTS](https://nodejs.org/en/download/)
 - [PNPM 8+](https://pnpm.io/installation)
 - [Go 1.21+](https://golang.org/doc/install)
+- [wgc](https://www.npmjs.com/package/wgc)
+- .env/.env.local (see below)
+
+All services work with environment variables. You can find the default values in the `.env.example` file. 
+Please copy the variables to `.env` (the same for studio but with `.env.local`) and adjust the values to your needs.
 
 Bootstrapping your development environment is easy. Just run the following commands in order:
 
@@ -109,8 +114,6 @@ export COSMO_API_URL=http://localhost:3001
 
 cd cli && pnpm wgc -h
 ```
-
-All services work with environment variables. You can find the default values in the `.env.example` file. Please copy it to `.env` (Except studio which works with `.env.local`) and adjust the values to your needs.
 
 _Clean up all containers and volumes by running `make infra-down-v`._
 
