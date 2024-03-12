@@ -41,6 +41,7 @@ import {
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
@@ -166,11 +167,20 @@ const GraphOverviewPage: NextPageWithLayout = () => {
         </OverviewToolbar>
       }
     >
-      <div className="grid grid-rows-3 gap-4 lg:grid-cols-2">
+      <div
+        className={cn("grid grid-rows-3 gap-4 lg:grid-cols-2", {
+          "grid-rows-2": graphData.graph.type !== "federated",
+        })}
+      >
         <div className="space-y-2 lg:col-span-1">
           <Card className="flex grow flex-col justify-between">
             <CardHeader>
-              <CardTitle>Graph details</CardTitle>
+              <CardTitle>
+                {graphData.graph.type === "federated"
+                  ? "Federated Graph"
+                  : "Monograph"}{" "}
+                details
+              </CardTitle>
               <CardDescription className="text-xs">
                 Last updated:{" "}
                 {lastUpdatedAt
@@ -192,32 +202,44 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 <span className="w-28 text-muted-foreground">Name</span>
                 <span className="w-32">{graphData.graph.name}</span>
               </div>
-              <div className="flex gap-x-4">
-                <span className="w-28 text-muted-foreground">Subgraphs</span>
-                <span className="w-32">{connectedSubgraphs}</span>
-              </div>
-              <div className="flex items-start gap-x-4">
-                <span className="w-28 flex-shrink-0 text-muted-foreground">
-                  Matchers
-                </span>
-                <div className="flex flex-wrap gap-2 overflow-hidden">
-                  {labelMatchers.length === 0 && (
-                    <Tooltip delayDuration={200}>
-                      <TooltipTrigger>-</TooltipTrigger>
-                      <TooltipContent>
-                        This graph will only compose subgraphs without labels
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {labelMatchers.map((lm: any) => {
-                    return (
-                      <Badge variant="secondary" key={lm} className="truncate">
-                        <span className="truncate">{lm}</span>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </div>
+
+              {graphData.graph.type === "federated" && (
+                <>
+                  <div className="flex gap-x-4">
+                    <span className="w-28 text-muted-foreground">
+                      Subgraphs
+                    </span>
+                    <span className="w-32">{connectedSubgraphs}</span>
+                  </div>
+                  <div className="flex items-start gap-x-4">
+                    <span className="w-28 flex-shrink-0 text-muted-foreground">
+                      Matchers
+                    </span>
+                    <div className="flex flex-wrap gap-2 overflow-hidden">
+                      {labelMatchers.length === 0 && (
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>-</TooltipTrigger>
+                          <TooltipContent>
+                            This graph will only compose subgraphs without
+                            labels
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      {labelMatchers.map((lm: any) => {
+                        return (
+                          <Badge
+                            variant="secondary"
+                            key={lm}
+                            className="truncate"
+                          >
+                            <span className="truncate">{lm}</span>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
               <div className="flex items-center gap-x-4">
                 <span className="w-28 text-muted-foreground">Schema Check</span>
                 <ComposeStatus
@@ -227,6 +249,15 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               </div>
             </CardContent>
             <CardFooter className="flex-col items-start text-sm">
+              {graphData.graph.type !== "federated-graph" && (
+                <div className="mb-4 w-full">
+                  <span className="text-muted-foreground">Graph Endpoint</span>
+                  <CLI
+                    className="mt-1 md:w-full"
+                    command={graphData.subgraphs[0].routingURL}
+                  />
+                </div>
+              )}
               <span className="text-muted-foreground">Router Url</span>
               <CLI className="mt-1 md:w-full" command={routingURL} />
 
@@ -274,16 +305,18 @@ const GraphOverviewPage: NextPageWithLayout = () => {
             </div>
           </Alert>
         </div>
-        <div className="lg:col-span-1 lg:row-span-2">
-          <Card className="h-full">
-            <ReactFlowProvider>
-              <GraphVisualization
-                subgraphMetrics={dashboardView?.subgraphMetrics}
-                federatedGraphMetrics={dashboardView?.federatedGraphMetrics}
-              />
-            </ReactFlowProvider>
-          </Card>
-        </div>
+        {graphData.graph.type === "federated" && (
+          <div className="lg:col-span-1 lg:row-span-2">
+            <Card className="h-full">
+              <ReactFlowProvider>
+                <GraphVisualization
+                  subgraphMetrics={dashboardView?.subgraphMetrics}
+                  federatedGraphMetrics={dashboardView?.federatedGraphMetrics}
+                />
+              </ReactFlowProvider>
+            </Card>
+          </div>
+        )}
         <div className="lg:col-span-1">
           <MostRequested
             data={dashboardView?.mostRequestedOperations ?? []}

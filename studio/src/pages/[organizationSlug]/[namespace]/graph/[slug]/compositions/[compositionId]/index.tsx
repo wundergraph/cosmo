@@ -245,34 +245,36 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
           </dl>
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-          <dl className="grid w-full flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
-            {compositionSubgraphs.length > 0 && (
-              <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
-                <dt className="text-sm text-muted-foreground">
-                  Composition Inputs
-                </dt>
-                <dd className="flex flex-col gap-2">
-                  {compositionSubgraphs.length === 0 ? (
-                    <span className="text-sm">No subgraphs stored.</span>
-                  ) : (
-                    compositionSubgraphs.map((cs) => {
-                      return (
-                        <div className="flex flex-col gap-y-1" key={cs.id}>
-                          <div className="flex items-center gap-x-1.5 text-sm ">
-                            <CubeIcon className="h-4 w-4" />
-                            <span>{cs.name}</span>
+          {graphData?.graph?.type === "federated" && (
+            <dl className="grid w-full flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
+              {compositionSubgraphs.length > 0 && (
+                <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
+                  <dt className="text-sm text-muted-foreground">
+                    Composition Inputs
+                  </dt>
+                  <dd className="flex flex-col gap-2">
+                    {compositionSubgraphs.length === 0 ? (
+                      <span className="text-sm">No subgraphs stored.</span>
+                    ) : (
+                      compositionSubgraphs.map((cs) => {
+                        return (
+                          <div className="flex flex-col gap-y-1" key={cs.id}>
+                            <div className="flex items-center gap-x-1.5 text-sm ">
+                              <CubeIcon className="h-4 w-4" />
+                              <span>{cs.name}</span>
+                            </div>
+                            <span className="pl-6 text-xs">
+                              {cs.schemaVersionId.split("-")[0]}
+                            </span>
                           </div>
-                          <span className="pl-6 text-xs">
-                            {cs.schemaVersionId.split("-")[0]}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
-                </dd>
-              </div>
-            )}
-          </dl>
+                        );
+                      })
+                    )}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
           <div className="h-full flex-1">
             <Tabs
               value={tab ?? "output"}
@@ -332,47 +334,49 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                       <div className="relative flex h-full min-h-[60vh] flex-col">
                         <div className="-top-[60px] right-8 px-5 md:absolute md:px-0">
                           <div className="flex gap-x-2">
-                            <Select
-                              value={activeSubgraphName}
-                              onValueChange={(subgraph) =>
-                                router.push({
-                                  pathname: router.pathname,
-                                  query: {
-                                    ...router.query,
-                                    subgraph,
-                                  },
-                                })
-                              }
-                            >
-                              <SelectTrigger
+                            {graphData?.graph?.type === "federated" && (
+                              <Select
                                 value={activeSubgraphName}
-                                className="w-full md:ml-auto md:w-[200px]"
+                                onValueChange={(subgraph) =>
+                                  router.push({
+                                    pathname: router.pathname,
+                                    query: {
+                                      ...router.query,
+                                      subgraph,
+                                    },
+                                  })
+                                }
                               >
-                                <SelectValue aria-label={activeSubgraphName}>
-                                  {activeSubgraphName}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                                    <Component2Icon className="h-3 w-3" />{" "}
-                                    Subgraphs
-                                  </SelectLabel>
-                                  {subgraphs.map(({ name, versionId }) => {
-                                    return (
-                                      <SelectItem key={name} value={name}>
-                                        <div>
-                                          <p>{name}</p>
-                                          <p className="text-xs">
-                                            {versionId.split("-")[0]}
-                                          </p>
-                                        </div>
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
+                                <SelectTrigger
+                                  value={activeSubgraphName}
+                                  className="w-full md:ml-auto md:w-[200px]"
+                                >
+                                  <SelectValue aria-label={activeSubgraphName}>
+                                    {activeSubgraphName}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                                      <Component2Icon className="h-3 w-3" />{" "}
+                                      Subgraphs
+                                    </SelectLabel>
+                                    {subgraphs.map(({ name, versionId }) => {
+                                      return (
+                                        <SelectItem key={name} value={name}>
+                                          <div>
+                                            <p>{name}</p>
+                                            <p className="text-xs">
+                                              {versionId.split("-")[0]}
+                                            </p>
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            )}
 
                             <SDLViewerActions sdl={sdlData.sdl} size="icon" />
                           </div>

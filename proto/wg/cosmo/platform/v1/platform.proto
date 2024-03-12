@@ -24,6 +24,17 @@ message ResponseStatus {
   string message = 2;
 }
 
+message PublishMonographRequest {
+  string name = 1;
+  string namespace = 2;
+  string schema = 3;
+}
+
+message PublishMonographResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+}
+
 message PublishFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
@@ -74,6 +85,20 @@ message FixSubgraphSchemaRequest {
   string namespace = 3;
 }
 
+message CreateMonographRequest {
+  string name = 1;
+  string namespace = 2;
+  string routing_url = 3;
+  string graph_url = 4;
+  optional string subscription_url = 5;
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
+  optional string readme = 7;
+}
+
+message CreateMonographResponse {
+  Response response = 1;
+}
+
 message CreateFederatedGraphRequest {
   // name is the FQDN of the federated graph e.g. "wg.main"
   string name = 1;
@@ -107,6 +132,15 @@ message CreateFederatedSubgraphRequest {
 message DeleteFederatedGraphRequest {
   string name = 1;
   string namespace = 2;
+}
+
+message DeleteMonographRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteMonographResponse {
+  Response response = 1;
 }
 
 message DeleteFederatedSubgraphRequest {
@@ -199,6 +233,7 @@ message FederatedGraph {
   optional string readme = 10;
   string target_id = 11;
   string namespace = 12;
+  string type = 13;
 }
 
 message GetFederatedGraphsResponse {
@@ -456,6 +491,20 @@ message UpdateFederatedGraphRequest {
 message UpdateFederatedGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
+}
+
+message UpdateMonographRequest {
+  string name = 1;
+  string namespace = 2;
+  string routing_url = 3;
+  string graph_url = 4;
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+  optional string subscription_url = 6;
+  optional string readme = 7;
+}
+
+message UpdateMonographResponse {
+  Response response = 1;
 }
 
 message CheckFederatedGraphRequest {
@@ -1776,14 +1825,21 @@ service PlatformService {
   rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
 
   rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
+  rpc MoveMonograph(MoveGraphRequest) returns (MoveGraphResponse) {}
   rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}
 
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
+  // CreateMonograph creates a monograph on the control plane.
+  rpc CreateMonograph(CreateMonographRequest) returns (CreateMonographResponse) {}
+  // PublishMonograph pushes the schema of the monograph to the control plane.
+  rpc PublishMonograph(PublishMonographRequest) returns (PublishMonographResponse) {}
   // CreateFederatedSubgraph creates a federated subgraph on the control plane.
   rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}
   // PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
   rpc PublishFederatedSubgraph(PublishFederatedSubgraphRequest) returns (PublishFederatedSubgraphResponse) {}
+  // DeleteMonograph deletes a monograph from the control plane.
+  rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
   // DeleteFederatedGraph deletes a federated graph from the control plane.
   rpc DeleteFederatedGraph(DeleteFederatedGraphRequest) returns (DeleteFederatedGraphResponse) {}
   // DeleteFederatedSubgraph deletes a federated subgraph from the control plane.
@@ -1791,6 +1847,8 @@ service PlatformService {
   // CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
   rpc CheckSubgraphSchema(CheckSubgraphSchemaRequest) returns (CheckSubgraphSchemaResponse) {}
   rpc FixSubgraphSchema(FixSubgraphSchemaRequest) returns (FixSubgraphSchemaResponse) {}
+  // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+  rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
   // UpdateFederatedGraph updates a federated graph with new labels and routing url
   rpc UpdateFederatedGraph(UpdateFederatedGraphRequest) returns (UpdateFederatedGraphResponse) {}
   // UpdateSubgraph updates a subgraph with new labels and routing url

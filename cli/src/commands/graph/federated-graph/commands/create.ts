@@ -1,19 +1,22 @@
-import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
-import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { resolve } from 'pathe';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import pc from 'picocolors';
+import { baseHeaders } from '../../../../core/config.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('update');
-  command.description('Updates a federated graph on the control plane.');
-  command.argument('<name>', 'The name of the federated graph to update.');
+  const command = new Command('create');
+  command.description('Creates a federated graph on the control plane.');
+  command.argument(
+    '<name>',
+    'The name of the federated graph to create. It is usually in the format of <org>.<env> and is used to uniquely identify your federated graph.',
+  );
   command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
-  command.option(
+  command.requiredOption(
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',
   );
@@ -21,11 +24,7 @@ export default (opts: BaseCommandOptions) => {
     '--label-matcher [labels...]',
     'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
   );
-  command.option(
-    '--unset-label-matchers',
-    'This will remove all label matchers. It will not add new label matchers if both this and --label-matchers option is passed.',
-  );
-  command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
+  command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
@@ -39,14 +38,13 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    const resp = await opts.client.platform.updateFederatedGraph(
+    const resp = await opts.client.platform.createFederatedGraph(
       {
         name,
-        namespace: options.namespace,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
-        unsetLabelMatchers: options.unsetLabelMatchers,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        namespace: options.namespace,
       },
       {
         headers: baseHeaders,
@@ -54,9 +52,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`The federated graph '${name}' was updated.`)));
+      console.log(pc.dim(pc.green(`A new federated graph called '${name}' was created.`)));
     } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
-      console.log(pc.dim(pc.green(`The federated graph '${name}' was updated.`)));
+      console.log(pc.dim(pc.green(`A new federated graph called '${name}' was created.`)));
 
       const compositionErrorsTable = new Table({
         head: [
@@ -83,7 +81,7 @@ export default (opts: BaseCommandOptions) => {
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());
     } else {
-      console.log(`Failed to update federated graph ${pc.bold(name)}.`);
+      console.log(pc.red(`Failed to create federated graph ${pc.bold(name)}.`));
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

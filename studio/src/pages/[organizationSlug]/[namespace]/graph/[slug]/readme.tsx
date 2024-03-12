@@ -14,8 +14,9 @@ import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 
-export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
+const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
   const router = useRouter();
+  const graphContext = useContext(GraphContext);
 
   return (
     <EmptyState
@@ -23,7 +24,7 @@ export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
       title="Add federated graph README using CLI"
       description={
         <>
-          No federated graph readme found. Use the CLI tool to add the readme.{" "}
+          No graph readme found. Use the CLI tool to add the readme.{" "}
           <a
             target="_blank"
             rel="noreferrer"
@@ -36,7 +37,13 @@ export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
       }
       actions={
         <CLI
-          command={`npx wgc federated-graph update ${fedGraphName} --namespace ${router.query.namespace} --readme <path-to-readme>`}
+          command={`npx wgc ${
+            graphContext?.graph?.type === "federated"
+              ? "federated-graph"
+              : "monograph"
+          } update ${fedGraphName} --namespace ${
+            router.query.namespace
+          } --readme <path-to-readme>`}
         />
       }
     />

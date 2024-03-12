@@ -101,7 +101,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
     const navigation: Partial<NavLink>[] = [
       {
-        title: "Federated Graphs",
+        title: "Graphs",
         href: basePath + "/graphs",
         icon: <PiGraphLight className="h-4 w-4" />,
       },

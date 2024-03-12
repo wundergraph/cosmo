@@ -62,7 +62,7 @@ export const ComposeStatusMessage = ({
       </span>
     )
   ) : subgraphsCount ? (
-    <span>Please publish a subgraph.</span>
+    <span>Please publish a schema.</span>
   ) : (
     <span>Please create a subgraph.</span>
   );

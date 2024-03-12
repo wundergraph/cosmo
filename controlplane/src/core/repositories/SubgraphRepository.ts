@@ -338,7 +338,6 @@ export class SubgraphRepository {
       targetId: string;
       subgraphId: string;
       subgraphLabels: Label[];
-      newNamespace: string;
       updatedBy: string;
       currentNamespaceId: string;
       newNamespaceId: string;
@@ -503,7 +502,7 @@ export class SubgraphRepository {
       where: and(
         eq(schema.targets.id, data.federatedGraphTargetId),
         eq(schema.targets.organizationId, this.organizationId),
-        eq(schema.targets.type, 'federated'),
+        or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
       ),
       with: {
         federatedGraph: {

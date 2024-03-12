@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Toolbar } from "@/components/ui/toolbar";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
 import { Component2Icon } from "@radix-ui/react-icons";
 import { Separator } from "@radix-ui/react-separator";
 import { useRouter } from "next/router";
@@ -61,7 +62,9 @@ const DiscussionsPage: NextPageWithLayout = () => {
             >
               <SelectTrigger
                 value={selectedGraph?.name ?? ""}
-                className="w-full md:w-[200px]"
+                className={cn("w-full md:w-[200px]", {
+                  hidden: graphData?.graph?.type !== "federated",
+                })}
               >
                 <SelectValue aria-label={selectedGraph?.name ?? ""}>
                   {selectedGraph?.name ?? ""}

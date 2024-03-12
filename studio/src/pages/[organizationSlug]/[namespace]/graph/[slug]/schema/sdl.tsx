@@ -13,7 +13,7 @@ import {
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
 import { SchemaToolbar } from "@/components/schema/toolbar";
-import { CLISteps } from "@/components/ui/cli";
+import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -43,19 +44,20 @@ import { PiGraphLight } from "react-icons/pi";
 
 const Empty = ({ subgraphName }: { subgraphName?: string }) => {
   const router = useRouter();
+  const graphContext = useContext(GraphContext);
+
+  const isFederated = graphContext?.graph?.type === "federated";
 
   return (
     <EmptyState
       icon={<CommandLineIcon />}
-      title={
-        subgraphName
-          ? "Publish subgraph using CLI"
-          : "Create and Publish subgraph using CLI"
-      }
+      title="No schema found"
       description={
-        subgraphName ? (
+        isFederated ? (
           <>
-            Use the CLI tool to publish the subgraph.{" "}
+            {subgraphName
+              ? "Use the CLI tool to publish the subgraph."
+              : "No subgraphs found. Use the CLI tool to create and publish one."}{" "}
             <a
               target="_blank"
               rel="noreferrer"
@@ -67,11 +69,11 @@ const Empty = ({ subgraphName }: { subgraphName?: string }) => {
           </>
         ) : (
           <>
-            No subgraphs found. Use the CLI tool to create and publish one.{" "}
+            Please publish a schema to your monograph.{" "}
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/cli/subgraphs/publish"}
+              href={docsBaseURL + "/cli/monograph/publish"}
               className="text-primary"
             >
               Learn more.
@@ -80,22 +82,13 @@ const Empty = ({ subgraphName }: { subgraphName?: string }) => {
         )
       }
       actions={
-        <CLISteps
-          steps={
-            subgraphName
-              ? [
-                  {
-                    description: "Publish a subgraph.",
-                    command: `npx wgc subgraph publish ${subgraphName} --namespace ${router.query.namespace} --schema <path-to-schema>`,
-                  },
-                ]
-              : [
-                  {
-                    description:
-                      "Publish a subgraph. If the subgraph does not exist, it will be created.",
-                    command: `npx wgc subgraph publish <subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema> --label <labels> --routing-url <routing-url>`,
-                  },
-                ]
+        <CLI
+          command={
+            isFederated
+              ? subgraphName
+                ? `npx wgc subgraph publish ${subgraphName} --namespace ${router.query.namespace} --schema <path-to-schema>`
+                : `npx wgc subgraph publish <subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema> --label <labels> --routing-url <routing-url>`
+              : `npx wgc monograph publish ${graphContext?.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
           }
         />
       }
@@ -229,7 +222,9 @@ const SDLPage: NextPageWithLayout = () => {
               <Select onValueChange={(query) => router.push(pathname + query)}>
                 <SelectTrigger
                   value={activeGraphWithSDL.title}
-                  className="w-full md:ml-auto md:w-[200px]"
+                  className={cn("w-full md:ml-auto md:w-[200px]", {
+                    hidden: graphData?.graph?.type !== "federated",
+                  })}
                 >
                   <SelectValue aria-label={activeGraphWithSDL.title}>
                     {activeGraphWithSDL.title}
@@ -258,7 +253,9 @@ const SDLPage: NextPageWithLayout = () => {
                 </SelectContent>
               </Select>
               <SDLViewerActions
-                className="w-auto"
+                className={cn("w-auto", {
+                  "ml-auto": graphData?.graph?.type !== "federated",
+                })}
                 sdl={activeGraphWithSDL.sdl ?? ""}
               />
               <SchemaSettings />

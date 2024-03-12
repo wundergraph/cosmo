@@ -140,7 +140,11 @@ const ChecksPage: NextPageWithLayout = () => {
         }
         actions={
           <CLI
-            command={`npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`}
+            command={
+              graphContext.graph.type === "federated"
+                ? `npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`
+                : `npx wgc monograph check ${graphContext.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
+            }
           />
         }
       />
@@ -155,7 +159,9 @@ const ChecksPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Check</TableHead>
-              <TableHead>Subgraph</TableHead>
+              {graphContext.graph.type === "federated" && (
+                <TableHead>Subgraph</TableHead>
+              )}
               <TableHead>Tasks</TableHead>
               <TableHead></TableHead>
             </TableRow>
@@ -215,7 +221,9 @@ const ChecksPage: NextPageWithLayout = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{subgraphName}</TableCell>
+                      {graphContext.graph?.type === "federated" && (
+                        <TableCell>{subgraphName}</TableCell>
+                      )}
                       <TableCell>
                         <div className="flex flex-wrap items-start gap-2">
                           <Badge variant="outline" className="gap-2 py-1.5">

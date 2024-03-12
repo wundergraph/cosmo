@@ -256,7 +256,7 @@ export const targets = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    type: targetTypeEnum('type'),
+    type: targetTypeEnum('type').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     labels: text('labels').array(),
     organizationId: uuid('organization_id')

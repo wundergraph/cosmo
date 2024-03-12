@@ -54,6 +54,7 @@ export interface FederatedGraphDTO {
   readme?: string;
   namespace: string;
   namespaceId: string;
+  type: string;
 }
 
 export interface FederatedGraphChangelogDTO {

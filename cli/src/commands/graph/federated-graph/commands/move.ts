@@ -2,8 +2,8 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import CliTable3 from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
-import { baseHeaders } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { baseHeaders } from '../../../../core/config.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('move');
@@ -34,7 +34,7 @@ export default (opts: BaseCommandOptions) => {
           pc.bold(pc.white('NAMESPACE')),
           pc.bold(pc.white('ERROR_MESSAGE')),
         ],
-        colWidths: [30, 120],
+        colWidths: [30, 30, 120],
         wordWrap: true,
       });
 

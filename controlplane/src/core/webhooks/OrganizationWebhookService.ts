@@ -2,35 +2,52 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
-import { PartialMessage } from '@bufbuild/protobuf';
+import { PartialMessage, PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { post } from './utils.js';
 
 export interface FederatedGraphSchemaUpdate {
-  federated_graph: {
-    id: string;
-    name: string;
-    namespace: string;
+  eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;
+  payload: {
+    federated_graph: {
+      id: string;
+      name: string;
+      namespace: string;
+    };
+    organization: {
+      id: string;
+      slug: string;
+    };
+    errors: boolean;
+    actor_id?: string;
   };
-  organization: {
-    id: string;
-    slug: string;
-  };
-  errors: boolean;
-  actor_id?: string;
 }
 
-interface EventMap {
-  [OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]: FederatedGraphSchemaUpdate;
+export interface MonographSchemaUpdate {
+  eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED;
+  payload: {
+    monograph: {
+      id: string;
+      name: string;
+      namespace: string;
+    };
+    organization: {
+      id: string;
+      slug: string;
+    };
+    actor_id?: string;
+  };
 }
+
+type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate;
 
 type Config = {
   url?: string;
   key?: string;
   allowedUserEvents?: string[];
-  meta: PartialMessage<EventMeta>[];
+  meta: PlainMessage<EventMeta>['meta'];
   type: string;
 };
 
@@ -52,27 +69,53 @@ export class OrganizationWebhookService {
     this.synced = false;
   }
 
-  private async syncOrganizationSettings() {
+  private async syncOrganizationSettings(eventName: OrganizationEventName) {
     const orgRepo = new OrganizationRepository(this.db, this.defaultBillingPlanId);
     const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
       with: {
-        webhookGraphSchemaUpdate: true,
+        webhookGraphSchemaUpdate: {
+          with: {
+            federatedGraph: {
+              columns: {
+                id: true,
+              },
+              with: {
+                target: {
+                  columns: {
+                    type: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     for (const config of orgConfigs) {
-      const meta: PartialMessage<EventMeta>[] = [];
+      let meta: PlainMessage<EventMeta>['meta'];
 
-      meta.push({
-        eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-        meta: {
-          case: 'federatedGraphSchemaUpdated',
-          value: {
-            graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
-          },
-        },
-      });
+      switch (eventName) {
+        case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {
+          meta = {
+            case: 'federatedGraphSchemaUpdated',
+            value: {
+              graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
+            },
+          };
+          break;
+        }
+        case OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED: {
+          meta = {
+            case: 'monographSchemaUpdated',
+            value: {
+              graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
+            },
+          };
+          break;
+        }
+      }
 
       this.configs?.push({
         url: config?.endpoint ?? '',
@@ -89,42 +132,46 @@ export class OrganizationWebhookService {
         continue;
       }
 
+      const meta = integration.eventsMeta.find((em) => em.eventName === eventName)?.meta;
+      if (!meta) {
+        continue;
+      }
+
       this.configs?.push({
         url: integration.integrationConfig?.config.value?.endpoint ?? '',
         key: '',
         allowedUserEvents: integration.events ?? [],
         type: 'slack',
-        meta: integration.eventsMeta,
+        meta,
       });
     }
 
     this.synced = true;
   }
 
-  private shouldProcess<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T], config: Config) {
-    if (!config.url) {
+  private shouldProcess(eventData: OrganizationEventData, config: Config) {
+    if (
+      !config.url ||
+      !config.allowedUserEvents?.includes(OrganizationEventName[eventData.eventName]) ||
+      !config.meta
+    ) {
       return false;
     }
 
-    if (!config.allowedUserEvents?.includes(OrganizationEventName[eventName])) {
-      return false;
-    }
-
-    if (!config.meta) {
-      return true;
-    }
-
-    switch (eventName) {
+    switch (eventData.eventName) {
       case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {
-        const meta = config.meta.find(
-          (m) => m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-        )?.meta;
-
-        if (!meta || meta?.case !== 'federatedGraphSchemaUpdated' || meta.value.graphIds?.length === 0) {
-          return true;
+        if (config.meta.case !== 'federatedGraphSchemaUpdated' || config.meta.value.graphIds?.length === 0) {
+          return false;
         }
 
-        return meta.value.graphIds?.includes(eventPayload.federated_graph.id);
+        return config.meta.value.graphIds?.includes(eventData.payload.federated_graph.id);
+      }
+      case OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED: {
+        if (config.meta.case !== 'monographSchemaUpdated' || config.meta.value.graphIds?.length === 0) {
+          return false;
+        }
+
+        return config.meta.value.graphIds?.includes(eventData.payload.monograph.id);
       }
       default: {
         return true;
@@ -132,153 +179,178 @@ export class OrganizationWebhookService {
     }
   }
 
-  private async constructSlackBody<T extends keyof EventMap>(eventPayload: EventMap[T]) {
-    const fedRepo = new FederatedGraphRepository(this.db, eventPayload.organization.id);
-    const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(eventPayload.federated_graph.id);
+  private async constructSlackBody(eventData: OrganizationEventData): Promise<{ blocks: any[]; attachments: any[] }> {
+    switch (eventData.eventName) {
+      case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED:
+      case OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED: {
+        let graph: {
+          id: string;
+          name: string;
+          namespace: string;
+        };
 
-    let linkToChangelog = `https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name}`;
-    if (latestChangelogs) {
-      linkToChangelog += `/changelog/${latestChangelogs?.schemaVersionId}`;
-    }
+        switch (eventData.eventName) {
+          case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {
+            graph = eventData.payload.federated_graph;
+            break;
+          }
+          case OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED: {
+            graph = eventData.payload.monograph;
+            break;
+          }
+        }
 
-    const tempData: { blocks: any[]; attachments: any[] } = {
-      blocks: [
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
-          },
-        },
-      ],
-      attachments: [
-        {
-          color: '#fafafa',
+        const fedRepo = new FederatedGraphRepository(this.db, eventData.payload.organization.id);
+        const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(graph.id);
+
+        let linkToChangelog = `https://cosmo.wundergraph.com/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name}`;
+        if (latestChangelogs) {
+          linkToChangelog += `/changelog/${latestChangelogs?.schemaVersionId}`;
+        }
+
+        const tempData: { blocks: any[]; attachments: any[] } = {
           blocks: [
             {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `Click <${linkToChangelog}| here> for more details.`,
+                text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name} | ${graph.name}>* has been updated 🎉`,
               },
             },
           ],
-        },
-      ],
-    };
-    if (latestChangelogs) {
-      const addedChanges = latestChangelogs.changelogs.filter(
-        (c) => c.changeType.includes('ADDED') || c.changeType.includes('CHANGED'),
-      );
-      const removedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('REMOVED'));
-
-      if (removedChanges.length + addedChanges.length > 20) {
-        tempData.attachments.unshift({
-          color: '#e11d48',
-          blocks: [
+          attachments: [
             {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `Too many changes to display. There were ${removedChanges.length} deletions and ${addedChanges.length} additions.`,
-              },
+              color: '#fafafa',
+              blocks: [
+                {
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: `Click <${linkToChangelog}| here> for more details.`,
+                  },
+                },
+              ],
             },
           ],
-        });
+        };
+        if (latestChangelogs) {
+          const addedChanges = latestChangelogs.changelogs.filter(
+            (c) => c.changeType.includes('ADDED') || c.changeType.includes('CHANGED'),
+          );
+          const removedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('REMOVED'));
+
+          if (removedChanges.length + addedChanges.length > 20) {
+            tempData.attachments.unshift({
+              color: '#e11d48',
+              blocks: [
+                {
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: `Too many changes to display. There were ${removedChanges.length} deletions and ${addedChanges.length} additions.`,
+                  },
+                },
+              ],
+            });
+            return tempData;
+          }
+
+          if (removedChanges.length > 0) {
+            tempData.attachments.unshift({
+              color: '#e11d48',
+              blocks: [
+                {
+                  type: 'rich_text',
+                  elements: [
+                    {
+                      type: 'rich_text_list',
+                      style: 'bullet',
+                      elements: removedChanges.map((r) => ({
+                        type: 'rich_text_section',
+                        elements: [
+                          {
+                            type: 'text',
+                            text: r.changeMessage,
+                          },
+                        ],
+                      })),
+                    },
+                  ],
+                },
+              ],
+            });
+          }
+          if (addedChanges.length > 0) {
+            tempData.attachments.unshift({
+              color: '#22c55e',
+              blocks: [
+                {
+                  type: 'rich_text',
+                  elements: [
+                    {
+                      type: 'rich_text_list',
+                      style: 'bullet',
+                      elements: addedChanges.map((r) => ({
+                        type: 'rich_text_section',
+                        elements: [
+                          {
+                            type: 'text',
+                            text: r.changeMessage,
+                          },
+                        ],
+                      })),
+                    },
+                  ],
+                },
+              ],
+            });
+          }
+        }
         return tempData;
       }
-
-      if (removedChanges.length > 0) {
-        tempData.attachments.unshift({
-          color: '#e11d48',
-          blocks: [
-            {
-              type: 'rich_text',
-              elements: [
-                {
-                  type: 'rich_text_list',
-                  style: 'bullet',
-                  elements: removedChanges.map((r) => ({
-                    type: 'rich_text_section',
-                    elements: [
-                      {
-                        type: 'text',
-                        text: r.changeMessage,
-                      },
-                    ],
-                  })),
-                },
-              ],
-            },
-          ],
-        });
-      }
-      if (addedChanges.length > 0) {
-        tempData.attachments.unshift({
-          color: '#22c55e',
-          blocks: [
-            {
-              type: 'rich_text',
-              elements: [
-                {
-                  type: 'rich_text_list',
-                  style: 'bullet',
-                  elements: addedChanges.map((r) => ({
-                    type: 'rich_text_section',
-                    elements: [
-                      {
-                        type: 'text',
-                        text: r.changeMessage,
-                      },
-                    ],
-                  })),
-                },
-              ],
-            },
-          ],
-        });
+      default: {
+        return { blocks: [], attachments: [] };
       }
     }
-    return tempData;
   }
 
-  private async sendEvent<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
+  private async sendEvent(eventData: OrganizationEventData) {
     if (!this.configs) {
       return;
     }
 
     for (const config of this.configs) {
-      if (!this.shouldProcess(eventName, eventPayload, config)) {
+      if (!this.shouldProcess(eventData, config)) {
         continue;
       }
 
       let data = {};
       if (config.type === 'slack') {
-        data = await this.constructSlackBody(eventPayload);
+        data = await this.constructSlackBody(eventData);
       } else {
         data = {
           version: 1,
-          event: OrganizationEventName[eventName],
-          payload: eventPayload,
+          event: OrganizationEventName[eventData.eventName],
+          payload: eventData.payload,
         };
       }
 
-      post(OrganizationEventName[eventName], data, this.logger, 'debug', config.url!, config.key);
+      post(OrganizationEventName[eventData.eventName], data, this.logger, 'debug', config.url!, config.key);
     }
   }
 
-  send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
+  send(eventData: OrganizationEventData) {
     if (!this.synced) {
-      this.syncOrganizationSettings()
-        .then(() => this.sendEvent(eventName, data))
+      this.syncOrganizationSettings(eventData.eventName)
+        .then(() => this.sendEvent(eventData))
         .catch((e) => {
-          const logger = this.logger.child({ eventName: OrganizationEventName[eventName] });
+          const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
           logger.child({ message: e.message });
           logger.error(`Could not send webhook event`);
         });
       return;
     }
 
-    this.sendEvent(eventName, data);
+    this.sendEvent(eventData);
   }
 }

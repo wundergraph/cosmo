@@ -1,13 +1,13 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../core/types/types.js';
-import { checkAPIKey } from '../../utils.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
+import { checkAPIKey } from '../../../utils.js';
+import FetchFederatedGraphCommand from '../common/fetch.js';
+import GetFederatedGraphChangelog from '../common/changelog.js';
+import ListFederatedGraphs from './commands/list.js';
 import CheckFederatedGraphCommand from './commands/check.js';
 import CreateFederatedGraphCommand from './commands/create.js';
 import DeleteFederatedGraphCommand from './commands/delete.js';
-import FetchFederatedGraphCommand from './commands/fetch.js';
-import ListFederatedGraphs from './commands/list.js';
 import UpdateFederatedGraphCommand from './commands/update.js';
-import GetFederatedGraphChangelog from './commands/changelog.js';
 import MoveFederatedGraph from './commands/move.js';
 
 export default (opts: BaseCommandOptions) => {

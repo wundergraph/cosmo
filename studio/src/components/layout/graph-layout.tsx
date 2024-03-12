@@ -92,11 +92,15 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath,
         icon: <HomeIcon className="h-4 w-4" />,
       },
-      {
-        title: "Subgraphs",
-        href: basePath + "/subgraphs",
-        icon: <Component2Icon className="h-4 w-4" />,
-      },
+      ...(graphContextData?.graph?.type === "federated"
+        ? [
+            {
+              title: "Subgraphs",
+              href: basePath + "/subgraphs",
+              icon: <Component2Icon className="h-4 w-4" />,
+            },
+          ]
+        : []),
       {
         title: "Playground",
         href: basePath + "/playground",
@@ -155,7 +159,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <PiChat className="h-4 w-4" />,
       },
     ];
-  }, [organizationSlug, namespace, slug]);
+  }, [organizationSlug, namespace, slug, graphContextData?.graph?.type]);
 
   let render: React.ReactNode;
 
