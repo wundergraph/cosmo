@@ -26,7 +26,7 @@ import {
   newAuthorizationData,
   newFieldAuthorizationData,
   setAndGetValue,
-  upsertEntityContainerProperties,
+  upsertEntityDataProperties,
 } from '../utils/utils';
 import {
   addConcreteTypesForImplementedInterfaces,
@@ -35,11 +35,12 @@ import {
   isObjectLikeNodeEntity,
   SchemaNode,
 } from '../ast/utils';
-import { extractFieldSetValue, newFieldSetContainer } from './utils';
+import { extractFieldSetValue, newFieldSetData } from './utils';
 import {
   ANY_SCALAR,
   ENTITIES_FIELD,
   ENTITY_UNION,
+  EVENT_DIRECTIVE_NAMES,
   EXTENSIONS,
   PARENT_DEFINITION_DATA_MAP,
   PARENT_EXTENSION_DATA_MAP,
@@ -84,6 +85,9 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
     Directive: {
       enter(node) {
         const name = node.name.value;
+        if (EVENT_DIRECTIVE_NAMES.has(name)) {
+          nf.isEventDrivenSubgraph = true;
+        }
         if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
           nf.isSubgraphVersionTwo = true;
           return false;
@@ -304,11 +308,11 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.subgraphName,
           nf.isSubgraphVersionTwo,
         );
-        const entityContainer = nf.entityContainerByTypeName.get(nf.originalParentTypeName);
+        const entityContainer = nf.entityDataByTypeName.get(nf.originalParentTypeName);
         if (entityContainer) {
           entityContainer.fieldNames.add(nf.childName);
           // Only entities will have an existing FieldSet
-          const existingFieldSet = nf.fieldSetContainerByTypeName.get(nf.originalParentTypeName);
+          const existingFieldSet = nf.fieldSetDataByTypeName.get(nf.originalParentTypeName);
           if (existingFieldSet) {
             // @requires should only be defined on a field whose parent is an entity
             // If there is existingFieldSet, it's an entity
@@ -333,9 +337,9 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return;
         }
         const fieldSetContainer = getValueOrDefault(
-          nf.fieldSetContainerByTypeName,
+          nf.fieldSetDataByTypeName,
           nf.originalParentTypeName,
-          newFieldSetContainer,
+          newFieldSetData,
         );
         // @provides only makes sense on entities, but the field can be encountered before the type definition
         // When the FieldSet is evaluated, it will be checked whether the field is an entity.
@@ -485,11 +489,11 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           isInterfaceObject: false,
           typeName: typeName,
         });
-        upsertEntityContainerProperties(nf.entityContainerByTypeName, {
+        upsertEntityDataProperties(nf.entityDataByTypeName, {
           typeName: nf.originalParentTypeName,
           ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
         });
-        const fieldSetContainer = getValueOrDefault(nf.fieldSetContainerByTypeName, typeName, newFieldSetContainer);
+        const fieldSetContainer = getValueOrDefault(nf.fieldSetDataByTypeName, typeName, newFieldSetData);
         nf.extractKeyFieldSets(node, fieldSetContainer);
       },
       leave() {
@@ -556,15 +560,11 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         if (!isEntity) {
           return;
         }
-        const fieldSetContainer = getValueOrDefault(
-          nf.fieldSetContainerByTypeName,
-          nf.originalParentTypeName,
-          newFieldSetContainer,
-        );
-        nf.extractKeyFieldSets(node, fieldSetContainer);
-        upsertEntityContainerProperties(nf.entityContainerByTypeName, {
+        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
+        nf.extractKeyFieldSets(node, fieldSetData);
+        upsertEntityDataProperties(nf.entityDataByTypeName, {
           typeName: nf.originalParentTypeName,
-          keyFieldSets: fieldSetContainer.keys,
+          keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
           ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
         });
       },

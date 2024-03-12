@@ -46,8 +46,8 @@ import {
   addIterableValuesToSet,
   AuthorizationData,
   doSetsHaveAnyOverlap,
-  EntityContainer,
-  EntityContainerByTypeName,
+  EntityData,
+  EntityDataByTypeName,
   EntityInterfaceFederationData,
   getAllMutualEntries,
   getEntriesNotInHashSet,
@@ -127,7 +127,7 @@ export class FederationFactory {
   persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   currentSubgraphName = '';
   childName = '';
-  entityContainersByTypeName: EntityContainerByTypeName;
+  entityContainersByTypeName: EntityDataByTypeName;
   errors: Error[] = [];
   evaluatedObjectLikesBySubgraph = new Map<string, Set<string>>();
   graph: MultiGraph;
@@ -158,7 +158,7 @@ export class FederationFactory {
   constructor(
     authorizationDataByParentTypeName: Map<string, AuthorizationData>,
     concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>,
-    entityContainersByTypeName: EntityContainerByTypeName,
+    entityContainersByTypeName: EntityDataByTypeName,
     entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
     graph: MultiGraph,
     internalSubgraphBySubgraphName: Map<string, InternalSubgraph>,
@@ -533,7 +533,7 @@ export class FederationFactory {
     }
   }
 
-  validateKeyFieldSetsForImplicitEntity(entityContainer: EntityContainer) {
+  validateKeyFieldSetsForImplicitEntity(entityData: EntityData) {
     const internalSubgraph = getOrThrowError(
       this.internalSubgraphBySubgraphName,
       this.currentSubgraphName,
@@ -542,28 +542,27 @@ export class FederationFactory {
     const parentContainerByTypeName = internalSubgraph.parentDefinitionDataByTypeName;
     const extensionContainerByTypeName = internalSubgraph.parentExtensionDataByTypeName;
     const implicitEntityContainer =
-      parentContainerByTypeName.get(entityContainer.typeName) ||
-      extensionContainerByTypeName.get(entityContainer.typeName);
+      parentContainerByTypeName.get(entityData.typeName) || extensionContainerByTypeName.get(entityData.typeName);
     if (
       !implicitEntityContainer ||
       (implicitEntityContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
         implicitEntityContainer.kind !== Kind.OBJECT_TYPE_EXTENSION)
     ) {
       throw incompatibleParentKindFatalError(
-        entityContainer.typeName,
+        entityData.typeName,
         Kind.OBJECT_TYPE_DEFINITION,
         implicitEntityContainer?.kind || Kind.NULL,
       );
     }
     const configurationData = getOrThrowError(
       internalSubgraph.configurationDataByParentTypeName,
-      entityContainer.typeName,
+      entityData.typeName,
       'internalSubgraph.configurationDataMap',
     );
     const keyFieldNames = new Set<string>();
     const keys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
-    for (const fieldSet of entityContainer.keyFieldSets) {
+    for (const fieldSet of entityData.keyFieldSets) {
       // Create a new selection set so that the value can be parsed as a new DocumentNode
       const { error, documentNode } = safeParse('{' + fieldSet + '}');
       if (error || !documentNode) {

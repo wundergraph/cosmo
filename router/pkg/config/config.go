@@ -246,7 +246,7 @@ type EventSource struct {
 }
 
 type EventsConfiguration struct {
-	Sources []EventSource `yaml:"sources,omitempty"`
+	Sources map[string]EventSource `yaml:"sources,omitempty"`
 }
 
 type Cluster struct {

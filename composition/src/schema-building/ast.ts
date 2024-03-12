@@ -201,12 +201,6 @@ export function getMutableScalarNode(node: ScalarTypeDefinitionNode): MutableSca
   };
 }
 
-// export type MutableTypeNode = {
-//   kind: Kind.NAMED_TYPE | Kind.LIST_TYPE | Kind.NON_NULL_TYPE;
-//   name?: NameNode;
-//   type?: MutableTypeNode;
-// };
-
 // This type allows the building of a MutableTypeNode
 export type MutableIntermediateTypeNode = {
   kind: Kind.NAMED_TYPE | Kind.LIST_TYPE | Kind.NON_NULL_TYPE;

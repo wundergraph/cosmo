@@ -33,10 +33,10 @@ import {
 } from '../ast/utils';
 import {
   addNonExternalFieldsToSet,
-  FieldSetContainer,
+  FieldSetData,
   InputValidationContainer,
   isNodeQuery,
-  newFieldSetContainer,
+  newFieldSetData,
   validateAndAddDirectivesWithFieldSetToConfigurationData,
 } from './utils';
 import {
@@ -50,8 +50,8 @@ import {
 import {
   addIterableValuesToSet,
   AuthorizationData,
-  EntityContainer,
-  EntityContainerByTypeName,
+  EntityData,
+  EntityDataByTypeName,
   EntityInterfaceSubgraphData,
   FieldAuthorizationData,
   getAuthorizationDataToUpdate,
@@ -69,8 +69,8 @@ import {
   setAndGetValue,
   subtractSourceSetFromTargetSet,
   upsertAuthorizationData,
-  upsertEntityContainer,
-  upsertEntityContainerProperties,
+  upsertEntityData,
+  upsertEntityDataProperties,
   upsertFieldAuthorizationData,
 } from '../utils/utils';
 import {
@@ -87,13 +87,23 @@ import {
   invalidArgumentsError,
   invalidDirectiveArgumentTypeErrorMessage,
   invalidDirectiveError,
+  invalidEventDrivenGraphError,
+  invalidEventsDrivenMutationResponseTypeErrorMessage,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
+  invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidPublishEventResultObjectErrorMessage,
   invalidRootTypeDefinitionError,
+  invalidRootTypeFieldEventsDirectivesErrorMessage,
+  invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
   noBaseTypeExtensionError,
   noFieldDefinitionsError,
+  nonEntityObjectExtensionsEventDrivenErrorMessage,
+  nonExternalKeyFieldNamesEventDrivenErrorMessage,
+  nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
+  nonKeyFieldNamesEventDrivenErrorMessage,
   operationDefinitionError,
   orScopesLimitError,
   subgraphInvalidSyntaxError,
@@ -108,7 +118,9 @@ import {
 } from '../errors/errors';
 import {
   AUTHENTICATED,
+  DEFAULT,
   ENTITIES_FIELD,
+  EVENT_DIRECTIVE_NAMES,
   EVENTS_PUBLISH,
   EVENTS_REQUEST,
   EVENTS_SUBSCRIBE,
@@ -117,16 +129,23 @@ import {
   FIELDS,
   FROM,
   KEY,
+  MUTATION,
   N_A,
+  NON_NULLABLE_BOOLEAN,
+  NON_NULLABLE_PUBLISH_EVENT_RESULT,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PARENTS,
+  PUBLISH_EVENT_RESULT,
+  QUERY,
   REQUIRES_SCOPES,
   RESOLVABLE,
   SCHEMA,
   SCOPES,
   SERVICE_FIELD,
-  SOURCE_ID,
+  SOURCE_NAME,
+  SUBSCRIPTION,
+  SUCCESS,
   TOPIC,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
@@ -168,16 +187,18 @@ import {
   getSchemaNodeByData,
   getUnionNodeByData,
   isTypeValidImplementation,
+  ObjectData,
 } from '../schema-building/utils';
 import { MultiGraph } from 'graphology';
 import { getTypeNodeNamedTypeName, ObjectLikeTypeNode } from '../schema-building/ast';
+import { InvalidRootTypeFieldEventsDirectiveData } from '../errors/utils';
 
 export type NormalizationResult = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   configurationDataByParentTypeName: Map<string, ConfigurationData>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
-  entityContainerByTypeName: EntityContainerByTypeName;
+  entityContainerByTypeName: EntityDataByTypeName;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   parentExtensionDataByTypeName: Map<string, ObjectExtensionData>;
   originalTypeNameByRenamedTypeName: Map<string, string>;
@@ -200,7 +221,7 @@ export type NormalizationResultContainer = {
 export type BatchNormalizationContainer = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
-  entityContainerByTypeName: EntityContainerByTypeName;
+  entityContainerByTypeName: EntityDataByTypeName;
   graph: MultiGraph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   errors?: Error[];
@@ -234,14 +255,15 @@ export class NormalizationFactory {
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
   directiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>();
   errors: Error[] = [];
-  entityContainerByTypeName: EntityContainerByTypeName = new Map<string, EntityContainer>();
+  entityDataByTypeName = new Map<string, EntityData>();
   entityInterfaces = new Map<string, EntityInterfaceSubgraphData>();
   graph: MultiGraph;
   parentExtensionDataByTypeName = new Map<string, ParentExtensionData>();
   interfaceTypeNamesWithAuthorizationDirectives = new Set<string>();
   isCurrentParentExtension = false;
+  isEventDrivenSubgraph = false;
   isSubgraphVersionTwo = false;
-  fieldSetContainerByTypeName = new Map<string, FieldSetContainer>();
+  fieldSetDataByTypeName = new Map<string, FieldSetData>();
   heirFieldAuthorizationDataByTypeName = new Map<string, FieldAuthorizationData[]>();
   handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
   lastParentNodeKind: Kind = Kind.NULL;
@@ -540,21 +562,17 @@ export class NormalizationFactory {
     if (node.kind === Kind.INTERFACE_TYPE_DEFINITION || node.kind === Kind.INTERFACE_TYPE_EXTENSION || !isEntity) {
       return;
     }
-    const fieldSetContainer = getValueOrDefault(
-      this.fieldSetContainerByTypeName,
-      this.originalParentTypeName,
-      newFieldSetContainer,
-    );
-    this.extractKeyFieldSets(node, fieldSetContainer);
-    upsertEntityContainerProperties(this.entityContainerByTypeName, {
+    const fieldSetData = getValueOrDefault(this.fieldSetDataByTypeName, this.originalParentTypeName, newFieldSetData);
+    this.extractKeyFieldSets(node, fieldSetData);
+    upsertEntityDataProperties(this.entityDataByTypeName, {
       typeName: this.originalParentTypeName,
-      keyFieldSets: fieldSetContainer.keys,
+      keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
       ...(this.subgraphName ? { subgraphNames: [this.subgraphName] } : {}),
     });
   }
 
-  extractKeyFieldSets(node: ObjectLikeTypeNode, fieldSetContainer: FieldSetContainer) {
-    const rawFieldSets = fieldSetContainer.keys;
+  extractKeyFieldSets(node: ObjectLikeTypeNode, fieldSetData: FieldSetData) {
+    const isUnresolvableByRawKeyFieldSet = fieldSetData.isUnresolvableByKeyFieldSet;
     const parentTypeName = node.name.value;
     if (!node.directives?.length) {
       // This should never happen
@@ -570,23 +588,30 @@ export class NormalizationFactory {
         errorMessages.push(undefinedRequiredArgumentsErrorMessage(KEY, parentTypeName, [FIELDS]));
         continue;
       }
+      let keyFieldSet;
+      let isUnresolvable = false;
       for (const arg of directive.arguments) {
         const argumentName = arg.name.value;
         if (arg.name.value === RESOLVABLE) {
           if (arg.value.kind === Kind.BOOLEAN && !arg.value.value) {
-            fieldSetContainer.disableEntityResolver = true;
+            isUnresolvable = true;
           }
           continue;
         }
         if (arg.name.value !== FIELDS) {
+          keyFieldSet = undefined;
           errorMessages.push(unexpectedDirectiveArgumentErrorMessage(KEY, argumentName));
           break;
         }
         if (arg.value.kind !== Kind.STRING) {
+          keyFieldSet = undefined;
           errorMessages.push(invalidKeyDirectiveArgumentErrorMessage(arg.value.kind));
           break;
         }
-        rawFieldSets.add(arg.value.value);
+        keyFieldSet = arg.value.value;
+      }
+      if (keyFieldSet !== undefined) {
+        isUnresolvableByRawKeyFieldSet.set(keyFieldSet, isUnresolvable);
       }
     }
     if (errorMessages.length) {
@@ -729,7 +754,7 @@ export class NormalizationFactory {
           continue;
       }
       let topic: string | undefined;
-      let sourceId: string | undefined;
+      let sourceName: string | undefined;
       for (const arg of directive.arguments || []) {
         if (arg.value.kind !== Kind.STRING) {
           throw new Error(`Event directive arguments must be strings, ${arg.value.kind} found in argument ${arg.name}`);
@@ -745,14 +770,14 @@ export class NormalizationFactory {
             topic = arg.value.value;
             break;
           }
-          case SOURCE_ID: {
-            if (sourceId !== undefined) {
+          case SOURCE_NAME: {
+            if (sourceName !== undefined) {
               throw new Error(`Event directives must have exactly one sourceID argument, found multiple`);
             }
             if (!arg.value.value) {
               throw new Error(`Event directives must have a non-empty sourceID argument`);
             }
-            sourceId = arg.value.value;
+            sourceName = arg.value.value;
             break;
           }
           default:
@@ -773,8 +798,249 @@ export class NormalizationFactory {
         type: eventType,
         fieldName: this.childName,
         topic,
-        sourceId,
+        sourceName: sourceName || DEFAULT,
       });
+    }
+  }
+
+  getValidEventsDirectiveNamesForRootTypeName(parentTypeName: string): Set<string> | undefined {
+    const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
+    if (!operationTypeNode) {
+      switch (parentTypeName) {
+        case MUTATION:
+          return new Set<string>([EVENTS_PUBLISH, EVENTS_REQUEST]);
+        case QUERY:
+          return new Set<string>([EVENTS_REQUEST]);
+        case SUBSCRIPTION:
+          return new Set<string>([EVENTS_SUBSCRIBE]);
+        default:
+          return;
+      }
+    }
+    switch (operationTypeNode) {
+      case OperationTypeNode.MUTATION:
+        return new Set<string>([EVENTS_REQUEST, EVENTS_PUBLISH]);
+      case OperationTypeNode.QUERY:
+        return new Set<string>([EVENTS_REQUEST]);
+      case OperationTypeNode.SUBSCRIPTION:
+        return new Set<string>([EVENTS_SUBSCRIBE]);
+      default:
+        return;
+    }
+  }
+
+  validateEventDrivenRootType(
+    data: ObjectData,
+    validEventsDirectiveNames: Set<string>,
+    invalidEventsDirectiveDataByRootFieldPath: Map<string, InvalidRootTypeFieldEventsDirectiveData>,
+    invalidResponseTypeStringByRootFieldPath: Map<string, string>,
+    invalidResponseTypeNameByMutationPath: Map<string, string>,
+  ) {
+    const isMutation = validEventsDirectiveNames.has(EVENTS_PUBLISH);
+    for (const [fieldName, fieldData] of data.fieldDataByFieldName) {
+      const fieldPath = `${fieldData.originalParentTypeName}.${fieldName}`;
+      const definedEventsDirectiveNames = new Set<string>();
+      for (const eventsDirectiveName of EVENT_DIRECTIVE_NAMES) {
+        if (fieldData.directivesByDirectiveName.has(eventsDirectiveName)) {
+          definedEventsDirectiveNames.add(eventsDirectiveName);
+        }
+      }
+      const invalidEventsDirectiveNames = new Set<string>();
+      for (const definedEventsDirectiveName of definedEventsDirectiveNames) {
+        if (!validEventsDirectiveNames.has(definedEventsDirectiveName)) {
+          invalidEventsDirectiveNames.add(definedEventsDirectiveName);
+        }
+      }
+      if (definedEventsDirectiveNames.size < 1 || invalidEventsDirectiveNames.size > 0) {
+        invalidEventsDirectiveDataByRootFieldPath.set(fieldPath, {
+          definesDirectives: definedEventsDirectiveNames.size > 0,
+          invalidDirectiveNames: [...invalidEventsDirectiveNames],
+        });
+      }
+      if (isMutation) {
+        const typeString = printTypeNode(fieldData.type);
+        if (typeString !== NON_NULLABLE_PUBLISH_EVENT_RESULT) {
+          invalidResponseTypeNameByMutationPath.set(fieldPath, typeString);
+        }
+        continue;
+      }
+      const fieldTypeString = printTypeNode(fieldData.type);
+      const expectedTypeString = fieldData.namedTypeName + '!';
+      let isValid = false;
+      const concreteTypeNames =
+        this.concreteTypeNamesByAbstractTypeName.get(fieldData.namedTypeName) ||
+        new Set<string>([fieldData.namedTypeName]);
+      for (const concreteTypeName of concreteTypeNames) {
+        isValid ||= this.entityDataByTypeName.has(concreteTypeName);
+        if (isValid) {
+          break;
+        }
+      }
+      if (!isValid || fieldTypeString !== expectedTypeString) {
+        invalidResponseTypeStringByRootFieldPath.set(fieldPath, fieldTypeString);
+      }
+    }
+  }
+
+  validateEventDrivenKeyDefinition(typeName: string, invalidKeyFieldSetsByEntityTypeName: Map<string, string[]>) {
+    const fieldSetData = this.fieldSetDataByTypeName.get(typeName);
+    if (!fieldSetData) {
+      return;
+    }
+    for (const [keyFieldSet, isUnresolvable] of fieldSetData.isUnresolvableByKeyFieldSet) {
+      if (isUnresolvable) {
+        continue;
+      }
+      getValueOrDefault(invalidKeyFieldSetsByEntityTypeName, typeName, () => []).push(keyFieldSet);
+    }
+  }
+
+  validateEventDrivenObjectFields(
+    fieldDataByFieldName: Map<string, FieldData>,
+    keyFieldNames: Set<string>,
+    nonExternalKeyFieldNameByFieldPath: Map<string, string>,
+    nonKeyFieldNameByFieldPath: Map<string, string>,
+  ) {
+    for (const [fieldName, fieldData] of fieldDataByFieldName) {
+      const fieldPath = `${fieldData.originalParentTypeName}.${fieldName}`;
+      if (keyFieldNames.has(fieldName)) {
+        if (!fieldData.isExternalBySubgraphName.get(this.subgraphName)) {
+          nonExternalKeyFieldNameByFieldPath.set(fieldPath, fieldName);
+        }
+        continue;
+      }
+      nonKeyFieldNameByFieldPath.set(fieldPath, fieldName);
+    }
+  }
+
+  isPublishEventResultValid(): boolean {
+    const data = this.parentDefinitionDataByTypeName.get(PUBLISH_EVENT_RESULT);
+    if (!data) {
+      return true;
+    }
+    if (data.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+      return false;
+    }
+    if (data.fieldDataByFieldName.size != 1) {
+      return false;
+    }
+    for (const [fieldName, fieldData] of data.fieldDataByFieldName) {
+      if (fieldData.argumentDataByArgumentName.size > 0) {
+        return false;
+      }
+      if (fieldName !== SUCCESS) {
+        return false;
+      }
+      if (printTypeNode(fieldData.type) !== NON_NULLABLE_BOOLEAN) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  validateEventDrivenSubgraph() {
+    const errorMessages: string[] = [];
+    const invalidEventsDirectiveDataByRootFieldPath = new Map<string, InvalidRootTypeFieldEventsDirectiveData>();
+    const invalidResponseTypeStringByRootFieldPath = new Map<string, string>();
+    const invalidResponseTypeNameByMutationPath = new Map<string, string>();
+    const invalidKeyFieldSetsByEntityTypeName = new Map<string, string[]>();
+    const nonExternalKeyFieldNameByFieldPath = new Map<string, string>();
+    const nonKeyFieldNameByFieldPath = new Map<string, string>();
+    const nonEntityExtensionTypeNames = new Set<string>();
+    const invalidObjectTypeNames = new Set<string>();
+    for (const [typeName, data] of this.parentExtensionDataByTypeName) {
+      if (data.kind !== Kind.OBJECT_TYPE_EXTENSION) {
+        continue;
+      }
+      // If a required events directive is returned, the parent type is a root type
+      const validEventsDirectiveNames = this.getValidEventsDirectiveNamesForRootTypeName(data.name);
+      if (validEventsDirectiveNames) {
+        this.validateEventDrivenRootType(
+          data,
+          validEventsDirectiveNames,
+          invalidEventsDirectiveDataByRootFieldPath,
+          invalidResponseTypeStringByRootFieldPath,
+          invalidResponseTypeNameByMutationPath,
+        );
+        continue;
+      }
+      const keyFieldNames = this.keyFieldNamesByParentTypeName.get(typeName);
+      if (!keyFieldNames || !data.isEntity) {
+        nonEntityExtensionTypeNames.add(typeName);
+        continue;
+      }
+      this.validateEventDrivenKeyDefinition(typeName, invalidKeyFieldSetsByEntityTypeName);
+      this.validateEventDrivenObjectFields(
+        data.fieldDataByFieldName,
+        keyFieldNames,
+        nonExternalKeyFieldNameByFieldPath,
+        nonKeyFieldNameByFieldPath,
+      );
+    }
+    for (const [typeName, data] of this.parentDefinitionDataByTypeName) {
+      if (data.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        continue;
+      }
+      // validate PublishEventResult separately
+      if (typeName === PUBLISH_EVENT_RESULT) {
+        continue;
+      }
+      // If a required events directive is returned, the parent type is a root type
+      const validEventsDirectiveNames = this.getValidEventsDirectiveNamesForRootTypeName(data.name);
+      if (validEventsDirectiveNames) {
+        this.validateEventDrivenRootType(
+          data,
+          validEventsDirectiveNames,
+          invalidEventsDirectiveDataByRootFieldPath,
+          invalidResponseTypeStringByRootFieldPath,
+          invalidResponseTypeNameByMutationPath,
+        );
+        continue;
+      }
+      const keyFieldNames = this.keyFieldNamesByParentTypeName.get(typeName);
+      if (!keyFieldNames) {
+        invalidObjectTypeNames.add(typeName);
+        continue;
+      }
+      this.validateEventDrivenKeyDefinition(typeName, invalidKeyFieldSetsByEntityTypeName);
+      this.validateEventDrivenObjectFields(
+        data.fieldDataByFieldName,
+        keyFieldNames,
+        nonExternalKeyFieldNameByFieldPath,
+        nonKeyFieldNameByFieldPath,
+      );
+    }
+    if (!this.isPublishEventResultValid()) {
+      errorMessages.push(invalidPublishEventResultObjectErrorMessage);
+    }
+    if (invalidEventsDirectiveDataByRootFieldPath.size > 0) {
+      errorMessages.push(invalidRootTypeFieldEventsDirectivesErrorMessage(invalidEventsDirectiveDataByRootFieldPath));
+    }
+    if (invalidResponseTypeNameByMutationPath.size > 0) {
+      errorMessages.push(invalidEventsDrivenMutationResponseTypeErrorMessage(invalidResponseTypeNameByMutationPath));
+    }
+    if (invalidResponseTypeStringByRootFieldPath.size > 0) {
+      errorMessages.push(
+        invalidRootTypeFieldResponseTypesEventDrivenErrorMessage(invalidResponseTypeStringByRootFieldPath),
+      );
+    }
+    if (invalidKeyFieldSetsByEntityTypeName.size > 0) {
+      errorMessages.push(invalidKeyFieldSetsEventDrivenErrorMessage(invalidKeyFieldSetsByEntityTypeName));
+    }
+    if (nonExternalKeyFieldNameByFieldPath.size > 0) {
+      errorMessages.push(nonExternalKeyFieldNamesEventDrivenErrorMessage(nonExternalKeyFieldNameByFieldPath));
+    }
+    if (nonKeyFieldNameByFieldPath.size > 0) {
+      errorMessages.push(nonKeyFieldNamesEventDrivenErrorMessage(nonKeyFieldNameByFieldPath));
+    }
+    if (nonEntityExtensionTypeNames.size > 0) {
+      errorMessages.push(nonEntityObjectExtensionsEventDrivenErrorMessage([...nonEntityExtensionTypeNames]));
+    }
+    if (invalidObjectTypeNames.size > 0) {
+      errorMessages.push(nonKeyComposingObjectTypeNamesEventDrivenErrorMessage([...invalidObjectTypeNames]));
+    }
+    if (errorMessages.length > 0) {
+      this.errors.push(invalidEventDrivenGraphError(errorMessages));
     }
   }
 
@@ -853,7 +1119,7 @@ export class NormalizationFactory {
     const validParentExtensionOrphansByTypeName = new Map<string, ObjectExtensionData>();
     const handledParentTypeNames = new Set<string>();
     for (const [extensionTypeName, parentExtensionData] of this.parentExtensionDataByTypeName) {
-      const isEntity = this.entityContainerByTypeName.has(extensionTypeName);
+      const isEntity = this.entityDataByTypeName.has(extensionTypeName);
       const newParentTypeName =
         parentExtensionData.kind === Kind.OBJECT_TYPE_EXTENSION
           ? parentExtensionData.renamedTypeName || extensionTypeName
@@ -1038,7 +1304,7 @@ export class NormalizationFactory {
         case Kind.INTERFACE_TYPE_DEFINITION:
         // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
-          const isEntity = this.entityContainerByTypeName.has(parentTypeName);
+          const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           if (operationTypeNode) {
             parentDefinitionData.fieldDataByFieldName.delete(SERVICE_FIELD);
@@ -1167,7 +1433,7 @@ export class NormalizationFactory {
     for (const referencedTypeName of this.referencedTypeNames) {
       if (
         this.parentDefinitionDataByTypeName.has(referencedTypeName) ||
-        this.entityContainerByTypeName.has(referencedTypeName)
+        this.entityDataByTypeName.has(referencedTypeName)
       ) {
         continue;
       }
@@ -1176,7 +1442,7 @@ export class NormalizationFactory {
         this.errors.push(undefinedTypeError(referencedTypeName));
       }
     }
-    for (const [parentTypeName, fieldSetContainers] of this.fieldSetContainerByTypeName) {
+    for (const [parentTypeName, fieldSetData] of this.fieldSetDataByTypeName) {
       const parentData =
         this.parentDefinitionDataByTypeName.get(parentTypeName) ||
         this.parentExtensionDataByTypeName.get(parentTypeName);
@@ -1191,7 +1457,7 @@ export class NormalizationFactory {
         continue;
       }
       // this is where keys, provides, and requires are added to the ConfigurationData
-      validateAndAddDirectivesWithFieldSetToConfigurationData(this, parentData, fieldSetContainers);
+      validateAndAddDirectivesWithFieldSetToConfigurationData(this, parentData, fieldSetData);
     }
     const persistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
     for (const directiveDefinitionNode of this.directiveDefinitionByDirectiveName.values()) {
@@ -1213,6 +1479,9 @@ export class NormalizationFactory {
         this.subgraphName,
       );
     }
+    if (this.isEventDrivenSubgraph) {
+      this.validateEventDrivenSubgraph();
+    }
     if (this.errors.length > 0) {
       return { errors: this.errors };
     }
@@ -1227,7 +1496,7 @@ export class NormalizationFactory {
         // It is an Intermediate configuration object that will be converted to an engine configuration in the router
         concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
         configurationDataByParentTypeName: this.configurationDataByParentTypeName,
-        entityContainerByTypeName: this.entityContainerByTypeName,
+        entityContainerByTypeName: this.entityDataByTypeName,
         entityInterfaces: this.entityInterfaces,
         parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         parentExtensionDataByTypeName: validParentExtensionOrphansByTypeName,
@@ -1249,7 +1518,7 @@ export class NormalizationFactory {
 export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContainer {
   const authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
   const concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
-  const entityContainerByTypeName: EntityContainerByTypeName = new Map<string, EntityContainer>();
+  const entityDataByTypeName: EntityDataByTypeName = new Map<string, EntityData>();
   const internalSubgraphBySubgraphName = new Map<string, InternalSubgraph>();
   const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   const overrideSourceSubgraphNamesByFieldPath = new Map<string, string[]>();
@@ -1301,7 +1570,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       addIterableValuesToSet(incomingConcreteTypeNames, existingConcreteTypeNames);
     }
     for (const entityContainer of normalizationResult.entityContainerByTypeName.values()) {
-      upsertEntityContainer(entityContainerByTypeName, entityContainer);
+      upsertEntityData(entityDataByTypeName, entityContainer);
     }
     if (subgraph.name) {
       internalSubgraphBySubgraphName.set(subgraphName, {
@@ -1385,7 +1654,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     return {
       authorizationDataByParentTypeName,
       concreteTypeNamesByAbstractTypeName,
-      entityContainerByTypeName,
+      entityContainerByTypeName: entityDataByTypeName,
       errors: allErrors,
       graph,
       internalSubgraphBySubgraphName,
@@ -1413,7 +1682,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   return {
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
-    entityContainerByTypeName: entityContainerByTypeName,
+    entityContainerByTypeName: entityDataByTypeName,
     graph,
     internalSubgraphBySubgraphName: internalSubgraphBySubgraphName,
     ...(warnings.length > 0 ? { warnings } : {}),

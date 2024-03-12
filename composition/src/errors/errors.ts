@@ -21,6 +21,7 @@ import {
 import { RootTypeFieldData } from '../federation/utils';
 import { ARGUMENT, INPUT_FIELD, QUOTATION_JOIN, UNION } from '../utils/string-constants';
 import { ObjectDefinitionData } from '../schema-building/type-definition-data';
+import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -883,3 +884,135 @@ export function orScopesLimitError(maxOrScopes: number, hostPaths: string[]): Er
       `"\nIf you require more, please contact support.`,
   );
 }
+
+export function invalidEventDrivenGraphError(errorMessages: string[]): Error {
+  return new Error(
+    `An "Event Driven" graph—a subgraph that defines event driven directives ("@eventsPublish", "@eventsRequest", and` +
+      ` "@eventsPublish")—must not define any resolvers. Consequently, any "@key" definitions must also include the` +
+      ` "resolvable: false" argument. Moreover, only fields that compose part of an entity's (composite) key and are` +
+      ` declared "@external" are permitted.\n` +
+      errorMessages.join('\n'),
+  );
+}
+
+export function invalidRootTypeFieldEventsDirectivesErrorMessage(
+  invalidEventsDirectiveDataByRootFieldPath: Map<string, InvalidRootTypeFieldEventsDirectiveData>,
+): string {
+  let message =
+    ` Root type fields defined in an Event Driven graph must define a valid events` +
+    ` directive:\n  Mutation type fields must define either "@eventsPublish" or "@eventsRequest"\n` +
+    `  Query type fields must define "@eventsRequest"\n  Subscription type fields must define "@eventsSubscribe"\n` +
+    ` The following root field path` +
+    (invalidEventsDirectiveDataByRootFieldPath.size > 1 ? 's are' : ' is') +
+    `invalid:\n`;
+  for (const [fieldPath, data] of invalidEventsDirectiveDataByRootFieldPath) {
+    if (!data.definesDirectives) {
+      message += `  The root field path "${fieldPath}" does not define any events directives.\n`;
+    } else {
+      message +=
+        `  The root field path "${fieldPath}" defines the following invalid events directive` +
+        (data.invalidDirectiveNames.length > 1 ? `s` : ``) +
+        `: "@` +
+        data.invalidDirectiveNames.join(`", "@`) +
+        `"\n`;
+    }
+  }
+  return message;
+}
+
+export function invalidEventsDrivenMutationResponseTypeErrorMessage(
+  invalidResponseTypeStringByMutationPath: Map<string, string>,
+): string {
+  let message =
+    ` Mutation type fields defined in an Event Driven graph must return the non-nullable type` +
+    ` "PublishEventResult!", which has the following definition:\n  type PublishEventResult {\n` +
+    `   success: Boolean!\n  }\n However, the following mutation field path` +
+    (invalidResponseTypeStringByMutationPath.size > 1 ? `s are` : ` is`) +
+    ` invalid:\n`;
+  for (const [path, responseTypeString] of invalidResponseTypeStringByMutationPath) {
+    message += `  The mutation field path "${path}" returns "${responseTypeString}".\n`;
+  }
+  return message;
+}
+
+export function invalidRootTypeFieldResponseTypesEventDrivenErrorMessage(
+  invalidResponseTypeStringByRootFieldPath: Map<string, string>,
+): string {
+  let message =
+    ` The named response type of root type fields defined in an Event Driven graph must be a` +
+    ` non-nullable, non-list named type that is either an entity, an interface implemented by` +
+    ` an entity, or a union of which an entity is a member.\n Consequently, the following root field path` +
+    (invalidResponseTypeStringByRootFieldPath.size > 1 ? 's are' : ' is') +
+    ` invalid:\n`;
+  for (const [fieldPath, responseTypeString] of invalidResponseTypeStringByRootFieldPath) {
+    message += `  The root field path "${fieldPath}", which returns the invalid type "${responseTypeString}"\n`;
+  }
+  return message;
+}
+
+export function invalidKeyFieldSetsEventDrivenErrorMessage(
+  invalidKeyFieldSetsByEntityTypeName = new Map<string, string[]>(),
+): string {
+  let message = '';
+  for (const [typeName, keyFieldSets] of invalidKeyFieldSetsByEntityTypeName) {
+    message +=
+      ` The following "@key" FieldSet` +
+      (keyFieldSets.length > 1 ? 's are' : ' is') +
+      ` defined on the entity "${typeName}" without a "resolvable: false" argument:\n` +
+      `  "` +
+      keyFieldSets.join(QUOTATION_JOIN) +
+      `"\n`;
+  }
+  return message;
+}
+
+export function nonExternalKeyFieldNamesEventDrivenErrorMessage(
+  nonExternalKeyFieldNameByFieldPath: Map<string, string>,
+): string {
+  let message =
+    ` The following field` +
+    (nonExternalKeyFieldNameByFieldPath.size > 1 ? 's' : '') +
+    ` compose part of an entity's primary key but are not declared "@external":\n`;
+  for (const [fieldPath, fieldName] of nonExternalKeyFieldNameByFieldPath) {
+    message += `  field "${fieldName}" defined on path "${fieldPath}"\n`;
+  }
+  return message;
+}
+
+export function nonKeyFieldNamesEventDrivenErrorMessage(nonKeyFieldNameByFieldPath: Map<string, string>): string {
+  let message =
+    ` The following field` +
+    (nonKeyFieldNameByFieldPath.size > 1 ? 's are' : ' is') +
+    ` defined despite not composing part of a "@key" directive FieldSet:\n`;
+  for (const [fieldPath, fieldName] of nonKeyFieldNameByFieldPath) {
+    message += `  Field "${fieldName}" defined on path "${fieldPath}"\n`;
+  }
+  return message;
+}
+
+export function nonEntityObjectExtensionsEventDrivenErrorMessage(typeNames: string[]): string {
+  return (
+    ` Only root types and entities (objects that define one or more primary keys with the "@key" directive) may` +
+    ` be defined as object extensions in an Event Driven graph. Consequently, the following object extension` +
+    ` definition` +
+    (typeNames.length > 1 ? 's are' : ' is') +
+    ` invalid:\n  "` +
+    typeNames.join(QUOTATION_JOIN) +
+    `"\n`
+  );
+}
+
+export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames: string[]): string {
+  return (
+    ` Only object definitions whose fields compose part of a "@key" directive's FieldSet may be defined in an` +
+    ` Event Driven graph. Consequently, the following object type definition` +
+    (typeNames.length > 1 ? 's are' : ' is') +
+    ` invalid:\n  "` +
+    typeNames.join(QUOTATION_JOIN) +
+    `"\n`
+  );
+}
+
+export const invalidPublishEventResultObjectErrorMessage =
+  ` The object "PublishEventResult" that was defined in the Event Driven graph is invalid and must instead have` +
+  ` the following definition:\n  type PublishEventResult {\n   success: Boolean!\n  }`;

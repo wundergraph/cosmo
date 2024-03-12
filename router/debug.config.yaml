@@ -15,5 +15,6 @@ engine:
 
 events:
   sources:
-    - provider: NATS
+    default:
+      provider: NATS
       url: "nats://localhost:4222"

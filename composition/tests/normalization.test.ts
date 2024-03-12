@@ -1800,9 +1800,9 @@ describe('Normalization tests', () => {
       normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @composeDirective(name: String!) repeatable on SCHEMA
-      directive @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION
-      directive @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION
-      directive @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION
+      directive @eventsPublish(sourceName: String! = "default", topic: String!) on FIELD_DEFINITION
+      directive @eventsRequest(sourceName: String! = "default", topic: String!) on FIELD_DEFINITION
+      directive @eventsSubscribe(sourceName: String! = "default", topic: String!) on FIELD_DEFINITION
       directive @extends on INTERFACE | OBJECTdirective @external on FIELD_DEFINITION | OBJECT
       directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       directive @interfaceObject on OBJECT
