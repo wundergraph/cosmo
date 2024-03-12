@@ -214,9 +214,13 @@
   "DevelopmentMode": false,
   "Events": {
     "Sources": {
-      "my-nats": {
+      "default": {
         "Provider": "NATS",
         "URL": "nats://localhost:4222"
+      },
+      "another-nats": {
+        "Provider": "NATS",
+        "URL": "nats://localhost:4223"
       }
     }
   },
