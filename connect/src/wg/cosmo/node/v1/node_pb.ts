@@ -3,9 +3,16 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
+import type {
+  BinaryReadOptions,
+  FieldList,
+  JsonReadOptions,
+  JsonValue,
+  PartialMessage,
+  PlainMessage,
+} from '@bufbuild/protobuf';
+import { Message, proto3, protoInt64 } from '@bufbuild/protobuf';
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from '../../common/common_pb.js';
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -1394,9 +1401,9 @@ export class EventConfiguration extends Message<EventConfiguration> {
   topic = "";
 
   /**
-   * @generated from field: string source_id = 5;
+   * @generated from field: string source_name = 5;
    */
-  sourceId = "";
+  sourceName = "";
 
   constructor(data?: PartialMessage<EventConfiguration>) {
     super();
@@ -1410,7 +1417,7 @@ export class EventConfiguration extends Message<EventConfiguration> {
     { no: 2, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "source_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "source_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventConfiguration {
@@ -1752,7 +1759,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   url?: ConfigurationVariable;
 
   /**
-   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. 
+   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead.
    *
    * @generated from field: optional bool useSSE = 3;
    */

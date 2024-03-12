@@ -1,6 +1,6 @@
-directive @eventsRequest(topic: String!) on FIELD_DEFINITION
-directive @eventsPublish(topic: String!) on FIELD_DEFINITION
-directive @eventsSubscribe(topic: String!) on FIELD_DEFINITION
+directive @eventsRequest(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
+directive @eventsPublish(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
+directive @eventsSubscribe(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
 
 type PublishEventResult {
     success: Boolean!
@@ -23,6 +23,6 @@ type Subscription {
     employeeUpdated(employeeID: ID!): Employee! @eventsSubscribe(topic: "employeeUpdated.{{ args.employeeID }}")
 }
 
-type Employee @key(fields: "id") {
-  id: Int!
+type Employee @key(fields: "id", resolvable: false) {
+  id: Int! @external
 }

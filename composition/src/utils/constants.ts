@@ -1,10 +1,11 @@
-import { DirectiveDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql';
+import { DEFAULT_DEPRECATION_REASON, DirectiveDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
+  DEFAULT,
   DEPRECATED,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
@@ -37,7 +38,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SHAREABLE,
-  SOURCE_ID,
+  SOURCE_NAME,
   SPECIFIED_BY,
   STRING_SCALAR,
   TAG,
@@ -71,7 +72,7 @@ export const DEPRECATED_DEFINITION: MutableDirectiveDefinitionNode = {
       type: stringToNamedTypeNode(STRING_SCALAR),
       defaultValue: {
         kind: Kind.STRING,
-        value: 'No longer supported',
+        value: DEFAULT_DEPRECATION_REASON,
       },
     },
   ],
@@ -102,7 +103,7 @@ const EXTERNAL_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @eventsPublish(topic: String!, sourceID: String) on FIELD_DEFINITION
+// directive @eventsPublish(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
 const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -115,8 +116,15 @@ const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(SOURCE_ID),
-      type: stringToNamedTypeNode(STRING_SCALAR),
+      name: stringToNameNode(SOURCE_NAME),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT,
+      },
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -125,7 +133,7 @@ const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @eventsRequest(topic: String!, sourceID: String) on FIELD_DEFINITION
+// directive @eventsRequest(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
 const EVENTS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -138,8 +146,15 @@ const EVENTS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(SOURCE_ID),
-      type: stringToNamedTypeNode(STRING_SCALAR),
+      name: stringToNameNode(SOURCE_NAME),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT,
+      },
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -148,7 +163,7 @@ const EVENTS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @eventsSubscribe(topic: String!, sourceID: String) on FIELD_DEFINITION
+// directive @eventsSubscribe(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
 const EVENTS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -161,8 +176,15 @@ const EVENTS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(SOURCE_ID),
-      type: stringToNamedTypeNode(STRING_SCALAR),
+      name: stringToNameNode(SOURCE_NAME),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT,
+      },
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,

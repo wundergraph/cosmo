@@ -416,6 +416,52 @@ describe('@external directive tests', () => {
         ),
       );
     });
+
+    test('that @external does not contribute to shareability checks #3.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphD, subgraphE]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+      type Entity {
+        field: String!
+        id: ID!
+      }
+      
+      type Query {
+        anotherField: Entity!
+        field: Entity!
+      }
+      
+      scalar openfed__Scope
+    `,
+        ),
+      );
+    });
+
+    test('that @external does not contribute to shareability checks #3.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphD]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+            `
+      type Entity {
+        field: String!
+        id: ID!
+      }
+      
+      type Query {
+        anotherField: Entity!
+        field: Entity!
+      }
+      
+      scalar openfed__Scope
+    `,
+        ),
+      );
+    });
   });
 });
 
@@ -489,6 +535,36 @@ const subgraphC: Subgraph = {
       id: ID!
       name: String! @external
       isEntity: Boolean!
+    }
+  `),
+};
+
+const subgraphD: Subgraph = {
+  name: 'subgraph-d',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field: Entity!
+    }
+    
+    type Entity @extends @key(fields: "id") {
+      id: ID!
+      field: String! @external
+    }
+  `),
+};
+
+const subgraphE: Subgraph = {
+  name: 'subgraph-e',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      anotherField: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      field: String!
     }
   `),
 };

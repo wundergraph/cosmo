@@ -1,5 +1,6 @@
 export * from './ast/utils';
 export * from './errors/errors';
+export * from './errors/utils';
 export * from './federation/federation-factory';
 export * from './federation/utils';
 export * from './federation/walkers';

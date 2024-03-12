@@ -839,15 +839,18 @@
       "additionalProperties": false,
       "properties": {
         "sources": {
-          "type": "array",
-          "items": {
+          "type": "object",
+          "description": "The provider configuration by source name",
+          "additionalProperties": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
               "provider": {
                 "type": "string",
                 "description": "The provider of the events. The supported providers are 'NATS'.",
-                "enum": ["NATS"]
+                "enum": [
+                  "NATS"
+                ]
               },
               "url": {
                 "type": "string",
@@ -855,7 +858,10 @@
                 "format": "url"
               }
             },
-            "required": ["provider", "url"]
+            "required": [
+              "provider",
+              "url"
+            ]
           }
         }
       }
