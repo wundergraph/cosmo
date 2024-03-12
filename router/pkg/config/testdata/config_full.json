@@ -213,12 +213,12 @@
   },
   "DevelopmentMode": false,
   "Events": {
-    "Sources": [
-      {
+    "Sources": {
+      "default": {
         "Provider": "NATS",
         "URL": "nats://localhost:4222"
       }
-    ]
+    }
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
