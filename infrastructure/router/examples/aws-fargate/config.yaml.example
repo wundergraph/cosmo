@@ -4,6 +4,8 @@
 # Cosmo Router Configuration
 #
 
+# Documentation: https://cosmo-docs.wundergraph.com/router/configuration
+
 version: "1"
 
 log_level: "info"
@@ -14,7 +16,3 @@ introspection_enabled: true
 
 graph:
   token: ${GRAPH_API_TOKEN}
-
-compliance:
-  anonymize_ip:
-    method: redact
