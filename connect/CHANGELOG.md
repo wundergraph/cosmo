@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.59.1...@wundergraph/cosmo-connect@0.60.0) (2024-03-11)
+
+### Features
+
+* add configurable schema linting ([#596](https://github.com/wundergraph/cosmo/issues/596)) ([c662485](https://github.com/wundergraph/cosmo/commit/c66248529c5bc13e795725c82ba50dbad79451ae)) (@JivusAyrus)
+
+## [0.59.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.59.0...@wundergraph/cosmo-connect@0.59.1) (2024-03-08)
+
+### Bug Fixes
+
+* handle empty files in the cli itself ([#593](https://github.com/wundergraph/cosmo/issues/593)) ([de08e24](https://github.com/wundergraph/cosmo/commit/de08e24e63bc0083d3b86c417cb1bd282891c60b)) (@JivusAyrus)
+
 # [0.59.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.58.0...@wundergraph/cosmo-connect@0.59.0) (2024-02-27)
 
 ### Features

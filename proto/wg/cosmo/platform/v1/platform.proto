@@ -27,8 +27,8 @@ message ResponseStatus {
 message PublishFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
-  // The binary representation of the schema, the content of the file
-  bytes schema = 2;
+  // The string representation of the schema, the content of the file
+  string schema = 2;
   // routing_url is the URL of the service which will be used to route the requests to the subgraph.
   optional string routing_url = 3;
   // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
@@ -69,8 +69,8 @@ message CheckSubgraphSchemaRequest {
 message FixSubgraphSchemaRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
-  // The binary representation of the schema, the content of the file
-  bytes schema = 2;
+  // The string representation of the schema, the content of the file
+  string schema = 2;
   string namespace = 3;
 }
 
@@ -143,6 +143,25 @@ message CheckedFederatedGraphs {
   string organization_slug = 4;
 }
 
+enum LintSeverity {
+  warn = 0;
+  error = 1;
+}
+
+message LintLocation{
+  uint32 line = 1;
+  uint32 column = 2;
+  optional uint32 endLine = 3;
+  optional uint32 endColumn = 4;
+}
+
+message LintIssue{
+  optional string lintRuleType = 1;
+  LintSeverity severity = 2;
+  string message = 3;
+  LintLocation issueLocation = 4;
+}
+
 message CheckSubgraphSchemaResponse {
   Response response = 1;
   repeated SchemaChange breakingChanges = 2;
@@ -153,6 +172,8 @@ message CheckSubgraphSchemaResponse {
   CheckOperationUsageStats operationUsageStats = 5;
   string check_id = 6;
   repeated CheckedFederatedGraphs checked_federated_graphs = 7;
+  repeated LintIssue lintWarnings = 8;
+  repeated LintIssue lintErrors = 9;
 }
 
 message FixSubgraphSchemaResponse {
@@ -318,6 +339,7 @@ message SchemaCheck {
   bool isForcedSuccess = 8;
   bool isDeleted = 9;
   optional SchemaCheckGhDetails ghDetails = 10;
+  bool hasLintErrors = 11;
 }
 
 message SchemaCheckGhDetails {
@@ -358,6 +380,7 @@ message GetCheckSummaryResponse {
   repeated SchemaChange changes = 6;
   repeated string compositionErrors = 7;
   int32 traffic_check_days = 8;
+  repeated LintIssue lintIssues = 9;
 }
 
 message GetCheckOperationsRequest {
@@ -1768,6 +1791,39 @@ message MoveGraphResponse {
   repeated CompositionError compositionErrors = 2;
 }
 
+message GetNamespaceLintConfigRequest {
+  string namespace = 1;
+}
+
+message GetNamespaceLintConfigResponse {
+  Response response = 1;
+  bool linterEnabled = 2;
+  repeated LintConfig configs = 3;
+}
+
+message EnableLintingForTheNamespaceRequest {
+  string namespace = 1;
+  bool enableLinting = 2;
+}
+
+message EnableLintingForTheNamespaceResponse {
+  Response response = 1;
+}
+
+message LintConfig {
+  string ruleName = 1;
+  LintSeverity severityLevel = 2;
+}
+
+message ConfigureNamespaceLintConfigRequest {
+  string namespace = 1;
+  repeated LintConfig configs = 2;
+}
+
+message ConfigureNamespaceLintConfigResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -1997,6 +2053,13 @@ service PlatformService {
   rpc GetOrganizationRequestsCount(GetOrganizationRequestsCountRequest) returns (GetOrganizationRequestsCountResponse) {}
 
   rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
+
+  // EnableLintingForTheNamespace enables the lint check for the namespace passed.
+  rpc EnableLintingForTheNamespace(EnableLintingForTheNamespaceRequest) returns (EnableLintingForTheNamespaceResponse) {}
+  // ConfigureNamespaceLintConfig configures the lint config of the organization.
+  rpc ConfigureNamespaceLintConfig(ConfigureNamespaceLintConfigRequest) returns (ConfigureNamespaceLintConfigResponse) {}
+  // GetNamespaceLintConfig returns the lint config of the organization.
+  rpc GetNamespaceLintConfig(GetNamespaceLintConfigRequest) returns (GetNamespaceLintConfigResponse) {}
 
   //
   // Billing

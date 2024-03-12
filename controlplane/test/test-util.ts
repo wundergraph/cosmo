@@ -120,7 +120,7 @@ export const createSubgraph = async (
   const publishResp = await client.publishFederatedSubgraph({
     name,
     namespace,
-    schema: Uint8Array.from(Buffer.from(schemaSDL)),
+    schema: schemaSDL,
   });
   expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 

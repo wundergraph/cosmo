@@ -41,6 +41,7 @@ export class SchemaCheckRepository {
     isComposable?: boolean;
     hasClientTraffic?: boolean;
     hasBreakingChanges?: boolean;
+    hasLintErrors?: boolean;
   }): Promise<string | undefined> {
     const updatedSchemaCheck = await this.db
       .update(schemaChecks)
@@ -48,6 +49,7 @@ export class SchemaCheckRepository {
         isComposable: data.isComposable,
         hasBreakingChanges: data.hasBreakingChanges,
         hasClientTraffic: data.hasClientTraffic,
+        hasLintErrors: data.hasLintErrors,
       })
       .where(eq(schemaChecks.id, data.schemaCheckID))
       .returning()

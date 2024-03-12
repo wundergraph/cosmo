@@ -95,6 +95,10 @@ export default function Document() {
           content="/favicon/ms-icon-144x144.png"
         />
         <meta name="theme-color" content="#ffffff" />
+      </Head>
+      <body>
+        <Main />
+        <NextScript />
 
         {scripts?.map((script, i) =>
           script.inline ? (
@@ -110,10 +114,6 @@ export default function Document() {
             />
           ),
         )}
-      </Head>
-      <body>
-        <Main />
-        <NextScript />
       </body>
     </Html>
   );
