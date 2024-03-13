@@ -1117,6 +1117,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 	}
 
+	operationBlocker := NewOperationBlocker(&OperationBlockerOptions{
+		BlockMutations:     r.engineExecutionConfiguration.BlockMutations,
+		BlockSubscriptions: r.engineExecutionConfiguration.BlockSubscriptions,
+	})
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                      r.logger,
 		Executor:                    executor,
@@ -1124,6 +1129,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		OperationProcessor:          operationParser,
 		Planner:                     operationPlanner,
 		AccessController:            r.accessController,
+		OperationBlocker:            operationBlocker,
 		RouterPublicKey:             publicKey,
 		EnableRequestTracing:        r.engineExecutionConfiguration.EnableRequestTracing,
 		DevelopmentMode:             r.developmentMode,
@@ -1137,6 +1143,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			OperationProcessor:         operationParser,
+			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
 			GraphQLHandler:             graphqlHandler,
 			Metrics:                    routerMetrics,

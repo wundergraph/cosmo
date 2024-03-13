@@ -37,6 +37,7 @@ var (
 
 type WebsocketMiddlewareOptions struct {
 	OperationProcessor *OperationProcessor
+	OperationBlocker   *OperationBlocker
 	Planner            *OperationPlanner
 	GraphQLHandler     *GraphQLHandler
 	Metrics            RouterMetrics
@@ -58,6 +59,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			ctx:                ctx,
 			next:               next,
 			operationProcessor: opts.OperationProcessor,
+			operationBlocker:   opts.OperationBlocker,
 			planner:            opts.Planner,
 			graphqlHandler:     opts.GraphQLHandler,
 			metrics:            opts.Metrics,
@@ -150,6 +152,7 @@ type WebsocketHandler struct {
 	config             *config.WebSocketConfiguration
 	next               http.Handler
 	operationProcessor *OperationProcessor
+	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
 	graphqlHandler     *GraphQLHandler
 	metrics            RouterMetrics
@@ -236,6 +239,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	handler := NewWebsocketConnectionHandler(h.ctx, WebSocketConnectionHandlerOptions{
 		OperationProcessor: h.operationProcessor,
+		OperationBlocker:   h.operationBlocker,
 		Planner:            h.planner,
 		GraphQLHandler:     h.graphqlHandler,
 		Metrics:            h.metrics,
@@ -501,6 +505,7 @@ type graphqlError struct {
 type WebSocketConnectionHandlerOptions struct {
 	Config             *config.WebSocketConfiguration
 	OperationProcessor *OperationProcessor
+	OperationBlocker   *OperationBlocker
 	Planner            *OperationPlanner
 	GraphQLHandler     *GraphQLHandler
 	Metrics            RouterMetrics
@@ -519,6 +524,7 @@ type WebSocketConnectionHandlerOptions struct {
 type WebSocketConnectionHandler struct {
 	ctx                context.Context
 	operationProcessor *OperationProcessor
+	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
 	graphqlHandler     *GraphQLHandler
 	metrics            RouterMetrics
@@ -548,6 +554,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 	return &WebSocketConnectionHandler{
 		ctx:                              ctx,
 		operationProcessor:               opts.OperationProcessor,
+		operationBlocker:                 opts.OperationBlocker,
 		planner:                          opts.Planner,
 		graphqlHandler:                   opts.GraphQLHandler,
 		metrics:                          opts.Metrics,
@@ -595,6 +602,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 	if err := operationKit.Parse(h.ctx, h.clientInfo, h.logger); err != nil {
 		return nil, nil, err
+	}
+
+	if h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation.Type) {
+		return nil, nil, fmt.Errorf("operation type '%s' is blocked", operationKit.parsedOperation.Type)
 	}
 
 	if err := operationKit.Normalize(); err != nil {

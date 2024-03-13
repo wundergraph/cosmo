@@ -704,6 +704,34 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 	})
 }
 
+func TestBlockMutations(t *testing.T) {
+	t.Parallel()
+	t.Run("allow", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
+			})
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, res.Body)
+		})
+	})
+	t.Run("block", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.BlockMutations = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
+			})
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"operation type 'mutation' is blocked"}],"data":null}`, res.Body)
+		})
+	})
+}
+
 func TestPartialOriginErrors(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{

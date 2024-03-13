@@ -994,6 +994,15 @@
           "type": "integer",
           "default": 10000,
           "description": "The size of the execution plan cache."
+        },
+        "block_mutations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Block mutation Operations. If the value is true, the mutations are blocked."
+        },
+        "block_subscriptions": {
+          "type": "boolean",
+          "description": "Block subscription Operations. If the value is true, the subscriptions are blocked."
         }
       }
     }

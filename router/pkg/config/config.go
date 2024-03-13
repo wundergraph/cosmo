@@ -185,6 +185,8 @@ type EngineExecutionConfiguration struct {
 	EpollKqueueConnBufferSize              int                      `default:"128" envconfig:"ENGINE_EPOLL_KQUEUE_CONN_BUFFER_SIZE" yaml:"epoll_kqueue_conn_buffer_size,omitempty"`
 	WebSocketReadTimeout                   time.Duration            `default:"5s" envconfig:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout,omitempty"`
 	ExecutionPlanCacheSize                 int64                    `default:"10000" envconfig:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
+	BlockMutations                         bool                     `default:"false" envconfig:"ENGINE_BLOCK_MUTATIONS" yaml:"block_mutations"`
+	BlockSubscriptions                     bool                     `default:"false" envconfig:"ENGINE_BLOCK_SUBSCRIPTIONS" yaml:"block_subscriptions"`
 }
 
 type OverrideRoutingURLConfiguration struct {
