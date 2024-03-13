@@ -35,4 +35,4 @@ graph:
   sign_key: 'sign_key'
 ```
 
-4. Wait for the log line that says "Config signature is valid"
+4. Wait for the log line that says "Config signature validation successful"

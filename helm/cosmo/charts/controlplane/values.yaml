@@ -180,7 +180,7 @@ configuration:
   githubAppWebhookSecret: ''
   slackAppClientId: ''
   slackAppClientSecret: ''
-  s3StorageUrl: 'http://minio:changeme@minio.wundergraph.local:9000/cosmo'
+  s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
   smtpUsername: ''
   smtpPassword: ''
   stripeSecretKey: ''
@@ -189,7 +189,7 @@ configuration:
   defaultBillingPlan: ''
   openAiApiKey: ''
   # -- URL of the CDN to use for serving router configs and persistent operations
-  cdnBaseUrl: 'http://cdn.wundergraph.local:10000'
+  cdnBaseUrl: 'http://cosmo-cdn:8787'
 
 # -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
 existingSecret: ""

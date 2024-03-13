@@ -110,6 +110,7 @@ controlplane:
     redisHost: 'cosmo-redis-master'
     redisPort: 6379
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+    cdnBaseUrl: 'http://cosmo-cdn:8787'
 
 # Cosmo Router. For more options, please refer to the CHART.md
 router:
