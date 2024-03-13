@@ -42,7 +42,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { PiGitBranch } from "react-icons/pi";
-import { MdVerifiedUser } from "react-icons/md";
+import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
 
 const CompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -261,7 +261,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                     {admissionError ? (
                       <>
                         <div>
-                          <MdVerifiedUser className="h-4 w-4 text-red-500" />
+                          <MdNearbyError className="h-4 w-4 text-red-500" />
                         </div>
                         <span className="text-sm">Failed</span>
                       </>

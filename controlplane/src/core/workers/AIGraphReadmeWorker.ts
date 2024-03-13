@@ -5,7 +5,6 @@ import * as schema from '../../db/schema.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
-import { FastifyBaseLogger } from 'fastify';
 
 const QueueName = 'ai.graph-readme-generator';
 const WorkerName = 'AIGraphReadmeWorker';

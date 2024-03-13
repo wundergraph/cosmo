@@ -22,6 +22,7 @@ import {
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SignJWT, generateKeyPair, importPKCS8 } from 'jose';
 import { FastifyBaseLogger } from 'fastify';
+import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -52,7 +53,6 @@ import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 import { UserRepository } from './UserRepository.js';
-import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -281,7 +281,7 @@ export class FederatedGraphRepository {
 
         return {
           compositionErrors: composedGraph.errors,
-          deploymentErrors: deploymentErrors,
+          deploymentErrors,
         };
       }
     });

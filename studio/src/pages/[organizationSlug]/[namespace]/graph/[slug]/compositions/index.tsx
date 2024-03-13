@@ -42,7 +42,7 @@ import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useContext } from "react";
-import { MdVerifiedUser } from "react-icons/md";
+import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
 import { InfoTooltip } from "@/components/info-tooltip";
 
 const CompositionsPage: NextPageWithLayout = () => {
@@ -166,7 +166,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                                   variant="outline"
                                   className="gap-2 py-1.5"
                                 >
-                                  <MdVerifiedUser className="h-4 w-4 text-red-500" />
+                                  <MdNearbyError className="h-4 w-4 text-red-500" />
                                   <span>Error</span>
                                 </Badge>
                               ) : routerConfigSignature ? (
