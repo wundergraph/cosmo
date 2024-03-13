@@ -203,7 +203,7 @@ export class OrganizationWebhookService {
         const fedRepo = new FederatedGraphRepository(this.db, eventData.payload.organization.id);
         const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(graph.id);
 
-        let linkToChangelog = `https://cosmo.wundergraph.com/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name}`;
+        let linkToChangelog = `${process.env.WEB_BASE_URL}/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name}`;
         if (latestChangelogs) {
           linkToChangelog += `/changelog/${latestChangelogs?.schemaVersionId}`;
         }
@@ -214,7 +214,7 @@ export class OrganizationWebhookService {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name} | ${graph.name}>* has been updated 🎉`,
+                text: `🚀 Schema of the federated graph *<${process.env.WEB_BASE_URL}/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name} | ${graph.name}>* has been updated 🎉`,
               },
             },
           ],

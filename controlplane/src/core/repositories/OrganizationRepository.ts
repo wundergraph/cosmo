@@ -5,7 +5,7 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -25,6 +25,7 @@ import {
 } from '../../db/schema.js';
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 import { BillingRepository } from './BillingRepository.js';
+import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -552,7 +553,8 @@ export class OrganizationRepository {
 
       for (const eventMeta of input.eventsMeta) {
         switch (eventMeta.meta.case) {
-          case 'federatedGraphSchemaUpdated': {
+          case 'federatedGraphSchemaUpdated':
+          case 'monographSchemaUpdated': {
             const ids = eventMeta.meta.value.graphIds;
             if (ids.length === 0) {
               break;
@@ -589,12 +591,40 @@ export class OrganizationRepository {
 
     const meta: PartialMessage<EventMeta>[] = [];
 
+    const fedGraphRepo = new FederatedGraphRepository(this.db, organizationId);
+    const federatedGraphIds = [];
+    const monographIds = [];
+
+    for (const graphId of results.map((r) => r.graphId)) {
+      const graph = await fedGraphRepo.byId(graphId);
+
+      if (!graph) {
+        continue;
+      }
+
+      if (graph.type === 'federated') {
+        federatedGraphIds.push(graph.id);
+      } else {
+        monographIds.push(graph.id);
+      }
+    }
+
     meta.push({
       eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
       meta: {
         case: 'federatedGraphSchemaUpdated',
         value: {
-          graphIds: results.map((r) => r.graphId),
+          graphIds: federatedGraphIds,
+        },
+      },
+    });
+
+    meta.push({
+      eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+      meta: {
+        case: 'monographSchemaUpdated',
+        value: {
+          graphIds: monographIds,
         },
       },
     });
@@ -635,24 +665,38 @@ export class OrganizationRepository {
 
       await tx.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
 
-      if (!input.eventsMeta) {
-        return;
+      const graphIds: string[] = [];
+      for (const eventMeta of input.eventsMeta) {
+        switch (eventMeta.meta.case) {
+          case 'federatedGraphSchemaUpdated':
+          case 'monographSchemaUpdated': {
+            graphIds.push(...eventMeta.meta.value.graphIds);
+          }
+        }
       }
+
+      await tx
+        .delete(schema.webhookGraphSchemaUpdate)
+        .where(
+          and(
+            eq(schema.webhookGraphSchemaUpdate.webhookId, input.id),
+            graphIds.length > 0 ? not(inArray(schema.webhookGraphSchemaUpdate.federatedGraphId, graphIds)) : undefined,
+          ),
+        );
 
       for (const eventMeta of input.eventsMeta) {
         switch (eventMeta.meta.case) {
-          case 'federatedGraphSchemaUpdated': {
-            const graphIds = eventMeta.meta.value.graphIds;
-            await tx
-              .delete(schema.webhookGraphSchemaUpdate)
-              .where(and(eq(schema.webhookGraphSchemaUpdate.webhookId, input.id)));
-            if (graphIds.length === 0) {
-              break;
+          case 'federatedGraphSchemaUpdated':
+          case 'monographSchemaUpdated': {
+            const ids = eventMeta.meta.value.graphIds;
+            if (ids.length === 0) {
+              continue;
             }
+
             await tx
               .insert(schema.webhookGraphSchemaUpdate)
               .values(
-                graphIds.map((id) => ({
+                ids.map((id) => ({
                   webhookId: input.id,
                   federatedGraphId: id,
                 })),
@@ -747,8 +791,14 @@ export class OrganizationRepository {
 
           for (const eventMeta of input.eventsMeta) {
             switch (eventMeta.meta.case) {
-              case 'federatedGraphSchemaUpdated': {
+              case 'federatedGraphSchemaUpdated':
+              case 'monographSchemaUpdated': {
                 const ids = eventMeta.meta.value.graphIds;
+
+                if (ids.length === 0) {
+                  continue;
+                }
+
                 await tx.insert(slackSchemaUpdateEventConfigs).values(
                   ids.map((id) => ({
                     slackIntegrationConfigId: slackIntegrationConfig[0].id,
@@ -758,7 +808,7 @@ export class OrganizationRepository {
                 break;
               }
               default: {
-                throw new Error(`This event ${eventMeta.meta.case} doesnt exist`);
+                throw new Error(`This event ${eventMeta.meta.case} does not exist`);
               }
             }
           }
@@ -858,6 +908,24 @@ export class OrganizationRepository {
             },
           };
 
+          const fedGraphRepo = new FederatedGraphRepository(this.db, organizationId);
+          const federatedGraphIds = [];
+          const monographIds = [];
+
+          for (const graphId of slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId)) {
+            const graph = await fedGraphRepo.byId(graphId);
+
+            if (!graph) {
+              continue;
+            }
+
+            if (graph.type === 'federated') {
+              federatedGraphIds.push(graph.id);
+            } else {
+              monographIds.push(graph.id);
+            }
+          }
+
           orgIntegrations.push({
             id: r.id,
             name: r.name,
@@ -870,7 +938,16 @@ export class OrganizationRepository {
                 meta: {
                   case: 'federatedGraphSchemaUpdated',
                   value: {
-                    graphIds: slackIntegrationConfig.slackSchemaUpdateEventConfigs.map((i) => i.federatedGraphId),
+                    graphIds: federatedGraphIds,
+                  },
+                },
+              },
+              {
+                eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+                meta: {
+                  case: 'monographSchemaUpdated',
+                  value: {
+                    graphIds: monographIds,
                   },
                 },
               },
@@ -925,31 +1002,46 @@ export class OrganizationRepository {
             .returning()
             .execute();
 
-          // if the meta is not sent, we delete all the existing event configs
-          if (input.eventsMeta.length === 0) {
-            await tx
-              .delete(slackSchemaUpdateEventConfigs)
-              .where(and(eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id)));
+          const graphIds: string[] = [];
+          for (const eventMeta of input.eventsMeta) {
+            switch (eventMeta.meta.case) {
+              case 'federatedGraphSchemaUpdated':
+              case 'monographSchemaUpdated': {
+                graphIds.push(...eventMeta.meta.value.graphIds);
+              }
+            }
           }
+
+          await tx
+            .delete(slackSchemaUpdateEventConfigs)
+            .where(
+              and(
+                eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id),
+                graphIds.length > 0
+                  ? not(inArray(schema.slackSchemaUpdateEventConfigs.federatedGraphId, graphIds))
+                  : undefined,
+              ),
+            );
 
           for (const eventMeta of input.eventsMeta) {
             switch (eventMeta.meta.case) {
-              case 'federatedGraphSchemaUpdated': {
-                await tx
-                  .delete(slackSchemaUpdateEventConfigs)
-                  .where(and(eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id)));
-
+              case 'federatedGraphSchemaUpdated':
+              case 'monographSchemaUpdated': {
                 const ids = eventMeta.meta.value.graphIds;
                 if (ids.length === 0) {
                   break;
                 }
 
-                await tx.insert(slackSchemaUpdateEventConfigs).values(
-                  ids.map((id) => ({
-                    slackIntegrationConfigId: slackIntegrationConfig[0].id,
-                    federatedGraphId: id,
-                  })),
-                );
+                await tx
+                  .insert(slackSchemaUpdateEventConfigs)
+                  .values(
+                    ids.map((id) => ({
+                      slackIntegrationConfigId: slackIntegrationConfig[0].id,
+                      federatedGraphId: id,
+                    })),
+                  )
+                  .onConflictDoNothing()
+                  .execute();
 
                 break;
               }

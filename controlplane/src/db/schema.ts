@@ -973,18 +973,26 @@ export const slackIntegrationConfigs = pgTable('slack_integration_configs', {
   endpoint: text('endpoint').notNull(),
 });
 
-export const slackSchemaUpdateEventConfigs = pgTable('slack_schema_update_event_configs', {
-  slackIntegrationConfigId: uuid('slack_integration_config_id')
-    .notNull()
-    .references(() => slackIntegrationConfigs.id, {
-      onDelete: 'cascade',
-    }),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, {
-      onDelete: 'cascade',
-    }),
-});
+export const slackSchemaUpdateEventConfigs = pgTable(
+  'slack_schema_update_event_configs',
+  {
+    slackIntegrationConfigId: uuid('slack_integration_config_id')
+      .notNull()
+      .references(() => slackIntegrationConfigs.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.slackIntegrationConfigId, t.federatedGraphId] }),
+    };
+  },
+);
 
 export const organizationIntegrationRelations = relations(organizationIntegrations, ({ one }) => ({
   organization: one(organizations),

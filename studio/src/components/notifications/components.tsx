@@ -35,25 +35,39 @@ export const notificationEvents = [
     label: "Federated Graph Schema Update",
     description: "An update to the schema of any federated graph",
   },
+  {
+    id: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+    name: OrganizationEventName[OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED],
+    label: "Monograph Schema Update",
+    description: "An update to the schema of any monograph",
+  },
 ] as const;
 
-export const SelectFederatedGraphs = ({
+export const SelectGraphs = ({
   meta,
   setMeta,
+  type = "federated",
+  eventName,
 }: {
   meta: EventsMeta;
   setMeta: (meta: EventsMeta) => void;
+  type: "federated" | "graph";
+  eventName: OrganizationEventName;
 }) => {
   const { data } = useQuery(getFederatedGraphs.useQuery());
 
   const graphIds = useMemo(() => {
-    const entry = meta.find(
-      (m) =>
-        m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-    );
-    if (entry?.meta?.case !== "federatedGraphSchemaUpdated") return [];
+    const entry = meta.find((m) => m.eventName === eventName);
+    if (
+      entry?.meta?.case !==
+      (eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
+        ? "federatedGraphSchemaUpdated"
+        : "monographSchemaUpdated")
+    ) {
+      return [];
+    }
     return entry.meta.value.graphIds ?? [];
-  }, [meta]);
+  }, [eventName, meta]);
 
   const onCheckedChange = (val: boolean, graphId: string) => {
     const tempMeta: EventsMeta = [...meta];
@@ -66,19 +80,19 @@ export const SelectFederatedGraphs = ({
     }
 
     const entry: EventsMeta[number] = {
-      eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+      eventName,
       meta: {
-        case: "federatedGraphSchemaUpdated",
+        case:
+          eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
+            ? "federatedGraphSchemaUpdated"
+            : "monographSchemaUpdated",
         value: {
           graphIds: newGraphIds,
         },
       },
     };
 
-    const idx = tempMeta.findIndex(
-      (v) =>
-        v.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-    );
+    const idx = tempMeta.findIndex((v) => v.eventName === eventName);
 
     if (idx === -1) {
       tempMeta.push(entry);
@@ -89,8 +103,11 @@ export const SelectFederatedGraphs = ({
     setMeta(tempMeta);
   };
 
-  const groupedGraphs = data?.graphs.reduce<Record<string, FederatedGraph[]>>(
-    (result, graph) => {
+  const graphs = data?.graphs.filter((g) => g.type === type) || [];
+
+  const groupedGraphs = graphs
+    .filter((g) => g.type === type)
+    .reduce<Record<string, FederatedGraph[]>>((result, graph) => {
       const { namespace, name } = graph;
 
       if (!result[namespace]) {
@@ -100,9 +117,11 @@ export const SelectFederatedGraphs = ({
       result[namespace].push(graph);
 
       return result;
-    },
-    {},
-  );
+    }, {});
+
+  if (graphs.length === 0) {
+    return null;
+  }
 
   return (
     <DropdownMenu>
@@ -147,8 +166,21 @@ export const Meta = ({
   meta: EventsMeta;
   setMeta: (meta: EventsMeta) => void;
 }) => {
-  if (id == OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED) {
-    return <SelectFederatedGraphs meta={meta} setMeta={setMeta} />;
+  if (id === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED) {
+    return (
+      <SelectGraphs
+        meta={meta}
+        setMeta={setMeta}
+        type="federated"
+        eventName={id}
+      />
+    );
+  }
+
+  if (id === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED) {
+    return (
+      <SelectGraphs meta={meta} setMeta={setMeta} type="graph" eventName={id} />
+    );
   }
 
   return null;

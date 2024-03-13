@@ -258,23 +258,13 @@ const Integration = ({
   };
 
   const onSubmitOfUpdate: SubmitHandler<UpdateIntegrationInput> = (data) => {
-    const compiledMeta: EventsMeta = [];
-
-    if (data?.events && data.events.length !== 0) {
-      for (const m of meta) {
-        if (data.events.includes(OrganizationEventName[m.eventName!] || "")) {
-          compiledMeta.push(m);
-        }
-      }
-    }
-
     if (mode === "update" && existing?.id) {
       update(
         {
           id: existing.id,
           endpoint: data.endpoint,
           events: data.events ?? [],
-          eventsMeta: compiledMeta,
+          eventsMeta: meta,
         },
         {
           onSuccess: (d) => {
