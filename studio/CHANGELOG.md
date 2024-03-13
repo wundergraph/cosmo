@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.71.1](https://github.com/wundergraph/cosmo/compare/studio@0.71.0...studio@0.71.1) (2024-03-13)
+
+**Note:** Version bump only for package studio
+
+# [0.71.0](https://github.com/wundergraph/cosmo/compare/studio@0.70.4...studio@0.71.0) (2024-03-11)
+
+### Features
+
+* add configurable schema linting ([#596](https://github.com/wundergraph/cosmo/issues/596)) ([c662485](https://github.com/wundergraph/cosmo/commit/c66248529c5bc13e795725c82ba50dbad79451ae)) (@JivusAyrus)
+
 ## [0.70.4](https://github.com/wundergraph/cosmo/compare/studio@0.70.3...studio@0.70.4) (2024-03-08)
 
 **Note:** Version bump only for package studio

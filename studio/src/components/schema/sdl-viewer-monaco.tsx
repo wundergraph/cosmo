@@ -8,14 +8,35 @@ import estreePlugin from "prettier/plugins/estree";
 import graphQLPlugin from "prettier/plugins/graphql";
 import * as prettier from "prettier/standalone";
 
+export interface DecorationCollection {
+  range: {
+    startLineNumber: number;
+    endLineNumber: number;
+    startColumn: number;
+    endColumn: number;
+  };
+  options: {
+    hoverMessage?: {
+      value: string;
+    };
+    className?: string;
+    inlineClassName?: string;
+    isWholeLine: boolean;
+  };
+}
+
 export const SDLViewerMonaco = ({
   schema,
   newSchema,
   line,
+  decorationCollections,
+  disablePrettier,
 }: {
   schema: string;
   newSchema?: string;
   line?: number;
+  decorationCollections?: DecorationCollection[];
+  disablePrettier?: boolean;
 }) => {
   const selectedTheme = useResolvedTheme();
 
@@ -23,6 +44,11 @@ export const SDLViewerMonaco = ({
   const [newContent, setNewContent] = useState("");
 
   useEffect(() => {
+    if (!schema) return;
+    if (disablePrettier) {
+      setContent(schema);
+      return;
+    }
     const set = async (source: string, setter: (val: string) => void) => {
       try {
         const res = await prettier.format(source, {
@@ -35,14 +61,12 @@ export const SDLViewerMonaco = ({
       }
     };
 
-    if (schema) {
-      set(schema, setContent);
-    }
+    set(schema, setContent);
 
     if (newSchema) {
       set(newSchema, setNewContent);
     }
-  }, [schema, newSchema]);
+  }, [schema, newSchema, disablePrettier]);
 
   const monaco = useMonaco();
 
@@ -119,26 +143,26 @@ export const SDLViewerMonaco = ({
         if (selectedTheme === "dark") {
           monaco.editor.setTheme("wg-dark");
         }
+        const decorations: DecorationCollection[] = decorationCollections || [];
 
         if (line) {
-          editor.createDecorationsCollection([
-            {
-              range: {
-                startLineNumber: line,
-                endLineNumber: line,
-                startColumn: 1,
-                endColumn: 1,
-              },
-              options: {
-                isWholeLine: true,
-                className: "bg-green-500 bg-opacity-40 w-full h-32 z-50",
-              },
+          decorations.push({
+            range: {
+              startLineNumber: line,
+              endLineNumber: line,
+              startColumn: 1,
+              endColumn: 1,
             },
-          ]);
+            options: {
+              isWholeLine: true,
+              className: "bg-green-500 bg-opacity-40 w-full h-32 z-25",
+            },
+          });
 
-          const y = editor.getTopForLineNumber(line);
+          const y = editor.getTopForLineNumber(line-5);
           editor.setScrollPosition({ scrollTop: y - 10 });
         }
+        editor.createDecorationsCollection(decorations);
       }}
     />
   );

@@ -3,10 +3,10 @@ import { useFeature } from "@/hooks/use-feature";
 import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import {
   ChartBarIcon,
-  CommandLineIcon,
-  EyeIcon,
+  CommandLineIcon
 } from "@heroicons/react/24/outline";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -56,12 +56,9 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  TooltipTrigger
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
-import { cn } from "@/lib/utils";
-import { PiAsterisk } from "react-icons/pi";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const router = useRouter();

@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-connect",
-  "version": "0.59.1",
+  "version": "0.61.0",
   "description": "TypeScript Connect client for WunderGraph Cosmo",
   "scripts": {
     "build": "del dist && tsc"

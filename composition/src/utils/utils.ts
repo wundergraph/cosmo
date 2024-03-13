@@ -317,23 +317,23 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
   return value;
 }
 
-export type EntityContainer = {
+export type EntityData = {
   fieldNames: Set<string>;
   keyFieldSets: Set<string>;
   subgraphNames: Set<string>;
   typeName: string;
 };
 
-export type EntityContainerByTypeName = Map<string, EntityContainer>;
+export type EntityDataByTypeName = Map<string, EntityData>;
 
-export type EntityContainerParams = {
+export type EntityDataParams = {
   typeName: string;
   fieldNames?: Iterable<string>;
   keyFieldSets?: Iterable<string>;
   subgraphNames?: Iterable<string>;
 };
 
-export function newEntityContainer(params: EntityContainerParams): EntityContainer {
+export function newEntityData(params: EntityDataParams): EntityData {
   return {
     fieldNames: new Set<string>(params.fieldNames),
     keyFieldSets: new Set<string>(params.keyFieldSets),
@@ -342,30 +342,24 @@ export function newEntityContainer(params: EntityContainerParams): EntityContain
   };
 }
 
-function addEntityContainerProperties(source: EntityContainer | EntityContainerParams, target: EntityContainer) {
+function addEntityDataProperties(source: EntityData | EntityDataParams, target: EntityData) {
   addIterableValuesToSet(source.fieldNames || [], target.fieldNames);
   addIterableValuesToSet(source.keyFieldSets || [], target.keyFieldSets);
   addIterableValuesToSet(source.subgraphNames || [], target.subgraphNames);
 }
 
-export function upsertEntityContainerProperties(
-  entityContainersByTypeName: EntityContainerByTypeName,
-  params: EntityContainerParams,
-) {
-  const existingEntityContainer = entityContainersByTypeName.get(params.typeName);
-  existingEntityContainer
-    ? addEntityContainerProperties(params, existingEntityContainer)
-    : entityContainersByTypeName.set(params.typeName, newEntityContainer(params));
+export function upsertEntityDataProperties(entityDataByTypeName: EntityDataByTypeName, params: EntityDataParams) {
+  const existingData = entityDataByTypeName.get(params.typeName);
+  existingData
+    ? addEntityDataProperties(params, existingData)
+    : entityDataByTypeName.set(params.typeName, newEntityData(params));
 }
 
-export function upsertEntityContainer(
-  entityContainersByTypeName: EntityContainerByTypeName,
-  entityContainer: EntityContainer,
-) {
-  const existingEntityContainer = entityContainersByTypeName.get(entityContainer.typeName);
-  existingEntityContainer
-    ? addEntityContainerProperties(entityContainer, existingEntityContainer)
-    : entityContainersByTypeName.set(entityContainer.typeName, entityContainer);
+export function upsertEntityData(entityDataByTypeName: EntityDataByTypeName, incomingData: EntityData) {
+  const existingData = entityDataByTypeName.get(incomingData.typeName);
+  existingData
+    ? addEntityDataProperties(incomingData, existingData)
+    : entityDataByTypeName.set(incomingData.typeName, incomingData);
 }
 
 export type FieldAuthorizationData = {

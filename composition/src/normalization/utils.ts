@@ -66,16 +66,15 @@ import { RequiredFieldConfiguration } from '../router-configuration/router-confi
 import { FieldData, ParentWithFieldsData, UnionDefinitionData } from '../schema-building/type-definition-data';
 import { getTypeNodeNamedTypeName } from '../schema-building/ast';
 
-export type FieldSetContainer = {
-  keys: Set<string>;
+export type FieldSetData = {
+  isUnresolvableByKeyFieldSet: Map<string, boolean>;
   provides: Map<string, string>;
   requires: Map<string, string>;
-  disableEntityResolver?: boolean;
 };
 
-export function newFieldSetContainer(): FieldSetContainer {
+export function newFieldSetData(): FieldSetData {
   return {
-    keys: new Set<string>(),
+    isUnresolvableByKeyFieldSet: new Map<string, boolean>(),
     provides: new Map<string, string>(),
     requires: new Map<string, string>(),
   };
@@ -452,15 +451,14 @@ function validateNonRepeatableFieldSet(
 function validateKeyFieldSets(
   nf: NormalizationFactory,
   entityParentData: ParentWithFieldsData,
-  fieldSets: Set<string>,
+  nonResolvableByKeyFieldSet: Map<string, boolean>,
   fieldNames: Set<string>,
-  disableEntityResolver?: boolean,
 ): RequiredFieldConfiguration[] | undefined {
   const entityTypeName = entityParentData.name;
   const errorMessages: string[] = [];
   const configurations: RequiredFieldConfiguration[] = [];
   const keyFieldNames = new Set<string>();
-  for (const fieldSet of fieldSets) {
+  for (const [fieldSet, disableEntityResolver] of nonResolvableByKeyFieldSet) {
     // Create a new selection set so that the value can be parsed as a new DocumentNode
     const { error, documentNode } = safeParse('{' + fieldSet + '}');
     if (error || !documentNode) {
@@ -656,7 +654,7 @@ function getFieldSetParent(
   parentTypeName: string,
 ): FieldSetParentResult {
   if (fieldSetDirective !== FieldSetDirective.PROVIDES) {
-    return factory.entityContainerByTypeName.has(parentTypeName) ? { fieldSetParentContainer: parentData } : {};
+    return factory.entityDataByTypeName.has(parentTypeName) ? { fieldSetParentContainer: parentData } : {};
   }
   const fieldData = getOrThrowError(
     parentData.fieldDataByFieldName,
@@ -665,7 +663,7 @@ function getFieldSetParent(
   );
   const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
 
-  if (!factory.entityContainerByTypeName.has(fieldNamedTypeName)) {
+  if (!factory.entityDataByTypeName.has(fieldNamedTypeName)) {
     return {};
   }
   const childData =
@@ -737,7 +735,7 @@ function validateProvidesOrRequires(
 export function validateAndAddDirectivesWithFieldSetToConfigurationData(
   factory: NormalizationFactory,
   parentContainer: ParentWithFieldsData,
-  fieldSetContainer: FieldSetContainer,
+  fieldSetData: FieldSetData,
 ) {
   const configurationData = getOrThrowError(
     factory.configurationDataByParentTypeName,
@@ -747,9 +745,8 @@ export function validateAndAddDirectivesWithFieldSetToConfigurationData(
   const keys = validateKeyFieldSets(
     factory,
     parentContainer,
-    fieldSetContainer.keys,
+    fieldSetData.isUnresolvableByKeyFieldSet,
     configurationData.fieldNames,
-    fieldSetContainer.disableEntityResolver,
   );
   if (keys) {
     configurationData.keys = keys;
@@ -757,7 +754,7 @@ export function validateAndAddDirectivesWithFieldSetToConfigurationData(
   const provides = validateProvidesOrRequires(
     factory,
     parentContainer,
-    fieldSetContainer.provides,
+    fieldSetData.provides,
     FieldSetDirective.PROVIDES,
   );
   if (provides) {
@@ -766,7 +763,7 @@ export function validateAndAddDirectivesWithFieldSetToConfigurationData(
   const requires = validateProvidesOrRequires(
     factory,
     parentContainer,
-    fieldSetContainer.requires,
+    fieldSetData.requires,
     FieldSetDirective.REQUIRES,
   );
   if (requires) {
