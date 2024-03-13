@@ -968,7 +968,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const labelMatchers = [joinLabel(label)];
 
           await subgraphRepo.create({
-            name: `subgraph-${uid(8)}`,
+            name: req.name,
             namespace: req.namespace,
             namespaceId: namespace.id,
             createdBy: authContext.userId,
