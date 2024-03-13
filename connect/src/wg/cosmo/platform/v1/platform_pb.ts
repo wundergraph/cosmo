@@ -14887,3 +14887,83 @@ export class ConfigureNamespaceLintConfigResponse extends Message<ConfigureNames
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.MigrateMonographRequest
+ */
+export class MigrateMonographRequest extends Message<MigrateMonographRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<MigrateMonographRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.MigrateMonographRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MigrateMonographRequest {
+    return new MigrateMonographRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MigrateMonographRequest {
+    return new MigrateMonographRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MigrateMonographRequest {
+    return new MigrateMonographRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MigrateMonographRequest | PlainMessage<MigrateMonographRequest> | undefined, b: MigrateMonographRequest | PlainMessage<MigrateMonographRequest> | undefined): boolean {
+    return proto3.util.equals(MigrateMonographRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.MigrateMonographResponse
+ */
+export class MigrateMonographResponse extends Message<MigrateMonographResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<MigrateMonographResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.MigrateMonographResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MigrateMonographResponse {
+    return new MigrateMonographResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MigrateMonographResponse {
+    return new MigrateMonographResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MigrateMonographResponse {
+    return new MigrateMonographResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MigrateMonographResponse | PlainMessage<MigrateMonographResponse> | undefined, b: MigrateMonographResponse | PlainMessage<MigrateMonographResponse> | undefined): boolean {
+    return proto3.util.equals(MigrateMonographResponse, a, b);
+  }
+}
+

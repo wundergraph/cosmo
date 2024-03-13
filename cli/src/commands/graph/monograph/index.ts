@@ -10,6 +10,7 @@ import CheckMonographCommand from './commands/check.js';
 import DeleteMonographCommand from './commands/delete.js';
 import ListMonographs from './commands/list.js';
 import MoveMonograph from './commands/move.js';
+import MigrateMonograph from './commands/migrate.js';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('monograph');
@@ -24,6 +25,7 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(DeleteMonographCommand(opts));
   schema.addCommand(ListMonographs(opts));
   schema.addCommand(MoveMonograph(opts));
+  schema.addCommand(MigrateMonograph(opts));
 
   schema.hook('preAction', () => {
     checkAPIKey();

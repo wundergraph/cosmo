@@ -1873,6 +1873,15 @@ message ConfigureNamespaceLintConfigResponse {
   Response response = 1;
 }
 
+message MigrateMonographRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message MigrateMonographResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -1892,6 +1901,8 @@ service PlatformService {
   rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
   // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
   rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
+  // MigrateMonograph converts a monograph into a federated graph.
+  rpc MigrateMonograph(MigrateMonographRequest) returns (MigrateMonographResponse) {}
   
   // CreateFederatedSubgraph creates a federated subgraph on the control plane.
   rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}

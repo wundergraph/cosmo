@@ -125,13 +125,14 @@ import {
   PublishMonographResponse,
   UpdateMonographResponse,
   DeleteMonographResponse,
+  MigrateMonographResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
-import { uid } from 'uid';
+import { uid } from 'uid/secure';
 import {
   DateRange,
   FederatedGraphDTO,
@@ -586,6 +587,56 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    migrateMonograph: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<MigrateMonographResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        req.namespace = req.namespace || DefaultNamespace;
+
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        console.log(req.name, req.namespace);
+
+        const graph = await fedGraphRepo.byMonographName(req.name, req.namespace);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Monograph '${req.name}' not found`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: graph.targetId,
+            name: graph.name,
+            targetType: 'federatedGraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
+        await fedGraphRepo.migrateMonograph({
+          targetId: graph.targetId,
+          userId: authContext.userId,
+          blobStorage: opts.blobStorage,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          compositionErrors: [],
+        };
+      });
+    },
+
     moveFederatedGraph: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
@@ -911,13 +962,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           const label: Label = {
             key: 'monograph',
-            value: req.name,
+            value: uid(12),
           };
 
           const labelMatchers = [joinLabel(label)];
 
           await subgraphRepo.create({
-            name: req.name,
+            name: `subgraph-${uid(8)}`,
             namespace: req.namespace,
             namespaceId: namespace.id,
             createdBy: authContext.userId,

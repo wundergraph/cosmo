@@ -124,12 +124,16 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         matchExact: false,
         icon: <ServerStackIcon className="h-4 w-4" />,
       },
-      {
-        title: "Compositions",
-        href: basePath + "/compositions",
-        matchExact: false,
-        icon: <PiCubeFocus className="h-4 w-4" />,
-      },
+      ...(graphContextData?.graph?.type === "federated"
+        ? [
+            {
+              title: "Compositions",
+              href: basePath + "/compositions",
+              matchExact: false,
+              icon: <PiCubeFocus className="h-4 w-4" />,
+            },
+          ]
+        : []),
       {
         title: "Clients",
         href: basePath + "/clients",

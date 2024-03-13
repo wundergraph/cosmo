@@ -56,7 +56,7 @@ export const ComposeStatusMessage = ({
       <span>Ready to be fetched from the router</span>
     ) : (
       <span className="whitespace-pre-line">
-        <div className="pt-1 text-xs">
+        <div>
           This version of the graph is not ready because the composition failed.
         </div>
       </span>

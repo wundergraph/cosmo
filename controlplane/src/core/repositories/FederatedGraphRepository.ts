@@ -5,6 +5,7 @@ import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, desc, eq, exists, gt, inArray, lt, not, notExists, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SignJWT, generateKeyPair, importPKCS8 } from 'jose';
+import { uid } from 'uid/secure';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -1172,5 +1173,60 @@ export class FederatedGraphRepository {
     }
 
     return federatedGraphs;
+  }
+
+  public migrateMonograph({
+    targetId,
+    blobStorage,
+    userId,
+  }: {
+    targetId: string;
+    blobStorage: BlobStorage;
+    userId: string;
+  }) {
+    return this.db.transaction(async (tx) => {
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+
+      const subgraph = (
+        await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: targetId,
+        })
+      )[0];
+
+      const graph = await fedGraphRepo.byTargetId(targetId);
+      if (!graph) {
+        throw new Error('Monograph not found');
+      }
+
+      const newLabel: Label = {
+        key: 'federated',
+        value: uid(12),
+      };
+
+      await tx
+        .update(targets)
+        .set({
+          type: 'federated',
+        })
+        .where(eq(targets.id, targetId));
+
+      await tx
+        .update(targets)
+        .set({
+          labels: [joinLabel(newLabel)],
+        })
+        .where(eq(targets.id, subgraph.targetId));
+
+      await tx.delete(schema.targetLabelMatchers).where(eq(schema.targetLabelMatchers.targetId, graph.targetId));
+
+      await tx
+        .insert(schema.targetLabelMatchers)
+        .values({
+          targetId: graph.targetId,
+          labelMatcher: [joinLabel(newLabel)],
+        })
+        .execute();
+    });
   }
 }

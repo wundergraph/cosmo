@@ -291,18 +291,16 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 ? "All good!"
                 : "Needs Attention!"}
             </AlertTitle>
-            <div className="flex items-center justify-between space-x-2.5">
+            <AlertDescription className="space-y-2">
               <ComposeStatusMessage
                 lastUpdatedAt={lastUpdatedAt}
                 isComposable={isComposable}
                 subgraphsCount={connectedSubgraphs}
               />
               {compositionErrors && (
-                <AlertDescription>
-                  <CompositionErrorsDialog errors={compositionErrors} />
-                </AlertDescription>
+                <CompositionErrorsDialog errors={compositionErrors} />
               )}
-            </div>
+            </AlertDescription>
           </Alert>
         </div>
         {graphData.graph.type === "federated" && (
