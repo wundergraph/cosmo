@@ -1061,8 +1061,8 @@ const RBAC = () => {
             <Badge variant="outline">Enterprise feature</Badge>
           </CardTitle>
           <CardDescription>
-            Enabling RBAC allows the fine grain access control of subgraphs and
-            federated graphs.{" "}
+            Enabling RBAC allows the fine grain access control of subgraphs,
+            federated graphs and monographs.{" "}
             <Link
               href={docsBaseURL + "/studio/graph-access-control"}
               className="text-sm text-primary"
