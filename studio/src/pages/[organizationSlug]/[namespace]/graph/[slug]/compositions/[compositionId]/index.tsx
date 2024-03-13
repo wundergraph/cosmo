@@ -129,6 +129,8 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
     schemaVersionId,
     compositionErrors,
     routerConfigSignature,
+    admissionError,
+    deploymentError,
   } = composition;
 
   const subgraphs =
@@ -251,32 +253,57 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           <dl className="grid w-full flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
-            {routerConfigSignature && (
+            {routerConfigSignature || admissionError ? (
               <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
                 <dt className="text-sm text-muted-foreground">Admission</dt>
                 <dd className="flex flex-col space-y-3">
                   <div className="flex items-center gap-2">
-                    <div>
-                      <MdVerifiedUser className="h-4 w-4 text-yellow-500" />
-                    </div>
-                    <span className="text-sm">Verified</span>
+                    {admissionError ? (
+                      <>
+                        <div>
+                          <MdVerifiedUser className="h-4 w-4 text-red-500" />
+                        </div>
+                        <span className="text-sm">Failed</span>
+                      </>
+                    ) : routerConfigSignature ? (
+                      <>
+                        <div>
+                          <MdVerifiedUser className="h-4 w-4 text-amber-500" />
+                        </div>
+                        <span className="text-sm">Verified</span>
+                      </>
+                    ) : null}
                   </div>
                   <div className="text-xs text-slate-400">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="space-y-1">
-                          <div className="font-bold">Signature</div>
-                          <div className="truncate">
-                            {routerConfigSignature}
+                    {admissionError ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1">
+                            <div className="font-bold">Details</div>
+                            <div className="break-words">
+                              {admissionError || "No details available"}
+                            </div>
                           </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>{routerConfigSignature}</TooltipContent>
-                    </Tooltip>
+                        </TooltipTrigger>
+                        <TooltipContent>{admissionError}</TooltipContent>
+                      </Tooltip>
+                    ) : routerConfigSignature ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1">
+                            <div className="font-bold">Signature</div>
+                            <div className="truncate">
+                              {routerConfigSignature}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>{routerConfigSignature}</TooltipContent>
+                      </Tooltip>
+                    ) : null}
                   </div>
                 </dd>
               </div>
-            )}
+            ) : null}
             {compositionSubgraphs.length > 0 && (
               <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
                 <dt className="text-sm text-muted-foreground">

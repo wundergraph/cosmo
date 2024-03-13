@@ -1,5 +1,5 @@
 {
-  "id": "a237aaca-04c4-4766-bb82-50aa1eaa87eb",
+  "id": "e0a04cc8-136f-4c29-93a2-ffa0ba1fd6bb",
   "prevId": "86c179ca-210c-4daf-bb9e-ed052b5aec34",
   "version": "5",
   "dialect": "pg",
@@ -1222,6 +1222,18 @@
         },
         "router_config_signature": {
           "name": "router_config_signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deployment_error": {
+          "name": "deployment_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "admission_error": {
+          "name": "admission_error",
           "type": "text",
           "primaryKey": false,
           "notNull": false

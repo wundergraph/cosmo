@@ -1,9 +1,9 @@
 import { PlainMessage } from '@bufbuild/protobuf';
-import { AdmissionWebhookError, CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, count, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import {
   graphCompositionSubgraphs,
@@ -27,8 +27,9 @@ import {
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { Composer } from '../composition/composer.js';
+import { Composer, ComposeDeploymentError, RouterConfigUploadError } from '../composition/composer.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
@@ -176,10 +177,10 @@ export class SubgraphRepository {
     },
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
-    admissionWebhookErrors: PlainMessage<AdmissionWebhookError>[];
+    deploymentErrors: PlainMessage<DeploymentError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
   }> {
-    const admissionWebhookErrors: PlainMessage<AdmissionWebhookError>[] = [];
+    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
@@ -315,6 +316,15 @@ export class SubgraphRepository {
       for (const federatedGraph of updatedFederatedGraphs) {
         const composition = await composer.composeFederatedGraph(federatedGraph);
 
+        // Collect all composition errors
+        compositionErrors.push(
+          ...composition.errors.map((e) => ({
+            federatedGraphName: composition.name,
+            namespace: composition.namespace,
+            message: e.message,
+          })),
+        );
+
         const deployment = await composer.deployComposition({
           composedGraph: composition,
           composedBy: data.updatedBy,
@@ -327,22 +337,14 @@ export class SubgraphRepository {
           },
         });
 
-        if (deployment?.admissionWebhookError) {
-          admissionWebhookErrors.push({
-            federatedGraphName: federatedGraph.name,
-            namespace: federatedGraph.namespace,
-            message: deployment.admissionWebhookError?.message ?? '',
-          });
-        }
-
-        // Collect all composition errors
-
-        compositionErrors.push(
-          ...composition.errors.map((e) => ({
-            federatedGraphName: composition.name,
-            namespace: composition.namespace,
-            message: e.message,
-          })),
+        deploymentErrors.push(
+          ...deployment.errors
+            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+            .map((e) => ({
+              federatedGraphName: federatedGraph.name,
+              namespace: federatedGraph.namespace,
+              message: e.message ?? '',
+            })),
         );
       }
 
@@ -352,7 +354,7 @@ export class SubgraphRepository {
       }
     });
 
-    return { compositionErrors, updatedFederatedGraphs, admissionWebhookErrors };
+    return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
   }
 
   public async move(
@@ -373,9 +375,9 @@ export class SubgraphRepository {
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
-    admissionWebhookErrors: PlainMessage<AdmissionWebhookError>[];
+    deploymentErrors: ComposeDeploymentError[];
   }> {
-    const admissionWebhookErrors: PlainMessage<AdmissionWebhookError>[] = [];
+    const deploymentErrors: ComposeDeploymentError[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
@@ -418,6 +420,15 @@ export class SubgraphRepository {
       for (const federatedGraph of updatedFederatedGraphs) {
         const composition = await composer.composeFederatedGraph(federatedGraph);
 
+        // Collect all composition errors
+        compositionErrors.push(
+          ...composition.errors.map((e) => ({
+            federatedGraphName: composition.name,
+            namespace: composition.namespace,
+            message: e.message,
+          })),
+        );
+
         const deployment = await composer.deployComposition({
           composedGraph: composition,
           composedBy: data.updatedBy,
@@ -427,26 +438,11 @@ export class SubgraphRepository {
           admissionConfig,
         });
 
-        if (deployment?.admissionWebhookError) {
-          admissionWebhookErrors.push({
-            federatedGraphName: federatedGraph.name,
-            namespace: federatedGraph.namespace,
-            message: deployment?.admissionWebhookError?.message ?? '',
-          });
-        }
-
-        // Collect all composition errors
-        compositionErrors.push(
-          ...composition.errors.map((e) => ({
-            federatedGraphName: composition.name,
-            namespace: composition.namespace,
-            message: e.message,
-          })),
-        );
+        deploymentErrors.push(...deployment.errors);
       }
     });
 
-    return { compositionErrors, updatedFederatedGraphs, admissionWebhookErrors };
+    return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
   }
 
   public addSchemaVersion(data: { targetId: string; subgraphSchema: string }): Promise<SubgraphDTO | undefined> {

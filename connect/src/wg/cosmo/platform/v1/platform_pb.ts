@@ -525,9 +525,9 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AdmissionWebhookError admissionWebhookErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
    */
-  admissionWebhookErrors: AdmissionWebhookError[] = [];
+  deploymentErrors: DeploymentError[] = [];
 
   constructor(data?: PartialMessage<PublishFederatedSubgraphResponse>) {
     super();
@@ -539,7 +539,7 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "admissionWebhookErrors", kind: "message", T: AdmissionWebhookError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphResponse {
@@ -1101,9 +1101,9 @@ export class CompositionError extends Message<CompositionError> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.AdmissionWebhookError
+ * @generated from message wg.cosmo.platform.v1.DeploymentError
  */
-export class AdmissionWebhookError extends Message<AdmissionWebhookError> {
+export class DeploymentError extends Message<DeploymentError> {
   /**
    * @generated from field: string message = 1;
    */
@@ -1119,33 +1119,33 @@ export class AdmissionWebhookError extends Message<AdmissionWebhookError> {
    */
   namespace = "";
 
-  constructor(data?: PartialMessage<AdmissionWebhookError>) {
+  constructor(data?: PartialMessage<DeploymentError>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.AdmissionWebhookError";
+  static readonly typeName = "wg.cosmo.platform.v1.DeploymentError";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdmissionWebhookError {
-    return new AdmissionWebhookError().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeploymentError {
+    return new DeploymentError().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdmissionWebhookError {
-    return new AdmissionWebhookError().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeploymentError {
+    return new DeploymentError().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdmissionWebhookError {
-    return new AdmissionWebhookError().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeploymentError {
+    return new DeploymentError().fromJsonString(jsonString, options);
   }
 
-  static equals(a: AdmissionWebhookError | PlainMessage<AdmissionWebhookError> | undefined, b: AdmissionWebhookError | PlainMessage<AdmissionWebhookError> | undefined): boolean {
-    return proto3.util.equals(AdmissionWebhookError, a, b);
+  static equals(a: DeploymentError | PlainMessage<DeploymentError> | undefined, b: DeploymentError | PlainMessage<DeploymentError> | undefined): boolean {
+    return proto3.util.equals(DeploymentError, a, b);
   }
 }
 
@@ -1399,9 +1399,9 @@ export class CreateFederatedGraphResponse extends Message<CreateFederatedGraphRe
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AdmissionWebhookError admissionWebhookErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
    */
-  admissionWebhookErrors: AdmissionWebhookError[] = [];
+  deploymentErrors: DeploymentError[] = [];
 
   constructor(data?: PartialMessage<CreateFederatedGraphResponse>) {
     super();
@@ -1413,7 +1413,7 @@ export class CreateFederatedGraphResponse extends Message<CreateFederatedGraphRe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "admissionWebhookErrors", kind: "message", T: AdmissionWebhookError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphResponse {
@@ -1485,9 +1485,9 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AdmissionWebhookError admissionWebhookErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
    */
-  admissionWebhookErrors: AdmissionWebhookError[] = [];
+  deploymentErrors: DeploymentError[] = [];
 
   constructor(data?: PartialMessage<DeleteFederatedSubgraphResponse>) {
     super();
@@ -1499,7 +1499,7 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "admissionWebhookErrors", kind: "message", T: AdmissionWebhookError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphResponse {
@@ -3604,9 +3604,9 @@ export class UpdateSubgraphResponse extends Message<UpdateSubgraphResponse> {
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AdmissionWebhookError admissionWebhookErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
    */
-  admissionWebhookErrors: AdmissionWebhookError[] = [];
+  deploymentErrors: DeploymentError[] = [];
 
   constructor(data?: PartialMessage<UpdateSubgraphResponse>) {
     super();
@@ -3618,7 +3618,7 @@ export class UpdateSubgraphResponse extends Message<UpdateSubgraphResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "admissionWebhookErrors", kind: "message", T: AdmissionWebhookError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphResponse {
@@ -3726,9 +3726,9 @@ export class UpdateFederatedGraphResponse extends Message<UpdateFederatedGraphRe
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AdmissionWebhookError admissionWebhookErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
    */
-  admissionWebhookErrors: AdmissionWebhookError[] = [];
+  deploymentErrors: DeploymentError[] = [];
 
   constructor(data?: PartialMessage<UpdateFederatedGraphResponse>) {
     super();
@@ -3740,7 +3740,7 @@ export class UpdateFederatedGraphResponse extends Message<UpdateFederatedGraphRe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "admissionWebhookErrors", kind: "message", T: AdmissionWebhookError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphResponse {
@@ -11039,6 +11039,16 @@ export class GraphComposition extends Message<GraphComposition> {
    */
   routerConfigSignature?: string;
 
+  /**
+   * @generated from field: optional string admissionError = 9;
+   */
+  admissionError?: string;
+
+  /**
+   * @generated from field: optional string deploymentError = 10;
+   */
+  deploymentError?: string;
+
   constructor(data?: PartialMessage<GraphComposition>) {
     super();
     proto3.util.initPartial(data, this);
@@ -11055,6 +11065,8 @@ export class GraphComposition extends Message<GraphComposition> {
     { no: 6, name: "createdBy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "isLatestValid", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "routerConfigSignature", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "admissionError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "deploymentError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphComposition {
@@ -14119,9 +14131,9 @@ export class MoveGraphResponse extends Message<MoveGraphResponse> {
   compositionErrors: CompositionError[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AdmissionWebhookError admissionWebhookErrors = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
    */
-  admissionWebhookErrors: AdmissionWebhookError[] = [];
+  deploymentErrors: DeploymentError[] = [];
 
   constructor(data?: PartialMessage<MoveGraphResponse>) {
     super();
@@ -14133,7 +14145,7 @@ export class MoveGraphResponse extends Message<MoveGraphResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
-    { no: 3, name: "admissionWebhookErrors", kind: "message", T: AdmissionWebhookError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveGraphResponse {

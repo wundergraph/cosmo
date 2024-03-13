@@ -80,9 +80,9 @@ export enum EnumStatusCode {
   ERR_LIMIT_REACHED = 13,
 
   /**
-   * @generated from enum value: ERR_ADMISSION_WEBHOOK_FAILED = 14;
+   * @generated from enum value: ERR_DEPLOYMENT_FAILED = 14;
    */
-  ERR_ADMISSION_WEBHOOK_FAILED = 14,
+  ERR_DEPLOYMENT_FAILED = 14,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EnumStatusCode)
 proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
@@ -100,7 +100,7 @@ proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
   { no: 11, name: "ERR_FREE_TRIAL_EXPIRED" },
   { no: 12, name: "ERROR_NOT_AUTHORIZED" },
   { no: 13, name: "ERR_LIMIT_REACHED" },
-  { no: 14, name: "ERR_ADMISSION_WEBHOOK_FAILED" },
+  { no: 14, name: "ERR_DEPLOYMENT_FAILED" },
 ]);
 
 /**

@@ -95,12 +95,12 @@ export default (opts: BaseCommandOptions) => {
 
         break;
       }
-      case EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED: {
+      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          'Federated Graph was created but the composition was not deployed due to admission webhook failures. Please check the errors below.',
+          'Federated Graph was created but the composition was not deployed due to the following failures. Please check the errors below.',
         );
 
-        const admissionWebhookErrorsTable = new Table({
+        const deploymentErrorsTable = new Table({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
@@ -110,15 +110,15 @@ export default (opts: BaseCommandOptions) => {
           wordWrap: true,
         });
 
-        for (const admissionError of resp.admissionWebhookErrors) {
-          admissionWebhookErrorsTable.push([
-            admissionError.federatedGraphName,
-            admissionError.namespace,
-            admissionError.message,
+        for (const deploymentError of resp.deploymentErrors) {
+          deploymentErrorsTable.push([
+            deploymentError.federatedGraphName,
+            deploymentError.namespace,
+            deploymentError.message,
           ]);
         }
         // Don't exit here with 1 because the change was still applied
-        console.log(admissionWebhookErrorsTable.toString());
+        console.log(deploymentErrorsTable.toString());
 
         break;
       }

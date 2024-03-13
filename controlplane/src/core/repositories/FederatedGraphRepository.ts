@@ -1,8 +1,24 @@
 import { KeyObject } from 'node:crypto';
-import { JsonValue } from '@bufbuild/protobuf';
+import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, desc, eq, exists, gt, inArray, lt, not, notExists, notInArray, sql } from 'drizzle-orm';
+import {
+  SQL,
+  and,
+  or,
+  asc,
+  desc,
+  eq,
+  exists,
+  gt,
+  inArray,
+  lt,
+  not,
+  notExists,
+  notInArray,
+  sql,
+  isNull,
+} from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SignJWT, generateKeyPair, importPKCS8 } from 'jose';
 import { FastifyBaseLogger } from 'fastify';
@@ -28,14 +44,15 @@ import {
   RouterRequestKeysDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { Composer } from '../composition/composer.js';
+import { Composer, ComposeDeploymentError, RouterConfigUploadError } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
-import { AdmissionWebhookError } from '../services/AdmissionWebhookController.js';
+import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 import { UserRepository } from './UserRepository.js';
+import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -148,7 +165,7 @@ export class FederatedGraphRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
-  }): Promise<{ compositionErrors: Error[]; admissionWebhookError?: AdmissionWebhookError } | undefined> {
+  }): Promise<{ compositionErrors: Error[]; deploymentErrors: PlainMessage<DeploymentError>[] } | undefined> {
     const routingUrl = normalizeURL(data.routingUrl);
     const admissionWebhookURL = data.admissionWebhookURL ? normalizeURL(data.admissionWebhookURL) : undefined;
 
@@ -250,9 +267,21 @@ export class FederatedGraphRepository {
           },
         });
 
+        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+        deploymentErrors.push(
+          ...deployment.errors
+            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+            .map((e) => ({
+              federatedGraphName: federatedGraph.name,
+              namespace: federatedGraph.namespace,
+              message: e.message ?? '',
+            })),
+        );
+
         return {
           compositionErrors: composedGraph.errors,
-          admissionWebhookError: deployment.admissionWebhookError,
+          deploymentErrors: deploymentErrors,
         };
       }
     });
@@ -272,7 +301,7 @@ export class FederatedGraphRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     },
-  ): Promise<{ compositionErrors: Error[]; admissionWebhookError?: AdmissionWebhookError }> {
+  ): Promise<{ compositionErrors: Error[]; deploymentErrors: ComposeDeploymentError[] }> {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -317,7 +346,7 @@ export class FederatedGraphRepository {
 
       return {
         compositionErrors: composedGraph.errors,
-        admissionWebhookError: deployment.admissionWebhookError,
+        deploymentErrors: deployment.errors,
       };
     });
   }
@@ -552,6 +581,8 @@ export class FederatedGraphRepository {
     compositionErrors,
     routerConfig,
     routerConfigSignature,
+    deploymentError,
+    admissionError,
     subgraphSchemaVersionIds,
     composedBy,
     routerConfigPath,
@@ -561,6 +592,8 @@ export class FederatedGraphRepository {
     schemaVersionId: string;
     composedSDL?: string;
     compositionErrors?: Error[];
+    admissionError?: AdmissionError;
+    deploymentError?: RouterConfigUploadError;
     routerConfig?: JsonValue;
     routerConfigSignature?: string;
     subgraphSchemaVersionIds: string[];
@@ -610,6 +643,8 @@ export class FederatedGraphRepository {
         compositionErrorString,
         routerConfig,
         routerConfigSignature,
+        admissionErrorString: admissionError?.message,
+        deploymentErrorString: deploymentError?.message,
         composedBy,
       });
 
@@ -637,7 +672,16 @@ export class FederatedGraphRepository {
       })
       .from(schemaVersion)
       .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .where(and(eq(schemaVersion.targetId, targetId), eq(graphCompositions.isComposable, true)))
+      .where(
+        and(
+          eq(schemaVersion.targetId, targetId),
+          and(
+            eq(graphCompositions.isComposable, true),
+            or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+            or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+          ),
+        ),
+      )
       .orderBy(desc(schemaVersion.createdAt))
       .limit(1)
       .execute();
@@ -659,7 +703,16 @@ export class FederatedGraphRepository {
       })
       .from(schemaVersion)
       .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
-      .where(and(eq(schemaVersion.targetId, targetId), eq(graphCompositions.isComposable, true)))
+      .where(
+        and(
+          eq(schemaVersion.targetId, targetId),
+          and(
+            eq(graphCompositions.isComposable, true),
+            or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+            or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+          ),
+        ),
+      )
       .orderBy(desc(schemaVersion.createdAt))
       .limit(1)
       .execute();
@@ -691,7 +744,11 @@ export class FederatedGraphRepository {
           eq(targets.type, 'federated'),
           eq(targets.organizationId, this.organizationId),
           eq(targets.id, data.targetId),
-          eq(graphCompositions.isComposable, true),
+          and(
+            eq(graphCompositions.isComposable, true),
+            or(isNull(graphCompositions.deploymentError), eq(graphCompositions.deploymentError, '')),
+            or(isNull(graphCompositions.admissionError), eq(graphCompositions.admissionError, '')),
+          ),
         ),
       )
       .orderBy(desc(graphCompositions.createdAt))

@@ -48,7 +48,7 @@ message PublishFederatedSubgraphRequest {
 message PublishFederatedSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
-  repeated AdmissionWebhookError admissionWebhookErrors = 3;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message GitInfo {
@@ -133,7 +133,7 @@ message CompositionError {
   string namespace = 3;
 }
 
-message AdmissionWebhookError {
+message DeploymentError {
   string message = 1;
   string federatedGraphName = 2;
   string namespace = 3;
@@ -174,7 +174,7 @@ message FixSubgraphSchemaResponse {
 message CreateFederatedGraphResponse {
     Response response = 1;
     repeated CompositionError compositionErrors = 2;
-    repeated AdmissionWebhookError admissionWebhookErrors = 3;
+    repeated DeploymentError deploymentErrors = 3;
 }
 
 message CreateFederatedSubgraphResponse {
@@ -184,7 +184,7 @@ message CreateFederatedSubgraphResponse {
 message DeleteFederatedSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
-  repeated AdmissionWebhookError admissionWebhookErrors = 3;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message DeleteFederatedGraphResponse {
@@ -454,7 +454,7 @@ message UpdateSubgraphRequest {
 message UpdateSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
-  repeated AdmissionWebhookError admissionWebhookErrors = 3;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message UpdateFederatedGraphRequest {
@@ -470,7 +470,7 @@ message UpdateFederatedGraphRequest {
 message UpdateFederatedGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
-  repeated AdmissionWebhookError admissionWebhookErrors = 3;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message CheckFederatedGraphRequest {
@@ -1417,6 +1417,8 @@ message GraphComposition {
   optional string createdBy = 6;
   bool isLatestValid = 7;
   optional string routerConfigSignature = 8;
+  optional string admissionError = 9;
+  optional string deploymentError = 10;
 }
 
 message GraphCompositionSubgraph {
@@ -1782,7 +1784,7 @@ message MoveGraphRequest {
 message MoveGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
-  repeated AdmissionWebhookError admissionWebhookErrors = 3;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 service PlatformService {

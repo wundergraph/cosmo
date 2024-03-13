@@ -116,7 +116,7 @@ import {
   GetLatestSubgraphSDLResponse,
   GetSubgraphSDLFromLatestCompositionResponse,
   GetFederatedGraphSDLByNameResponse,
-  AdmissionWebhookError,
+  DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
@@ -133,7 +133,7 @@ import {
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
-import { Composer } from '../composition/composer.js';
+import { Composer, RouterConfigUploadError } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
@@ -191,6 +191,7 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { RouterMetricsRepository } from '../repositories/analytics/RouterMetricsRepository.js';
+import { AdmissionError } from '../services/AdmissionWebhookController.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -487,7 +488,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Federated graph '${req.name}' not found`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -499,7 +500,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `A federated graph '${req.name}' already exists in the namespace ${req.newNamespace}`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -522,11 +523,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Could not find namespace ${req.newNamespace}`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
-        const { compositionErrors, admissionWebhookError } = await fedGraphRepo.move(
+        const { compositionErrors, deploymentErrors } = await fedGraphRepo.move(
           {
             targetId: graph.targetId,
             newNamespaceId: newNamespace.id,
@@ -563,16 +564,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: authContext.organizationId,
             slug: authContext.organizationSlug,
           },
-          errors: compositionErrors.length > 0,
+          errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
           actor_id: authContext.userId,
         });
+
+        const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+        allDeploymentErrors.push(
+          ...deploymentErrors
+            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+            .map((e) => ({
+              federatedGraphName: req.name,
+              namespace: graph.namespace,
+              message: e.message ?? '',
+            })),
+        );
 
         if (compositionErrors.length > 0) {
           return {
             response: {
               code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             },
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
             compositionErrors: compositionErrors.map((e) => ({
               federatedGraphName: req.name,
               message: e.message,
@@ -581,18 +594,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (admissionWebhookError) {
+        if (deploymentErrors?.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED,
+              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
             },
-            admissionWebhookErrors: [
-              {
-                federatedGraphName: graph.name,
-                namespace: graph.namespace,
-                message: admissionWebhookError.message,
-              },
-            ],
+            deploymentErrors: allDeploymentErrors,
             compositionErrors: [],
           };
         }
@@ -602,7 +609,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           compositionErrors: [],
-          admissionWebhookErrors: [],
+          deploymentErrors: [],
         };
       });
     },
@@ -630,7 +637,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Subgraph '${req.name}' not found`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -645,7 +652,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
-        const { compositionErrors, updatedFederatedGraphs, admissionWebhookErrors } = await opts.db.transaction(
+        const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await opts.db.transaction(
           async (tx) => {
             const auditLogRepo = new AuditLogRepository(tx);
             const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
@@ -664,7 +671,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.newNamespace}`);
             }
 
-            const { compositionErrors, updatedFederatedGraphs, admissionWebhookErrors } = await subgraphRepo.move(
+            const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.move(
               {
                 targetId: graph.targetId,
                 newNamespace: newNamespace.id,
@@ -694,8 +701,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               targetNamespaceDisplayName: newNamespace.name,
             });
 
-            return { compositionErrors, updatedFederatedGraphs, admissionWebhookErrors };
+            return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
           },
+        );
+
+        const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+        allDeploymentErrors.push(
+          ...deploymentErrors
+            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+            .map((e) => ({
+              federatedGraphName: graph.name,
+              namespace: graph.namespace,
+              message: e.message ?? '',
+            })),
         );
 
         for (const graph of updatedFederatedGraphs) {
@@ -709,7 +728,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
-            errors: compositionErrors.length > 0,
+            errors: compositionErrors.length > 0 || allDeploymentErrors.length > 0,
             actor_id: authContext.userId,
           });
         }
@@ -720,17 +739,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             },
             compositionErrors,
-            admissionWebhookErrors,
+            deploymentErrors: [],
           };
         }
 
-        if (admissionWebhookErrors.length > 0) {
+        if (deploymentErrors.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED,
+              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
             },
-            compositionErrors,
-            admissionWebhookErrors,
+            compositionErrors: [],
+            deploymentErrors: allDeploymentErrors,
           };
         }
 
@@ -739,7 +758,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           compositionErrors: [],
-          admissionWebhookErrors: [],
+          deploymentErrors: [],
         };
       });
     },
@@ -772,7 +791,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesn't have the permissions to perform this operation`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -784,7 +803,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Could not find namespace ${req.namespace}`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -795,7 +814,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Federated graph '${req.name}' already exists in the namespace`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -806,7 +825,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `One or more labels in the matcher were found to be invalid`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -817,7 +836,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Routing URL is not a valid URL`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -828,7 +847,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Admission Webhook URL is not a valid URL`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -848,7 +867,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The organization reached the limit of federated graphs`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -870,7 +889,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Could not create federated graph`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -905,12 +924,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.OK,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
         const compositionErrors: PlainMessage<CompositionError>[] = [];
-        const admissionWebhookErrors: PlainMessage<AdmissionWebhookError>[] = [];
+        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
 
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -938,13 +957,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           });
 
-          if (deployment.admissionWebhookError) {
-            admissionWebhookErrors.push({
-              federatedGraphName: federatedGraph.name,
-              namespace: federatedGraph.namespace,
-              message: deployment.admissionWebhookError.message,
-            });
-          }
+          deploymentErrors.push(
+            ...deployment.errors
+              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+              .map((e) => ({
+                federatedGraphName: composition.name,
+                namespace: composition.namespace,
+                message: e.message ?? '',
+              })),
+          );
         });
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -957,7 +978,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: authContext.organizationId,
             slug: authContext.organizationSlug,
           },
-          errors: compositionErrors.length > 0,
+          errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
           actor_id: authContext.userId,
         });
 
@@ -967,17 +988,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             },
             compositionErrors,
-            admissionWebhookErrors,
+            deploymentErrors: [],
           };
         }
 
-        if (admissionWebhookErrors.length > 0) {
+        if (deploymentErrors.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED,
+              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
             },
-            compositionErrors,
-            admissionWebhookErrors,
+            compositionErrors: [],
+            deploymentErrors,
           };
         }
 
@@ -986,7 +1007,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           compositionErrors: [],
-          admissionWebhookErrors: [],
+          deploymentErrors: [],
         };
       });
     },
@@ -1515,7 +1536,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -1531,7 +1552,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 details: errors.map((e) => e.toString()).join('\n'),
               },
               compositionErrors: [],
-              admissionWebhookErrors: [],
+              deploymentErrors: [],
             };
           }
         } catch (e: any) {
@@ -1541,7 +1562,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: e.message,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -1553,7 +1574,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Could not find namespace ${req.namespace}`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -1581,7 +1602,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 details: `One ore more labels were found to be invalid`,
               },
               compositionErrors: [],
-              admissionWebhookErrors: [],
+              deploymentErrors: [],
             };
           }
 
@@ -1592,7 +1613,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 details: `Routing URL is required to create a new subgraph`,
               },
               compositionErrors: [],
-              admissionWebhookErrors: [],
+              deploymentErrors: [],
             };
           }
 
@@ -1603,7 +1624,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 details: `Subscription URL is not a valid URL`,
               },
               compositionErrors: [],
-              admissionWebhookErrors: [],
+              deploymentErrors: [],
             };
           }
 
@@ -1639,7 +1660,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         }
 
-        const { compositionErrors, updatedFederatedGraphs, admissionWebhookErrors } = await subgraphRepo.update(
+        const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.update(
           {
             targetId: subgraph.targetId,
             labels: req.labels,
@@ -1671,7 +1692,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
-            errors: compositionErrors.length > 0,
+            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
             actor_id: authContext.userId,
           });
         }
@@ -1721,17 +1742,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             },
             compositionErrors,
-            admissionWebhookErrors,
+            deploymentErrors: [],
           };
         }
 
-        if (admissionWebhookErrors.length > 0) {
+        if (deploymentErrors.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED,
+              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
             },
-            compositionErrors,
-            admissionWebhookErrors,
+            compositionErrors: [],
+            deploymentErrors,
           };
         }
 
@@ -1740,7 +1761,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           compositionErrors: [],
-          admissionWebhookErrors: [],
+          deploymentErrors: [],
         };
       });
     },
@@ -2269,7 +2290,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -2281,7 +2302,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Subgraph '${req.subgraphName}' not found`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -2298,7 +2319,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         const federatedGraphSchemaUpdates: FederatedGraphSchemaUpdate[] = [];
-        const admissionWebhookErrors: PlainMessage<AdmissionWebhookError>[] = [];
+        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
 
         await opts.db.transaction(async (tx) => {
@@ -2348,6 +2369,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           for (const federatedGraph of affectedFederatedGraphs) {
             const composition = await composer.composeFederatedGraph(federatedGraph);
 
+            const namespace = await namespaceRepo.byTargetId(composition.targetID);
+            if (!namespace) {
+              throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, 'Could not find namespace');
+            }
+
+            // Collect all composition errors
+            compositionErrors.push(
+              ...composition.errors.map((e) => ({
+                federatedGraphName: composition.name,
+                namespace: composition.namespace,
+                message: e.message,
+              })),
+            );
+
             const deployment = await composer.deployComposition({
               composedGraph: composition,
               composedBy: authContext.userId,
@@ -2360,28 +2395,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               },
             });
 
-            if (deployment.admissionWebhookError) {
-              admissionWebhookErrors.push({
-                federatedGraphName: composition.name,
-                namespace: composition.namespace,
-                message: deployment.admissionWebhookError.message ?? '',
-              });
-            }
-
-            // Collect all composition errors
-
-            compositionErrors.push(
-              ...composition.errors.map((e) => ({
-                federatedGraphName: composition.name,
-                namespace: composition.namespace,
-                message: e.message,
-              })),
+            deploymentErrors.push(
+              ...deployment.errors
+                .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+                .map((e) => ({
+                  federatedGraphName: composition.name,
+                  namespace: composition.namespace,
+                  message: e.message ?? '',
+                })),
             );
-
-            const namespace = await namespaceRepo.byTargetId(composition.targetID);
-            if (!namespace) {
-              throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, 'Could not find namespace');
-            }
 
             federatedGraphSchemaUpdates.push({
               federated_graph: {
@@ -2393,7 +2415,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: authContext.organizationId,
                 slug: authContext.organizationSlug,
               },
-              errors: composition.errors.length > 0,
+              errors: composition.errors.length > 0 || deploymentErrors.length > 0,
               actor_id: authContext.userId,
             });
           }
@@ -2408,18 +2430,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             },
-            admissionWebhookErrors,
+            deploymentErrors: [],
             compositionErrors,
           };
         }
 
-        if (admissionWebhookErrors.length > 0) {
+        if (deploymentErrors.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED,
+              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
             },
-            admissionWebhookErrors,
-            compositionErrors,
+            deploymentErrors,
+            compositionErrors: [],
           };
         }
 
@@ -2427,7 +2449,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          admissionWebhookErrors: [],
+          deploymentErrors: [],
           compositionErrors: [],
         };
       });
@@ -2458,7 +2480,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -2470,7 +2492,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Federated graph '${req.name}' not found`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -2493,11 +2515,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `One or more labels in the matcher were found to be invalid`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
-        const admissionWebhookErrors: PlainMessage<AdmissionWebhookError>[] = [];
+        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
         let compositionErrors: PlainMessage<CompositionError>[] = [];
 
         const result = await fedGraphRepo.update({
@@ -2515,12 +2537,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
         });
 
-        if (result?.admissionWebhookError) {
-          admissionWebhookErrors.push({
-            federatedGraphName: req.name,
-            namespace: federatedGraph.namespace,
-            message: result.admissionWebhookError.message ?? '',
-          });
+        if (result?.deploymentErrors) {
+          deploymentErrors.push(...result.deploymentErrors);
         }
 
         if (result?.compositionErrors) {
@@ -2554,7 +2572,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: authContext.organizationId,
             slug: authContext.organizationSlug,
           },
-          errors: compositionErrors.length > 0,
+          errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
           actor_id: authContext.userId,
         });
 
@@ -2563,18 +2581,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             },
-            admissionWebhookErrors,
+            deploymentErrors: [],
             compositionErrors,
           };
         }
 
-        if (admissionWebhookErrors.length > 0) {
+        if (deploymentErrors.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED,
+              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
             },
-            admissionWebhookErrors,
-            compositionErrors,
+            deploymentErrors,
+            compositionErrors: [],
           };
         }
 
@@ -2583,7 +2601,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           compositionErrors: [],
-          admissionWebhookErrors: [],
+          deploymentErrors: [],
         };
       });
     },
@@ -2613,7 +2631,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -2624,7 +2642,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `One ore more labels were found to be invalid`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -2636,7 +2654,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Subgraph '${req.name}' not found`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
@@ -2659,11 +2677,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Subscription URL is not a valid URL`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
+            deploymentErrors: [],
           };
         }
 
-        const { compositionErrors, updatedFederatedGraphs, admissionWebhookErrors } = await subgraphRepo.update(
+        const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.update(
           {
             targetId: subgraph.targetId,
             labels: req.labels,
@@ -2708,7 +2726,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
-            errors: compositionErrors.length > 0,
+            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
             actor_id: authContext.userId,
           });
         }
@@ -2719,17 +2737,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             },
             compositionErrors,
-            admissionWebhookErrors,
+            deploymentErrors: [],
           };
         }
 
-        if (admissionWebhookErrors.length > 0) {
+        if (deploymentErrors.length > 0) {
           return {
             response: {
-              code: EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED,
+              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
             },
-            compositionErrors,
-            admissionWebhookErrors,
+            compositionErrors: [],
+            deploymentErrors,
           };
         }
 
@@ -2738,7 +2756,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           compositionErrors: [],
-          admissionWebhookErrors: [],
+          deploymentErrors: [],
         };
       });
     },
@@ -2762,7 +2780,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
             subgraphs: [],
           };
         }
@@ -2775,7 +2792,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Federated graph '${req.name}' not found`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
             subgraphs: [],
           };
         }
@@ -2787,7 +2803,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `One or more labels in the matcher were found to be invalid`,
             },
             compositionErrors: [],
-            admissionWebhookErrors: [],
             subgraphs: [],
           };
         }
@@ -5751,7 +5766,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'Please provide pagination and datetange',
+              details: 'Please provide pagination and daterange',
             },
             federatedGraphChangelogOutput: [],
             hasNextPage: false,

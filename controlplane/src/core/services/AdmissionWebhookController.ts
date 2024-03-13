@@ -3,10 +3,10 @@ import { JWTPayload } from 'jose';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { FastifyBaseLogger } from 'fastify';
 
-export class AdmissionWebhookError extends Error {
+export class AdmissionError extends Error {
   constructor(message: string, cause?: Error) {
     super(message, cause);
-    Object.setPrototypeOf(this, AdmissionWebhookError.prototype);
+    Object.setPrototypeOf(this, AdmissionError.prototype);
   }
 }
 
@@ -46,10 +46,8 @@ export class AdmissionWebhookController {
   }
 
   public async validateConfig(req: ValidateConfigRequest) {
-    this.logger.debug(
-      { url: this.graphAdmissionWebhookURL + '/validate-config', path: '/validate-config', ...req },
-      'Sending admission validate-config webhook request',
-    );
+    const url = this.graphAdmissionWebhookURL + '/validate-config';
+    this.logger.debug({ url, path: '/validate-config', ...req }, 'Sending admission validate-config webhook request');
 
     try {
       const res = await this.httpClient.request<ValidateConfigResponse>({
@@ -68,13 +66,13 @@ export class AdmissionWebhookController {
       );
 
       if (res.status !== 200) {
-        throw new AdmissionWebhookError(
+        throw new AdmissionError(
           `Non-200 status code '${res.status}' from admission /validate-config webhook handler received.`,
         );
       }
 
       if (!res.data.signatureSHA256) {
-        throw new AdmissionWebhookError('No signature from admission /validate-config webhook handler received.');
+        throw new AdmissionError('No signature from admission /validate-config webhook handler received.');
       }
 
       return res.data;
@@ -90,8 +88,8 @@ export class AdmissionWebhookController {
       );
 
       if (err instanceof AxiosError) {
-        throw new AdmissionWebhookError(
-          `Unable to reach admission /validate-config webhook handler. Status code '${err.response?.status}' received.`,
+        throw new AdmissionError(
+          `Unable to reach admission webhook handler on ${url}. Make sure the URL is correct and the service is running.`,
         );
       }
 

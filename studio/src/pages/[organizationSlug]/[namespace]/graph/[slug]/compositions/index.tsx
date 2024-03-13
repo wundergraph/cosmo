@@ -122,7 +122,9 @@ const CompositionsPage: NextPageWithLayout = () => {
                   createdAt,
                   createdBy,
                   isLatestValid,
+                  admissionError,
                   routerConfigSignature,
+                  deploymentError,
                 }) => {
                   const path = `${router.asPath.split("?")[0]}/${id}`;
                   return (
@@ -159,20 +161,41 @@ const CompositionsPage: NextPageWithLayout = () => {
                         <Tooltip>
                           <TooltipTrigger>
                             <div className="flex items-center space-x-1">
-                              {routerConfigSignature ? (
+                              {admissionError ? (
                                 <Badge
                                   variant="outline"
                                   className="gap-2 py-1.5"
                                 >
-                                  <MdVerifiedUser className="h-4 w-4 text-yellow-500" />
+                                  <MdVerifiedUser className="h-4 w-4 text-red-500" />
+                                  <span>Error</span>
+                                </Badge>
+                              ) : routerConfigSignature ? (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-2 py-1.5"
+                                >
+                                  <MdVerifiedUser className="h-4 w-4 text-amber-500" />
                                   <span>Verified</span>
                                 </Badge>
                               ) : null}
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="bottom">
-                            This composition has been validated and signed
-                            successfully by your Admission Controller.
+                            {admissionError ? (
+                              <>
+                                {" "}
+                                This composition could not be validated due to
+                                an error in the Admission Controller Webhooks.
+                                Please open the composition details page to see
+                                the error.
+                              </>
+                            ) : routerConfigSignature ? (
+                              <>
+                                {" "}
+                                This composition has been validated and signed
+                                successfully by your Admission Controller.
+                              </>
+                            ) : null}
                           </TooltipContent>
                         </Tooltip>
                       </TableCell>

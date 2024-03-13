@@ -387,6 +387,8 @@ export interface GraphCompositionDTO {
   routerConfigSignature?: string;
   isComposable: boolean;
   isLatestValid: boolean;
+  admissionError?: string;
+  deploymentError?: string;
 }
 
 export interface SubgraphMemberDTO {
