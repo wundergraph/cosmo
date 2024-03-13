@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.61.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.60.0...@wundergraph/cosmo-connect@0.61.0) (2024-03-13)
+
+### Features
+
+* add edfs validation; add event source name keys to config ([#624](https://github.com/wundergraph/cosmo/issues/624)) ([bf03bb8](https://github.com/wundergraph/cosmo/commit/bf03bb8fca1838fefebcb150f8924ec52fb8bdb5)) (@Aenimus)
+
 # [0.60.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.59.1...@wundergraph/cosmo-connect@0.60.0) (2024-03-11)
 
 ### Features
