@@ -1,1 +1,0 @@
-ALTER TABLE "targets" ALTER COLUMN "type" SET NOT NULL;

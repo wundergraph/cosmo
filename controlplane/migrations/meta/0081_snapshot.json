@@ -1,5 +1,5 @@
 {
-  "id": "f340dc3e-ccb7-4c4c-abfa-2c07df06d947",
+  "id": "234c6f74-cc28-4d70-869a-4e08d1362fb6",
   "prevId": "86c179ca-210c-4daf-bb9e-ed052b5aec34",
   "version": "5",
   "dialect": "pg",
@@ -2968,7 +2968,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "slack_schema_update_event_configs_slack_integration_config_id_federated_graph_id_pk": {
+          "name": "slack_schema_update_event_configs_slack_integration_config_id_federated_graph_id_pk",
+          "columns": [
+            "slack_integration_config_id",
+            "federated_graph_id"
+          ]
+        }
+      },
       "uniqueConstraints": {}
     },
     "subgraph_members": {
