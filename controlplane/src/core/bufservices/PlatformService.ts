@@ -6017,17 +6017,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         return {
-          graphs: list.map((g) => ({
-            id: g.id,
-            name: g.name,
-            routingURL: g.routingUrl,
-            lastUpdatedAt: g.lastUpdatedAt,
-            labels: g.labels,
-            createdUserId: g.creatorUserId,
-            targetId: g.targetId,
-            subscriptionUrl: g.subscriptionUrl,
-            namespace: g.namespace,
-          })),
+          graphs: list
+            .filter((g) => g.labels.length > 0 && g.labels[0].key !== 'monograph')
+            .map((g) => ({
+              id: g.id,
+              name: g.name,
+              routingURL: g.routingUrl,
+              lastUpdatedAt: g.lastUpdatedAt,
+              labels: g.labels,
+              createdUserId: g.creatorUserId,
+              targetId: g.targetId,
+              subscriptionUrl: g.subscriptionUrl,
+              namespace: g.namespace,
+            })),
           response: {
             code: EnumStatusCode.OK,
           },
@@ -7883,10 +7885,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             offset: 0,
           });
 
-          const subgraphs = await subgraphRepo.list({
-            limit: 0,
-            offset: 0,
-          });
+          const subgraphs = (
+            await subgraphRepo.list({
+              limit: 0,
+              offset: 0,
+            })
+          ).filter((s) => s.labels.length > 0 && s.labels[0].key !== 'monograph');
 
           return {
             response: {
@@ -7907,7 +7911,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const federatedGraphs = await fedRepo.getAccessibleFederatedGraphs(authContext.userId);
 
-        const subgraphs = await subgraphRepo.getAccessibleSubgraphs(authContext.userId);
+        const subgraphs = (await subgraphRepo.getAccessibleSubgraphs(authContext.userId)).filter(
+          (s) => s.labels.length > 0 && s.labels[0].key !== 'monograph',
+        );
 
         return {
           response: {

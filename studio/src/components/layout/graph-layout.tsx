@@ -235,6 +235,18 @@ export const GraphSelect = () => {
       value={selected?.id}
       onValueChange={(gID) => {
         const graph = data?.graphs.find((g) => g.id === gID);
+
+        // don't show subgraphs and compositions page for monographs
+        if (
+          graph?.type === "graph" &&
+          ["subgraphs", "compositions"].includes(router.pathname.split("/")[5])
+        ) {
+          router.push(
+            `/${router.query.organizationSlug}/${graph.namespace}/graph/${graph.name}`,
+          );
+          return;
+        }
+
         router.push({
           pathname: router.pathname,
           query: {
