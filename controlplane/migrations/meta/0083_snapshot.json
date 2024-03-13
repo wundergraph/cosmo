@@ -1,6 +1,6 @@
 {
-  "id": "dfc325d2-53af-404e-a2a5-dd4c6376e2e5",
-  "prevId": "86c179ca-210c-4daf-bb9e-ed052b5aec34",
+  "id": "e23bc083-e97b-454a-b775-557e62f0bdd6",
+  "prevId": "9516e493-e237-4cc9-916e-5dc7af7c8376",
   "version": "5",
   "dialect": "pg",
   "tables": {
@@ -2578,6 +2578,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "lint_rule_type": {
+          "name": "lint_rule_type",
+          "type": "lint_rules",
+          "primaryKey": false,
+          "notNull": false
+        },
         "message": {
           "name": "message",
           "type": "text",
@@ -3101,7 +3107,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "slack_schema_update_event_configs_slack_integration_config_id_federated_graph_id_pk": {
+          "name": "slack_schema_update_event_configs_slack_integration_config_id_federated_graph_id_pk",
+          "columns": [
+            "slack_integration_config_id",
+            "federated_graph_id"
+          ]
+        }
+      },
       "uniqueConstraints": {}
     },
     "subgraph_members": {
@@ -3365,7 +3379,7 @@
           "name": "type",
           "type": "target_type",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",

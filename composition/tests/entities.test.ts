@@ -582,6 +582,38 @@ describe('Entity Tests', () => {
         ]),
       );
     });
+
+    test('that resolvable false is correctly propagated in the ConfigurationData', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphS]);
+      expect(errors).toBeUndefined();
+      const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
+      const s = subgraphConfigBySubgraphName?.get('subgraph-s');
+      expect(s).toBeDefined();
+      expect(s!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'property']),
+              isRootNode: true,
+              keys: [
+                { fieldName: '', selectionSet: 'id', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'property' },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+    });
   });
 });
 
@@ -853,6 +885,21 @@ const subgraphR: Subgraph = {
   url: '',
   definitions: parse(`
     type Entity @key(fields: "id") {
+      id: ID!
+      property: String!
+    }
+  `),
+};
+
+const subgraphS: Subgraph = {
+  name: 'subgraph-s',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(fields: "id", resolvable: false) @key(fields: "property") {
       id: ID!
       property: String!
     }

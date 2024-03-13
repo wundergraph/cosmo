@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.75.0...controlplane@0.75.1) (2024-03-11)
+
+### Bug Fixes
+
+* dependencies ([#622](https://github.com/wundergraph/cosmo/issues/622)) ([7763060](https://github.com/wundergraph/cosmo/commit/776306054ebb77a883779ae11ffd178b62afbd59)) (@JivusAyrus)
+
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.74.1...controlplane@0.75.0) (2024-03-11)
+
+### Bug Fixes
+
+* subgraphs not found in composition details page ([#619](https://github.com/wundergraph/cosmo/issues/619)) ([f3ea37e](https://github.com/wundergraph/cosmo/commit/f3ea37eb24a60b4f993437b728cf3b3db2166862)) (@JivusAyrus)
+
+### Features
+
+* add configurable schema linting ([#596](https://github.com/wundergraph/cosmo/issues/596)) ([c662485](https://github.com/wundergraph/cosmo/commit/c66248529c5bc13e795725c82ba50dbad79451ae)) (@JivusAyrus)
+
 ## [0.74.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.74.0...controlplane@0.74.1) (2024-03-08)
 
 ### Bug Fixes

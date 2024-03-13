@@ -171,7 +171,7 @@
             "serviceSdl": "directive @goField(\n\tforceResolver: Boolean\n\tname: String\n\tomittable: Boolean\n) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION\n\ntype Query {\n  employee(id: Int!): Employee\n  employees: [Employee!]!\n  products: [Products!]!\n  teammates(team: Department!): [Employee!]!\n}\n\ntype Mutation {\n  updateEmployeeTag(id: Int!, tag: String!): Employee\n}\n\ntype Subscription {\n  \"\"\"\n  `currentTime` will return a stream of `Time` objects.\n  \"\"\"\n  currentTime: Time!\n  countEmp(max: Int! intervalMilliseconds: Int!): Int!\n  countEmp2(max: Int! intervalMilliseconds: Int!): Int!\n}\n\nenum Department {\n  ENGINEERING\n  MARKETING\n  OPERATIONS\n}\n\ninterface RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nenum EngineerType {\n  BACKEND\n  FRONTEND\n  FULLSTACK\n}\n\ninterface Identifiable {\n  id: Int!\n}\n\ntype Engineer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  engineerType: EngineerType!\n}\n\ntype Marketer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nenum OperationType {\n  FINANCE\n  HUMAN_RESOURCES\n}\n\ntype Operator implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  operatorType: [OperationType!]!\n}\n\ntype Details {\n  forename: String! @shareable\n  location: Country!\n  surname: String! @shareable\n  pastLocations: [City!]!\n}\n\ntype City {\n  type: String!\n  name: String!\n  country: Country\n}\n\n# Using a nested key field simply because it can showcase potential bug\n# vectors / Federation capabilities.\ntype Country @key(fields: \"key { name }\", resolvable: false) {\n  key: CountryKey!\n}\n\ntype CountryKey {\n  name: String!\n}\n\ntype Employee implements Identifiable @key(fields: \"id\") {\n  details: Details! @shareable\n  id: Int!\n  tag: String!\n  role: RoleType!\n  notes: String @shareable\n  updatedAt: String!\n  startDate: String! @requiresScopes(scopes: [[\"read:employee\", \"read:private\"], [\"read:all\"]])\n}\n\ntype Time {\n  unixTime: Int!\n  timeStamp: String!\n}\n\nunion Products = Consultancy | Cosmo | SDK\n\ninterface IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n}\n\ntype Consultancy @key(fields: \"upc\") {\n  upc: ID!\n  lead: Employee!\n}\n\ntype Cosmo implements IProduct @key(fields: \"upc\") {\n  upc: ID!\n  engineers: [Employee!]!\n  lead: Employee!\n}\n\ntype SDK implements IProduct @key(fields: \"upc\") {\n  upc: ID!\n  engineers: [Employee!]!\n  owner: Employee!\n}\n"
           },
           "upstreamSchema": {
-            "key": "56a59ddf7e60f3570c5b9d68da54478d4174160a"
+            "key": "4287d1b3654e508309891f8154f894f8822db453"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -312,7 +312,7 @@
             "serviceSdl": "type Query {\n  findEmployees(criteria: SearchInput): [Employee!]!\n}\n\nenum Class {\n  FISH\n  MAMMAL\n  REPTILE\n}\n\nenum Gender {\n  FEMALE\n  MALE\n  UNKNOWN\n}\n\ninterface Animal {\n  class: Class!\n  gender: Gender!\n}\n\ninterface Pet implements Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\nenum CatType {\n  HOME\n  STREET\n}\n\ntype Alligator implements Pet & Animal {\n  class: Class!\n  dangerous: String!\n  gender: Gender!\n  name: String!\n}\n\ntype Cat implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n  type: CatType!\n}\n\nenum DogBreed {\n  GOLDEN_RETRIEVER\n  POODLE\n  ROTTWEILER\n  YORKSHIRE_TERRIER\n}\n\ntype Dog implements Pet & Animal {\n  breed: DogBreed!\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Mouse implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Pony implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\nenum MaritalStatus {\n  ENGAGED\n  MARRIED\n}\n\nenum Nationality {\n  AMERICAN\n  DUTCH\n  ENGLISH\n  GERMAN\n  INDIAN\n  SPANISH\n  UKRAINIAN\n}\n\ntype Details {\n  forename: String! @shareable\n  middlename: String @deprecated\n  surname: String! @shareable\n  hasChildren: Boolean!\n  maritalStatus: MaritalStatus\n  nationality: Nationality!\n  pets: [Pet]\n}\n\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  details: Details @shareable\n}\n\ninput SearchInput {\n  hasPets: Boolean\n  nationality: Nationality\n  nested: NestedSearchInput\n}\n\ninput NestedSearchInput {\n  maritalStatus: MaritalStatus\n  hasChildren: Boolean\n}\n"
           },
           "upstreamSchema": {
-            "key": "cf890e980392898b688726825cc44d402a42a84c"
+            "key": "3f454775482dd4f9236f9133dc42ed2d5275588e"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -442,7 +442,7 @@
             "serviceSdl": "directive @goField(\n  forceResolver: Boolean\n  name: String\n  omittable: Boolean\n) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION\n\nenum ExerciseType {\n  CALISTHENICS\n  HIKING\n  SPORT\n  STRENGTH_TRAINING\n}\n\ntype Exercise implements Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  category: ExerciseType!\n}\n\ninterface Experience {\n  yearsOfExperience: Float!\n}\n\ntype Flying implements Experience & Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  planeModels: [String!]!\n  yearsOfExperience: Float!\n}\n\nenum GameGenre {\n  ADVENTURE\n  BOARD\n  FPS\n  CARD\n  RPG\n  ROGUELITE\n  SIMULATION\n  STRATEGY\n}\n\ntype Gaming implements Experience & Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  genres: [GameGenre!]!\n  name: String!\n  yearsOfExperience: Float!\n}\n\ntype Other implements Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  name: String!\n}\n\nenum ProgrammingLanguage {\n  CSHARP\n  GO\n  RUST\n  TYPESCRIPT\n}\n\ntype Programming implements Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  languages: [ProgrammingLanguage!]!\n}\n\n# Using a nested key field simply because it can showcase potential bug\n# vectors / Federation capabilities.\ntype Country @key(fields: \"key { name }\", resolvable: false) {\n  key: CountryKey!\n}\n\ntype CountryKey {\n  name: String!\n}\n\ntype Travelling implements Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  countriesLived: [Country!]!\n}\n\ninterface Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  hobbies: [Hobby!]\n}\n\ntype SDK @key(fields: \"upc\") {\n  upc: ID!\n  clientLanguages: [ProgrammingLanguage!]!\n}\n\ntype Subscription {\n  countHob(max: Int! intervalMilliseconds: Int!): Int!\n}"
           },
           "upstreamSchema": {
-            "key": "31a47038e4fcfd370c2c5b9d87bb491fa167ea8d"
+            "key": "30a1340f94465032b5f0b29e0755d475ea6c9f18"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -567,7 +567,7 @@
             "serviceSdl": "schema {\n  query: Queries\n  mutation: Mutation\n}\n\ntype Queries {\n  productTypes: [Products!]!\n  topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [[\"read:fact\"], [\"read:all\"]])\n  factTypes: [TopSecretFactType!]\n}\n\ntype Mutation {\n  addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [[\"write:fact\"], [\"write:all\"]])\n}\n\ninput TopSecretFactInput {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType!\n}\n\nenum TopSecretFactType @authenticated {\n  DIRECTIVE,\n  ENTITY,\n  MISCELLANEOUS,\n}\n\ninterface TopSecretFact @authenticated {\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\nscalar FactContent @requiresScopes(scopes: [[\"read:scalar\"], [\"read:all\"]])\n\ntype DirectiveFact implements TopSecretFact @authenticated {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\ntype EntityFact implements TopSecretFact @requiresScopes(scopes: [[\"read:entity\"]]){\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\ntype MiscellaneousFact implements TopSecretFact {\n  title: String!\n  description: FactContent! @requiresScopes(scopes: [[\"read:miscellaneous\"]])\n  factType: TopSecretFactType\n}\n\nenum ProductName {\n  CONSULTANCY\n  COSMO\n  ENGINE\n  FINANCE\n  HUMAN_RESOURCES\n  MARKETING\n  SDK\n}\n\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  products: [ProductName!]!\n  notes: String @override(from: \"employees\")\n}\n\nunion Products = Consultancy | Cosmo | Documentation\n\ntype Consultancy @key(fields: \"upc\") {\n  upc: ID!\n  name: ProductName!\n}\n\ntype Cosmo @key(fields: \"upc\") {\n  upc: ID!\n  name: ProductName!\n  repositoryURL: String!\n}\n\ntype Documentation {\n  url(product: ProductName!): String!\n  urls(products: [ProductName!]!): [String!]!\n}\n"
           },
           "upstreamSchema": {
-            "key": "113299e79371e754f6a253e10234470127164d26"
+            "key": "8fa02f3271fc0281fa7b8bacf2d4c778f2e26bf6"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -643,7 +643,7 @@
             "serviceSdl": "type Query {\n  \"Returns the value of the received HTTP header.\"\n  headerValue(name: String!): String!\n  \"Returns the value of the given key in the WS initial payload.\"\n  initPayloadValue(key: String!): String!\n  initialPayload: Map\n  \"Returns response after the given delay\"\n  delay(response: String!, ms: Int!): String!\n}\n\nscalar Map\n\ntype TimestampedString {\n  \"The value of the string.\"\n  value: String!\n  \"The timestamp when the response was generated.\"\n  unixTime: Int!\n  \"Sequence number\"\n  seq: Int!\n  \"Total number of responses to be sent\"\n  total: Int!\n  initialPayload: Map\n}\n\ntype Subscription {\n  \"Returns a stream with the value of the received HTTP header.\"\n  headerValue(name: String!, repeat: Int): TimestampedString!\n  \"Returns a stream with the value of value of the given key in the WS initial payload.\"\n  initPayloadValue(key: String!, repeat: Int): TimestampedString!\n  \"Returns a stream with the value of the WS initial payload.\"\n  initialPayload(repeat: Int): Map\n}\n"
           },
           "upstreamSchema": {
-            "key": "3978f365778f64a2658452bc93adc35253882fd4"
+            "key": "174a1089ccb32239d24a0e873e27065f9a1d5b2b"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -689,7 +689,7 @@
             "serviceSdl": "type Mutation {\n    updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!\n}\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  isAvailable: Boolean!\n}\n"
           },
           "upstreamSchema": {
-            "key": "4b6e8a8893cb03aefdf8098d350033e8696f7913"
+            "key": "13d382d0092d713c9989e9a60c4a1529a57d13da"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -741,7 +741,7 @@
             "serviceSdl": "type Mutation {\n    updateMood(employeeID: Int!, mood: Mood!): Employee!\n}\nenum Mood {\n    HAPPY\n    SAD\n}\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  currentMood: Mood!\n}\n"
           },
           "upstreamSchema": {
-            "key": "4aea0f796c828de810fc0204482c95d9413bb3f0"
+            "key": "1d3a7a5c608d59d0adec4584a5e2799b94537078"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -795,7 +795,7 @@
             "serviceSdl": "# Using a nested key field simply because it can showcase potential bug\n# vectors / Federation capabilities.\ntype Country @key(fields: \"key { name }\") {\n  key: CountryKey!\n  language: String\n}\n\ntype CountryKey {\n  name: String!\n}\n"
           },
           "upstreamSchema": {
-            "key": "148b5adf9cd1c49cf04cf5e996ee09ccaf06e146"
+            "key": "61722de1bb9a7d4cf173f247c104a21cddf7f3c1"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -849,7 +849,8 @@
         "keys": [
           {
             "typeName": "Employee",
-            "selectionSet": "id"
+            "selectionSet": "id",
+            "disableEntityResolver": true
           }
         ],
         "customEvents": {
@@ -858,18 +859,21 @@
               "type": "REQUEST",
               "typeName": "Query",
               "fieldName": "employeeFromEvent",
-              "topic": "getEmployee.{{ args.id }}"
+              "topic": "getEmployee.{{ args.id }}",
+              "sourceName": "my-nats"
             },
             {
               "typeName": "Mutation",
               "fieldName": "updateEmployee",
-              "topic": "updateEmployee.{{ args.id }}"
+              "topic": "updateEmployee.{{ args.id }}",
+              "sourceName": "my-nats"
             },
             {
               "type": "SUBSCRIBE",
               "typeName": "Subscription",
               "fieldName": "employeeUpdated",
-              "topic": "employeeUpdated.{{ args.employeeID }}"
+              "topic": "employeeUpdated.{{ args.employeeID }}",
+              "sourceName": "my-nats"
             }
           ]
         }
@@ -1162,142 +1166,6 @@
         }
       },
       {
-        "typeName": "MiscellaneousFact",
-        "fieldName": "description",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true,
-          "requiredOrScopes": [
-            {
-              "requiredAndScopes": [
-                "read:miscellaneous",
-                "read:scalar"
-              ]
-            },
-            {
-              "requiredAndScopes": [
-                "read:miscellaneous",
-                "read:all"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "typeName": "MiscellaneousFact",
-        "fieldName": "factType",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true
-        }
-      },
-      {
-        "typeName": "TopSecretFact",
-        "fieldName": "description",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true,
-          "requiredOrScopes": [
-            {
-              "requiredAndScopes": [
-                "read:scalar"
-              ]
-            },
-            {
-              "requiredAndScopes": [
-                "read:all"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "typeName": "TopSecretFact",
-        "fieldName": "factType",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true
-        }
-      },
-      {
-        "typeName": "DirectiveFact",
-        "fieldName": "title",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true
-        }
-      },
-      {
-        "typeName": "DirectiveFact",
-        "fieldName": "description",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true,
-          "requiredOrScopes": [
-            {
-              "requiredAndScopes": [
-                "read:scalar"
-              ]
-            },
-            {
-              "requiredAndScopes": [
-                "read:all"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "typeName": "DirectiveFact",
-        "fieldName": "factType",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true
-        }
-      },
-      {
-        "typeName": "EntityFact",
-        "fieldName": "title",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true,
-          "requiredOrScopes": [
-            {
-              "requiredAndScopes": [
-                "read:entity"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "typeName": "EntityFact",
-        "fieldName": "description",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true,
-          "requiredOrScopes": [
-            {
-              "requiredAndScopes": [
-                "read:entity",
-                "read:scalar"
-              ]
-            },
-            {
-              "requiredAndScopes": [
-                "read:entity",
-                "read:all"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "typeName": "EntityFact",
-        "fieldName": "factType",
-        "authorizationConfiguration": {
-          "requiresAuthentication": true,
-          "requiredOrScopes": [
-            {
-              "requiredAndScopes": [
-                "read:entity"
-              ]
-            }
-          ]
-        }
-      },
-      {
         "typeName": "Query",
         "fieldName": "topSecretFederationFacts",
         "authorizationConfiguration": {
@@ -1322,19 +1190,155 @@
         "authorizationConfiguration": {
           "requiresAuthentication": true
         }
+      },
+      {
+        "typeName": "MiscellaneousFact",
+        "fieldName": "description",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true,
+          "requiredOrScopes": [
+            {
+              "requiredAndScopes": [
+                "read:miscellaneous",
+                "read:scalar"
+              ]
+            },
+            {
+              "requiredAndScopes": [
+                "read:miscellaneous",
+                "read:all"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "typeName": "MiscellaneousFact",
+        "fieldName": "factType",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true
+        }
+      },
+      {
+        "typeName": "TopSecretFact",
+        "fieldName": "description",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true,
+          "requiredOrScopes": [
+            {
+              "requiredAndScopes": [
+                "read:scalar"
+              ]
+            },
+            {
+              "requiredAndScopes": [
+                "read:all"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "typeName": "TopSecretFact",
+        "fieldName": "factType",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true
+        }
+      },
+      {
+        "typeName": "DirectiveFact",
+        "fieldName": "title",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true
+        }
+      },
+      {
+        "typeName": "DirectiveFact",
+        "fieldName": "description",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true,
+          "requiredOrScopes": [
+            {
+              "requiredAndScopes": [
+                "read:scalar"
+              ]
+            },
+            {
+              "requiredAndScopes": [
+                "read:all"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "typeName": "DirectiveFact",
+        "fieldName": "factType",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true
+        }
+      },
+      {
+        "typeName": "EntityFact",
+        "fieldName": "title",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true,
+          "requiredOrScopes": [
+            {
+              "requiredAndScopes": [
+                "read:entity"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "typeName": "EntityFact",
+        "fieldName": "description",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true,
+          "requiredOrScopes": [
+            {
+              "requiredAndScopes": [
+                "read:entity",
+                "read:scalar"
+              ]
+            },
+            {
+              "requiredAndScopes": [
+                "read:entity",
+                "read:all"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "typeName": "EntityFact",
+        "fieldName": "factType",
+        "authorizationConfiguration": {
+          "requiresAuthentication": true,
+          "requiredOrScopes": [
+            {
+              "requiredAndScopes": [
+                "read:entity"
+              ]
+            }
+          ]
+        }
       }
     ],
-    "graphqlSchema": "directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\nscalar openfed__Scope\n\ninterface RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]!\n}\n\ninterface Identifiable {\n  id: Int!\n}\n\nunion Products = Consultancy | Cosmo | SDK | Documentation\n\ninterface IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n}\n\ninterface Animal {\n  class: Class!\n  gender: Gender!\n}\n\ninterface Experience {\n  yearsOfExperience: Float!\n}\n\ninterface Hobby {\n  employees: [Employee!]!\n}\n\ninterface TopSecretFact {\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\ntype Query {\n  employee(id: Int!): Employee\n  employees: [Employee!]!\n  products: [Products!]!\n  teammates(team: Department!): [Employee!]!\n  findEmployees(criteria: SearchInput): [Employee!]!\n  productTypes: [Products!]!\n  topSecretFederationFacts: [TopSecretFact!]!\n  factTypes: [TopSecretFactType!]\n\n  \"\"\"Returns the value of the received HTTP header.\"\"\"\n  headerValue(name: String!): String!\n\n  \"\"\"Returns the value of the given key in the WS initial payload.\"\"\"\n  initPayloadValue(key: String!): String!\n  initialPayload: Map\n\n  \"\"\"Returns response after the given delay\"\"\"\n  delay(response: String!, ms: Int!): String!\n  employeeFromEvent(id: ID!): Employee!\n}\n\ntype Mutation {\n  updateEmployeeTag(id: Int!, tag: String!): Employee\n  addFact(fact: TopSecretFactInput!): TopSecretFact!\n  updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!\n  updateMood(employeeID: Int!, mood: Mood!): Employee!\n  updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult!\n}\n\ntype Subscription {\n  \"\"\"`currentTime` will return a stream of `Time` objects.\"\"\"\n  currentTime: Time!\n  countEmp(max: Int!, intervalMilliseconds: Int!): Int!\n  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!\n  countHob(max: Int!, intervalMilliseconds: Int!): Int!\n\n  \"\"\"Returns a stream with the value of the received HTTP header.\"\"\"\n  headerValue(name: String!, repeat: Int): TimestampedString!\n\n  \"\"\"\n  Returns a stream with the value of value of the given key in the WS initial payload.\n  \"\"\"\n  initPayloadValue(key: String!, repeat: Int): TimestampedString!\n\n  \"\"\"Returns a stream with the value of the WS initial payload.\"\"\"\n  initialPayload(repeat: Int): Map\n  employeeUpdated(employeeID: ID!): Employee!\n}\n\nenum Department {\n  ENGINEERING\n  MARKETING\n  OPERATIONS\n}\n\nenum EngineerType {\n  BACKEND\n  FRONTEND\n  FULLSTACK\n}\n\nenum OperationType {\n  FINANCE\n  HUMAN_RESOURCES\n}\n\ntype Details {\n  forename: String!\n  location: Country!\n  surname: String!\n  pastLocations: [City!]!\n  middlename: String @deprecated\n  hasChildren: Boolean!\n  maritalStatus: MaritalStatus\n  nationality: Nationality!\n  pets: [Pet]\n}\n\ntype City {\n  type: String!\n  name: String!\n  country: Country\n}\n\ntype Country {\n  key: CountryKey!\n  language: String\n}\n\ntype CountryKey {\n  name: String!\n}\n\ntype Time {\n  unixTime: Int!\n  timeStamp: String!\n}\n\ntype Consultancy {\n  upc: ID!\n  lead: Employee!\n  name: ProductName!\n}\n\nenum Class {\n  FISH\n  MAMMAL\n  REPTILE\n}\n\nenum Gender {\n  FEMALE\n  MALE\n  UNKNOWN\n}\n\nenum CatType {\n  HOME\n  STREET\n}\n\nenum DogBreed {\n  GOLDEN_RETRIEVER\n  POODLE\n  ROTTWEILER\n  YORKSHIRE_TERRIER\n}\n\nenum MaritalStatus {\n  ENGAGED\n  MARRIED\n}\n\nenum Nationality {\n  AMERICAN\n  DUTCH\n  ENGLISH\n  GERMAN\n  INDIAN\n  SPANISH\n  UKRAINIAN\n}\n\ninput SearchInput {\n  hasPets: Boolean\n  nationality: Nationality\n  nested: NestedSearchInput\n}\n\ninput NestedSearchInput {\n  maritalStatus: MaritalStatus\n  hasChildren: Boolean\n}\n\nenum ExerciseType {\n  CALISTHENICS\n  HIKING\n  SPORT\n  STRENGTH_TRAINING\n}\n\nenum GameGenre {\n  ADVENTURE\n  BOARD\n  FPS\n  CARD\n  RPG\n  ROGUELITE\n  SIMULATION\n  STRATEGY\n}\n\nenum ProgrammingLanguage {\n  CSHARP\n  GO\n  RUST\n  TYPESCRIPT\n}\n\ninput TopSecretFactInput {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType!\n}\n\nenum TopSecretFactType {\n  DIRECTIVE\n  ENTITY\n  MISCELLANEOUS\n}\n\nscalar FactContent\n\nenum ProductName {\n  CONSULTANCY\n  COSMO\n  ENGINE\n  FINANCE\n  HUMAN_RESOURCES\n  MARKETING\n  SDK\n}\n\ntype Documentation {\n  url(product: ProductName!): String!\n  urls(products: [ProductName!]!): [String!]!\n}\n\nscalar Map\n\ntype TimestampedString {\n  \"\"\"The value of the string.\"\"\"\n  value: String!\n\n  \"\"\"The timestamp when the response was generated.\"\"\"\n  unixTime: Int!\n\n  \"\"\"Sequence number\"\"\"\n  seq: Int!\n\n  \"\"\"Total number of responses to be sent\"\"\"\n  total: Int!\n  initialPayload: Map\n}\n\nenum Mood {\n  HAPPY\n  SAD\n}\n\ntype PublishEventResult {\n  success: Boolean!\n}\n\ninput UpdateEmployeeInput {\n  name: String\n  email: String\n}\n\ninterface Pet implements Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Engineer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]!\n  engineerType: EngineerType!\n}\n\ntype Marketer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]!\n}\n\ntype Operator implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]!\n  operatorType: [OperationType!]!\n}\n\ntype Employee implements Identifiable {\n  details: Details\n  id: Int!\n  tag: String!\n  role: RoleType!\n  updatedAt: String!\n  startDate: String!\n  hobbies: [Hobby!]\n  products: [ProductName!]!\n  notes: String\n  isAvailable: Boolean!\n  currentMood: Mood!\n}\n\ntype Cosmo implements IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n  lead: Employee!\n  name: ProductName!\n  repositoryURL: String!\n}\n\ntype SDK implements IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n  owner: Employee!\n  clientLanguages: [ProgrammingLanguage!]!\n}\n\ntype Alligator implements Pet & Animal {\n  class: Class!\n  dangerous: String!\n  gender: Gender!\n  name: String!\n}\n\ntype Cat implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n  type: CatType!\n}\n\ntype Dog implements Pet & Animal {\n  breed: DogBreed!\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Mouse implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Pony implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Exercise implements Hobby {\n  employees: [Employee!]!\n  category: ExerciseType!\n}\n\ntype Flying implements Experience & Hobby {\n  employees: [Employee!]!\n  planeModels: [String!]!\n  yearsOfExperience: Float!\n}\n\ntype Gaming implements Experience & Hobby {\n  employees: [Employee!]!\n  genres: [GameGenre!]!\n  name: String!\n  yearsOfExperience: Float!\n}\n\ntype Other implements Hobby {\n  employees: [Employee!]!\n  name: String!\n}\n\ntype Programming implements Hobby {\n  employees: [Employee!]!\n  languages: [ProgrammingLanguage!]!\n}\n\ntype Travelling implements Hobby {\n  employees: [Employee!]!\n  countriesLived: [Country!]!\n}\n\ntype DirectiveFact implements TopSecretFact {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\ntype EntityFact implements TopSecretFact {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\ntype MiscellaneousFact implements TopSecretFact {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType\n}",
+    "graphqlSchema": "directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\nscalar openfed__Scope\n\ntype Query {\n  employee(id: Int!): Employee\n  employees: [Employee!]!\n  products: [Products!]!\n  teammates(team: Department!): [Employee!]!\n  findEmployees(criteria: SearchInput): [Employee!]!\n  productTypes: [Products!]!\n  topSecretFederationFacts: [TopSecretFact!]!\n  factTypes: [TopSecretFactType!]\n\n  \"\"\"Returns the value of the received HTTP header.\"\"\"\n  headerValue(name: String!): String!\n\n  \"\"\"Returns the value of the given key in the WS initial payload.\"\"\"\n  initPayloadValue(key: String!): String!\n  initialPayload: Map\n\n  \"\"\"Returns response after the given delay\"\"\"\n  delay(response: String!, ms: Int!): String!\n  employeeFromEvent(id: ID!): Employee!\n}\n\ntype Mutation {\n  updateEmployeeTag(id: Int!, tag: String!): Employee\n  addFact(fact: TopSecretFactInput!): TopSecretFact!\n  updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!\n  updateMood(employeeID: Int!, mood: Mood!): Employee!\n  updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult!\n}\n\ntype Subscription {\n  \"\"\"`currentTime` will return a stream of `Time` objects.\"\"\"\n  currentTime: Time!\n  countEmp(max: Int!, intervalMilliseconds: Int!): Int!\n  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!\n  countHob(max: Int!, intervalMilliseconds: Int!): Int!\n\n  \"\"\"Returns a stream with the value of the received HTTP header.\"\"\"\n  headerValue(name: String!, repeat: Int): TimestampedString!\n\n  \"\"\"\n  Returns a stream with the value of value of the given key in the WS initial payload.\n  \"\"\"\n  initPayloadValue(key: String!, repeat: Int): TimestampedString!\n\n  \"\"\"Returns a stream with the value of the WS initial payload.\"\"\"\n  initialPayload(repeat: Int): Map\n  employeeUpdated(employeeID: ID!): Employee!\n}\n\nenum Department {\n  ENGINEERING\n  MARKETING\n  OPERATIONS\n}\n\ninterface RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]!\n}\n\nenum EngineerType {\n  BACKEND\n  FRONTEND\n  FULLSTACK\n}\n\ninterface Identifiable {\n  id: Int!\n}\n\nenum OperationType {\n  FINANCE\n  HUMAN_RESOURCES\n}\n\ntype Details {\n  forename: String!\n  location: Country!\n  surname: String!\n  pastLocations: [City!]!\n  middlename: String @deprecated\n  hasChildren: Boolean!\n  maritalStatus: MaritalStatus\n  nationality: Nationality!\n  pets: [Pet]\n}\n\ntype City {\n  type: String!\n  name: String!\n  country: Country\n}\n\ntype Country {\n  key: CountryKey!\n  language: String\n}\n\ntype CountryKey {\n  name: String!\n}\n\ntype Time {\n  unixTime: Int!\n  timeStamp: String!\n}\n\nunion Products = Consultancy | Cosmo | SDK | Documentation\n\ninterface IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n}\n\ntype Consultancy {\n  upc: ID!\n  lead: Employee!\n  name: ProductName!\n}\n\nenum Class {\n  FISH\n  MAMMAL\n  REPTILE\n}\n\nenum Gender {\n  FEMALE\n  MALE\n  UNKNOWN\n}\n\ninterface Animal {\n  class: Class!\n  gender: Gender!\n}\n\nenum CatType {\n  HOME\n  STREET\n}\n\nenum DogBreed {\n  GOLDEN_RETRIEVER\n  POODLE\n  ROTTWEILER\n  YORKSHIRE_TERRIER\n}\n\nenum MaritalStatus {\n  ENGAGED\n  MARRIED\n}\n\nenum Nationality {\n  AMERICAN\n  DUTCH\n  ENGLISH\n  GERMAN\n  INDIAN\n  SPANISH\n  UKRAINIAN\n}\n\ninput SearchInput {\n  hasPets: Boolean\n  nationality: Nationality\n  nested: NestedSearchInput\n}\n\ninput NestedSearchInput {\n  maritalStatus: MaritalStatus\n  hasChildren: Boolean\n}\n\nenum ExerciseType {\n  CALISTHENICS\n  HIKING\n  SPORT\n  STRENGTH_TRAINING\n}\n\ninterface Experience {\n  yearsOfExperience: Float!\n}\n\nenum GameGenre {\n  ADVENTURE\n  BOARD\n  FPS\n  CARD\n  RPG\n  ROGUELITE\n  SIMULATION\n  STRATEGY\n}\n\nenum ProgrammingLanguage {\n  CSHARP\n  GO\n  RUST\n  TYPESCRIPT\n}\n\ninterface Hobby {\n  employees: [Employee!]!\n}\n\ninput TopSecretFactInput {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType!\n}\n\nenum TopSecretFactType {\n  DIRECTIVE\n  ENTITY\n  MISCELLANEOUS\n}\n\ninterface TopSecretFact {\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\nscalar FactContent\n\nenum ProductName {\n  CONSULTANCY\n  COSMO\n  ENGINE\n  FINANCE\n  HUMAN_RESOURCES\n  MARKETING\n  SDK\n}\n\ntype Documentation {\n  url(product: ProductName!): String!\n  urls(products: [ProductName!]!): [String!]!\n}\n\nscalar Map\n\ntype TimestampedString {\n  \"\"\"The value of the string.\"\"\"\n  value: String!\n\n  \"\"\"The timestamp when the response was generated.\"\"\"\n  unixTime: Int!\n\n  \"\"\"Sequence number\"\"\"\n  seq: Int!\n\n  \"\"\"Total number of responses to be sent\"\"\"\n  total: Int!\n  initialPayload: Map\n}\n\nenum Mood {\n  HAPPY\n  SAD\n}\n\ntype PublishEventResult {\n  success: Boolean!\n}\n\ninput UpdateEmployeeInput {\n  name: String\n  email: String\n}\n\ntype Engineer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]!\n  engineerType: EngineerType!\n}\n\ntype Marketer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]!\n}\n\ntype Operator implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]!\n  operatorType: [OperationType!]!\n}\n\ntype Employee implements Identifiable {\n  details: Details\n  id: Int!\n  tag: String!\n  role: RoleType!\n  notes: String\n  updatedAt: String!\n  startDate: String!\n  hobbies: [Hobby!]\n  products: [ProductName!]!\n  isAvailable: Boolean!\n  currentMood: Mood!\n}\n\ntype Cosmo implements IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n  lead: Employee!\n  name: ProductName!\n  repositoryURL: String!\n}\n\ntype SDK implements IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n  owner: Employee!\n  clientLanguages: [ProgrammingLanguage!]!\n}\n\ninterface Pet implements Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Alligator implements Pet & Animal {\n  class: Class!\n  dangerous: String!\n  gender: Gender!\n  name: String!\n}\n\ntype Cat implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n  type: CatType!\n}\n\ntype Dog implements Pet & Animal {\n  breed: DogBreed!\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Mouse implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Pony implements Pet & Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Exercise implements Hobby {\n  employees: [Employee!]!\n  category: ExerciseType!\n}\n\ntype Flying implements Experience & Hobby {\n  employees: [Employee!]!\n  planeModels: [String!]!\n  yearsOfExperience: Float!\n}\n\ntype Gaming implements Experience & Hobby {\n  employees: [Employee!]!\n  genres: [GameGenre!]!\n  name: String!\n  yearsOfExperience: Float!\n}\n\ntype Other implements Hobby {\n  employees: [Employee!]!\n  name: String!\n}\n\ntype Programming implements Hobby {\n  employees: [Employee!]!\n  languages: [ProgrammingLanguage!]!\n}\n\ntype Travelling implements Hobby {\n  employees: [Employee!]!\n  countriesLived: [Country!]!\n}\n\ntype DirectiveFact implements TopSecretFact {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\ntype EntityFact implements TopSecretFact {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType\n}\n\ntype MiscellaneousFact implements TopSecretFact {\n  title: String!\n  description: FactContent!\n  factType: TopSecretFactType\n}",
     "stringStorage": {
-      "56a59ddf7e60f3570c5b9d68da54478d4174160a": "schema {\n  query: Query\n  mutation: Mutation\n  subscription: Subscription\n}\n\ndirective @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @composeDirective(name: String!) repeatable on SCHEMA\n\ndirective @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @interfaceObject on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: String, import: [String], url: String!) repeatable on SCHEMA\n\ndirective @override(from: String!) on FIELD_DEFINITION\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @shareable on FIELD_DEFINITION | OBJECT\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype City {\n  country: Country\n  name: String!\n  type: String!\n}\n\ntype Consultancy @key(fields: \"upc\") {\n  lead: Employee!\n  upc: ID!\n}\n\ntype Cosmo implements IProduct @key(fields: \"upc\") {\n  engineers: [Employee!]!\n  lead: Employee!\n  upc: ID!\n}\n\ntype Country @key(fields: \"key { name }\", resolvable: false) {\n  key: CountryKey!\n}\n\ntype CountryKey {\n  name: String!\n}\n\nenum Department {\n  ENGINEERING\n  MARKETING\n  OPERATIONS\n}\n\ntype Details {\n  forename: String! @shareable\n  location: Country!\n  pastLocations: [City!]!\n  surname: String! @shareable\n}\n\ntype Employee implements Identifiable @key(fields: \"id\") {\n  details: Details! @shareable\n  id: Int!\n  notes: String @shareable\n  role: RoleType!\n  startDate: String! @requiresScopes(scopes: [[\"read:employee\", \"read:private\"], [\"read:all\"]])\n  tag: String!\n  updatedAt: String!\n}\n\ntype Engineer implements RoleType {\n  departments: [Department!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  engineerType: EngineerType!\n  title: [String!]!\n}\n\nenum EngineerType {\n  BACKEND\n  FRONTEND\n  FULLSTACK\n}\n\ninterface IProduct {\n  engineers: [Employee!]!\n  upc: ID!\n}\n\ninterface Identifiable {\n  id: Int!\n}\n\ntype Marketer implements RoleType {\n  departments: [Department!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  title: [String!]!\n}\n\ntype Mutation {\n  updateEmployeeTag(id: Int!, tag: String!): Employee\n}\n\nenum OperationType {\n  FINANCE\n  HUMAN_RESOURCES\n}\n\ntype Operator implements RoleType {\n  departments: [Department!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  operatorType: [OperationType!]!\n  title: [String!]!\n}\n\nunion Products = Consultancy | Cosmo | SDK\n\ntype Query {\n  employee(id: Int!): Employee\n  employees: [Employee!]!\n  products: [Products!]!\n  teammates(team: Department!): [Employee!]!\n}\n\ninterface RoleType {\n  departments: [Department!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  title: [String!]!\n}\n\ntype SDK implements IProduct @key(fields: \"upc\") {\n  engineers: [Employee!]!\n  owner: Employee!\n  upc: ID!\n}\n\ntype Subscription {\n  countEmp(intervalMilliseconds: Int!, max: Int!): Int!\n  countEmp2(intervalMilliseconds: Int!, max: Int!): Int!\n  \"\"\"`currentTime` will return a stream of `Time` objects.\"\"\"\n  currentTime: Time!\n}\n\ntype Time {\n  timeStamp: String!\n  unixTime: Int!\n}\n\nscalar openfed__FieldSet\n\nscalar openfed__Scope",
-      "cf890e980392898b688726825cc44d402a42a84c": "schema {\n  query: Query\n}\n\ndirective @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @composeDirective(name: String!) repeatable on SCHEMA\n\ndirective @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @interfaceObject on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: String, import: [String], url: String!) repeatable on SCHEMA\n\ndirective @override(from: String!) on FIELD_DEFINITION\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @shareable on FIELD_DEFINITION | OBJECT\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Alligator implements Animal & Pet {\n  class: Class!\n  dangerous: String!\n  gender: Gender!\n  name: String!\n}\n\ninterface Animal {\n  class: Class!\n  gender: Gender!\n}\n\ntype Cat implements Animal & Pet {\n  class: Class!\n  gender: Gender!\n  name: String!\n  type: CatType!\n}\n\nenum CatType {\n  HOME\n  STREET\n}\n\nenum Class {\n  FISH\n  MAMMAL\n  REPTILE\n}\n\ntype Details {\n  forename: String! @shareable\n  hasChildren: Boolean!\n  maritalStatus: MaritalStatus\n  middlename: String @deprecated\n  nationality: Nationality!\n  pets: [Pet]\n  surname: String! @shareable\n}\n\ntype Dog implements Animal & Pet {\n  breed: DogBreed!\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\nenum DogBreed {\n  GOLDEN_RETRIEVER\n  POODLE\n  ROTTWEILER\n  YORKSHIRE_TERRIER\n}\n\ntype Employee @key(fields: \"id\") {\n  details: Details @shareable\n  id: Int!\n}\n\nenum Gender {\n  FEMALE\n  MALE\n  UNKNOWN\n}\n\nenum MaritalStatus {\n  ENGAGED\n  MARRIED\n}\n\ntype Mouse implements Animal & Pet {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\nenum Nationality {\n  AMERICAN\n  DUTCH\n  ENGLISH\n  GERMAN\n  INDIAN\n  SPANISH\n  UKRAINIAN\n}\n\ninput NestedSearchInput {\n  hasChildren: Boolean\n  maritalStatus: MaritalStatus\n}\n\ninterface Pet implements Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Pony implements Animal & Pet {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Query {\n  findEmployees(criteria: SearchInput): [Employee!]!\n}\n\ninput SearchInput {\n  hasPets: Boolean\n  nationality: Nationality\n  nested: NestedSearchInput\n}\n\nscalar openfed__FieldSet\n\nscalar openfed__Scope",
-      "31a47038e4fcfd370c2c5b9d87bb491fa167ea8d": "schema {\n  subscription: Subscription\n}\n\ndirective @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Country @key(fields: \"key { name }\", resolvable: false) {\n  key: CountryKey!\n}\n\ntype CountryKey {\n  name: String!\n}\n\ntype Employee @key(fields: \"id\") {\n  hobbies: [Hobby!]\n  id: Int!\n}\n\ntype Exercise implements Hobby {\n  category: ExerciseType!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nenum ExerciseType {\n  CALISTHENICS\n  HIKING\n  SPORT\n  STRENGTH_TRAINING\n}\n\ninterface Experience {\n  yearsOfExperience: Float!\n}\n\ntype Flying implements Experience & Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  planeModels: [String!]!\n  yearsOfExperience: Float!\n}\n\nenum GameGenre {\n  ADVENTURE\n  BOARD\n  CARD\n  FPS\n  ROGUELITE\n  RPG\n  SIMULATION\n  STRATEGY\n}\n\ntype Gaming implements Experience & Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  genres: [GameGenre!]!\n  name: String!\n  yearsOfExperience: Float!\n}\n\ninterface Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\ntype Other implements Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  name: String!\n}\n\ntype Programming implements Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  languages: [ProgrammingLanguage!]!\n}\n\nenum ProgrammingLanguage {\n  CSHARP\n  GO\n  RUST\n  TYPESCRIPT\n}\n\ntype SDK @key(fields: \"upc\") {\n  clientLanguages: [ProgrammingLanguage!]!\n  upc: ID!\n}\n\ntype Subscription {\n  countHob(intervalMilliseconds: Int!, max: Int!): Int!\n}\n\ntype Travelling implements Hobby {\n  countriesLived: [Country!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nscalar openfed__FieldSet",
-      "113299e79371e754f6a253e10234470127164d26": "schema {\n  query: Queries\n  mutation: Mutation\n}\n\ndirective @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @composeDirective(name: String!) repeatable on SCHEMA\n\ndirective @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @interfaceObject on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: String, import: [String], url: String!) repeatable on SCHEMA\n\ndirective @override(from: String!) on FIELD_DEFINITION\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @shareable on FIELD_DEFINITION | OBJECT\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Consultancy @key(fields: \"upc\") {\n  name: ProductName!\n  upc: ID!\n}\n\ntype Cosmo @key(fields: \"upc\") {\n  name: ProductName!\n  repositoryURL: String!\n  upc: ID!\n}\n\ntype DirectiveFact implements TopSecretFact {\n  description: FactContent! @authenticated @requiresScopes(scopes: [[\"read:scalar\"], [\"read:all\"]])\n  factType: TopSecretFactType @authenticated\n  title: String! @authenticated\n}\n\ntype Documentation {\n  url(product: ProductName!): String!\n  urls(products: [ProductName!]!): [String!]!\n}\n\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  notes: String\n  products: [ProductName!]!\n}\n\ntype EntityFact implements TopSecretFact {\n  description: FactContent! @authenticated @requiresScopes(scopes: [[\"read:entity\", \"read:scalar\"], [\"read:entity\", \"read:all\"]])\n  factType: TopSecretFactType @authenticated @requiresScopes(scopes: [[\"read:entity\"]])\n  title: String! @requiresScopes(scopes: [[\"read:entity\"]])\n}\n\nscalar FactContent\n\ntype MiscellaneousFact implements TopSecretFact {\n  description: FactContent! @authenticated @requiresScopes(scopes: [[\"read:miscellaneous\", \"read:scalar\"], [\"read:miscellaneous\", \"read:all\"]])\n  factType: TopSecretFactType @authenticated\n  title: String!\n}\n\ntype Mutation {\n  addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [[\"write:fact\"], [\"write:all\"]])\n}\n\nenum ProductName {\n  CONSULTANCY\n  COSMO\n  ENGINE\n  FINANCE\n  HUMAN_RESOURCES\n  MARKETING\n  SDK\n}\n\nunion Products = Consultancy | Cosmo | Documentation\n\ntype Queries {\n  factTypes: [TopSecretFactType!] @authenticated\n  productTypes: [Products!]!\n  topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [[\"read:fact\"], [\"read:all\"]])\n}\n\ninterface TopSecretFact {\n  description: FactContent! @authenticated @requiresScopes(scopes: [[\"read:scalar\"], [\"read:all\"]])\n  factType: TopSecretFactType @authenticated\n}\n\ninput TopSecretFactInput {\n  description: FactContent!\n  factType: TopSecretFactType!\n  title: String!\n}\n\nenum TopSecretFactType {\n  DIRECTIVE\n  ENTITY\n  MISCELLANEOUS\n}\n\nscalar openfed__FieldSet\n\nscalar openfed__Scope",
-      "3978f365778f64a2658452bc93adc35253882fd4": "schema {\n  query: Query\n  subscription: Subscription\n}\n\ndirective @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\nscalar Map\n\ntype Query {\n  \"\"\"Returns response after the given delay\"\"\"\n  delay(ms: Int!, response: String!): String!\n  \"\"\"Returns the value of the received HTTP header.\"\"\"\n  headerValue(name: String!): String!\n  \"\"\"Returns the value of the given key in the WS initial payload.\"\"\"\n  initPayloadValue(key: String!): String!\n  initialPayload: Map\n}\n\ntype Subscription {\n  \"\"\"Returns a stream with the value of the received HTTP header.\"\"\"\n  headerValue(name: String!, repeat: Int): TimestampedString!\n  \"\"\"\n  Returns a stream with the value of value of the given key in the WS initial payload.\n  \"\"\"\n  initPayloadValue(key: String!, repeat: Int): TimestampedString!\n  \"\"\"Returns a stream with the value of the WS initial payload.\"\"\"\n  initialPayload(repeat: Int): Map\n}\n\ntype TimestampedString {\n  initialPayload: Map\n  \"\"\"Sequence number\"\"\"\n  seq: Int!\n  \"\"\"Total number of responses to be sent\"\"\"\n  total: Int!\n  \"\"\"The timestamp when the response was generated.\"\"\"\n  unixTime: Int!\n  \"\"\"The value of the string.\"\"\"\n  value: String!\n}\n\nscalar openfed__FieldSet",
-      "4b6e8a8893cb03aefdf8098d350033e8696f7913": "schema {\n  mutation: Mutation\n}\n\ndirective @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  isAvailable: Boolean!\n}\n\ntype Mutation {\n  updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!\n}\n\nscalar openfed__FieldSet",
-      "4aea0f796c828de810fc0204482c95d9413bb3f0": "schema {\n  mutation: Mutation\n}\n\ndirective @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Employee @key(fields: \"id\") {\n  currentMood: Mood!\n  id: Int!\n}\n\nenum Mood {\n  HAPPY\n  SAD\n}\n\ntype Mutation {\n  updateMood(employeeID: Int!, mood: Mood!): Employee!\n}\n\nscalar openfed__FieldSet",
-      "148b5adf9cd1c49cf04cf5e996ee09ccaf06e146": "directive @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Country @key(fields: \"key { name }\") {\n  key: CountryKey!\n  language: String\n}\n\ntype CountryKey {\n  name: String!\n}\n\nscalar openfed__FieldSet",
-      "3ff40694e2c273b9480db53128ac834855919b32": "schema {\n  query: Query\n  mutation: Mutation\n  subscription: Subscription\n}\n\ndirective @eventsPublish(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceID: String, topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Employee @key(fields: \"id\") {\n  id: Int!\n}\n\ntype Mutation {\n  updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: \"updateEmployee.{{ args.id }}\")\n}\n\ntype PublishEventResult {\n  success: Boolean!\n}\n\ntype Query {\n  employeeFromEvent(id: ID!): Employee! @eventsRequest(topic: \"getEmployee.{{ args.id }}\")\n}\n\ntype Subscription {\n  employeeUpdated(employeeID: ID!): Employee! @eventsSubscribe(topic: \"employeeUpdated.{{ args.employeeID }}\")\n}\n\ninput UpdateEmployeeInput {\n  email: String\n  name: String\n}\n\nscalar openfed__FieldSet"
+      "4287d1b3654e508309891f8154f894f8822db453": "schema {\n  query: Query\n  mutation: Mutation\n  subscription: Subscription\n}\n\ndirective @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @composeDirective(name: String!) repeatable on SCHEMA\n\ndirective @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @interfaceObject on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: String, import: [String], url: String!) repeatable on SCHEMA\n\ndirective @override(from: String!) on FIELD_DEFINITION\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @shareable on FIELD_DEFINITION | OBJECT\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype City {\n  country: Country\n  name: String!\n  type: String!\n}\n\ntype Consultancy @key(fields: \"upc\") {\n  lead: Employee!\n  upc: ID!\n}\n\ntype Cosmo implements IProduct @key(fields: \"upc\") {\n  engineers: [Employee!]!\n  lead: Employee!\n  upc: ID!\n}\n\ntype Country @key(fields: \"key { name }\", resolvable: false) {\n  key: CountryKey!\n}\n\ntype CountryKey {\n  name: String!\n}\n\nenum Department {\n  ENGINEERING\n  MARKETING\n  OPERATIONS\n}\n\ntype Details {\n  forename: String! @shareable\n  location: Country!\n  pastLocations: [City!]!\n  surname: String! @shareable\n}\n\ntype Employee implements Identifiable @key(fields: \"id\") {\n  details: Details! @shareable\n  id: Int!\n  notes: String @shareable\n  role: RoleType!\n  startDate: String! @requiresScopes(scopes: [[\"read:employee\", \"read:private\"], [\"read:all\"]])\n  tag: String!\n  updatedAt: String!\n}\n\ntype Engineer implements RoleType {\n  departments: [Department!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  engineerType: EngineerType!\n  title: [String!]!\n}\n\nenum EngineerType {\n  BACKEND\n  FRONTEND\n  FULLSTACK\n}\n\ninterface IProduct {\n  engineers: [Employee!]!\n  upc: ID!\n}\n\ninterface Identifiable {\n  id: Int!\n}\n\ntype Marketer implements RoleType {\n  departments: [Department!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  title: [String!]!\n}\n\ntype Mutation {\n  updateEmployeeTag(id: Int!, tag: String!): Employee\n}\n\nenum OperationType {\n  FINANCE\n  HUMAN_RESOURCES\n}\n\ntype Operator implements RoleType {\n  departments: [Department!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  operatorType: [OperationType!]!\n  title: [String!]!\n}\n\nunion Products = Consultancy | Cosmo | SDK\n\ntype Query {\n  employee(id: Int!): Employee\n  employees: [Employee!]!\n  products: [Products!]!\n  teammates(team: Department!): [Employee!]!\n}\n\ninterface RoleType {\n  departments: [Department!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  title: [String!]!\n}\n\ntype SDK implements IProduct @key(fields: \"upc\") {\n  engineers: [Employee!]!\n  owner: Employee!\n  upc: ID!\n}\n\ntype Subscription {\n  countEmp(intervalMilliseconds: Int!, max: Int!): Int!\n  countEmp2(intervalMilliseconds: Int!, max: Int!): Int!\n  \"\"\"`currentTime` will return a stream of `Time` objects.\"\"\"\n  currentTime: Time!\n}\n\ntype Time {\n  timeStamp: String!\n  unixTime: Int!\n}\n\nscalar openfed__FieldSet\n\nscalar openfed__Scope",
+      "3f454775482dd4f9236f9133dc42ed2d5275588e": "schema {\n  query: Query\n}\n\ndirective @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @composeDirective(name: String!) repeatable on SCHEMA\n\ndirective @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @interfaceObject on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: String, import: [String], url: String!) repeatable on SCHEMA\n\ndirective @override(from: String!) on FIELD_DEFINITION\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @shareable on FIELD_DEFINITION | OBJECT\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Alligator implements Animal & Pet {\n  class: Class!\n  dangerous: String!\n  gender: Gender!\n  name: String!\n}\n\ninterface Animal {\n  class: Class!\n  gender: Gender!\n}\n\ntype Cat implements Animal & Pet {\n  class: Class!\n  gender: Gender!\n  name: String!\n  type: CatType!\n}\n\nenum CatType {\n  HOME\n  STREET\n}\n\nenum Class {\n  FISH\n  MAMMAL\n  REPTILE\n}\n\ntype Details {\n  forename: String! @shareable\n  hasChildren: Boolean!\n  maritalStatus: MaritalStatus\n  middlename: String @deprecated\n  nationality: Nationality!\n  pets: [Pet]\n  surname: String! @shareable\n}\n\ntype Dog implements Animal & Pet {\n  breed: DogBreed!\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\nenum DogBreed {\n  GOLDEN_RETRIEVER\n  POODLE\n  ROTTWEILER\n  YORKSHIRE_TERRIER\n}\n\ntype Employee @key(fields: \"id\") {\n  details: Details @shareable\n  id: Int!\n}\n\nenum Gender {\n  FEMALE\n  MALE\n  UNKNOWN\n}\n\nenum MaritalStatus {\n  ENGAGED\n  MARRIED\n}\n\ntype Mouse implements Animal & Pet {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\nenum Nationality {\n  AMERICAN\n  DUTCH\n  ENGLISH\n  GERMAN\n  INDIAN\n  SPANISH\n  UKRAINIAN\n}\n\ninput NestedSearchInput {\n  hasChildren: Boolean\n  maritalStatus: MaritalStatus\n}\n\ninterface Pet implements Animal {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Pony implements Animal & Pet {\n  class: Class!\n  gender: Gender!\n  name: String!\n}\n\ntype Query {\n  findEmployees(criteria: SearchInput): [Employee!]!\n}\n\ninput SearchInput {\n  hasPets: Boolean\n  nationality: Nationality\n  nested: NestedSearchInput\n}\n\nscalar openfed__FieldSet\n\nscalar openfed__Scope",
+      "30a1340f94465032b5f0b29e0755d475ea6c9f18": "schema {\n  subscription: Subscription\n}\n\ndirective @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Country @key(fields: \"key { name }\", resolvable: false) {\n  key: CountryKey!\n}\n\ntype CountryKey {\n  name: String!\n}\n\ntype Employee @key(fields: \"id\") {\n  hobbies: [Hobby!]\n  id: Int!\n}\n\ntype Exercise implements Hobby {\n  category: ExerciseType!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nenum ExerciseType {\n  CALISTHENICS\n  HIKING\n  SPORT\n  STRENGTH_TRAINING\n}\n\ninterface Experience {\n  yearsOfExperience: Float!\n}\n\ntype Flying implements Experience & Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  planeModels: [String!]!\n  yearsOfExperience: Float!\n}\n\nenum GameGenre {\n  ADVENTURE\n  BOARD\n  CARD\n  FPS\n  ROGUELITE\n  RPG\n  SIMULATION\n  STRATEGY\n}\n\ntype Gaming implements Experience & Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  genres: [GameGenre!]!\n  name: String!\n  yearsOfExperience: Float!\n}\n\ninterface Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\ntype Other implements Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  name: String!\n}\n\ntype Programming implements Hobby {\n  employees: [Employee!]! @goField(forceResolver: true)\n  languages: [ProgrammingLanguage!]!\n}\n\nenum ProgrammingLanguage {\n  CSHARP\n  GO\n  RUST\n  TYPESCRIPT\n}\n\ntype SDK @key(fields: \"upc\") {\n  clientLanguages: [ProgrammingLanguage!]!\n  upc: ID!\n}\n\ntype Subscription {\n  countHob(intervalMilliseconds: Int!, max: Int!): Int!\n}\n\ntype Travelling implements Hobby {\n  countriesLived: [Country!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nscalar openfed__FieldSet",
+      "8fa02f3271fc0281fa7b8bacf2d4c778f2e26bf6": "schema {\n  query: Queries\n  mutation: Mutation\n}\n\ndirective @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @composeDirective(name: String!) repeatable on SCHEMA\n\ndirective @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @interfaceObject on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: String, import: [String], url: String!) repeatable on SCHEMA\n\ndirective @override(from: String!) on FIELD_DEFINITION\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\n\ndirective @shareable on FIELD_DEFINITION | OBJECT\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Consultancy @key(fields: \"upc\") {\n  name: ProductName!\n  upc: ID!\n}\n\ntype Cosmo @key(fields: \"upc\") {\n  name: ProductName!\n  repositoryURL: String!\n  upc: ID!\n}\n\ntype DirectiveFact implements TopSecretFact {\n  description: FactContent! @authenticated @requiresScopes(scopes: [[\"read:scalar\"], [\"read:all\"]])\n  factType: TopSecretFactType @authenticated\n  title: String! @authenticated\n}\n\ntype Documentation {\n  url(product: ProductName!): String!\n  urls(products: [ProductName!]!): [String!]!\n}\n\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  notes: String\n  products: [ProductName!]!\n}\n\ntype EntityFact implements TopSecretFact {\n  description: FactContent! @authenticated @requiresScopes(scopes: [[\"read:entity\", \"read:scalar\"], [\"read:entity\", \"read:all\"]])\n  factType: TopSecretFactType @authenticated @requiresScopes(scopes: [[\"read:entity\"]])\n  title: String! @requiresScopes(scopes: [[\"read:entity\"]])\n}\n\nscalar FactContent\n\ntype MiscellaneousFact implements TopSecretFact {\n  description: FactContent! @authenticated @requiresScopes(scopes: [[\"read:miscellaneous\", \"read:scalar\"], [\"read:miscellaneous\", \"read:all\"]])\n  factType: TopSecretFactType @authenticated\n  title: String!\n}\n\ntype Mutation {\n  addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [[\"write:fact\"], [\"write:all\"]])\n}\n\nenum ProductName {\n  CONSULTANCY\n  COSMO\n  ENGINE\n  FINANCE\n  HUMAN_RESOURCES\n  MARKETING\n  SDK\n}\n\nunion Products = Consultancy | Cosmo | Documentation\n\ntype Queries {\n  factTypes: [TopSecretFactType!]\n  productTypes: [Products!]!\n  topSecretFederationFacts: [TopSecretFact!]!\n}\n\ninterface TopSecretFact {\n  description: FactContent! @authenticated @requiresScopes(scopes: [[\"read:scalar\"], [\"read:all\"]])\n  factType: TopSecretFactType @authenticated\n}\n\ninput TopSecretFactInput {\n  description: FactContent!\n  factType: TopSecretFactType!\n  title: String!\n}\n\nenum TopSecretFactType {\n  DIRECTIVE\n  ENTITY\n  MISCELLANEOUS\n}\n\nscalar openfed__FieldSet\n\nscalar openfed__Scope",
+      "174a1089ccb32239d24a0e873e27065f9a1d5b2b": "schema {\n  query: Query\n  subscription: Subscription\n}\n\ndirective @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\nscalar Map\n\ntype Query {\n  \"\"\"Returns response after the given delay\"\"\"\n  delay(ms: Int!, response: String!): String!\n  \"\"\"Returns the value of the received HTTP header.\"\"\"\n  headerValue(name: String!): String!\n  \"\"\"Returns the value of the given key in the WS initial payload.\"\"\"\n  initPayloadValue(key: String!): String!\n  initialPayload: Map\n}\n\ntype Subscription {\n  \"\"\"Returns a stream with the value of the received HTTP header.\"\"\"\n  headerValue(name: String!, repeat: Int): TimestampedString!\n  \"\"\"\n  Returns a stream with the value of value of the given key in the WS initial payload.\n  \"\"\"\n  initPayloadValue(key: String!, repeat: Int): TimestampedString!\n  \"\"\"Returns a stream with the value of the WS initial payload.\"\"\"\n  initialPayload(repeat: Int): Map\n}\n\ntype TimestampedString {\n  initialPayload: Map\n  \"\"\"Sequence number\"\"\"\n  seq: Int!\n  \"\"\"Total number of responses to be sent\"\"\"\n  total: Int!\n  \"\"\"The timestamp when the response was generated.\"\"\"\n  unixTime: Int!\n  \"\"\"The value of the string.\"\"\"\n  value: String!\n}\n\nscalar openfed__FieldSet",
+      "13d382d0092d713c9989e9a60c4a1529a57d13da": "schema {\n  mutation: Mutation\n}\n\ndirective @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Employee @key(fields: \"id\") {\n  id: Int!\n  isAvailable: Boolean!\n}\n\ntype Mutation {\n  updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!\n}\n\nscalar openfed__FieldSet",
+      "1d3a7a5c608d59d0adec4584a5e2799b94537078": "schema {\n  mutation: Mutation\n}\n\ndirective @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Employee @key(fields: \"id\") {\n  currentMood: Mood!\n  id: Int!\n}\n\nenum Mood {\n  HAPPY\n  SAD\n}\n\ntype Mutation {\n  updateMood(employeeID: Int!, mood: Mood!): Employee!\n}\n\nscalar openfed__FieldSet",
+      "61722de1bb9a7d4cf173f247c104a21cddf7f3c1": "directive @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Country @key(fields: \"key { name }\") {\n  key: CountryKey!\n  language: String\n}\n\ntype CountryKey {\n  name: String!\n}\n\nscalar openfed__FieldSet",
+      "4f3c46546a6ae6fc8c7d14506a31e8226de278bb": "schema {\n  query: Query\n  mutation: Mutation\n  subscription: Subscription\n}\n\ndirective @eventsPublish(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsRequest(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @eventsSubscribe(sourceName: String! = \"default\", topic: String!) on FIELD_DEFINITION\n\ndirective @extends on INTERFACE | OBJECT\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Employee @key(fields: \"id\", resolvable: false) {\n  id: Int! @external\n}\n\ntype Mutation {\n  updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: \"updateEmployee.{{ args.id }}\", sourceName: \"my-nats\")\n}\n\ntype PublishEventResult {\n  success: Boolean!\n}\n\ntype Query {\n  employeeFromEvent(id: ID!): Employee! @eventsRequest(topic: \"getEmployee.{{ args.id }}\", sourceName: \"my-nats\")\n}\n\ntype Subscription {\n  employeeUpdated(employeeID: ID!): Employee! @eventsSubscribe(topic: \"employeeUpdated.{{ args.employeeID }}\", sourceName: \"my-nats\")\n}\n\ninput UpdateEmployeeInput {\n  email: String\n  name: String\n}\n\nscalar openfed__FieldSet"
     }
   },
   "subgraphs": [

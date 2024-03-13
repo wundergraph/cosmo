@@ -13,6 +13,7 @@ import {
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
+  ConfigureNamespaceLintConfigResponse,
   CreateAPIKeyResponse,
   CreateBillingPortalSessionResponse,
   CreateCheckoutSessionResponse,
@@ -37,6 +38,7 @@ import {
   DeleteOIDCProviderResponse,
   DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
+  EnableLintingForTheNamespaceResponse,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GenerateRouterTokenResponse,
@@ -58,12 +60,15 @@ import {
   GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
+  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetInvitationsResponse,
+  GetLatestSubgraphSDLResponse,
   GetMetricsErrorRateResponse,
+  GetNamespaceLintConfigResponse,
   GetNamespacesResponse,
   GetOIDCProviderResponse,
   GetOperationContentResponse,
@@ -75,17 +80,21 @@ import {
   GetOrganizationWebhookMetaResponse,
   GetPersistedOperationsResponse,
   GetRouterTokensResponse,
+  GetRoutersResponse,
   GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
   GetSubgraphMembersResponse,
   GetSubgraphMetricsErrorRateResponse,
   GetSubgraphMetricsResponse,
+  GetSubgraphSDLFromLatestCompositionResponse,
   GetSubgraphsResponse,
   GetTraceResponse,
   GetUserAccessibleResourcesResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
   LeaveOrganizationResponse,
+  LintConfig,
+  LintSeverity,
   MigrateFromApolloResponse,
   MoveGraphResponse,
   PublishFederatedSubgraphResponse,
@@ -99,6 +108,7 @@ import {
   RenameNamespaceResponse,
   ReplyToDiscussionResponse,
   RequestSeriesItem,
+  Router,
   SetDiscussionResolutionResponse,
   UpdateAISettingsResponse,
   UpdateDiscussionCommentResponse,
@@ -111,11 +121,6 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
-  GetRoutersResponse,
-  Router,
-  GetLatestSubgraphSDLResponse,
-  GetSubgraphSDLFromLatestCompositionResponse,
-  GetFederatedGraphSDLByNameResponse,
   CreateMonographResponse,
   PublishMonographResponse,
   UpdateMonographResponse,
@@ -123,10 +128,10 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
+import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
-import { FastifyBaseLogger } from 'fastify';
 import {
   DateRange,
   FederatedGraphDTO,
@@ -134,12 +139,14 @@ import {
   GraphCompositionDTO,
   Label,
   PublishedOperationData,
+  SchemaLintIssues,
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
+import { schemaLintCheck } from '../composition/schemaLint.js';
 import { signJwt } from '../crypto/jwt.js';
 import { PublicError } from '../errors/errors.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
@@ -156,6 +163,7 @@ import { OperationsRepository } from '../repositories/OperationsRepository.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
+import { SchemaLintRepository } from '../repositories/SchemaLintRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { TargetRepository } from '../repositories/TargetRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
@@ -163,6 +171,7 @@ import { AnalyticsDashboardViewRepository } from '../repositories/analytics/Anal
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
 import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
 import { MonthlyRequestViewRepository } from '../repositories/analytics/MonthlyRequestViewRepository.js';
+import { RouterMetricsRepository } from '../repositories/analytics/RouterMetricsRepository.js';
 import { SubgraphMetricsRepository } from '../repositories/analytics/SubgraphMetricsRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
@@ -194,7 +203,6 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { RouterMetricsRepository } from '../repositories/analytics/RouterMetricsRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1292,8 +1300,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const schemaLintRepo = new SchemaLintRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const compositionRepo = new GraphCompositionRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -1308,6 +1318,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
             checkId: '',
             checkedFederatedGraphs: [],
+            lintWarnings: [],
+            lintErrors: [],
           };
         }
 
@@ -1323,6 +1335,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
             checkId: '',
             checkedFederatedGraphs: [],
+            lintWarnings: [],
+            lintErrors: [],
+          };
+        }
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            breakingChanges: [],
+            nonBreakingChanges: [],
+            compositionErrors: [],
+            checkId: '',
+            checkedFederatedGraphs: [],
+            lintWarnings: [],
+            lintErrors: [],
           };
         }
 
@@ -1339,6 +1370,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
             checkId: '',
             checkedFederatedGraphs: [],
+            lintWarnings: [],
+            lintErrors: [],
           };
         }
 
@@ -1363,6 +1396,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
             checkId: schemaCheckID,
             checkedFederatedGraphs: [],
+            lintWarnings: [],
+            lintErrors: [],
           };
         }
 
@@ -1462,13 +1497,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        // Update the overall schema check with the results
-        await schemaCheckRepo.update({
-          schemaCheckID,
-          hasClientTraffic,
-          hasBreakingChanges,
-        });
-
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
           await githubRepo.createCommitCheck({
@@ -1483,6 +1511,30 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             composedGraphs: result.compositions.map((c) => c.name),
           });
         }
+
+        let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
+        if (namespace.enableLinting && newSchemaSDL !== '') {
+          const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
+          if (lintConfigs.length > 0) {
+            lintIssues = await schemaLintCheck({
+              schema: newSchemaSDL,
+              rulesInput: lintConfigs,
+            });
+          }
+        }
+
+        await schemaLintRepo.addSchemaCheckLintIssues({
+          schemaCheckId: schemaCheckID,
+          lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
+        });
+
+        // Update the overall schema check with the results
+        await schemaCheckRepo.update({
+          schemaCheckID,
+          hasClientTraffic,
+          hasBreakingChanges,
+          hasLintErrors: lintIssues.errors.length > 0,
+        });
 
         return {
           response: {
@@ -1499,6 +1551,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespace: c.namespace,
             organizationSlug: authContext.organizationSlug,
           })),
+          lintWarnings: lintIssues.warnings,
+          lintErrors: lintIssues.errors,
         };
       });
     },
@@ -5828,6 +5882,68 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    enableLintingForTheNamespace: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<EnableLintingForTheNamespaceResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+          };
+        }
+
+        await namespaceRepo.toggleEnableLinting({ name: req.namespace, enableLinting: req.enableLinting });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    configureNamespaceLintConfig: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<ConfigureNamespaceLintConfigResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const schemaLintRepo = new SchemaLintRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            configs: [],
+          };
+        }
+
+        await schemaLintRepo.configureNamespaceLintConfig({
+          namespaceId: namespace.id,
+          lintConfigs: req.configs,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
     /*
     Queries
     */
@@ -6390,6 +6506,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+        const schemaLintRepo = new SchemaLintRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
@@ -6403,6 +6520,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             changes: [],
             affectedGraphs: [],
             trafficCheckDays: 0,
+            lintIssues: [],
           };
         }
 
@@ -6419,10 +6537,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             changes: [],
             affectedGraphs: [],
             trafficCheckDays: 0,
+            lintIssues: [],
           };
         }
 
         const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
+
+        const lintIssues = await schemaLintRepo.getSchemaCheckLintIsssues({ schemaCheckId: req.checkId });
 
         return {
           response: {
@@ -6434,6 +6555,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           changes: checkDetails.changes,
           compositionErrors: checkDetails.compositionErrors,
           trafficCheckDays,
+          lintIssues,
         };
       });
     },
@@ -8678,6 +8800,45 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           series: metrics.errorRate.series,
           resolution: metrics.resolution,
+        };
+      });
+    },
+
+    getNamespaceLintConfig: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetNamespaceLintConfigResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const schemaLintRepo = new SchemaLintRepository(opts.db);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            configs: [],
+            linterEnabled: false,
+          };
+        }
+
+        const orgLintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          configs: orgLintConfigs.map((l) => {
+            return {
+              ruleName: l.ruleName,
+              severityLevel: l.severity === 'error' ? LintSeverity.error : LintSeverity.warn,
+            } as LintConfig;
+          }),
+          linterEnabled: namespace.enableLinting,
         };
       });
     },

@@ -663,6 +663,7 @@ export class SubgraphRepository {
         hasClientTraffic: true,
         forcedSuccess: true,
         ghDetails: true,
+        hasLintErrors: true,
       },
       limit,
       offset,
@@ -698,6 +699,7 @@ export class SubgraphRepository {
               checkRunId: c.ghDetails.checkRunId,
             }
           : undefined,
+        hasLintErrors: c.hasLintErrors ?? false,
       })),
       checksCount,
     };
@@ -797,6 +799,7 @@ export class SubgraphRepository {
             checkRunId: check.ghDetails.checkRunId,
           }
         : undefined,
+      hasLintErrors: check.hasLintErrors ?? false,
     };
   }
 
