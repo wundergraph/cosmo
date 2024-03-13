@@ -187,6 +187,12 @@ type EngineExecutionConfiguration struct {
 	ExecutionPlanCacheSize                 int64                    `default:"10000" envconfig:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 }
 
+type SecurityConfiguration struct {
+	BlockMutations              bool `yaml:"block_mutations" default:"false" envconfig:"SECURITY_BLOCK_MUTATIONS"`
+	BlockSubscriptions          bool `yaml:"block_subscriptions" default:"false" envconfig:"SECURITY_BLOCK_SUBSCRIPTIONS"`
+	BlockNonPersistedOperations bool `yaml:"block_non_persisted_operations" default:"false" envconfig:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+}
+
 type OverrideRoutingURLConfiguration struct {
 	Subgraphs map[string]string `yaml:"subgraphs"`
 }
@@ -344,6 +350,8 @@ type Config struct {
 	RouterRegistration bool   `yaml:"router_registration" envconfig:"ROUTER_REGISTRATION" default:"true"`
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
+
+	SecurityConfiguration SecurityConfiguration `yaml:"security,omitempty"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
 

@@ -233,6 +233,43 @@ func TestEventsNew(t *testing.T) {
 		})
 	})
 
+	t.Run("subscribe sync sse with block", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.BlockSubscriptions = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
+
+			client := http.Client{
+				Timeout: time.Second * 10,
+			}
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+			req.Header.Set("Connection", "keep-alive")
+			req.Header.Set("Cache-Control", "no-cache")
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			defer resp.Body.Close()
+			reader := bufio.NewReader(resp.Body)
+
+			eventNext, _, err := reader.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, "event: next", string(eventNext))
+			data, _, err := reader.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}],\"data\":null}", string(data))
+		})
+	})
+
 	t.Run("subscribe sync sse client close", func(t *testing.T) {
 		t.Parallel()
 

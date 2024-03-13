@@ -167,15 +167,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		if err != nil {
 			if errors.Is(err, ErrUnauthorized) {
-				writeRequestErrors(executionContext, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
+				writeRequestErrors(executionContext, r, w, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), requestLogger)
 			} else if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
-				writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+				writeRequestErrors(executionContext, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
 				return
 			}
 
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
-			writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+			writeRequestErrors(executionContext, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
 			return
 		}
 	default:
@@ -380,12 +380,21 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 	addErrorToSpan(ctx.Context(), err)
 }
 
-func writeRequestErrors(ctx context.Context, statusCode int, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
+func writeRequestErrors(ctx context.Context, r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphql.RequestErrors, requestLogger *zap.Logger) {
 	addErrorToSpan(ctx, requestErrors)
 
 	if requestErrors != nil {
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
+		}
+		if r.URL.Query().Has("wg_sse") {
+			_, err := w.Write([]byte("event: next\ndata: "))
+			if err != nil {
+				if requestLogger != nil {
+					requestLogger.Error("error writing response", zap.Error(err))
+				}
+				return
+			}
 		}
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {
@@ -395,6 +404,6 @@ func writeRequestErrors(ctx context.Context, statusCode int, requestErrors graph
 	}
 }
 
-func writeInternalError(ctx context.Context, w http.ResponseWriter, requestLogger *zap.Logger) {
-	writeRequestErrors(ctx, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
+func writeInternalError(ctx context.Context, r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger) {
+	writeRequestErrors(ctx, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), requestLogger)
 }
