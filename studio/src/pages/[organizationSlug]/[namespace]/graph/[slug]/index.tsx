@@ -179,7 +179,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 {graphData.graph.type === "federated"
                   ? "Federated Graph"
                   : "Monograph"}{" "}
-                details
+                Details
               </CardTitle>
               <CardDescription className="text-xs">
                 Last updated:{" "}
