@@ -188,6 +188,8 @@ configuration:
   # -- The default billing plan, eg `developer@1`
   defaultBillingPlan: ''
   openAiApiKey: ''
+  # -- URL of the CDN to use for serving router configs and persistent operations
+  cdnBaseUrl: 'http://cdn.wundergraph.local:10000'
 
 # -- Existing secret in the same namespace containing the ControlPlane Secrets. The secret keys have to match with current secret.
 existingSecret: ""

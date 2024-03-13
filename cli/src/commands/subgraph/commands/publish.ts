@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
+import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -46,6 +47,16 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
   );
+  command.option(
+    '--fail-on-composition-error',
+    'If set, the command will fail if the composition of the federated graph fails.',
+    false,
+  );
+  command.option(
+    '--fail-on-admission-webhook-error',
+    'If set, the command will fail if the admission webhook fails.',
+    false,
+  );
 
   command.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
@@ -64,6 +75,8 @@ export default (opts: BaseCommandOptions) => {
         pc.red(pc.bold(`The schema file '${pc.bold(schemaFile)}' is empty. Please provide a valid schema.`)),
       );
     }
+
+    const spinner = ora('Subgraph is being published...').start();
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
@@ -87,8 +100,10 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`Subgraph '${name}' was updated successfully.`)));
+      spinner.succeed('Subgraph published successfully.');
     } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
+      spinner.warn('Subgraph published but with composition errors.');
+
       const compositionErrorsTable = new Table({
         head: [
           pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
@@ -115,10 +130,42 @@ export default (opts: BaseCommandOptions) => {
       }
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());
+
+      if (options.failOnCompositionError) {
+        program.error(pc.red(pc.bold('The command failed due to composition errors.')));
+      }
+    } else if (resp.response?.code === EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED) {
+      spinner.warn(
+        'Subgraph was published but the composition was not deployed due to admission webhook failures. Please check the errors below.',
+      );
+
+      const admissionWebhookErrorsTable = new Table({
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('ERROR_MESSAGE')),
+        ],
+        colWidths: [30, 30, 120],
+        wordWrap: true,
+      });
+
+      for (const admissionError of resp.admissionWebhookErrors) {
+        admissionWebhookErrorsTable.push([
+          admissionError.federatedGraphName,
+          admissionError.namespace,
+          admissionError.message,
+        ]);
+      }
+      // Don't exit here with 1 because the change was still applied
+      console.log(admissionWebhookErrorsTable.toString());
+
+      if (options.failOnAdmissionWebhookError) {
+        program.error(pc.red(pc.bold('The command failed due to admission webhook errors.')));
+      }
     } else {
-      console.log(pc.red(`Failed to update subgraph ${pc.bold(name)}.`));
+      spinner.fail(`Failed to update subgraph.`);
       if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
+        console.error(pc.red(pc.bold(resp.response?.details)));
       }
       process.exit(1);
     }

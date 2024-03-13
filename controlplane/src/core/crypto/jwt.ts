@@ -1,9 +1,9 @@
 import { hkdf, randomFill, randomUUID, subtle } from 'node:crypto';
-import { decodeJwt, EncryptJWT, jwtDecrypt, JWTPayload, jwtVerify, SignJWT } from 'jose';
+import { decodeJwt, EncryptJWT, jwtDecrypt, JWTPayload, jwtVerify, KeyLike, SignJWT } from 'jose';
 import { JWTDecodeParams, JWTEncodeParams } from '../../types/index.js';
 import { base64URLEncode } from '../util.js';
 
-const now = () => Math.trunc(Date.now() / 1000);
+export const nowInSeconds = () => Math.trunc(Date.now() / 1000);
 export const DEFAULT_SESSION_MAX_AGE_SEC = 24 * 60 * 60; // 1 day
 
 // The cookie name used to store the user session.
@@ -49,12 +49,12 @@ export async function calculatePKCECodeChallenge(codeVerifier: string) {
  * @param params
  */
 export async function encrypt<Payload extends JWTPayload = JWTPayload>(params: JWTEncodeParams<Payload>) {
-  const { token = {}, secret, maxAge = DEFAULT_SESSION_MAX_AGE_SEC } = params;
+  const { token = {}, secret, maxAgeInSeconds = DEFAULT_SESSION_MAX_AGE_SEC } = params;
   const encryptionSecret = await getDerivedEncryptionKey(secret);
   return await new EncryptJWT(token)
     .setProtectedHeader({ alg: 'dir', enc: 'A256GCM' })
     .setIssuedAt()
-    .setExpirationTime(now() + maxAge)
+    .setExpirationTime(nowInSeconds() + maxAgeInSeconds)
     .setJti(randomUUID())
     .encrypt(encryptionSecret);
 }
@@ -102,7 +102,7 @@ export function getDerivedEncryptionKey(secret: string | Buffer) {
   });
 }
 
-export async function signJwt<Payload extends JWTPayload = JWTPayload>(params: JWTEncodeParams<Payload>) {
+export async function signJwtHS256<Payload extends JWTPayload = JWTPayload>(params: JWTEncodeParams<Payload>) {
   const secret = new TextEncoder().encode(params.secret);
   return await new SignJWT(params.token).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().sign(secret);
 }

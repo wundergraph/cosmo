@@ -14,6 +14,7 @@ export const NodeService = {
   methods: {
     /**
      * @generated from rpc wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig
+     * @deprecated
      */
     getLatestValidRouterConfig: {
       name: "GetLatestValidRouterConfig",

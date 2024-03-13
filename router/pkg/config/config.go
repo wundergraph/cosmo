@@ -19,6 +19,8 @@ const (
 type Graph struct {
 	// Token is required if no router config path is provided
 	Token string `yaml:"token,omitempty" envconfig:"GRAPH_API_TOKEN"`
+	// SignKey is used to validate the signature of the received config. The same key is used to publish the subgraph in sign mode.
+	SignKey string `yaml:"sign_key,omitempty" envconfig:"GRAPH_CONFIG_SIGN_KEY"`
 }
 
 type TracingExporterConfig struct {

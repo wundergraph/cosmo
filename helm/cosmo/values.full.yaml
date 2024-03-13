@@ -41,6 +41,8 @@ global:
     webUrl: 'http://controlplane.wundergraph.local'
     # The following secret is used to sign cookie and JWT tokens
     jwtSecret: '1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM'
+    # The following secret is used to sign short-lived JWT tokens to provide access to router configs in the webhooks
+    admissionJwtSecret: 'uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW'
 
   otelcollector:
     enabled: true

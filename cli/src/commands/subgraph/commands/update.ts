@@ -6,6 +6,7 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { splitLabel, parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
+import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -53,6 +54,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    const spinner = ora('Subgraph is being updated...').start();
     const resp = await opts.client.platform.updateSubgraph(
       {
         name,
@@ -81,9 +83,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`Subgraph '${name}' was updated.`)));
+      spinner.succeed('Subgraph was updated successfully.');
     } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
-      console.log(pc.dim(pc.green(`Subgraph called '${name}' was updated.`)));
+      spinner.warn('Subgraph was updated but with composition errors.');
 
       const compositionErrorsTable = new Table({
         head: [
@@ -111,8 +113,32 @@ export default (opts: BaseCommandOptions) => {
       }
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());
+    } else if (resp.response?.code === EnumStatusCode.ERR_ADMISSION_WEBHOOK_FAILED) {
+      spinner.warn(
+        'Subgraph was updated but the composition was not deployed due to admission webhook failures. Please check the errors below.',
+      );
+
+      const admissionWebhookErrorsTable = new Table({
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('ERROR_MESSAGE')),
+        ],
+        colWidths: [30, 30, 120],
+        wordWrap: true,
+      });
+
+      for (const admissionError of resp.admissionWebhookErrors) {
+        admissionWebhookErrorsTable.push([
+          admissionError.federatedGraphName,
+          admissionError.namespace,
+          admissionError.message,
+        ]);
+      }
+      // Don't exit here with 1 because the change was still applied
+      console.log(admissionWebhookErrorsTable.toString());
     } else {
-      console.log(pc.red(`Failed to update subgraph ${pc.bold(name)}.`));
+      spinner.fail(`Failed to update subgraph.`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

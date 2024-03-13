@@ -47,9 +47,9 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 	} else if cfg.Graph.Token != "" {
-		routerCDN, err := cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.PersistentOperationsOptions{
-			CacheSize: cfg.CDN.CacheSize.Uint64(),
-			Logger:    logger,
+		routerCDN, err := cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.RouterConfigOptions{
+			Logger:       logger,
+			SignatureKey: cfg.Graph.SignKey,
 		})
 		if err != nil {
 			return nil, err

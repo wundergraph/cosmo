@@ -71,6 +71,12 @@ spec:
                   name: {{ include "cdn.secretName" . }}
                   key: authJwtSecret
 
+            - name: AUTH_ADMISSION_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cdn.secretName" . }}
+                  key: authAdmissionJwtSecret
+
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

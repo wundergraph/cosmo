@@ -1,24 +1,30 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, count, desc, eq, gt, lt } from 'drizzle-orm';
 import { JsonValue } from '@bufbuild/protobuf';
+import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { graphCompositions, graphCompositionSubgraphs, schemaVersion, targets, users } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export class GraphCompositionRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>) {}
+  constructor(
+    private logger: FastifyBaseLogger,
+    private db: PostgresJsDatabase<typeof schema>,
+  ) {}
 
   public async addComposition({
     fedGraphSchemaVersionId,
     compositionErrorString,
     routerConfig,
+    routerConfigSignature,
     subgraphSchemaVersionIds,
     composedBy,
   }: {
     fedGraphSchemaVersionId: string;
     compositionErrorString: string;
     routerConfig?: JsonValue;
+    routerConfigSignature?: string;
     subgraphSchemaVersionIds: string[];
     composedBy: string;
   }) {
@@ -30,6 +36,7 @@ export class GraphCompositionRepository {
           routerConfig: routerConfig || null,
           compositionErrors: compositionErrorString,
           isComposable: compositionErrorString === '',
+          routerConfigSignature,
           createdBy: composedBy,
         })
         .returning()
@@ -52,7 +59,7 @@ export class GraphCompositionRepository {
     compositionId: string;
     organizationId: string;
   }): Promise<GraphCompositionDTO | undefined> {
-    const fedRepo = new FederatedGraphRepository(this.db, input.organizationId);
+    const fedRepo = new FederatedGraphRepository(this.logger, this.db, input.organizationId);
 
     const compositions = await this.db
       .select({
@@ -63,6 +70,7 @@ export class GraphCompositionRepository {
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
         targetId: schemaVersion.targetId,
+        routerConfigSignature: graphCompositions.routerConfigSignature,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -89,6 +97,7 @@ export class GraphCompositionRepository {
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
       createdBy: composition.createdBy || undefined,
+      routerConfigSignature: composition.routerConfigSignature || undefined,
       isLatestValid: isCurrentDeployed,
     };
   }
@@ -97,7 +106,7 @@ export class GraphCompositionRepository {
     schemaVersionId: string;
     organizationId: string;
   }): Promise<GraphCompositionDTO | undefined> {
-    const fedRepo = new FederatedGraphRepository(this.db, input.organizationId);
+    const fedRepo = new FederatedGraphRepository(this.logger, this.db, input.organizationId);
 
     const compositions = await this.db
       .select({
@@ -108,6 +117,7 @@ export class GraphCompositionRepository {
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
         targetId: schemaVersion.targetId,
+        routerConfigSignature: graphCompositions.routerConfigSignature,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -135,6 +145,7 @@ export class GraphCompositionRepository {
       compositionErrors: composition.compositionErrors || undefined,
       createdBy: composition.createdBy || undefined,
       isLatestValid: isCurrentDeployed,
+      routerConfigSignature: composition.routerConfigSignature || undefined,
     };
   }
 
@@ -167,7 +178,7 @@ export class GraphCompositionRepository {
     offset: number;
     dateRange: DateRange;
   }): Promise<GraphCompositionDTO[]> {
-    const fedRepo = new FederatedGraphRepository(this.db, organizationId);
+    const fedRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
 
     const resp = await this.db
       .select({
@@ -177,6 +188,7 @@ export class GraphCompositionRepository {
         compositionErrors: graphCompositions.compositionErrors,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
+        routerConfigSignature: graphCompositions.routerConfigSignature,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -206,6 +218,7 @@ export class GraphCompositionRepository {
         compositionErrors: r.compositionErrors || undefined,
         createdBy: r.createdBy || undefined,
         isLatestValid: isCurrentDeployed,
+        routerConfigSignature: r.routerConfigSignature || undefined,
       });
     }
 

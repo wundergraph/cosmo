@@ -3,9 +3,9 @@
     "compilerOptions": {
       "declaration": true,
       "outDir": "./dist",
-      "module": "commonjs",
+      "module": "ESNext",
+      "target": "ESNext"
     },
     "include": ["src/**/*"],
     "exclude": ["node_modules"]
   }
-  

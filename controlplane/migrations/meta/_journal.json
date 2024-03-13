@@ -568,6 +568,13 @@
       "when": 1708283616058,
       "tag": "0080_large_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "5",
+      "when": 1710334098778,
+      "tag": "0081_tearful_big_bertha",
+      "breakpoints": true
     }
   ]
 }

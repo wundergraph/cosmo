@@ -1,5 +1,5 @@
 import { GetObjectCommand, HeadObjectCommand, NoSuchKey, NotFound, S3Client } from '@aws-sdk/client-s3';
-import { BlobNotFoundError, BlobStorage } from '@wundergraph/cosmo-cdn';
+import { BlobNotFoundError, BlobObject, BlobStorage } from '@wundergraph/cosmo-cdn';
 import { Context } from 'hono';
 
 /**
@@ -19,7 +19,7 @@ class S3BlobStorage implements BlobStorage {
     context: Context;
     key: string;
     cacheControl?: string;
-  }): Promise<ReadableStream> {
+  }): Promise<BlobObject> {
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,
@@ -29,9 +29,17 @@ class S3BlobStorage implements BlobStorage {
     try {
       const resp = await this.s3Client.send(command);
       if (resp.$metadata.httpStatusCode !== 200) {
-        throw new BlobNotFoundError(`Failed to retrieve object from S3: ${resp}`);
+        throw new Error(`Failed to retrieve object from S3: ${resp}`);
       }
-      return resp.Body!.transformToWebStream();
+
+      if (!resp.Body) {
+        throw new Error(`Failed to retrieve object from S3: ${resp}`);
+      }
+
+      return {
+        metadata: resp.Metadata,
+        stream: resp.Body.transformToWebStream(),
+      };
     } catch (e: any) {
       if (e instanceof NoSuchKey) {
         throw new BlobNotFoundError(`Failed to retrieve object from S3: ${e}`);

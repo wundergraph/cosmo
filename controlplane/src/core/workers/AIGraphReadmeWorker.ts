@@ -5,6 +5,7 @@ import * as schema from '../../db/schema.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { FastifyBaseLogger } from 'fastify';
 
 const QueueName = 'ai.graph-readme-generator';
 const WorkerName = 'AIGraphReadmeWorker';
@@ -17,10 +18,10 @@ export interface CreateReadmeInputEvent {
 
 export class AIGraphReadmeQueue {
   private readonly queue: Queue<CreateReadmeInputEvent>;
-  private readonly log: pino.Logger;
+  private readonly logger: pino.Logger;
 
   constructor(log: pino.Logger, conn: ConnectionOptions) {
-    this.log = log.child({ queue: QueueName });
+    this.logger = log.child({ queue: QueueName });
     this.queue = new Queue<CreateReadmeInputEvent>(QueueName, {
       connection: conn,
       defaultJobOptions: {
@@ -35,7 +36,7 @@ export class AIGraphReadmeQueue {
     });
 
     this.queue.on('error', (err) => {
-      this.log.error(err, 'Queue error');
+      this.logger.error(err, 'Queue error');
     });
   }
 
@@ -51,18 +52,18 @@ class AIGraphReadmeWorker {
     private input: {
       redisConnection: ConnectionOptions;
       db: PostgresJsDatabase<typeof schema>;
-      log: pino.Logger;
+      logger: pino.Logger;
       openAiApiKey: string;
     },
   ) {
     this.openaiGraphql = new OpenAIGraphql({
       openAiApiKey: input.openAiApiKey,
     });
-    this.input.log = input.log.child({ worker: WorkerName });
+    this.input.logger = input.logger.child({ worker: WorkerName });
   }
 
   private async generateSubgraphReadme(job: Job<CreateReadmeInputEvent>) {
-    const subgraphRepo = new SubgraphRepository(this.input.db, job.data.organizationId);
+    const subgraphRepo = new SubgraphRepository(this.input.logger, this.input.db, job.data.organizationId);
     const subgraph = await subgraphRepo.byTargetId(job.data.targetId);
     if (!subgraph) {
       throw new Error(`Subgraph with target id ${job.data.targetId} not found`);
@@ -80,7 +81,7 @@ class AIGraphReadmeWorker {
   }
 
   private async generateFederatedGraphReadme(job: Job<CreateReadmeInputEvent>) {
-    const fedGraphRepo = new FederatedGraphRepository(this.input.db, job.data.organizationId);
+    const fedGraphRepo = new FederatedGraphRepository(this.input.logger, this.input.db, job.data.organizationId);
     const graph = await fedGraphRepo.byTargetId(job.data.targetId);
     if (!graph) {
       throw new Error(`Federated Graph with target id ${job.data.targetId} not found`);
@@ -115,7 +116,10 @@ class AIGraphReadmeWorker {
         throw new Error(`Unknown job type ${job.data.type}`);
       }
     } catch (err) {
-      this.input.log.error(err, `Failed to generate readme for type: ${job.data.type} targetId: ${job.data.targetId}`);
+      this.input.logger.error(
+        err,
+        `Failed to generate readme for type: ${job.data.type} targetId: ${job.data.targetId}`,
+      );
       throw err;
     }
   }
@@ -124,10 +128,10 @@ class AIGraphReadmeWorker {
 export const createAIGraphReadmeWorker = (input: {
   redisConnection: ConnectionOptions;
   db: PostgresJsDatabase<typeof schema>;
-  log: pino.Logger;
+  logger: pino.Logger;
   openAiApiKey: string;
 }) => {
-  const log = input.log.child({ worker: WorkerName });
+  const log = input.logger.child({ worker: WorkerName });
   const worker = new Worker<CreateReadmeInputEvent>(QueueName, (job) => new AIGraphReadmeWorker(input).handler(job), {
     connection: input.redisConnection,
     concurrency: 10,
@@ -136,7 +140,7 @@ export const createAIGraphReadmeWorker = (input: {
     log.warn(`Job ${job} stalled`);
   });
   worker.on('error', (err) => {
-    input.log.error(err, 'Worker error');
+    input.logger.error(err, 'Worker error');
   });
   return worker;
 };

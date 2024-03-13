@@ -3,10 +3,12 @@ import { eq } from 'drizzle-orm';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
 import { PartialMessage } from '@bufbuild/protobuf';
+import axiosRetry, { exponentialDelay } from 'axios-retry';
+import axios, { AxiosInstance } from 'axios';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
-import { post } from './utils.js';
+import { makeWebhookRequest } from './utils.js';
 
 export interface FederatedGraphSchemaUpdate {
   federated_graph: {
@@ -39,6 +41,7 @@ export class OrganizationWebhookService {
   private synced?: boolean;
   private readonly logger: pino.Logger;
   private readonly defaultBillingPlanId?: string;
+  private httpClient: AxiosInstance;
 
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
@@ -50,6 +53,17 @@ export class OrganizationWebhookService {
     this.defaultBillingPlanId = defaultBillingPlanId;
     this.configs = [];
     this.synced = false;
+
+    this.httpClient = axios.create({
+      timeout: 10_000,
+    });
+    axiosRetry(this.httpClient, {
+      retries: 5,
+      retryDelay: (retryCount) => {
+        return exponentialDelay(retryCount);
+      },
+      shouldResetTimeout: true,
+    });
   }
 
   private async syncOrganizationSettings() {
@@ -133,7 +147,7 @@ export class OrganizationWebhookService {
   }
 
   private async constructSlackBody<T extends keyof EventMap>(eventPayload: EventMap[T]) {
-    const fedRepo = new FederatedGraphRepository(this.db, eventPayload.organization.id);
+    const fedRepo = new FederatedGraphRepository(this.logger, this.db, eventPayload.organization.id);
     const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(eventPayload.federated_graph.id);
 
     let linkToChangelog = `https://cosmo.wundergraph.com/${eventPayload.organization.slug}/${eventPayload.federated_graph.namespace}/graph/${eventPayload.federated_graph.name}`;
@@ -247,8 +261,15 @@ export class OrganizationWebhookService {
       return;
     }
 
+    const logger = this.logger.child({ eventName: OrganizationEventName[eventName] });
+
     for (const config of this.configs) {
       if (!this.shouldProcess(eventName, eventPayload, config)) {
+        continue;
+      }
+
+      if (!config.url) {
+        logger.error('Webhook URL is not set');
         continue;
       }
 
@@ -263,7 +284,9 @@ export class OrganizationWebhookService {
         };
       }
 
-      post(OrganizationEventName[eventName], data, this.logger, 'debug', config.url!, config.key);
+      // Don't wait for the response.
+      // @TODO Use a queue to send the events
+      makeWebhookRequest(this.httpClient, data, logger, config.url, config.key);
     }
   }
 

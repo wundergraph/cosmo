@@ -194,6 +194,7 @@ services:
     environment:
       - PORT=11000
       - AUTH_JWT_SECRET=fkczyomvdprgvtmvkuhvprxuggkbgwld
+      - AUTH_ADMISSION_JWT_SECRET="uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW"
       - S3_STORAGE_URL=http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo
     ports:
       - '11000:11000'
@@ -249,6 +250,7 @@ services:
       AUTH_REDIRECT_URI: 'http://localhost:3001/v1/auth/callback'
       WEB_BASE_URL: 'http://localhost:3000'
       AUTH_JWT_SECRET: 'fkczyomvdprgvtmvkuhvprxuggkbgwld'
+      AUTH_ADMISSION_JWT_SECRET: 'uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW'
       KC_CLIENT_ID: 'studio'
       KC_REALM: 'cosmo'
       KC_ADMIN_USER: ${KEYCLOAK_ADMIN:-admin}

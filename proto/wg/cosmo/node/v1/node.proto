@@ -65,7 +65,9 @@ message SelfRegisterResponse {
 }
 
 service NodeService {
-  rpc GetLatestValidRouterConfig(GetConfigRequest) returns (GetConfigResponse) {}
+  rpc GetLatestValidRouterConfig(GetConfigRequest) returns (GetConfigResponse) {
+    option deprecated = true;
+  }
   rpc SelfRegister(SelfRegisterRequest) returns (SelfRegisterResponse) {}
 }
 

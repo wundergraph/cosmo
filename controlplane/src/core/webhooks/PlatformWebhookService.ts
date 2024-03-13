@@ -1,7 +1,9 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
-import { post } from './utils.js';
+import axios, { AxiosInstance } from 'axios';
+import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { makeWebhookRequest } from './utils.js';
 
 interface UserRegister {
   user_id: string;
@@ -35,11 +37,23 @@ export class PlatformWebhookService implements IPlatformWebhookService {
   private url: string;
   private key: string;
   private logger: pino.Logger;
+  private httpClient: AxiosInstance;
 
   constructor(webhookURL = '', webhookKey = '', logger: pino.Logger) {
     this.url = webhookURL;
     this.key = webhookKey;
     this.logger = logger;
+
+    this.httpClient = axios.create({
+      timeout: 10_000,
+    });
+    axiosRetry(this.httpClient, {
+      retries: 5,
+      retryDelay: (retryCount) => {
+        return exponentialDelay(retryCount);
+      },
+      shouldResetTimeout: true,
+    });
   }
 
   send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
@@ -47,13 +61,16 @@ export class PlatformWebhookService implements IPlatformWebhookService {
       return;
     }
 
+    const logger = this.logger.child({ eventName: PlatformEventName[eventName] });
+
     const data = {
       version: 1,
       event: PlatformEventName[eventName],
       payload: eventData,
     };
 
-    post(PlatformEventName[eventName], data, this.logger, 'error', this.url, this.key);
+    // Don't wait for the response
+    makeWebhookRequest(this.httpClient, data, logger, this.url, this.key);
   }
 }
 

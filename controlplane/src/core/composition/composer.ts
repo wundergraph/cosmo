@@ -3,17 +3,28 @@ import { DocumentNode, parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FieldConfiguration, FederationResult } from '@wundergraph/composition';
+import { FastifyBaseLogger } from 'fastify';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
-import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import {
+  AdmissionWebhookController,
+  AdmissionWebhookError,
+  AdmissionWebhookJwtPayload,
+} from '../services/AdmissionWebhookController.js';
+import { nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
 
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
+
+export interface S3RouterConfigMetadata extends Record<string, string> {
+  version: string;
+  'signature-sha256': string;
+}
 
 export function subgraphDTOsToComposedSubgraphs(
   subgraphs: SubgraphDTO[],
@@ -57,11 +68,15 @@ export interface ComposedFederatedGraph {
   fieldConfigurations: FieldConfiguration[];
 }
 
+export interface CompositionDeployResult {
+  admissionWebhookError?: AdmissionWebhookError;
+}
+
 export class Composer {
   constructor(
+    private logger: FastifyBaseLogger,
     private federatedGraphRepo: FederatedGraphRepository,
     private subgraphRepo: SubgraphRepository,
-    private compositionRepo: GraphCompositionRepository,
   ) {}
 
   /**
@@ -73,17 +88,30 @@ export class Composer {
     composedBy,
     blobStorage,
     organizationId,
+    admissionConfig,
+    admissionWebhookURL,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
     blobStorage: BlobStorage;
     organizationId: string;
-  }) {
+    admissionWebhookURL?: string;
+    admissionConfig: {
+      jwtSecret: string;
+      cdnBaseUrl: string;
+    };
+  }): Promise<CompositionDeployResult> {
     const hasCompositionErrors = composedGraph.errors.length > 0;
     const federatedSchemaVersionId = randomUUID();
 
     let routerConfigJson: JsonValue = null;
-    const path = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
+
+    // CDN path and bucket path are the same in this case
+    const s3PathDraft = `${organizationId}/${composedGraph.id}/routerconfigs/draft.json`;
+    const s3PathReady = `${organizationId}/${composedGraph.id}/routerconfigs/latest.json`;
+
+    // The signature will be added by the admission webhook
+    let signatureSha256 = '';
 
     // Build router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
@@ -94,17 +122,77 @@ export class Composer {
         schemaVersionId: federatedSchemaVersionId,
       });
       routerConfigJson = routerConfig.toJson();
+      const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
+
+      let draftCreated = false;
+
+      if (admissionWebhookURL) {
+        try {
+          // 1. Upload the draft config to the blob storage
+          // so that the admission webhook can download it.
+          await blobStorage.putObject<S3RouterConfigMetadata>({
+            key: s3PathDraft,
+            body: routerConfigJsonStringBytes,
+            contentType: 'application/json; charset=utf-8',
+            metadata: {
+              version: federatedSchemaVersionId,
+              'signature-sha256': '', // The signature will be added by the admission webhook
+            },
+          });
+
+          draftCreated = true;
+
+          // 2. Create a private URL with a token that the admission webhook can use to fetch the draft config.
+          // The token is valid for 5 minutes and signed with the organization ID and the federated graph ID.
+          const token = await signJwtHS256<AdmissionWebhookJwtPayload>({
+            secret: admissionConfig.jwtSecret,
+            token: {
+              iat: nowInSeconds() + 5 * 60, // 5 minutes
+              aud: 'cdn/admission-hooks',
+              organization_id: organizationId,
+              federated_graph_id: composedGraph.id,
+            },
+          });
+
+          const admissionWebhookController = new AdmissionWebhookController(this.logger, admissionWebhookURL);
+
+          const resp = await admissionWebhookController.validateConfig({
+            privateConfigUrl: `${admissionConfig.cdnBaseUrl}/${s3PathDraft}?token=${token}`,
+            organizationId,
+            federatedGraphId: composedGraph.id,
+          });
+
+          signatureSha256 = resp.signatureSHA256;
+        } catch (err: any) {
+          if (err instanceof AdmissionWebhookError) {
+            return { admissionWebhookError: err };
+          }
+
+          // Throw to ensure that the config is not deployed
+          throw err;
+        } finally {
+          if (draftCreated) {
+            // Clean up the draft config from the blob storage
+            await blobStorage.deleteObject({
+              key: s3PathDraft,
+            });
+          }
+        }
+      }
 
       try {
-        await blobStorage.putObject({
-          key: path,
-          body: Buffer.from(routerConfig.toJsonString(), 'utf8'),
+        await blobStorage.putObject<S3RouterConfigMetadata>({
+          key: s3PathReady,
+          body: routerConfigJsonStringBytes,
           contentType: 'application/json; charset=utf-8',
-          version: federatedSchemaVersionId,
+          metadata: {
+            version: federatedSchemaVersionId,
+            'signature-sha256': signatureSha256,
+          },
         });
       } catch {
         throw new Error(
-          `Could not upload the latest config of the federated graph ${composedGraph.name}. Please try again.`,
+          `Could not deploy the latest composition artifacts of the federated graph ${composedGraph.name}. Please try again.`,
         );
       }
     }
@@ -119,10 +207,12 @@ export class Composer {
       subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
       routerConfig: routerConfigJson,
+      routerConfigSignature: signatureSha256,
       composedBy,
       schemaVersionId: federatedSchemaVersionId,
-      // passing the path only when there exists a previous valid version or when the compostion passes.
-      routerConfigPath: prevValidFederatedSDL || (!hasCompositionErrors && composedGraph.composedSchema) ? path : null,
+      // passing the path only when there exists a previous valid version or when the composition passes.
+      routerConfigPath:
+        prevValidFederatedSDL || (!hasCompositionErrors && composedGraph.composedSchema) ? s3PathReady : null,
     });
 
     // Only create changelog when the composed schema is valid
@@ -139,6 +229,8 @@ export class Composer {
         });
       }
     }
+
+    return {};
   }
 
   /**
