@@ -154,6 +154,11 @@
   "OverrideRoutingURL": {
     "Subgraphs": {}
   },
+  "SecurityConfiguration": {
+    "BlockMutations": false,
+    "BlockSubscriptions": false,
+    "BlockNonPersistedOperations": false
+  },
   "EngineExecutionConfiguration": {
     "Debug": {
       "PrintOperationTransformations": false,

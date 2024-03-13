@@ -231,6 +231,11 @@
       "some-subgraph": "http://router:3002/graphql"
     }
   },
+  "SecurityConfiguration": {
+    "BlockMutations": false,
+    "BlockSubscriptions": false,
+    "BlockNonPersistedOperations": false
+  },
   "EngineExecutionConfiguration": {
     "Debug": {
       "PrintOperationTransformations": false,

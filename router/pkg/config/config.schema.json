@@ -897,6 +897,27 @@
         }
       }
     },
+    "security": {
+      "type": "object",
+      "description": "The configuration for the security. The security is used to configure the security settings for the router.",
+      "additionalProperties": false,
+      "properties": {
+        "block_mutations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Block mutation Operations. If the value is true, the mutations are blocked."
+        },
+        "block_subscriptions": {
+          "type": "boolean",
+          "description": "Block subscription Operations. If the value is true, the subscriptions are blocked."
+        },
+        "block_non_persisted_operations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Block non-persisted Operations. If the value is true, the non-persisted operations are blocked."
+        }
+      }
+    },
     "engine": {
       "type": "object",
       "description": "The configuration for the engine. The engine is used to execute the GraphQL queries, mutations and subscriptions. Only modify this if you know what you are doing.",
