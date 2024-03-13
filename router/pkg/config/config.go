@@ -187,6 +187,7 @@ type EngineExecutionConfiguration struct {
 	ExecutionPlanCacheSize                 int64                    `default:"10000" envconfig:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	BlockMutations                         bool                     `default:"false" envconfig:"ENGINE_BLOCK_MUTATIONS" yaml:"block_mutations"`
 	BlockSubscriptions                     bool                     `default:"false" envconfig:"ENGINE_BLOCK_SUBSCRIPTIONS" yaml:"block_subscriptions"`
+	BlockNonPersistedOperations            bool                     `default:"false" envconfig:"ENGINE_BLOCK_NON_PERSISTED_OPERATIONS" yaml:"block_non_persisted_operations"`
 }
 
 type OverrideRoutingURLConfiguration struct {

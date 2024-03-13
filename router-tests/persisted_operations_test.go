@@ -39,6 +39,26 @@ func TestPersistedOperation(t *testing.T) {
 	})
 }
 
+func TestPersistedOperationWithBlock(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.BlockNonPersistedOperations = true
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		header := make(http.Header)
+		header.Add("graphql-client-name", "my-client")
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"Employees"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Header:        header,
+		})
+		require.NoError(t, err)
+		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+	})
+}
+
 func TestPersistedOperationsCache(t *testing.T) {
 	t.Parallel()
 

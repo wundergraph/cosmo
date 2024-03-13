@@ -223,8 +223,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			traceTimings.EndParse()
 		}
 
-		if h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation.Type) {
-			writeRequestErrors(r.Context(), r, w, http.StatusOK, graphql.RequestErrorsFromError(fmt.Errorf("operation type '%s' is blocked", operationKit.parsedOperation.Type)), requestLogger)
+		if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
+			writeRequestErrors(r.Context(), r, w, http.StatusOK, graphql.RequestErrorsFromError(blocked), requestLogger)
 			return
 		}
 

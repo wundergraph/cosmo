@@ -1120,6 +1120,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	operationBlocker := NewOperationBlocker(&OperationBlockerOptions{
 		BlockMutations:     r.engineExecutionConfiguration.BlockMutations,
 		BlockSubscriptions: r.engineExecutionConfiguration.BlockSubscriptions,
+		BlockNonPersisted:  r.engineExecutionConfiguration.BlockNonPersistedOperations,
 	})
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{

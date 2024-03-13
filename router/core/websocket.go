@@ -604,8 +604,8 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
-	if h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation.Type) {
-		return nil, nil, fmt.Errorf("operation type '%s' is blocked", operationKit.parsedOperation.Type)
+	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
+		return nil, nil, blocked
 	}
 
 	if err := operationKit.Normalize(); err != nil {

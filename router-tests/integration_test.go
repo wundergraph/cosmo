@@ -732,6 +732,24 @@ func TestBlockMutations(t *testing.T) {
 	})
 }
 
+func TestBlockNonPersistedOperations(t *testing.T) {
+	t.Parallel()
+	t.Run("block", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.BlockNonPersistedOperations = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
+			})
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"non-persisted operation is blocked"}],"data":null}`, res.Body)
+		})
+	})
+}
+
 func TestPartialOriginErrors(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{

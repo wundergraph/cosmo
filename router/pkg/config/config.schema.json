@@ -1003,6 +1003,11 @@
         "block_subscriptions": {
           "type": "boolean",
           "description": "Block subscription Operations. If the value is true, the subscriptions are blocked."
+        },
+        "block_non_persisted_operations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Block non-persisted Operations. If the value is true, the non-persisted operations are blocked."
         }
       }
     }
