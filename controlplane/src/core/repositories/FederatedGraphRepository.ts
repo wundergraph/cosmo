@@ -450,6 +450,36 @@ export class FederatedGraphRepository {
   }
 
   /**
+   * Retrieves a monograph by its name and namespace.
+   * This function is mainly used to guard monographs from being modified by federated graph CLI commands
+   * like create, update, move, and delete.
+   * In all other cases, please just call the `byName` function.
+   */
+  public byMonographName(name: string, namespace: string): Promise<FederatedGraphDTO | undefined> {
+    return this.getFederatedGraph([
+      eq(schema.targets.name, name),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'graph'),
+      eq(schema.namespaces.name, namespace),
+    ]);
+  }
+
+  /**
+   * Retrieves a federated graph by its name and namespace.
+   * This function is mainly used to guard federated graphs from being modified by monograph CLI commands
+   * like create, update, move, and delete.
+   * In all other cases, please just call the `byName` function.
+   */
+  public byFederatedGraphName(name: string, namespace: string): Promise<FederatedGraphDTO | undefined> {
+    return this.getFederatedGraph([
+      eq(schema.targets.name, name),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'federated'),
+      eq(schema.namespaces.name, namespace),
+    ]);
+  }
+
+  /**
    * bySubgraphLabels returns federated graphs whose label matchers satisfy the given subgraph labels.
    */
   public async bySubgraphLabels(data: { labels: Label[]; namespaceId: string }): Promise<FederatedGraphDTO[]> {
