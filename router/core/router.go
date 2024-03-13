@@ -164,6 +164,8 @@ type (
 
 		registrationInfo *nodev1.RegistrationInfo
 
+		securityConfiguration config.SecurityConfiguration
+
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
@@ -1117,6 +1119,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 	}
 
+	operationBlocker := NewOperationBlocker(&OperationBlockerOptions{
+		BlockMutations:     r.securityConfiguration.BlockMutations,
+		BlockSubscriptions: r.securityConfiguration.BlockSubscriptions,
+		BlockNonPersisted:  r.securityConfiguration.BlockNonPersistedOperations,
+	})
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                      r.logger,
 		Executor:                    executor,
@@ -1124,6 +1132,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		OperationProcessor:          operationParser,
 		Planner:                     operationPlanner,
 		AccessController:            r.accessController,
+		OperationBlocker:            operationBlocker,
 		RouterPublicKey:             publicKey,
 		EnableRequestTracing:        r.engineExecutionConfiguration.EnableRequestTracing,
 		DevelopmentMode:             r.developmentMode,
@@ -1137,6 +1146,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			OperationProcessor:         operationParser,
+			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
 			GraphQLHandler:             graphqlHandler,
 			Metrics:                    routerMetrics,
@@ -1529,6 +1539,12 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfiguration) Option {
 	return func(r *Router) {
 		r.overrideRoutingURLConfiguration = overrideRoutingURL
+	}
+}
+
+func WithSecurityConfig(cfg config.SecurityConfiguration) Option {
+	return func(r *Router) {
+		r.securityConfiguration = cfg
 	}
 }
 
