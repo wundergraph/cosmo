@@ -121,11 +121,6 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
-  GetRoutersResponse,
-  Router,
-  GetLatestSubgraphSDLResponse,
-  GetSubgraphSDLFromLatestCompositionResponse,
-  GetFederatedGraphSDLByNameResponse,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
@@ -148,7 +143,6 @@ import { Composer, RouterConfigUploadError } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { schemaLintCheck } from '../composition/schemaLint.js';
-import { signJwt } from '../crypto/jwt.js';
 import { nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { PublicError } from '../errors/errors.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
@@ -205,7 +199,6 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { RouterMetricsRepository } from '../repositories/analytics/RouterMetricsRepository.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
@@ -1152,7 +1145,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const schemaLintRepo = new SchemaLintRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-        const compositionRepo = new GraphCompositionRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
