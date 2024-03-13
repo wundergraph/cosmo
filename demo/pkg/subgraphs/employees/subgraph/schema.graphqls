@@ -39,6 +39,7 @@ interface RoleType {
 enum EngineerType {
   BACKEND
   FRONTEND
+  FULLSTACK
 }
 
 interface Identifiable {
