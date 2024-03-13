@@ -237,8 +237,8 @@ func TestEventsNew(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.BlockSubscriptions = true
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.BlockSubscriptions = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 

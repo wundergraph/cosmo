@@ -719,8 +719,8 @@ func TestBlockMutations(t *testing.T) {
 	t.Run("block", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.BlockMutations = true
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.BlockMutations = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -737,8 +737,8 @@ func TestBlockNonPersistedOperations(t *testing.T) {
 	t.Run("block", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.BlockNonPersistedOperations = true
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.BlockNonPersistedOperations = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

@@ -77,6 +77,7 @@ type Config struct {
 	OverrideAbsinthePath               string
 	ModifyRouterConfig                 func(routerConfig *nodev1.RouterConfig)
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
+	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DisableWebSockets                  bool
 	TLSConfig                          *core.TlsConfig
@@ -439,6 +440,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyEngineExecutionConfiguration(&engineExecutionConfig)
 	}
 
+	if testConfig.ModifySecurityConfiguration != nil {
+		testConfig.ModifySecurityConfiguration(&cfg.SecurityConfiguration)
+	}
+
 	routerOpts := []core.Option{
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
@@ -446,6 +451,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithDevelopmentMode(true),
 		core.WithPlayground(true),
 		core.WithEngineExecutionConfig(engineExecutionConfig),
+		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
 		core.WithTLSConfig(testConfig.TLSConfig),

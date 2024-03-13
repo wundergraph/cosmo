@@ -350,9 +350,8 @@ func TestWebSockets(t *testing.T) {
 	t.Run("subscription blocked", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
-				engineExecutionConfiguration.BlockSubscriptions = true
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.BlockSubscriptions = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 

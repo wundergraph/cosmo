@@ -43,8 +43,8 @@ func TestPersistedOperationWithBlock(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{
-		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-			cfg.BlockNonPersistedOperations = true
+		ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+			securityConfiguration.BlockNonPersistedOperations = true
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		header := make(http.Header)

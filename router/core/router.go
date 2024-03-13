@@ -164,6 +164,8 @@ type (
 
 		registrationInfo *nodev1.RegistrationInfo
 
+		securityConfiguration config.SecurityConfiguration
+
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
@@ -1118,9 +1120,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	operationBlocker := NewOperationBlocker(&OperationBlockerOptions{
-		BlockMutations:     r.engineExecutionConfiguration.BlockMutations,
-		BlockSubscriptions: r.engineExecutionConfiguration.BlockSubscriptions,
-		BlockNonPersisted:  r.engineExecutionConfiguration.BlockNonPersistedOperations,
+		BlockMutations:     r.securityConfiguration.BlockMutations,
+		BlockSubscriptions: r.securityConfiguration.BlockSubscriptions,
+		BlockNonPersisted:  r.securityConfiguration.BlockNonPersistedOperations,
 	})
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
@@ -1537,6 +1539,12 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfiguration) Option {
 	return func(r *Router) {
 		r.overrideRoutingURLConfiguration = overrideRoutingURL
+	}
+}
+
+func WithSecurityConfig(cfg config.SecurityConfiguration) Option {
+	return func(r *Router) {
+		r.securityConfiguration = cfg
 	}
 }
 

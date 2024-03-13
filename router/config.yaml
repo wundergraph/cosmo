@@ -4,37 +4,3 @@
 # This file is used to debugging purposes only.
 
 version: "1"
-
-graph:
-  token: "eyJhbGciOiJIUzI1NiJ9.eyJmZWRlcmF0ZWRfZ3JhcGhfaWQiOiIxNTZhNzI5NS0wOTU2LTQ3MmYtODdlNi0xNmNmNzUwNDQ5NjYiLCJvcmdhbml6YXRpb25faWQiOiI0ZmFkMTJiYy04YjdhLTQ3ZDYtOWZhYi0wOTU1OWI5NmE1YWUiLCJpYXQiOjE2OTY1OTA3MTB9.WcGJh93WX185HQeMXqU3MwdRl_JgOSIUxE6oDhU6tc8"
-
-engine:
-  max_concurrent_resolvers: 1024
-  debug:
-    report_websocket_connections: true
-    report_memory_usage: true
-
-events:
-  sources:
-    - provider: NATS
-      url: "nats://localhost:4222"
-
-rate_limit:
-  enabled: false
-  strategy: "simple"
-  storage:
-    addr: "localhost:6379"
-    password: "test"
-    key_prefix: "cosmo_rate_limit"
-  simple_strategy:
-    rate: 60
-    burst: 60
-    period: "60s"
-    reject_exceeding_requests: true
-
-instance_id: "QjlitZRdzHKB6YIFAQHIdi"
-
-websocket:
-  absinthe_protocol:
-    enabled: true
-    handler_path: /absinthe/socket

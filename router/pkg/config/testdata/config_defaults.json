@@ -154,6 +154,11 @@
   "OverrideRoutingURL": {
     "Subgraphs": {}
   },
+  "SecurityConfiguration": {
+    "BlockMutations": false,
+    "BlockSubscriptions": false,
+    "BlockNonPersistedOperations": false
+  },
   "EngineExecutionConfiguration": {
     "Debug": {
       "PrintOperationTransformations": false,
@@ -175,10 +180,7 @@
     "EpollKqueuePollTimeout": 1000000000,
     "EpollKqueueConnBufferSize": 128,
     "WebSocketReadTimeout": 5000000000,
-    "ExecutionPlanCacheSize": 10000,
-    "BlockMutations": false,
-    "BlockSubscriptions": false,
-    "BlockNonPersistedOperations": false
+    "ExecutionPlanCacheSize": 10000
   },
   "WebSocket": {
     "Enabled": true,
