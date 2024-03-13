@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.3.1...aws-lambda-router@0.4.0) (2024-03-13)
+
+### Features
+
+* add edfs validation; add event source name keys to config ([#624](https://github.com/wundergraph/cosmo/issues/624)) ([bf03bb8](https://github.com/wundergraph/cosmo/commit/bf03bb8fca1838fefebcb150f8924ec52fb8bdb5)) (@Aenimus)
+
 ## [0.3.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.3.0...aws-lambda-router@0.3.1) (2024-02-20)
 
 **Note:** Version bump only for package aws-lambda-router
