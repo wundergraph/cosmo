@@ -391,96 +391,105 @@ export const SubgraphsTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {subgraphs.map(
-            ({
-              name,
-              routingURL,
-              lastUpdatedAt,
-              labels,
-              creatorUserId,
-              namespace,
-            }) => {
-              const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
-              let analyticsPath = `${path}/analytics`;
-              if (router.asPath.split("/")[3] === "graph") {
-                const query = [
-                  {
-                    id: "federatedGraphId",
-                    value: [
-                      JSON.stringify({
-                        label: graph?.name,
-                        operator: 0,
-                        value: graph?.id,
-                      }),
-                    ],
-                  },
-                ];
-                analyticsPath += `?filterState=${encodeURIComponent(
-                  JSON.stringify(query),
-                )}`;
-              }
-              return (
-                <TableRow key={name} className="py-1 even:bg-secondary/20">
-                  <TableCell className="px-4 font-medium">{name}</TableCell>
-                  <TableCell className="px-4 text-muted-foreground">
-                    {routingURL}
-                  </TableCell>
-                  <TableCell className="px-4">
-                    <div className="flex space-x-2">
-                      {labels.length === 0 && (
-                        <Tooltip delayDuration={200}>
-                          <TooltipTrigger>-</TooltipTrigger>
-                          <TooltipContent>
-                            Only graphs with empty label matchers will compose
-                            this subgraph
-                          </TooltipContent>
-                        </Tooltip>
+          {subgraphs
+            .filter(
+              (s) => s.labels.length !== 0 && s.labels[0].key !== "monograph",
+            )
+            .map(
+              ({
+                name,
+                routingURL,
+                lastUpdatedAt,
+                labels,
+                creatorUserId,
+                namespace,
+              }) => {
+                const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
+                let analyticsPath = `${path}/analytics`;
+                if (router.asPath.split("/")[3] === "graph") {
+                  const query = [
+                    {
+                      id: "federatedGraphId",
+                      value: [
+                        JSON.stringify({
+                          label: graph?.name,
+                          operator: 0,
+                          value: graph?.id,
+                        }),
+                      ],
+                    },
+                  ];
+                  analyticsPath += `?filterState=${encodeURIComponent(
+                    JSON.stringify(query),
+                  )}`;
+                }
+                return (
+                  <TableRow key={name} className="py-1 even:bg-secondary/20">
+                    <TableCell className="px-4 font-medium">{name}</TableCell>
+                    <TableCell className="px-4 text-muted-foreground">
+                      {routingURL}
+                    </TableCell>
+                    <TableCell className="px-4">
+                      <div className="flex space-x-2">
+                        {labels.length === 0 && (
+                          <Tooltip delayDuration={200}>
+                            <TooltipTrigger>-</TooltipTrigger>
+                            <TooltipContent>
+                              Only graphs with empty label matchers will compose
+                              this subgraph
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {labels.map(({ key, value }) => {
+                          return (
+                            <Badge variant="secondary" key={key + value}>
+                              {key}={value}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 text-muted-foreground">
+                      {lastUpdatedAt
+                        ? formatDistanceToNow(new Date(lastUpdatedAt), {
+                            addSuffix: true,
+                          })
+                        : "Never"}
+                    </TableCell>
+                    <TableCell className="flex justify-end gap-2">
+                      {rbac && (
+                        <AddSubgraphUsers
+                          subgraphName={name}
+                          namespace={namespace}
+                          creatorUserId={creatorUserId}
+                        />
                       )}
-                      {labels.map(({ key, value }) => {
-                        return (
-                          <Badge variant="secondary" key={key + value}>
-                            {key}={value}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-4 text-muted-foreground">
-                    {lastUpdatedAt
-                      ? formatDistanceToNow(new Date(lastUpdatedAt), {
-                          addSuffix: true,
-                        })
-                      : "Never"}
-                  </TableCell>
-                  <TableCell className="flex justify-end gap-2">
-                    {rbac && (
-                      <AddSubgraphUsers
-                        subgraphName={name}
-                        namespace={namespace}
-                        creatorUserId={creatorUserId}
-                      />
-                    )}
-                    <Tooltip delayDuration={200}>
-                      <TooltipTrigger asChild>
-                        <Button asChild variant="ghost" size="icon-sm">
-                          <Link
-                            onClick={(e) => e.stopPropagation()}
-                            href={analyticsPath}
-                          >
-                            <ChartBarIcon className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Analytics</TooltipContent>
-                    </Tooltip>
-                    <Button asChild variant="ghost" size="sm" className="table-action">
-                      <Link href={path}>View</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            },
-          )}
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <Button asChild variant="ghost" size="icon-sm">
+                            <Link
+                              onClick={(e) => e.stopPropagation()}
+                              href={analyticsPath}
+                            >
+                              <ChartBarIcon className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Analytics</TooltipContent>
+                      </Tooltip>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="table-action"
+                      >
+                        <Link href={path}>View</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              },
+            )}
         </TableBody>
       </Table>
     </TableWrapper>

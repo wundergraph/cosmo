@@ -43,13 +43,15 @@ export default (opts: BaseCommandOptions) => {
       program.error(pc.red('Could not fetch the federated graphs.'));
     }
 
-    if (resp.graphs.length === 0) {
+    const graphs = resp.graphs.filter((g) => g.type === 'federated');
+
+    if (graphs.length === 0) {
       console.log('No federated graphs found');
       process.exit(0);
     }
 
     if (options.out) {
-      const output = resp.graphs.map(
+      const output = graphs.map(
         (g) =>
           ({
             name: g.name,
@@ -65,7 +67,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw) {
-      console.log(resp.graphs);
+      console.log(graphs);
       process.exit(0);
     }
 
@@ -83,7 +85,7 @@ export default (opts: BaseCommandOptions) => {
       wordWrap: true,
     });
 
-    for (const graph of resp.graphs) {
+    for (const graph of graphs) {
       graphsTable.push([
         graph.name,
         graph.namespace,

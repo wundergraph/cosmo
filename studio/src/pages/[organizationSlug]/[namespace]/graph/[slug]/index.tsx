@@ -249,9 +249,9 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               </div>
             </CardContent>
             <CardFooter className="flex-col items-start text-sm">
-              {graphData.graph.type !== "federated-graph" && (
+              {graphData.graph.type !== "federated" && (
                 <div className="mb-4 w-full">
-                  <span className="text-muted-foreground">Graph Endpoint</span>
+                  <span className="text-muted-foreground">Graph Url</span>
                   <CLI
                     className="mt-1 md:w-full"
                     command={graphData.subgraphs[0].routingURL}

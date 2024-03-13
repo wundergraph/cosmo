@@ -119,6 +119,7 @@ import {
   CreateMonographResponse,
   PublishMonographResponse,
   UpdateMonographResponse,
+  DeleteMonographResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
@@ -900,16 +901,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          const subgraphName = req.name + Date.now();
           const label: Label = {
             key: 'monograph',
-            value: subgraphName,
+            value: req.name,
           };
 
           const labelMatchers = [joinLabel(label)];
 
           await subgraphRepo.create({
-            name: subgraphName,
+            name: req.name,
             namespace: req.namespace,
             namespaceId: namespace.id,
             createdBy: authContext.userId,
@@ -1934,7 +1934,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             return {
               response: {
                 code: EnumStatusCode.ERR_INVALID_LABELS,
-                details: `One ore more labels were found to be invalid`,
+                details: `One or more labels were found to be invalid`,
               },
               compositionErrors: [],
             };
@@ -2518,7 +2518,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     deleteMonograph: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<DeleteFederatedGraphResponse>>(ctx, logger, async () => {
+      return handleError<PlainMessage<DeleteMonographResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 

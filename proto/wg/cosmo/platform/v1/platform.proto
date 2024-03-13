@@ -1825,21 +1825,24 @@ service PlatformService {
   rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
 
   rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
-  rpc MoveMonograph(MoveGraphRequest) returns (MoveGraphResponse) {}
   rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}
-
-  // CreateFederatedGraph creates a federated graph on the control plane.
-  rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
+  
+  rpc MoveMonograph(MoveGraphRequest) returns (MoveGraphResponse) {}
   // CreateMonograph creates a monograph on the control plane.
   rpc CreateMonograph(CreateMonographRequest) returns (CreateMonographResponse) {}
   // PublishMonograph pushes the schema of the monograph to the control plane.
   rpc PublishMonograph(PublishMonographRequest) returns (PublishMonographResponse) {}
+  // DeleteMonograph deletes a monograph from the control plane.
+  rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
+  // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+  rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
+  
   // CreateFederatedSubgraph creates a federated subgraph on the control plane.
   rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}
   // PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
   rpc PublishFederatedSubgraph(PublishFederatedSubgraphRequest) returns (PublishFederatedSubgraphResponse) {}
-  // DeleteMonograph deletes a monograph from the control plane.
-  rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
+  // CreateFederatedGraph creates a federated graph on the control plane.
+  rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
   // DeleteFederatedGraph deletes a federated graph from the control plane.
   rpc DeleteFederatedGraph(DeleteFederatedGraphRequest) returns (DeleteFederatedGraphResponse) {}
   // DeleteFederatedSubgraph deletes a federated subgraph from the control plane.
@@ -1847,8 +1850,6 @@ service PlatformService {
   // CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
   rpc CheckSubgraphSchema(CheckSubgraphSchemaRequest) returns (CheckSubgraphSchemaResponse) {}
   rpc FixSubgraphSchema(FixSubgraphSchemaRequest) returns (FixSubgraphSchemaResponse) {}
-  // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
-  rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
   // UpdateFederatedGraph updates a federated graph with new labels and routing url
   rpc UpdateFederatedGraph(UpdateFederatedGraphRequest) returns (UpdateFederatedGraphResponse) {}
   // UpdateSubgraph updates a subgraph with new labels and routing url
