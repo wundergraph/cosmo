@@ -23,7 +23,7 @@
     "dist"
   ],
   "dependencies": {
-    "hono": "4.0.10",
+    "hono": "4.1.0",
     "jose": "^5.2.3"
   },
   "devDependencies": {
