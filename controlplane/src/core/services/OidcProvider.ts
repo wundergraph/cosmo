@@ -43,6 +43,7 @@ export default class OidcProvider {
 
     for (const mapper of input.mappers) {
       let key = 'ssoGroups';
+      // using a different claim name for microsoft entra as it doesnt allow us to change the name of the claim.
       if (endpoint === 'login.microsoftonline.com') {
         key = 'groups';
       }
