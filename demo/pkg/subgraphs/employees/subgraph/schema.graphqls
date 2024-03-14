@@ -27,6 +27,7 @@ type Subscription {
 enum Department {
   ENGINEERING
   MARKETING
+  OPERATIONS
 }
 
 interface RoleType {
