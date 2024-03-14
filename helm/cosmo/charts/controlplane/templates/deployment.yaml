@@ -309,7 +309,7 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: cdnBaseUrl
             {{- end }}
-            {{- if .Values.configuration.admissionJwtSecret }}
+            {{- if .Values.global.controlplane.admissionJwtSecret }}
             - name: AUTH_ADMISSION_JWT_SECRET
               valueFrom:
                 secretKeyRef:
