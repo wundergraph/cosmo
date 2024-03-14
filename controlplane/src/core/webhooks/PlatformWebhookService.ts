@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { makeWebhookRequest } from './utils.js';
 
@@ -69,8 +69,14 @@ export class PlatformWebhookService implements IPlatformWebhookService {
       payload: eventData,
     };
 
-    // Don't wait for the response
-    makeWebhookRequest(this.httpClient, data, logger, this.url, this.key);
+    // @TODO Use a queue to send the events
+    makeWebhookRequest(this.httpClient, data, this.url, this.key).catch((error: AxiosError) => {
+      if (error instanceof AxiosError) {
+        logger.error({ statusCode: error.response?.status, message: error.message }, 'Could not send webhook event');
+      } else {
+        logger.error(error, 'Could not send webhook event');
+      }
+    });
   }
 }
 

@@ -4,7 +4,7 @@ import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dis
 import pino from 'pino';
 import { PartialMessage } from '@bufbuild/protobuf';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
@@ -284,9 +284,14 @@ export class OrganizationWebhookService {
         };
       }
 
-      // Don't wait for the response.
       // @TODO Use a queue to send the events
-      makeWebhookRequest(this.httpClient, data, logger, config.url, config.key);
+      makeWebhookRequest(this.httpClient, data, config.url, config.key).catch((error: AxiosError) => {
+        if (error instanceof AxiosError) {
+          logger.debug({ statusCode: error.response?.status, message: error.message }, 'Could not send webhook event');
+        } else {
+          logger.debug(error, 'Could not send webhook event');
+        }
+      });
     }
   }
 

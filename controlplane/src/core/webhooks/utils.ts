@@ -2,10 +2,9 @@ import { createHmac } from 'node:crypto';
 import { AxiosError, AxiosInstance } from 'axios';
 import pino from 'pino';
 
-export const makeWebhookRequest = <Data = any>(
+export const makeWebhookRequest = async <Data = any>(
   axiosInstance: AxiosInstance,
   data: Data,
-  logger: pino.Logger,
   url: string,
   signatureKey?: string,
 ) => {
@@ -18,18 +17,10 @@ export const makeWebhookRequest = <Data = any>(
     headers['X-Cosmo-Signature-256'] = createHmac('sha256', signatureKey).update(dataString).digest('hex');
   }
 
-  axiosInstance
-    .post(url, data, {
-      headers,
-      timeout: 10_000,
-    })
-    .catch((error: AxiosError) => {
-      if (error instanceof AxiosError) {
-        logger.debug({ statusCode: error.response?.status, message: error.message }, 'Could not send webhook event');
-      } else {
-        logger.debug(error, 'Could not send webhook event');
-      }
-    });
+  await axiosInstance.post(url, data, {
+    headers,
+    timeout: 10_000,
+  });
 };
 
 export const toISODateTime = (secs: number) => {
