@@ -200,7 +200,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 <span className="w-28 text-muted-foreground">Subgraphs</span>
                 <span className="w-32">{connectedSubgraphs}</span>
               </div>
-              <div className="flex items-start gap-x-4">
+              <div className="flex items-start gap-x-3">
                 <span className="w-28 flex-shrink-0 text-muted-foreground">
                   Matchers
                 </span>
