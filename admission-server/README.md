@@ -16,6 +16,12 @@ open http://localhost:3009
 
 # Demo
 
+We have deployed a demo of the Admission Server at https://demo-admission-server.fly.dev/. You can use this server `--admission-webhook-url=https://demo-admission-server.fly.dev` flag when creating a graph with the `wgc` CLI as shown below:
+
+The signing key for the demo server is `7kZKCz7DaLpvHKtaFEupDsBvDD9EEmUB`. You need this key when starting the Router to validate the configuration.
+
+# Development
+
 1. Create a graph with an admission webhook url:
 
 ```bash
