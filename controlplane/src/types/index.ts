@@ -1,5 +1,5 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { JWTPayload, KeyLike } from 'jose';
+import { JWTPayload } from 'jose';
 import { LintRuleEnum } from '../db/models.js';
 
 export type FeatureIds =
