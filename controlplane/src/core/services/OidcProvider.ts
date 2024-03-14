@@ -42,7 +42,12 @@ export default class OidcProvider {
     await oidcRepo.addOidcProvider({ name: input.name, organizationId, endpoint, alias });
 
     for (const mapper of input.mappers) {
-      const claims = `[{ "key": "ssoGroups", "value": "${mapper.ssoGroup}" }]`;
+      let key = 'ssoGroups';
+      // using a different claim name for microsoft entra as it doesnt allow us to change the name of the claim.
+      if (endpoint === 'login.microsoftonline.com') {
+        key = 'groups';
+      }
+      const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup}" }]`;
       let keycloakGroupName;
 
       switch (mapper.role) {
