@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.76.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.75.2...controlplane@0.76.0) (2024-03-14)
+
+### Bug Fixes
+
+* change claim key to support microsoft entra ([#630](https://github.com/wundergraph/cosmo/issues/630)) ([f1bc391](https://github.com/wundergraph/cosmo/commit/f1bc3916f9859525fd36e4879a839e6f3c59fa0d)) (@JivusAyrus)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
 ## [0.75.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.75.1...controlplane@0.75.2) (2024-03-13)
 
 **Note:** Version bump only for package controlplane
