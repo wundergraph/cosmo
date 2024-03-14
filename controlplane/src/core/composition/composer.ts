@@ -158,7 +158,7 @@ export class Composer {
               secret: admissionConfig.jwtSecret,
               token: {
                 iat: nowInSeconds() + 5 * 60, // 5 minutes
-                aud: 'admission-hooks',
+                aud: 'admission-hooks', // to distinguish from other tokens
                 organization_id: organizationId,
                 federated_graph_id: composedGraph.id,
               },
@@ -256,8 +256,18 @@ export class Composer {
       }
     }
 
+    const errors: ComposeDeploymentError[] = [];
+
+    if (deploymentError) {
+      errors.push(deploymentError);
+    }
+
+    if (admissionError) {
+      errors.push(admissionError);
+    }
+
     return {
-      errors: [deploymentError, admissionError].filter(Boolean) as ComposeDeploymentError[],
+      errors,
     };
   }
 
