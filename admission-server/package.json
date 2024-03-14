@@ -1,6 +1,9 @@
 {
   "name": "admission-server",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "del dist && tsc"
