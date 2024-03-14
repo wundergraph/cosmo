@@ -76,7 +76,7 @@ func Main() {
 	go func() {
 		if err := router.Start(ctx); err != nil {
 			logger.Error("Could not start server", zap.Error(err))
-			// Don't block and wait for shutdown. No fatal error because some sinks might be flushed.
+			// Don't block and wait for shutdown. We don't want to shutdown hard because some sinks might be flushed.
 			stop()
 		}
 	}()

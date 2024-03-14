@@ -283,7 +283,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         // Create a JWT token containing the session id and user id.
         const jwt = await encrypt<UserSession>({
-          maxAge: sessionExpiresIn,
+          maxAgeInSeconds: sessionExpiresIn,
           token: {
             iss: userId,
             sessionId: insertedSession.id,

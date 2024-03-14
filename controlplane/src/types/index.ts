@@ -52,6 +52,8 @@ export interface FederatedGraphDTO {
   labelMatchers: string[];
   subgraphsCount: number;
   composedSchemaVersionId?: string;
+  admissionWebhookURL?: string;
+  compositionId?: string;
   creatorUserId?: string;
   readme?: string;
   namespace: string;
@@ -263,17 +265,13 @@ export enum SchemaChangeType {
   UNION_MEMBER_ADDED = 'UNION_MEMBER_ADDED',
 }
 
-export interface JWTEncodeParams<Payload extends JWTPayload = JWTPayload> {
-  /** The JWT payload. */
+export interface JWTEncodeParams<Payload extends JWTPayload = JWTPayload, Secret = string> {
+  // The payload to encode into the JWT
   token: Payload;
-  /** The secret used to encode the issued JWT. */
-  secret: string;
-  /**
-   * The maximum age of the issued JWT in seconds.
-   *
-   * @default 30 * 24 * 60 * 60 // 30 days
-   */
-  maxAge?: number;
+  // The secret used to encode the issued JWT
+  secret: Secret;
+  // The maximum age of the issued JWT in seconds
+  maxAgeInSeconds?: number;
 }
 
 export interface JWTDecodeParams {
@@ -390,8 +388,11 @@ export interface GraphCompositionDTO {
   createdAt: string;
   createdBy?: string;
   compositionErrors?: string;
+  routerConfigSignature?: string;
   isComposable: boolean;
   isLatestValid: boolean;
+  admissionError?: string;
+  deploymentError?: string;
 }
 
 export interface SubgraphMemberDTO {

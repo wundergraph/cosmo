@@ -446,46 +446,50 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
   schema = "";
 
   /**
-   * routing_url is the URL of the service which will be used to route the requests to the subgraph.
+   * The routing_url is the URL of the service which will be used to route the requests to the subgraph.
    *
    * @generated from field: optional string routing_url = 3;
    */
   routingUrl?: string;
 
   /**
-   * labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
+   * The labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
    *
    * @generated from field: repeated wg.cosmo.platform.v1.Label labels = 4;
    */
   labels: Label[] = [];
 
   /**
-   * headers are the headers which will be used to route the requests to the subgraph.
+   * The headers are the headers which will be used to route the requests to the subgraph.
    *
    * @generated from field: repeated string headers = 5;
    */
   headers: string[] = [];
 
   /**
-   * subscription protocol to use when subscribing to this subgraph
+   * The subscription protocol to use when subscribing to this subgraph
    *
    * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
    */
   subscriptionProtocol?: GraphQLSubscriptionProtocol;
 
   /**
-   * url used for subscriptions
+   * The url used for subscriptions
    *
    * @generated from field: optional string subscription_url = 7;
    */
   subscriptionUrl?: string;
 
   /**
+   * The namespace of the subgraph
+   *
    * @generated from field: string namespace = 8;
    */
   namespace = "";
 
   /**
+   * If true, the labels will be unset
+   *
    * @generated from field: optional bool unset_labels = 9;
    */
   unsetLabels?: boolean;
@@ -540,6 +544,11 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
    */
   compositionErrors: CompositionError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -550,6 +559,7 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphResponse {
@@ -781,6 +791,11 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
    */
   namespace = "";
 
+  /**
+   * @generated from field: string admissionWebhookURL = 6;
+   */
+  admissionWebhookURL = "";
+
   constructor(data?: PartialMessage<CreateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -794,6 +809,7 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
     { no: 3, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphRequest {
@@ -1101,6 +1117,55 @@ export class CompositionError extends Message<CompositionError> {
 
   static equals(a: CompositionError | PlainMessage<CompositionError> | undefined, b: CompositionError | PlainMessage<CompositionError> | undefined): boolean {
     return proto3.util.equals(CompositionError, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeploymentError
+ */
+export class DeploymentError extends Message<DeploymentError> {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 2;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<DeploymentError>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeploymentError";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeploymentError {
+    return new DeploymentError().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeploymentError {
+    return new DeploymentError().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeploymentError {
+    return new DeploymentError().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeploymentError | PlainMessage<DeploymentError> | undefined, b: DeploymentError | PlainMessage<DeploymentError> | undefined): boolean {
+    return proto3.util.equals(DeploymentError, a, b);
   }
 }
 
@@ -1475,6 +1540,11 @@ export class CreateFederatedGraphResponse extends Message<CreateFederatedGraphRe
    */
   compositionErrors: CompositionError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<CreateFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1485,6 +1555,7 @@ export class CreateFederatedGraphResponse extends Message<CreateFederatedGraphRe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphResponse {
@@ -1555,6 +1626,11 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
    */
   compositionErrors: CompositionError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<DeleteFederatedSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1565,6 +1641,7 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphResponse {
@@ -1740,6 +1817,11 @@ export class FederatedGraph extends Message<FederatedGraph> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string compositionId = 13;
+   */
+  compositionId?: string;
+
   constructor(data?: PartialMessage<FederatedGraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1760,6 +1842,7 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 10, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 12, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 13, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {
@@ -3680,6 +3763,11 @@ export class UpdateSubgraphResponse extends Message<UpdateSubgraphResponse> {
    */
   compositionErrors: CompositionError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<UpdateSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3690,6 +3778,7 @@ export class UpdateSubgraphResponse extends Message<UpdateSubgraphResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphResponse {
@@ -3743,6 +3832,11 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
    */
   unsetLabelMatchers?: boolean;
 
+  /**
+   * @generated from field: optional string admissionWebhookURL = 7;
+   */
+  admissionWebhookURL?: string;
+
   constructor(data?: PartialMessage<UpdateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3757,6 +3851,7 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
     { no: 4, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "unset_label_matchers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 7, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphRequest {
@@ -3790,6 +3885,11 @@ export class UpdateFederatedGraphResponse extends Message<UpdateFederatedGraphRe
    */
   compositionErrors: CompositionError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<UpdateFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3800,6 +3900,7 @@ export class UpdateFederatedGraphResponse extends Message<UpdateFederatedGraphRe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphResponse {
@@ -11093,6 +11194,21 @@ export class GraphComposition extends Message<GraphComposition> {
    */
   isLatestValid = false;
 
+  /**
+   * @generated from field: optional string routerConfigSignature = 8;
+   */
+  routerConfigSignature?: string;
+
+  /**
+   * @generated from field: optional string admissionError = 9;
+   */
+  admissionError?: string;
+
+  /**
+   * @generated from field: optional string deploymentError = 10;
+   */
+  deploymentError?: string;
+
   constructor(data?: PartialMessage<GraphComposition>) {
     super();
     proto3.util.initPartial(data, this);
@@ -11108,6 +11224,9 @@ export class GraphComposition extends Message<GraphComposition> {
     { no: 5, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "createdBy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "isLatestValid", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "routerConfigSignature", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "admissionError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "deploymentError", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphComposition {
@@ -14171,6 +14290,11 @@ export class MoveGraphResponse extends Message<MoveGraphResponse> {
    */
   compositionErrors: CompositionError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<MoveGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -14181,6 +14305,7 @@ export class MoveGraphResponse extends Message<MoveGraphResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveGraphResponse {

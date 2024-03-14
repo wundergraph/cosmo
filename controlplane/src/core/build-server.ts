@@ -80,9 +80,13 @@ export interface BuildConfig {
     privateKey?: string;
   };
   slack: { clientID?: string; clientSecret?: string };
+  cdnBaseUrl: string;
   s3StorageUrl: string;
   smtpUsername?: string;
   smtpPassword?: string;
+  admissionWebhook: {
+    secret: string;
+  };
   stripe?: {
     secret?: string;
     webhookSecret?: string;
@@ -124,10 +128,10 @@ export default async function build(opts: BuildConfig) {
     ...opts.logger,
   };
 
-  const log = pino(opts.production ? opts.logger : { ...developmentLoggerOpts, ...opts.logger });
+  const logger = pino(opts.production ? opts.logger : { ...developmentLoggerOpts, ...opts.logger });
 
   const fastify = Fastify({
-    logger: log,
+    logger,
     // The maximum amount of time in *milliseconds* in which a plugin can load
     pluginTimeout: 10_000, // 10s
   });
@@ -164,10 +168,10 @@ export default async function build(opts: BuildConfig) {
   if (opts.clickhouseDsn) {
     await fastify.register(fastifyClickHouse, {
       dsn: opts.clickhouseDsn,
-      logger: log,
+      logger,
     });
   } else {
-    log.warn('ClickHouse connection not configured');
+    logger.warn('ClickHouse connection not configured');
   }
 
   const authUtils = new AuthUtils(fastify.db, {
@@ -197,7 +201,7 @@ export default async function build(opts: BuildConfig) {
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
   const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
-  const authorizer = new Authorization(opts.stripe?.defaultPlanId);
+  const authorizer = new Authorization(logger, opts.stripe?.defaultPlanId);
 
   const keycloakClient = new Keycloak({
     apiUrl: opts.keycloak.apiUrl,
@@ -213,12 +217,12 @@ export default async function build(opts: BuildConfig) {
     try {
       const verified = await mailerClient.verifyConnection();
       if (verified) {
-        log.info('Email client ready to send emails');
+        logger.info('Email client ready to send emails');
       } else {
-        log.error('Email client failed to verify connection');
+        logger.error('Email client failed to verify connection');
       }
     } catch (error) {
-      log.error(error, 'Email client could not verify connection');
+      logger.error(error, 'Email client could not verify connection');
     }
   }
 
@@ -231,14 +235,14 @@ export default async function build(opts: BuildConfig) {
     tls: opts.redis.tls,
   });
 
-  const readmeQueue = new AIGraphReadmeQueue(log, fastify.redisForQueue);
+  const readmeQueue = new AIGraphReadmeQueue(logger, fastify.redisForQueue);
 
   if (opts.openaiAPIKey) {
     bullWorkers.push(
       createAIGraphReadmeWorker({
         redisConnection: fastify.redisForWorker,
         db: fastify.db,
-        log,
+        logger,
         openAiApiKey: opts.openaiAPIKey,
       }),
     );
@@ -277,7 +281,7 @@ export default async function build(opts: BuildConfig) {
       prefix: '/webhook/github',
       githubRepository,
       webhookSecret: opts.githubApp?.webhookSecret ?? '',
-      logger: log,
+      logger,
     });
   }
 
@@ -288,7 +292,7 @@ export default async function build(opts: BuildConfig) {
       prefix: '/webhook/stripe',
       billingService,
       webhookSecret: opts.stripe.webhookSecret,
-      logger: log,
+      logger,
     });
   }
 
@@ -314,7 +318,7 @@ export default async function build(opts: BuildConfig) {
    * Controllers registration
    */
 
-  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, log);
+  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
 
   await fastify.register(AuthController, {
     organizationRepository,
@@ -343,7 +347,7 @@ export default async function build(opts: BuildConfig) {
   await fastify.register(fastifyConnectPlugin, {
     routes: routes({
       db: fastify.db,
-      logger: log,
+      logger,
       jwtSecret: opts.auth.secret,
       keycloakRealm: opts.keycloak.realm,
       keycloakApiUrl: opts.keycloak.apiUrl,
@@ -361,6 +365,8 @@ export default async function build(opts: BuildConfig) {
       openaiApiKey: opts.openaiAPIKey,
       readmeQueue,
       stripeSecretKey: opts.stripe?.secret,
+      admissionWebhookJWTSecret: opts.admissionWebhook.secret,
+      cdnBaseUrl: opts.cdnBaseUrl,
     }),
     contextValues(req) {
       return createContextValues().set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: req.log }, req.log);

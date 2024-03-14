@@ -390,7 +390,9 @@ const RoutersPage: NextPageWithLayout = () => {
         return (
           <div className="flex items-center space-x-1">
             <div>Instance ID</div>
-            <InfoTooltip>The unique instance ID.</InfoTooltip>
+            <div>
+              <InfoTooltip>The unique instance ID.</InfoTooltip>
+            </div>
           </div>
         );
       },
@@ -401,7 +403,9 @@ const RoutersPage: NextPageWithLayout = () => {
         return (
           <div className="flex items-center space-x-1">
             <div>Status</div>
-            <InfoTooltip>The Router status</InfoTooltip>
+            <div>
+              <InfoTooltip>The Router status</InfoTooltip>
+            </div>
           </div>
         );
       },
@@ -420,7 +424,9 @@ const RoutersPage: NextPageWithLayout = () => {
         return (
           <div className="flex items-center space-x-1">
             <div>Cluster</div>
-            <InfoTooltip>The name of the logical cluster.</InfoTooltip>
+            <div>
+              <InfoTooltip>The name of the logical cluster.</InfoTooltip>
+            </div>
           </div>
         );
       },
@@ -432,10 +438,12 @@ const RoutersPage: NextPageWithLayout = () => {
         return (
           <div className="flex items-center space-x-1">
             <div>Mem / CPU</div>
-            <InfoTooltip>
-              Current utilization of the instance. Arrows show the trend in
-              percentage.
-            </InfoTooltip>
+            <div>
+              <InfoTooltip>
+                Current utilization of the instance. Arrows show the trend in
+                percentage.
+              </InfoTooltip>
+            </div>
           </div>
         );
       },
