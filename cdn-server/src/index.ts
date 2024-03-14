@@ -21,6 +21,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.use('*', compress());
 cdn(app, {
   authJwtSecret: process.env.AUTH_JWT_SECRET!,
+  authAdmissionJwtSecret: process.env.AUTH_ADMISSION_JWT_SECRET!,
   blobStorage,
 });
 

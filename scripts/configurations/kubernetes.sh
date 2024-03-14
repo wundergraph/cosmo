@@ -4,3 +4,4 @@ set -e
 export COSMO_API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705
 export COSMO_API_URL=http://controlplane.wundergraph.local
 export KC_API_URL=http://keycloak.wundergraph.local
+export CDN_URL=http://cdn.wundergraph.com:11000

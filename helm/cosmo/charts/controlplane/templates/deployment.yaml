@@ -302,6 +302,20 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: openAiApiKey
             {{- end }}
+            {{- if .Values.configuration.cdnBaseUrl }}
+            - name: CDN_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: cdnBaseUrl
+            {{- end }}
+            {{- if .Values.global.controlplane.admissionJwtSecret }}
+            - name: AUTH_ADMISSION_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: admissionJwtSecret
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

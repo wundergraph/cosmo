@@ -17,6 +17,7 @@ export const NodeService = {
   methods: {
     /**
      * @generated from rpc wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig
+     * @deprecated
      */
     getLatestValidRouterConfig: {
       name: "GetLatestValidRouterConfig",
@@ -40,6 +41,7 @@ const $queryService = createQueryService({  service: NodeService,});
 
 /**
  * @generated from rpc wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig
+ * @deprecated
  */
 export const getLatestValidRouterConfig: UnaryFunctionsWithHooks<GetConfigRequest, GetConfigResponse> = {   ...$queryService.getLatestValidRouterConfig,  ...createUnaryHooks($queryService.getLatestValidRouterConfig)};
 

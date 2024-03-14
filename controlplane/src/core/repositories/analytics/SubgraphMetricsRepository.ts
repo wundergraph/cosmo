@@ -4,6 +4,7 @@ import {
   CustomOptions,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { FastifyBaseLogger } from 'fastify';
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange, Label } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../FederatedGraphRepository.js';
@@ -52,6 +53,7 @@ interface GetSubgraphMetricsProps {
 
 export class SubgraphMetricsRepository {
   constructor(
+    private logger: FastifyBaseLogger,
     private client: ClickHouseClient,
     private db: PostgresJsDatabase<typeof schema>,
   ) {}
@@ -671,7 +673,7 @@ export class SubgraphMetricsRepository {
       }
     }
 
-    const fedRepo = new FederatedGraphRepository(this.db, organizationId);
+    const fedRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
     const graphs = await fedRepo.bySubgraphLabels({ labels: subgraphLabels, namespaceId });
     for (const graph of graphs) {
       addFilterOption('federatedGraphId', graph.id, graph.name);

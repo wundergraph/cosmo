@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   ListObjectsV2Command,
@@ -6,7 +7,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { BlobNotFoundError, type BlobStorage } from './index.js';
+import { BlobNotFoundError, BlobObject, type BlobStorage } from './index.js';
 
 /**
  * Stores objects in S3 given an S3Client and a bucket name
@@ -17,27 +18,24 @@ export class S3BlobStorage implements BlobStorage {
     private bucketName: string,
   ) {}
 
-  async putObject({
+  async putObject<Metadata extends Record<string, string>>({
     key,
     body,
     contentType,
-    version,
+    metadata,
   }: {
     key: string;
     body: Buffer;
     contentType: string;
     version?: string;
+    metadata?: Metadata;
   }): Promise<void> {
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,
       Body: body,
       ContentType: contentType,
-      Metadata: version
-        ? {
-            version,
-          }
-        : undefined,
+      Metadata: metadata,
     });
     const resp = await this.s3Client.send(command);
     if (resp.$metadata.httpStatusCode !== 200) {
@@ -45,17 +43,43 @@ export class S3BlobStorage implements BlobStorage {
     }
   }
 
-  async getObject(key: string): Promise<ReadableStream> {
+  async deleteObject(data: { key: string; abortSignal?: AbortSignal }): Promise<void> {
+    const command = new DeleteObjectCommand({
+      Bucket: this.bucketName,
+      Key: data.key,
+    });
+
+    const resp = await this.s3Client.send(command, {
+      abortSignal: data.abortSignal,
+    });
+
+    if (resp.$metadata.httpStatusCode !== 204) {
+      throw new Error(`Failed to delete object from S3: ${resp}`);
+    }
+  }
+
+  async getObject(data: { key: string; abortSignal?: AbortSignal }): Promise<BlobObject> {
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
-      Key: key,
+      Key: data.key,
     });
     try {
-      const resp = await this.s3Client.send(command);
+      const resp = await this.s3Client.send(command, {
+        abortSignal: data.abortSignal,
+      });
+
       if (resp.$metadata.httpStatusCode !== 200) {
-        throw new BlobNotFoundError(`Failed to retrieve object from S3: ${resp}`);
+        throw new Error(`Failed to retrieve object from S3: ${resp}`);
       }
-      return resp.Body!.transformToWebStream();
+
+      if (!resp.Body) {
+        throw new Error(`Failed to retrieve object from S3: ${resp}`);
+      }
+
+      return {
+        stream: resp.Body.transformToWebStream(),
+        metadata: resp.Metadata,
+      };
     } catch (e: any) {
       if (e instanceof NoSuchKey) {
         throw new BlobNotFoundError(`Failed to retrieve object from S3: ${e}`);
@@ -64,12 +88,14 @@ export class S3BlobStorage implements BlobStorage {
     }
   }
 
-  async removeDirectory(key: string): Promise<number> {
+  async removeDirectory(data: { key: string; abortSignal?: AbortSignal }): Promise<number> {
     const listCommand = new ListObjectsV2Command({
       Bucket: this.bucketName,
-      Prefix: key,
+      Prefix: data.key,
     });
-    const entries = await this.s3Client.send(listCommand);
+    const entries = await this.s3Client.send(listCommand, {
+      abortSignal: data.abortSignal,
+    });
     const objectsToDelete = entries.Contents?.map((item) => ({ Key: item.Key }));
     if (objectsToDelete && objectsToDelete.length > 0) {
       const deleteCommand = new DeleteObjectsCommand({

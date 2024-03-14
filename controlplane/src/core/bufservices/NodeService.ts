@@ -9,7 +9,6 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { lru } from 'tiny-lru';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
-import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { enrichLogger, getLogger, handleError } from '../util.js';
@@ -25,7 +24,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
-        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
         const cachedInfo = registrationInfoCache.get(authContext.federatedGraphId);
         if (cachedInfo) {
@@ -73,6 +72,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
       });
     },
 
+    // TODO: Delete RPC after a few weeks, after the new router has been released without controlplane support
+    // Controlplane was no longer used as primary router config serving mechanism since 0.59.0 2024-02-05
     getLatestValidRouterConfig: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
@@ -80,7 +81,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
         const federatedGraph = await fedGraphRepo.byId(authContext.federatedGraphId);
 

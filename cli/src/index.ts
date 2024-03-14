@@ -10,7 +10,10 @@ dotenv.config();
 try {
   await program.parseAsync(process.argv);
 } catch (e) {
+  console.log('');
+
   console.error(e);
+
   const message = `\
 Please try the below steps to solve the issue
 

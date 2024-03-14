@@ -219,8 +219,8 @@ export default class ApolloMigrator {
     db: PostgresJsDatabase<typeof schema>;
   }): Promise<FederatedGraphDTO> {
     return db.transaction<FederatedGraphDTO>(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(tx, organizationID);
-      const subgraphRepo = new SubgraphRepository(tx, organizationID);
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, organizationID);
+      const subgraphRepo = new SubgraphRepository(this.logger, tx, organizationID);
       const sanitizedGraphName = sanitizeMigratedGraphName(fedGraph.name);
       const federatedGraph = await fedGraphRepo.create({
         name: fedGraph.name,

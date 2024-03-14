@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,8 +20,18 @@ import (
 	"net/url"
 )
 
+const (
+	sigResponseHeaderName = "X-Signature-SHA256"
+)
+
+var (
+	ErrMissingSignatureHeader = errors.New("signature header not found in CDN response")
+	ErrInvalidSignature       = errors.New("invalid config signature, potential tampering detected")
+)
+
 type RouterConfigOptions struct {
-	Logger *zap.Logger
+	Logger       *zap.Logger
+	SignatureKey string
 }
 
 type RouterConfigClient struct {
@@ -29,8 +43,10 @@ type RouterConfigClient struct {
 	// organizationID is the ID of the organization for this graph that was obtained
 	// from the token, already url-escaped
 	organizationID string
-	httpClient     *http.Client
-	logger         *zap.Logger
+	// signatureKey is the private key used to validate the signature of the received config
+	signatureKey string
+	httpClient   *http.Client
+	logger       *zap.Logger
 }
 
 type RouterConfigNotFoundError interface {
@@ -110,7 +126,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 	if resp.Header.Get("Content-Encoding") == "gzip" {
 		r, err := gzip.NewReader(resp.Body)
 		if err != nil {
-			return nil, errors.New("could not create gzip reader. " + err.Error())
+			return nil, fmt.Errorf("could not create gzip reader: %w", err)
 		}
 		defer r.Close()
 		reader = r
@@ -118,13 +134,63 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 
 	body, err = io.ReadAll(reader)
 	if err != nil {
-		return nil, errors.New("could not read the response body. " + err.Error())
+		return nil, fmt.Errorf("could not read the response body: %w", err)
 	}
+
+	if len(body) == 0 {
+		return nil, errors.New("empty response body")
+	}
+
+	/*
+	* Serialize the response body to a RouterConfig object
+	 */
 
 	var routerConfig nodev1.RouterConfig
 	err = protojson.Unmarshal(body, &routerConfig)
 	if err != nil {
-		return nil, errors.New("could not unmarshal router config. " + err.Error())
+		return nil, fmt.Errorf("could not unmarshal router external router config from CDN: %w", err)
+	}
+
+	/**
+	* If a signature key is set, we need to validate the signature of the received config
+	 */
+
+	if cdn.signatureKey != "" {
+
+		configSignature := resp.Header.Get(sigResponseHeaderName)
+		if configSignature == "" {
+			cdn.logger.Error(
+				"Signature header not found in CDN response. Ensure that your Admission Controller was able to sign the config. Open the compositions page in the Studio to check the status of the last deployment",
+				zap.Error(ErrMissingSignatureHeader),
+			)
+			return nil, ErrMissingSignatureHeader
+		}
+
+		// create a signature of the received config body
+		hasher := hmac.New(sha256.New, []byte(cdn.signatureKey))
+		if _, err := hasher.Write(body); err != nil {
+			return nil, fmt.Errorf("could not write config body to hmac: %w", err)
+		}
+		dataHmac := hasher.Sum(nil)
+
+		// compare received signature with the one we calculated with the private signature key
+		rawSignature, err := base64.StdEncoding.DecodeString(configSignature)
+		if err != nil {
+			return nil, fmt.Errorf("could not hex decode signature key: %w", err)
+		}
+
+		if subtle.ConstantTimeCompare(rawSignature, dataHmac) != 1 {
+			cdn.logger.Error(
+				"Invalid config signature, potential tampering detected. Ensure that your Admission Controller has signed the config correctly. Open the compositions page in the Studio to check the status of the last deployment",
+				zap.Error(ErrInvalidSignature),
+			)
+			return nil, ErrInvalidSignature
+		}
+
+		cdn.logger.Info("Config signature validation successful",
+			zap.String("federatedGraphID", cdn.federatedGraphID),
+			zap.String("signature", configSignature),
+		)
 	}
 
 	return &routerConfig, nil
@@ -132,7 +198,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 
 // NewRouterConfigClient creates a new CDN client. URL is the URL of the CDN.
 // Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewRouterConfigClient(endpoint string, token string, opts PersistentOperationsOptions) (*RouterConfigClient, error) {
+func NewRouterConfigClient(endpoint string, token string, opts RouterConfigOptions) (*RouterConfigClient, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
@@ -154,5 +220,6 @@ func NewRouterConfigClient(endpoint string, token string, opts PersistentOperati
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          newRetryableHTTPClient(opts.Logger),
 		logger:              opts.Logger,
+		signatureKey:        opts.SignatureKey,
 	}, nil
 }

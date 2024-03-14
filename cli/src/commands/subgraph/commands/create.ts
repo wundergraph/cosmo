@@ -5,6 +5,7 @@ import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
+import ora from 'ora';
 import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
@@ -50,6 +51,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    const spinner = ora('Subgraph is being created...').start();
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
         name,
@@ -70,9 +72,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`A new subgraph called '${name}' was created.`)));
+      spinner.succeed('Subgraph was created successfully.');
     } else {
-      console.log(pc.red(`Failed to create subgraph '${pc.bold(name)}'.`));
+      spinner.fail('Failed to create subgraph.');
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

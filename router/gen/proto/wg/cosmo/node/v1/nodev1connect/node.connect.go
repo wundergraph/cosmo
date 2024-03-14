@@ -43,6 +43,7 @@ const (
 
 // NodeServiceClient is a client for the wg.cosmo.node.v1.NodeService service.
 type NodeServiceClient interface {
+	// Deprecated: do not use.
 	GetLatestValidRouterConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
 	SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error)
 }
@@ -77,6 +78,8 @@ type nodeServiceClient struct {
 }
 
 // GetLatestValidRouterConfig calls wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig.
+//
+// Deprecated: do not use.
 func (c *nodeServiceClient) GetLatestValidRouterConfig(ctx context.Context, req *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
 	return c.getLatestValidRouterConfig.CallUnary(ctx, req)
 }
@@ -88,6 +91,7 @@ func (c *nodeServiceClient) SelfRegister(ctx context.Context, req *connect.Reque
 
 // NodeServiceHandler is an implementation of the wg.cosmo.node.v1.NodeService service.
 type NodeServiceHandler interface {
+	// Deprecated: do not use.
 	GetLatestValidRouterConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
 	SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error)
 }

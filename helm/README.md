@@ -74,6 +74,7 @@ Now, add the following entries to your `/etc/hosts` file and replace the IP with
 192.168.49.2 keycloak.wundergraph.local
 192.168.49.2 otelcollector.wundergraph.local
 192.168.49.2 graphqlmetrics.wundergraph.local
+192.168.49.2 cdn.wundergraph.local
 ```
 
 ##### macOS
@@ -88,6 +89,7 @@ entries to `/etc/hosts`:
 127.0.0.1 keycloak.wundergraph.local
 127.0.0.1 otelcollector.wundergraph.local
 127.0.0.1 graphqlmetrics.wundergraph.local
+127.0.0.1 cdn.wundergraph.local
 ```
 
 Then start `minikube tunnel` and leave it running. It might ask for your root password in order to open

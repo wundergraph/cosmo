@@ -2,20 +2,14 @@ package configpoller
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	"go.uber.org/zap"
-	brotli "go.withmatt.com/connect-brotli"
 )
 
 type Option func(cp *configPoller)
@@ -25,7 +19,7 @@ type ConfigPoller interface {
 	// with the latest router config and the previous version string. If the handler takes longer than the poll interval
 	// to execute, the next invocation will be skipped.
 	Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error)
-	// GetRouterConfig returns the latest router config from the controlplane
+	// GetRouterConfig returns the latest router config from the CDN
 	// If the Config is nil, no new config is available and the current config should be used.
 	// and updates the latest router config version. This method is only used for the initial config
 	GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error)
@@ -34,7 +28,6 @@ type ConfigPoller interface {
 }
 
 type configPoller struct {
-	nodeServiceClient         nodev1connect.NodeServiceClient
 	graphApiToken             string
 	controlplaneEndpoint      string
 	logger                    *zap.Logger
@@ -68,13 +61,6 @@ func New(endpoint, token string, opts ...Option) ConfigPoller {
 			c.logger.Info("Fetch router config from controlplane", zap.Int("retry", retry))
 		}
 	}
-
-	// Uses connect binary protocol by default + gzip compression
-	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(retryClient.StandardClient(), c.controlplaneEndpoint,
-		brotli.WithCompression(),
-		// Compress requests with Brotli.
-		connect.WithSendCompression(brotli.Name),
-	)
 
 	c.poller = controlplane.NewPoll(c.pollInterval)
 
@@ -123,55 +109,13 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 	})
 }
 
-// getRouterConfigFromCP returns the latest router config from the controlplane
-// version can be nil to get the latest version. If version is not nil, it will determine
-// if the config has changed and only return non-nil config if it has changed.
-func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *string) (*nodev1.RouterConfig, error) {
-	start := time.Now()
-
-	req := connect.NewRequest(&nodev1.GetConfigRequest{
-		Version: version,
-	})
-
-	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", c.graphApiToken))
-
-	resp, err := c.nodeServiceClient.GetLatestValidRouterConfig(ctx, req)
-
-	c.logger.Debug("Received router config from control plane", zap.Duration("duration", time.Since(start)))
-
+func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
+	cfg, err := c.cdnConfigClient.RouterConfig(ctx, c.latestRouterConfigVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.Msg.GetResponse().GetCode() != common.EnumStatusCode_OK {
-		return nil, fmt.Errorf(
-			"could not get latest router config: %s, Details: %s",
-			resp.Msg.GetResponse().GetCode(),
-			resp.Msg.GetResponse().GetDetails(),
-		)
-	}
-
-	return resp.Msg.GetConfig(), nil
-}
-
-func (c *configPoller) getRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
-	cfg, err := c.cdnConfigClient.RouterConfig(ctx, c.latestRouterConfigVersion)
-	if err == nil {
-		return cfg, nil
-	}
-
-	joinErr := fmt.Errorf("could not get router config from CDN: %w", err)
-
-	c.logger.Debug("Fallback fetching initial router configuration from control plane because CDN returned error")
-
-	cfg, err = c.getRouterConfigFromCP(ctx, nil)
-	if err == nil {
-		return cfg, nil
-	}
-
-	joinErr = errors.Join(joinErr, fmt.Errorf("could not get router config from control plane: %w", err))
-
-	return nil, joinErr
+	return cfg, nil
 }
 
 // GetRouterConfig returns the latest router config from the CDN first, if not found then it fetches from the controlplane.

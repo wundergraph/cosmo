@@ -1,0 +1,21 @@
+{
+  "name": "admission-server",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "del dist && tsc"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.8.2",
+    "dotenv": "^16.4.5",
+    "hono": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.3.2",
+    "tsx": "^3.12.2"
+  }
+}

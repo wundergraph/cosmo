@@ -208,7 +208,7 @@ export default class AuthUtils {
     }
 
     const jwt = await encrypt<PKCECodeChallenge>({
-      maxAge: pkceMaxAgeSec,
+      maxAgeInSeconds: pkceMaxAgeSec,
       token: {
         codeVerifier,
       },
@@ -341,7 +341,7 @@ export default class AuthUtils {
       const newUserSession = updatedSessions[0];
 
       const jwt = await encrypt<UserSession>({
-        maxAge: sessionExpiresIn,
+        maxAgeInSeconds: sessionExpiresIn,
         token: {
           sessionId: newUserSession.id,
         },

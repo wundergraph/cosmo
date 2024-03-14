@@ -5,18 +5,10 @@ import { ClipboardCopyIcon, DownloadIcon } from "@radix-ui/react-icons";
 import copy from "copy-to-clipboard";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import {
-  Highlight,
-  LineInputProps,
-  LineOutputProps,
-  Token,
-  TokenInputProps,
-  TokenOutputProps,
-  themes,
-} from "prism-react-renderer";
+import { Highlight, themes } from "prism-react-renderer";
 import { Button } from "./ui/button";
 import { useToast } from "./ui/use-toast";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import graphQLPlugin from "prettier/plugins/graphql";
 import babelPlugin from "prettier/plugins/babel";
 import estreePlugin from "prettier/plugins/estree";
@@ -24,8 +16,6 @@ import * as prettier from "prettier/standalone";
 import * as Prism from "prismjs";
 import "prismjs/components/prism-json";
 import "prismjs/components/prism-graphql";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useScrollIntoView } from "./schema/sdl-viewer";
 
 export const CodeViewerActions = ({
   code,

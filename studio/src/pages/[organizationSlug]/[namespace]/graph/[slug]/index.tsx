@@ -53,11 +53,14 @@ import {
 } from "@tanstack/react-query";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
-import { useContext, useState } from "react";
-import { PiAsterisk } from "react-icons/pi";
+import React, { useContext, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
+import Link from "next/link";
+import { PiCubeFocus } from "react-icons/pi";
+import { useRouter } from "next/router";
 
 const GraphOverviewPage: NextPageWithLayout = () => {
+  const router = useRouter();
   const graphData = useContext(GraphContext);
   const [open, setOpen] = useState(false);
   const applyParams = useApplyParams();
@@ -95,6 +98,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     compositionErrors,
     name,
     namespace,
+    compositionId,
   } = graphData.graph;
 
   const validGraph = isComposable && !!lastUpdatedAt;
@@ -187,7 +191,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 </div>
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-y-2 text-sm">
+            <CardContent className="flex flex-col gap-y-3 text-sm">
               <div className="flex gap-x-4">
                 <span className="w-28 text-muted-foreground">Name</span>
                 <span className="w-32">{graphData.graph.name}</span>
@@ -196,7 +200,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 <span className="w-28 text-muted-foreground">Subgraphs</span>
                 <span className="w-32">{connectedSubgraphs}</span>
               </div>
-              <div className="flex items-start gap-x-4">
+              <div className="flex items-start gap-x-3">
                 <span className="w-28 flex-shrink-0 text-muted-foreground">
                   Matchers
                 </span>
@@ -218,7 +222,30 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   })}
                 </div>
               </div>
-              <div className="flex items-center gap-x-4">
+              <div className="flex items-center gap-x-3">
+                <span className="w-28 text-muted-foreground">Composition</span>
+                <Badge variant="secondary" className="truncate">
+                  {compositionId ? (
+                    <Link
+                      href={{
+                        pathname:
+                          "/[organizationSlug]/[namespace]/graph/[slug]/compositions/[compositionId]",
+                        query: {
+                          ...router.query,
+                          compositionId,
+                        },
+                      }}
+                      className="flex items-center space-x-1 hover:underline"
+                    >
+                      <PiCubeFocus className="h-4 w-4" />{" "}
+                      <span>{compositionId.split("-")[0]}</span>
+                    </Link>
+                  ) : (
+                    "N/A"
+                  )}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-x-3">
                 <span className="w-28 text-muted-foreground">Schema Check</span>
                 <ComposeStatus
                   validGraph={validGraph}

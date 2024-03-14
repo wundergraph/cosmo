@@ -17,6 +17,7 @@ WunderGraph Cosmo Controlplane
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | configuration.allowedOrigins[0] | string | `"*"` |  |
 | configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
+| configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` | URL of the CDN to use for serving router configs and persistent operations |
 | configuration.clickhouseDsn | string | `"http://default:changeme@cosmo-clickhouse:8123?database=cosmo"` |  |
 | configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"` |  |
 | configuration.databaseTlsCa | string | `""` | When connecting to a postgres instance over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
@@ -38,7 +39,7 @@ WunderGraph Cosmo Controlplane
 | configuration.redisTlsCa | string | `""` | When connecting to a redis instance over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
 | configuration.redisTlsCert | string | `""` |  |
 | configuration.redisTlsKey | string | `""` |  |
-| configuration.s3StorageUrl | string | `"http://minio:changeme@minio.wundergraph.local:9000/cosmo"` |  |
+| configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |
 | configuration.smtpPassword | string | `""` |  |

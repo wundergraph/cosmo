@@ -29,23 +29,26 @@ message PublishFederatedSubgraphRequest {
   string name = 1;
   // The string representation of the schema, the content of the file
   string schema = 2;
-  // routing_url is the URL of the service which will be used to route the requests to the subgraph.
+  // The routing_url is the URL of the service which will be used to route the requests to the subgraph.
   optional string routing_url = 3;
-  // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
+  // The labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
   repeated Label labels = 4;
-  // headers are the headers which will be used to route the requests to the subgraph.
+  // The headers are the headers which will be used to route the requests to the subgraph.
   repeated string headers = 5;
-  // subscription protocol to use when subscribing to this subgraph
+  // The subscription protocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
-  // url used for subscriptions
+  // The url used for subscriptions
   optional string subscription_url = 7;
+  // The namespace of the subgraph
   string namespace = 8;
+  // If true, the labels will be unset
   optional bool unset_labels = 9;
 }
 
 message PublishFederatedSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message GitInfo {
@@ -84,6 +87,7 @@ message CreateFederatedGraphRequest {
   // readme of the fed graph
   optional string readme = 4;
   string namespace = 5;
+  string admissionWebhookURL = 6;
 }
 
 message CreateFederatedSubgraphRequest {
@@ -123,7 +127,13 @@ message SchemaChange{
   optional bool hasOverride = 5;
 }
 
-message CompositionError{
+message CompositionError {
+  string message = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+}
+
+message DeploymentError {
   string message = 1;
   string federatedGraphName = 2;
   string namespace = 3;
@@ -185,6 +195,7 @@ message FixSubgraphSchemaResponse {
 message CreateFederatedGraphResponse {
     Response response = 1;
     repeated CompositionError compositionErrors = 2;
+    repeated DeploymentError deploymentErrors = 3;
 }
 
 message CreateFederatedSubgraphResponse {
@@ -194,6 +205,7 @@ message CreateFederatedSubgraphResponse {
 message DeleteFederatedSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message DeleteFederatedGraphResponse {
@@ -220,6 +232,7 @@ message FederatedGraph {
   optional string readme = 10;
   string target_id = 11;
   string namespace = 12;
+  optional string compositionId = 13;
 }
 
 message GetFederatedGraphsResponse {
@@ -465,6 +478,7 @@ message UpdateSubgraphRequest {
 message UpdateSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message UpdateFederatedGraphRequest {
@@ -474,11 +488,13 @@ message UpdateFederatedGraphRequest {
   optional string readme = 4;
   string namespace = 5;
   optional bool unset_label_matchers = 6;
+  optional string admissionWebhookURL = 7;
 }
 
 message UpdateFederatedGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message CheckFederatedGraphRequest {
@@ -1424,6 +1440,9 @@ message GraphComposition {
   optional string compositionErrors = 5;
   optional string createdBy = 6;
   bool isLatestValid = 7;
+  optional string routerConfigSignature = 8;
+  optional string admissionError = 9;
+  optional string deploymentError = 10;
 }
 
 message GraphCompositionSubgraph {
@@ -1789,6 +1808,7 @@ message MoveGraphRequest {
 message MoveGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message GetNamespaceLintConfigRequest {

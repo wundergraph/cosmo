@@ -59,6 +59,9 @@ export const federatedGraphs = pgTable('federated_graphs', {
     onDelete: 'no action',
   }),
   routerConfigPath: text('router_config_path'),
+  // The admission webhook url. This is the url that the controlplane will use to run admission checks.
+  // You can use this to enforce policies on the router config.
+  admissionWebhookURL: text('admission_webhook_url'),
 });
 
 export const federatedGraphClients = pgTable(
@@ -1088,6 +1091,12 @@ export const graphCompositions = pgTable('graph_compositions', {
   compositionErrors: text('composition_errors'),
   // This is router config based on the composed schema. Only set for federated graphs.
   routerConfig: customJsonb('router_config'),
+  // Signature of the schema. Provided by the user when the admission hook is called.
+  routerConfigSignature: text('router_config_signature'),
+  // The errors that occurred during the deployment of the schema. Only set when the schema was composable and no admission errors occurred.
+  deploymentError: text('deployment_error'),
+  // The errors that occurred during the admission of the config. Only set when the schema was composable.
+  admissionError: text('admission_error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   createdBy: uuid('created_by').references(() => users.id, {
     onDelete: 'cascade',

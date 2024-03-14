@@ -19,6 +19,12 @@
         "token": {
           "type": "string",
           "description": "The token used to authenticate with other component from Cosmo. Can be ommitted if the router is started with a static execution config."
+        },
+        "sign_key": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "description": "The key used to verify the graph config signature when downloading from the CDN. The same key was used to create the signature in the admission webhook '/validate-config'. If the key is not set, the router will not verify the graph configuration. The key must be a 32 byte long string."
         }
       }
     },

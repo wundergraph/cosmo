@@ -1,57 +1,26 @@
 import { createHmac } from 'node:crypto';
-import axios from 'axios';
+import { AxiosError, AxiosInstance } from 'axios';
 import pino from 'pino';
-import axiosRetry, { exponentialDelay } from 'axios-retry';
 
-axiosRetry(axios, {
-  retries: 5,
-  retryDelay: (retryCount) => {
-    return exponentialDelay(retryCount);
-  },
-  shouldResetTimeout: true,
-});
-
-export const post = (
-  event: string,
-  data: any,
-  logger: pino.Logger,
-  logLevel: 'error' | 'debug',
+export const makeWebhookRequest = async <Data = any>(
+  axiosInstance: AxiosInstance,
+  data: Data,
   url: string,
-  key?: string,
+  signatureKey?: string,
 ) => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  if (key) {
+  if (signatureKey) {
     const dataString = JSON.stringify(data);
-    const signature = createHmac('sha256', key).update(dataString).digest('hex');
-    headers['X-Cosmo-Signature-256'] = signature;
+    headers['X-Cosmo-Signature-256'] = createHmac('sha256', signatureKey).update(dataString).digest('hex');
   }
 
-  axios
-    .post(url, data, {
-      headers,
-      timeout: 3000,
-    })
-    .catch((error) => {
-      let log = logger.child({ eventName: event });
-      log = log.child({ eventData: data });
-
-      if (error.response) {
-        log = log.child({ statusCode: error.response.status });
-      } else if (error.request) {
-        log = log.child({ message: 'failed to send request' });
-      } else {
-        log = log.child({ message: error.message });
-      }
-
-      if (logLevel === 'error') {
-        log.error('Could not send webhook event');
-      } else {
-        log.debug('Could not send webhook event');
-      }
-    });
+  await axiosInstance.post(url, data, {
+    headers,
+    timeout: 10_000,
+  });
 };
 
 export const toISODateTime = (secs: number) => {

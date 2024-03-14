@@ -113,7 +113,7 @@ docker-build-local:
 	docker compose --file docker-compose.cosmo.yml build --no-cache
 
 docker-push-local:
-	docker compose --file docker-compose.cosmo.yml push
+	docker compose --file docker-compose.cosmo.yml push --no-cache
 
 docker-build-minikube: docker-build-local
 	minikube image load ghcr.io/wundergraph/cosmo/studio:latest & \
