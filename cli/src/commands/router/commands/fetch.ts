@@ -77,14 +77,14 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const body = await response.text();
-    const signature = response.headers.get('X-Signature-SHA256');
-
-    if (!signature) {
-      console.log(pc.red('The router config response does not contain a signature but a signature key was provided.'));
-      process.exit(1);
-    }
 
     if (options.graphSignKey) {
+      const signature = response.headers.get('X-Signature-SHA256');
+      if (!signature) {
+        console.log(pc.red('You provided a signature key, but the router config does not have a signature header.'));
+        process.exit(1);
+      }
+
       const hash = await makeSignature(body, options.graphSignKey);
 
       if (!safeCompare(hash, signature)) {

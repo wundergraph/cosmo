@@ -77,6 +77,8 @@ global:
 
   cdn:
     enabled: true
+    webUrl: 'http://cdn.wundergraph.local'
+    port: 8787
 
 # Overall Ingress for the Cosmo Platform
 ingress:

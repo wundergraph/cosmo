@@ -114,4 +114,17 @@ spec:
                   number: {{ .Values.global.router.port }}
     {{- end }}
 
+    {{- if .Values.global.cdn.enabled }}
+    - host: {{ (urlParse .Values.global.cdn.webUrl).host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "cdn.fullname" . }}
+                port:
+                  number: {{ .Values.global.cdn.port }}
+    {{- end }}
+
 {{- end }}
