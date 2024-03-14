@@ -287,9 +287,12 @@ export class OrganizationWebhookService {
       // @TODO Use a queue to send the events
       makeWebhookRequest(this.httpClient, data, config.url, config.key).catch((error: AxiosError) => {
         if (error instanceof AxiosError) {
-          logger.debug({ statusCode: error.response?.status, message: error.message }, 'Could not send webhook event');
+          logger.debug(
+            { statusCode: error.response?.status, message: error.message },
+            'Could not send organization webhook event',
+          );
         } else {
-          logger.debug(error, 'Could not send webhook event');
+          logger.debug(error, 'Could not send organization webhook event');
         }
       });
     }

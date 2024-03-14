@@ -72,9 +72,12 @@ export class PlatformWebhookService implements IPlatformWebhookService {
     // @TODO Use a queue to send the events
     makeWebhookRequest(this.httpClient, data, this.url, this.key).catch((error: AxiosError) => {
       if (error instanceof AxiosError) {
-        logger.error({ statusCode: error.response?.status, message: error.message }, 'Could not send webhook event');
+        logger.error(
+          { statusCode: error.response?.status, message: error.message },
+          'Could not send platform webhook event',
+        );
       } else {
-        logger.error(error, 'Could not send webhook event');
+        logger.error(error, 'Could not send platform webhook event');
       }
     });
   }
