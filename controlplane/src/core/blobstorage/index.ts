@@ -7,6 +7,11 @@ export class BlobNotFoundError extends Error {
   }
 }
 
+export interface BlobObject {
+  metadata?: Record<string, string>;
+  stream: ReadableStream;
+}
+
 /**
  * Describes the interface for a blob storage service
  */
@@ -14,31 +19,35 @@ export interface BlobStorage {
   /**
    * Stores an object in the blob storage under the given key, throwing an error if the operation fails
    * @param key Key to store the object under
-   * @param body Data to store into the object
+   * @param body Buffer containing the object to store
+   * @param contentType Content type of the object
+   * @param metadata Optional metadata to store with the object
    */
-  putObject({
+  putObject<Metadata extends Record<string, string>>({
     key,
     body,
     contentType,
-    version,
+    metadata,
   }: {
     key: string;
+    abortSignal?: AbortSignal;
     body: Buffer;
     contentType: string;
-    version?: string;
+    metadata?: Metadata;
   }): Promise<void>;
   /**
    * Retrieves an object from the blob storage using the given key. If the blob doesn't exist, it throws
    * BlobNotFoundError.
-   * @param key Key to retrieve the object from
    */
-  getObject(key: string): Promise<ReadableStream>;
+  getObject(data: { key: string; abortSignal?: AbortSignal }): Promise<BlobObject>;
 
   /**
    * Remove a directory recursively, erasing all entries under the given key
-   *
-   * @param key Path to the directory
-   * @returns Number of deleted objects
    */
-  removeDirectory(key: string): Promise<number>;
+  removeDirectory(data: { key: string; abortSignal?: AbortSignal }): Promise<number>;
+
+  /**
+   * Remove an object from the blob storage using the given key
+   */
+  deleteObject(data: { key: string; abortSignal?: AbortSignal }): Promise<void>;
 }
