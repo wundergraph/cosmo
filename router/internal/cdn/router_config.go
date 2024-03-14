@@ -20,7 +20,14 @@ import (
 	"net/url"
 )
 
-const sigResponseHeaderName = "X-Signature-SHA256"
+const (
+	sigResponseHeaderName = "X-Signature-SHA256"
+)
+
+var (
+	ErrMissingSignatureHeader = errors.New("signature header not found in CDN response")
+	ErrInvalidSignature       = errors.New("invalid config signature, potential tampering detected")
+)
 
 type RouterConfigOptions struct {
 	Logger       *zap.Logger
@@ -152,7 +159,11 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 
 		configSignature := resp.Header.Get(sigResponseHeaderName)
 		if configSignature == "" {
-			return nil, errors.New("signature header not found in CDN response")
+			cdn.logger.Error(
+				"Signature header not found in CDN response. Ensure that your Admission Controller was able to sign the config. Open the compositions page in the Studio to check the status of the last deployment",
+				zap.Error(ErrMissingSignatureHeader),
+			)
+			return nil, ErrMissingSignatureHeader
 		}
 
 		// create a signature of the received config body
@@ -169,7 +180,11 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 		}
 
 		if subtle.ConstantTimeCompare(rawSignature, dataHmac) != 1 {
-			return nil, errors.New("invalid config signature, potential tampering detected")
+			cdn.logger.Error(
+				"Invalid config signature, potential tampering detected. Ensure that your Admission Controller has signed the config correctly. Open the compositions page in the Studio to check the status of the last deployment",
+				zap.Error(ErrInvalidSignature),
+			)
+			return nil, ErrInvalidSignature
 		}
 
 		cdn.logger.Info("Config signature validation successful",

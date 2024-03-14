@@ -97,7 +97,7 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          'Federated Graph was created but the composition was not deployed due to the following failures. Please check the errors below.',
+          "The Federated Graph was set up, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
         );
 
         const deploymentErrorsTable = new Table({
