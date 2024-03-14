@@ -1,0 +1,33 @@
+# fly.toml app configuration file generated for demo-router on 2023-12-18T10:58:31+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "demo-admission-server"
+primary_region = "lax"
+
+[env]
+LISTEN_ADDR="0.0.0.0:3009"
+LOG_LEVEL="info"
+CORS_ALLOW_CREDENTIALS="true"
+CLUSTER_NAME="fly-lax"
+
+[build]
+  dockerfile = "./admission-server/Dockerfile"
+
+[http_service]
+  internal_port = 3009
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[deploy]
+  strategy = "rolling"
+  max_unavailable = 1
+
+[services]
+  internal_port = 3009
+  auto_stop_machines = false
+  auto_start_machines = false
