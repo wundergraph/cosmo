@@ -13,7 +13,7 @@ import {
   AdmissionError,
   AdmissionWebhookJwtPayload,
 } from '../services/AdmissionWebhookController.js';
-import { nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
+import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
 
@@ -158,7 +158,7 @@ export class Composer {
               secret: admissionConfig.jwtSecret,
               token: {
                 iat: nowInSeconds() + 5 * 60, // 5 minutes
-                aud: 'admission-hooks', // to distinguish from other tokens
+                aud: audiences.cosmoCDNAdmission, // to distinguish from other tokens
                 organization_id: organizationId,
                 federated_graph_id: composedGraph.id,
               },

@@ -232,6 +232,7 @@ message FederatedGraph {
   optional string readme = 10;
   string target_id = 11;
   string namespace = 12;
+  optional string compositionId = 13;
 }
 
 message GetFederatedGraphsResponse {

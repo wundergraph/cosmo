@@ -13,6 +13,11 @@ export const pkceCodeVerifierCookieName = 'cosmo_pkce_code_verifier';
 // The cookie name used to store theligin idp hint
 export const cosmoIdpHintCookieName = 'cosmo_idp_hint';
 
+export const audiences = {
+  cosmoGraphKey: 'cosmo:graph-key',
+  cosmoCDNAdmission: 'cosmo:cdn-admission',
+};
+
 /**
  * Generate random `code_verifier` value.
  *

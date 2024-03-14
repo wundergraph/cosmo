@@ -143,7 +143,7 @@ import { Composer, RouterConfigUploadError } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { schemaLintCheck } from '../composition/schemaLint.js';
-import { nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
+import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { PublicError } from '../errors/errors.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
@@ -2970,6 +2970,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           token: {
             iss: authContext.userId,
             federated_graph_id: graph.id,
+            aud: audiences.cosmoGraphKey, // to distinguish from other tokens
             organization_id: authContext.organizationId,
           },
         });
@@ -3797,6 +3798,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           token: {
             iss: authContext.userId,
             federated_graph_id: migratedGraph.id,
+            aud: audiences.cosmoGraphKey, // to distinguish from other tokens
             organization_id: authContext.organizationId,
           },
         });
@@ -5603,6 +5605,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             connectedSubgraphs: g.subgraphsCount,
             compositionErrors: g.compositionErrors ?? '',
             isComposable: g.isComposable,
+            compositionId: g.compositionId,
             requestSeries: requestSeriesList[g.id] ?? [],
           })),
           response: {
@@ -5650,6 +5653,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             connectedSubgraphs: g.subgraphsCount,
             compositionErrors: g.compositionErrors ?? '',
             isComposable: g.isComposable,
+            compositionId: g.compositionId,
             requestSeries: [],
             targetId: g.targetId,
           })),
@@ -5833,6 +5837,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: federatedGraph.lastUpdatedAt,
             connectedSubgraphs: federatedGraph.subgraphsCount,
             compositionErrors: federatedGraph.compositionErrors ?? '',
+            compositionId: federatedGraph.compositionId,
             isComposable: federatedGraph.isComposable,
             requestSeries,
             readme: federatedGraph.readme,
@@ -6641,6 +6646,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           token: {
             iss: authContext.userId,
             federated_graph_id: federatedGraph.id,
+            aud: audiences.cosmoGraphKey, // to distinguish from other tokens
             organization_id: authContext.organizationId,
             exp: nowInSeconds() + 5 * 60, // 5 minutes
           },

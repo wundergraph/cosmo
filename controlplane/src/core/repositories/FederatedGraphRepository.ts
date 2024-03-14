@@ -421,6 +421,7 @@ export class FederatedGraphRepository {
         id: schemaVersion.id,
         isComposable: graphCompositions.isComposable,
         compositionErrors: graphCompositions.compositionErrors,
+        compositionId: graphCompositions.id,
         createdAt: schemaVersion.createdAt,
       })
       .from(schemaVersion)
@@ -450,6 +451,8 @@ export class FederatedGraphRepository {
       schemaVersionId: resp[0].composedSchemaVersionId ?? undefined,
       subgraphsCount: subgraphs.length ?? 0,
       labelMatchers: labelMatchers.map((s) => s.labelMatcher.join(',')),
+      compositionId: latestVersion?.[0]?.compositionId,
+      composedSchemaVersionId: resp?.[0]?.composedSchemaVersionId ?? undefined,
       creatorUserId: resp[0].createdBy || undefined,
       readme: resp[0].readme || undefined,
       namespace: resp[0].namespaceName,

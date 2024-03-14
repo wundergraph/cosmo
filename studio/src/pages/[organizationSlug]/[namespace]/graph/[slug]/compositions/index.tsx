@@ -210,7 +210,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                               className="gap-2 bg-success py-1.5"
                             >
                               <div className="h-2 w-2 rounded-full bg-white" />
-                              <span>Latest</span>
+                              <span>Ready to fetch</span>
                             </Badge>
                           )}
                         </div>
