@@ -16,6 +16,11 @@ export function joinLabel({ key, value }: { key: string; value: string }) {
   return key + labelSeparator + value;
 }
 
+/**
+ * Normalize the URL by removing the trailing slash, fragments and query parameters.
+ * Only the protocol, hostname, port and path are preserved.
+ * @param url
+ */
 export function normalizeURL(url: string): string {
   // return empty
   if (!url) {
