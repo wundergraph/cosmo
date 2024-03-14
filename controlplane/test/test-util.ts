@@ -77,10 +77,12 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
         clientID: '',
         clientSecret: '',
       },
+      cdnBaseUrl: 'http://localhost:11000',
+      admissionWebhookJWTSecret: 'secret',
       keycloakApiUrl: apiUrl,
       blobStorage,
       mailerClient,
-      authorizer: new Authorization(),
+      authorizer: new Authorization(log),
       readmeQueue,
     }),
   });

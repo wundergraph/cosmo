@@ -175,7 +175,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                                   className="gap-2 py-1.5"
                                 >
                                   <MdVerifiedUser className="h-4 w-4 text-amber-500" />
-                                  <span>Verified</span>
+                                  <span>Validated & Signed</span>
                                 </Badge>
                               ) : null}
                             </div>

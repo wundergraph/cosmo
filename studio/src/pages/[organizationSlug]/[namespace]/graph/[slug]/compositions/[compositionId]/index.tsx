@@ -130,7 +130,6 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
     compositionErrors,
     routerConfigSignature,
     admissionError,
-    deploymentError,
   } = composition;
 
   const subgraphs =
@@ -270,7 +269,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                         <div>
                           <MdVerifiedUser className="h-4 w-4 text-amber-500" />
                         </div>
-                        <span className="text-sm">Verified</span>
+                        <span className="text-sm">Validated & Signed</span>
                       </>
                     ) : null}
                   </div>

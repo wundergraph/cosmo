@@ -35,7 +35,7 @@ export class Authorization {
     authContext: AuthContext;
   }) {
     try {
-      const { name, targetId, targetType } = graph;
+      const { targetId, targetType } = graph;
       const { userId, organizationId, isAdmin } = authContext;
 
       const orgRepo = new OrganizationRepository(db, this.defaultBillingPlanId);

@@ -139,7 +139,9 @@ describe('Persisted operations', (ctx) => {
     const keyBasename = keyFilename.split('.')[0];
     expect(keyBasename).toBe(id);
 
-    const blobObject = await blobStorage.getObject(storageKeys[1]);
+    const blobObject = await blobStorage.getObject({
+      key: storageKeys[1],
+    });
     const text = await new Response(blobObject.stream).text();
     expect(JSON.parse(text)).toEqual({ version: 1, body: query });
     await server.close();

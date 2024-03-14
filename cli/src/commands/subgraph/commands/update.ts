@@ -82,67 +82,78 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    if (resp.response?.code === EnumStatusCode.OK) {
-      spinner.succeed('Subgraph was updated successfully.');
-    } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
-      spinner.warn('Subgraph was updated but with composition errors.');
+    switch (resp.response?.code) {
+      case EnumStatusCode.OK: {
+        spinner.succeed('Subgraph was updated successfully.');
 
-      const compositionErrorsTable = new Table({
-        head: [
-          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-          pc.bold(pc.white('NAMESPACE')),
-          pc.bold(pc.white('ERROR_MESSAGE')),
-        ],
-        colWidths: [30, 30, 120],
-        wordWrap: true,
-      });
-
-      console.log(
-        pc.red(
-          `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
-            'Please check the errors below:',
-          )}`,
-        ),
-      );
-      for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([
-          compositionError.federatedGraphName,
-          compositionError.namespace,
-          compositionError.message,
-        ]);
+        break;
       }
-      // Don't exit here with 1 because the change was still applied
-      console.log(compositionErrorsTable.toString());
-    } else if (resp.response?.code === EnumStatusCode.ERR_DEPLOYMENT_FAILED) {
-      spinner.warn(
-        'Subgraph was updated but the composition was not deployed due to the following failures. Please check the errors below.',
-      );
+      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
+        spinner.warn('Subgraph was updated but with composition errors.');
 
-      const deploymentErrorsTable = new Table({
-        head: [
-          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-          pc.bold(pc.white('NAMESPACE')),
-          pc.bold(pc.white('ERROR_MESSAGE')),
-        ],
-        colWidths: [30, 30, 120],
-        wordWrap: true,
-      });
+        const compositionErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
 
-      for (const deploymentError of resp.deploymentErrors) {
-        deploymentErrorsTable.push([
-          deploymentError.federatedGraphName,
-          deploymentError.namespace,
-          deploymentError.message,
-        ]);
+        console.log(
+          pc.red(
+            `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
+              'Please check the errors below:',
+            )}`,
+          ),
+        );
+        for (const compositionError of resp.compositionErrors) {
+          compositionErrorsTable.push([
+            compositionError.federatedGraphName,
+            compositionError.namespace,
+            compositionError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(compositionErrorsTable.toString());
+
+        break;
       }
-      // Don't exit here with 1 because the change was still applied
-      console.log(deploymentErrorsTable.toString());
-    } else {
-      spinner.fail(`Failed to update subgraph.`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
+      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
+        spinner.warn(
+          'Subgraph was updated but the composition was not deployed due to the following failures. Please check the errors below.',
+        );
+
+        const deploymentErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        for (const deploymentError of resp.deploymentErrors) {
+          deploymentErrorsTable.push([
+            deploymentError.federatedGraphName,
+            deploymentError.namespace,
+            deploymentError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(deploymentErrorsTable.toString());
+
+        break;
       }
-      process.exit(1);
+      default: {
+        spinner.fail(`Failed to update subgraph.`);
+        if (resp.response?.details) {
+          console.log(pc.red(pc.bold(resp.response?.details)));
+        }
+        process.exit(1);
+      }
     }
   });
 
