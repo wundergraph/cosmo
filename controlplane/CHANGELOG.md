@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.77.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.76.0...controlplane@0.77.0) (2024-03-14)
+
+### Features
+
+* improve admission controller ([#632](https://github.com/wundergraph/cosmo/issues/632)) ([229bc9f](https://github.com/wundergraph/cosmo/commit/229bc9f5e58d0a936c2c5427b9f30146def87157)) (@StarpTech)
+
 # [0.76.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.75.2...controlplane@0.76.0) (2024-03-14)
 
 ### Bug Fixes
