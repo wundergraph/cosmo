@@ -97,8 +97,6 @@ export function normalizeLabels(labels: Label[]): Label[] {
   return [...uniqueLabels].map((label) => splitLabel(label));
 }
 
-const reservedKeys = new Set(['monograph']);
-
 /**
  * Both key and value must be 63 characters or fewer (cannot be empty).
  * Must begin and end with an alphanumeric character ([a-z0-9A-Z]).
@@ -110,10 +108,6 @@ export function isValidLabels(labels: Label[]): boolean {
 
     // key and value cannot be empty
     if (!key || !value) {
-      return false;
-    }
-
-    if (reservedKeys.has(key)) {
       return false;
     }
 

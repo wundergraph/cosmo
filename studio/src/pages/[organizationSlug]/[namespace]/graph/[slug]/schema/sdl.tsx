@@ -46,7 +46,7 @@ const Empty = ({ subgraphName }: { subgraphName?: string }) => {
   const router = useRouter();
   const graphContext = useContext(GraphContext);
 
-  const isFederated = graphContext?.graph?.type === "federated";
+  const isFederated = !graphContext?.graph?.asMonograph;
 
   return (
     <EmptyState
@@ -223,7 +223,7 @@ const SDLPage: NextPageWithLayout = () => {
                 <SelectTrigger
                   value={activeGraphWithSDL.title}
                   className={cn("w-full md:ml-auto md:w-[200px]", {
-                    hidden: graphData?.graph?.type !== "federated",
+                    hidden: graphData?.graph?.asMonograph,
                   })}
                 >
                   <SelectValue aria-label={activeGraphWithSDL.title}>
@@ -254,7 +254,7 @@ const SDLPage: NextPageWithLayout = () => {
               </Select>
               <SDLViewerActions
                 className={cn("w-auto", {
-                  "ml-auto": graphData?.graph?.type !== "federated",
+                  "ml-auto": graphData?.graph?.asMonograph,
                 })}
                 sdl={activeGraphWithSDL.sdl ?? ""}
               />

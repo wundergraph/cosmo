@@ -121,9 +121,9 @@ const ChecksPage: NextPageWithLayout = () => {
         actions={
           <CLI
             command={
-              graphContext.graph.type === "federated"
-                ? `npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`
-                : `npx wgc monograph check ${graphContext.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
+              graphContext.graph.asMonograph
+                ? `npx wgc monograph check ${graphContext.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
+                : `npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`
             }
           />
         }
@@ -139,7 +139,7 @@ const ChecksPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Check</TableHead>
-              {graphContext.graph.type === "federated" && (
+              {!graphContext.graph.asMonograph && (
                 <TableHead>Subgraph</TableHead>
               )}
               <TableHead>Tasks</TableHead>
@@ -203,7 +203,7 @@ const ChecksPage: NextPageWithLayout = () => {
                           </div>
                         </div>
                       </TableCell>
-                      {graphContext.graph?.type === "federated" && (
+                      {!graphContext.graph?.asMonograph && (
                         <TableCell>{subgraphName}</TableCell>
                       )}
                       <TableCell>

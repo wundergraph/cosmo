@@ -74,7 +74,7 @@ export class FederatedGraphRepository {
     labelMatchers: string[];
     createdBy: string;
     readme?: string;
-    isMonoGraph?: boolean;
+    asMonograph?: boolean;
     admissionWebhookURL?: string;
   }): Promise<FederatedGraphDTO | undefined> {
     return this.db.transaction(async (tx) => {
@@ -89,10 +89,11 @@ export class FederatedGraphRepository {
         .values({
           organizationId: this.organizationId,
           name: data.name,
-          type: data.isMonoGraph ? 'graph' : 'federated',
+          type: 'federated',
           createdBy: data.createdBy,
           readme: data.readme,
           namespaceId: data.namespaceId,
+          asMonograph: data.asMonograph,
         })
         .returning()
         .execute();
@@ -140,7 +141,7 @@ export class FederatedGraphRepository {
         id: insertedGraph[0].id,
         targetId: insertedTarget[0].id,
         name: insertedTarget[0].name,
-        type: insertedTarget[0].type,
+        asMonograph: insertedTarget[0].asMonograph,
         isComposable: false,
         routingUrl: insertedGraph[0].routingUrl,
         admissionWebhookURL: insertedGraph[0].admissionWebhookURL ?? '',
@@ -298,6 +299,7 @@ export class FederatedGraphRepository {
   }
 
   // We do not need to do any recomposition since we move both the graph and subgraph to the new namespace.
+  // Also, due to unique labels, they will not compose with other graphs.
   // The namespaceId column update is enough.
   public async moveMonograph({
     federatedGraphTargetId,
@@ -373,12 +375,18 @@ export class FederatedGraphRepository {
 
   public async list(opts: ListFilterOptions): Promise<FederatedGraphDTO[]> {
     const conditions: (SQL<unknown> | undefined)[] = [
-      or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
+      eq(schema.targets.type, 'federated'),
       eq(schema.targets.organizationId, this.organizationId),
     ];
 
     if (opts.namespaceId) {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
+    if (opts.excludeMonographs) {
+      conditions.push(eq(schema.targets.asMonograph, false));
+    } else if (opts.onlyMonographs) {
+      conditions.push(eq(schema.targets.asMonograph, true));
     }
 
     const targets = await this.db.query.targets.findMany({
@@ -406,12 +414,7 @@ export class FederatedGraphRepository {
     const result = await this.db
       .select({ count: sql<number>`cast(count(${targets.id}) as int)` })
       .from(schema.targets)
-      .where(
-        and(
-          or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
-          eq(schema.targets.organizationId, this.organizationId),
-        ),
-      )
+      .where(and(eq(schema.targets.type, 'federated'), eq(schema.targets.organizationId, this.organizationId)))
       .execute();
 
     return result[0]?.count || 0;
@@ -421,7 +424,7 @@ export class FederatedGraphRepository {
     const resp = await this.db
       .select({
         name: schema.targets.name,
-        type: schema.targets.type,
+        asMonograph: schema.targets.asMonograph,
         labelMatchers: schema.targets.labels,
         createdBy: schema.targets.createdBy,
         readme: schema.targets.readme,
@@ -469,7 +472,7 @@ export class FederatedGraphRepository {
     return {
       id: resp[0].id,
       name: resp[0].name,
-      type: resp[0].type,
+      asMonograph: resp[0].asMonograph,
       routingUrl: resp[0].routingUrl,
       isComposable: latestVersion?.[0]?.isComposable ?? false,
       compositionErrors: latestVersion?.[0]?.compositionErrors ?? '',
@@ -492,7 +495,7 @@ export class FederatedGraphRepository {
     return this.getFederatedGraph([
       eq(schema.targets.id, targetId),
       eq(schema.targets.organizationId, this.organizationId),
-      or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
+      eq(schema.targets.type, 'federated'),
     ]);
   }
 
@@ -517,7 +520,7 @@ export class FederatedGraphRepository {
         and(
           eq(schema.targets.name, name),
           eq(schema.targets.organizationId, this.organizationId),
-          or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
+          eq(schema.targets.type, 'federated'),
           eq(schema.namespaces.name, namespace),
         ),
       );
@@ -529,7 +532,7 @@ export class FederatedGraphRepository {
     return this.getFederatedGraph([
       eq(schema.targets.name, name),
       eq(schema.targets.organizationId, this.organizationId),
-      or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
+      eq(schema.targets.type, 'federated'),
       eq(schema.namespaces.name, namespace),
     ]);
   }
@@ -544,7 +547,8 @@ export class FederatedGraphRepository {
     return this.getFederatedGraph([
       eq(schema.targets.name, name),
       eq(schema.targets.organizationId, this.organizationId),
-      eq(schema.targets.type, 'graph'),
+      eq(schema.targets.type, 'federated'),
+      eq(schema.targets.asMonograph, true),
       eq(schema.namespaces.name, namespace),
     ]);
   }
@@ -560,6 +564,7 @@ export class FederatedGraphRepository {
       eq(schema.targets.name, name),
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'federated'),
+      eq(schema.targets.asMonograph, false),
       eq(schema.namespaces.name, namespace),
     ]);
   }
@@ -579,7 +584,7 @@ export class FederatedGraphRepository {
       .where(
         and(
           eq(targets.organizationId, this.organizationId),
-          or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
+          eq(schema.targets.type, 'federated'),
           eq(targets.namespaceId, data.namespaceId),
           // In case labels are empty only compose with graphs whose label matchers are also empty.
           // This is a negative lookup. We check if the graph has label matchers and then
@@ -711,7 +716,7 @@ export class FederatedGraphRepository {
       return {
         id: fedGraph.id,
         targetId: fedGraph.targetId,
-        type: fedGraph.type,
+        asMonograph: fedGraph.asMonograph,
         name: fedGraph.name,
         labelMatchers: fedGraph.labelMatchers,
         compositionErrors: compositionErrorString,
@@ -802,7 +807,7 @@ export class FederatedGraphRepository {
       .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .where(
         and(
-          or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
+          eq(schema.targets.type, 'federated'),
           eq(targets.organizationId, this.organizationId),
           eq(targets.id, data.targetId),
           and(

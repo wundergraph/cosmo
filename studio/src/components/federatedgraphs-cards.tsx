@@ -595,7 +595,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           <div className="mb-3 flex flex-wrap items-center gap-x-5">
             <div className="flex items-center gap-x-2">
               <Component2Icon className="h-4 w-4 text-[#0284C7]" />
-              {graph.type === "federated" ? (
+              {!graph.asMonograph ? (
                 <p className="text-sm">
                   {`${formatMetric(graph.connectedSubgraphs)} ${
                     graph.connectedSubgraphs === 1 ? "subgraph" : "subgraphs"

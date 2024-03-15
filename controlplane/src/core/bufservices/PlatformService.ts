@@ -1005,7 +1005,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           const label: Label = {
-            key: 'monograph',
+            key: uid(12),
             value: uid(12),
           };
 
@@ -1023,6 +1023,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: req.subscriptionProtocol
               ? formatSubscriptionProtocol(req.subscriptionProtocol)
               : undefined,
+            asMonograph: true,
           });
 
           if (!subgraph) {
@@ -1042,8 +1043,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             readme: req.readme,
             namespace: req.namespace,
             namespaceId: namespace.id,
-            isMonoGraph: true,
             admissionWebhookURL: req.admissionWebhookURL,
+            asMonograph: true,
           });
 
           if (!graph) {
@@ -3953,6 +3954,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const apiKeyRepo = new ApiKeyRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
+        const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -3992,13 +3994,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const generatedAPIKey = ApiKeyGenerator.generate();
 
+        const monographSubgraphTargetIds = await subgraphRepo.getSubgraphTargetIdsForMonographs(
+          req.federatedGraphTargetIds,
+        );
+
+        const subgraphTargetIds = new Set([...req.subgraphTargetIds, ...monographSubgraphTargetIds]);
+
         await apiKeyRepo.addAPIKey({
           name: keyName,
           organizationID: authContext.organizationId,
           userID: authContext.userId || req.userID,
           key: generatedAPIKey,
           expiresAt: req.expires,
-          targetIds: [...req.federatedGraphTargetIds, ...req.subgraphTargetIds],
+          targetIds: [...req.federatedGraphTargetIds, ...subgraphTargetIds],
         });
 
         await auditLogRepo.addAuditLog({
@@ -6249,22 +6257,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           limit: req.limit,
           offset: req.offset,
           namespaceId: namespace?.id,
+          excludeMonographs: true,
         });
 
         return {
-          graphs: list
-            .filter((g) => g.labels.length > 0 && g.labels[0].key !== 'monograph')
-            .map((g) => ({
-              id: g.id,
-              name: g.name,
-              routingURL: g.routingUrl,
-              lastUpdatedAt: g.lastUpdatedAt,
-              labels: g.labels,
-              createdUserId: g.creatorUserId,
-              targetId: g.targetId,
-              subscriptionUrl: g.subscriptionUrl,
-              namespace: g.namespace,
-            })),
+          graphs: list.map((g) => ({
+            id: g.id,
+            name: g.name,
+            routingURL: g.routingUrl,
+            lastUpdatedAt: g.lastUpdatedAt,
+            labels: g.labels,
+            createdUserId: g.creatorUserId,
+            targetId: g.targetId,
+            subscriptionUrl: g.subscriptionUrl,
+            namespace: g.namespace,
+          })),
           response: {
             code: EnumStatusCode.OK,
           },
@@ -6329,6 +6336,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           limit: req.limit,
           offset: req.offset,
           namespaceId: namespace?.id,
+          excludeMonographs: req.monographConfig.case === 'excludeMonographs' && req.monographConfig.value,
+          onlyMonographs: req.monographConfig.case === 'onlyMonographs' && req.monographConfig.value,
         });
 
         const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
@@ -6357,7 +6366,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           graphs: list.map((g) => ({
             id: g.id,
             targetId: g.targetId,
-            type: g.type,
             name: g.name,
             namespace: g.namespace,
             labelMatchers: g.labelMatchers,
@@ -6368,6 +6376,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             isComposable: g.isComposable,
             compositionId: g.compositionId,
             requestSeries: requestSeriesList[g.id] ?? [],
+            asMonograph: g.asMonograph,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -6406,7 +6415,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return {
           graphs: federatedGraphs.map((g) => ({
             id: g.id,
-            type: g.type,
             name: g.name,
             namespace: g.namespace,
             labelMatchers: g.labelMatchers,
@@ -6418,6 +6426,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionId: g.compositionId,
             requestSeries: [],
             targetId: g.targetId,
+            asMonograph: g.asMonograph,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -6592,7 +6601,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           graph: {
             id: federatedGraph.id,
             targetId: federatedGraph.targetId,
-            type: federatedGraph.type,
             name: federatedGraph.name,
             namespace: federatedGraph.namespace,
             routingURL: federatedGraph.routingUrl,
@@ -6604,6 +6612,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             isComposable: federatedGraph.isComposable,
             requestSeries,
             readme: federatedGraph.readme,
+            asMonograph: federatedGraph.asMonograph,
           },
           subgraphs: list.map((g) => ({
             id: g.id,
@@ -8122,12 +8131,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             offset: 0,
           });
 
-          const subgraphs = (
-            await subgraphRepo.list({
-              limit: 0,
-              offset: 0,
-            })
-          ).filter((s) => s.labels.length > 0 && s.labels[0].key !== 'monograph');
+          const subgraphs = await subgraphRepo.list({
+            limit: 0,
+            offset: 0,
+            excludeMonographs: true,
+          });
 
           return {
             response: {
@@ -8148,9 +8156,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const federatedGraphs = await fedRepo.getAccessibleFederatedGraphs(authContext.userId);
 
-        const subgraphs = (await subgraphRepo.getAccessibleSubgraphs(authContext.userId)).filter(
-          (s) => s.labels.length > 0 && s.labels[0].key !== 'monograph',
-        );
+        const subgraphs = await subgraphRepo.getAccessibleSubgraphs(authContext.userId);
 
         return {
           response: {

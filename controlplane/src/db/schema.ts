@@ -253,7 +253,7 @@ export const namespaces = pgTable(
   },
 );
 
-export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph'] as const);
+export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph'] as const);
 
 export const targets = pgTable(
   'targets',
@@ -277,6 +277,7 @@ export const targets = pgTable(
       .references(() => namespaces.id, {
         onDelete: 'cascade',
       }),
+    asMonograph: boolean('as_monograph').default(false).notNull(),
   },
   (t) => {
     return {

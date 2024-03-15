@@ -38,9 +38,7 @@ const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
       actions={
         <CLI
           command={`npx wgc ${
-            graphContext?.graph?.type === "federated"
-              ? "federated-graph"
-              : "monograph"
+            graphContext?.graph?.asMonograph ? "monograph" : "federated-graph"
           } update ${fedGraphName} --namespace ${
             router.query.namespace
           } --readme <path-to-readme>`}

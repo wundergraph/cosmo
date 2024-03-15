@@ -604,10 +604,10 @@ export class OrganizationRepository {
         continue;
       }
 
-      if (graph.type === 'federated') {
-        federatedGraphIds.push(graph.id);
-      } else {
+      if (graph.asMonograph) {
         monographIds.push(graph.id);
+      } else {
+        federatedGraphIds.push(graph.id);
       }
     }
 
@@ -921,10 +921,10 @@ export class OrganizationRepository {
               continue;
             }
 
-            if (graph.type === 'federated') {
-              federatedGraphIds.push(graph.id);
-            } else {
+            if (graph.asMonograph) {
               monographIds.push(graph.id);
+            } else {
+              federatedGraphIds.push(graph.id);
             }
           }
 

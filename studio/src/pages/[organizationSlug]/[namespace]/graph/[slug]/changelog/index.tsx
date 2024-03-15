@@ -321,9 +321,9 @@ const ChangelogPage: NextPageWithLayout = () => {
           actions={
             <CLI
               command={
-                graphData?.graph?.type === "federated"
-                  ? `npx wgc subgraph publish <subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema>`
-                  : `npx wgc monograph publish ${graphData?.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
+                graphData?.graph?.asMonograph
+                  ? `npx wgc monograph publish ${graphData?.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
+                  : `npx wgc subgraph publish <subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema>`
               }
             />
           }

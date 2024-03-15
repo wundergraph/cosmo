@@ -133,6 +133,8 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     });
   };
 
+  const isMonograph = graphData.graph.asMonograph;
+
   return (
     <GraphPageLayout
       title="Graph Overview"
@@ -173,17 +175,14 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     >
       <div
         className={cn("grid grid-rows-3 gap-4 lg:grid-cols-2", {
-          "grid-rows-2": graphData.graph.type !== "federated",
+          "grid-rows-2": isMonograph,
         })}
       >
         <div className="space-y-2 lg:col-span-1">
           <Card className="flex grow flex-col justify-between">
             <CardHeader>
               <CardTitle>
-                {graphData.graph.type === "federated"
-                  ? "Federated Graph"
-                  : "Monograph"}{" "}
-                Details
+                {isMonograph ? "Monograph" : "Federated Graph"} Details
               </CardTitle>
               <CardDescription className="text-xs">
                 Last updated:{" "}
@@ -206,7 +205,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 <span className="w-28 text-muted-foreground">Name</span>
                 <span className="w-32">{graphData.graph.name}</span>
               </div>
-              {graphData.graph.type === "federated" && (
+              {!isMonograph && (
                 <>
                   <div className="flex gap-x-4">
                     <span className="w-28 text-muted-foreground">
@@ -275,7 +274,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               </div>
             </CardContent>
             <CardFooter className="flex-col items-start text-sm">
-              {graphData.graph.type !== "federated" && (
+              {isMonograph && (
                 <div className="mb-4 w-full">
                   <span className="text-muted-foreground">Graph Url</span>
                   <CLI
@@ -329,7 +328,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
             </AlertDescription>
           </Alert>
         </div>
-        {graphData.graph.type === "federated" && (
+        {!isMonograph && (
           <div className="lg:col-span-1 lg:row-span-2">
             <Card className="h-full">
               <ReactFlowProvider>

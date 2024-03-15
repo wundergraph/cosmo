@@ -92,7 +92,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath,
         icon: <HomeIcon className="h-4 w-4" />,
       },
-      ...(graphContextData?.graph?.type === "federated"
+      ...(!graphContextData?.graph?.asMonograph
         ? [
             {
               title: "Subgraphs",
@@ -159,7 +159,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <PiChat className="h-4 w-4" />,
       },
     ];
-  }, [organizationSlug, namespace, slug, graphContextData?.graph?.type]);
+  }, [organizationSlug, namespace, slug, graphContextData?.graph?.asMonograph]);
 
   let render: React.ReactNode;
 
@@ -232,10 +232,10 @@ export const GraphSelect = () => {
       onValueChange={(gID) => {
         const graph = data?.graphs.find((g) => g.id === gID);
 
-        // don't show subgraphs and compositions page for monographs
+        // don't show subgraphs page for monographs
         if (
-          graph?.type === "graph" &&
-          ["subgraphs", "compositions"].includes(router.pathname.split("/")[5])
+          graph?.asMonograph &&
+          router.pathname.split("/")[5] === "subgraphs"
         ) {
           router.push(
             `/${router.query.organizationSlug}/${graph.namespace}/graph/${graph.name}`,

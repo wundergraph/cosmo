@@ -32,6 +32,10 @@ export default (opts: BaseCommandOptions) => {
         limit: 0,
         offset: 0,
         namespace: options.namespace,
+        monographConfig: {
+          case: 'excludeMonographs',
+          value: true,
+        },
       },
       {
         headers: baseHeaders,
@@ -43,15 +47,13 @@ export default (opts: BaseCommandOptions) => {
       program.error(pc.red('Could not fetch the federated graphs.'));
     }
 
-    const graphs = resp.graphs.filter((g) => g.type === 'federated');
-
-    if (graphs.length === 0) {
+    if (resp.graphs.length === 0) {
       console.log('No federated graphs found');
       process.exit(0);
     }
 
     if (options.out) {
-      const output = graphs.map(
+      const output = resp.graphs.map(
         (g) =>
           ({
             name: g.name,
@@ -67,7 +69,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw) {
-      console.log(graphs);
+      console.log(resp.graphs);
       process.exit(0);
     }
 
@@ -85,7 +87,7 @@ export default (opts: BaseCommandOptions) => {
       wordWrap: true,
     });
 
-    for (const graph of graphs) {
+    for (const graph of resp.graphs) {
       graphsTable.push([
         graph.name,
         graph.namespace,

@@ -389,7 +389,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                       <div className="relative flex h-full min-h-[60vh] flex-col">
                         <div className="-top-[60px] right-8 px-5 md:absolute md:px-0">
                           <div className="flex gap-x-2">
-                            {graphData?.graph?.type === "federated" && (
+                            {!graphData?.graph?.asMonograph && (
                               <Select
                                 value={activeSubgraphName}
                                 onValueChange={(subgraph) =>

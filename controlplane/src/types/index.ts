@@ -33,6 +33,8 @@ export interface ListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
+  excludeMonographs?: boolean;
+  onlyMonographs?: boolean;
 }
 
 export interface Label {
@@ -58,7 +60,7 @@ export interface FederatedGraphDTO {
   readme?: string;
   namespace: string;
   namespaceId: string;
-  type: string;
+  asMonograph: boolean;
 }
 
 export interface FederatedGraphChangelogDTO {

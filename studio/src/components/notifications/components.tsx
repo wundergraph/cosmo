@@ -51,7 +51,7 @@ export const SelectGraphs = ({
 }: {
   meta: EventsMeta;
   setMeta: (meta: EventsMeta) => void;
-  type: "federated" | "graph";
+  type: "federated" | "monograph";
   eventName: OrganizationEventName;
 }) => {
   const { data } = useQuery(getFederatedGraphs.useQuery());
@@ -103,10 +103,11 @@ export const SelectGraphs = ({
     setMeta(tempMeta);
   };
 
-  const graphs = data?.graphs.filter((g) => g.type === type) || [];
+  const graphs =
+    data?.graphs.filter((g) => g.asMonograph === (type === "monograph")) || [];
 
   const groupedGraphs = graphs
-    .filter((g) => g.type === type)
+    .filter((g) => g.asMonograph === (type === "monograph"))
     .reduce<Record<string, FederatedGraph[]>>((result, graph) => {
       const { namespace, name } = graph;
 
@@ -179,7 +180,12 @@ export const Meta = ({
 
   if (id === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED) {
     return (
-      <SelectGraphs meta={meta} setMeta={setMeta} type="graph" eventName={id} />
+      <SelectGraphs
+        meta={meta}
+        setMeta={setMeta}
+        type="monograph"
+        eventName={id}
+      />
     );
   }
 

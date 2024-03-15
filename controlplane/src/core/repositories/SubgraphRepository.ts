@@ -72,6 +72,7 @@ export class SubgraphRepository {
     subscriptionProtocol?: SubscriptionProtocol;
     readme?: string;
     namespaceId: string;
+    asMonograph?: boolean;
   }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -95,6 +96,7 @@ export class SubgraphRepository {
           organizationId: this.organizationId,
           labels: uniqueLabels.map((ul) => joinLabel(ul)),
           readme: data.readme,
+          asMonograph: data.asMonograph,
         })
         .returning()
         .execute();
@@ -498,6 +500,10 @@ export class SubgraphRepository {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
     }
 
+    if (opts.excludeMonographs) {
+      conditions.push(eq(schema.targets.asMonograph, false));
+    }
+
     const targets = await this.db
       .select({
         id: schema.targets.id,
@@ -538,7 +544,7 @@ export class SubgraphRepository {
       where: and(
         eq(schema.targets.id, data.federatedGraphTargetId),
         eq(schema.targets.organizationId, this.organizationId),
-        or(eq(schema.targets.type, 'federated'), eq(schema.targets.type, 'graph')),
+        eq(schema.targets.type, 'federated'),
       ),
       with: {
         federatedGraph: {
@@ -1001,6 +1007,8 @@ export class SubgraphRepository {
           eq(targets.type, 'subgraph'),
           eq(targets.organizationId, this.organizationId),
           or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId)),
+          // Exclude subgraphs used for monographs.
+          eq(targets.asMonograph, false),
         ),
       );
 
@@ -1064,5 +1072,46 @@ export class SubgraphRepository {
       .delete(subgraphMembers)
       .where(and(eq(subgraphMembers.subgraphId, subgraphId), eq(subgraphMembers.id, subgraphMemberId)))
       .execute();
+  }
+
+  public async getSubgraphTargetIdsForMonographs(federatedGraphTargetIds: string[]) {
+    const subgraphTargetIds: string[] = [];
+
+    if (federatedGraphTargetIds.length === 0) {
+      return subgraphTargetIds;
+    }
+
+    const monographs = await this.db.query.targets.findMany({
+      columns: {
+        id: true,
+        namespaceId: true,
+      },
+      with: {
+        labelMatchers: true,
+      },
+      where: and(
+        eq(targets.type, 'federated'),
+        eq(targets.asMonograph, true),
+        eq(targets.organizationId, this.organizationId),
+        inArray(targets.id, federatedGraphTargetIds),
+      ),
+    });
+
+    if (monographs.length === 0) {
+      return subgraphTargetIds;
+    }
+
+    for (const graph of monographs) {
+      const subgraphs = await this.byGraphLabelMatchers({
+        labelMatchers: graph.labelMatchers.map((lm) => lm.labelMatcher.join(',')),
+        namespaceId: graph.namespaceId,
+      });
+
+      for (const sg of subgraphs) {
+        subgraphTargetIds.push(sg.targetId);
+      }
+    }
+
+    return subgraphTargetIds;
   }
 }
