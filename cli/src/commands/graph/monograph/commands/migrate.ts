@@ -33,10 +33,8 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    spinner.stop();
-
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(
+      spinner.succeed(
         pc.green(
           `Successfully migrated ${pc.bold(
             name,
@@ -44,7 +42,7 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
     } else {
-      program.error(pc.red(`Could not migrate monograph. ${resp.response?.details ?? ''}`));
+      spinner.fail(pc.red(`Could not migrate monograph. ${resp.response?.details ?? ''}`));
     }
   });
 

@@ -1,12 +1,12 @@
 directive @goField(
-	forceResolver: Boolean
-	name: String
-	omittable: Boolean
+  forceResolver: Boolean
+  name: String
+  omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
 type Query {
   employee(id: Int!): Employee
-  employees: [Employee!]!
+  employees: [Employee]
   products: [Products!]!
   teammates(team: Department!): [Employee!]!
 }
@@ -20,8 +20,8 @@ type Subscription {
   `currentTime` will return a stream of `Time` objects.
   """
   currentTime: Time!
-  countEmp(max: Int! intervalMilliseconds: Int!): Int!
-  countEmp2(max: Int! intervalMilliseconds: Int!): Int!
+  countEmp(max: Int!, intervalMilliseconds: Int!): Int!
+  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
 }
 
 enum Department {

@@ -46,7 +46,7 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    const spinner = ora('Subgraph is being published...').start();
+    const spinner = ora('Monograph is being published...').start();
 
     const resp = await opts.client.platform.publishMonograph(
       {
