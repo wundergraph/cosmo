@@ -2,7 +2,8 @@
   "Version": "1",
   "InstanceID": "",
   "Graph": {
-    "Token": "token"
+    "Token": "token",
+    "SignKey": ""
   },
   "Telemetry": {
     "ServiceName": "cosmo-router",

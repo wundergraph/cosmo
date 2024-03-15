@@ -1,7 +1,8 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import CliTable3 from 'cli-table3';
-import { Command, program } from 'commander';
+import { Command } from 'commander';
 import pc from 'picocolors';
+import ora from 'ora';
 import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
@@ -12,6 +13,7 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-n, --namespace [string]', 'The namespace of the subgraph');
   command.requiredOption('-t, --to [string]', 'The new namespace of the subgraph.');
   command.action(async (name, options) => {
+    const spinner = ora('Subgraph is being moved...').start();
     const resp = await opts.client.platform.moveSubgraph(
       {
         name,
@@ -23,37 +25,76 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.green(`Successfully moved graph to namespace ${pc.bold(options.to)}.`));
-    } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
-      console.log(pc.dim(`Successfully moved graph to namespace ${pc.bold(options.to)}.`));
+    switch (resp.response?.code) {
+      case EnumStatusCode.OK: {
+        spinner.succeed('Subgraph has been moved successfully.');
 
-      const compositionErrorsTable = new CliTable3({
-        head: [
-          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-          pc.bold(pc.white('NAMESPACE')),
-          pc.bold(pc.white('ERROR_MESSAGE')),
-        ],
-        colWidths: [30, 120],
-        wordWrap: true,
-      });
-
-      console.log(
-        pc.yellow(
-          'But we found composition errors, while composing the federated graphs.\nThe graphs will not be updated until the errors are fixed. Please check the errors below:',
-        ),
-      );
-      for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([
-          compositionError.federatedGraphName,
-          compositionError.namespace,
-          compositionError.message,
-        ]);
+        break;
       }
-      // Don't exit here with 1 because the change was still applied
-      console.log(compositionErrorsTable.toString());
-    } else {
-      program.error(pc.red(`Could not move subgraph. ${resp.response?.details ?? ''}`));
+      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
+        spinner.warn('Subgraph has been moved but with composition errors.');
+
+        const compositionErrorsTable = new CliTable3({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 120],
+          wordWrap: true,
+        });
+
+        console.log(
+          pc.yellow(
+            'But we found composition errors, while composing the federated graphs.\nThe graphs will not be updated until the errors are fixed. Please check the errors below:',
+          ),
+        );
+        for (const compositionError of resp.compositionErrors) {
+          compositionErrorsTable.push([
+            compositionError.federatedGraphName,
+            compositionError.namespace,
+            compositionError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(compositionErrorsTable.toString());
+
+        break;
+      }
+      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
+        spinner.warn(
+          "The Subgraph was moved, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+        );
+
+        const deploymentErrorsTable = new CliTable3({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        for (const deploymentError of resp.deploymentErrors) {
+          deploymentErrorsTable.push([
+            deploymentError.federatedGraphName,
+            deploymentError.namespace,
+            deploymentError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(deploymentErrorsTable.toString());
+
+        break;
+      }
+      default: {
+        spinner.fail('Failed to move federated graph.');
+        if (resp.response?.details) {
+          console.error(pc.red(pc.bold(resp.response?.details)));
+        }
+        process.exit(1);
+      }
     }
   });
 

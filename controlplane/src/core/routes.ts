@@ -20,6 +20,7 @@ import { AIGraphReadmeQueue } from './workers/AIGraphReadmeWorker.js';
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
   jwtSecret: string;
+  admissionWebhookJWTSecret: string;
   authenticator: Authenticator;
   authorizer: Authorization;
   keycloakRealm: string;
@@ -37,9 +38,10 @@ export interface RouterOptions {
   openaiApiKey?: string;
   readmeQueue: AIGraphReadmeQueue;
   stripeSecretKey?: string;
+  cdnBaseUrl: string;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
-  maxTimeoutMs: 5000,
+  maxTimeoutMs: 30_000,
   jsonOptions: {
     emitDefaultValues: true,
   },

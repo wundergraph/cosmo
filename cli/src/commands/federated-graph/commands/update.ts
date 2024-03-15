@@ -5,6 +5,7 @@ import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { resolve } from 'pathe';
+import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -39,6 +40,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    const spinner = ora('Federated Graph is being updated...').start();
     const resp = await opts.client.platform.updateFederatedGraph(
       {
         name,
@@ -53,41 +55,76 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`The federated graph '${name}' was updated.`)));
-    } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
-      console.log(pc.dim(pc.green(`The federated graph '${name}' was updated.`)));
+    switch (resp.response?.code) {
+      case EnumStatusCode.OK: {
+        spinner.succeed(`Federated Graph was updated successfully.`);
 
-      const compositionErrorsTable = new Table({
-        head: [
-          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-          pc.bold(pc.white('NAMESPACE')),
-          pc.bold(pc.white('ERROR_MESSAGE')),
-        ],
-        colWidths: [30, 30, 120],
-        wordWrap: true,
-      });
+        break;
+      }
+      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
+        spinner.warn(`Federated Graph was updated but with composition errors.`);
 
-      console.log(
-        pc.yellow(
-          'But we found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. Please check the errors below:',
-        ),
-      );
-      for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([
-          compositionError.federatedGraphName,
-          compositionError.namespace,
-          compositionError.message,
-        ]);
+        const compositionErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        console.log(
+          pc.yellow(
+            'But we found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. Please check the errors below:',
+          ),
+        );
+        for (const compositionError of resp.compositionErrors) {
+          compositionErrorsTable.push([
+            compositionError.federatedGraphName,
+            compositionError.namespace,
+            compositionError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(compositionErrorsTable.toString());
+
+        break;
       }
-      // Don't exit here with 1 because the change was still applied
-      console.log(compositionErrorsTable.toString());
-    } else {
-      console.log(`Failed to update federated graph ${pc.bold(name)}.`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
+      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
+        spinner.warn(
+          "The Federated Graph was updated, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+        );
+
+        const deploymentErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        for (const deploymentError of resp.deploymentErrors) {
+          deploymentErrorsTable.push([
+            deploymentError.federatedGraphName,
+            deploymentError.namespace,
+            deploymentError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(deploymentErrorsTable.toString());
+
+        break;
       }
-      process.exit(1);
+      default: {
+        spinner.fail(`Failed to update federated graph.`);
+        if (resp.response?.details) {
+          console.log(pc.red(pc.bold(resp.response?.details)));
+        }
+        process.exit(1);
+      }
     }
   });
 
