@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.21.0...@wundergraph/cosmo-shared@0.22.0) (2024-03-14)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
 # [0.21.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.20.17...@wundergraph/cosmo-shared@0.21.0) (2024-03-13)
 
 ### Features
