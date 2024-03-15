@@ -103,12 +103,22 @@ export default (opts: BaseCommandOptions) => {
       wordWrap: true,
     });
 
+    const lintIssuesTable = new Table({
+      head: [pc.bold(pc.white('LINT_RULE')), pc.bold(pc.white('ERROR_MESSAGE')), pc.bold(pc.white('LINE NUMBER'))],
+      colAligns: ['left', 'left', 'center'],
+      wordWrap: true,
+    });
+
     let success = false;
     let finalStatement = '';
 
     let studioCheckDestination = '';
     if (resp.checkId && resp.checkedFederatedGraphs.length > 0) {
-      studioCheckDestination = `Open in studio: ${config.webURL}/${resp.checkedFederatedGraphs[0].organizationSlug}/${resp.checkedFederatedGraphs[0].namespace}/graph/${resp.checkedFederatedGraphs[0].name}/checks/${resp.checkId}`;
+      studioCheckDestination = studioCheckDestination = `${pc.bold('Open in studio')}: ${config.webURL}/${
+        resp.checkedFederatedGraphs[0].organizationSlug
+      }/${resp.checkedFederatedGraphs[0].namespace}/graph/${resp.checkedFederatedGraphs[0].name}/checks/${
+        resp.checkId
+      }`;
     }
 
     switch (resp.response?.code) {
@@ -116,9 +126,11 @@ export default (opts: BaseCommandOptions) => {
         if (
           resp.nonBreakingChanges.length === 0 &&
           resp.breakingChanges.length === 0 &&
-          resp.compositionErrors.length === 0
+          resp.compositionErrors.length === 0 &&
+          resp.lintErrors.length === 0 &&
+          resp.lintWarnings.length === 0
         ) {
-          console.log(`\nDetected no changes.\n${studioCheckDestination}\n`);
+          console.log(`\nDetected no changes.\nDetected no lint issues.\n\n${studioCheckDestination}\n`);
 
           success = true;
 
@@ -193,6 +205,26 @@ export default (opts: BaseCommandOptions) => {
             ]);
           }
           console.log(compositionErrorsTable.toString());
+        }
+
+        if (resp.lintErrors.length > 0 || resp.lintWarnings.length > 0) {
+          success = resp.lintErrors.length === 0;
+          console.log('\nDetected lint issues:');
+          for (const error of resp.lintErrors) {
+            lintIssuesTable.push([
+              `${logSymbols.error} ${pc.red(error.lintRuleType)}`,
+              error.message,
+              error.issueLocation?.line,
+            ]);
+          }
+          for (const warning of resp.lintWarnings) {
+            lintIssuesTable.push([
+              `${logSymbols.warning} ${pc.yellow(warning.lintRuleType)}`,
+              warning.message,
+              warning.issueLocation?.line,
+            ]);
+          }
+          console.log(lintIssuesTable.toString());
         }
 
         if (success) {

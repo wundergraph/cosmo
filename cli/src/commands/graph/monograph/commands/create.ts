@@ -5,6 +5,7 @@ import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import ora from 'ora';
 import { baseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 
@@ -26,6 +27,11 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the graph. The supported protocols are ws, sse, and sse_post.',
   );
+  command.option(
+    '--admission-webhook-url <url>',
+    'The admission webhook url. This is the url that the controlplane will use to implement admission control for the monograph. This is optional.',
+    [],
+  );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the graph.');
   command.action(async (name, options) => {
     let readmeFile;
@@ -40,6 +46,8 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    const spinner = ora('Federated Graph is being created...').start();
+
     const resp = await opts.client.platform.createMonograph(
       {
         name,
@@ -51,6 +59,7 @@ export default (opts: BaseCommandOptions) => {
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
+        admissionWebhookURL: options.admissionWebhookUrl,
       },
       {
         headers: baseHeaders,
@@ -58,9 +67,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`A new graph called '${name}' was created.`)));
+      spinner.succeed('Monograph was created successfully.');
     } else {
-      console.log(pc.red(`Failed to create graph ${pc.bold(name)}.`));
+      spinner.fail(`Failed to create monograph.`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

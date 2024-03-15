@@ -490,6 +490,11 @@ export class PublishMonographResponse extends Message<PublishMonographResponse> 
    */
   compositionErrors: CompositionError[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<PublishMonographResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -500,6 +505,7 @@ export class PublishMonographResponse extends Message<PublishMonographResponse> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishMonographResponse {
@@ -885,6 +891,11 @@ export class CreateMonographRequest extends Message<CreateMonographRequest> {
    */
   readme?: string;
 
+  /**
+   * @generated from field: string admissionWebhookURL = 8;
+   */
+  admissionWebhookURL = "";
+
   constructor(data?: PartialMessage<CreateMonographRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -900,6 +911,7 @@ export class CreateMonographRequest extends Message<CreateMonographRequest> {
     { no: 5, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateMonographRequest {

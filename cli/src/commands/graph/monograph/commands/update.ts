@@ -5,6 +5,7 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { resolve } from 'pathe';
 import { parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import ora from 'ora';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { baseHeaders } from '../../../../core/config.js';
 
@@ -43,6 +44,8 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    const spinner = ora('Federated Graph is being updated...').start();
+
     const resp = await opts.client.platform.updateMonograph(
       {
         name,
@@ -61,9 +64,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`The monograph '${name}' was updated.`)));
+      spinner.succeed(`The monograph '${name}' was updated.`);
     } else {
-      console.log(`Failed to update monograph ${pc.bold(name)}.`);
+      spinner.fail(`Failed to update monograph ${pc.bold(name)}.`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

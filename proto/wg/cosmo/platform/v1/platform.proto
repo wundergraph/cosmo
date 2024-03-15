@@ -33,6 +33,7 @@ message PublishMonographRequest {
 message PublishMonographResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message PublishFederatedSubgraphRequest {
@@ -96,6 +97,7 @@ message CreateMonographRequest {
   optional string subscription_url = 5;
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
   optional string readme = 7;
+  string admissionWebhookURL = 8;
 }
 
 message CreateMonographResponse {

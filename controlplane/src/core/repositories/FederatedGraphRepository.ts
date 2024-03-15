@@ -297,6 +297,23 @@ export class FederatedGraphRepository {
       .where(and(eq(targets.id, targetId), eq(schema.targets.organizationId, this.organizationId)));
   }
 
+  // We do not need to do any recomposition since we move both the graph and subgraph to the new namespace.
+  // The namespaceId column update is enough.
+  public async moveMonograph({
+    federatedGraphTargetId,
+    subgraphTargetId,
+    newNamespaceId,
+  }: {
+    federatedGraphTargetId: string;
+    subgraphTargetId: string;
+    newNamespaceId: string;
+  }) {
+    await this.db
+      .update(targets)
+      .set({ namespaceId: newNamespaceId })
+      .where(inArray(targets.id, [subgraphTargetId, federatedGraphTargetId]));
+  }
+
   public move(
     data: { targetId: string; newNamespaceId: string; updatedBy: string; federatedGraph: FederatedGraphDTO },
     blobStorage: BlobStorage,
@@ -1258,15 +1275,7 @@ export class FederatedGraphRepository {
     return federatedGraphs;
   }
 
-  public migrateMonograph({
-    targetId,
-    blobStorage,
-    userId,
-  }: {
-    targetId: string;
-    blobStorage: BlobStorage;
-    userId: string;
-  }) {
+  public migrateMonograph({ targetId }: { targetId: string }) {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);

@@ -2,6 +2,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import CliTable3 from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
+import ora from 'ora';
 import { baseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 
@@ -12,6 +13,8 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the monograph.');
   command.requiredOption('-t, --to [string]', 'The new namespace of the monograph.');
   command.action(async (name, options) => {
+    const spinner = ora('Monograph is being moved...').start();
+
     const resp = await opts.client.platform.moveMonograph(
       {
         name,
@@ -24,9 +27,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.green(`Successfully moved graph to namespace ${pc.bold(options.to)}.`));
+      spinner.succeed(`Successfully moved graph to namespace ${pc.bold(options.to)}.`);
     } else {
-      program.error(pc.red(`Could not move monograph. ${resp.response?.details ?? ''}`));
+      spinner.fail(`Could not move monograph. ${resp.response?.details ?? ''}`);
     }
   });
 
