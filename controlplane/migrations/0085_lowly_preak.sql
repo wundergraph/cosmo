@@ -1,1 +1,0 @@
-ALTER TABLE "targets" ADD COLUMN "as_monograph" boolean DEFAULT false NOT NULL;
