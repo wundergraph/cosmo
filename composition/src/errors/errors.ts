@@ -307,7 +307,7 @@ export function undefinedRequiredArgumentsErrorMessage(
   requiredArguments: string[],
   missingRequiredArguments: string[] = [],
 ): string {
-  return (
+  let message =
     ` The definition for the directive "${directiveName}" defines the following ` +
     requiredArguments.length +
     ` required argument` +
@@ -315,25 +315,41 @@ export function undefinedRequiredArgumentsErrorMessage(
     `"` +
     requiredArguments.join('", "') +
     `"` +
-    `.\n However, the same directive that is declared on "${hostPath}" does not define` +
-    (missingRequiredArguments.length > 0
-      ? ` the following required arguments: "${missingRequiredArguments.join('", "')}"`
-      : ` any arguments.`)
+    `.\n However, the same directive that is declared on "${hostPath}" does not define`;
+  if (missingRequiredArguments.length < 1) {
+    return message + ` any arguments.`;
+  }
+  return (
+    message +
+    ` the following required argument` +
+    (missingRequiredArguments.length > 1 ? `s` : ``) +
+    `: "` +
+    missingRequiredArguments.join(QUOTATION_JOIN) +
+    `".`
   );
 }
 
-export function unexpectedDirectiveArgumentErrorMessage(directiveName: string, argumentName: string): string {
-  return ` The definition for the directive "${directiveName}" does not define an argument named "${argumentName}".`;
+export function unexpectedDirectiveArgumentErrorMessage(directiveName: string, argumentNames: string[]): string {
+  return (
+    ` The definition for the directive "${directiveName}" does not define the following provided argument` +
+    (argumentNames.length > 1 ? 's' : '') +
+    `: "` +
+    argumentNames.join(QUOTATION_JOIN) +
+    `".`
+  );
 }
 
-export function duplicateDirectiveArgumentDefinitionErrorMessage(
+export function duplicateDirectiveArgumentDefinitionsErrorMessage(
   directiveName: string,
   hostPath: string,
-  argumentName: string,
+  argumentNames: string[],
 ): string {
   return (
-    ` The directive "${directiveName}" that is declared on "${hostPath}" ` +
-    `defines the argument named "${argumentName}" more than once.`
+    ` The directive "${directiveName}" that is declared on "${hostPath}" defines the following argument` +
+    (argumentNames.length > 1 ? 's' : '') +
+    ` more than once: "` +
+    argumentNames.join(QUOTATION_JOIN) +
+    `"`
   );
 }
 
@@ -363,9 +379,9 @@ export function invalidKeyDirectivesError(parentTypeName: string, errorMessages:
 }
 
 // Cannot use the constant for maximum type nesting or there will be a cyclical import
-export function maximumTypeNestingExceededFatalError(path: string, maximumTypeNesting: number): Error {
+export function maximumTypeNestingExceededError(path: string, maximumTypeNesting: number): Error {
   return new Error(
-    `Fatal: The type defined at path "${path}" has more than ${maximumTypeNesting} layers of nesting,` +
+    ` The type defined at path "${path}" has more than ${maximumTypeNesting} layers of nesting,` +
       ` or there is a cyclical error.`,
   );
 }
@@ -378,6 +394,26 @@ export function incompatibleParentKindFatalError(parentTypeName: string, expecte
   return new Error(
     `Fatal: Expected "${parentTypeName}" to be type ${kindToTypeString(expectedKind)}` +
       ` but received "${kindToTypeString(actualKind)}".`,
+  );
+}
+
+export function incompatibleParentKindMergeError(
+  parentTypeName: string,
+  expectedTypeString: string,
+  actualTypeString: string,
+): Error {
+  return new Error(
+    ` When merging types, expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`,
+  );
+}
+
+export function incompatibleObjectExtensionOrphanBaseTypeError(
+  parentTypeName: string,
+  actualTypeString: string,
+): Error {
+  return new Error(
+    ` When merging the object extension orphan "${parentTypeName}", expected an existing object base type` +
+      ` but received "${actualTypeString}".`,
   );
 }
 
@@ -413,6 +449,19 @@ export function unexpectedParentKindErrorMessage(
   actualTypeString: string,
 ): string {
   return ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`;
+}
+
+export function unexpectedParentKindForChildError(
+  parentTypeName: string,
+  expectedTypeString: string,
+  actualTypeString: string,
+  childName: string,
+  childTypeString: string,
+): Error {
+  return new Error(
+    ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}"` +
+      ` when handling child "${childName}" of type "${childTypeString}".`,
+  );
 }
 
 export function subgraphValidationError(subgraphName: string, errors: Error[]): Error {
@@ -564,7 +613,7 @@ export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: 
       ` The following argument` +
       (duplicatedArguments.length > 1 ? 's are' : ' is') +
       ` defined more than once: "` +
-      duplicatedArguments.join(`", "`) +
+      duplicatedArguments.join(QUOTATION_JOIN) +
       `"\n`,
   );
 }
@@ -907,7 +956,7 @@ export function invalidRootTypeFieldEventsDirectivesErrorMessage(
     `invalid:\n`;
   for (const [fieldPath, data] of invalidEventsDirectiveDataByRootFieldPath) {
     if (!data.definesDirectives) {
-      message += `  The root field path "${fieldPath}" does not define any events directives.\n`;
+      message += `  The root field path "${fieldPath}" does not define any valid events directives.\n`;
     } else {
       message +=
         `  The root field path "${fieldPath}" defines the following invalid events directive` +
@@ -1016,3 +1065,22 @@ export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames:
 export const invalidPublishEventResultObjectErrorMessage =
   ` The object "PublishEventResult" that was defined in the Event Driven graph is invalid and must instead have` +
   ` the following definition:\n  type PublishEventResult {\n   success: Boolean!\n  }`;
+
+export function invalidImplementedTypeError(
+  typeName: string,
+  invalidImplementationTypeStringByTypeName: Map<string, string>,
+): Error {
+  let message =
+    ` Only interfaces can be implemented. However, the type "${typeName}" attempts to implement` +
+    `the following invalid type` +
+    (invalidImplementationTypeStringByTypeName.size > 1 ? `s` : ``) +
+    `:\n`;
+  for (const [typeName, typeString] of invalidImplementationTypeStringByTypeName) {
+    message += `  "${typeName}", which is type "${typeString}"\n`;
+  }
+  return new Error(message);
+}
+
+export function selfImplementationError(typeName: string): Error {
+  return new Error(` The interface "${typeName}" must not implement itself.`);
+}

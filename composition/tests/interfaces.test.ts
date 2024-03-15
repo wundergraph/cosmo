@@ -2,8 +2,11 @@ import {
   federateSubgraphs,
   ImplementationErrors,
   InvalidFieldImplementation,
+  invalidImplementedTypeError,
   noFieldDefinitionsError,
+  normalizeSubgraph,
   normalizeSubgraphFromString,
+  selfImplementationError,
   Subgraph,
   unimplementedInterfaceFieldsError,
 } from '../src';
@@ -225,6 +228,28 @@ describe('Interface tests', () => {
           ]),
         ),
       );
+    });
+
+    test('that an error is returned if a type attempts to implement a type that is not an interface', () => {
+      const { errors } = normalizeSubgraph(subgraphG.definitions, subgraphG.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidImplementedTypeError(
+          'Object',
+          new Map<string, string>([
+            ['Interface', 'object'],
+            ['Scalar', 'scalar'],
+          ]),
+        ),
+      );
+    });
+
+    test('that an error is returned if an interface attempts to implement itself', () => {
+      const { errors } = normalizeSubgraph(subgraphH.definitions, subgraphH.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(selfImplementationError('Interface'));
     });
   });
 
@@ -537,6 +562,32 @@ const subgraphF: Subgraph = {
     type Dog implements Pet & Animal {
       name: String!
       sounds(a: String, b: Int): [String!]
+    }
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    type Object implements Interface & Scalar {
+      name: String!
+    }
+    
+    type Interface {
+      name: String!
+    }
+    
+    scalar Scalar
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    interface Interface implements Interface {
+      name: String!
     }
   `),
 };

@@ -116,7 +116,7 @@ describe('Enum federation tests', () => {
     );
   });
 
-  test('that inconsistent enums used as both an input and output throws an error', () => {
+  test('that an error is returned if an inconsistent enum is used as both input and output', () => {
     const { errors } = federateSubgraphs([subgraphC, subgraphE]);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);

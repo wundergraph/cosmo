@@ -120,7 +120,7 @@ export function areBaseAndExtensionKindsCompatible(baseKind: Kind, extensionKind
     case Kind.UNION_TYPE_DEFINITION:
       return extensionKind === Kind.UNION_TYPE_EXTENSION;
     default:
-      throw unexpectedKindFatalError(typeName);
+      return false;
   }
 }
 

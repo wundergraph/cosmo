@@ -62,7 +62,7 @@ describe('@override directive tests', () => {
   });
 
   test('that an error is returned if the source and target subgraph name for @override are equivalent', () => {
-    const { errors } = normalizeSubgraph(subgraphQ.definitions, new MultiGraph(), 'subgraph-q');
+    const { errors } = normalizeSubgraph(subgraphQ.definitions, 'subgraph-q');
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
       invalidDirectiveError(OVERRIDE, 'Entity.name', [

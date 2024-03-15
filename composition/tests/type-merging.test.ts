@@ -1,6 +1,9 @@
 import {
   getLeastRestrictiveMergedTypeNode,
   getMostRestrictiveMergedTypeNode,
+  getMutableTypeNode,
+  MAXIMUM_TYPE_NESTING,
+  maximumTypeNestingExceededError,
   MutableIntermediateTypeNode,
   MutableTypeNode,
 } from '../src';
@@ -8,15 +11,10 @@ import { Kind, TypeNode } from 'graphql';
 import { describe, expect, test } from 'vitest';
 
 describe('getMergedTypeNode Tests', () => {
-  const parentName = 'parent';
-  const fieldName = 'field';
+  const hostPath = `Parent.field`;
 
   test('that merging inconsistent types returns the incompatible types', () => {
-    const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
-      nestedStringOne,
-      nestedIntOne,
-      `${parentName}.${fieldName}`,
-    );
+    const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(nestedStringOne, nestedIntOne, hostPath, []);
     expect(typeNode).toBeUndefined();
     expect(typeErrors).toHaveLength(2);
     expect(typeErrors![0]).toBe('String');
@@ -24,11 +22,7 @@ describe('getMergedTypeNode Tests', () => {
   });
 
   test('that getLeastRestrictiveMergedTypeNode merges types into the least restrictive, mutually valid type #1', () => {
-    const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
-      nestedStringOne,
-      nestedStringTwo,
-      `${parentName}.${fieldName}`,
-    );
+    const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(nestedStringOne, nestedStringTwo, hostPath, []);
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(nestedStringTwo);
   });
@@ -37,7 +31,8 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
       optionalNestedObject,
       requiredNestedObject,
-      `${parentName}.${fieldName}`,
+      hostPath,
+      [],
     );
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(optionalNestedObject);
@@ -47,7 +42,8 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
       stringToTypeNode(`[[[Float!]]]!`),
       stringToTypeNode(`[[[Float]!]]!`),
-      `${parentName}.${fieldName}`,
+      hostPath,
+      [],
     );
     expect(typeNode).toBeUndefined();
     expect(typeErrors).toHaveLength(2);
@@ -59,7 +55,8 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
       stringToTypeNode(`[[[Float!]]]!`),
       stringToTypeNode(`[[[Float]!]]!`),
-      `${parentName}.${fieldName}`,
+      hostPath,
+      [],
     );
     expect(typeNode).toBeUndefined();
     expect(typeErrors).toHaveLength(2);
@@ -68,11 +65,7 @@ describe('getMergedTypeNode Tests', () => {
   });
 
   test('that getMostRestrictiveMergedTypeNode merges types into the most restrictive, mutually valid type #1', () => {
-    const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
-      nestedStringOne,
-      nestedStringTwo,
-      `${parentName}.${fieldName}`,
-    );
+    const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(nestedStringOne, nestedStringTwo, hostPath, []);
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(nestedStringOne);
   });
@@ -81,10 +74,47 @@ describe('getMergedTypeNode Tests', () => {
     const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
       optionalNestedObject,
       requiredNestedObject,
-      `${parentName}.${fieldName}`,
+      hostPath,
+      [],
     );
     expect(typeErrors).toBeUndefined();
     expect(typeNode).toStrictEqual(requiredNestedObject);
+  });
+
+  test('that getMostRestrictiveMergedTypeNode returns an error if the maximum nesting is exceeded', () => {
+    const errors: Error[] = [];
+    const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
+      simpleObjectType,
+      exceededNestingLimitType,
+      hostPath,
+      errors,
+    );
+    expect(typeErrors).toBeUndefined();
+    expect(typeNode).toStrictEqual(simpleObjectType);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath, MAXIMUM_TYPE_NESTING));
+  });
+
+  test('that getLeastRestrictiveMergedTypeNode returns an error if the maximum nesting is exceeded', () => {
+    const errors: Error[] = [];
+    const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
+      simpleObjectType,
+      exceededNestingLimitType,
+      hostPath,
+      errors,
+    );
+    expect(typeErrors).toBeUndefined();
+    expect(typeNode).toStrictEqual(simpleObjectType);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath, MAXIMUM_TYPE_NESTING));
+  });
+
+  test('that an error is returned if getMutableTypeNode receives a type that exceeds the nesting limit and a simplified dummy type is returned', () => {
+    const errors: Error[] = [];
+    const typeNode = getMutableTypeNode(exceededNestingLimitType, hostPath, errors);
+    expect(typeNode).toStrictEqual(simpleObjectType);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(maximumTypeNestingExceededError(hostPath, MAXIMUM_TYPE_NESTING));
   });
 
   test('that stringToTypeNode parses strings correctly', () => {
@@ -252,3 +282,5 @@ const nestedStringTwo: TypeNode = stringToTypeNode(`[[[[[[[[[[String]]]]]!]]]!]]
 const nestedIntOne: TypeNode = stringToTypeNode(`[[[[[[[[[[Int!]]!]]!]!]]]!]]`);
 const optionalNestedObject = stringToTypeNode(`[[[[[Object]]]]]`);
 const requiredNestedObject = stringToTypeNode(`[[[[[Object!]!]!]!]!]!`);
+const exceededNestingLimitType: TypeNode = stringToTypeNode(`[[[[[[[[[[[[[[[Object!]!]!]!]!]!]!]!]!]!]!]!]!]!]!]!`);
+const simpleObjectType: TypeNode = stringToTypeNode(`Object`);

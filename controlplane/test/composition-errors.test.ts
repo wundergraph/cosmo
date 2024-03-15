@@ -7,7 +7,7 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
   ImplementationErrors,
   incompatibleArgumentTypesError,
-  incompatibleParentKindFatalError,
+  incompatibleParentKindFatalError, incompatibleParentKindMergeError,
   InvalidFieldImplementation,
   invalidRequiredInputValueError,
   noQueryRootTypeError,
@@ -298,9 +298,10 @@ describe('CompositionErrors', (ctx) => {
       name: 'subgraph2',
     };
 
-    expect(() => composeSubgraphs([subgraph1, subgraph2])).toThrow(
-      incompatibleParentKindFatalError('SameName', Kind.OBJECT_TYPE_DEFINITION, Kind.INTERFACE_TYPE_DEFINITION),
-    );
+    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('SameName', 'object', 'interface'));
   });
 
   test('Should cause composition errors if a type does not implement one of its interface after merge', () => {

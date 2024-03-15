@@ -4,6 +4,8 @@ import {
   noBaseTypeExtensionError,
   noQueryRootTypeError,
   Subgraph,
+  incompatibleParentKindMergeError,
+  incompatibleObjectExtensionOrphanBaseTypeError,
 } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
@@ -715,6 +717,30 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(noQueryRootTypeError);
   });
+
+  test('that an error is returned when merging incompatible types #1.1', () => {
+    const { errors } = federateSubgraphs([subgraphR, subgraphS]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('Object', 'scalar', 'object'));
+  });
+
+  test('that an error is returned when merging incompatible types #1.2', () => {
+    const { errors } = federateSubgraphs([subgraphS, subgraphR]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('Object', 'object', 'scalar'));
+  });
+
+  test('that an error is returned when merging an object extension orphan with an incompatible base type #1.1', () => {
+    const { errors } = federateSubgraphs([subgraphT, subgraphU]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(incompatibleObjectExtensionOrphanBaseTypeError('Object', 'input object'));
+  });
+
+  test('that an error is returned when merging an object extension orphan with an incompatible base type #1.2', () => {
+    const { errors } = federateSubgraphs([subgraphU, subgraphT]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(incompatibleObjectExtensionOrphanBaseTypeError('Object', 'input object'));
+  });
 });
 
 const demoEmployees: Subgraph = {
@@ -1216,5 +1242,51 @@ const subgraphQ: Subgraph = {
   url: '',
   definitions: parse(`
     type Query
+  `),
+};
+
+const subgraphR: Subgraph = {
+  name: 'subgraph-r',
+  url: '',
+  definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+    
+    scalar Object
+  `),
+};
+
+const subgraphS: Subgraph = {
+  name: 'subgraph-s',
+  url: '',
+  definitions: parse(`
+    type Object {
+      field: String!
+    }
+  `),
+};
+
+const subgraphT: Subgraph = {
+  name: 'subgraph-t',
+  url: '',
+  definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+    
+    extend type Object @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphU: Subgraph = {
+  name: 'subgraph-u',
+  url: '',
+  definitions: parse(`
+    input Object {
+      field: String!
+    }
   `),
 };

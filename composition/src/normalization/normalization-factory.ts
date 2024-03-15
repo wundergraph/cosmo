@@ -89,6 +89,7 @@ import {
   invalidDirectiveError,
   invalidEventDrivenGraphError,
   invalidEventsDrivenMutationResponseTypeErrorMessage,
+  invalidImplementedTypeError,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
@@ -106,6 +107,7 @@ import {
   nonKeyFieldNamesEventDrivenErrorMessage,
   operationDefinitionError,
   orScopesLimitError,
+  selfImplementationError,
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
@@ -135,15 +137,18 @@ import {
   NON_NULLABLE_PUBLISH_EVENT_RESULT,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
-  PARENTS,
+  PARENT_DEFINITION_DATA,
+  PUBLISH,
   PUBLISH_EVENT_RESULT,
   QUERY,
+  REQUEST,
   REQUIRES_SCOPES,
   RESOLVABLE,
   SCHEMA,
   SCOPES,
   SERVICE_FIELD,
   SOURCE_NAME,
+  SUBSCRIBE,
   SUBSCRIPTION,
   SUCCESS,
   TOPIC,
@@ -239,8 +244,8 @@ export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationR
 
 export function normalizeSubgraph(
   document: DocumentNode,
-  graph?: MultiGraph,
   subgraphName?: string,
+  graph?: MultiGraph,
 ): NormalizationResultContainer {
   const normalizationFactory = new NormalizationFactory(graph || new MultiGraph(), subgraphName);
   return normalizationFactory.normalize(document);
@@ -591,7 +596,6 @@ export class NormalizationFactory {
       let keyFieldSet;
       let isUnresolvable = false;
       for (const arg of directive.arguments) {
-        const argumentName = arg.name.value;
         if (arg.name.value === RESOLVABLE) {
           if (arg.value.kind === Kind.BOOLEAN && !arg.value.value) {
             isUnresolvable = true;
@@ -600,7 +604,6 @@ export class NormalizationFactory {
         }
         if (arg.name.value !== FIELDS) {
           keyFieldSet = undefined;
-          errorMessages.push(unexpectedDirectiveArgumentErrorMessage(KEY, argumentName));
           break;
         }
         if (arg.value.kind !== Kind.STRING) {
@@ -619,24 +622,38 @@ export class NormalizationFactory {
     }
   }
 
-  validateInterfaceImplementations(container: ParentWithFieldsData) {
-    if (container.implementedInterfaceTypeNames.size < 1) {
+  validateInterfaceImplementations(data: ParentWithFieldsData) {
+    if (data.implementedInterfaceTypeNames.size < 1) {
       return;
     }
     const implementationErrorsMap = new Map<string, ImplementationErrors>();
-    for (const interfaceName of container.implementedInterfaceTypeNames) {
-      const interfaceContainer = getOrThrowError(this.parentDefinitionDataByTypeName, interfaceName, PARENTS);
-      if (interfaceContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        throw incompatibleParentKindFatalError(interfaceName, Kind.INTERFACE_TYPE_DEFINITION, interfaceContainer.kind);
+    const invalidImplementationTypeStringByTypeName = new Map<string, string>();
+    let doesInterfaceImplementItself = false;
+    for (const interfaceName of data.implementedInterfaceTypeNames) {
+      const implementationData = this.parentDefinitionDataByTypeName.get(interfaceName);
+      if (!implementationData) {
+        this.errors.push(undefinedTypeError(interfaceName));
+        continue;
+      }
+      if (implementationData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        invalidImplementationTypeStringByTypeName.set(
+          implementationData.name,
+          kindToTypeString(implementationData.kind),
+        );
+        continue;
+      }
+      if (data.name === implementationData.name) {
+        doesInterfaceImplementItself = true;
+        continue;
       }
       const implementationErrors: ImplementationErrors = {
         invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
         unimplementedFields: [],
       };
       let hasErrors = false;
-      for (const [fieldName, interfaceField] of interfaceContainer.fieldDataByFieldName) {
+      for (const [fieldName, interfaceField] of implementationData.fieldDataByFieldName) {
         let hasNestedErrors = false;
-        const containerField = container.fieldDataByFieldName.get(fieldName);
+        const containerField = data.fieldDataByFieldName.get(fieldName);
         if (!containerField) {
           hasErrors = true;
           implementationErrors.unimplementedFields.push(fieldName);
@@ -700,9 +717,15 @@ export class NormalizationFactory {
         implementationErrorsMap.set(interfaceName, implementationErrors);
       }
     }
-    if (implementationErrorsMap.size) {
+    if (invalidImplementationTypeStringByTypeName.size > 0) {
+      this.errors.push(invalidImplementedTypeError(data.name, invalidImplementationTypeStringByTypeName));
+    }
+    if (doesInterfaceImplementItself) {
+      this.errors.push(selfImplementationError(data.name));
+    }
+    if (implementationErrorsMap.size > 0) {
       this.errors.push(
-        unimplementedInterfaceFieldsError(container.name, kindToTypeString(container.kind), implementationErrorsMap),
+        unimplementedInterfaceFieldsError(data.name, kindToTypeString(data.kind), implementationErrorsMap),
       );
     }
   }
@@ -732,6 +755,7 @@ export class NormalizationFactory {
   }
 
   extractEventDirectivesToConfiguration(node: FieldDefinitionNode) {
+    // Validation is handled elsewhere
     if (!node.directives) {
       return;
     }
@@ -739,15 +763,15 @@ export class NormalizationFactory {
       let eventType: EventType;
       switch (directive.name.value) {
         case EVENTS_PUBLISH: {
-          eventType = 'publish';
+          eventType = PUBLISH;
           break;
         }
         case EVENTS_REQUEST: {
-          eventType = 'request';
+          eventType = REQUEST;
           break;
         }
         case EVENTS_SUBSCRIBE: {
-          eventType = 'subscribe';
+          eventType = SUBSCRIBE;
           break;
         }
         default:
@@ -755,38 +779,24 @@ export class NormalizationFactory {
       }
       let topic: string | undefined;
       let sourceName: string | undefined;
-      for (const arg of directive.arguments || []) {
-        if (arg.value.kind !== Kind.STRING) {
-          throw new Error(`Event directive arguments must be strings, ${arg.value.kind} found in argument ${arg.name}`);
+      for (const argumentNode of directive.arguments || []) {
+        if (argumentNode.value.kind !== Kind.STRING) {
+          continue;
         }
-        switch (arg.name.value) {
+        switch (argumentNode.name.value) {
           case TOPIC: {
-            if (topic !== undefined) {
-              throw new Error(`Event directives must have exactly one topic argument, found multiple`);
-            }
-            if (!arg.value.value) {
-              throw new Error(`Event directives must have a non-empty topic argument`);
-            }
-            topic = arg.value.value;
+            topic = argumentNode.value.value;
             break;
           }
           case SOURCE_NAME: {
-            if (sourceName !== undefined) {
-              throw new Error(`Event directives must have exactly one sourceID argument, found multiple`);
-            }
-            if (!arg.value.value) {
-              throw new Error(`Event directives must have a non-empty sourceID argument`);
-            }
-            sourceName = arg.value.value;
+            sourceName = argumentNode.value.value;
             break;
           }
-          default:
-            throw new Error(`Unknown argument ${arg.name.value} found in event directive`);
         }
       }
 
       if (!topic) {
-        throw new Error(`Event directives must have a topic argument`);
+        return;
       }
 
       const configuration = getValueOrDefault(
@@ -1543,7 +1553,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     if (!subgraph.name) {
       invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
     }
-    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions, graph, subgraph.name);
+    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions, subgraph.name, graph);
     if (errors) {
       validationErrors.push(subgraphValidationError(subgraphName, errors));
       continue;

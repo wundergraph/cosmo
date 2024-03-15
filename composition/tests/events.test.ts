@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import {
   ConfigurationData,
+  duplicateArgumentsError,
+  duplicateDirectiveArgumentDefinitionsErrorMessage,
   federateSubgraphs,
+  invalidDirectiveError,
   invalidEventDrivenGraphError,
   invalidEventsDrivenMutationResponseTypeErrorMessage,
   invalidKeyFieldSetsEventDrivenErrorMessage,
@@ -11,12 +14,21 @@ import {
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
+  normalizeSubgraph,
   normalizeSubgraphFromString,
   Subgraph,
   subgraphValidationError,
+  unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
 import { parse } from 'graphql';
-import { DEFAULT, EVENTS_PUBLISH, EVENTS_REQUEST, EVENTS_SUBSCRIBE } from '../src/utils/string-constants';
+import {
+  DEFAULT,
+  EVENTS_PUBLISH,
+  EVENTS_REQUEST,
+  EVENTS_SUBSCRIBE,
+  SOURCE_NAME,
+  TOPIC,
+} from '../src/utils/string-constants';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
@@ -206,6 +218,29 @@ describe('events Configuration tests', () => {
               typeName: 'Entity',
             },
           ],
+        ]),
+      );
+    });
+
+    test('that errors are returned if an event directive is invalid', () => {
+      const { errors } = normalizeSubgraph(subgraphN.definitions, subgraphN.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(2);
+      const directiveName = 'eventsSubscribe';
+      const rootFieldPath = 'Subscription.entitySubscription';
+      expect(errors![0]).toStrictEqual(
+        invalidDirectiveError(directiveName, rootFieldPath, [
+          duplicateDirectiveArgumentDefinitionsErrorMessage(directiveName, rootFieldPath, [TOPIC, SOURCE_NAME]),
+          unexpectedDirectiveArgumentErrorMessage(directiveName, ['unknownArgument']),
+        ]),
+      );
+      expect(errors![1]).toStrictEqual(
+        invalidEventDrivenGraphError([
+          invalidRootTypeFieldEventsDirectivesErrorMessage(
+            new Map<string, InvalidRootTypeFieldEventsDirectiveData>([
+              [rootFieldPath, { definesDirectives: false, invalidDirectiveNames: [] }],
+            ]),
+          ),
         ]),
       );
     });
@@ -711,6 +746,20 @@ const subgraphM: Subgraph = {
     
     type Subscription {
       entitySubscription(id: ID!): [Entity!]! @eventsSubscribe(topic: "entities.{{ args.id }}")
+    }
+    
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphN: Subgraph = {
+  name: 'subgraph-n',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @eventsSubscribe(topic: 1, topic: "topic", sourceName: false, sourceName: "sourceName", unknownArgument: null)
     }
     
     type Entity @key(fields: "id", resolvable: false) {
