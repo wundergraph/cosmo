@@ -34,7 +34,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { docsBaseURL, lintCategories } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, countLintConfigsByCategory } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {

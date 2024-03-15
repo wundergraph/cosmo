@@ -25,7 +25,7 @@ import { useSubgraph } from "@/hooks/use-subgraph";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphsBySubgraphLabels } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -186,7 +186,7 @@ const FederatedGraphsPage: NextPageWithLayout = () => {
   if (error || !data || data.response?.code !== EnumStatusCode.OK) {
     return (
       <EmptyState
-        icon={<ExclamationTriangleIcon className="h-10 w-10" />}
+        icon={<ExclamationTriangleIcon />}
         title="Could not retrieve the federated graphs that include this subgraph."
         description={
           data?.response?.details || error?.message || "Please try again"
