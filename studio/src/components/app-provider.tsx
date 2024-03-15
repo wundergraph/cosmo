@@ -110,18 +110,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (
-      currentOrgSlug &&
-      currentOrgSlug !== "undefined" &&
-      currentOrgSlug !== cookies.cosmo_org
-    ) {
+    if (currentOrgSlug && currentOrgSlug !== "undefined") {
       setCookie("cosmo_org", currentOrgSlug, {
         path: "/",
         maxAge: 3600 * 24 * 365, // 1 year
         sameSite: "lax",
       });
     }
-  }, [currentOrgSlug, router, cookies.cosmo_org, setCookie]);
+  }, [currentOrgSlug, router, setCookie]);
 
   const { data, error, isFetching } = useQuery<
     Session | null,
