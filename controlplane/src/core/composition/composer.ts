@@ -172,7 +172,7 @@ export class Composer {
               federatedGraphId: composedGraph.id,
             });
 
-            signatureSha256 = resp.signatureSHA256;
+            signatureSha256 = resp.signatureSha256;
           } finally {
             // Always clean up the draft config after the draft has been validated.
             await blobStorage.deleteObject({
