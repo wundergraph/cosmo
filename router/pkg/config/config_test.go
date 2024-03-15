@@ -157,3 +157,28 @@ func TestDefaults(t *testing.T) {
 
 	g.AssertJson(t, "config_defaults", cfg.Config)
 }
+
+func TestEventsInvalidProvider(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_provider.yaml", "")
+	require.ErrorContains(t, err, "value must be \"NATS\"")
+}
+
+func TestEventsInvalidNatsProviderProperty(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_provider_property.yaml", "")
+	require.ErrorContains(t, err, "")
+}
+
+func TestEventsInvalidNatsBothAuthenticationMethods(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_both_authentication_methods.yaml", "")
+	require.ErrorContains(t, err, "")
+}
+
+func TestEventsInvalidNatsNoAuthenticationMethod(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_no_authentication_method.yaml", "")
+	require.ErrorContains(t, err, "")
+}
+
+func TestEventsInvalidAuthenticationProperty(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_authentication_property.yaml", "")
+	require.ErrorContains(t, err, "")
+}

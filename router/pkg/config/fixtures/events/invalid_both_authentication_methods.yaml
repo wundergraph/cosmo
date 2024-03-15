@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../config.schema.json
+
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  sources:
+    default:
+      provider: NATS
+      url: "nats://localhost:4222"
+      authentication:
+        enabled: true
+        credentials:
+          username: "username"
+          password: "password"
+        token: "cat"

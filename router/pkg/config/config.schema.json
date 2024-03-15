@@ -849,7 +849,7 @@
           "description": "The provider configuration by source name",
           "additionalProperties": {
             "type": "object",
-            "additionalProperties": false,
+            "unevaluatedProperties": false,
             "properties": {
               "provider": {
                 "type": "string",
@@ -862,6 +862,87 @@
                 "type": "string",
                 "description": "The provider URL. The URL is used to connect to the provider.",
                 "format": "url"
+              }
+            },
+            "if": {
+              "properties": {
+                "provider": {
+                  "enum": [
+                    "NATS"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "authentication": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Whether EDFS uses authentication. If enabled, a username/password or token must be supplied."
+                    },
+                    "credentials": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "username": {
+                          "type": "string"
+                        },
+                        "password": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["username", "password"]
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  },
+                  "if": {
+                    "properties": {
+                      "enabled": {
+                        "const": true
+                      }
+                    }
+                  },
+                  "then": {
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "credentials": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "username": {
+                                "type": "string"
+                              },
+                              "password": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "username",
+                              "password"
+                            ]
+                          }
+                        },
+                        "required": ["credentials"]
+                      },
+                      {
+                        "properties": {
+                          "token": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["token"]
+                      }
+                    ]
+                  },
+                  "required": ["enabled"]
+                }
               }
             },
             "required": [
