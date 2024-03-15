@@ -286,7 +286,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(logger, opts.db);
 
         if (req.name === DefaultNamespace) {
           return {
@@ -934,7 +934,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
           logger = enrichLogger(ctx, logger, authContext);
 
-          const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+          const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
           const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
           const auditLogRepo = new AuditLogRepository(opts.db);
@@ -1091,7 +1091,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const orgWebhooks = new OrganizationWebhookService(
           opts.db,
           authContext.organizationId,
@@ -1456,7 +1456,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const schemaLintRepo = new SchemaLintRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
@@ -1762,7 +1762,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const feature = await orgRepo.getFeature({
           organizationId: authContext.organizationId,
           featureId: 'ai',
@@ -2030,7 +2030,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // Best effort approach. This way of counting tokens is not accurate.
           subgraphSchemaSDL.length <= 10_000
         ) {
-          const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+          const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
           const feature = await orgRepo.getFeature({
             organizationId: authContext.organizationId,
             featureId: 'ai',
@@ -2288,7 +2288,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // Best effort approach. This way of counting tokens is not accurate.
           subgraph.schemaSDL.length <= 10_000
         ) {
-          const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+          const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
           const feature = await orgRepo.getFeature({
             organizationId: authContext.organizationId,
             featureId: 'ai',
@@ -3771,8 +3771,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const userRepo = new UserRepository(opts.db);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -4028,7 +4028,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const apiKeyRepo = new ApiKeyRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -4096,7 +4096,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
         const userRepo = new UserRepository(opts.db);
 
@@ -4255,8 +4255,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -4352,7 +4352,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const userRepo = new UserRepository(opts.db);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(
@@ -4609,7 +4609,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -4652,7 +4652,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -4695,7 +4695,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -4747,7 +4747,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const memberships = await orgRepo.memberships({ userId: authContext.userId });
         const orgCount = memberships.length;
 
@@ -4813,7 +4813,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         return opts.db.transaction(async (tx) => {
-          const orgRepo = new OrganizationRepository(tx, opts.billingDefaultPlanId);
+          const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
           const billingRepo = new BillingRepository(tx);
           const billingService = new BillingService(tx, billingRepo);
 
@@ -4839,7 +4839,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         const org = await orgRepo.byId(authContext.organizationId);
@@ -4941,7 +4941,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         const org = await orgRepo.byId(authContext.organizationId);
@@ -5062,7 +5062,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const oidcRepo = new OidcRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -5357,7 +5357,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -5444,7 +5444,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -5506,7 +5506,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -5605,7 +5605,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const oidcRepo = new OidcRepository(opts.db);
         const oidcProvider = new OidcProvider();
 
@@ -5852,9 +5852,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         const user = await userRepo.byId(authContext.userId);
@@ -5957,7 +5957,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.isAdmin) {
           return {
@@ -5989,7 +5989,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
@@ -6631,7 +6631,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const fedgraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -6713,7 +6713,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const fedgraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -6946,7 +6946,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
         if (!graph) {
@@ -7025,7 +7025,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const analyticsRetention = await orgRepo.getFeature({
           organizationId: authContext.organizationId,
@@ -7082,7 +7082,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
         if (!graph) {
@@ -7140,7 +7140,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
         if (!graph) {
@@ -7217,8 +7217,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const orgMembers = await orgRepo.getMembers({ organizationID: authContext.organizationId });
         const pendingInvitations = await orgInvitationRepo.getPendingInvitationsOfOrganization({
@@ -7306,7 +7306,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const organization = await orgRepo.byId(authContext.organizationId);
 
@@ -7336,7 +7336,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const configs = await orgRepo.getWebhookConfigs(authContext.organizationId);
 
@@ -7356,7 +7356,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const eventsMeta = await orgRepo.getWebhookMeta(req.id, authContext.organizationId);
 
@@ -7499,7 +7499,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const integrations = await orgRepo.getIntegrations(authContext.organizationId);
 
@@ -7519,7 +7519,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepository = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepository = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         if (!opts.githubApp) {
           return {
@@ -7895,7 +7895,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         return {
           response: {
@@ -7914,7 +7914,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const graphCompositionRepository = new GraphCompositionRepository(logger, opts.db);
 
         req.namespace = req.namespace || DefaultNamespace;
@@ -8207,7 +8207,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const enabled = await orgRepo.updateFeature({
           id: 'ai',
@@ -8246,7 +8246,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(logger, opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.isAdmin) {
@@ -8375,7 +8375,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         try {
           const data = await opts.db.transaction(async (tx) => {
-            const orgRepo = new OrganizationRepository(tx, opts.billingDefaultPlanId);
+            const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
             const billingRepo = new BillingRepository(tx);
             const billingService = new BillingService(tx, billingRepo);
             const auditLogRepo = new AuditLogRepository(tx);
@@ -8773,7 +8773,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(logger, opts.db);
 
         const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
         if (!canAccessDiscussion) {
@@ -8994,7 +8994,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const subgraphMetricsRepo = new SubgraphMetricsRepository(logger, opts.chClient, opts.db);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
         if (!subgraph) {
@@ -9054,7 +9054,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const subgraphMetricsRepo = new SubgraphMetricsRepository(logger, opts.chClient, opts.db);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
         if (!subgraph) {

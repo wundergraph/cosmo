@@ -84,7 +84,7 @@ export class OrganizationWebhookService {
   }
 
   private async syncOrganizationSettings(eventName: OrganizationEventName) {
-    const orgRepo = new OrganizationRepository(this.db, this.defaultBillingPlanId);
+    const orgRepo = new OrganizationRepository(this.logger, this.db, this.defaultBillingPlanId);
     const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
       with: {

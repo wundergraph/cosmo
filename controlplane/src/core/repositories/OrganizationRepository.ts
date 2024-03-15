@@ -7,6 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, eq, inArray, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { FastifyBaseLogger } from 'fastify';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -34,6 +35,7 @@ export class OrganizationRepository {
   protected billing: BillingRepository;
 
   constructor(
+    private logger: FastifyBaseLogger,
     private db: PostgresJsDatabase<typeof schema>,
     private defaultBillingPlanId?: string,
   ) {
@@ -591,7 +593,7 @@ export class OrganizationRepository {
 
     const meta: PartialMessage<EventMeta>[] = [];
 
-    const fedGraphRepo = new FederatedGraphRepository(this.db, organizationId);
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
     const federatedGraphIds = [];
     const monographIds = [];
 
@@ -908,7 +910,7 @@ export class OrganizationRepository {
             },
           };
 
-          const fedGraphRepo = new FederatedGraphRepository(this.db, organizationId);
+          const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
           const federatedGraphIds = [];
           const monographIds = [];
 
