@@ -20,7 +20,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--label-matcher [labels...]',
-    'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
+    'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod. This will override existing label matchers.',
   );
   command.option(
     '--unset-label-matchers',
