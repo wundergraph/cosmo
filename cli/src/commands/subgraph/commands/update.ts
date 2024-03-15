@@ -21,7 +21,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. This will override existing labels.',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. This will overwrite existing labels.',
   );
   command.option(
     '--unset-labels',

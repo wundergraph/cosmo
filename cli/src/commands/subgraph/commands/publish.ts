@@ -27,7 +27,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. Required to create the subgraph.',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. Required to create the subgraph. This will overwrite existing labels.',
     [],
   );
   command.option(
