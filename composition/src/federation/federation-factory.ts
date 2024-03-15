@@ -13,6 +13,7 @@ import {
   incompatibleParentKindFatalError,
   incompatibleSharedEnumError,
   invalidFieldShareabilityError,
+  invalidImplementedTypeError,
   invalidRequiredInputValueError,
   minimumSubgraphRequirementError,
   noConcreteTypesForAbstractTypeError,
@@ -36,6 +37,7 @@ import {
   ENTITIES,
   INACCESSIBLE,
   INPUT_OBJECT,
+  PARENT_DEFINITION_DATA,
   QUERY,
   REQUIRES_SCOPES,
   ROOT_TYPES,
@@ -179,22 +181,27 @@ export class FederationFactory {
       return interfaces;
     }
     const implementationErrorsMap = new Map<string, ImplementationErrors>();
+    const invalidImplementationTypeStringByTypeName = new Map<string, string>();
     for (const interfaceName of data.implementedInterfaceTypeNames) {
       interfaces.push(stringToNamedTypeNode(interfaceName));
-      const interfaceData = this.parentDefinitionDataByTypeName.get(interfaceName);
-      if (!interfaceData) {
-        this.errors.push(undefinedTypeError(interfaceName));
+      const implementationData = getOrThrowError(
+        this.parentDefinitionDataByTypeName,
+        interfaceName,
+        PARENT_DEFINITION_DATA,
+      );
+      if (implementationData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        invalidImplementationTypeStringByTypeName.set(
+          implementationData.name,
+          kindToTypeString(implementationData.kind),
+        );
         continue;
-      }
-      if (interfaceData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        throw incompatibleParentKindFatalError(interfaceName, Kind.INTERFACE_TYPE_DEFINITION, interfaceData.kind);
       }
       const implementationErrors: ImplementationErrors = {
         invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
         unimplementedFields: [],
       };
       let hasErrors = false;
-      for (const [fieldName, interfaceField] of interfaceData.fieldDataByFieldName) {
+      for (const [fieldName, interfaceField] of implementationData.fieldDataByFieldName) {
         let hasNestedErrors = false;
         const fieldData = data.fieldDataByFieldName.get(fieldName);
         if (!fieldData) {
@@ -261,6 +268,9 @@ export class FederationFactory {
       if (hasErrors) {
         implementationErrorsMap.set(interfaceName, implementationErrors);
       }
+    }
+    if (invalidImplementationTypeStringByTypeName.size > 0) {
+      this.errors.push(invalidImplementedTypeError(data.name, invalidImplementationTypeStringByTypeName));
     }
     if (implementationErrorsMap.size) {
       this.errors.push(
@@ -329,14 +339,14 @@ export class FederationFactory {
       }
     }
     for (const entityAncestorTypeName of entityAncestors) {
-      const entityContainer = getOrThrowError(
+      const entityObjectData = getOrThrowError(
         this.parentDefinitionDataByTypeName,
         entityAncestorTypeName,
         'parentDefinitionDataByTypeName',
       ) as ObjectDefinitionData;
       const mutualEntityAncestorRootTypeFieldSubgraphs = getAllMutualEntries(
         rootTypeFieldSubgraphs,
-        entityContainer.subgraphNames,
+        entityObjectData.subgraphNames,
       );
       const mutualEntityAncestorSubgraphsNames = getAllMutualEntries(
         mutualEntityAncestorRootTypeFieldSubgraphs,
