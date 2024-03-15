@@ -690,7 +690,7 @@ export const FederatedGraphsCards = ({
     }
   }, [isMigrationSuccess]);
 
-  if (!graphs || graphs.length !== 0)
+  if (!graphs || graphs.length === 0)
     return (
       <Empty
         refetch={refetch}
