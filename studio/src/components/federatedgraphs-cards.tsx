@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFireworks } from "@/hooks/use-fireworks";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
@@ -491,12 +492,23 @@ export const Empty = ({
       }
       actions={
         <div className="flex flex-col gap-y-6">
-          <CLI
-            command={`npx wgc federated-graph create production --namespace ${router.query.namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
-          />
-          <CLI
-            command={`npx wgc monograph create production --namespace ${router.query.namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
-          />
+          <Tabs defaultValue="federated" className="mt-8 w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="federated">Federated Graph</TabsTrigger>
+              <TabsTrigger value="monograph">Monograph</TabsTrigger>
+            </TabsList>
+            <TabsContent value="federated">
+              <CLI
+                command={`npx wgc federated-graph create production --namespace ${router.query.namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
+              />
+            </TabsContent>
+            <TabsContent value="monograph">
+              <CLI
+                command={`npx wgc monograph create production --namespace ${router.query.namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
+              />
+            </TabsContent>
+          </Tabs>
+
           {checkUserAccess({
             rolesToBe: ["admin", "developer"],
             userRoles: user?.currentOrganization.roles || [],
@@ -678,7 +690,7 @@ export const FederatedGraphsCards = ({
     }
   }, [isMigrationSuccess]);
 
-  if (!graphs || graphs.length === 0)
+  if (!graphs || graphs.length !== 0)
     return (
       <Empty
         refetch={refetch}
