@@ -41,6 +41,8 @@ global:
     webUrl: 'http://controlplane.wundergraph.local'
     # The following secret is used to sign cookie and JWT tokens
     jwtSecret: '1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM'
+    # The following secret is used to sign short-lived JWT tokens to provide access to router configs in the webhooks
+    admissionJwtSecret: 'uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW'
 
   otelcollector:
     enabled: true
@@ -75,6 +77,8 @@ global:
 
   cdn:
     enabled: true
+    webUrl: 'http://cdn.wundergraph.local'
+    port: 8787
 
 # Overall Ingress for the Cosmo Platform
 ingress:
@@ -108,6 +112,7 @@ controlplane:
     redisHost: 'cosmo-redis-master'
     redisPort: 6379
     s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+    cdnBaseUrl: 'http://cosmo-cdn:8787'
 
 # Cosmo Router. For more options, please refer to the CHART.md
 router:

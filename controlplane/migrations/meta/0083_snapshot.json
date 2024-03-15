@@ -1,5 +1,5 @@
 {
-  "id": "e23bc083-e97b-454a-b775-557e62f0bdd6",
+  "id": "9c780134-32b2-425e-b281-4671ef79d47c",
   "prevId": "9516e493-e237-4cc9-916e-5dc7af7c8376",
   "version": "5",
   "dialect": "pg",
@@ -904,6 +904,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "admission_webhook_url": {
+          "name": "admission_webhook_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -1211,6 +1217,24 @@
         "router_config": {
           "name": "router_config",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "router_config_signature": {
+          "name": "router_config_signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deployment_error": {
+          "name": "deployment_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "admission_error": {
+          "name": "admission_error",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -3107,15 +3131,7 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "slack_schema_update_event_configs_slack_integration_config_id_federated_graph_id_pk": {
-          "name": "slack_schema_update_event_configs_slack_integration_config_id_federated_graph_id_pk",
-          "columns": [
-            "slack_integration_config_id",
-            "federated_graph_id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
     "subgraph_members": {
@@ -3379,7 +3395,7 @@
           "name": "type",
           "type": "target_type",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

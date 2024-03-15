@@ -49,6 +49,8 @@ const {
   REDIS_TLS_CERT,
   REDIS_TLS_KEY,
   REDIS_PASSWORD,
+  AUTH_ADMISSION_JWT_SECRET,
+  CDN_BASE_URL,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -82,6 +84,10 @@ const options: BuildConfig = {
   webhook: {
     url: WEBHOOK_URL,
     key: WEBHOOK_SECRET,
+  },
+  cdnBaseUrl: CDN_BASE_URL,
+  admissionWebhook: {
+    secret: AUTH_ADMISSION_JWT_SECRET,
   },
   githubApp: {
     webhookSecret: GITHUB_APP_WEBHOOK_SECRET,

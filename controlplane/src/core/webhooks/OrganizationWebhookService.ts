@@ -2,11 +2,13 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
-import { PartialMessage, PlainMessage } from '@bufbuild/protobuf';
+import { PlainMessage } from '@bufbuild/protobuf';
+import axiosRetry, { exponentialDelay } from 'axios-retry';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
-import { post } from './utils.js';
+import { makeWebhookRequest } from './utils.js';
 
 export interface FederatedGraphSchemaUpdate {
   eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;
@@ -56,6 +58,7 @@ export class OrganizationWebhookService {
   private synced?: boolean;
   private readonly logger: pino.Logger;
   private readonly defaultBillingPlanId?: string;
+  private httpClient: AxiosInstance;
 
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
@@ -67,6 +70,17 @@ export class OrganizationWebhookService {
     this.defaultBillingPlanId = defaultBillingPlanId;
     this.configs = [];
     this.synced = false;
+
+    this.httpClient = axios.create({
+      timeout: 10_000,
+    });
+    axiosRetry(this.httpClient, {
+      retries: 5,
+      retryDelay: (retryCount) => {
+        return exponentialDelay(retryCount);
+      },
+      shouldResetTimeout: true,
+    });
   }
 
   private async syncOrganizationSettings(eventName: OrganizationEventName) {
@@ -200,7 +214,7 @@ export class OrganizationWebhookService {
           }
         }
 
-        const fedRepo = new FederatedGraphRepository(this.db, eventData.payload.organization.id);
+        const fedRepo = new FederatedGraphRepository(this.logger, this.db, eventData.payload.organization.id);
         const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(graph.id);
 
         let linkToChangelog = `${process.env.WEB_BASE_URL}/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name}`;
@@ -319,8 +333,15 @@ export class OrganizationWebhookService {
       return;
     }
 
+    const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
+
     for (const config of this.configs) {
       if (!this.shouldProcess(eventData, config)) {
+        continue;
+      }
+
+      if (!config.url) {
+        logger.error('Webhook URL is not set');
         continue;
       }
 
@@ -335,7 +356,17 @@ export class OrganizationWebhookService {
         };
       }
 
-      post(OrganizationEventName[eventData.eventName], data, this.logger, 'debug', config.url!, config.key);
+      // @TODO Use a queue to send the events
+      makeWebhookRequest(this.httpClient, data, config.url, config.key).catch((error: AxiosError) => {
+        if (error instanceof AxiosError) {
+          logger.debug(
+            { statusCode: error.response?.status, message: error.message },
+            'Could not send organization webhook event',
+          );
+        } else {
+          logger.debug(error, 'Could not send organization webhook event');
+        }
+      });
     }
   }
 
