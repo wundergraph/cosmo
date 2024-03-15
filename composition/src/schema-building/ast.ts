@@ -19,8 +19,8 @@ import {
   TypeNode,
   UnionTypeDefinitionNode,
 } from 'graphql';
-import { formatDescription } from '../ast/utils';
-import { maximumTypeNestingExceededFatalError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
+import { formatDescription, stringToNameNode } from '../ast/utils';
+import { maximumTypeNestingExceededError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
 import { MAXIMUM_TYPE_NESTING } from '../utils/constants';
 
 export type MutableDirectiveDefinitionNode = {
@@ -85,13 +85,13 @@ export type MutableFieldNode = {
   description?: StringValueNode;
 };
 
-export function getMutableFieldNode(node: FieldDefinitionNode, hostPath: string): MutableFieldNode {
+export function getMutableFieldNode(node: FieldDefinitionNode, hostPath: string, errors: Error[]): MutableFieldNode {
   return {
     arguments: [],
     directives: [],
     kind: node.kind,
     name: { ...node.name },
-    type: deepCopyTypeNode(node.type, hostPath),
+    type: getMutableTypeNode(node.type, hostPath, errors),
     description: formatDescription(node.description),
   };
 }
@@ -121,12 +121,16 @@ export type MutableInputValueNode = {
   description?: StringValueNode;
 };
 
-export function getMutableInputValueNode(node: InputValueDefinitionNode, hostPath: string): MutableInputValueNode {
+export function getMutableInputValueNode(
+  node: InputValueDefinitionNode,
+  hostPath: string,
+  errors: Error[],
+): MutableInputValueNode {
   return {
     directives: [],
     kind: node.kind,
     name: { ...node.name },
-    type: deepCopyTypeNode(node.type, hostPath),
+    type: getMutableTypeNode(node.type, hostPath, errors),
     defaultValue: node.defaultValue,
     description: formatDescription(node.description),
   };
@@ -225,7 +229,7 @@ export type MutableNonNullTypeNode = {
   type: MutableNamedTypeNode | MutableListTypeNode;
 };
 
-export function getMutableTypeNode(node: TypeNode, typePath: string): MutableTypeNode {
+export function getMutableTypeNode(node: TypeNode, typePath: string, errors: Error[]): MutableTypeNode {
   const deepCopy: MutableIntermediateTypeNode = { kind: node.kind };
   let lastTypeNode = deepCopy;
   for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
@@ -249,7 +253,9 @@ export function getMutableTypeNode(node: TypeNode, typePath: string): MutableTyp
         throw unexpectedTypeNodeKindFatalError(typePath);
     }
   }
-  throw maximumTypeNestingExceededFatalError(typePath, MAXIMUM_TYPE_NESTING);
+  errors.push(maximumTypeNestingExceededError(typePath, MAXIMUM_TYPE_NESTING));
+  // Return a dummy type when the type has exceeded nesting
+  return { kind: Kind.NAMED_TYPE, name: stringToNameNode(getTypeNodeNamedTypeName(node)) };
 }
 
 export type MutableUnionNode = {
@@ -266,31 +272,6 @@ export function getMutableUnionNode(node: UnionTypeDefinitionNode): MutableUnion
     name: { ...node.name },
     description: formatDescription(node.description),
   };
-}
-
-export function deepCopyTypeNode(node: TypeNode, hostPath: string): TypeNode {
-  const deepCopy: MutableIntermediateTypeNode = { kind: node.kind };
-  let lastTypeNode = deepCopy;
-  for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
-    switch (node.kind) {
-      case Kind.NAMED_TYPE:
-        lastTypeNode.name = { ...node.name };
-        return deepCopy as TypeNode;
-      case Kind.LIST_TYPE:
-        lastTypeNode.kind = node.kind;
-        lastTypeNode.type = { kind: node.type.kind };
-        lastTypeNode = lastTypeNode.type;
-        node = node.type;
-        continue;
-      case Kind.NON_NULL_TYPE:
-        lastTypeNode.kind = node.kind;
-        lastTypeNode.type = { kind: node.type.kind };
-        lastTypeNode = lastTypeNode.type;
-        node = node.type;
-        continue;
-    }
-  }
-  throw maximumTypeNestingExceededFatalError(hostPath, MAXIMUM_TYPE_NESTING);
 }
 
 export type MutableTypeDefinitionNode =

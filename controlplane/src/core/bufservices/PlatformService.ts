@@ -1542,7 +1542,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
         if (schemaChanges.kind === 'failure') {
-          logger.debug(`Error finding diff between graphs: ${schemaChanges.error}`);
+          logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
           return {
             response: {
               code: schemaChanges.errorCode,
