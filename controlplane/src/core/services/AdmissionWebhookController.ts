@@ -86,12 +86,10 @@ export class AdmissionWebhookController {
       );
 
       if (err instanceof AxiosError) {
-        if (err.response?.status !== 200) {
-          if (err.response?.data?.error) {
-            throw new AdmissionError(
-              `Config validation has failed. /validate-config handler responded with: StatusCode: ${err.response.status}. Error: ${err.response.data.error}`,
-            );
-          }
+        if (err.response?.status !== 200 && err.response?.data?.error) {
+          throw new AdmissionError(
+            `Config validation has failed. /validate-config handler responded with: StatusCode: ${err.response.status}. Error: ${err.response.data.error}`,
+          );
         }
         throw new AdmissionError(
           `Unable to reach admission webhook handler on ${url}. Make sure the URL is correct and the service is running.`,
