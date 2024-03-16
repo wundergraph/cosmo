@@ -4,7 +4,13 @@ import pkg from "./package.json" assert { type: "json" };
 const isProd = process.env.NODE_ENV === "production";
 const debugCSP = true
 
+// Content Security Policy (CSP) is a security standard that helps prevent cross-site scripting (XSS),
+// click-jacking, and other code injection attacks resulting from execution of malicious content
+// in the trusted web page context.
+// For more information see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+// Known provider content security policies:
 // For Stripe see https://docs.stripe.com/security/guide?csp=csp-js#content-security-policy
+// For Koala see https://getkoala.com/docs/sdk/installation
 // 'unsafe-eval' is only used in development mode, when script is injected by Next.js
 
 const cspHeader = `
