@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.73.1](https://github.com/wundergraph/cosmo/compare/studio@0.73.0...studio@0.73.1) (2024-03-16)
+
+### Bug Fixes
+
+* load monaco from public folder ([#641](https://github.com/wundergraph/cosmo/issues/641)) ([a691c95](https://github.com/wundergraph/cosmo/commit/a691c95a6cf2641cc683eba897fa5344ba41bd0c)) (@StarpTech)
+
 # [0.73.0](https://github.com/wundergraph/cosmo/compare/studio@0.72.0...studio@0.73.0) (2024-03-16)
 
 ### Bug Fixes
