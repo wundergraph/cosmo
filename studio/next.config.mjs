@@ -5,7 +5,7 @@ const isProd = process.env.NODE_ENV === "production";
 const debugCSP = true
 
 // For Stripe see https://docs.stripe.com/security/guide?csp=csp-js#content-security-policy
-// 'unsafe-eval' is only used in development mode script is injected by Next.js
+// 'unsafe-eval' is only used in development mode, when script is injected by Next.js
 
 const cspHeader = `
   default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${process.env.NEXT_PUBLIC_COSMO_CP_URL};
