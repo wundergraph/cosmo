@@ -1,12 +1,11 @@
 import withMarkdoc from "@markdoc/next.js";
 import pkg from "./package.json" assert { type: "json" };
 
-const isProd = process.env.NODE_ENV === "production";
 const isPreview = process.env.VERCEL_ENV === "preview";
-// Disable once https://github.com/vercel/next.js/issues/23587 is fixed
+// Allow it only for development once https://github.com/vercel/next.js/issues/23587 is fixed
 const allowUnsafeEval = true
 // Report CSP violations to the console instead of blocking them
-const debugCSP = true
+const debugCSP = false
 
 // Content Security Policy (CSP) is a security standard that helps prevent cross-site scripting (XSS),
 // clickjacking, and other code injection attacks resulting from execution of malicious content
@@ -20,7 +19,7 @@ const debugCSP = true
 
 const cspHeader = `
   default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${process.env.NEXT_PUBLIC_COSMO_CP_URL};
-  script-src 'report-sample' 'self' 'unsafe-inline' ${isProd && !allowUnsafeEval ? '' : "'unsafe-eval'"} https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://*.getkoala.com ${isPreview ? 'https://vercel.live/ https://vercel.com' : ''};
+  script-src 'report-sample' 'self' 'unsafe-inline' ${allowUnsafeEval ? "'unsafe-eval'" : ''} https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://*.getkoala.com ${isPreview ? 'https://vercel.live/ https://vercel.com' : ''};
   style-src 'report-sample' 'self' 'unsafe-inline' data:;;
   object-src 'none';
   base-uri 'self';
