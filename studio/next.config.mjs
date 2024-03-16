@@ -29,7 +29,7 @@ const cspHeader = `
   img-src 'self' ${isPreview ? 'https://vercel.live/ https://vercel.com *.pusher.com/ data: blob:' : ''};
   manifest-src 'self';
   media-src 'self';
-  worker-src 'none';
+  worker-src 'self';
 `
 
 /** @type {import("next").NextConfig} */
