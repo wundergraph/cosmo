@@ -11,8 +11,8 @@
   ],
   "scripts": {
     "dev": "cross-env FORCE_COLOR=1 next dev",
-    "build": "pnpm run copy-monaco && next build",
-    "copy-monaco": "rm -rf public/monaco-editor/min && mkdir -p public/monaco-editor/min && cp -r node_modules/monaco-editor/min/vs public/monaco-editor/min",
+    "build": "next build",
+    "copy-monaco": "rm -rf public/monaco-editor && mkdir -p public/monaco-editor/min && cp -r node_modules/monaco-editor/min/vs public/monaco-editor/min",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run --reporter=default --reporter=hanging-process",
