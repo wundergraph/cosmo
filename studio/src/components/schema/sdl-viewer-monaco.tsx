@@ -24,7 +24,7 @@ loader.config({
     // Load Monaco Editor from "public" directory
     vs: "/monaco-editor/min/vs",
     // Load Monaco Editor from different CDN
-    // vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs',
+    // vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs',
   },
 });
 
