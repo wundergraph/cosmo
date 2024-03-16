@@ -56,6 +56,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
+        admissionWebhookURL: options.admissionWebhookUrl,
         unsetLabelMatchers: options.unsetLabelMatchers,
         unsetAdmissionWebhookUrl: options.unsetAdmissionWebhookUrl,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
