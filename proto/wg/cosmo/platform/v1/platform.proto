@@ -33,8 +33,8 @@ message PublishFederatedSubgraphRequest {
   optional string routing_url = 3;
   // The labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
   repeated Label labels = 4;
-  // The headers are the headers which will be used to route the requests to the subgraph.
-  repeated string headers = 5;
+  // The headers are the headers which will be used to route the requests to the subgraph. (Not used anymore)
+  repeated string headers = 5 [deprecated = true];
   // The subscription protocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
   // The url used for subscriptions
@@ -97,8 +97,8 @@ message CreateFederatedSubgraphRequest {
   string routing_url = 2;
   // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
   repeated Label labels = 3;
-  // headers are the headers which will be used to route the requests to the subgraph.
-  repeated string headers = 4;
+  // headers are the headers which will be used to route the requests to the subgraph. (Not used anymore)
+  repeated string headers = 4 [deprecated = true];
   // subscription protocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
     // url used for subscriptions
@@ -489,7 +489,6 @@ message UpdateFederatedGraphRequest {
   string namespace = 5;
   optional bool unset_label_matchers = 6;
   optional string admissionWebhookURL = 7;
-  optional bool unset_admission_webhook_url = 8;
 }
 
 message UpdateFederatedGraphResponse {

@@ -48,3 +48,16 @@ export function isValidUrl(url: string) {
     return false;
   }
 }
+
+export function isValidSubscriptionProtocol(protocol: string) {
+  switch (protocol) {
+    case 'sse':
+    case 'sse_post':
+    case 'ws': {
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}

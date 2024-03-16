@@ -180,32 +180,26 @@ export class FederatedGraphRepository {
         throw new Error(`Federated graph not found`);
       }
 
-      // update routing URL when changed
+      // Update routing URL when changed. (Is required)
       if (routingUrl && federatedGraph.routingUrl !== routingUrl) {
         await tx.update(federatedGraphs).set({ routingUrl }).where(eq(federatedGraphs.id, federatedGraph.id)).execute();
       }
 
-      // update admission webhook URL when changed
-      if (data.unsetAdmissionWebhookURL) {
+      // Update admission webhook URL when changed. (Is optional)
+      if (admissionWebhookURL !== undefined && federatedGraph.admissionWebhookURL !== admissionWebhookURL) {
         await tx
           .update(federatedGraphs)
-          .set({ admissionWebhookURL: null })
-          .where(eq(federatedGraphs.id, federatedGraph.id))
-          .execute();
-      } else if (admissionWebhookURL && federatedGraph.admissionWebhookURL !== admissionWebhookURL) {
-        await tx
-          .update(federatedGraphs)
-          .set({ admissionWebhookURL })
+          .set({ admissionWebhookURL: admissionWebhookURL || null })
           .where(eq(federatedGraphs.id, federatedGraph.id))
           .execute();
       }
 
-      // update the readme of the fed graph
-      if (data.readme) {
+      // Update the readme of the fed graph. (Is optional)
+      if (data.readme !== undefined) {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
 
-      // update label matchers
+      // Update label matchers (Is optional)
       if (data.labelMatchers.length > 0 || data.unsetLabelMatchers) {
         const labelMatchers = data.unsetLabelMatchers ? [] : normalizeLabelMatchers(data.labelMatchers);
 
