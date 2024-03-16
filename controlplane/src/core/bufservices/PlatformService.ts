@@ -2585,6 +2585,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           blobStorage: opts.blobStorage,
           namespaceId: federatedGraph.namespaceId,
           unsetLabelMatchers: req.unsetLabelMatchers,
+          admissionWebhookURL: req.admissionWebhookURL,
           unsetAdmissionWebhookURL: req.unsetAdmissionWebhookUrl,
           admissionConfig: {
             cdnBaseUrl: opts.cdnBaseUrl,
