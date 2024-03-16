@@ -489,6 +489,7 @@ message UpdateFederatedGraphRequest {
   string namespace = 5;
   optional bool unset_label_matchers = 6;
   optional string admissionWebhookURL = 7;
+  optional bool unset_admission_webhook_url = 8;
 }
 
 message UpdateFederatedGraphResponse {

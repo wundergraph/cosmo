@@ -92,9 +92,6 @@ export class AdmissionWebhookController {
               `Config validation has failed. /validate-config handler responded with: StatusCode: ${err.response.status}. Error: ${err.response.data.error}`,
             );
           }
-          throw new AdmissionError(
-            `Non-200 status code from /validate-config handler received: StatusCode: ${err.response?.status}`,
-          );
         }
         throw new AdmissionError(
           `Unable to reach admission webhook handler on ${url}. Make sure the URL is correct and the service is running.`,

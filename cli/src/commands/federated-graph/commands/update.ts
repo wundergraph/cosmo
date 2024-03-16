@@ -23,8 +23,17 @@ export default (opts: BaseCommandOptions) => {
     'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
   );
   command.option(
+    '--admission-webhook-url <url>',
+    'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
+    [],
+  );
+  command.option(
     '--unset-label-matchers',
     'This will remove all label matchers. It will not add new label matchers if both this and --label-matchers option is passed.',
+  );
+  command.option(
+    '--unset-admission-webhook-url',
+    'This will remove the admission webhook url. It will not add new admission webhook url if both this and --admission-webhook-url option is passed.',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
@@ -48,6 +57,7 @@ export default (opts: BaseCommandOptions) => {
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
         unsetLabelMatchers: options.unsetLabelMatchers,
+        unsetAdmissionWebhookUrl: options.unsetAdmissionWebhookUrl,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {

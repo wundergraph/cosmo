@@ -159,7 +159,8 @@ export class FederatedGraphRepository {
     readme?: string;
     blobStorage: BlobStorage;
     namespaceId: string;
-    unsetLabelMatchers: boolean;
+    unsetLabelMatchers?: boolean;
+    unsetAdmissionWebhookURL?: boolean;
     admissionWebhookURL?: string;
     admissionConfig: {
       jwtSecret: string;
@@ -185,8 +186,13 @@ export class FederatedGraphRepository {
       }
 
       // update admission webhook URL when changed
-      // if undefined, it means the user wants to remove the admission webhook
-      if (admissionWebhookURL !== undefined && federatedGraph.admissionWebhookURL !== admissionWebhookURL) {
+      if (data.unsetAdmissionWebhookURL) {
+        await tx
+          .update(federatedGraphs)
+          .set({ admissionWebhookURL: null })
+          .where(eq(federatedGraphs.id, federatedGraph.id))
+          .execute();
+      } else if (admissionWebhookURL && federatedGraph.admissionWebhookURL !== admissionWebhookURL) {
         await tx
           .update(federatedGraphs)
           .set({ admissionWebhookURL })

@@ -3837,6 +3837,11 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
    */
   admissionWebhookURL?: string;
 
+  /**
+   * @generated from field: optional bool unset_admission_webhook_url = 8;
+   */
+  unsetAdmissionWebhookUrl?: boolean;
+
   constructor(data?: PartialMessage<UpdateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3852,6 +3857,7 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "unset_label_matchers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "unset_admission_webhook_url", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphRequest {
