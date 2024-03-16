@@ -9,11 +9,11 @@ const debugCSP = true
 
 const cspHeader = `
   default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${process.env.NEXT_PUBLIC_COSMO_CP_URL};
-  script-src 'report-sample' 'self' 'unsafe-inline' ${isProd ? '' : "'unsafe-eval'"} https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://cdn.getkoala.com;
+  script-src 'report-sample' 'self' 'unsafe-inline' ${isProd ? '' : "'unsafe-eval'"} https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://*.getkoala.com
   style-src 'report-sample' 'self' 'unsafe-inline' data:;;
   object-src 'none';
   base-uri 'self';
-  connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${process.env.NEXT_PUBLIC_COSMO_CP_URL} https://api.getkoala.com wss://api.getkoala.com https://api.stripe.com https://maps.googleapis.com;
+  connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${process.env.NEXT_PUBLIC_COSMO_CP_URL} https://api.getkoala.com wss://*.getkoala.com https://*.getkoala.com https://api.stripe.com https://maps.googleapis.com;
   font-src 'self' data:;;
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
   img-src 'self';
