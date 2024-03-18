@@ -97,6 +97,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 		hash:         operation.ID,
 		clientInfo:   clientInfo,
 		variables:    operation.Variables,
+		files:        operation.Files,
 		traceOptions: traceOptions,
 		extensions:   operation.Extensions,
 		persistedID:  operation.PersistedID,
