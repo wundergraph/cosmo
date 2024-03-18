@@ -13,17 +13,16 @@ const debugCSP = false
 // For more information see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
 // Known provider content security policies:
 // For Stripe see https://docs.stripe.com/security/guide?csp=csp-js#content-security-policy
-// For Koala see https://getkoala.com/docs/sdk/installation
 // Vercel Preview Environment see https://vercel.com/docs/workflow-collaboration/comments/specialized-usage#using-a-content-security-policy
 // Important: 'unsafe-eval' is only used in development mode, when script is injected by Next.js
 
 const cspHeader = `
   default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${process.env.NEXT_PUBLIC_COSMO_CP_URL};
-  script-src 'report-sample' 'self' 'unsafe-inline' ${allowUnsafeEval ? "'unsafe-eval'" : ''} https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://*.getkoala.com ${isPreview ? 'https://vercel.live https://vercel.com' : ''};
+  script-src 'report-sample' 'self' 'unsafe-inline' ${allowUnsafeEval ? "'unsafe-eval'" : ''} https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com ${isPreview ? 'https://vercel.live https://vercel.com' : ''};
   style-src 'report-sample' 'self' 'unsafe-inline' data:;;
   object-src 'none';
   base-uri 'self';
-  connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${process.env.NEXT_PUBLIC_COSMO_CP_URL} https://*.wundergraph.com https://api.getkoala.com wss://*.getkoala.com https://plausible.io https://*.getkoala.com https://api.stripe.com https://maps.googleapis.com ${isPreview ? 'https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com' : ''};
+  connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${process.env.NEXT_PUBLIC_COSMO_CP_URL} https://*.wundergraph.com wss://*.wundergraph.com https://plausible.io https://api.stripe.com https://maps.googleapis.com ${isPreview ? 'https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com' : ''};
   font-src 'self' data:;;
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com ${isPreview ? 'https://vercel.live/ https://vercel.com' : ''};
   img-src 'self' ${isPreview ? 'https://vercel.live/ https://vercel.com *.pusher.com/ data: blob:' : ''};
