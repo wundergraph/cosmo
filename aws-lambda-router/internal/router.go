@@ -2,7 +2,9 @@ package internal
 
 import (
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/zap"
@@ -12,6 +14,7 @@ type Option func(*RouterConfig)
 
 type RouterConfig struct {
 	RouterConfigPath     string
+	ConfigPath           string
 	TelemetryServiceName string
 	RouterOpts           []core.Option
 	GraphApiToken        string
@@ -36,19 +39,53 @@ func NewRouter(opts ...Option) *core.Router {
 
 	logger := rc.Logger
 
-	routerConfig, err := core.SerializeConfigFromFile(rc.RouterConfigPath)
-	if err != nil {
-		logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", rc.RouterConfigPath))
-	}
-
 	routerOpts := []core.Option{
 		core.WithLogger(logger),
-		core.WithPlayground(true),
-		core.WithIntrospection(true),
-		core.WithStaticRouterConfig(routerConfig),
 		core.WithAwsLambdaRuntime(),
-		core.WithGraphApiToken(rc.GraphApiToken),
 	}
+
+	routerConfigPath := rc.RouterConfigPath
+
+	// Loading the config file is optional, but if a path is specified we assume it's required.
+	if rc.ConfigPath != "" {
+		logger.Info("Loading config", zap.String("path", rc.ConfigPath))
+		cfg, err := config.LoadConfig(rc.ConfigPath, "")
+		if err != nil {
+			logger.Fatal("Could not load config", zap.Error(err), zap.String("path", rc.ConfigPath))
+		} else {
+			logger.Info("Loaded config", zap.String("path", rc.ConfigPath), zap.Any("config", cfg))
+			// Selectively apply the config options to the router, based on what is supported.
+			routerOpts = append(routerOpts,
+				core.WithGraphApiToken(cfg.Config.Graph.Token),
+				core.WithGraphQLPath(cfg.Config.GraphQLPath),
+				core.WithIntrospection(cfg.Config.IntrospectionEnabled),
+				core.WithPlayground(cfg.Config.PlaygroundEnabled),
+				core.WithPlaygroundPath(cfg.Config.PlaygroundPath),
+				core.WithOverrideRoutingURL(cfg.Config.OverrideRoutingURL),
+			)
+
+			if cfg.Config.RouterConfigPath != "" {
+				routerConfigPath = cfg.Config.RouterConfigPath
+			}
+		}
+	} else {
+		logger.Info("Using default config", zap.Any("config", rc))
+		// If no config file is specified, set up the defaults for the Lambda Cosmo Router.
+		routerOpts = append(routerOpts,
+			core.WithPlayground(true),
+			core.WithIntrospection(true),
+			core.WithGraphApiToken(rc.GraphApiToken),
+		)
+	}
+
+	if routerConfigPath == "" {
+		routerConfigPath = "router.json"
+	}
+	routerConfig, err := core.SerializeConfigFromFile(routerConfigPath)
+	if err != nil {
+		logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", routerConfigPath))
+	}
+	routerOpts = append(routerOpts, core.WithStaticRouterConfig(routerConfig))
 
 	if rc.HttpPort != "" {
 		routerOpts = append(routerOpts, core.WithListenerAddr(":"+rc.HttpPort))
@@ -96,6 +133,12 @@ func NewRouter(opts ...Option) *core.Router {
 func WithRouterConfigPath(path string) Option {
 	return func(r *RouterConfig) {
 		r.RouterConfigPath = path
+	}
+}
+
+func WithConfigPath(path string) Option {
+	return func(r *RouterConfig) {
+		r.ConfigPath = path
 	}
 }
 

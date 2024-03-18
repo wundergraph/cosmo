@@ -3,10 +3,11 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	"testing"
+
 	"github.com/akrylysov/algnhsa"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
 )
@@ -18,6 +19,7 @@ func TestHandler(t *testing.T) {
 	r := NewRouter(
 		WithLogger(logger),
 		WithRouterConfigPath("../router.json"),
+		WithConfigPath("../config.yaml"),
 	)
 	require.NoError(t, err)
 
