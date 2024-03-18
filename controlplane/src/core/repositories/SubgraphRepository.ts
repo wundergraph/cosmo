@@ -220,24 +220,25 @@ export class SubgraphRepository {
           .execute();
       }
 
-      if (data.subscriptionUrl && data.subscriptionUrl !== subgraph.subscriptionUrl) {
+      if (data.subscriptionUrl !== undefined && data.subscriptionUrl !== subgraph.subscriptionUrl) {
         subgraphChanged = true;
         const url = normalizeURL(data.subscriptionUrl);
         await tx
           .update(subgraphs)
           .set({
-            subscriptionUrl: url,
+            subscriptionUrl: url || null,
           })
           .where(eq(subgraphs.id, subgraph.id))
           .execute();
       }
 
-      if (data.subscriptionProtocol && data.subscriptionProtocol !== subgraph.subscriptionProtocol) {
+      if (data.subscriptionProtocol !== undefined && data.subscriptionProtocol !== subgraph.subscriptionProtocol) {
         subgraphChanged = true;
         await tx
           .update(subgraphs)
           .set({
-            subscriptionProtocol: data.subscriptionProtocol,
+            // ws is the default protocol
+            subscriptionProtocol: data.subscriptionProtocol || 'ws',
           })
           .where(eq(subgraphs.id, subgraph.id))
           .execute();
@@ -349,7 +350,7 @@ export class SubgraphRepository {
       }
 
       // update the readme of the subgraph
-      if (data.readme) {
+      if (data.readme !== undefined) {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
     });
