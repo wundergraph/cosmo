@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"net/http"
 	"net/url"
 	"sync"
@@ -350,6 +351,7 @@ type operationContext struct {
 	// Content is the content of the operation
 	content    string
 	variables  []byte
+	files      []httpclient.File
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan   *planWithMetaData
@@ -363,6 +365,10 @@ type operationContext struct {
 
 func (o *operationContext) Variables() []byte {
 	return o.variables
+}
+
+func (o *operationContext) Files() []httpclient.File {
+	return o.files
 }
 
 func (o *operationContext) Name() string {
