@@ -73,7 +73,7 @@ import {
 } from '../ast/utils';
 import {
   duplicateArgumentsError,
-  duplicateDirectiveArgumentDefinitionErrorMessage,
+  duplicateDirectiveArgumentDefinitionsErrorMessage,
   duplicateInterfaceError,
   duplicateUnionMemberError,
   duplicateUnionMemberExtensionError,
@@ -82,7 +82,8 @@ import {
   incompatibleChildTypesError,
   incompatibleInputValueDefaultValuesError,
   incompatibleInputValueDefaultValueTypeError,
-  incompatibleParentKindFatalError,
+  incompatibleObjectExtensionOrphanBaseTypeError,
+  incompatibleParentKindMergeError,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidKeyDirectiveArgumentErrorMessage,
@@ -141,6 +142,7 @@ import {
   getEntriesNotInHashSet,
   getValueOrDefault,
   InvalidRequiredInputValueData,
+  kindToTypeString,
   mapToArrayOfValues,
 } from '../utils/utils';
 import {
@@ -202,21 +204,19 @@ export function getDefinedArgumentsForDirective(
   const directiveArguments = directiveNode.arguments || [];
   const directiveName = directiveNode.name.value;
   const definedArguments = new Set<string>();
-  const handledDuplicateArguments = new Set<string>();
+  const duplicateArgumentNames = new Set<string>();
+  const unexpectedArgumentNames = new Set<string>();
   for (const argument of directiveArguments) {
     const argumentName = argument.name.value;
     // If an argument is observed more than once, it is a duplication error.
     // However, the error should only propagate once.
     if (definedArguments.has(argumentName)) {
-      if (!handledDuplicateArguments.has(argumentName)) {
-        handledDuplicateArguments.add(argumentName);
-        errorMessages.push(duplicateDirectiveArgumentDefinitionErrorMessage(directiveName, hostPath, argumentName));
-      }
+      duplicateArgumentNames.add(argumentName);
       continue;
     }
     const argumentTypeNode = argumentTypeNodeByArgumentName.get(argumentName);
     if (!argumentTypeNode) {
-      errorMessages.push(unexpectedDirectiveArgumentErrorMessage(directiveName, argumentName));
+      unexpectedArgumentNames.add(argumentName);
       continue;
     }
     // TODO validate argument values
@@ -226,6 +226,14 @@ export function getDefinedArgumentsForDirective(
     //   );
     // }
     definedArguments.add(argumentName);
+  }
+  if (duplicateArgumentNames.size > 0) {
+    errorMessages.push(
+      duplicateDirectiveArgumentDefinitionsErrorMessage(directiveName, hostPath, [...duplicateArgumentNames]),
+    );
+  }
+  if (unexpectedArgumentNames.size > 0) {
+    errorMessages.push(unexpectedDirectiveArgumentErrorMessage(directiveName, [...unexpectedArgumentNames]));
   }
   return definedArguments;
 }
@@ -532,13 +540,13 @@ export function addInheritedDirectivesToFieldData(
 export function addFieldDataByNode(
   fieldDataByFieldName: Map<string, FieldData>,
   node: FieldDefinitionNode,
-  errors: Error[],
   argumentDataByArgumentName: Map<string, InputValueData>,
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
   originalParentTypeName: string,
   renamedParentTypeName: string,
   subgraphName: string,
   isSubgraphVersionTwo: boolean,
+  errors: Error[],
 ): FieldData {
   const name = node.name.value;
   const fieldPath = `${originalParentTypeName}.${name}`;
@@ -552,14 +560,14 @@ export function addFieldDataByNode(
     isExternalBySubgraphName: new Map<string, boolean>([[subgraphName, isNodeExternalOrShareableResult.isExternal]]),
     isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
     isShareableBySubgraphName: new Map<string, boolean>([[subgraphName, isNodeExternalOrShareableResult.isShareable]]),
-    node: getMutableFieldNode(node, fieldPath),
+    node: getMutableFieldNode(node, fieldPath, errors),
     name,
     namedTypeName: getTypeNodeNamedTypeName(node.type),
     originalParentTypeName,
     persistedDirectivesData: newPersistedDirectivesData(),
     renamedParentTypeName,
     subgraphNames: new Set<string>([subgraphName]),
-    type: getMutableTypeNode(node.type, fieldPath),
+    type: getMutableTypeNode(node.type, fieldPath, errors),
     directivesByDirectiveName,
     description: formatDescription(node.description),
   };
@@ -709,13 +717,13 @@ export function addInputValueDataByNode(
     includeDefaultValue: !!node.defaultValue,
     isArgument,
     name,
-    node: getMutableInputValueNode(node, originalPath),
+    node: getMutableInputValueNode(node, originalPath, errors),
     originalPath,
     persistedDirectivesData: newPersistedDirectivesData(),
     renamedPath: renamedPath || originalPath,
     requiredSubgraphNames: new Set<string>(isTypeRequired(node.type) ? [subgraphName] : []),
     subgraphNames: new Set<string>([subgraphName]),
-    type: getMutableTypeNode(node.type, originalPath),
+    type: getMutableTypeNode(node.type, originalPath, errors),
     defaultValue: node.defaultValue, // TODO validate
     description: formatDescription(node.description),
   });
@@ -1464,7 +1472,12 @@ function upsertFieldData(
     return;
   }
   const fieldPath = `${existingData.renamedParentTypeName}.${existingData.name}`;
-  const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(existingData.type, incomingData.type, fieldPath);
+  const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
+    existingData.type,
+    incomingData.type,
+    fieldPath,
+    errors,
+  );
   if (typeNode) {
     existingData.type = typeNode;
   } else {
@@ -1519,6 +1532,7 @@ function upsertInputValueData(
     existingData.type,
     incomingData.type,
     existingData.originalPath,
+    errors,
   );
   if (typeNode) {
     existingData.type = typeNode;
@@ -1638,7 +1652,14 @@ export function upsertParentDefinitionData(
       existingData.kind !== Kind.INTERFACE_TYPE_DEFINITION ||
       incomingData.kind !== Kind.OBJECT_TYPE_DEFINITION
     ) {
-      throw incompatibleParentKindFatalError(existingData.name, existingData.kind, incomingData.kind);
+      errors.push(
+        incompatibleParentKindMergeError(
+          existingData.name,
+          kindToTypeString(existingData.kind),
+          kindToTypeString(incomingData.kind),
+        ),
+      );
+      return;
     }
   }
   switch (existingData.kind) {
@@ -1827,7 +1848,8 @@ export function upsertValidObjectExtensionData(
     return;
   }
   if (existingData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-    throw incompatibleParentKindFatalError(existingData.name, Kind.OBJECT_TYPE_DEFINITION, existingData.kind);
+    errors.push(incompatibleObjectExtensionOrphanBaseTypeError(existingData.name, kindToTypeString(existingData.kind)));
+    return;
   }
   upsertPersistedDirectivesData(existingData.persistedDirectivesData, incomingData.persistedDirectivesData);
   addIterableValuesToSet(incomingData.implementedInterfaceTypeNames, existingData.implementedInterfaceTypeNames);
