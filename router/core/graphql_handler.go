@@ -35,6 +35,7 @@ var (
 
 type ErrUpgradeFailed struct {
 	StatusCode int
+	SubgraphID string
 }
 
 func (e *ErrUpgradeFailed) Error() string {
@@ -300,6 +301,9 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
 			response.Errors[0].Extensions = &Extensions{
 				StatusCode: upgradeErr.StatusCode,
+			}
+			if upgradeErr.SubgraphID != "" {
+				response.Errors[0].Message = fmt.Sprintf("Upgrade request failed for Subgraph '%s'.", upgradeErr.SubgraphID)
 			}
 		}
 		if isHttpResponseWriter {

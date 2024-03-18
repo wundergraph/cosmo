@@ -421,25 +421,27 @@ func (h *WebsocketHandler) runPoller() {
 }
 
 type websocketResponseWriter struct {
-	id           string
-	protocol     wsproto.Proto
-	header       http.Header
-	buf          bytes.Buffer
-	writtenBytes int
-	logger       *zap.Logger
-	stats        WebSocketsStatistics
+	id              string
+	protocol        wsproto.Proto
+	header          http.Header
+	buf             bytes.Buffer
+	writtenBytes    int
+	logger          *zap.Logger
+	stats           WebSocketsStatistics
+	propagateErrors bool
 }
 
 var _ http.ResponseWriter = (*websocketResponseWriter)(nil)
 var _ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
 
-func newWebsocketResponseWriter(id string, protocol wsproto.Proto, logger *zap.Logger, stats WebSocketsStatistics) *websocketResponseWriter {
+func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats WebSocketsStatistics) *websocketResponseWriter {
 	return &websocketResponseWriter{
-		id:       id,
-		protocol: protocol,
-		header:   make(http.Header),
-		logger:   logger.With(zap.String("subscription_id", id)),
-		stats:    stats,
+		id:              id,
+		protocol:        protocol,
+		header:          make(http.Header),
+		logger:          logger.With(zap.String("subscription_id", id)),
+		stats:           stats,
+		propagateErrors: propagateErrors,
 	}
 }
 
@@ -482,7 +484,11 @@ func (rw *websocketResponseWriter) Flush() error {
 		// Check if the result is an error
 		errorsResult := gjson.GetBytes(payload, "errors")
 		if errorsResult.Type == gjson.JSON {
-			err = rw.protocol.WriteGraphQLErrors(rw.id, json.RawMessage(errorsResult.Raw), extensions)
+			if rw.propagateErrors {
+				err = rw.protocol.WriteGraphQLErrors(rw.id, json.RawMessage(errorsResult.Raw), extensions)
+			} else {
+				err = rw.protocol.WriteGraphQLErrors(rw.id, json.RawMessage(`[{"message":"Unable to subscribe"}]`), extensions)
+			}
 		} else {
 			err = rw.protocol.WriteGraphQLData(rw.id, payload, extensions)
 		}
@@ -627,7 +633,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, id resolve.SubscriptionIdentifier) {
 
-	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger, h.stats)
+	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.graphqlHandler.subgraphErrorPropagation.Enabled, h.logger, h.stats)
 
 	_, operationCtx, err := h.parseAndPlan(msg.Payload)
 	if err != nil {
