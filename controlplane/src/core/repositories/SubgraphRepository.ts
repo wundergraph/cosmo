@@ -1,9 +1,9 @@
 import { PlainMessage } from '@bufbuild/protobuf';
+import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, count, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import {
   graphCompositionSubgraphs,
@@ -27,9 +27,9 @@ import {
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { Composer, ComposeDeploymentError, RouterConfigUploadError } from '../composition/composer.js';
-import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { ComposeDeploymentError, Composer, RouterConfigUploadError } from '../composition/composer.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
+import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
@@ -72,7 +72,6 @@ export class SubgraphRepository {
     subscriptionProtocol?: SubscriptionProtocol;
     readme?: string;
     namespaceId: string;
-    asMonograph?: boolean;
   }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -96,7 +95,6 @@ export class SubgraphRepository {
           organizationId: this.organizationId,
           labels: uniqueLabels.map((ul) => joinLabel(ul)),
           readme: data.readme,
-          asMonograph: data.asMonograph,
         })
         .returning()
         .execute();
@@ -490,6 +488,17 @@ export class SubgraphRepository {
     });
   }
 
+  public async matchesWithMonographs(labels: Label[], namespaceId: string): Promise<boolean> {
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+
+    const graphs = await fedGraphRepo.targetsBySubgraphLabels({
+      labels,
+      namespaceId,
+    });
+
+    return graphs.some((g) => g.asMonograph === true);
+  }
+
   public async list(opts: ListFilterOptions): Promise<SubgraphDTO[]> {
     const conditions: SQL<unknown>[] = [
       eq(schema.targets.organizationId, this.organizationId),
@@ -498,10 +507,6 @@ export class SubgraphRepository {
 
     if (opts.namespaceId) {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
-    }
-
-    if (opts.excludeMonographs) {
-      conditions.push(eq(schema.targets.asMonograph, false));
     }
 
     const targets = await this.db
@@ -525,6 +530,11 @@ export class SubgraphRepository {
       if (sg === undefined) {
         throw new Error(`Subgraph ${target.name} not found`);
       }
+      // If passed, we exclude subgraphs used for monographs. The use case is we do not want the user to know it exists
+      if (opts.excludeMonographs && (await this.matchesWithMonographs(sg.labels, sg.namespaceId))) {
+        continue;
+      }
+
       subgraphs.push(sg);
     }
 
@@ -1007,18 +1017,24 @@ export class SubgraphRepository {
           eq(targets.type, 'subgraph'),
           eq(targets.organizationId, this.organizationId),
           or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId)),
-          // Exclude subgraphs used for monographs.
-          eq(targets.asMonograph, false),
         ),
       );
 
     const accessibleSubgraphs: SubgraphDTO[] = [];
+
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
 
     for (const graph of graphs) {
       const sg = await this.byTargetId(graph.targetId);
       if (sg === undefined) {
         throw new Error(`Subgraph ${graph.name} not found`);
       }
+
+      // Exclude subgraphs used for monographs. We do not want to show them to the user.
+      if (await this.matchesWithMonographs(sg.labels, sg.namespaceId)) {
+        continue;
+      }
+
       accessibleSubgraphs.push(sg);
     }
 
@@ -1102,9 +1118,8 @@ export class SubgraphRepository {
     }
 
     for (const graph of monographs) {
-      const subgraphs = await this.byGraphLabelMatchers({
-        labelMatchers: graph.labelMatchers.map((lm) => lm.labelMatcher.join(',')),
-        namespaceId: graph.namespaceId,
+      const subgraphs = await this.listByFederatedGraph({
+        federatedGraphTargetId: graph.id,
       });
 
       for (const sg of subgraphs) {

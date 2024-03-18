@@ -283,12 +283,13 @@ const AddSubgraphUsers = ({
   const isAdmin = user?.currentOrganization.roles.includes("admin");
   const { data } = useQuery(getOrganizationMembers.useQuery());
 
-  const { data: subgraphMembersData, refetch } = useQuery(
-    getSubgraphMembers.useQuery({
+  const { data: subgraphMembersData, refetch } = useQuery({
+    ...getSubgraphMembers.useQuery({
       subgraphName,
       namespace,
     }),
-  );
+    enabled: open,
+  });
 
   const [inviteOptions, setInviteOptions] = useState<string[]>([]);
 

@@ -489,7 +489,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const auditLogRepo = new AuditLogRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        const graph = await fedGraphRepo.byMonographName(req.name, req.namespace);
+        const graph = await fedGraphRepo.byName(req.name, req.namespace, {
+          asMonograph: true,
+        });
         if (!graph) {
           return {
             response: {
@@ -584,7 +586,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         console.log(req.name, req.namespace);
 
-        const graph = await fedGraphRepo.byMonographName(req.name, req.namespace);
+        const graph = await fedGraphRepo.byName(req.name, req.namespace, {
+          asMonograph: true,
+        });
         if (!graph) {
           return {
             response: {
@@ -636,7 +640,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const auditLogRepo = new AuditLogRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-        const graph = await fedGraphRepo.byFederatedGraphName(req.name, req.namespace);
+        const graph = await fedGraphRepo.byName(req.name, req.namespace, {
+          asMonograph: false,
+        });
         if (!graph) {
           return {
             response: {
@@ -1023,7 +1029,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: req.subscriptionProtocol
               ? formatSubscriptionProtocol(req.subscriptionProtocol)
               : undefined,
-            asMonograph: true,
           });
 
           if (!subgraph) {
@@ -1900,7 +1905,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         req.namespace = req.namespace || DefaultNamespace;
 
-        const graph = await federatedGraphRepo.byMonographName(req.name, req.namespace);
+        const graph = await federatedGraphRepo.byName(req.name, req.namespace, {
+          asMonograph: true,
+        });
         if (!graph) {
           return {
             response: {
@@ -2791,7 +2798,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          const graph = await fedGraphRepo.byMonographName(req.name, req.namespace);
+          const graph = await fedGraphRepo.byName(req.name, req.namespace, {
+            asMonograph: true,
+          });
           if (!graph) {
             return {
               response: {
@@ -2869,7 +2878,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraph = await fedGraphRepo.byFederatedGraphName(req.name, req.namespace);
+        const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
+          asMonograph: false,
+        });
         if (!federatedGraph) {
           return {
             response: {
@@ -3171,7 +3182,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          const graph = await fedGraphRepo.byMonographName(req.name, req.namespace);
+          const graph = await fedGraphRepo.byName(req.name, req.namespace, {
+            asMonograph: true,
+          });
           if (!graph) {
             return {
               response: {
@@ -3288,7 +3301,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraph = await fedGraphRepo.byFederatedGraphName(req.name, req.namespace);
+        const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
+          asMonograph: false,
+        });
         if (!federatedGraph) {
           return {
             response: {
@@ -3594,7 +3609,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraph = await fedGraphRepo.byFederatedGraphName(req.name, req.namespace);
+        const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
+          asMonograph: false,
+        });
         if (!federatedGraph) {
           return {
             response: {
@@ -4499,7 +4516,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         });
 
-        const migratedGraph = await fedGraphRepo.byFederatedGraphName(graph.name, req.namespace);
+        const migratedGraph = await fedGraphRepo.byName(graph.name, req.namespace);
         if (!migratedGraph) {
           return {
             response: {
