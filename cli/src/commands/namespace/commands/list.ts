@@ -41,7 +41,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw) {
-      console.log(resp.namespaces);
+      console.log(JSON.stringify(resp.namespaces));
       return;
     }
 

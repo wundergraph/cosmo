@@ -60,7 +60,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw) {
-      console.log(resp.graphs);
+      console.log(JSON.stringify(resp.graphs));
       process.exit(0);
     }
 
