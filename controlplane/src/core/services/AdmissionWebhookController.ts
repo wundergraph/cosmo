@@ -22,7 +22,7 @@ export interface AdmissionWebhookJwtPayload extends JWTPayload {
 }
 
 export interface ValidateConfigResponse {
-  signatureSHA256: string;
+  signatureSha256: string;
   error?: string;
 }
 
@@ -60,19 +60,17 @@ export class AdmissionWebhookController {
         {
           url: this.graphAdmissionWebhookURL + '/validate-config',
           statusCode: res.status,
-          signature: res.data.signatureSHA256,
+          signature: res.data.signatureSha256,
         },
         'Received admission validate-config webhook response.',
       );
 
-      if (res.status !== 200) {
-        throw new AdmissionError(
-          `Non-200 status code '${res.status}' from admission /validate-config webhook handler received.`,
-        );
+      if (!res.data) {
+        throw new AdmissionError('No response body from /validate-config handler received.');
       }
 
-      if (!res.data.signatureSHA256) {
-        throw new AdmissionError('No signature from admission /validate-config webhook handler received.');
+      if (!res.data.signatureSha256) {
+        throw new AdmissionError('No signature from /validate-config handler received.');
       }
 
       return res.data;
@@ -88,6 +86,16 @@ export class AdmissionWebhookController {
       );
 
       if (err instanceof AxiosError) {
+        if (err.response?.status !== 200) {
+          if (err.response?.data?.error) {
+            throw new AdmissionError(
+              `Config validation has failed. /validate-config handler responded with: StatusCode: ${err.response.status}. Error: ${err.response.data.error}`,
+            );
+          }
+          throw new AdmissionError(
+            `Non-200 status code from /validate-config handler received: StatusCode: ${err.response?.status}`,
+          );
+        }
         throw new AdmissionError(
           `Unable to reach admission webhook handler on ${url}. Make sure the URL is correct and the service is running.`,
         );

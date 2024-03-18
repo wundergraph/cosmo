@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.46.1](https://github.com/wundergraph/cosmo/compare/wgc@0.46.0...wgc@0.46.1) (2024-03-16)
+
+**Note:** Version bump only for package wgc
+
+# [0.46.0](https://github.com/wundergraph/cosmo/compare/wgc@0.45.1...wgc@0.46.0) (2024-03-14)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
 ## [0.45.1](https://github.com/wundergraph/cosmo/compare/wgc@0.45.0...wgc@0.45.1) (2024-03-13)
 
 **Note:** Version bump only for package wgc

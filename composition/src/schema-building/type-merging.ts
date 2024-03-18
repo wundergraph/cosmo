@@ -1,6 +1,6 @@
 import { Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode, TypeNode } from 'graphql';
-import { maximumTypeNestingExceededFatalError } from '../errors/errors';
-import { deepCopyTypeNode, MutableIntermediateTypeNode } from './ast';
+import { maximumTypeNestingExceededError } from '../errors/errors';
+import { getMutableTypeNode, MutableIntermediateTypeNode } from './ast';
 import { MAXIMUM_TYPE_NESTING } from '../utils/constants';
 
 enum DivergentType {
@@ -19,8 +19,9 @@ function getMergedTypeNode(
   other: TypeNode,
   hostPath: string,
   mostRestrictive: boolean,
+  errors: Error[],
 ): MergedTypeResult {
-  other = deepCopyTypeNode(other, hostPath); // current is already a deep copy
+  other = getMutableTypeNode(other, hostPath, errors); // current is already a deep copy
   // The first type of the pair to diverge in restriction takes precedence in all future differences.
   // If the other type of the pair also diverges, it's a src error.
   // To keep the output link intact, it is not possible to spread assign "lastTypeNode".
@@ -87,21 +88,24 @@ function getMergedTypeNode(
     // At least one of the types must be a non-null wrapper, or the types are inconsistent
     return { typeErrors: [current.kind, other.kind] };
   }
-  throw maximumTypeNestingExceededFatalError(hostPath, MAXIMUM_TYPE_NESTING);
+  errors.push(maximumTypeNestingExceededError(hostPath, MAXIMUM_TYPE_NESTING));
+  return { typeNode: current };
 }
 
 export function getLeastRestrictiveMergedTypeNode(
   current: TypeNode,
   other: TypeNode,
   hostPath: string,
+  errors: Error[],
 ): MergedTypeResult {
-  return getMergedTypeNode(current, other, hostPath, false);
+  return getMergedTypeNode(current, other, hostPath, false, errors);
 }
 
 export function getMostRestrictiveMergedTypeNode(
   current: TypeNode,
   other: TypeNode,
   hostPath: string,
+  errors: Error[],
 ): MergedTypeResult {
-  return getMergedTypeNode(current, other, hostPath, true);
+  return getMergedTypeNode(current, other, hostPath, true, errors);
 }

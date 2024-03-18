@@ -9,7 +9,11 @@ query {
       forename
       surname
       # resolved through employees subgraph
-      location
+      location {
+        key {
+          name
+        }
+      }
       # resolved through family subgraph
       hasChildren
       # maritalStatus can return null
@@ -63,7 +67,11 @@ query {
         languages
       }
       ... on Travelling {
-        countriesLived
+        countriesLived {
+          key {
+            name
+          }
+        }
       }
     }
     # resolved through products subgraph
@@ -75,7 +83,11 @@ query {
     id
     details {
       forename
-      location
+      location {
+        key {
+          name
+        }
+      }
     }
   }
   teammates(team: OPERATIONS) {
