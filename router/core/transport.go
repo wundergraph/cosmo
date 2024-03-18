@@ -3,16 +3,17 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"io"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
@@ -116,6 +117,9 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 
 	if !ct.allowSingleFlight(req) {
 		resp, err = ct.roundTripper.RoundTrip(req)
+		if err == nil && ct.isUpgradeError(req, resp) {
+			return nil, &ErrUpgradeFailed{StatusCode: resp.StatusCode}
+		}
 	} else {
 		resp, err = ct.roundTripSingleFlight(req)
 	}
@@ -145,6 +149,10 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, er
 type responseWithBody struct {
 	res  *http.Response
 	body []byte
+}
+
+func (ct *CustomTransport) isUpgradeError(req *http.Request, res *http.Response) bool {
+	return req.Header.Get("Upgrade") != "" && res.StatusCode != http.StatusSwitchingProtocols
 }
 
 func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {

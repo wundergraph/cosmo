@@ -174,6 +174,7 @@ type EngineDebugConfiguration struct {
 	DatasourceVisitor             bool `default:"false" envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
 	ReportWebSocketConnections    bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
 	ReportMemoryUsage             bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
+	EnableResolverDebugging       bool `default:"false" envconfig:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -310,6 +311,11 @@ type TLSConfiguration struct {
 	Server TLSServerConfiguration `yaml:"server"`
 }
 
+type SubgraphErrorPropagationConfiguration struct {
+	Enabled              bool `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
+	PropagateStatusCodes bool `yaml:"propagate_status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_PROPAGATE_STATUS_CODES"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -358,6 +364,8 @@ type Config struct {
 	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
 
 	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
+
+	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
 }
 
 type LoadResult struct {
@@ -446,6 +454,10 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
+		cfg.Config.SubgraphErrorPropagation.Enabled = true
+		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
+		cfg.Config.EngineExecutionConfiguration.Debug.ReportMemoryUsage = true
+		cfg.Config.EngineExecutionConfiguration.Debug.ReportWebSocketConnections = true
 	}
 
 	return cfg, nil

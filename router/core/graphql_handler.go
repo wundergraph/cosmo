@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -31,6 +32,14 @@ var (
 	errCouldNotResolveResponse = errors.New("could not resolve response")
 	errInternalServer          = errors.New("internal server error")
 )
+
+type ErrUpgradeFailed struct {
+	StatusCode int
+}
+
+func (e *ErrUpgradeFailed) Error() string {
+	return fmt.Sprintf("upgrade failed with status code %d", e.StatusCode)
+}
 
 type ReportError interface {
 	error
@@ -65,6 +74,7 @@ type HandlerOptions struct {
 	Authorizer                             *CosmoAuthorizer
 	RateLimiter                            *CosmoRateLimiter
 	RateLimitConfig                        *config.RateLimitConfiguration
+	SubgraphErrorPropagation               config.SubgraphErrorPropagationConfiguration
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -77,9 +87,10 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 			"wundergraph/cosmo/router/graphql_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		authorizer:      opts.Authorizer,
-		rateLimiter:     opts.RateLimiter,
-		rateLimitConfig: opts.RateLimitConfig,
+		authorizer:               opts.Authorizer,
+		rateLimiter:              opts.RateLimiter,
+		rateLimitConfig:          opts.RateLimitConfig,
+		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
 	}
 	return graphQLHandler
 }
@@ -102,8 +113,9 @@ type GraphQLHandler struct {
 	tracer                                 trace.Tracer
 	authorizer                             *CosmoAuthorizer
 
-	rateLimiter     *CosmoRateLimiter
-	rateLimitConfig *config.RateLimitConfiguration
+	rateLimiter              *CosmoRateLimiter
+	rateLimitConfig          *config.RateLimitConfiguration
+	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -220,6 +232,7 @@ type Extensions struct {
 	RateLimit     json.RawMessage `json:"rateLimit,omitempty"`
 	Authorization json.RawMessage `json:"authorization,omitempty"`
 	Trace         json.RawMessage `json:"trace,omitempty"`
+	StatusCode    int             `json:"statusCode,omitempty"`
 }
 
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, buf *bytes.Buffer) {
@@ -281,6 +294,17 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
+	case errorTypeUpgradeFailed:
+		response.Errors[0].Message = "Upgrade failed"
+		var upgradeErr *ErrUpgradeFailed
+		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
+			response.Errors[0].Extensions = &Extensions{
+				StatusCode: upgradeErr.StatusCode,
+			}
+		}
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusOK)
+		}
 	}
 	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
 		traceNode := resolve.GetTrace(ctx.Context(), res.Data)
@@ -299,7 +323,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		requestLogger.Error("unable to write rate limit response", zap.Error(err))
 	}
 	if wsRw, ok := w.(*websocketResponseWriter); ok {
-		wsRw.Flush()
+		_ = wsRw.Flush()
 	}
 }
 
@@ -311,6 +335,7 @@ const (
 	errorTypeUnauthorized
 	errorTypeContextCanceled
 	errorTypeContextTimeout
+	errorTypeUpgradeFailed
 )
 
 func (h *GraphQLHandler) errorType(err error) errorType {
@@ -322,6 +347,10 @@ func (h *GraphQLHandler) errorType(err error) errorType {
 	}
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
+	}
+	var upgradeErr *ErrUpgradeFailed
+	if errors.As(err, &upgradeErr) {
+		return errorTypeUpgradeFailed
 	}
 	var nErr net.Error
 	if errors.As(err, &nErr) {

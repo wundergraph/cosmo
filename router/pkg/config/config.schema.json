@@ -6,7 +6,9 @@
     "version": {
       "type": "string",
       "description": "The version of the configuration file. This is used to ensure that the configuration file is compatible.",
-      "enum": ["1"]
+      "enum": [
+        "1"
+      ]
     },
     "instance_id": {
       "type": "string",
@@ -76,7 +78,9 @@
               "type": "object",
               "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the provided certificate.",
               "additionalProperties": false,
-              "required": ["cert_file"],
+              "required": [
+                "cert_file"
+              ],
               "properties": {
                 "required": {
                   "type": "boolean",
@@ -99,7 +103,10 @@
             }
           },
           "then": {
-            "required": ["cert_file", "key_file"]
+            "required": [
+              "cert_file",
+              "key_file"
+            ]
           }
         }
       }
@@ -165,7 +172,10 @@
               "type": "string",
               "default": "redact",
               "description": "The method used to anonymize the IP addresses. The supported methods are 'redact' and 'hash'. The default value is 'redact'. The 'redact' method replaces the IP addresses with the string '[REDACTED]'. The 'hash' method hashes the IP addresses using the SHA-256 algorithm.",
-              "enum": ["redact", "hash"]
+              "enum": [
+                "redact",
+                "hash"
+              ]
             }
           }
         }
@@ -199,7 +209,9 @@
               "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
               "items": {
                 "type": "object",
-                "required": ["endpoint"],
+                "required": [
+                  "endpoint"
+                ],
                 "additionalProperties": false,
                 "properties": {
                   "disabled": {
@@ -209,7 +221,10 @@
                     "type": "string",
                     "description": "The exporter to use for the traces. The supported exporters are 'http' and 'grpc'.",
                     "default": "http",
-                    "enum": ["http", "grpc"]
+                    "enum": [
+                      "http",
+                      "grpc"
+                    ]
                   },
                   "endpoint": {
                     "type": "string"
@@ -312,7 +327,10 @@
                         "type": "string",
                         "description": "The exporter protocol to use to export metrics. The supported exporters are 'http' and 'grpc'.",
                         "default": "http",
-                        "enum": ["http", "grpc"]
+                        "enum": [
+                          "http",
+                          "grpc"
+                        ]
                       },
                       "endpoint": {
                         "type": "string",
@@ -332,7 +350,10 @@
                         }
                       }
                     },
-                    "required": ["exporter", "endpoint"]
+                    "required": [
+                      "exporter",
+                      "endpoint"
+                    ]
                   }
                 }
               }
@@ -385,18 +406,32 @@
         "allow_origins": {
           "type": "array",
           "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
-          "default": ["*"],
+          "default": [
+            "*"
+          ],
           "items": {
             "type": "string"
           }
         },
         "allow_methods": {
           "type": "array",
-          "default": ["GET", "POST", "HEAD"],
+          "default": [
+            "GET",
+            "POST",
+            "HEAD"
+          ],
           "description": "The allowed HTTP methods. The default value is to allow the methods 'GET', 'POST', and 'HEAD'.",
           "items": {
             "type": "string",
-            "enum": ["GET", "POST", "HEAD", "PUT", "DELETE", "PATCH", "OPTIONS"]
+            "enum": [
+              "GET",
+              "POST",
+              "HEAD",
+              "PUT",
+              "DELETE",
+              "PATCH",
+              "OPTIONS"
+            ]
           }
         },
         "allow_headers": {
@@ -472,7 +507,14 @@
     },
     "log_level": {
       "type": "string",
-      "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "fatal",
+        "panic"
+      ],
       "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
       "default": "info"
     },
@@ -606,7 +648,9 @@
                 "algorithm": {
                   "type": "string",
                   "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
-                  "enum": ["backoff_jitter"]
+                  "enum": [
+                    "backoff_jitter"
+                  ]
                 },
                 "max_attempts": {
                   "type": "integer",
@@ -701,7 +745,9 @@
                   "header_names": {
                     "type": "array",
                     "description": "The names of the headers. The headers are used to extract the token from the request. The default value is 'Authorization'",
-                    "default": ["Authorization"],
+                    "default": [
+                      "Authorization"
+                    ],
                     "items": {
                       "type": "string"
                     }
@@ -709,7 +755,9 @@
                   "header_value_prefixes": {
                     "type": "array",
                     "description": "The prefixes of the header values. The prefixes are used to extract the token from the header value. The default value is 'Bearer'",
-                    "default": ["Bearer"],
+                    "default": [
+                      "Bearer"
+                    ],
                     "items": {
                       "type": "string"
                     }
@@ -723,10 +771,14 @@
                     "default": "1m"
                   }
                 },
-                "required": ["url"]
+                "required": [
+                  "url"
+                ]
               }
             },
-            "required": ["name"]
+            "required": [
+              "name"
+            ]
           }
         }
       }
@@ -755,7 +807,9 @@
         },
         "strategy": {
           "type": "string",
-          "enum": ["simple"],
+          "enum": [
+            "simple"
+          ],
           "description": "The strategy used to enforce the rate limit. The supported strategies are 'simple'."
         },
         "simple_strategy": {
@@ -784,7 +838,11 @@
               "description": "Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected."
             }
           },
-          "required": ["rate", "burst", "period"]
+          "required": [
+            "rate",
+            "burst",
+            "period"
+          ]
         },
         "storage": {
           "type": "object",
@@ -973,6 +1031,10 @@
             "report_memory_usage": {
               "type": "boolean",
               "description": "Print the memory usage."
+            },
+            "enable_resolver_debugging": {
+              "type": "boolean",
+              "description": "Enable verbose debug logging for the Resolver."
             }
           }
         },
@@ -1023,6 +1085,23 @@
           "description": "The size of the execution plan cache."
         }
       }
+    },
+    "subgraph_error_propagation": {
+      "type": "object",
+      "description": "",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable error propagation. If the value is true, Subgraph errors will be propagated to the client."
+        },
+        "propagate_status_codes": {
+            "type": "boolean",
+            "default": false,
+            "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."
+        }
+      }
     }
   },
   "definitions": {
@@ -1033,27 +1112,39 @@
       "properties": {
         "op": {
           "type": "string",
-          "enum": ["propagate"],
-          "examples": ["propagate"],
+          "enum": [
+            "propagate"
+          ],
+          "examples": [
+            "propagate"
+          ],
           "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
         },
         "matching": {
           "type": "string",
-          "examples": ["(?i)^X-Custom-.*"],
+          "examples": [
+            "(?i)^X-Custom-.*"
+          ],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
         "named": {
           "type": "string",
-          "examples": ["X-Test-Header"],
+          "examples": [
+            "X-Test-Header"
+          ],
           "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
         },
         "default": {
           "type": "string",
-          "examples": ["default-value"],
+          "examples": [
+            "default-value"
+          ],
           "description": "The default value of the header in case it is not present in the request."
         }
       },
-      "required": ["op"]
+      "required": [
+        "op"
+      ]
     }
   }
 }

@@ -499,7 +499,8 @@ func (rw *websocketResponseWriter) SubscriptionResponseWriter() resolve.Subscrip
 }
 
 type graphqlError struct {
-	Message string `json:"message"`
+	Message    string      `json:"message"`
+	Extensions *Extensions `json:"extensions,omitempty"`
 }
 
 type WebSocketConnectionHandlerOptions struct {

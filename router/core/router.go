@@ -175,6 +175,8 @@ type (
 		rateLimit *config.RateLimitConfiguration
 
 		webSocketConfiguration *config.WebSocketConfiguration
+
+		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	}
 
 	Server interface {
@@ -1017,9 +1019,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
-		Execution: r.engineExecutionConfiguration,
-		Headers:   r.headerRules,
-		Events:    r.eventsConfig,
+		Execution:                r.engineExecutionConfiguration,
+		Headers:                  r.headerRules,
+		Events:                   r.eventsConfig,
+		SubgraphErrorPropagation: r.subgraphErrorPropagation,
 	}
 
 	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
@@ -1081,6 +1084,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		WebSocketStats:                         r.WebsocketStats,
 		TracerProvider:                         r.tracerProvider,
 		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
+		SubgraphErrorPropagation:               r.subgraphErrorPropagation,
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
@@ -1661,6 +1665,12 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
 	return func(r *Router) {
 		r.Config.webSocketConfiguration = cfg
+	}
+}
+
+func WithSubgraphErrorPropagationConfiguration(cfg config.SubgraphErrorPropagationConfiguration) Option {
+	return func(r *Router) {
+		r.Config.subgraphErrorPropagation = cfg
 	}
 }
 
