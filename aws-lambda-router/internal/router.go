@@ -48,12 +48,10 @@ func NewRouter(opts ...Option) *core.Router {
 
 	// Loading the config file is optional, but if a path is specified we assume it's required.
 	if rc.ConfigPath != "" {
-		logger.Info("Loading config", zap.String("path", rc.ConfigPath))
 		cfg, err := config.LoadConfig(rc.ConfigPath, "")
 		if err != nil {
 			logger.Fatal("Could not load config", zap.Error(err), zap.String("path", rc.ConfigPath))
 		} else {
-			logger.Info("Loaded config", zap.String("path", rc.ConfigPath), zap.Any("config", cfg))
 			// Selectively apply the config options to the router, based on what is supported.
 			routerOpts = append(routerOpts,
 				core.WithGraphApiToken(cfg.Config.Graph.Token),
@@ -69,7 +67,6 @@ func NewRouter(opts ...Option) *core.Router {
 			}
 		}
 	} else {
-		logger.Info("Using default config", zap.Any("config", rc))
 		// If no config file is specified, set up the defaults for the Lambda Cosmo Router.
 		routerOpts = append(routerOpts,
 			core.WithPlayground(true),
