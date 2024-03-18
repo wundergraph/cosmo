@@ -124,7 +124,6 @@ describe('Subgraph', (ctx) => {
       routingUrl: 'http://localhost:3001',
       subscriptionUrl: 'http://localhost:3001',
       subscriptionProtocol: GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE,
-      headers: [],
     });
     expect(publishSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 

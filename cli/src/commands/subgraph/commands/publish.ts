@@ -35,11 +35,6 @@ export default (opts: BaseCommandOptions) => {
     'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
   );
   command.option(
-    '--header [headers...]',
-    'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
-    [],
-  );
-  command.option(
     '--subscription-url [url]',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.',
   );
@@ -86,7 +81,6 @@ export default (opts: BaseCommandOptions) => {
         schema,
         // Optional when subgraph does not exist yet
         routingUrl: options.routingUrl,
-        headers: options.header,
         subscriptionUrl: options.subscriptionUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)

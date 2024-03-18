@@ -4,7 +4,7 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { splitLabel, parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import { splitLabel, parseGraphQLSubscriptionProtocol, isValidSubscriptionProtocol } from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -28,11 +28,7 @@ export default (opts: BaseCommandOptions) => {
     'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
   );
   command.option(
-    '--header [headers...]',
-    'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
-  );
-  command.option(
-    '--subscription-url [url]',
+    '--subscription-url <url>',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.',
   );
   command.option(
@@ -54,6 +50,18 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    if (options.subscriptionProtocol && !isValidSubscriptionProtocol(options.subscriptionProtocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The subscription protocol '${pc.bold(
+              options.subscriptionProtocol,
+            )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
+          ),
+        ),
+      );
+    }
+
     const spinner = ora('Subgraph is being updated...').start();
     const resp = await opts.client.platform.updateSubgraph(
       {
@@ -68,13 +76,11 @@ export default (opts: BaseCommandOptions) => {
             };
           }) ?? [],
         unsetLabels: options.unsetLabels,
-        // If the argument is provided but the URL is not, clear it
-        subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
+        subscriptionUrl: options.subscriptionUrl,
         routingUrl: options.routingUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
-        headers: options.header,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {

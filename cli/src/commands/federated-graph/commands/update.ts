@@ -26,6 +26,12 @@ export default (opts: BaseCommandOptions) => {
     '--unset-label-matchers',
     'This will remove all label matchers. It will not add new label matchers if both this and --label-matchers option is passed.',
   );
+  command.option(
+    '--admission-webhook-url <url>',
+    'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
+    [],
+  );
+
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
     let readmeFile;
@@ -47,6 +53,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
+        admissionWebhookURL: options.admissionWebhookUrl,
         unsetLabelMatchers: options.unsetLabelMatchers,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },

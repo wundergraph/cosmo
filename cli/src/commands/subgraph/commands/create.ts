@@ -26,10 +26,6 @@ export default (opts: BaseCommandOptions) => {
     'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
   command.option(
-    '--header [headers...]',
-    'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
-  );
-  command.option(
     '--subscription-url [url]',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.',
   );
@@ -58,7 +54,6 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
         routingUrl: options.routingUrl,
-        headers: options.header,
         // If the argument is provided but the URL is not, clear it
         subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
         subscriptionProtocol: options.subscriptionProtocol

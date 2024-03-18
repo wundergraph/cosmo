@@ -1,3 +1,5 @@
+import { SubscriptionProtocol } from '../router-config/builder.js';
+
 export function delay(t: number) {
   return new Promise((resolve) => setTimeout(resolve, t));
 }
@@ -46,5 +48,18 @@ export function isValidUrl(url: string) {
     return true;
   } catch {
     return false;
+  }
+}
+
+export function isValidSubscriptionProtocol(protocol: SubscriptionProtocol) {
+  switch (protocol) {
+    case 'sse':
+    case 'sse_post':
+    case 'ws': {
+      return true;
+    }
+    default: {
+      return false;
+    }
   }
 }
