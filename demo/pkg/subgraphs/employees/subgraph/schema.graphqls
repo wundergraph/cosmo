@@ -12,8 +12,13 @@ type Query {
     teammates(team: Department!): [Employee!]!
 }
 
+scalar Upload
+
 type Mutation {
-    updateEmployeeTag(id: Int!, tag: String!): Employee
+  updateEmployeeTag(id: Int!, tag: String!): Employee
+
+  singleUpload(file: Upload!): Boolean!
+  multipleUpload(files: [Upload!]!): Boolean!
 }
 
 type Subscription {

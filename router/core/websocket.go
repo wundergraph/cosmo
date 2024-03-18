@@ -601,7 +601,7 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
-	operationKit, err := h.operationProcessor.NewKit(payload)
+	operationKit, err := h.operationProcessor.NewKit(payload, nil)
 	defer operationKit.Free()
 	if err != nil {
 		return nil, nil, err
