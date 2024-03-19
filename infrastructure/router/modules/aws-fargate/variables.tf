@@ -11,8 +11,10 @@ variable "name" {
   default = "cosmo-router"
 }
 
-variable "release" {
-  description = "The version of the Cosmo Router."
+variable "image" {
+  description = "The image of the Cosmo Router."
+  type        = string
+  default     = "ghcr.io/wundergraph/cosmo/router:latest"
 }
 
 variable "config_file_path" {
@@ -36,6 +38,24 @@ variable "hosted_zone_name" {
   type        = string
   nullable    = true
   default     = ""
+}
+
+variable "network_configuration_vpc_id" {
+  description = "(optional) Your VPC (when you want to use an existing VPC)."
+  type = string
+  default = ""
+}
+
+variable "network_configuration_fargate_subnet_ids" {
+  description = "(optional) Your Fargate subnets (when you want to use existing subnets)."
+  type = list(string)
+  default = []
+}
+
+variable "network_configuration_load_balancer_subnet_ids" {
+  description = "(optional) Your load balancer subnets (when you want to use existing subnets)."
+  type = list(string)
+  default = []
 }
 
 variable "min_instances" {

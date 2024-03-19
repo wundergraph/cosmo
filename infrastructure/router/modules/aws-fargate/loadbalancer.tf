@@ -1,10 +1,10 @@
 resource "aws_alb" "cosmo_router" {
   name               = var.name
   load_balancer_type = "application"
-  subnets = [
-    "${aws_default_subnet.default_subnet_a.id}",
-    "${aws_default_subnet.default_subnet_b.id}",
-    "${aws_default_subnet.default_subnet_c.id}",
+  subnets = length(var.network_configuration_load_balancer_subnet_ids) > 0 ? var.network_configuration_load_balancer_subnet_ids : [
+    aws_default_subnet.default_subnet_a[0].id,
+    aws_default_subnet.default_subnet_b[0].id,
+    aws_default_subnet.default_subnet_c[0].id,
   ]
 
   security_groups = [
@@ -47,11 +47,13 @@ resource "aws_lb_target_group" "cosmo_router" {
   port        = var.port
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_default_vpc.default_vpc.id
+  vpc_id      = var.network_configuration_vpc_id != "" ? var.network_configuration_vpc_id : aws_default_vpc.default_vpc[0].id
 }
 
 resource "aws_security_group" "cosmo_router_load_balancer_https" {
   count = var.enable_tls ? 1 : 0
+
+  vpc_id = var.network_configuration_vpc_id != "" ? var.network_configuration_vpc_id : aws_default_vpc.default_vpc[0].id
 
   ingress {
     from_port   = 443
@@ -70,6 +72,8 @@ resource "aws_security_group" "cosmo_router_load_balancer_https" {
 
 resource "aws_security_group" "cosmo_router_load_balancer_http" {
   count = var.enable_tls ? 0 : 1
+
+  vpc_id = var.network_configuration_vpc_id != "" ? var.network_configuration_vpc_id : aws_default_vpc.default_vpc[0].id
 
   ingress {
     from_port   = 80

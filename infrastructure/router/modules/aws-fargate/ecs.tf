@@ -24,10 +24,8 @@ resource "aws_ecs_task_definition" "cosmo_router" {
   container_definitions = jsonencode([
     {
       name      = var.name
-      image     = "ghcr.io/wundergraph/cosmo/router:${var.release}",
+      image     = var.image,
       essential = true
-
-
 
       portMappings = [
         {
@@ -37,7 +35,6 @@ resource "aws_ecs_task_definition" "cosmo_router" {
           protocol      = "tcp"
         },
       ]
-
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -128,7 +125,11 @@ resource "aws_ecs_service" "cosmo_router" {
   }
 
   network_configuration {
-    subnets = [aws_default_subnet.default_subnet_a.id, aws_default_subnet.default_subnet_b.id, aws_default_subnet.default_subnet_b.id]
+    subnets = length(var.network_configuration_fargate_subnet_ids) > 0 ? var.network_configuration_fargate_subnet_ids : [
+      aws_default_subnet.default_subnet_a[0].id,
+      aws_default_subnet.default_subnet_b[0].id,
+      aws_default_subnet.default_subnet_b[0].id
+    ]
     # Assign public IP addresses to the container, otherwise they wouldn't be able to reach the internet.
     # Alternative would be to install a NAT Gateway in the VPC.
     assign_public_ip = true
@@ -143,6 +144,9 @@ resource "aws_ecs_service" "cosmo_router" {
 }
 
 resource "aws_security_group" "cosmo_router_service" {
+
+  vpc_id = var.network_configuration_vpc_id != "" ? var.network_configuration_vpc_id : aws_default_vpc.default_vpc[0].id
+
   ingress {
     from_port = 0
     to_port   = 0
