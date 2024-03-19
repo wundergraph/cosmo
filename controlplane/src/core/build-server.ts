@@ -82,6 +82,8 @@ export interface BuildConfig {
   slack: { clientID?: string; clientSecret?: string };
   cdnBaseUrl: string;
   s3StorageUrl: string;
+  smtpHost?: string;
+  smtpPort?: number;
   smtpUsername?: string;
   smtpPassword?: string;
   admissionWebhook: {
@@ -213,7 +215,12 @@ export default async function build(opts: BuildConfig) {
 
   let mailerClient: Mailer | undefined;
   if (opts.smtpUsername && opts.smtpPassword) {
-    mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
+    mailerClient = new Mailer({
+      host: opts.smtpHost ?? 'smtp.postmarkapp.com',
+      port: opts.smtpPort ?? 587,
+      username: opts.smtpUsername,
+      password: opts.smtpPassword,
+    });
     try {
       const verified = await mailerClient.verifyConnection();
       if (verified) {

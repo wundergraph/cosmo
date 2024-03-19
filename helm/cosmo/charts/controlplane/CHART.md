@@ -42,6 +42,8 @@ WunderGraph Cosmo Controlplane
 | configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |
+| configuration.smtpHost | string | `"smtp.postmarkapp.com"` |  |
+| configuration.smtpPort | number | `587` |  |
 | configuration.smtpPassword | string | `""` |  |
 | configuration.smtpUsername | string | `""` |  |
 | configuration.stripeSecretKey | string | `""` |  |
