@@ -556,7 +556,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
       }
 
       const { host, pathname } = new URL(graph.routingURL);
-      return host + pathname;
+      return host + (pathname === "/" ? "" : pathname);
     } catch {}
   };
 

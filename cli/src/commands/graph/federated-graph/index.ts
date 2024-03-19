@@ -11,20 +11,20 @@ import UpdateFederatedGraphCommand from './commands/update.js';
 import MoveFederatedGraph from './commands/move.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schema = new Command('federated-graph');
-  schema.description('Provides commands for creating and managing a federated graph');
-  schema.addCommand(CreateFederatedGraphCommand(opts));
-  schema.addCommand(FetchFederatedGraphCommand(opts));
-  schema.addCommand(DeleteFederatedGraphCommand(opts));
-  schema.addCommand(UpdateFederatedGraphCommand(opts));
-  schema.addCommand(CheckFederatedGraphCommand(opts));
-  schema.addCommand(ListFederatedGraphs(opts));
-  schema.addCommand(GetFederatedGraphChangelog(opts));
-  schema.addCommand(MoveFederatedGraph(opts));
+  const command = new Command('federated-graph');
+  command.description('Provides commands for creating and managing a federated graph');
+  command.addCommand(CreateFederatedGraphCommand(opts));
+  command.addCommand(FetchFederatedGraphCommand(opts));
+  command.addCommand(DeleteFederatedGraphCommand(opts));
+  command.addCommand(UpdateFederatedGraphCommand(opts));
+  command.addCommand(CheckFederatedGraphCommand(opts));
+  command.addCommand(ListFederatedGraphs(opts));
+  command.addCommand(GetFederatedGraphChangelog(opts));
+  command.addCommand(MoveFederatedGraph(opts));
 
-  schema.hook('preAction', () => {
+  command.hook('preAction', () => {
     checkAPIKey();
   });
 
-  return schema;
+  return command;
 };

@@ -20,12 +20,10 @@ type OutputFile = {
 }[];
 
 export default (opts: CommonGraphCommandOptions) => {
-  const graphType = opts.isMonograph ? 'monograph' : 'federated graph';
-
   const command = new Command('changelog');
-  command.description(`Fetches the changelog for a ${graphType}`);
-  command.argument('<name>', `The name of the ${graphType} to update.`);
-  command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
+  command.description(`Fetches the changelog for the graph`);
+  command.argument('<name>', `The name of the graph to update.`);
+  command.option('-n, --namespace [string]', `The namespace of the graph.`);
   command.option('-l, --limit [number]', 'Limit of entries. Defaults to 10', '10');
   command.option('-f, --offset [number]', 'Offset of entries. Defaults to 0', '0');
   command.option('-s, --start [date]', 'Start date. Defaults to 3 days back');

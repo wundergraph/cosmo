@@ -18,10 +18,7 @@ export default (opts: BaseCommandOptions) => {
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',
   );
-  command.option(
-    '-u, --graph-url <url>',
-    'The url of your graph. This is the url that the router will communicate to.',
-  );
+  command.option('-u, --graph-url <url>', 'The url of your GraphQL server that is accessible from the router.');
   command.option(
     '--subscription-url [url]',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.',

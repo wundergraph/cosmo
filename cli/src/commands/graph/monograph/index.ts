@@ -13,23 +13,23 @@ import MoveMonograph from './commands/move.js';
 import MigrateMonograph from './commands/migrate.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schema = new Command('monograph');
-  schema.description('Provides commands for creating and managing a monograph');
+  const command = new Command('monograph');
+  command.description('Provides commands for creating and managing a monograph');
 
-  schema.addCommand(CreateMonographCommand(opts));
-  schema.addCommand(FetchMonographCommand(opts));
-  schema.addCommand(PublishMonographCommand(opts));
-  schema.addCommand(UpdateMonographCommand(opts));
-  schema.addCommand(CheckMonographCommand(opts));
-  schema.addCommand(GetMonographChangelog(opts));
-  schema.addCommand(DeleteMonographCommand(opts));
-  schema.addCommand(ListMonographs(opts));
-  schema.addCommand(MoveMonograph(opts));
-  schema.addCommand(MigrateMonograph(opts));
+  command.addCommand(CreateMonographCommand(opts));
+  command.addCommand(FetchMonographCommand(opts));
+  command.addCommand(PublishMonographCommand(opts));
+  command.addCommand(UpdateMonographCommand(opts));
+  command.addCommand(CheckMonographCommand(opts));
+  command.addCommand(GetMonographChangelog(opts));
+  command.addCommand(DeleteMonographCommand(opts));
+  command.addCommand(ListMonographs(opts));
+  command.addCommand(MoveMonograph(opts));
+  command.addCommand(MigrateMonograph(opts));
 
-  schema.hook('preAction', () => {
+  command.hook('preAction', () => {
     checkAPIKey();
   });
 
-  return schema;
+  return command;
 };
