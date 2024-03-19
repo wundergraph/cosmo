@@ -9,6 +9,7 @@ data "aws_route53_zone" "zone" {
 
 variable "name" {
   default = "cosmo-router"
+  type    = string
 }
 
 variable "image" {

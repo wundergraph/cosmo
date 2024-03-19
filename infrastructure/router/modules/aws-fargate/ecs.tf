@@ -133,7 +133,7 @@ resource "aws_ecs_service" "cosmo_router" {
     # Assign public IP addresses to the container, otherwise they wouldn't be able to reach the internet.
     # Alternative would be to install a NAT Gateway in the VPC.
     assign_public_ip = true
-    security_groups  = ["${aws_security_group.cosmo_router_service.id}"]
+    security_groups  = [aws_security_group.cosmo_router_service.id]
   }
 
   # Ignore the desired count after initial creation. This is required as when you scale up via
