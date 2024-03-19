@@ -12,7 +12,7 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	NC *nats.Conn
+	NatsConnectionBySourceName map[string]*nats.Conn
 }
 
 func (r *Resolver) Employees(hobby model.Hobby) ([]*model.Employee, error) {

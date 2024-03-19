@@ -11,6 +11,6 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	NC  *nats.Conn
-	mux sync.Mutex
+	NatsConnectionBySourceName map[string]*nats.Conn
+	mux                        sync.Mutex
 }

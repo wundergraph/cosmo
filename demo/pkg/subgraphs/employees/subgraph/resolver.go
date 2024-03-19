@@ -13,8 +13,8 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	mux sync.Mutex
-	NC  *nats.Conn
+	mux                        sync.Mutex
+	NatsConnectionBySourceName map[string]*nats.Conn
 }
 
 func (r *Resolver) Employees(ctx context.Context, obj model.RoleType) ([]*model.Employee, error) {

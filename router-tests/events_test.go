@@ -18,14 +18,17 @@ import (
 )
 
 func TestEventsNew(t *testing.T) {
+	const (
+		defaultSourceName = "default"
+		myNatsSourceName  = "my-nats"
+	)
 	t.Parallel()
 
 	t.Run("subscribe async", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			var subscription struct {
+			var subscriptionOne struct {
 				employeeUpdated struct {
 					ID      float64 `graphql:"id"`
 					Details struct {
@@ -35,6 +38,16 @@ func TestEventsNew(t *testing.T) {
 				} `graphql:"employeeUpdated(employeeID: 3)"`
 			}
 
+			var subscriptionTwo struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyNats(id: 12)"`
+			}
+
 			surl := xEnv.GraphQLSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
@@ -42,47 +55,70 @@ func TestEventsNew(t *testing.T) {
 			})
 
 			wg := &sync.WaitGroup{}
-			wg.Add(2)
+			wg.Add(3)
 
-			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				defer wg.Done()
 				return nil
 			})
 			require.NoError(t, err)
-			require.NotEqual(t, "", subscriptionID)
+			require.NotEqual(t, "", subscriptionOneID)
+
+			subscriptionTwoID, err := client.Subscribe(&subscriptionTwo, nil, func(dataValue []byte, errValue error) error {
+				require.NoError(t, errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyNats":{"id":12,"details":{"forename":"David","surname":"Stutt"}}}`, string(dataValue))
+				defer wg.Done()
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionTwoID)
 
 			go func() {
-				err := client.Run()
+				err = client.Run()
 				require.NoError(t, err)
 			}()
 
 			go func() {
 				wg.Wait()
-				err = client.Unsubscribe(subscriptionID)
+				err = client.Unsubscribe(subscriptionOneID)
 				require.NoError(t, err)
-				err := client.Close()
+				err = client.Unsubscribe(subscriptionTwoID)
+				require.NoError(t, err)
+				err = client.Close()
 				require.NoError(t, err)
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(2, time.Second*5)
 
-			// Send a mutation to trigger the subscription
-
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			// Send a mutation to trigger the first subscription
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
 			})
-			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, resOne.Body)
 
-			// Trigger the subscription via NATS
-			err = xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			// Send a mutation to trigger the second subscription
+			resTwo := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateAvailability(employeeID: 12, isAvailable: true) { id } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateAvailability":{"id":12}}}`, resTwo.Body)
+
+			// Trigger the first subscription via NATS
+			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NC.Flush()
+			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
 			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(2, time.Second*10)
+			// Trigger the second subscription via NATS
+			err = xEnv.NatsConnectionBySourceName[myNatsSourceName].Publish("employeeUpdatedMyNats.12", []byte(`{"id":12,"__typename": "Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionBySourceName[myNatsSourceName].Flush()
+			require.NoError(t, err)
+
+			xEnv.WaitForMessagesSent(4, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
 		})
@@ -141,10 +177,10 @@ func TestEventsNew(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err = xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NC.Flush()
+			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
 			require.NoError(t, err)
 
 			wg.Wait()
@@ -223,10 +259,10 @@ func TestEventsNew(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NC.Flush()
+			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
 			require.NoError(t, err)
 
 			wg.Wait()
@@ -241,32 +277,53 @@ func TestEventsNew(t *testing.T) {
 				securityConfiguration.BlockSubscriptions = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
+			subscribePayloadOne := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
+			subscribePayloadTwo := []byte(`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id details { forename surname } }}"}`)
 
 			client := http.Client{
 				Timeout: time.Second * 10,
 			}
-			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+			reqOne, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayloadOne))
 			require.NoError(t, err)
 
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Accept", "text/event-stream")
-			req.Header.Set("Connection", "keep-alive")
-			req.Header.Set("Cache-Control", "no-cache")
+			reqOne.Header.Set("Content-Type", "application/json")
+			reqOne.Header.Set("Accept", "text/event-stream")
+			reqOne.Header.Set("Connection", "keep-alive")
+			reqOne.Header.Set("Cache-Control", "no-cache")
 
-			resp, err := client.Do(req)
+			respOne, err := client.Do(reqOne)
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, resp.StatusCode)
-			defer resp.Body.Close()
-			reader := bufio.NewReader(resp.Body)
+			require.Equal(t, http.StatusOK, respOne.StatusCode)
+			defer respOne.Body.Close()
+			readerOne := bufio.NewReader(respOne.Body)
 
-			eventNext, _, err := reader.ReadLine()
+			eventNextOne, _, err := readerOne.ReadLine()
 			require.NoError(t, err)
-			require.Equal(t, "event: next", string(eventNext))
-			data, _, err := reader.ReadLine()
+			require.Equal(t, "event: next", string(eventNextOne))
+			dataOne, _, err := readerOne.ReadLine()
 			require.NoError(t, err)
-			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}],\"data\":null}", string(data))
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}],\"data\":null}", string(dataOne))
+
+			reqTwo, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayloadTwo))
+			require.NoError(t, err)
+
+			reqTwo.Header.Set("Content-Type", "application/json")
+			reqTwo.Header.Set("Accept", "text/event-stream")
+			reqTwo.Header.Set("Connection", "keep-alive")
+			reqTwo.Header.Set("Cache-Control", "no-cache")
+
+			respTwo, err := client.Do(reqTwo)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, respTwo.StatusCode)
+			defer respTwo.Body.Close()
+			readerTwo := bufio.NewReader(respTwo.Body)
+
+			eventNextTwo, _, err := readerTwo.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, "event: next", string(eventNextTwo))
+			dataTwo, _, err := readerTwo.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}],\"data\":null}", string(dataTwo))
 		})
 	})
 
@@ -275,7 +332,7 @@ func TestEventsNew(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
+			firstSubscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -284,7 +341,7 @@ func TestEventsNew(t *testing.T) {
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
-				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(firstSubscribePayload))
 				require.NoError(t, err)
 
 				req.Header.Set("Content-Type", "application/json")
@@ -320,10 +377,10 @@ func TestEventsNew(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NC.Flush()
+			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
 			require.NoError(t, err)
 
 			wg.Wait()
@@ -338,25 +395,40 @@ func TestEventsNew(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			sub, err := xEnv.NC.Subscribe("getEmployee.3", func(msg *nats.Msg) {
+			firstSub, err := xEnv.NatsConnectionBySourceName[defaultSourceName].Subscribe("getEmployee.3", func(msg *nats.Msg) {
 				err := msg.Respond([]byte(`{"id": 3, "__typename": "Employee"}`))
 				require.NoError(t, err)
 			})
 			require.NoError(t, err)
-			require.NoError(t, xEnv.NC.Flush())
+			require.NoError(t, xEnv.NatsConnectionBySourceName[defaultSourceName].Flush())
+
+			secondSub, err := xEnv.NatsConnectionBySourceName[myNatsSourceName].Subscribe("getEmployeeMyNats.12", func(msg *nats.Msg) {
+				err = msg.Respond([]byte(`{"id": 12, "__typename": "Employee"}`))
+				require.NoError(t, err)
+			})
+			require.NoError(t, err)
+			require.NoError(t, xEnv.NatsConnectionBySourceName[myNatsSourceName].Flush())
 
 			t.Cleanup(func() {
-				err := sub.Unsubscribe()
+				err = firstSub.Unsubscribe()
+				require.NoError(t, err)
+				err = secondSub.Unsubscribe()
 				require.NoError(t, err)
 			})
 
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employeeFromEvent(id: 3) { id details { forename } }}`,
 			})
 
 			// Send a query to receive the response from the NATS message
-			require.JSONEq(t, `{"data":{"employeeFromEvent": {"id": 3, "details": {"forename": "Stefan"}}}}`, res.Body)
+			require.JSONEq(t, `{"data":{"employeeFromEvent": {"id": 3, "details": {"forename": "Stefan"}}}}`, resOne.Body)
 
+			resTwo := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employeeFromEventMyNats(employeeID: 12) { id details { forename } }}`,
+			})
+
+			// Send a query to receive the response from the NATS message
+			require.JSONEq(t, `{"data":{"employeeFromEventMyNats": {"id": 12, "details": {"forename": "David"}}}}`, resTwo.Body)
 		})
 	})
 
@@ -364,30 +436,50 @@ func TestEventsNew(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			sub, err := xEnv.NC.SubscribeSync("updateEmployee.3")
+			firstSub, err := xEnv.NatsConnectionBySourceName[defaultSourceName].SubscribeSync("updateEmployee.3")
 			require.NoError(t, err)
-			require.NoError(t, xEnv.NC.Flush())
+			require.NoError(t, xEnv.NatsConnectionBySourceName[defaultSourceName].Flush())
+
+			secondSub, err := xEnv.NatsConnectionBySourceName[myNatsSourceName].SubscribeSync("updateEmployeeMyNats.12")
+			require.NoError(t, err)
+			require.NoError(t, xEnv.NatsConnectionBySourceName[myNatsSourceName].Flush())
 
 			t.Cleanup(func() {
-				err := sub.Unsubscribe()
+				err = firstSub.Unsubscribe()
+				require.NoError(t, err)
+				err = secondSub.Unsubscribe()
 				require.NoError(t, err)
 			})
 
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation UpdateEmployee ($update: UpdateEmployeeInput!) {
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation UpdateEmployee($update: UpdateEmployeeInput!) {
 							updateEmployee(id: 3, update: $update) {success}
 						}`,
 				Variables: json.RawMessage(`{"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`),
 			})
 
 			// Send a query to receive the response from the NATS message
-			require.JSONEq(t, `{"data":{"updateEmployee": {"success": true}}}`, res.Body)
+			require.JSONEq(t, `{"data":{"updateEmployee": {"success": true}}}`, resOne.Body)
 
-			msg, err := sub.NextMsg(5 * time.Second)
+			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
-			require.Equal(t, "updateEmployee.3", msg.Subject)
-			require.Equal(t, `{"id":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msg.Data))
+			require.Equal(t, "updateEmployee.3", msgOne.Subject)
+			require.Equal(t, `{"id":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
+
+			resTwo := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation updateEmployeeMyNats($update: UpdateEmployeeInput!) {
+							updateEmployeeMyNats(employeeID: 12, update: $update) {success}
+						}`,
+				Variables: json.RawMessage(`{"update":{"name":"David Stutt","email":"stutt@wundergraph.com"}}`),
+			})
+
+			// Send a query to receive the response from the NATS message
+			require.JSONEq(t, `{"data":{"updateEmployeeMyNats": {"success": true}}}`, resTwo.Body)
+
+			msgTwo, err := secondSub.NextMsg(5 * time.Second)
+			require.NoError(t, err)
+			require.Equal(t, "updateEmployeeMyNats.12", msgTwo.Subject)
+			require.Equal(t, `{"employeeID":12,"update":{"name":"David Stutt","email":"stutt@wundergraph.com"}}`, string(msgTwo.Data))
 		})
 	})
 }

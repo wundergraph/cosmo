@@ -8,8 +8,8 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/generated"
 )
 
-func NewSchema(nc *nats.Conn) graphql.ExecutableSchema {
+func NewSchema(natsConnectionBySourceName map[string]*nats.Conn) graphql.ExecutableSchema {
 	return generated.NewExecutableSchema(generated.Config{Resolvers: &subgraph.Resolver{
-		NC: nc,
+		NatsConnectionBySourceName: natsConnectionBySourceName,
 	}})
 }

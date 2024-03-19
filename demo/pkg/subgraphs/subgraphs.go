@@ -125,75 +125,89 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 }
 
 type SubgraphOptions struct {
-	NC *nats.Conn
+	NatsConnectionBySourceName map[string]*nats.Conn
 }
 
 func EmployeesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(employees.NewSchema(opts.NC))
+	return subgraphHandler(employees.NewSchema(opts.NatsConnectionBySourceName))
 }
 
 func FamilyHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(family.NewSchema(opts.NC))
+	return subgraphHandler(family.NewSchema(opts.NatsConnectionBySourceName))
 }
 
 func HobbiesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(hobbies.NewSchema(opts.NC))
+	return subgraphHandler(hobbies.NewSchema(opts.NatsConnectionBySourceName))
 }
 
 func ProductsHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(products.NewSchema(opts.NC))
+	return subgraphHandler(products.NewSchema(opts.NatsConnectionBySourceName))
 }
 
 func Test1Handler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(test1.NewSchema(opts.NC))
+	return subgraphHandler(test1.NewSchema(opts.NatsConnectionBySourceName))
 }
 
 func AvailabilityHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(availability.NewSchema(opts.NC))
+	return subgraphHandler(availability.NewSchema(opts.NatsConnectionBySourceName))
 }
 
 func MoodHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(mood.NewSchema(opts.NC))
+	return subgraphHandler(mood.NewSchema(opts.NatsConnectionBySourceName))
 }
 
 func CountriesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(countries.NewSchema(opts.NC))
+	return subgraphHandler(countries.NewSchema(opts.NatsConnectionBySourceName))
 }
 
 func New(config *Config) (*Subgraphs, error) {
-
 	url := nats.DefaultURL
-	if u := os.Getenv("NATS_URL"); u != "" {
-		url = u
+	if defaultSourceNameURL := os.Getenv("NATS_URL"); defaultSourceNameURL != "" {
+		url = defaultSourceNameURL
 	}
-	nc, err := nats.Connect(url)
+	defaultConnection, err := nats.Connect(url)
 	if err != nil {
-		log.Printf("failed to connect to nats: %v", err)
+		log.Printf("failed to connect to nats source \"default\": %v", err)
+	}
+	secondUrl := "nats://127.0.0.1:4223"
+	if myNatsSourceNameURL := os.Getenv("NATS_URL_TWO"); myNatsSourceNameURL != "" && url != myNatsSourceNameURL {
+		secondUrl = myNatsSourceNameURL
+	}
+	if url == secondUrl {
+		log.Printf("both nats sources are configured to the same url: %s", url)
+	}
+	myNatsConnection, err := nats.Connect(secondUrl)
+	if err != nil {
+		log.Printf("failed to connect to nats source \"my-nats\": %v", err)
 	}
 
+	natsConnectionBySourceName := map[string]*nats.Conn{
+		"default": defaultConnection,
+		"my-nats": myNatsConnection,
+	}
 	var servers []*http.Server
-	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema(nc)); srv != nil {
+	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema(natsConnectionBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("family", config.EnableDebug, config.Ports.Family, family.NewSchema(nc)); srv != nil {
+	if srv := newServer("family", config.EnableDebug, config.Ports.Family, family.NewSchema(natsConnectionBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, hobbies.NewSchema(nc)); srv != nil {
+	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, hobbies.NewSchema(natsConnectionBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema(nc)); srv != nil {
+	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema(natsConnectionBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(nc)); srv != nil {
+	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(natsConnectionBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(nc)); srv != nil {
+	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsConnectionBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(nc)); srv != nil {
+	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsConnectionBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(nc)); srv != nil {
+	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(natsConnectionBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{
