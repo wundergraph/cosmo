@@ -17,15 +17,16 @@ export default (opts: BaseCommandOptions) => {
   command.description('Provides commands for creating and managing a monograph');
 
   command.addCommand(CreateMonographCommand(opts));
-  command.addCommand(FetchMonographCommand(opts));
   command.addCommand(PublishMonographCommand(opts));
   command.addCommand(UpdateMonographCommand(opts));
   command.addCommand(CheckMonographCommand(opts));
-  command.addCommand(GetMonographChangelog(opts));
   command.addCommand(DeleteMonographCommand(opts));
   command.addCommand(ListMonographs(opts));
   command.addCommand(MoveMonograph(opts));
   command.addCommand(MigrateMonograph(opts));
+
+  command.addCommand(FetchMonographCommand({ ...opts, isMonograph: true }));
+  command.addCommand(GetMonographChangelog({ ...opts, isMonograph: true }));
 
   command.hook('preAction', () => {
     checkAPIKey();
