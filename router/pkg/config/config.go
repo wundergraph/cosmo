@@ -312,8 +312,8 @@ type TLSConfiguration struct {
 }
 
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled              bool `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	PropagateStatusCodes bool `yaml:"propagate_status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_PROPAGATE_STATUS_CODES"`
+	Enabled     bool `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
+	StatusCodes bool `yaml:"status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
 }
 
 type Config struct {
@@ -455,7 +455,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
-		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
+		cfg.Config.SubgraphErrorPropagation.StatusCodes = true
 		cfg.Config.EngineExecutionConfiguration.Debug.ReportMemoryUsage = true
 		cfg.Config.EngineExecutionConfiguration.Debug.ReportWebSocketConnections = true
 	}

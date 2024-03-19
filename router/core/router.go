@@ -1668,7 +1668,7 @@ func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
 	}
 }
 
-func WithSubgraphErrorPropagationConfiguration(cfg config.SubgraphErrorPropagationConfiguration) Option {
+func WithWithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfiguration) Option {
 	return func(r *Router) {
 		r.Config.subgraphErrorPropagation = cfg
 	}

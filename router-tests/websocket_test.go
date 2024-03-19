@@ -389,7 +389,7 @@ func TestWebSockets(t *testing.T) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-				cfg.PropagateStatusCodes = false
+				cfg.StatusCodes = false
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{

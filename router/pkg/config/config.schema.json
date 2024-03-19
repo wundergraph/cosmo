@@ -1088,7 +1088,7 @@
     },
     "subgraph_error_propagation": {
       "type": "object",
-      "description": "",
+      "description": "The configuration for the subgraph error propagation. The subgraph error propagation is used to propagate the errors from the subgraphs to the client.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -1096,7 +1096,7 @@
           "default": false,
           "description": "Enable error propagation. If the value is true, Subgraph errors will be propagated to the client."
         },
-        "propagate_status_codes": {
+        "status_codes": {
             "type": "boolean",
             "default": false,
             "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."

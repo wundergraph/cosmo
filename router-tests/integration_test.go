@@ -790,7 +790,7 @@ func TestPartialOriginErrorsWithNoStatusCodePropagation(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.PropagateStatusCodes = false
+			cfg.StatusCodes = false
 		},
 		Subgraphs: testenv.SubgraphsConfig{
 			Products: testenv.SubgraphConfig{

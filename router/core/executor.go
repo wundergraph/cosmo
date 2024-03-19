@@ -48,7 +48,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
 		Reporter:                     reporter,
 		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
-		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
+		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.StatusCodes,
 		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
 	})
 

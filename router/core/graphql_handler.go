@@ -298,7 +298,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 	case errorTypeUpgradeFailed:
 		response.Errors[0].Message = "Upgrade failed"
 		var upgradeErr *ErrUpgradeFailed
-		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
+		if h.subgraphErrorPropagation.StatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
 			response.Errors[0].Extensions = &Extensions{
 				StatusCode: upgradeErr.StatusCode,
 			}

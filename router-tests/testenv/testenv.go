@@ -398,8 +398,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			CacheSize: 1024 * 1024,
 		},
 		SubgraphErrorPropagation: config.SubgraphErrorPropagationConfiguration{
-			Enabled:              true,
-			PropagateStatusCodes: true,
+			Enabled:     true,
+			StatusCodes: true,
 		},
 	}
 
@@ -463,7 +463,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
-		core.WithSubgraphErrorPropagationConfiguration(cfg.SubgraphErrorPropagation),
+		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithEvents(config.EventsConfiguration{
 			Sources: map[string]config.EventSource{

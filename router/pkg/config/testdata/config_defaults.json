@@ -196,6 +196,6 @@
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
-    "PropagateStatusCodes": false
+    "StatusCodes": false
   }
 }
