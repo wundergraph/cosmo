@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/router@0.74.0...router@0.75.0) (2024-03-19)
+
+### Bug Fixes
+
+* change 'scopes' keyword to 'scope' ([#646](https://github.com/wundergraph/cosmo/issues/646)) ([9947d43](https://github.com/wundergraph/cosmo/commit/9947d437043a4926b9c2166a171c668e1fed15a6)) (@rickpasetto)
+
+### Features
+
+* allow exposing upgrade errors ([#647](https://github.com/wundergraph/cosmo/issues/647)) ([fdcd479](https://github.com/wundergraph/cosmo/commit/fdcd479b77b979554f6a1151ae52d5430966d06e)) (@jensneuse)
+
 # [0.74.0](https://github.com/wundergraph/cosmo/compare/router@0.73.0...router@0.74.0) (2024-03-14)
 
 ### Features
