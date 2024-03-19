@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.73.3](https://github.com/wundergraph/cosmo/compare/studio@0.73.2...studio@0.73.3) (2024-03-19)
+
+### Bug Fixes
+
+* soften CSP on playground page ([#653](https://github.com/wundergraph/cosmo/issues/653)) ([6790b6d](https://github.com/wundergraph/cosmo/commit/6790b6d6c316c1199184775af50572d28e83eb99)) (@StarpTech)
+
+## [0.73.2](https://github.com/wundergraph/cosmo/compare/studio@0.73.1...studio@0.73.2) (2024-03-18)
+
+### Bug Fixes
+
+* graph overview ui visuals ([#633](https://github.com/wundergraph/cosmo/issues/633)) ([96867e6](https://github.com/wundergraph/cosmo/commit/96867e6fb908c17e02997babdf13e0a5b15515c7)) (@StarpTech)
+
 ## [0.73.1](https://github.com/wundergraph/cosmo/compare/studio@0.73.0...studio@0.73.1) (2024-03-16)
 
 ### Bug Fixes

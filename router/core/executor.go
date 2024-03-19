@@ -43,8 +43,11 @@ func (b *ExecutorConfigurationBuilder) Build(executionCtx context.Context, route
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
 	resolver := resolve.New(executionCtx, resolve.ResolverOptions{
-		MaxConcurrency: routerEngineConfig.Execution.MaxConcurrentResolvers,
-		Reporter:       reporter,
+		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
+		Reporter:                     reporter,
+		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
+		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.StatusCodes,
+		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
 	})
 
 	// this is the GraphQL Schema that we will expose from our API
