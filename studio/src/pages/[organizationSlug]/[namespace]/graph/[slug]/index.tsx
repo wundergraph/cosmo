@@ -307,7 +307,9 @@ const GraphOverviewPage: NextPageWithLayout = () => {
             <CardFooter className="flex-col items-start text-sm">
               {isMonograph && (
                 <div className="mb-4 w-full">
-                  <span className="text-muted-foreground">Graph Url</span>
+                  <span className="text-muted-foreground">
+                    GraphQL Server Url
+                  </span>
                   <CLI
                     className="mt-1 md:w-full"
                     command={graphData.subgraphs[0].routingURL}
