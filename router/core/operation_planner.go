@@ -1,11 +1,9 @@
 package core
 
 import (
-	"context"
 	"errors"
 	"strconv"
 
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
@@ -13,6 +11,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"golang.org/x/sync/singleflight"
+
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
 
 type planWithMetaData struct {
@@ -66,7 +66,10 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 		return planWithMetaData{}, &reportError{report: &report}
 	}
 
-	planner := plan.NewPlanner(context.Background(), p.executor.PlanConfig)
+	planner, err := plan.NewPlanner(p.executor.PlanConfig)
+	if err != nil {
+		return planWithMetaData{}, err
+	}
 
 	// create and postprocess the plan
 	preparedPlan := planner.Plan(&doc, p.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)

@@ -16,7 +16,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -33,18 +32,17 @@ type Executor struct {
 	PlanConfig      plan.Configuration
 	Definition      *ast.Document
 	Resolver        *resolve.Resolver
-	Pool            *pool.Pool
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, reporter resolve.Reporter) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(routerConfig, routerEngineConfig)
+func (b *ExecutorConfigurationBuilder) Build(executionCtx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, reporter resolve.Reporter) (*Executor, error) {
+	planConfig, err := b.buildPlannerConfiguration(executionCtx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx, resolve.ResolverOptions{
+	resolver := resolve.New(executionCtx, resolve.ResolverOptions{
 		MaxConcurrency: routerEngineConfig.Execution.MaxConcurrentResolvers,
 		Reporter:       reporter,
 	})
@@ -98,11 +96,10 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		Definition:      &definition,
 		Resolver:        resolver,
 		RenameTypeNames: renameTypeNames,
-		Pool:            pool.New(),
 	}, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(executionCtx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -146,6 +143,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	}
 
 	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
+		executionCtx,
 		NewTransport(b.transportOptions),
 		b.transport,
 		b.logger,

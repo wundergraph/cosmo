@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -43,19 +44,18 @@ type ApiTransportFactory interface {
 type DefaultFactoryResolver struct {
 	baseTransport    http.RoundTripper
 	transportFactory ApiTransportFactory
-	graphql          *graphql_datasource.Factory[graphql_datasource.Configuration]
-	static           *staticdatasource.Factory[staticdatasource.Configuration]
-	pubsub           *pubsub_datasource.Factory[pubsub_datasource.Configuration]
-	log              *zap.Logger
+
+	static *staticdatasource.Factory[staticdatasource.Configuration]
+	pubsub *pubsub_datasource.Factory[pubsub_datasource.Configuration]
+	log    *zap.Logger
+
+	engineCtx       context.Context
+	httpClient      *http.Client
+	streamingClient *http.Client
+	factoryLogger   abstractlogger.Logger
 }
 
-func NewDefaultFactoryResolver(
-	transportFactory ApiTransportFactory,
-	baseTransport http.RoundTripper,
-	log *zap.Logger,
-	enableSingleFlight bool,
-	natsConnection *nats.Conn,
-) *DefaultFactoryResolver {
+func NewDefaultFactoryResolver(executionCtx context.Context, transportFactory ApiTransportFactory, baseTransport http.RoundTripper, log *zap.Logger, enableSingleFlight bool, natsConnection *nats.Conn) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
 		Timeout:   transportFactory.DefaultTransportTimeout(),
@@ -74,24 +74,23 @@ func NewDefaultFactoryResolver(
 		baseTransport:    baseTransport,
 		transportFactory: transportFactory,
 		static:           &staticdatasource.Factory[staticdatasource.Configuration]{},
-		graphql: &graphql_datasource.Factory[graphql_datasource.Configuration]{
-			HTTPClient:      defaultHttpClient,
-			StreamingClient: streamingClient,
-			Logger:          factoryLogger,
-		},
-		pubsub: &pubsub_datasource.Factory[pubsub_datasource.Configuration]{
-			Connector: pubsub.NewNATSConnector(natsConnection),
-		},
-		log: log,
+		pubsub: pubsub_datasource.NewFactory(
+			executionCtx,
+			pubsub.NewNATSConnector(natsConnection),
+		),
+		log:             log,
+		factoryLogger:   factoryLogger,
+		engineCtx:       executionCtx,
+		httpClient:      defaultHttpClient,
+		streamingClient: streamingClient,
 	}
 }
 
-func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (factory plan.PlannerFactory[graphql_datasource.Configuration], err error) {
-	return &graphql_datasource.Factory[graphql_datasource.Configuration]{
-		HTTPClient:      d.graphql.HTTPClient,
-		StreamingClient: d.graphql.StreamingClient,
-		Logger:          d.graphql.Logger,
-	}, nil
+func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.httpClient, d.streamingClient, d.engineCtx, graphql_datasource.WithLogger(d.factoryLogger))
+
+	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, subscriptionClient)
+	return factory, err
 }
 
 func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {
