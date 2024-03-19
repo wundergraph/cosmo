@@ -56,7 +56,7 @@ func (a *authentication) Scopes() []string {
 	if a == nil {
 		return nil
 	}
-	scopes, ok := a.claims["scopes"].(string)
+	scopes, ok := a.claims["scope"].(string)
 	if !ok {
 		return nil
 	}
