@@ -1265,7 +1265,7 @@ export class FederatedGraphRepository {
 
       const newLabel: Label = {
         key: 'federated',
-        value: subgraphs.length > 0 && subgraphs[0].labels.length > 0 ? subgraphs[0].labels[0].value : uid(6),
+        value: uid(6),
       };
 
       await tx.delete(schema.targetLabelMatchers).where(eq(schema.targetLabelMatchers.targetId, graph.targetId));
