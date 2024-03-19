@@ -30,7 +30,7 @@ const DiscussionsPage: NextPageWithLayout = () => {
   const graphName = router.query.slug as string;
   const organizationSlug = router.query.organizationSlug as string;
   const namespace = router.query.namespace as string;
-  const subgraphName = router.query.subgraph as string;
+  const subgraphId = router.query.subgraph as string;
 
   const graphData = useContext(GraphContext);
 
@@ -38,9 +38,8 @@ const DiscussionsPage: NextPageWithLayout = () => {
 
   const selectedGraph = useMemo(
     () =>
-      graphData?.subgraphs.find((s) => s.name === subgraphName) ||
-      graphData?.graph,
-    [graphData?.graph, graphData?.subgraphs, subgraphName],
+      graphData?.subgraphs.find((s) => s.id === subgraphId) || graphData?.graph,
+    [graphData?.graph, graphData?.subgraphs, subgraphId],
   );
 
   return (
@@ -52,44 +51,64 @@ const DiscussionsPage: NextPageWithLayout = () => {
           <Toolbar>
             <DiscussionsToolbar />
             <Select
-              onValueChange={(name) => {
+              onValueChange={(id) => {
                 applyParams({
                   subgraph:
-                    graphData?.subgraphs.find((s) => s.name === name)?.name ||
-                    null,
+                    graphData?.subgraphs.find((s) => s.id === id)?.id || null,
                 });
               }}
             >
               <SelectTrigger
-                value={selectedGraph?.name ?? ""}
+                value={selectedGraph?.id ?? ""}
                 className="w-full md:w-[200px]"
               >
-                <SelectValue aria-label={selectedGraph?.name ?? ""}>
-                  {selectedGraph?.name ?? ""}
+                <SelectValue aria-label={selectedGraph?.id ?? ""}>
+                  {graphData?.graph?.supportsFederation
+                    ? selectedGraph?.name ?? ""
+                    : selectedGraph?.id === graphData?.graph?.id
+                    ? "Router SDL"
+                    : "Published SDL"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectGroup>
-                  <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                    <PiGraphLight className="h-3 w-3" /> Graph
-                  </SelectLabel>
-                  <SelectItem value={graphData?.graph?.name ?? ""}>
-                    {graphName}
-                  </SelectItem>
-                </SelectGroup>
-                <Separator className="my-2" />
-                <SelectGroup>
-                  <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                    <Component2Icon className="h-3 w-3" /> Subgraphs
-                  </SelectLabel>
-                  {graphData?.subgraphs?.map(({ name }) => {
-                    return (
-                      <SelectItem key={name} value={name}>
-                        {name}
+                {graphData?.graph?.supportsFederation ? (
+                  <>
+                    <SelectGroup>
+                      <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                        <PiGraphLight className="h-3 w-3" /> Graph
+                      </SelectLabel>
+                      <SelectItem value={graphData?.graph?.id ?? ""}>
+                        {graphName}
                       </SelectItem>
-                    );
-                  })}
-                </SelectGroup>
+                    </SelectGroup>
+                    <Separator className="my-2" />
+                    <SelectGroup>
+                      <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                        <Component2Icon className="h-3 w-3" /> Subgraphs
+                      </SelectLabel>
+                      {graphData?.subgraphs?.map(({ name, id }) => {
+                        return (
+                          <SelectItem key={id} value={id}>
+                            {name}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectGroup>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value={graphData?.graph?.id ?? ""}>
+                      Router SDL
+                    </SelectItem>
+                    {graphData?.subgraphs?.map(({ id }) => {
+                      return (
+                        <SelectItem key={id} value={id}>
+                          Published SDL
+                        </SelectItem>
+                      );
+                    })}
+                  </>
+                )}
               </SelectContent>
             </Select>
           </Toolbar>

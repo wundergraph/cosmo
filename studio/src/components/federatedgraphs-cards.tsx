@@ -26,6 +26,7 @@ import {
   useState,
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
+import { LuSquareDot } from "react-icons/lu";
 import { MdNearbyError } from "react-icons/md";
 import { SiApollographql } from "react-icons/si";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
@@ -606,7 +607,11 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           </p>
           <div className="mb-3 flex flex-wrap items-center gap-x-5">
             <div className="flex items-center gap-x-2">
-              <Component2Icon className="h-4 w-4 text-[#0284C7]" />
+              {graph.supportsFederation ? (
+                <Component2Icon className="h-4 w-4 text-[#0284C7]" />
+              ) : (
+                <LuSquareDot className="h-4 w-4 text-[#0284C7]" />
+              )}
               {graph.supportsFederation ? (
                 <p className="text-sm">
                   {`${formatMetric(graph.connectedSubgraphs)} ${

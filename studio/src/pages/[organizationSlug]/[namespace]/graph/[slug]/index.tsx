@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
+  InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { RocketIcon, UpdateIcon } from "@radix-ui/react-icons";
 import {
@@ -59,6 +60,7 @@ import { ReactFlowProvider } from "reactflow";
 import Link from "next/link";
 import { PiCubeFocus } from "react-icons/pi";
 import { useRouter } from "next/router";
+import { docsBaseURL } from "@/lib/constants";
 
 const GraphOverviewPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -174,11 +176,19 @@ const GraphOverviewPage: NextPageWithLayout = () => {
       }
     >
       {isMonograph && (
-        <Alert className="mb-4">
-          A monograph does not support federation. It is strictly limited to one
-          subgraph that is created automatically for you. Modifying that
-          subgraph directly can potentially break the monograph. Please use
-          monograph CLI commands to operate this graph.
+        <Alert className="mb-4 flex flex-col justify-between gap-4 bg-card md:flex-row md:items-center">
+          <AlertDescription>
+            This is a monograph without federation enabled. A monograph strictly
+            consists of a single subgraph.
+          </AlertDescription>
+          <Button size="sm" variant="secondary" asChild>
+            <Link
+              className="flex-shrink-0"
+              href={docsBaseURL + "/cli/essentials#monographs"}
+            >
+              Learn More
+            </Link>
+          </Button>
         </Alert>
       )}
       <div className="grid grid-rows-3 gap-4 lg:grid-cols-2">
