@@ -10,5 +10,3 @@ events:
     default:
       provider: NATS
       url: "nats://localhost:4222"
-      authentication:
-        enabled: true

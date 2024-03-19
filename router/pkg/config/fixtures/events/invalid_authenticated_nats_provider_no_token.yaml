@@ -8,4 +8,7 @@ graph:
 events:
   sources:
     default:
-      provider: TEST
+      provider: NATS
+      url: "nats://localhost:4222"
+      authentication:
+        whatever: false

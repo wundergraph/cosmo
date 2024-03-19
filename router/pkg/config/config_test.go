@@ -160,25 +160,39 @@ func TestDefaults(t *testing.T) {
 
 func TestEventsInvalidProvider(t *testing.T) {
 	_, err := LoadConfig("./fixtures/events/invalid_provider.yaml", "")
-	require.ErrorContains(t, err, "value must be \"NATS\"")
+	// Note: If none of the oneOf array matches, the first in the array is compared
+	require.ErrorContains(t, err, "missing properties: 'url'")
 }
 
-func TestEventsInvalidNatsProviderProperty(t *testing.T) {
-	_, err := LoadConfig("./fixtures/events/invalid_provider_property.yaml", "")
-	require.ErrorContains(t, err, "")
+func TestInvalidAuthenticatedNatsProviderNoToken(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_authenticated_nats_provider_no_token.yaml", "")
+	// Note: If none of the oneOf array matches, the first in the array is compared
+	require.ErrorContains(t, err, "missing properties: 'token'")
 }
 
-func TestEventsInvalidNatsBothAuthenticationMethods(t *testing.T) {
-	_, err := LoadConfig("./fixtures/events/invalid_both_authentication_methods.yaml", "")
-	require.ErrorContains(t, err, "")
+func TestInvalidAuthenticatedNatsProviderNoUsername(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_authenticated_nats_provider_no_username.yaml", "")
+	// Note: If none of the oneOf array matches, the first in the array is compared
+	require.ErrorContains(t, err, "missing properties: 'token'")
 }
 
-func TestEventsInvalidNatsNoAuthenticationMethod(t *testing.T) {
-	_, err := LoadConfig("./fixtures/events/invalid_no_authentication_method.yaml", "")
-	require.ErrorContains(t, err, "")
+func TestInvalidAuthenticatedNatsProviderNoPassword(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_authenticated_nats_provider_no_password.yaml", "")
+	// Note: If none of the oneOf array matches, the first in the array is compared
+	require.ErrorContains(t, err, "missing properties: 'token'")
 }
 
-func TestEventsInvalidAuthenticationProperty(t *testing.T) {
-	_, err := LoadConfig("./fixtures/events/invalid_authentication_property.yaml", "")
-	require.ErrorContains(t, err, "")
+func TestValidUnauthenticatedNatsProvider(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/valid_unauthenticated_nats_provider.yaml", "")
+	require.NoError(t, err)
+}
+
+func TestValidAuthenticatedNatsProviderWithToken(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/valid_authenticated_nats_provider_with_token.yaml", "")
+	require.NoError(t, err)
+}
+
+func TestValidAuthenticatedNatsProviderWithCredentials(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/valid_authenticated_nats_provider_with_credentials.yaml", "")
+	require.NoError(t, err)
 }

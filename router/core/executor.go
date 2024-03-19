@@ -3,6 +3,9 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/pubsub"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -38,7 +41,7 @@ type Executor struct {
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, reporter resolve.Reporter) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(routerConfig, routerEngineConfig)
+	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
@@ -105,27 +108,35 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
+func natsAuthenticationOptions(authentication *config.Authentication) ([]nats.Option, error) {
+	if authentication == nil {
+		return nil, nil
+	}
+	if authentication.Token != nil {
+		return []nats.Option{nats.Token(*authentication.Token)}, nil
+	}
+	if authentication.Username == nil || authentication.Password == nil {
+		return nil, fmt.Errorf("must provide username and password if token is not provided")
+	}
+	return []nats.Option{nats.UserInfo(*authentication.Username, *authentication.Password)}, nil
+}
+
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
-	// XXX: We support only a single NATS provider for now, but we can easily extend this
-	// since the configuration format already handles multiple sources
-	var nc *nats.Conn
+	pubSubBySourceName := make(map[string]pubsub_datasource.PubSub)
 	datasourceConfigurations := routerCfg.EngineConfig.GetDatasourceConfigurations()
-	initiatedSourceNames := make([]string, 0)
 	for _, datasourceConfiguration := range datasourceConfigurations {
 		if datasourceConfiguration.CustomEvents == nil {
 			continue
 		}
-	eventsLoop:
 		for _, eventConfiguration := range datasourceConfiguration.CustomEvents.Events {
-			for _, sourceName := range initiatedSourceNames {
-				// if this source name's provider has already been initiated, do not try to initiate again
-				if eventConfiguration.SourceName == sourceName {
-					continue eventsLoop
-				}
+			// if this source name's provider has already been initiated, do not try to initiate again
+			_, ok := pubSubBySourceName[eventConfiguration.SourceName]
+			if ok {
+				continue
 			}
 			eventSource, ok := routerEngineCfg.Events.Sources[eventConfiguration.SourceName]
 			if !ok {
@@ -133,17 +144,17 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 			}
 			switch eventSource.Provider {
 			case "NATS":
-				if nc != nil {
-					return nil, fmt.Errorf("multiple NATS event sources are not supported")
+				options, err := natsAuthenticationOptions(eventSource.Authentication)
+				if err != nil {
+					return nil, fmt.Errorf("failed to add authentication for NATS provider with sourceName \"%s\": %w", eventConfiguration.SourceName, err)
 				}
-				var err error
-				nc, err = nats.Connect(eventSource.URL)
+				natsConnection, err := nats.Connect(eventSource.URL, options...)
 				if err != nil {
 					return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 				}
-				initiatedSourceNames = append(initiatedSourceNames, eventConfiguration.SourceName)
+				pubSubBySourceName[eventConfiguration.SourceName] = pubsub.NewNATSConnector(natsConnection).New(ctx)
 			default:
-				return nil, fmt.Errorf("unknown event source provider %s", eventSource.Provider)
+				return nil, fmt.Errorf("unknown event source provider %s for sourceName \"%s\"", eventConfiguration.SourceName, eventSource.Provider)
 			}
 		}
 	}
@@ -153,7 +164,9 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
-		nc,
+		&pubsub_datasource.Factory{
+			PubSubBySourceName: pubSubBySourceName,
+		},
 	))
 
 	// this generates the plan config using the data source factories from the config package

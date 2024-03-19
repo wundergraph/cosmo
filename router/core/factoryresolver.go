@@ -9,7 +9,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/jensneuse/abstractlogger"
-	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
@@ -19,7 +18,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/pubsub"
 )
 
 type Loader struct {
@@ -52,7 +50,7 @@ func NewDefaultFactoryResolver(
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
-	natsConnection *nats.Conn,
+	pubsub *pubsub_datasource.Factory,
 ) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
@@ -77,10 +75,8 @@ func NewDefaultFactoryResolver(
 			StreamingClient: streamingClient,
 			Logger:          factoryLogger,
 		},
-		pubsub: &pubsub_datasource.Factory{
-			Connector: pubsub.NewNATSConnector(natsConnection),
-		},
-		log: log,
+		pubsub: pubsub,
+		log:    log,
 	}
 }
 
@@ -262,10 +258,11 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", ev.Type.String(), in.Id, err)
 				}
 				events[ii] = pubsub_datasource.EventConfiguration{
-					Type:      eventType,
-					TypeName:  ev.TypeName,
-					FieldName: ev.FieldName,
-					Topic:     ev.Topic,
+					FieldName:  ev.FieldName,
+					SourceName: ev.SourceName,
+					Topic:      ev.Topic,
+					Type:       eventType,
+					TypeName:   ev.TypeName,
 				}
 			}
 			out.Custom = pubsub_datasource.ConfigJson(pubsub_datasource.Configuration{
