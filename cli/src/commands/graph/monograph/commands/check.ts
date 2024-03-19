@@ -47,6 +47,10 @@ export default (opts: BaseCommandOptions) => {
       program.error(pc.red(`Could not perform check. ${graphResp.response?.details}`));
     }
 
+    if (graphResp.subgraphs.length === 0) {
+      program.error(pc.red(`Could not perform check. No subgraph found.`));
+    }
+
     const subgraph = graphResp.subgraphs[0];
 
     const resp = await opts.client.platform.checkSubgraphSchema(

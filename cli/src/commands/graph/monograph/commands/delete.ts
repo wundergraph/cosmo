@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import inquirer from 'inquirer';
@@ -40,10 +40,7 @@ export default (opts: BaseCommandOptions) => {
       spinner.succeed(`Monograph was deleted successfully.`);
     } else {
       spinner.fail(`Failed to delete monograph.`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
-      }
-      process.exit(1);
+      program.error(pc.red(pc.bold(resp.response?.details ?? '')));
     }
   });
 
