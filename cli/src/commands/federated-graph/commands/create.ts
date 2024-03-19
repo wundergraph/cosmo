@@ -27,7 +27,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--admission-webhook-url <url>',
-    'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph. This is optional.',
+    'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
     [],
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
