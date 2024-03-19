@@ -486,6 +486,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+        const targetRepo = new TargetRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
@@ -540,15 +541,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraph = (
-          await subgraphRepo.listByFederatedGraph({
-            federatedGraphTargetId: graph.targetId,
-          })
-        )[0];
-
-        await fedGraphRepo.moveMonograph({
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: graph.targetId,
-          subgraphTargetId: subgraph.targetId,
+        });
+
+        const targetIds = [graph.targetId];
+        if (subgraphs.length > 0) {
+          targetIds.push(subgraphs[0].targetId);
+        }
+        await targetRepo.moveWithoutRecomposition({
+          targetIds,
           newNamespaceId: newNamespace.id,
         });
 
@@ -1965,17 +1967,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraph = (
-          await subgraphRepo.listByFederatedGraph({
-            federatedGraphTargetId: graph.targetId,
-          })
-        )[0];
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: graph.targetId,
+        });
+
+        if (subgraphs.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find any subgraphs in the monograph ${req.name}`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
 
         await opts.authorizer.authorize({
           db: opts.db,
           graph: {
-            targetId: subgraph.targetId,
-            name: subgraph.name,
+            targetId: subgraphs[0].targetId,
+            name: subgraphs[0].name,
             targetType: 'subgraph',
           },
           headers: ctx.requestHeader,
@@ -1984,7 +1995,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.update(
           {
-            targetId: subgraph.targetId,
+            targetId: subgraphs[0].targetId,
             labels: [],
             unsetLabels: false,
             schemaSDL: subgraphSchemaSDL,
@@ -2045,7 +2056,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             try {
               await opts.readmeQueue.addJob({
                 organizationId: authContext.organizationId,
-                targetId: subgraph.targetId,
+                targetId: subgraphs[0].targetId,
                 type: 'subgraph',
               });
             } catch (e) {
