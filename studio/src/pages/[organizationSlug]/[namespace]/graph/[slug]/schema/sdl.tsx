@@ -1,19 +1,18 @@
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import { ThreadSheet } from "@/components/discussions/thread";
-import { EmptyState } from "@/components/empty-state";
 import {
   GraphContext,
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
+import { EmptySchema } from "@/components/schema/empty-schema-state";
 import {
   SDLViewer,
   SDLViewerActions,
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
 import { SchemaToolbar } from "@/components/schema/toolbar";
-import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -25,11 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -41,60 +37,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
-
-const Empty = ({ subgraphName }: { subgraphName?: string }) => {
-  const router = useRouter();
-  const graphContext = useContext(GraphContext);
-
-  const isFederated = graphContext?.graph?.supportsFederation;
-
-  return (
-    <EmptyState
-      icon={<CommandLineIcon />}
-      title="No schema found"
-      description={
-        isFederated ? (
-          <>
-            {subgraphName
-              ? "Use the CLI tool to publish the subgraph."
-              : "No subgraphs found. Use the CLI tool to create and publish one."}{" "}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href={docsBaseURL + "/cli/subgraphs/publish"}
-              className="text-primary"
-            >
-              Learn more.
-            </a>
-          </>
-        ) : (
-          <>
-            Please publish a schema to your monograph.{" "}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href={docsBaseURL + "/cli/monograph/publish"}
-              className="text-primary"
-            >
-              Learn more.
-            </a>
-          </>
-        )
-      }
-      actions={
-        <CLI
-          command={
-            isFederated
-              ? subgraphName
-                ? `npx wgc subgraph publish ${subgraphName} --namespace ${router.query.namespace} --schema <path-to-schema>`
-                : `npx wgc subgraph publish <subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema> --label <labels> --routing-url <routing-url>`
-              : `npx wgc monograph publish ${graphContext?.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
-          }
-        />
-      }
-    />
-  );
-};
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -170,14 +112,16 @@ const SDLPage: NextPageWithLayout = () => {
     subgraphSdl?.response &&
     subgraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND
   ) {
-    content = <Empty subgraphName={activeSubgraph} />;
+    content = <EmptySchema subgraphName={activeSubgraph} />;
   } else if (
     federatedGraphSdl?.response &&
     federatedGraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND
   ) {
     validGraph = true;
     content = (
-      <Empty subgraphName={graphData?.subgraphs?.[0]?.name || undefined} />
+      <EmptySchema
+        subgraphName={graphData?.subgraphs?.[0]?.name || undefined}
+      />
     );
   } else {
     content = (
