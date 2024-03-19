@@ -26,6 +26,7 @@ type Config = {
       headers?: {
         [key: string]: string;
       };
+      raw?: boolean;
     };
   }[];
 };
@@ -65,6 +66,7 @@ export default (opts: BaseCommandOptions) => {
           key,
           value,
         })),
+        rawIntrospection: s.introspection?.raw,
       });
 
       if (!result.success) {
