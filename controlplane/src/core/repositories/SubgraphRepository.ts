@@ -697,7 +697,6 @@ export class SubgraphRepository {
   }): Promise<GetChecksResponse> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
-      published: true,
     });
 
     if (subgraphs.length === 0) {
@@ -771,7 +770,6 @@ export class SubgraphRepository {
   }): Promise<number> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
-      published: true,
     });
 
     if (subgraphs.length === 0) {
@@ -823,7 +821,6 @@ export class SubgraphRepository {
 
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId: data.federatedGraphTargetId,
-      published: true,
     });
 
     const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
@@ -1091,44 +1088,4 @@ export class SubgraphRepository {
       .where(and(eq(subgraphMembers.subgraphId, subgraphId), eq(subgraphMembers.id, subgraphMemberId)))
       .execute();
   }
-
-  // public async getSubgraphsByFederatedGraphIds(federatedGraphTargetIds: string[], supportsFederation?: boolean) {
-  //   const subgraphs: string[] = [];
-
-  //   if (federatedGraphTargetIds.length === 0) {
-  //     return subgraphTargetIds;
-  //   }
-
-  //   const monographs = await this.db.query.targets.findMany({
-  //     columns: {
-  //       id: true,
-  //       namespaceId: true,
-  //     },
-  //     with: {
-  //       labelMatchers: true,
-  //     },
-  //     where: and(
-  //       eq(targets.type, 'federated'),
-  //       eq(targets.asMonograph, true),
-  //       eq(targets.organizationId, this.organizationId),
-  //       inArray(targets.id, federatedGraphTargetIds),
-  //     ),
-  //   });
-
-  //   if (monographs.length === 0) {
-  //     return subgraphTargetIds;
-  //   }
-
-  //   for (const graph of monographs) {
-  //     const subgraphs = await this.listByFederatedGraph({
-  //       federatedGraphTargetId: graph.id,
-  //     });
-
-  //     for (const sg of subgraphs) {
-  //       subgraphTargetIds.push(sg.targetId);
-  //     }
-  //   }
-
-  //   return subgraphTargetIds;
-  // }
 }
