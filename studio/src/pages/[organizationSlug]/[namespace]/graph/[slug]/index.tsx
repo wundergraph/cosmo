@@ -1,6 +1,7 @@
 import { RefreshInterval } from "@/components/analytics/refresh-interval";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import {
   ComposeStatus,
   ComposeStatusMessage,
@@ -66,6 +67,10 @@ const GraphOverviewPage: NextPageWithLayout = () => {
   const router = useRouter();
   const graphData = useContext(GraphContext);
   const [open, setOpen] = useState(false);
+  const [showMonographInfo, setShowMonoGraphInfo] = useLocalStorage(
+    "showMonographInfo",
+    true,
+  );
   const applyParams = useApplyParams();
   const client = useQueryClient();
   const { range, dateRange, refreshInterval } = useAnalyticsQueryState(4);
@@ -175,20 +180,32 @@ const GraphOverviewPage: NextPageWithLayout = () => {
         </OverviewToolbar>
       }
     >
-      {isMonograph && (
+      {isMonograph && showMonographInfo && (
         <Alert className="mb-4 flex flex-col justify-between gap-4 bg-card md:flex-row md:items-center">
           <AlertDescription>
-            This is a monograph without federation enabled. A monograph strictly
-            consists of a single subgraph.
+            This is a monograph without GraphQL Federation enabled. A monograph
+            strictly consists of a single subgraph.
           </AlertDescription>
-          <Button size="sm" variant="secondary" asChild>
-            <Link
-              className="flex-shrink-0"
-              href={docsBaseURL + "/cli/essentials#monographs"}
+          <div className="flex-shrink-0 space-y-2 md:space-x-2 md:space-y-0">
+            <Button
+              className="w-full md:w-auto"
+              size="sm"
+              variant="default"
+              asChild
             >
-              Learn More
-            </Link>
-          </Button>
+              <Link href={docsBaseURL + "/cli/essentials#monographs"}>
+                Learn More
+              </Link>
+            </Button>
+            <Button
+              className="w-full md:w-auto"
+              size="sm"
+              variant="secondary"
+              onClick={() => setShowMonoGraphInfo(false)}
+            >
+              Hide
+            </Button>
+          </div>
         </Alert>
       )}
       <div className="grid grid-rows-3 gap-4 lg:grid-cols-2">
