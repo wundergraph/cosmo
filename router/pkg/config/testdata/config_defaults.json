@@ -171,7 +171,8 @@
       "PlanningVisitor": false,
       "DatasourceVisitor": false,
       "ReportWebSocketConnections": false,
-      "ReportMemoryUsage": false
+      "ReportMemoryUsage": false,
+      "EnableResolverDebugging": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
@@ -192,5 +193,9 @@
     "ForwardUpgradeHeaders": true,
     "ForwardUpgradeQueryParams": true,
     "ForwardInitialPayload": true
+  },
+  "SubgraphErrorPropagation": {
+    "Enabled": false,
+    "StatusCodes": false
   }
 }
