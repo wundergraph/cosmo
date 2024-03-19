@@ -6,8 +6,9 @@ module "cosmo" {
 
   enable_tls = true
 
-  subdomain = "cosmo-router"
-  hosted_zone_name = "example.com"
+  # Please adjust accordingly
+  subdomain        = "router"
+  hosted_zone_name = "your-domain.com"
 
   secret_arn = var.secret_arn
 }
