@@ -2,8 +2,9 @@ package core
 
 import (
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"net/http"
+
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
 
 var (

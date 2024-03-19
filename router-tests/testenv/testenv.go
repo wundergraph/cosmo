@@ -78,6 +78,7 @@ type Config struct {
 	ModifyRouterConfig                 func(routerConfig *nodev1.RouterConfig)
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
+	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DisableWebSockets                  bool
 	TLSConfig                          *core.TlsConfig
@@ -396,6 +397,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			URL:       cdn.URL,
 			CacheSize: 1024 * 1024,
 		},
+		SubgraphErrorPropagation: config.SubgraphErrorPropagationConfiguration{
+			Enabled:     true,
+			StatusCodes: true,
+		},
 	}
 
 	if testConfig.ModifyCDNConfig != nil {
@@ -444,6 +449,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySecurityConfiguration(&cfg.SecurityConfiguration)
 	}
 
+	if testConfig.ModifySubgraphErrorPropagation != nil {
+		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
+	}
+
 	routerOpts := []core.Option{
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
@@ -454,6 +463,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
+		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithEvents(config.EventsConfiguration{
 			Sources: map[string]config.EventSource{

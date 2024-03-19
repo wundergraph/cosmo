@@ -29,4 +29,5 @@ type Subscription {
   initPayloadValue(key: String!, repeat: Int): TimestampedString!
   "Returns a stream with the value of the WS initial payload."
   initialPayload(repeat: Int): Map
+  returnsError: String
 }

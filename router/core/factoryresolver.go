@@ -119,9 +119,10 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 }
 
 type RouterEngineConfiguration struct {
-	Execution config.EngineExecutionConfiguration
-	Headers   config.HeaderRules
-	Events    config.EventsConfiguration
+	Execution                config.EngineExecutionConfiguration
+	Headers                  config.HeaderRules
+	Events                   config.EventsConfiguration
+	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 }
 
 func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
