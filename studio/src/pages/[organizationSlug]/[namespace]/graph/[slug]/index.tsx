@@ -207,7 +207,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
             <CardContent className="flex flex-col gap-y-3 text-sm">
               <div className="flex gap-x-4">
                 <span className="w-28 text-muted-foreground">Name</span>
-                <span className="w-32">{graphData.graph.name}</span>
+                <span className="truncate">{graphData.graph.name}</span>
               </div>
               {!isMonograph && (
                 <>
@@ -215,7 +215,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                     <span className="w-28 text-muted-foreground">
                       Subgraphs
                     </span>
-                    <span className="w-32">{connectedSubgraphs}</span>
+                    <span>{connectedSubgraphs}</span>
                   </div>
                   <div className="flex items-start gap-x-3">
                     <span className="w-28 flex-shrink-0 text-muted-foreground">

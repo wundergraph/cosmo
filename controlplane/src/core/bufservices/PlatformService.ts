@@ -1164,7 +1164,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (req.admissionWebhookURL && !isValidUrl(req.routingUrl)) {
+        if (req.admissionWebhookURL && !isValidUrl(req.admissionWebhookURL)) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -3347,6 +3347,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (req.admissionWebhookURL && !isValidUrl(req.admissionWebhookURL)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Admission Webhook URL is not a valid URL`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
         const deploymentErrors: PlainMessage<DeploymentError>[] = [];
         let compositionErrors: PlainMessage<CompositionError>[] = [];
 
@@ -3358,7 +3369,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           readme: req.readme,
           blobStorage: opts.blobStorage,
           namespaceId: federatedGraph.namespaceId,
-          unsetLabelMatchers: req.unsetLabelMatchers ?? false,
+          unsetLabelMatchers: req.unsetLabelMatchers,
+          admissionWebhookURL: req.admissionWebhookURL,
           admissionConfig: {
             cdnBaseUrl: opts.cdnBaseUrl,
             jwtSecret: opts.admissionWebhookJWTSecret,
@@ -3489,7 +3501,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // check if the user is authorized to perform the action
+        // Check if the user is authorized to perform the action
         await opts.authorizer.authorize({
           db: opts.db,
           graph: {
@@ -3501,6 +3513,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
+        // When un-setting the url, the url can be empty string
         if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
           return {
             response: {

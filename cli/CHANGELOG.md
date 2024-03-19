@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.47.0](https://github.com/wundergraph/cosmo/compare/wgc@0.46.1...wgc@0.47.0) (2024-03-18)
+
+### Bug Fixes
+
+* raw output not being a valid json ([#642](https://github.com/wundergraph/cosmo/issues/642)) ([a690338](https://github.com/wundergraph/cosmo/commit/a690338d0a152d76fdc408e272b5b57299752ab2)) (@thisisnithin)
+
+### Features
+
+* allow to update admission url ([#638](https://github.com/wundergraph/cosmo/issues/638)) ([c7f7ee6](https://github.com/wundergraph/cosmo/commit/c7f7ee65f7716d463fb0bf96cf386e54ba5f8b73)) (@StarpTech)
+
+## [0.46.1](https://github.com/wundergraph/cosmo/compare/wgc@0.46.0...wgc@0.46.1) (2024-03-16)
+
+**Note:** Version bump only for package wgc
+
 # [0.46.0](https://github.com/wundergraph/cosmo/compare/wgc@0.45.1...wgc@0.46.0) (2024-03-14)
 
 ### Features

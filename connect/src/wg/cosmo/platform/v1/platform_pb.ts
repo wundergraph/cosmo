@@ -558,13 +558,6 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
   labels: Label[] = [];
 
   /**
-   * The headers are the headers which will be used to route the requests to the subgraph.
-   *
-   * @generated from field: repeated string headers = 5;
-   */
-  headers: string[] = [];
-
-  /**
    * The subscription protocol to use when subscribing to this subgraph
    *
    * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
@@ -604,7 +597,6 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
     { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "labels", kind: "message", T: Label, repeated: true },
-    { no: 5, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 6, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 7, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -1069,13 +1061,6 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
   labels: Label[] = [];
 
   /**
-   * headers are the headers which will be used to route the requests to the subgraph.
-   *
-   * @generated from field: repeated string headers = 4;
-   */
-  headers: string[] = [];
-
-  /**
    * subscription protocol to use when subscribing to this subgraph
    *
    * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
@@ -1112,7 +1097,6 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
-    { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
