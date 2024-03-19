@@ -85,6 +85,13 @@ export const enrichLogger = (
   return newLogger;
 };
 
+export function createInternalLabel(): Label {
+  return {
+    key: '_internal',
+    value: uid(6),
+  };
+}
+
 /**
  * Normalizes labels by removing duplicates.
  * Also performs a simple sort

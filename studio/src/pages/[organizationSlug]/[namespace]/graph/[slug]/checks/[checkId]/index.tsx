@@ -336,7 +336,7 @@ const CheckDetails = ({
             </dd>
           </div>
 
-          {!graphContext.graph?.asMonograph && (
+          {graphContext.graph?.supportsFederation && (
             <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
               <dt className="text-sm text-muted-foreground">Subgraph</dt>
               <dd>

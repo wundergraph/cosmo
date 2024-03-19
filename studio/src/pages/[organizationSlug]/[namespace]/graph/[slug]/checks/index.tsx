@@ -121,7 +121,7 @@ const ChecksPage: NextPageWithLayout = () => {
         actions={
           <CLI
             command={
-              graphContext.graph.asMonograph
+              !graphContext.graph.supportsFederation
                 ? `npx wgc monograph check ${graphContext.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
                 : `npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`
             }
@@ -139,7 +139,7 @@ const ChecksPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Check</TableHead>
-              {!graphContext.graph.asMonograph && (
+              {graphContext.graph.supportsFederation && (
                 <TableHead>Subgraph</TableHead>
               )}
               <TableHead>Tasks</TableHead>
@@ -203,7 +203,7 @@ const ChecksPage: NextPageWithLayout = () => {
                           </div>
                         </div>
                       </TableCell>
-                      {!graphContext.graph?.asMonograph && (
+                      {graphContext.graph?.supportsFederation && (
                         <TableCell>{subgraphName}</TableCell>
                       )}
                       <TableCell>

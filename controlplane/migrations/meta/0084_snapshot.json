@@ -1,5 +1,5 @@
 {
-  "id": "a44dfaec-7c6a-44a5-8696-0fd9737077ee",
+  "id": "e7466e0a-a242-4b6a-b4bb-877e9f61c96a",
   "prevId": "9c780134-32b2-425e-b281-4671ef79d47c",
   "version": "5",
   "dialect": "pg",
@@ -910,6 +910,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "supports_federation": {
+          "name": "supports_federation",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         }
       },
       "indexes": {},
@@ -3441,13 +3448,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
-        },
-        "as_monograph": {
-          "name": "as_monograph",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         }
       },
       "indexes": {

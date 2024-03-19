@@ -202,7 +202,7 @@ const FederatedGraphsPage: NextPageWithLayout = () => {
 FederatedGraphsPage.getLayout = (page) =>
   getSubgraphLayout(
     <SubgraphPageLayout
-      title="Federated Graphs"
+      title="Graphs"
       subtitle="View the federated graph that include this subgraph."
     >
       {page}

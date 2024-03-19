@@ -104,10 +104,12 @@ export const SelectGraphs = ({
   };
 
   const graphs =
-    data?.graphs.filter((g) => g.asMonograph === (type === "monograph")) || [];
+    data?.graphs.filter(
+      (g) => g.supportsFederation === (type === "federated"),
+    ) || [];
 
   const groupedGraphs = graphs
-    .filter((g) => g.asMonograph === (type === "monograph"))
+    .filter((g) => g.supportsFederation === (type === "federated"))
     .reduce<Record<string, FederatedGraph[]>>((result, graph) => {
       const { namespace, name } = graph;
 

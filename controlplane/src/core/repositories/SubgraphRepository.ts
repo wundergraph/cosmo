@@ -488,18 +488,11 @@ export class SubgraphRepository {
     });
   }
 
-  public async matchesWithMonographs(labels: Label[], namespaceId: string): Promise<boolean> {
-    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
-
-    const graphs = await fedGraphRepo.targetsBySubgraphLabels({
-      labels,
-      namespaceId,
-    });
-
-    return graphs.some((g) => g.asMonograph === true);
-  }
-
-  public async list(opts: ListFilterOptions): Promise<SubgraphDTO[]> {
+  public async list(
+    opts: ListFilterOptions & {
+      federatedGraphTargetIds?: string[];
+    },
+  ): Promise<SubgraphDTO[]> {
     const conditions: SQL<unknown>[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
@@ -507,6 +500,14 @@ export class SubgraphRepository {
 
     if (opts.namespaceId) {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
+    if (opts.supportsFederation !== undefined) {
+      conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
+    }
+
+    if (opts.federatedGraphTargetIds && opts.federatedGraphTargetIds.length > 0) {
+      conditions.push(inArray(schema.federatedGraphs.targetId, opts.federatedGraphTargetIds));
     }
 
     const targets = await this.db
@@ -518,6 +519,11 @@ export class SubgraphRepository {
       .from(schema.targets)
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
       .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
+      .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
+      .innerJoin(
+        schema.federatedGraphs,
+        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
+      )
       .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
       .where(and(...conditions))
       .limit(opts.limit)
@@ -529,10 +535,6 @@ export class SubgraphRepository {
       const sg = await this.byTargetId(target.id);
       if (sg === undefined) {
         throw new Error(`Subgraph ${target.name} not found`);
-      }
-      // If passed, we exclude subgraphs used for monographs. The use case is we do not want the user to know it exists
-      if (opts.excludeMonographs && (await this.matchesWithMonographs(sg.labels, sg.namespaceId))) {
-        continue;
       }
 
       subgraphs.push(sg);
@@ -1012,27 +1014,26 @@ export class SubgraphRepository {
       .from(targets)
       .innerJoin(subgraphs, eq(targets.id, subgraphs.targetId))
       .innerJoin(subgraphMembers, eq(subgraphs.id, subgraphMembers.subgraphId))
+      .innerJoin(schema.subgraphsToFederatedGraph, eq(subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
+      .innerJoin(
+        schema.federatedGraphs,
+        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
+      )
       .where(
         and(
           eq(targets.type, 'subgraph'),
           eq(targets.organizationId, this.organizationId),
           or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId)),
+          eq(schema.federatedGraphs.supportsFederation, true),
         ),
       );
 
     const accessibleSubgraphs: SubgraphDTO[] = [];
 
-    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
-
     for (const graph of graphs) {
       const sg = await this.byTargetId(graph.targetId);
       if (sg === undefined) {
         throw new Error(`Subgraph ${graph.name} not found`);
-      }
-
-      // Exclude subgraphs used for monographs. We do not want to show them to the user.
-      if (await this.matchesWithMonographs(sg.labels, sg.namespaceId)) {
-        continue;
       }
 
       accessibleSubgraphs.push(sg);
@@ -1090,43 +1091,43 @@ export class SubgraphRepository {
       .execute();
   }
 
-  public async getSubgraphTargetIdsForMonographs(federatedGraphTargetIds: string[]) {
-    const subgraphTargetIds: string[] = [];
+  // public async getSubgraphsByFederatedGraphIds(federatedGraphTargetIds: string[], supportsFederation?: boolean) {
+  //   const subgraphs: string[] = [];
 
-    if (federatedGraphTargetIds.length === 0) {
-      return subgraphTargetIds;
-    }
+  //   if (federatedGraphTargetIds.length === 0) {
+  //     return subgraphTargetIds;
+  //   }
 
-    const monographs = await this.db.query.targets.findMany({
-      columns: {
-        id: true,
-        namespaceId: true,
-      },
-      with: {
-        labelMatchers: true,
-      },
-      where: and(
-        eq(targets.type, 'federated'),
-        eq(targets.asMonograph, true),
-        eq(targets.organizationId, this.organizationId),
-        inArray(targets.id, federatedGraphTargetIds),
-      ),
-    });
+  //   const monographs = await this.db.query.targets.findMany({
+  //     columns: {
+  //       id: true,
+  //       namespaceId: true,
+  //     },
+  //     with: {
+  //       labelMatchers: true,
+  //     },
+  //     where: and(
+  //       eq(targets.type, 'federated'),
+  //       eq(targets.asMonograph, true),
+  //       eq(targets.organizationId, this.organizationId),
+  //       inArray(targets.id, federatedGraphTargetIds),
+  //     ),
+  //   });
 
-    if (monographs.length === 0) {
-      return subgraphTargetIds;
-    }
+  //   if (monographs.length === 0) {
+  //     return subgraphTargetIds;
+  //   }
 
-    for (const graph of monographs) {
-      const subgraphs = await this.listByFederatedGraph({
-        federatedGraphTargetId: graph.id,
-      });
+  //   for (const graph of monographs) {
+  //     const subgraphs = await this.listByFederatedGraph({
+  //       federatedGraphTargetId: graph.id,
+  //     });
 
-      for (const sg of subgraphs) {
-        subgraphTargetIds.push(sg.targetId);
-      }
-    }
+  //     for (const sg of subgraphs) {
+  //       subgraphTargetIds.push(sg.targetId);
+  //     }
+  //   }
 
-    return subgraphTargetIds;
-  }
+  //   return subgraphTargetIds;
+  // }
 }

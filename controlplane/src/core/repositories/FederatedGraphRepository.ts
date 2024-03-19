@@ -74,7 +74,7 @@ export class FederatedGraphRepository {
     labelMatchers: string[];
     createdBy: string;
     readme?: string;
-    asMonograph?: boolean;
+    supportsFederation?: boolean;
     admissionWebhookURL?: string;
   }): Promise<FederatedGraphDTO | undefined> {
     return this.db.transaction(async (tx) => {
@@ -93,7 +93,6 @@ export class FederatedGraphRepository {
           createdBy: data.createdBy,
           readme: data.readme,
           namespaceId: data.namespaceId,
-          asMonograph: data.asMonograph,
         })
         .returning()
         .execute();
@@ -104,6 +103,7 @@ export class FederatedGraphRepository {
           targetId: insertedTarget[0].id,
           admissionWebhookURL,
           routingUrl,
+          supportsFederation: data.supportsFederation,
         })
         .returning()
         .execute();
@@ -141,7 +141,6 @@ export class FederatedGraphRepository {
         id: insertedGraph[0].id,
         targetId: insertedTarget[0].id,
         name: insertedTarget[0].name,
-        asMonograph: insertedTarget[0].asMonograph,
         isComposable: false,
         routingUrl: insertedGraph[0].routingUrl,
         admissionWebhookURL: insertedGraph[0].admissionWebhookURL ?? '',
@@ -151,6 +150,7 @@ export class FederatedGraphRepository {
         subgraphsCount: subgraphs.length,
         namespace: data.namespace,
         namespaceId: data.namespaceId,
+        supportsFederation: insertedGraph[0].supportsFederation,
       };
     });
   }
@@ -383,18 +383,21 @@ export class FederatedGraphRepository {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
     }
 
-    if (opts.excludeMonographs) {
-      conditions.push(eq(schema.targets.asMonograph, false));
-    } else if (opts.onlyMonographs) {
-      conditions.push(eq(schema.targets.asMonograph, true));
+    if (opts.supportsFederation !== undefined) {
+      conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
     }
 
-    const targets = await this.db.query.targets.findMany({
-      where: and(...conditions),
-      limit: opts.limit,
-      offset: opts.offset,
-      orderBy: asc(schema.targets.namespaceId),
-    });
+    const targets = await this.db
+      .select({
+        id: schema.targets.id,
+        name: schema.targets.name,
+      })
+      .from(schema.targets)
+      .innerJoin(schema.federatedGraphs, eq(schema.federatedGraphs.targetId, schema.targets.id))
+      .where(and(...conditions))
+      .limit(opts.limit)
+      .offset(opts.offset)
+      .orderBy(asc(schema.targets.namespaceId));
 
     const federatedGraphs: FederatedGraphDTO[] = [];
 
@@ -424,7 +427,6 @@ export class FederatedGraphRepository {
     const resp = await this.db
       .select({
         name: schema.targets.name,
-        asMonograph: schema.targets.asMonograph,
         labelMatchers: schema.targets.labels,
         createdBy: schema.targets.createdBy,
         readme: schema.targets.readme,
@@ -435,6 +437,7 @@ export class FederatedGraphRepository {
         namespaceId: schema.namespaces.id,
         namespaceName: schema.namespaces.name,
         admissionWebhookURL: schema.federatedGraphs.admissionWebhookURL,
+        supportsFederation: schema.federatedGraphs.supportsFederation,
       })
       .from(targets)
       .where(and(...conditions))
@@ -472,7 +475,6 @@ export class FederatedGraphRepository {
     return {
       id: resp[0].id,
       name: resp[0].name,
-      asMonograph: resp[0].asMonograph,
       routingUrl: resp[0].routingUrl,
       isComposable: latestVersion?.[0]?.isComposable ?? false,
       compositionErrors: latestVersion?.[0]?.compositionErrors ?? '',
@@ -488,6 +490,7 @@ export class FederatedGraphRepository {
       namespace: resp[0].namespaceName,
       namespaceId: resp[0].namespaceId,
       admissionWebhookURL: resp[0].admissionWebhookURL ?? '',
+      supportsFederation: resp[0].supportsFederation,
     };
   }
 
@@ -532,7 +535,7 @@ export class FederatedGraphRepository {
     name: string,
     namespace: string,
     opts?: {
-      asMonograph?: boolean;
+      supportsFederation?: boolean;
     },
   ): Promise<FederatedGraphDTO | undefined> {
     return this.getFederatedGraph([
@@ -540,18 +543,20 @@ export class FederatedGraphRepository {
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'federated'),
       eq(schema.namespaces.name, namespace),
-      opts?.asMonograph ? eq(schema.targets.asMonograph, opts.asMonograph) : undefined,
+      opts?.supportsFederation ? eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation) : undefined,
     ]);
   }
 
-  public targetsBySubgraphLabels(data: { labels: Label[]; namespaceId: string }) {
+  /**
+   * bySubgraphLabels returns federated graphs whose label matchers satisfy the given subgraph labels.
+   */
+  public async bySubgraphLabels(data: { labels: Label[]; namespaceId: string }): Promise<FederatedGraphDTO[]> {
     const uniqueLabels = normalizeLabels(data.labels);
 
-    return this.db
+    const graphs = await this.db
       .select({
         id: targets.id,
         name: targets.name,
-        asMonograph: targets.asMonograph,
       })
       .from(targets)
       .where(
@@ -593,13 +598,6 @@ export class FederatedGraphRepository {
       .leftJoin(schemaVersion, eq(schemaVersion.id, federatedGraphs.composedSchemaVersionId))
       .orderBy(asc(targets.createdAt), asc(schemaVersion.createdAt))
       .execute();
-  }
-
-  /**
-   * bySubgraphLabels returns federated graphs whose label matchers satisfy the given subgraph labels.
-   */
-  public async bySubgraphLabels(data: { labels: Label[]; namespaceId: string }): Promise<FederatedGraphDTO[]> {
-    const graphs = await this.targetsBySubgraphLabels(data);
 
     const graphsDTOs: FederatedGraphDTO[] = [];
 
@@ -696,7 +694,7 @@ export class FederatedGraphRepository {
       return {
         id: fedGraph.id,
         targetId: fedGraph.targetId,
-        asMonograph: fedGraph.asMonograph,
+        supportsFederation: fedGraph.supportsFederation,
         name: fedGraph.name,
         labelMatchers: fedGraph.labelMatchers,
         compositionErrors: compositionErrorString,
@@ -1260,40 +1258,31 @@ export class FederatedGraphRepository {
     return federatedGraphs;
   }
 
-  public migrateMonograph({ targetId }: { targetId: string }) {
+  public enableFederationSupport({ targetId }: { targetId: string }) {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
 
-      const subgraph = (
-        await subgraphRepo.listByFederatedGraph({
-          federatedGraphTargetId: targetId,
-        })
-      )[0];
+      const subgraphs = await subgraphRepo.listByFederatedGraph({
+        federatedGraphTargetId: targetId,
+      });
 
       const graph = await fedGraphRepo.byTargetId(targetId);
       if (!graph) {
         throw new Error('Monograph not found');
       }
 
+      await tx
+        .update(federatedGraphs)
+        .set({
+          supportsFederation: true,
+        })
+        .where(eq(federatedGraphs.targetId, targetId));
+
       const newLabel: Label = {
         key: 'federated',
-        value: uid(12),
+        value: subgraphs.length > 0 && subgraphs[0].labels.length > 0 ? subgraphs[0].labels[0].value : uid(6),
       };
-
-      await tx
-        .update(targets)
-        .set({
-          asMonograph: false,
-        })
-        .where(eq(targets.id, targetId));
-
-      await tx
-        .update(targets)
-        .set({
-          labels: [joinLabel(newLabel)],
-        })
-        .where(eq(targets.id, subgraph.targetId));
 
       await tx.delete(schema.targetLabelMatchers).where(eq(schema.targetLabelMatchers.targetId, graph.targetId));
 
@@ -1304,6 +1293,15 @@ export class FederatedGraphRepository {
           labelMatcher: [joinLabel(newLabel)],
         })
         .execute();
+
+      if (subgraphs.length > 0) {
+        await tx
+          .update(targets)
+          .set({
+            labels: [joinLabel(newLabel)],
+          })
+          .where(eq(targets.id, subgraphs[0].targetId));
+      }
     });
   }
 }

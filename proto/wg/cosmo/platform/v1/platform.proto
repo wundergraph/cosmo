@@ -253,10 +253,7 @@ message GetFederatedGraphsRequest {
   int32 offset = 2;
   bool includeMetrics = 3;
   string namespace = 4;
-  oneof monograph_config {
-    bool only_monographs = 5;
-    bool exclude_monographs = 6;
-  }
+  optional bool supports_federation = 5;
 }
 
 message FederatedGraph {
@@ -272,7 +269,7 @@ message FederatedGraph {
   optional string readme = 10;
   string target_id = 11;
   string namespace = 12;
-  bool as_monograph = 13;
+  bool supports_federation = 13;
   optional string compositionId = 14;
 }
 
@@ -1929,7 +1926,7 @@ service PlatformService {
   rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
   // MigrateMonograph converts a monograph into a federated graph.
   rpc MigrateMonograph(MigrateMonographRequest) returns (MigrateMonographResponse) {}
-  
+
   // CreateFederatedSubgraph creates a federated subgraph on the control plane.
   rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}
   // PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.

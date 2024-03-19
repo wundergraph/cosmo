@@ -92,15 +92,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath,
         icon: <HomeIcon className="h-4 w-4" />,
       },
-      ...(!graphContextData?.graph?.asMonograph
-        ? [
-            {
-              title: "Subgraphs",
-              href: basePath + "/subgraphs",
-              icon: <Component2Icon className="h-4 w-4" />,
-            },
-          ]
-        : []),
+
+      {
+        title: "Subgraphs",
+        href: basePath + "/subgraphs",
+        icon: <Component2Icon className="h-4 w-4" />,
+      },
       {
         title: "Playground",
         href: basePath + "/playground",
@@ -159,7 +156,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <PiChat className="h-4 w-4" />,
       },
     ];
-  }, [organizationSlug, namespace, slug, graphContextData?.graph?.asMonograph]);
+  }, [organizationSlug, namespace, slug]);
 
   let render: React.ReactNode;
 
@@ -231,17 +228,6 @@ export const GraphSelect = () => {
       value={selected?.id}
       onValueChange={(gID) => {
         const graph = data?.graphs.find((g) => g.id === gID);
-
-        // don't show subgraphs page for monographs
-        if (
-          graph?.asMonograph &&
-          router.pathname.split("/")[5] === "subgraphs"
-        ) {
-          router.push(
-            `/${router.query.organizationSlug}/${graph.namespace}/graph/${graph.name}`,
-          );
-          return;
-        }
 
         router.push({
           pathname: router.pathname,

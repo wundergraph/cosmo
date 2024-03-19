@@ -133,7 +133,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     });
   };
 
-  const isMonograph = graphData.graph.asMonograph;
+  const isMonograph = !graphData.graph.supportsFederation;
 
   return (
     <GraphPageLayout
@@ -173,11 +173,15 @@ const GraphOverviewPage: NextPageWithLayout = () => {
         </OverviewToolbar>
       }
     >
-      <div
-        className={cn("grid grid-rows-3 gap-4 lg:grid-cols-2", {
-          "grid-rows-2": isMonograph,
-        })}
-      >
+      {isMonograph && (
+        <Alert className="mb-4">
+          A monograph does not support federation. It is strictly limited to one
+          subgraph that is created automatically for you. Modifying that
+          subgraph directly can potentially break the monograph. Please use
+          monograph CLI commands to operate this graph.
+        </Alert>
+      )}
+      <div className="grid grid-rows-3 gap-4 lg:grid-cols-2">
         <div className="space-y-2 lg:col-span-1">
           <Card className="flex grow flex-col justify-between">
             <CardHeader>
@@ -328,18 +332,19 @@ const GraphOverviewPage: NextPageWithLayout = () => {
             </AlertDescription>
           </Alert>
         </div>
-        {!isMonograph && (
-          <div className="lg:col-span-1 lg:row-span-2">
-            <Card className="h-full">
-              <ReactFlowProvider>
-                <GraphVisualization
-                  subgraphMetrics={dashboardView?.subgraphMetrics}
-                  federatedGraphMetrics={dashboardView?.federatedGraphMetrics}
-                />
-              </ReactFlowProvider>
-            </Card>
-          </div>
-        )}
+        <div className="lg:col-span-1 lg:row-span-2">
+          <Card className="h-full">
+            <ReactFlowProvider>
+              <GraphVisualization
+                subgraphMetrics={dashboardView?.subgraphMetrics}
+                federatedGraphMetrics={dashboardView?.federatedGraphMetrics}
+                supportsFederation={
+                  graphData?.graph?.supportsFederation ?? true
+                }
+              />
+            </ReactFlowProvider>
+          </Card>
+        </div>
         <div className="lg:col-span-1">
           <MostRequested
             data={dashboardView?.mostRequestedOperations ?? []}

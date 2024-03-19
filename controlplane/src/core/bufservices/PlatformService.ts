@@ -191,6 +191,7 @@ import {
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
+  createInternalLabel,
   enrichLogger,
   extractOperationNames,
   formatSubscriptionProtocol,
@@ -340,13 +341,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const federatedGraphs = await federatedGraphRepo.list({
             namespaceId: ns.id,
             offset: 0,
-            limit: 999,
+            limit: 0,
           });
 
           const subgraphs = await subgraphRepo.list({
             namespaceId: ns.id,
             offset: 0,
-            limit: 999,
+            limit: 0,
           });
 
           await namespaceRepo.delete(req.name);
@@ -490,8 +491,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.name, req.namespace, {
-          asMonograph: true,
+          supportsFederation: false,
         });
+
         if (!graph) {
           return {
             response: {
@@ -584,10 +586,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
-        console.log(req.name, req.namespace);
-
         const graph = await fedGraphRepo.byName(req.name, req.namespace, {
-          asMonograph: true,
+          supportsFederation: false,
         });
         if (!graph) {
           return {
@@ -610,7 +610,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
-        await fedGraphRepo.migrateMonograph({
+        await fedGraphRepo.enableFederationSupport({
           targetId: graph.targetId,
         });
 
@@ -641,7 +641,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.name, req.namespace, {
-          asMonograph: false,
+          supportsFederation: true,
         });
         if (!graph) {
           return {
@@ -1010,10 +1010,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          const label: Label = {
-            key: uid(12),
-            value: uid(12),
-          };
+          const label = createInternalLabel();
 
           const labelMatchers = [joinLabel(label)];
 
@@ -1049,7 +1046,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespace: req.namespace,
             namespaceId: namespace.id,
             admissionWebhookURL: req.admissionWebhookURL,
-            asMonograph: true,
+            supportsFederation: false,
           });
 
           if (!graph) {
@@ -1906,7 +1903,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         req.namespace = req.namespace || DefaultNamespace;
 
         const graph = await federatedGraphRepo.byName(req.name, req.namespace, {
-          asMonograph: true,
+          supportsFederation: false,
         });
         if (!graph) {
           return {
@@ -2799,7 +2796,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           const graph = await fedGraphRepo.byName(req.name, req.namespace, {
-            asMonograph: true,
+            supportsFederation: false,
           });
           if (!graph) {
             return {
@@ -2879,7 +2876,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
-          asMonograph: false,
+          supportsFederation: true,
         });
         if (!federatedGraph) {
           return {
@@ -3183,7 +3180,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           const graph = await fedGraphRepo.byName(req.name, req.namespace, {
-            asMonograph: true,
+            supportsFederation: false,
           });
           if (!graph) {
             return {
@@ -3302,7 +3299,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
-          asMonograph: false,
+          supportsFederation: true,
         });
         if (!federatedGraph) {
           return {
@@ -3610,7 +3607,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
-          asMonograph: false,
+          supportsFederation: true,
         });
         if (!federatedGraph) {
           return {
@@ -4011,9 +4008,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const generatedAPIKey = ApiKeyGenerator.generate();
 
-        const monographSubgraphTargetIds = await subgraphRepo.getSubgraphTargetIdsForMonographs(
-          req.federatedGraphTargetIds,
-        );
+        // We do not display subgraphs used for monographs in user accessible resources.
+        // So we automatically add them if such graphs are found
+        const monographSubgraphTargetIds = (
+          await subgraphRepo.list({
+            limit: 0,
+            offset: 0,
+            supportsFederation: false,
+            federatedGraphTargetIds: req.federatedGraphTargetIds,
+          })
+        ).map((s) => s.targetId);
 
         const subgraphTargetIds = new Set([...req.subgraphTargetIds, ...monographSubgraphTargetIds]);
 
@@ -6274,7 +6278,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           limit: req.limit,
           offset: req.offset,
           namespaceId: namespace?.id,
-          excludeMonographs: true,
         });
 
         return {
@@ -6353,8 +6356,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           limit: req.limit,
           offset: req.offset,
           namespaceId: namespace?.id,
-          excludeMonographs: req.monographConfig.case === 'excludeMonographs' && req.monographConfig.value,
-          onlyMonographs: req.monographConfig.case === 'onlyMonographs' && req.monographConfig.value,
+          supportsFederation: req.supportsFederation,
         });
 
         const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
@@ -6393,7 +6395,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             isComposable: g.isComposable,
             compositionId: g.compositionId,
             requestSeries: requestSeriesList[g.id] ?? [],
-            asMonograph: g.asMonograph,
+            supportsFederation: g.supportsFederation,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -6443,7 +6445,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionId: g.compositionId,
             requestSeries: [],
             targetId: g.targetId,
-            asMonograph: g.asMonograph,
+            supportsFederation: g.supportsFederation,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -6629,7 +6631,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             isComposable: federatedGraph.isComposable,
             requestSeries,
             readme: federatedGraph.readme,
-            asMonograph: federatedGraph.asMonograph,
+            supportsFederation: federatedGraph.supportsFederation,
           },
           subgraphs: list.map((g) => ({
             id: g.id,
@@ -8151,7 +8153,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const subgraphs = await subgraphRepo.list({
             limit: 0,
             offset: 0,
-            excludeMonographs: true,
+            supportsFederation: true,
           });
 
           return {

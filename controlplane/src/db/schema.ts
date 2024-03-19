@@ -62,6 +62,7 @@ export const federatedGraphs = pgTable('federated_graphs', {
   // The admission webhook url. This is the url that the controlplane will use to run admission checks.
   // You can use this to enforce policies on the router config.
   admissionWebhookURL: text('admission_webhook_url'),
+  supportsFederation: boolean('supports_federation').default(true).notNull(),
 });
 
 export const federatedGraphClients = pgTable(
@@ -277,7 +278,6 @@ export const targets = pgTable(
       .references(() => namespaces.id, {
         onDelete: 'cascade',
       }),
-    asMonograph: boolean('as_monograph').default(false).notNull(),
   },
   (t) => {
     return {

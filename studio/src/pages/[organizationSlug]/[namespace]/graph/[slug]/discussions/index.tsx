@@ -62,9 +62,7 @@ const DiscussionsPage: NextPageWithLayout = () => {
             >
               <SelectTrigger
                 value={selectedGraph?.name ?? ""}
-                className={cn("w-full md:w-[200px]", {
-                  hidden: graphData?.graph?.asMonograph,
-                })}
+                className="w-full md:w-[200px]"
               >
                 <SelectValue aria-label={selectedGraph?.name ?? ""}>
                   {selectedGraph?.name ?? ""}

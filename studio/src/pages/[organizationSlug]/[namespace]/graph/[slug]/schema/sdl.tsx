@@ -46,7 +46,7 @@ const Empty = ({ subgraphName }: { subgraphName?: string }) => {
   const router = useRouter();
   const graphContext = useContext(GraphContext);
 
-  const isFederated = !graphContext?.graph?.asMonograph;
+  const isFederated = graphContext?.graph?.supportsFederation;
 
   return (
     <EmptyState
@@ -222,40 +222,55 @@ const SDLPage: NextPageWithLayout = () => {
               <Select onValueChange={(query) => router.push(pathname + query)}>
                 <SelectTrigger
                   value={activeGraphWithSDL.title}
-                  className={cn("w-full md:ml-auto md:w-[200px]", {
-                    hidden: graphData?.graph?.asMonograph,
-                  })}
+                  className="w-full md:ml-auto md:w-[200px]"
                 >
                   <SelectValue aria-label={activeGraphWithSDL.title}>
-                    {activeGraphWithSDL.title}
+                    {graphData?.graph?.supportsFederation
+                      ? activeGraphWithSDL.title
+                      : activeSubgraph
+                      ? "Published SDL"
+                      : "Router SDL"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                      <PiGraphLight className="h-3 w-3" /> Graph
-                    </SelectLabel>
-                    <SelectItem value="">{graphName}</SelectItem>
-                  </SelectGroup>
-                  <Separator className="my-2" />
-                  <SelectGroup>
-                    <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                      <Component2Icon className="h-3 w-3" /> Subgraphs
-                    </SelectLabel>
-                    {subgraphs.map(({ name, query }) => {
-                      return (
-                        <SelectItem key={name} value={query}>
-                          {name}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectGroup>
+                  {graphData?.graph?.supportsFederation ? (
+                    <>
+                      <SelectGroup>
+                        <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                          <PiGraphLight className="h-3 w-3" /> Graph
+                        </SelectLabel>
+                        <SelectItem value="">{graphName}</SelectItem>
+                      </SelectGroup>
+                      <Separator className="my-2" />
+                      <SelectGroup>
+                        <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                          <Component2Icon className="h-3 w-3" /> Subgraphs
+                        </SelectLabel>
+                        {subgraphs.map(({ name, query }) => {
+                          return (
+                            <SelectItem key={name} value={query}>
+                              {name}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectGroup>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="">Router SDL</SelectItem>
+                      {subgraphs.map(({ name, query }) => {
+                        return (
+                          <SelectItem key={name} value={query}>
+                            Published SDL
+                          </SelectItem>
+                        );
+                      })}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               <SDLViewerActions
-                className={cn("w-auto", {
-                  "ml-auto": graphData?.graph?.asMonograph,
-                })}
+                className="w-auto"
                 sdl={activeGraphWithSDL.sdl ?? ""}
               />
               <SchemaSettings />

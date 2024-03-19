@@ -2017,21 +2017,9 @@ export class GetFederatedGraphsRequest extends Message<GetFederatedGraphsRequest
   namespace = "";
 
   /**
-   * @generated from oneof wg.cosmo.platform.v1.GetFederatedGraphsRequest.monograph_config
+   * @generated from field: optional bool supports_federation = 5;
    */
-  monographConfig: {
-    /**
-     * @generated from field: bool only_monographs = 5;
-     */
-    value: boolean;
-    case: "onlyMonographs";
-  } | {
-    /**
-     * @generated from field: bool exclude_monographs = 6;
-     */
-    value: boolean;
-    case: "excludeMonographs";
-  } | { case: undefined; value?: undefined } = { case: undefined };
+  supportsFederation?: boolean;
 
   constructor(data?: PartialMessage<GetFederatedGraphsRequest>) {
     super();
@@ -2045,8 +2033,7 @@ export class GetFederatedGraphsRequest extends Message<GetFederatedGraphsRequest
     { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "includeMetrics", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "only_monographs", kind: "scalar", T: 8 /* ScalarType.BOOL */, oneof: "monograph_config" },
-    { no: 6, name: "exclude_monographs", kind: "scalar", T: 8 /* ScalarType.BOOL */, oneof: "monograph_config" },
+    { no: 5, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphsRequest {
@@ -2131,9 +2118,9 @@ export class FederatedGraph extends Message<FederatedGraph> {
   namespace = "";
 
   /**
-   * @generated from field: bool as_monograph = 13;
+   * @generated from field: bool supports_federation = 13;
    */
-  asMonograph = false;
+  supportsFederation = false;
 
   /**
    * @generated from field: optional string compositionId = 14;
@@ -2160,7 +2147,7 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 10, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 12, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 13, name: "as_monograph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 14, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 

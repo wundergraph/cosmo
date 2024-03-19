@@ -604,7 +604,7 @@ export class OrganizationRepository {
         continue;
       }
 
-      if (graph.asMonograph) {
+      if (graph.supportsFederation) {
         monographIds.push(graph.id);
       } else {
         federatedGraphIds.push(graph.id);
@@ -921,7 +921,7 @@ export class OrganizationRepository {
               continue;
             }
 
-            if (graph.asMonograph) {
+            if (graph.supportsFederation) {
               monographIds.push(graph.id);
             } else {
               federatedGraphIds.push(graph.id);
