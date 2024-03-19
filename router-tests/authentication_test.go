@@ -166,7 +166,7 @@ func TestAuthentication(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
 			token, err := authServer.Token(map[string]any{
-				"scopes": "read:employee read:private",
+				"scope": "read:employee read:private",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -193,7 +193,7 @@ func TestAuthentication(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with an token should succeed
 			token, err := authServer.Token(map[string]any{
-				"scopes": "read:employee",
+				"scope": "read:employee",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -223,7 +223,7 @@ func TestAuthentication(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
 			token, err := authServer.Token(map[string]any{
-				"scopes": "read:employee",
+				"scope": "read:employee",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -328,7 +328,7 @@ func TestAuthentication(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
 			token, err := authServer.Token(map[string]any{
-				"scopes": "read:all",
+				"scope": "read:all",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -355,7 +355,7 @@ func TestAuthentication(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
 			token, err := authServer.Token(map[string]any{
-				"scopes": "read:employee read:private read:all",
+				"scope": "read:employee read:private read:all",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -382,7 +382,7 @@ func TestAuthentication(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
 			token, err := authServer.Token(map[string]any{
-				"scopes": "read:fact read:miscellaneous",
+				"scope": "read:fact read:miscellaneous",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -495,7 +495,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(map[string]any{
-				"scopes": "write:fact read:miscellaneous read:all",
+				"scope": "write:fact read:miscellaneous read:all",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -522,7 +522,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(map[string]any{
-				"scopes": "write:fact read:miscellaneous",
+				"scope": "write:fact read:miscellaneous",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -549,7 +549,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(map[string]any{
-				"scopes": "read:miscellaneous read:all",
+				"scope": "read:miscellaneous read:all",
 			})
 			require.NoError(t, err)
 			header := http.Header{
@@ -579,7 +579,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(map[string]any{
-				"scopes": "read:miscellaneous read:all",
+				"scope": "read:miscellaneous read:all",
 			})
 			require.NoError(t, err)
 			header := http.Header{
