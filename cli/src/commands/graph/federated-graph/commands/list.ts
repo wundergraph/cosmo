@@ -32,10 +32,7 @@ export default (opts: BaseCommandOptions) => {
         limit: 0,
         offset: 0,
         namespace: options.namespace,
-        monographConfig: {
-          case: 'excludeMonographs',
-          value: true,
-        },
+        supportsFederation: true,
       },
       {
         headers: baseHeaders,

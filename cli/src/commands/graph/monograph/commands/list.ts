@@ -29,10 +29,7 @@ export default (opts: BaseCommandOptions) => {
         limit: 0,
         offset: 0,
         namespace: options.namespace,
-        monographConfig: {
-          case: 'onlyMonographs',
-          value: true,
-        },
+        supportsFederation: false,
       },
       {
         headers: baseHeaders,
