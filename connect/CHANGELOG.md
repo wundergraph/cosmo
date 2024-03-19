@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.62.0...@wundergraph/cosmo-connect@0.63.0) (2024-03-18)
+
+### Features
+
+* allow to update admission url ([#638](https://github.com/wundergraph/cosmo/issues/638)) ([c7f7ee6](https://github.com/wundergraph/cosmo/commit/c7f7ee65f7716d463fb0bf96cf386e54ba5f8b73)) (@StarpTech)
+
 # [0.62.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.61.0...@wundergraph/cosmo-connect@0.62.0) (2024-03-14)
 
 ### Features
