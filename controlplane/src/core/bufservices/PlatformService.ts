@@ -2809,6 +2809,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const graph = await fedGraphRepo.byName(req.name, req.namespace, {
             supportsFederation: false,
           });
+
           if (!graph) {
             return {
               response: {

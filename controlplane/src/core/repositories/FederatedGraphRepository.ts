@@ -525,7 +525,9 @@ export class FederatedGraphRepository {
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'federated'),
       eq(schema.namespaces.name, namespace),
-      opts?.supportsFederation ? eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation) : undefined,
+      opts?.supportsFederation === undefined
+        ? undefined
+        : eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation),
     ]);
   }
 
