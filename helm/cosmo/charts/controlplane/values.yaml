@@ -40,6 +40,9 @@ serviceAnnotations: {}
 
 podAnnotations: {}
 
+# Annotation for pods of clickhouse-migration and database-migration jobs
+jobPodAnnotations: {}
+
 podSecurityContext:
   {}
   # fsGroup: 2000
