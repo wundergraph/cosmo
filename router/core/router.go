@@ -1039,18 +1039,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistentOpClient:      r.cdnPersistentOpClient,
 	})
-	// Pre-hash all data source IDs to avoid races
-	// TODO: Ideally, we would do this in the engine itself
-	// Context:
-	// In case we have 2 concurrent requests that need planning and use the same data source
-	// it's possible that we run into a race by either calling Hash() on the same data source
-	// or by calling Planner(), which might have side effects.
-	// E.g. in a Data Source Factory, we might be lazily initializing a client
-	for _ = range executor.PlanConfig.DataSources {
-		// Pre-init the Planner ctx for each data source
-		// TODO: need another way of doing this
-		// executor.PlanConfig.DataSources[i].Factory.Planner(ctx)
-	}
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler func(http.Handler) http.Handler
