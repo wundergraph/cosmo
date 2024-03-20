@@ -2102,14 +2102,14 @@ export class FederatedGraph extends Message<FederatedGraph> {
   namespace = "";
 
   /**
-   * @generated from field: bool supports_federation = 13;
-   */
-  supportsFederation = false;
-
-  /**
-   * @generated from field: optional string compositionId = 14;
+   * @generated from field: optional string compositionId = 13;
    */
   compositionId?: string;
+
+  /**
+   * @generated from field: bool supports_federation = 14;
+   */
+  supportsFederation = false;
 
   constructor(data?: PartialMessage<FederatedGraph>) {
     super();
@@ -2131,8 +2131,8 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 10, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 11, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 12, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 13, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 14, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 13, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 14, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {
