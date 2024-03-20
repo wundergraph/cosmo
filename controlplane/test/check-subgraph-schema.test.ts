@@ -1,8 +1,9 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
+import { addSeconds, formatISO, subDays } from 'date-fns';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { SchemaChangeType } from '../src/types/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { SchemaChangeType } from '../src/types/index.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -142,6 +143,51 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkResp.compositionErrors.length).toBe(0);
     expect(checkResp.breakingChanges.length).toBe(0);
+
+    await server.close();
+  });
+
+  test('Should retrieve checks performed against unpublished subgraphs', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const federatedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph1');
+    const label = genUniqueLabel();
+
+    const createFederatedGraphResp = await client.createFederatedGraph({
+      name: federatedGraphName,
+      namespace: 'default',
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const resp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const checksResp = await client.getChecksByFederatedGraphName({
+      name: federatedGraphName,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+      limit: 10,
+      offset: 0,
+    });
+    expect(checksResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checksResp.checks?.length).toBe(1);
 
     await server.close();
   });

@@ -7,10 +7,13 @@ import { baseHeaders } from '../../../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
-  command.description('Deletes a router token of a federated graph.');
+  command.description('Deletes a router token of a federated graph or monograph.');
   command.argument('<name>', 'The name of the router token.');
-  command.requiredOption('-g, --graph-name <graphName>', 'The name of the federated graph the token belongs to');
-  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
+  command.requiredOption(
+    '-g, --graph-name <graphName>',
+    'The name of the federated graph or monograph the token belongs to',
+  );
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
   command.option('-f --force', 'Option to force delete');
   command.action(async (name, options) => {
     if (!options.force) {
