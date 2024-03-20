@@ -2831,18 +2831,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             authContext,
           });
 
-          const subgraph = (
-            await subgraphRepo.listByFederatedGraph({
-              federatedGraphTargetId: graph.targetId,
-            })
-          )[0];
+          const subgraphs = await subgraphRepo.listByFederatedGraph({
+            federatedGraphTargetId: graph.targetId,
+          });
 
           const blobStorageDirectory = `${authContext.organizationId}/${graph.id}`;
           await opts.blobStorage.removeDirectory({ key: blobStorageDirectory });
 
           await fedGraphRepo.delete(graph.targetId);
 
-          await subgraphRepo.delete(subgraph.targetId);
+          if (subgraphs.length === 1) {
+            await subgraphRepo.delete(subgraphs[0].targetId);
+          }
 
           await auditLogRepo.addAuditLog({
             organizationId: authContext.organizationId,
