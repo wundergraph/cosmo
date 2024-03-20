@@ -2,9 +2,9 @@ export type EventType = 'subscribe' | 'publish' | 'request';
 
 export type EventConfiguration = {
   fieldName: string;
+  sourceName: string;
   topic: string;
   type: EventType;
-  sourceId?: string;
 };
 
 export type FieldConfiguration = {

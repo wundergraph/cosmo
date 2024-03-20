@@ -16,13 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -42,19 +35,15 @@ import { formatDateTime } from "@/lib/format-date";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  DoubleArrowLeftIcon,
-  DoubleArrowRightIcon,
-} from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getCompositions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useCallback, useContext } from "react";
+import React, { useContext } from "react";
+import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
+import { InfoTooltip } from "@/components/info-tooltip";
 
 const CompositionsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -111,6 +100,15 @@ const CompositionsPage: NextPageWithLayout = () => {
             <TableRow>
               <TableHead>Id</TableHead>
               <TableHead>Triggered By</TableHead>
+              <TableHead className="flex items-center space-x-1">
+                <div>Admission</div>
+                <div>
+                  <InfoTooltip>
+                    Indicates if the composition has been validated and signed
+                    by your Admission Controller.
+                  </InfoTooltip>
+                </div>
+              </TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-center">Details</TableHead>
             </TableRow>
@@ -118,7 +116,16 @@ const CompositionsPage: NextPageWithLayout = () => {
           <TableBody>
             {data.compositions.length !== 0 ? (
               data.compositions.map(
-                ({ id, isComposable, createdAt, createdBy, isLatestValid }) => {
+                ({
+                  id,
+                  isComposable,
+                  createdAt,
+                  createdBy,
+                  isLatestValid,
+                  admissionError,
+                  routerConfigSignature,
+                  deploymentError,
+                }) => {
                   const path = `${router.asPath.split("?")[0]}/${id}`;
                   return (
                     <TableRow
@@ -150,14 +157,61 @@ const CompositionsPage: NextPageWithLayout = () => {
                       </TableCell>
                       <TableCell>{createdBy || "-"}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-x-2">
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="flex items-center space-x-1">
+                              {admissionError ? (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-2 py-1.5"
+                                >
+                                  <MdNearbyError className="h-4 w-4 text-red-500" />
+                                  <span>Error</span>
+                                </Badge>
+                              ) : routerConfigSignature ? (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-2 py-1.5"
+                                >
+                                  <MdVerifiedUser className="h-4 w-4 text-amber-500" />
+                                  <span>Validated & Signed</span>
+                                </Badge>
+                              ) : (
+                                "-"
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            {admissionError ? (
+                              <>
+                                {" "}
+                                This composition could not be validated due to
+                                an error in the Admission Controller Webhooks.
+                                Please open the composition details page to see
+                                the error.
+                              </>
+                            ) : routerConfigSignature ? (
+                              <>
+                                {" "}
+                                This composition has been validated and signed
+                                successfully by your Admission Controller.
+                              </>
+                            ) : null}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell className="w-[128px] md:w-auto">
+                        <div className="flex w-max flex-col gap-2 md:flex-row md:items-center">
                           <Badge variant="outline" className="gap-2 py-1.5">
                             {getCheckIcon(isComposable)} <span>Composes</span>
                           </Badge>
                           {isLatestValid && (
-                            <Badge variant="outline" className="gap-2 py-1.5">
-                              <div className="h-2 w-2 rounded-full bg-success" />
-                              <span>Current</span>
+                            <Badge
+                              variant="outline"
+                              className="gap-2 bg-success py-1.5"
+                            >
+                              <div className="h-2 w-2 rounded-full bg-white" />
+                              <span>Ready to fetch</span>
                             </Badge>
                           )}
                         </div>

@@ -9,7 +9,7 @@ import {
   incompatibleExtensionKindsError,
   invalidOperationTypeDefinitionError,
   noDefinedUnionMembersError,
-  unexpectedKindFatalError,
+  unexpectedParentKindForChildError,
 } from '../errors/errors';
 import { NormalizationFactory } from './normalization-factory';
 import {
@@ -26,7 +26,7 @@ import {
   newAuthorizationData,
   newFieldAuthorizationData,
   setAndGetValue,
-  upsertEntityContainerProperties,
+  upsertEntityDataProperties,
 } from '../utils/utils';
 import {
   addConcreteTypesForImplementedInterfaces,
@@ -35,15 +35,16 @@ import {
   isObjectLikeNodeEntity,
   SchemaNode,
 } from '../ast/utils';
-import { extractFieldSetValue, newFieldSetContainer } from './utils';
+import { extractFieldSetValue, newFieldSetData } from './utils';
 import {
   ANY_SCALAR,
   ENTITIES_FIELD,
   ENTITY_UNION,
+  EVENT_DIRECTIVE_NAMES,
   EXTENSIONS,
+  PARENT_DEFINITION_DATA,
   PARENT_DEFINITION_DATA_MAP,
   PARENT_EXTENSION_DATA_MAP,
-  PARENTS,
   PROVIDES,
   REQUIRES,
   SCHEMA,
@@ -84,6 +85,9 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
     Directive: {
       enter(node) {
         const name = node.name.value;
+        if (EVENT_DIRECTIVE_NAMES.has(name)) {
+          nf.isEventDrivenSubgraph = true;
+        }
         if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
           nf.isSubgraphVersionTwo = true;
           return false;
@@ -218,13 +222,22 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
       enter(node) {
         nf.childName = node.name.value;
         nf.lastChildNodeKind = node.kind;
-        const parent = nf.isCurrentParentExtension
+        const parentData = nf.isCurrentParentExtension
           ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, EXTENSIONS)
-          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENTS);
-        if (parent.kind !== Kind.ENUM_TYPE_DEFINITION && parent.kind !== Kind.ENUM_TYPE_EXTENSION) {
-          throw unexpectedKindFatalError(nf.childName);
+          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA);
+        if (parentData.kind !== Kind.ENUM_TYPE_DEFINITION && parentData.kind !== Kind.ENUM_TYPE_EXTENSION) {
+          nf.errors.push(
+            unexpectedParentKindForChildError(
+              nf.originalParentTypeName,
+              'enum or enum extension',
+              kindToTypeString(parentData.kind),
+              nf.childName,
+              kindToTypeString(node.kind),
+            ),
+          );
+          return false;
         }
-        if (parent.enumValueDataByValueName.has(nf.childName)) {
+        if (parentData.enumValueDataByValueName.has(nf.childName)) {
           const error = nf.isCurrentParentExtension
             ? duplicateValueExtensionError('enum', nf.originalParentTypeName, nf.childName)
             : duplicateEnumValueDefinitionError(nf.childName, nf.originalParentTypeName);
@@ -232,7 +245,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return;
         }
         addEnumValueDataByNode(
-          parent.enumValueDataByValueName,
+          parentData.enumValueDataByValueName,
           node,
           nf.errors,
           nf.directiveDefinitionByDirectiveName,
@@ -262,14 +275,23 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         }
         const parentData = nf.isCurrentParentExtension
           ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, EXTENSIONS)
-          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENTS);
+          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA);
         if (
           parentData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
           parentData.kind !== Kind.OBJECT_TYPE_EXTENSION &&
           parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
           parentData.kind !== Kind.INTERFACE_TYPE_EXTENSION
         ) {
-          throw unexpectedKindFatalError(nf.originalParentTypeName);
+          nf.errors.push(
+            unexpectedParentKindForChildError(
+              nf.originalParentTypeName,
+              'object, object extension, interface, or interface extension',
+              kindToTypeString(parentData.kind),
+              nf.childName,
+              kindToTypeString(node.kind),
+            ),
+          );
+          return false;
         }
         if (parentData.fieldDataByFieldName.has(nf.childName)) {
           nf.errors.push(duplicateFieldDefinitionError(nf.childName, nf.originalParentTypeName));
@@ -296,19 +318,19 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         const fieldData = addFieldDataByNode(
           parentData.fieldDataByFieldName,
           node,
-          nf.errors,
           argumentDataByArgumentName,
           directivesByDirectiveName,
           nf.originalParentTypeName,
           nf.renamedParentTypeName || nf.originalParentTypeName,
           nf.subgraphName,
           nf.isSubgraphVersionTwo,
+          nf.errors,
         );
-        const entityContainer = nf.entityContainerByTypeName.get(nf.originalParentTypeName);
+        const entityContainer = nf.entityDataByTypeName.get(nf.originalParentTypeName);
         if (entityContainer) {
           entityContainer.fieldNames.add(nf.childName);
           // Only entities will have an existing FieldSet
-          const existingFieldSet = nf.fieldSetContainerByTypeName.get(nf.originalParentTypeName);
+          const existingFieldSet = nf.fieldSetDataByTypeName.get(nf.originalParentTypeName);
           if (existingFieldSet) {
             // @requires should only be defined on a field whose parent is an entity
             // If there is existingFieldSet, it's an entity
@@ -333,9 +355,9 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return;
         }
         const fieldSetContainer = getValueOrDefault(
-          nf.fieldSetContainerByTypeName,
+          nf.fieldSetDataByTypeName,
           nf.originalParentTypeName,
-          newFieldSetContainer,
+          newFieldSetData,
         );
         // @provides only makes sense on entities, but the field can be encountered before the type definition
         // When the FieldSet is evaluated, it will be checked whether the field is an entity.
@@ -421,18 +443,30 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         if (!BASE_SCALARS.has(namedInputValueTypeName)) {
           nf.referencedTypeNames.add(namedInputValueTypeName);
         }
-        const parent = nf.isCurrentParentExtension
+        const parentData = nf.isCurrentParentExtension
           ? getOrThrowError(nf.parentExtensionDataByTypeName, nf.originalParentTypeName, EXTENSIONS)
-          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENTS);
-        if (parent.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION && parent.kind !== Kind.INPUT_OBJECT_TYPE_EXTENSION) {
-          throw unexpectedKindFatalError(nf.originalParentTypeName);
+          : getOrThrowError(nf.parentDefinitionDataByTypeName, nf.originalParentTypeName, PARENT_DEFINITION_DATA);
+        if (
+          parentData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION &&
+          parentData.kind !== Kind.INPUT_OBJECT_TYPE_EXTENSION
+        ) {
+          nf.errors.push(
+            unexpectedParentKindForChildError(
+              nf.originalParentTypeName,
+              'input object or input object extension',
+              kindToTypeString(parentData.kind),
+              nf.childName,
+              kindToTypeString(node.kind),
+            ),
+          );
+          return false;
         }
-        if (parent.inputValueDataByValueName.has(name)) {
+        if (parentData.inputValueDataByValueName.has(name)) {
           nf.errors.push(duplicateValueExtensionError('input', nf.originalParentTypeName, name));
           return;
         }
         addInputValueDataByNode(
-          parent.inputValueDataByValueName,
+          parentData.inputValueDataByValueName,
           node,
           nf.directiveDefinitionByDirectiveName,
           nf.handledRepeatedDirectivesByHostPath,
@@ -485,11 +519,11 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           isInterfaceObject: false,
           typeName: typeName,
         });
-        upsertEntityContainerProperties(nf.entityContainerByTypeName, {
+        upsertEntityDataProperties(nf.entityDataByTypeName, {
           typeName: nf.originalParentTypeName,
           ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
         });
-        const fieldSetContainer = getValueOrDefault(nf.fieldSetContainerByTypeName, typeName, newFieldSetContainer);
+        const fieldSetContainer = getValueOrDefault(nf.fieldSetDataByTypeName, typeName, newFieldSetData);
         nf.extractKeyFieldSets(node, fieldSetContainer);
       },
       leave() {
@@ -556,15 +590,11 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         if (!isEntity) {
           return;
         }
-        const fieldSetContainer = getValueOrDefault(
-          nf.fieldSetContainerByTypeName,
-          nf.originalParentTypeName,
-          newFieldSetContainer,
-        );
-        nf.extractKeyFieldSets(node, fieldSetContainer);
-        upsertEntityContainerProperties(nf.entityContainerByTypeName, {
+        const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
+        nf.extractKeyFieldSets(node, fieldSetData);
+        upsertEntityDataProperties(nf.entityDataByTypeName, {
           typeName: nf.originalParentTypeName,
-          keyFieldSets: fieldSetContainer.keys,
+          keyFieldSets: fieldSetData.isUnresolvableByKeyFieldSet.keys(),
           ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
         });
       },

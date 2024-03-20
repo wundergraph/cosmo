@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/router@0.74.0...router@0.75.0) (2024-03-19)
+
+### Bug Fixes
+
+* change 'scopes' keyword to 'scope' ([#646](https://github.com/wundergraph/cosmo/issues/646)) ([9947d43](https://github.com/wundergraph/cosmo/commit/9947d437043a4926b9c2166a171c668e1fed15a6)) (@rickpasetto)
+
+### Features
+
+* allow exposing upgrade errors ([#647](https://github.com/wundergraph/cosmo/issues/647)) ([fdcd479](https://github.com/wundergraph/cosmo/commit/fdcd479b77b979554f6a1151ae52d5430966d06e)) (@jensneuse)
+
+# [0.74.0](https://github.com/wundergraph/cosmo/compare/router@0.73.0...router@0.74.0) (2024-03-14)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
+# [0.73.0](https://github.com/wundergraph/cosmo/compare/router@0.72.0...router@0.73.0) (2024-03-13)
+
+### Features
+
+* add edfs validation; add event source name keys to config ([#624](https://github.com/wundergraph/cosmo/issues/624)) ([bf03bb8](https://github.com/wundergraph/cosmo/commit/bf03bb8fca1838fefebcb150f8924ec52fb8bdb5)) (@Aenimus)
+* allow blocking mutations, subscriptions, non-persisted operations via router config ([#627](https://github.com/wundergraph/cosmo/issues/627)) ([8d26d36](https://github.com/wundergraph/cosmo/commit/8d26d3618cfe8e7b94ef1e20627849365b01cee0)) (@jensneuse)
+
 # [0.72.0](https://github.com/wundergraph/cosmo/compare/router@0.71.2...router@0.72.0) (2024-03-09)
 
 ### Bug Fixes

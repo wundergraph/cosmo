@@ -31,6 +31,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { AiOutlineAudit } from "react-icons/ai";
 import { UserContext } from "@/components/app-provider";
+import { MdOutlinePolicy } from "react-icons/md";
 
 export const StarBanner = ({
   setDisableStarBanner,
@@ -101,7 +102,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
     const navigation: Partial<NavLink>[] = [
       {
-        title: "Federated Graphs",
+        title: "Graphs",
         href: basePath + "/graphs",
         icon: <PiGraphLight className="h-4 w-4" />,
       },
@@ -109,6 +110,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
         icon: <Component2Icon className="h-4 w-4" />,
+      },
+      {
+        title: "Lint Policy",
+        href: basePath + "/lint-policy",
+        icon: <MdOutlinePolicy className="h-4 w-4" />,
         separator: true,
       },
       {

@@ -1,6 +1,7 @@
 import { RefreshInterval } from "@/components/analytics/refresh-interval";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import {
   ComposeStatus,
   ComposeStatusMessage,
@@ -41,9 +42,11 @@ import {
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
+  InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { RocketIcon, UpdateIcon } from "@radix-ui/react-icons";
 import {
@@ -53,13 +56,21 @@ import {
 } from "@tanstack/react-query";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
-import { useContext, useState } from "react";
-import { PiAsterisk } from "react-icons/pi";
+import React, { useContext, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
+import Link from "next/link";
+import { PiCubeFocus } from "react-icons/pi";
+import { useRouter } from "next/router";
+import { docsBaseURL } from "@/lib/constants";
 
 const GraphOverviewPage: NextPageWithLayout = () => {
+  const router = useRouter();
   const graphData = useContext(GraphContext);
   const [open, setOpen] = useState(false);
+  const [showMonographInfo, setShowMonoGraphInfo] = useLocalStorage(
+    "showMonographInfo",
+    true,
+  );
   const applyParams = useApplyParams();
   const client = useQueryClient();
   const { range, dateRange, refreshInterval } = useAnalyticsQueryState(4);
@@ -95,6 +106,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     compositionErrors,
     name,
     namespace,
+    compositionId,
   } = graphData.graph;
 
   const validGraph = isComposable && !!lastUpdatedAt;
@@ -127,6 +139,8 @@ const GraphOverviewPage: NextPageWithLayout = () => {
       refreshInterval: value ? value.toString() : null,
     });
   };
+
+  const isMonograph = !graphData.graph.supportsFederation;
 
   return (
     <GraphPageLayout
@@ -166,11 +180,41 @@ const GraphOverviewPage: NextPageWithLayout = () => {
         </OverviewToolbar>
       }
     >
+      {isMonograph && showMonographInfo && (
+        <Alert className="mb-4 flex flex-col justify-between gap-4 bg-card md:flex-row md:items-center">
+          <AlertDescription>
+            This is a monograph without GraphQL Federation enabled. A monograph
+            strictly consists of a single subgraph.
+          </AlertDescription>
+          <div className="flex-shrink-0 space-y-2 md:space-x-2 md:space-y-0">
+            <Button
+              className="w-full md:w-auto"
+              size="sm"
+              variant="default"
+              asChild
+            >
+              <Link href={docsBaseURL + "/cli/essentials#monographs"}>
+                Learn More
+              </Link>
+            </Button>
+            <Button
+              className="w-full md:w-auto"
+              size="sm"
+              variant="secondary"
+              onClick={() => setShowMonoGraphInfo(false)}
+            >
+              Hide
+            </Button>
+          </div>
+        </Alert>
+      )}
       <div className="grid grid-rows-3 gap-4 lg:grid-cols-2">
         <div className="space-y-2 lg:col-span-1">
           <Card className="flex grow flex-col justify-between">
             <CardHeader>
-              <CardTitle>Graph details</CardTitle>
+              <CardTitle>
+                {isMonograph ? "Monograph" : "Federated Graph"} Details
+              </CardTitle>
               <CardDescription className="text-xs">
                 Last updated:{" "}
                 {lastUpdatedAt
@@ -187,38 +231,72 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 </div>
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-y-2 text-sm">
+            <CardContent className="flex flex-col gap-y-3 text-sm">
               <div className="flex gap-x-4">
                 <span className="w-28 text-muted-foreground">Name</span>
-                <span className="w-32">{graphData.graph.name}</span>
+                <span className="truncate">{graphData.graph.name}</span>
               </div>
-              <div className="flex gap-x-4">
-                <span className="w-28 text-muted-foreground">Subgraphs</span>
-                <span className="w-32">{connectedSubgraphs}</span>
-              </div>
-              <div className="flex items-start gap-x-4">
-                <span className="w-28 flex-shrink-0 text-muted-foreground">
-                  Matchers
-                </span>
-                <div className="flex flex-wrap gap-2 overflow-hidden">
-                  {labelMatchers.length === 0 && (
-                    <Tooltip delayDuration={200}>
-                      <TooltipTrigger>-</TooltipTrigger>
-                      <TooltipContent>
-                        This graph will only compose subgraphs without labels
-                      </TooltipContent>
-                    </Tooltip>
+              {!isMonograph && (
+                <>
+                  <div className="flex gap-x-4">
+                    <span className="w-28 text-muted-foreground">
+                      Subgraphs
+                    </span>
+                    <span>{connectedSubgraphs}</span>
+                  </div>
+                  <div className="flex items-start gap-x-3">
+                    <span className="w-28 flex-shrink-0 text-muted-foreground">
+                      Matchers
+                    </span>
+                    <div className="flex flex-wrap gap-2 overflow-hidden">
+                      {labelMatchers.length === 0 && (
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>-</TooltipTrigger>
+                          <TooltipContent>
+                            This graph will only compose subgraphs without
+                            labels
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      {labelMatchers.map((lm: any) => {
+                        return (
+                          <Badge
+                            variant="secondary"
+                            key={lm}
+                            className="truncate"
+                          >
+                            <span className="truncate">{lm}</span>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center gap-x-3">
+                <span className="w-28 text-muted-foreground">Composition</span>
+                <Badge variant="secondary" className="truncate">
+                  {compositionId ? (
+                    <Link
+                      href={{
+                        pathname:
+                          "/[organizationSlug]/[namespace]/graph/[slug]/compositions/[compositionId]",
+                        query: {
+                          ...router.query,
+                          compositionId,
+                        },
+                      }}
+                      className="flex items-center space-x-1 hover:underline"
+                    >
+                      <PiCubeFocus className="h-4 w-4" />{" "}
+                      <span>{compositionId.split("-")[0]}</span>
+                    </Link>
+                  ) : (
+                    "N/A"
                   )}
-                  {labelMatchers.map((lm: any) => {
-                    return (
-                      <Badge variant="secondary" key={lm} className="truncate">
-                        <span className="truncate">{lm}</span>
-                      </Badge>
-                    );
-                  })}
-                </div>
+                </Badge>
               </div>
-              <div className="flex items-center gap-x-4">
+              <div className="flex items-center gap-x-3">
                 <span className="w-28 text-muted-foreground">Schema Check</span>
                 <ComposeStatus
                   validGraph={validGraph}
@@ -227,6 +305,17 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               </div>
             </CardContent>
             <CardFooter className="flex-col items-start text-sm">
+              {isMonograph && (
+                <div className="mb-4 w-full">
+                  <span className="text-muted-foreground">
+                    GraphQL Server Url
+                  </span>
+                  <CLI
+                    className="mt-1 md:w-full"
+                    command={graphData.subgraphs[0].routingURL}
+                  />
+                </div>
+              )}
               <span className="text-muted-foreground">Router Url</span>
               <CLI className="mt-1 md:w-full" command={routingURL} />
 
@@ -260,18 +349,16 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 ? "All good!"
                 : "Needs Attention!"}
             </AlertTitle>
-            <div className="flex items-center justify-between space-x-2.5">
+            <AlertDescription className="space-y-2">
               <ComposeStatusMessage
                 lastUpdatedAt={lastUpdatedAt}
                 isComposable={isComposable}
                 subgraphsCount={connectedSubgraphs}
               />
               {compositionErrors && (
-                <AlertDescription>
-                  <CompositionErrorsDialog errors={compositionErrors} />
-                </AlertDescription>
+                <CompositionErrorsDialog errors={compositionErrors} />
               )}
-            </div>
+            </AlertDescription>
           </Alert>
         </div>
         <div className="lg:col-span-1 lg:row-span-2">
@@ -280,6 +367,9 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               <GraphVisualization
                 subgraphMetrics={dashboardView?.subgraphMetrics}
                 federatedGraphMetrics={dashboardView?.federatedGraphMetrics}
+                supportsFederation={
+                  graphData?.graph?.supportsFederation ?? true
+                }
               />
             </ReactFlowProvider>
           </Card>

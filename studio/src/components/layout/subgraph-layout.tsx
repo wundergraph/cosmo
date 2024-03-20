@@ -84,7 +84,7 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         icon: <FileTextIcon className="h-4 w-4" />,
       },
       {
-        title: "Federated Graphs",
+        title: "Graphs",
         href: basePath + "/graphs",
         icon: <PiGraphLight className="h-4 w-4" />,
       },

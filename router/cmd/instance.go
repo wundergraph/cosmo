@@ -47,9 +47,9 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 	} else if cfg.Graph.Token != "" {
-		routerCDN, err := cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.PersistentOperationsOptions{
-			CacheSize: cfg.CDN.CacheSize.Uint64(),
-			Logger:    logger,
+		routerCDN, err := cdn.NewRouterConfigClient(cfg.CDN.URL, cfg.Graph.Token, cdn.RouterConfigOptions{
+			Logger:       logger,
+			SignatureKey: cfg.Graph.SignKey,
 		})
 		if err != nil {
 			return nil, err
@@ -154,9 +154,11 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithTracing(traceConfig(&cfg.Telemetry)),
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
+		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithAuthorizationConfig(&cfg.Authorization),
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithWebSocketConfiguration(&cfg.WebSocket),
+		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
 		core.WithCDN(cfg.CDN),
 		core.WithEvents(cfg.Events),

@@ -101,10 +101,11 @@ export function configurationDataMapToDataSourceConfiguration(
     for (const event of data.events ?? []) {
       output.events.push(
         new EventConfiguration({
+          fieldName: event.fieldName,
+          sourceName: event.sourceName,
+          topic: event.topic,
           type: eventType(event.type),
           typeName,
-          fieldName: event.fieldName,
-          topic: event.topic,
         }),
       );
     }

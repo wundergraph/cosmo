@@ -59,6 +59,10 @@ export const federatedGraphs = pgTable('federated_graphs', {
     onDelete: 'no action',
   }),
   routerConfigPath: text('router_config_path'),
+  // The admission webhook url. This is the url that the controlplane will use to run admission checks.
+  // You can use this to enforce policies on the router config.
+  admissionWebhookURL: text('admission_webhook_url'),
+  supportsFederation: boolean('supports_federation').default(true).notNull(),
 });
 
 export const federatedGraphClients = pgTable(
@@ -241,6 +245,7 @@ export const namespaces = pgTable(
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    enableLinting: boolean('enable_linting').default(false).notNull(),
   },
   (t) => {
     return {
@@ -249,14 +254,14 @@ export const namespaces = pgTable(
   },
 );
 
-export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph'] as const);
+export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph'] as const);
 
 export const targets = pgTable(
   'targets',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    type: targetTypeEnum('type'),
+    type: targetTypeEnum('type').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     labels: text('labels').array(),
     organizationId: uuid('organization_id')
@@ -442,6 +447,7 @@ export const schemaChecks = pgTable('schema_checks', {
   isComposable: boolean('is_composable').default(false),
   isDeleted: boolean('is_deleted').default(false),
   hasBreakingChanges: boolean('has_breaking_changes').default(false),
+  hasLintErrors: boolean('has_lint_errors').default(false),
   hasClientTraffic: boolean('has_client_traffic').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -973,18 +979,26 @@ export const slackIntegrationConfigs = pgTable('slack_integration_configs', {
   endpoint: text('endpoint').notNull(),
 });
 
-export const slackSchemaUpdateEventConfigs = pgTable('slack_schema_update_event_configs', {
-  slackIntegrationConfigId: uuid('slack_integration_config_id')
-    .notNull()
-    .references(() => slackIntegrationConfigs.id, {
-      onDelete: 'cascade',
-    }),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, {
-      onDelete: 'cascade',
-    }),
-});
+export const slackSchemaUpdateEventConfigs = pgTable(
+  'slack_schema_update_event_configs',
+  {
+    slackIntegrationConfigId: uuid('slack_integration_config_id')
+      .notNull()
+      .references(() => slackIntegrationConfigs.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.slackIntegrationConfigId, t.federatedGraphId] }),
+    };
+  },
+);
 
 export const organizationIntegrationRelations = relations(organizationIntegrations, ({ one }) => ({
   organization: one(organizations),
@@ -1086,6 +1100,12 @@ export const graphCompositions = pgTable('graph_compositions', {
   compositionErrors: text('composition_errors'),
   // This is router config based on the composed schema. Only set for federated graphs.
   routerConfig: customJsonb('router_config'),
+  // Signature of the schema. Provided by the user when the admission hook is called.
+  routerConfigSignature: text('router_config_signature'),
+  // The errors that occurred during the deployment of the schema. Only set when the schema was composable and no admission errors occurred.
+  deploymentError: text('deployment_error'),
+  // The errors that occurred during the admission of the config. Only set when the schema was composable.
+  admissionError: text('admission_error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   createdBy: uuid('created_by').references(() => users.id, {
     onDelete: 'cascade',
@@ -1198,5 +1218,66 @@ export const discussionThreadRelations = relations(discussionThread, ({ one }) =
   discussion: one(discussions, {
     fields: [discussionThread.discussionId],
     references: [discussions.id],
+  }),
+}));
+
+export const lintRulesEnum = pgEnum('lint_rules', [
+  'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
+  'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
+  'SHOULD_NOT_HAVE_TYPE_PREFIX',
+  'SHOULD_NOT_HAVE_TYPE_SUFFIX',
+  'SHOULD_NOT_HAVE_INPUT_PREFIX',
+  'SHOULD_HAVE_INPUT_SUFFIX',
+  'SHOULD_NOT_HAVE_ENUM_PREFIX',
+  'SHOULD_NOT_HAVE_ENUM_SUFFIX',
+  'SHOULD_NOT_HAVE_INTERFACE_PREFIX',
+  'SHOULD_NOT_HAVE_INTERFACE_SUFFIX',
+  'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
+  'ORDER_FIELDS',
+  'ORDER_ENUM_VALUES',
+  'ORDER_DEFINITIONS',
+  'ALL_TYPES_REQUIRE_DESCRIPTION',
+  'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
+  'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
+  'REQUIRE_DEPRECATION_REASON',
+  'REQUIRE_DEPRECATION_DATE',
+] as const);
+
+export const lintSeverityEnum = pgEnum('lint_severity', ['warn', 'error'] as const);
+
+export const namespaceLintCheckConfig = pgTable('namespace_lint_check_config', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  namespaceId: uuid('namespace_id')
+    .notNull()
+    .references(() => namespaces.id, {
+      onDelete: 'cascade',
+    }),
+  lintRule: lintRulesEnum('lint_rule').notNull(),
+  severityLevel: lintSeverityEnum('severity_level').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const namespaceLintCheckConfigRelations = relations(namespaceLintCheckConfig, ({ one }) => ({
+  namespace: one(namespaces),
+}));
+
+export const schemaCheckLintAction = pgTable('schema_check_lint_action', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaCheckId: uuid('schema_check_id')
+    .notNull()
+    .references(() => schemaChecks.id, {
+      onDelete: 'cascade',
+    }),
+  lintRuleType: lintRulesEnum('lint_rule_type'),
+  message: text('message'),
+  isError: boolean('is_error').default(false),
+  location: customJson<{ line: number; column: number; endLine?: number; endColumn?: number }>('location').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const schemaCheckLintActionRelations = relations(schemaCheckLintAction, ({ one }) => ({
+  check: one(schemaChecks, {
+    fields: [schemaCheckLintAction.schemaCheckId],
+    references: [schemaChecks.id],
   }),
 }));

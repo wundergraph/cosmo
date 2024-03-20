@@ -1,10 +1,15 @@
 import {
   ConfigurationData,
+  duplicateDirectiveArgumentDefinitionsErrorMessage,
   federateSubgraphs,
   FieldData,
+  invalidDirectiveError,
   invalidFieldShareabilityError,
+  normalizeSubgraph,
   ObjectDefinitionData,
   Subgraph,
+  undefinedRequiredArgumentsErrorMessage,
+  unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
 import { describe, expect, test } from 'vitest';
 import {
@@ -15,9 +20,30 @@ import {
   versionOneSchemaQueryAndPersistedDirectiveDefinitions,
 } from './utils/utils';
 import { parse } from 'graphql';
+import { FIELDS, KEY } from '../src/utils/string-constants';
 
-describe('Entity Tests', () => {
-  describe('Entity Federation Tests', () => {
+describe('Entity tests', () => {
+  describe('Entity normalization tests', () => {
+    test('that an error is returned if the @key directive is defined with invalid arguments', () => {
+      const hostPath = 'Entity';
+      const { errors } = normalizeSubgraph(subgraphT.definitions, subgraphT.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(2);
+      expect(errors![0]).toStrictEqual(
+        invalidDirectiveError(KEY, hostPath, [
+          unexpectedDirectiveArgumentErrorMessage(KEY, ['unknownArgument', 'duplicateUnknownArgument']),
+          undefinedRequiredArgumentsErrorMessage(KEY, hostPath, [FIELDS], [FIELDS]),
+        ]),
+      );
+      expect(errors![1]).toStrictEqual(
+        invalidDirectiveError(KEY, hostPath, [
+          duplicateDirectiveArgumentDefinitionsErrorMessage(KEY, hostPath, [FIELDS]),
+        ]),
+      );
+    });
+  });
+
+  describe('Entity federation tests', () => {
     test('that entities merge successfully', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
@@ -280,7 +306,7 @@ describe('Entity Tests', () => {
     });
   });
 
-  describe('Entity Configuration Tests', () => {
+  describe('Entity configuration tests', () => {
     test('that the correct configuration is returned when a resolvable in a key directive is set to false', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ]);
       expect(errors).toBeUndefined();
@@ -582,6 +608,38 @@ describe('Entity Tests', () => {
         ]),
       );
     });
+
+    test('that resolvable false is correctly propagated in the ConfigurationData', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphS]);
+      expect(errors).toBeUndefined();
+      const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
+      const s = subgraphConfigBySubgraphName?.get('subgraph-s');
+      expect(s).toBeDefined();
+      expect(s!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'property']),
+              isRootNode: true,
+              keys: [
+                { fieldName: '', selectionSet: 'id', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'property' },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+    });
   });
 });
 
@@ -853,6 +911,36 @@ const subgraphR: Subgraph = {
   url: '',
   definitions: parse(`
     type Entity @key(fields: "id") {
+      id: ID!
+      property: String!
+    }
+  `),
+};
+
+const subgraphS: Subgraph = {
+  name: 'subgraph-s',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(fields: "id", resolvable: false) @key(fields: "property") {
+      id: ID!
+      property: String!
+    }
+  `),
+};
+
+const subgraphT: Subgraph = {
+  name: 'subgraph-t',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(unknownArgument: 1, duplicateUnknownArgument: false, duplicateUnknownArgument: "string") @key(fields: "id", fields: "property") {
       id: ID!
       property: String!
     }

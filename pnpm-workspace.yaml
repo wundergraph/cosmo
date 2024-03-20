@@ -9,3 +9,4 @@ packages:
   - connect
   - cdn-server
   - cdn-server/cdn
+  - admission-server

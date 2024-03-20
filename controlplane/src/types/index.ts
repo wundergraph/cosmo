@@ -1,4 +1,6 @@
+import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
+import { LintRuleEnum } from '../db/models.js';
 
 export type FeatureIds =
   | 'users'
@@ -31,6 +33,7 @@ export interface ListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
+  supportsFederation?: boolean;
 }
 
 export interface Label {
@@ -50,10 +53,13 @@ export interface FederatedGraphDTO {
   labelMatchers: string[];
   subgraphsCount: number;
   composedSchemaVersionId?: string;
+  admissionWebhookURL?: string;
+  compositionId?: string;
   creatorUserId?: string;
   readme?: string;
   namespace: string;
   namespaceId: string;
+  supportsFederation: boolean;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -107,6 +113,7 @@ export interface SchemaCheckDTO {
     repositorySlug: string;
     checkRunId: number;
   };
+  hasLintErrors: boolean;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -260,17 +267,13 @@ export enum SchemaChangeType {
   UNION_MEMBER_ADDED = 'UNION_MEMBER_ADDED',
 }
 
-export interface JWTEncodeParams<Payload extends JWTPayload = JWTPayload> {
-  /** The JWT payload. */
+export interface JWTEncodeParams<Payload extends JWTPayload = JWTPayload, Secret = string> {
+  // The payload to encode into the JWT
   token: Payload;
-  /** The secret used to encode the issued JWT. */
-  secret: string;
-  /**
-   * The maximum age of the issued JWT in seconds.
-   *
-   * @default 30 * 24 * 60 * 60 // 30 days
-   */
-  maxAge?: number;
+  // The secret used to encode the issued JWT
+  secret: Secret;
+  // The maximum age of the issued JWT in seconds
+  maxAgeInSeconds?: number;
 }
 
 export interface JWTDecodeParams {
@@ -387,8 +390,11 @@ export interface GraphCompositionDTO {
   createdAt: string;
   createdBy?: string;
   compositionErrors?: string;
+  routerConfigSignature?: string;
   isComposable: boolean;
   isLatestValid: boolean;
+  admissionError?: string;
+  deploymentError?: string;
 }
 
 export interface SubgraphMemberDTO {
@@ -451,4 +457,61 @@ export interface MailerParams {
   smtpRequireTls: boolean;
   smtpUsername: string;
   smtpPassword: string;
+}
+
+type LintRuleType = Record<LintRuleEnum, LintRuleEnum>;
+
+// when the rules are changed, it has to be changed in the constants.ts file in the studio to maintain consistency.
+export const LintRules: LintRuleType = {
+  FIELD_NAMES_SHOULD_BE_CAMEL_CASE: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
+  TYPE_NAMES_SHOULD_BE_PASCAL_CASE: 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
+  SHOULD_NOT_HAVE_TYPE_PREFIX: 'SHOULD_NOT_HAVE_TYPE_PREFIX',
+  SHOULD_NOT_HAVE_TYPE_SUFFIX: 'SHOULD_NOT_HAVE_TYPE_SUFFIX',
+  SHOULD_NOT_HAVE_INPUT_PREFIX: 'SHOULD_NOT_HAVE_INPUT_PREFIX',
+  SHOULD_HAVE_INPUT_SUFFIX: 'SHOULD_HAVE_INPUT_SUFFIX',
+  SHOULD_NOT_HAVE_ENUM_PREFIX: 'SHOULD_NOT_HAVE_ENUM_PREFIX',
+  SHOULD_NOT_HAVE_ENUM_SUFFIX: 'SHOULD_NOT_HAVE_ENUM_SUFFIX',
+  SHOULD_NOT_HAVE_INTERFACE_PREFIX: 'SHOULD_NOT_HAVE_INTERFACE_PREFIX',
+  SHOULD_NOT_HAVE_INTERFACE_SUFFIX: 'SHOULD_NOT_HAVE_INTERFACE_SUFFIX',
+  ENUM_VALUES_SHOULD_BE_UPPER_CASE: 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
+  ORDER_FIELDS: 'ORDER_FIELDS',
+  ORDER_ENUM_VALUES: 'ORDER_ENUM_VALUES',
+  ORDER_DEFINITIONS: 'ORDER_DEFINITIONS',
+  ALL_TYPES_REQUIRE_DESCRIPTION: 'ALL_TYPES_REQUIRE_DESCRIPTION',
+  DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
+  NO_TYPENAME_PREFIX_IN_TYPE_FIELDS: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
+  REQUIRE_DEPRECATION_REASON: 'REQUIRE_DEPRECATION_REASON',
+  REQUIRE_DEPRECATION_DATE: 'REQUIRE_DEPRECATION_DATE',
+};
+
+export type Severity = 1 | 2;
+export type LintSeverityLevel = 'warn' | 'error';
+export type RuleLevel = Severity | LintSeverityLevel;
+export type RuleLevelAndOptions<Options extends any[] = any[]> = Prepend<Partial<Options>, RuleLevel>;
+export type RuleEntry<Options extends any[] = any[]> = RuleLevel | RuleLevelAndOptions<Options>;
+
+export interface RulesConfig {
+  [rule: string]: RuleEntry;
+}
+
+export interface LintIssueResult {
+  lintRuleType: LintRuleEnum | undefined;
+  severity: LintSeverity;
+  message: string;
+  issueLocation: {
+    line: number;
+    column: number;
+    endLine?: number;
+    endColumn?: number;
+  };
+}
+
+export interface SchemaLintDTO {
+  severity: LintSeverityLevel;
+  ruleName: LintRuleEnum;
+}
+
+export interface SchemaLintIssues {
+  warnings: LintIssueResult[];
+  errors: LintIssueResult[];
 }

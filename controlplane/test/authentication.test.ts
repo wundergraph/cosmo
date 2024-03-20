@@ -63,6 +63,10 @@ describe('Authentication', (ctx) => {
         port: 6379,
         password: 'test',
       },
+      cdnBaseUrl: 'http://localhost:11000',
+      admissionWebhook: {
+        secret: 'secret',
+      },
     });
 
     testContext.onTestFailed(async () => {

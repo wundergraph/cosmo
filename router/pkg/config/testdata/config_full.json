@@ -2,7 +2,8 @@
   "Version": "1",
   "InstanceID": "",
   "Graph": {
-    "Token": "mytoken"
+    "Token": "mytoken",
+    "SignKey": ""
   },
   "Telemetry": {
     "ServiceName": "cosmo-router",
@@ -213,12 +214,16 @@
   },
   "DevelopmentMode": false,
   "Events": {
-    "Sources": [
-      {
+    "Sources": {
+      "another-nats": {
+        "Provider": "NATS",
+        "URL": "nats://localhost:4223"
+      },
+      "default": {
         "Provider": "NATS",
         "URL": "nats://localhost:4222"
       }
-    ]
+    }
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
@@ -226,6 +231,11 @@
     "Subgraphs": {
       "some-subgraph": "http://router:3002/graphql"
     }
+  },
+  "SecurityConfiguration": {
+    "BlockMutations": false,
+    "BlockSubscriptions": false,
+    "BlockNonPersistedOperations": false
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -238,7 +248,8 @@
       "PlanningVisitor": false,
       "DatasourceVisitor": false,
       "ReportWebSocketConnections": false,
-      "ReportMemoryUsage": false
+      "ReportMemoryUsage": false,
+      "EnableResolverDebugging": false
     },
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
@@ -259,5 +270,9 @@
     "ForwardUpgradeHeaders": true,
     "ForwardUpgradeQueryParams": true,
     "ForwardInitialPayload": true
+  },
+  "SubgraphErrorPropagation": {
+    "Enabled": false,
+    "StatusCodes": false
   }
 }

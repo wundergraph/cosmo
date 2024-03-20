@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/composition",
-  "version": "0.18.5",
+  "version": "0.20.1",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -30,7 +30,7 @@
     "graphology-simple-path": "^0.2.0",
     "graphql": "^16.7.1",
     "pathe": "^1.1.1",
-    "vitest": "^0.34.1"
+    "vitest": "^1.4.0"
   },
   "devDependencies": {
     "del-cli": "^5.0.0",

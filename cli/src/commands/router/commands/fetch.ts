@@ -7,6 +7,7 @@ import { join } from 'pathe';
 import { baseHeaders, config } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { GraphToken } from '../../auth/utils.js';
+import { makeSignature, safeCompare } from '../../../core/signature.js';
 
 export const handleOutput = async (out: string | undefined, config: string) => {
   if (out) {
@@ -19,11 +20,15 @@ export const handleOutput = async (out: string | undefined, config: string) => {
 export default (opts: BaseCommandOptions) => {
   const command = new Command('fetch');
   command.description(
-    'Fetches the latest valid router config for a federated graph. The output can be piped to a file.',
+    'Fetches the latest valid router config for a federated graph or monograph. The output can be piped to a file.',
   );
-  command.argument('<name>', 'The name of the federated graph to fetch.');
-  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
+  command.argument('<name>', 'The name of the federated graph or monograph to fetch.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
+  command.option(
+    '--graph-sign-key [string]',
+    'The signature key to verify the downloaded router config. If not provided, the router config will not be verified.',
+  );
   command.action(async (name, options) => {
     const resp = await opts.client.platform.generateRouterToken(
       {
@@ -36,7 +41,7 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code !== EnumStatusCode.OK) {
-      console.log(`${pc.red(`Could not fetch the router config for the federated graph ${pc.bold(name)}`)}`);
+      console.log(`${pc.red(`Could not fetch the router config for the graph ${pc.bold(name)}`)}`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
@@ -70,31 +75,34 @@ export default (opts: BaseCommandOptions) => {
       headers,
       body: requestBody,
     });
-    if (response.status !== 200) {
-      const latestConfigResp = await opts.client.platform.getLatestValidRouterConfig(
-        {
-          graphName: name,
-          namespace: options.namespace,
-        },
-        {
-          headers: baseHeaders,
-        },
-      );
 
-      if (latestConfigResp.response?.code !== EnumStatusCode.OK) {
-        console.log(`${pc.red(`No router config could be fetched for federated graph ${pc.bold(name)}`)}`);
-        if (resp.response?.details) {
-          console.log(pc.red(pc.bold(resp.response?.details)));
-        }
+    const body = await response.text();
+
+    if (options.graphSignKey) {
+      const signature = response.headers.get('X-Signature-SHA256');
+      if (!signature) {
+        console.log(pc.red('You provided a signature key, but the router config does not have a signature header.'));
         process.exit(1);
       }
-      await handleOutput(options.out, latestConfigResp.config?.toJsonString() ?? '');
 
-      process.exit(0);
+      const hash = await makeSignature(body, options.graphSignKey);
+
+      if (!safeCompare(hash, signature)) {
+        console.log(pc.red('The signature of the router config does not match the provided signature key.'));
+        process.exit(1);
+      }
+
+      if (options.out) {
+        await handleOutput(options.out, body);
+
+        console.log(pc.green('The signature of the router config matches the local computed signature.'));
+        console.log(pc.green(`The router config has been written to ${pc.bold(options.out)}`));
+
+        return;
+      }
     }
 
-    const body = await response.json();
-    await handleOutput(options.out, JSON.stringify(body));
+    await handleOutput(options.out, body);
   });
 
   return command;

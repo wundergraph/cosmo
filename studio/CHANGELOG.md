@@ -4,6 +4,64 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.74.1](https://github.com/wundergraph/cosmo/compare/studio@0.74.0...studio@0.74.1) (2024-03-20)
+
+### Bug Fixes
+
+* remove connect-src CSP policy ([#656](https://github.com/wundergraph/cosmo/issues/656)) ([faf12ff](https://github.com/wundergraph/cosmo/commit/faf12ff15a0eb8d07a0b00a61927b75d98ce023c)) (@StarpTech)
+
+# [0.74.0](https://github.com/wundergraph/cosmo/compare/studio@0.73.3...studio@0.74.0) (2024-03-20)
+
+### Features
+
+* monograph support ([#623](https://github.com/wundergraph/cosmo/issues/623)) ([a255f74](https://github.com/wundergraph/cosmo/commit/a255f747d63454e1219760b729d99e4778d56dda)) (@thisisnithin)
+
+## [0.73.3](https://github.com/wundergraph/cosmo/compare/studio@0.73.2...studio@0.73.3) (2024-03-19)
+
+### Bug Fixes
+
+* soften CSP on playground page ([#653](https://github.com/wundergraph/cosmo/issues/653)) ([6790b6d](https://github.com/wundergraph/cosmo/commit/6790b6d6c316c1199184775af50572d28e83eb99)) (@StarpTech)
+
+## [0.73.2](https://github.com/wundergraph/cosmo/compare/studio@0.73.1...studio@0.73.2) (2024-03-18)
+
+### Bug Fixes
+
+* graph overview ui visuals ([#633](https://github.com/wundergraph/cosmo/issues/633)) ([96867e6](https://github.com/wundergraph/cosmo/commit/96867e6fb908c17e02997babdf13e0a5b15515c7)) (@StarpTech)
+
+## [0.73.1](https://github.com/wundergraph/cosmo/compare/studio@0.73.0...studio@0.73.1) (2024-03-16)
+
+### Bug Fixes
+
+* load monaco from public folder ([#641](https://github.com/wundergraph/cosmo/issues/641)) ([a691c95](https://github.com/wundergraph/cosmo/commit/a691c95a6cf2641cc683eba897fa5344ba41bd0c)) (@StarpTech)
+
+# [0.73.0](https://github.com/wundergraph/cosmo/compare/studio@0.72.0...studio@0.73.0) (2024-03-16)
+
+### Bug Fixes
+
+* cookie race ([#636](https://github.com/wundergraph/cosmo/issues/636)) ([6d2baed](https://github.com/wundergraph/cosmo/commit/6d2baed692dd876abae4a984ee39ffa1d39ed4ed)) (@thisisnithin)
+* csp header ([a1ec190](https://github.com/wundergraph/cosmo/commit/a1ec1902eb4aa7af461ee76b63fd8bda3691c0cf)) (@StarpTech)
+* improve ui and logs ([#631](https://github.com/wundergraph/cosmo/issues/631)) ([83695b9](https://github.com/wundergraph/cosmo/commit/83695b97d3aca66d70677bc207f874c8aa17bf65)) (@JivusAyrus)
+
+### Features
+
+* configure CSP for studio ([#639](https://github.com/wundergraph/cosmo/issues/639)) ([183ef61](https://github.com/wundergraph/cosmo/commit/183ef6166bf106ce87d6d7472c9297e7cd63ac31)) (@StarpTech)
+
+# [0.72.0](https://github.com/wundergraph/cosmo/compare/studio@0.71.1...studio@0.72.0) (2024-03-14)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
+## [0.71.1](https://github.com/wundergraph/cosmo/compare/studio@0.71.0...studio@0.71.1) (2024-03-13)
+
+**Note:** Version bump only for package studio
+
+# [0.71.0](https://github.com/wundergraph/cosmo/compare/studio@0.70.4...studio@0.71.0) (2024-03-11)
+
+### Features
+
+* add configurable schema linting ([#596](https://github.com/wundergraph/cosmo/issues/596)) ([c662485](https://github.com/wundergraph/cosmo/commit/c66248529c5bc13e795725c82ba50dbad79451ae)) (@JivusAyrus)
+
 ## [0.70.4](https://github.com/wundergraph/cosmo/compare/studio@0.70.3...studio@0.70.4) (2024-03-08)
 
 **Note:** Version bump only for package studio

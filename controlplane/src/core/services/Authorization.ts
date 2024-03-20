@@ -1,5 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { AuthorizationError } from '../errors/errors.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
@@ -9,7 +10,10 @@ import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { AuthContext } from '../../types/index.js';
 
 export class Authorization {
-  constructor(private defaultBillingPlanId?: string) {}
+  constructor(
+    private logger: FastifyBaseLogger,
+    private defaultBillingPlanId?: string,
+  ) {}
 
   /**
    * Authorize a user.
@@ -31,12 +35,12 @@ export class Authorization {
     authContext: AuthContext;
   }) {
     try {
-      const { name, targetId, targetType } = graph;
+      const { targetId, targetType } = graph;
       const { userId, organizationId, isAdmin } = authContext;
 
-      const orgRepo = new OrganizationRepository(db, this.defaultBillingPlanId);
-      const fedRepo = new FederatedGraphRepository(db, organizationId);
-      const subgraphRepo = new SubgraphRepository(db, organizationId);
+      const orgRepo = new OrganizationRepository(this.logger, db, this.defaultBillingPlanId);
+      const fedRepo = new FederatedGraphRepository(this.logger, db, organizationId);
+      const subgraphRepo = new SubgraphRepository(this.logger, db, organizationId);
       const apiKeyRepo = new ApiKeyRepository(db);
 
       const authorization = headers.get('authorization');
@@ -76,7 +80,7 @@ export class Authorization {
         }
       } else {
         const subgraph = await subgraphRepo.byTargetId(targetId);
-        const subgraphMembers = await subgraphRepo.getSubgraphMembersbyTargetId(targetId);
+        const subgraphMembers = await subgraphRepo.getSubgraphMembersByTargetId(targetId);
         const userIds = subgraphMembers.map((s) => s.userId);
 
         if (!((subgraph?.creatorUserId && subgraph.creatorUserId === userId) || userIds.includes(userId))) {

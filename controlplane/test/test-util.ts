@@ -6,8 +6,8 @@ import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connec
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import Fastify from 'fastify';
 import { pino } from 'pino';
-import { expect, TestContext } from 'vitest';
-import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage/index.js';
+import { expect } from 'vitest';
+import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
@@ -84,10 +84,12 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
         clientID: '',
         clientSecret: '',
       },
+      cdnBaseUrl: 'http://localhost:11000',
+      admissionWebhookJWTSecret: 'secret',
       keycloakApiUrl: apiUrl,
       blobStorage,
       mailerClient,
-      authorizer: new Authorization(),
+      authorizer: new Authorization(log),
       readmeQueue,
     }),
   });
@@ -158,15 +160,24 @@ export class InMemoryBlobStorage implements BlobStorage {
     return [...this.objects.keys()];
   }
 
-  putObject({ key, body, contentType }: { key: string; body: Buffer; contentType: string }): Promise<void> {
+  putObject<Metadata extends Record<string, string>>({
+    key,
+    body,
+  }: {
+    key: string;
+    body: Buffer;
+    abortSignal?: AbortSignal;
+    contentType: string;
+    metadata?: Metadata;
+  }): Promise<void> {
     this.objects.set(key, body);
     return Promise.resolve();
   }
 
-  getObject(key: string): Promise<ReadableStream> {
-    const obj = this.objects.get(key);
+  getObject(data: { key: string; abortSignal?: AbortSignal }): Promise<BlobObject> {
+    const obj = this.objects.get(data.key);
     if (!obj) {
-      return Promise.reject(new BlobNotFoundError(`Object with key ${key} not found`));
+      return Promise.reject(new BlobNotFoundError(`Object with key ${data.key} not found`));
     }
     const stream = new ReadableStream({
       start(controller) {
@@ -174,13 +185,20 @@ export class InMemoryBlobStorage implements BlobStorage {
         controller.close();
       },
     });
-    return Promise.resolve(stream);
+    return Promise.resolve({
+      stream,
+    });
   }
 
-  removeDirectory(key: string): Promise<number> {
+  deleteObject(data: { key: string; abortSignal?: AbortSignal }): Promise<void> {
+    this.objects.delete(data.key);
+    return Promise.resolve();
+  }
+
+  removeDirectory(data: { key: string; abortSignal?: AbortSignal }): Promise<number> {
     let count = 0;
     for (const objectKey of this.objects.keys()) {
-      if (objectKey.startsWith(key)) {
+      if (objectKey.startsWith(data.key)) {
         this.objects.delete(objectKey);
         count++;
       }

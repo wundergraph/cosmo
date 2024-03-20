@@ -1,5 +1,7 @@
+import { LintConfig } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { lintCategories } from "./constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -35,4 +37,30 @@ export const getHighestPriorityRole = ({
     return "developer";
   }
   return "viewer";
+};
+
+export const countLintConfigsByCategory = (lintConfigs: LintConfig[]) => {
+  let countNamingConventionRules = 0;
+  let countAlphabeticalSortRules = 0;
+  let countOtherRules = 0;
+
+  const namingConventionRules = lintCategories[0].rules.map((l) => l.name);
+  const alphabeticalSortRules = lintCategories[1].rules.map((l) => l.name);
+  const otherRules = lintCategories[2].rules.map((l) => l.name);
+
+  for (const l of lintConfigs) {
+    if (namingConventionRules.includes(l.ruleName)) {
+      countNamingConventionRules += 1;
+    } else if (alphabeticalSortRules.includes(l.ruleName)) {
+      countAlphabeticalSortRules += 1;
+    } else if (otherRules.includes(l.ruleName)) {
+      countOtherRules += 1;
+    }
+  }
+
+  return [
+    countNamingConventionRules,
+    countAlphabeticalSortRules,
+    countOtherRules,
+  ];
 };

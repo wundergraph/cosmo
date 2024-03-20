@@ -19,6 +19,8 @@ const (
 type Graph struct {
 	// Token is required if no router config path is provided
 	Token string `yaml:"token,omitempty" envconfig:"GRAPH_API_TOKEN"`
+	// SignKey is used to validate the signature of the received config. The same key is used to publish the subgraph in sign mode.
+	SignKey string `yaml:"sign_key,omitempty" envconfig:"GRAPH_CONFIG_SIGN_KEY"`
 }
 
 type TracingExporterConfig struct {
@@ -172,6 +174,7 @@ type EngineDebugConfiguration struct {
 	DatasourceVisitor             bool `default:"false" envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
 	ReportWebSocketConnections    bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
 	ReportMemoryUsage             bool `default:"false" envconfig:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
+	EnableResolverDebugging       bool `default:"false" envconfig:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -185,6 +188,12 @@ type EngineExecutionConfiguration struct {
 	EpollKqueueConnBufferSize              int                      `default:"128" envconfig:"ENGINE_EPOLL_KQUEUE_CONN_BUFFER_SIZE" yaml:"epoll_kqueue_conn_buffer_size,omitempty"`
 	WebSocketReadTimeout                   time.Duration            `default:"5s" envconfig:"ENGINE_WEBSOCKET_READ_TIMEOUT" yaml:"websocket_read_timeout,omitempty"`
 	ExecutionPlanCacheSize                 int64                    `default:"10000" envconfig:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
+}
+
+type SecurityConfiguration struct {
+	BlockMutations              bool `yaml:"block_mutations" default:"false" envconfig:"SECURITY_BLOCK_MUTATIONS"`
+	BlockSubscriptions          bool `yaml:"block_subscriptions" default:"false" envconfig:"SECURITY_BLOCK_SUBSCRIPTIONS"`
+	BlockNonPersistedOperations bool `yaml:"block_non_persisted_operations" default:"false" envconfig:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
 }
 
 type OverrideRoutingURLConfiguration struct {
@@ -246,7 +255,7 @@ type EventSource struct {
 }
 
 type EventsConfiguration struct {
-	Sources []EventSource `yaml:"sources,omitempty"`
+	Sources map[string]EventSource `yaml:"sources,omitempty"`
 }
 
 type Cluster struct {
@@ -302,6 +311,11 @@ type TLSConfiguration struct {
 	Server TLSServerConfiguration `yaml:"server"`
 }
 
+type SubgraphErrorPropagationConfiguration struct {
+	Enabled     bool `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
+	StatusCodes bool `yaml:"status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -345,9 +359,13 @@ type Config struct {
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
+	SecurityConfiguration SecurityConfiguration `yaml:"security,omitempty"`
+
 	EngineExecutionConfiguration EngineExecutionConfiguration `yaml:"engine"`
 
 	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
+
+	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
 }
 
 type LoadResult struct {
@@ -436,6 +454,10 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
+		cfg.Config.SubgraphErrorPropagation.Enabled = true
+		cfg.Config.SubgraphErrorPropagation.StatusCodes = true
+		cfg.Config.EngineExecutionConfiguration.Debug.ReportMemoryUsage = true
+		cfg.Config.EngineExecutionConfiguration.Debug.ReportWebSocketConnections = true
 	}
 
 	return cfg, nil

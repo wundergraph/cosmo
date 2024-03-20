@@ -21,6 +21,7 @@ import {
 import { RootTypeFieldData } from '../federation/utils';
 import { ARGUMENT, INPUT_FIELD, QUOTATION_JOIN, UNION } from '../utils/string-constants';
 import { ObjectDefinitionData } from '../schema-building/type-definition-data';
+import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -306,7 +307,7 @@ export function undefinedRequiredArgumentsErrorMessage(
   requiredArguments: string[],
   missingRequiredArguments: string[] = [],
 ): string {
-  return (
+  let message =
     ` The definition for the directive "${directiveName}" defines the following ` +
     requiredArguments.length +
     ` required argument` +
@@ -314,25 +315,41 @@ export function undefinedRequiredArgumentsErrorMessage(
     `"` +
     requiredArguments.join('", "') +
     `"` +
-    `.\n However, the same directive that is declared on "${hostPath}" does not define` +
-    (missingRequiredArguments.length > 0
-      ? ` the following required arguments: "${missingRequiredArguments.join('", "')}"`
-      : ` any arguments.`)
+    `.\n However, the same directive that is declared on "${hostPath}" does not define`;
+  if (missingRequiredArguments.length < 1) {
+    return message + ` any arguments.`;
+  }
+  return (
+    message +
+    ` the following required argument` +
+    (missingRequiredArguments.length > 1 ? `s` : ``) +
+    `: "` +
+    missingRequiredArguments.join(QUOTATION_JOIN) +
+    `".`
   );
 }
 
-export function unexpectedDirectiveArgumentErrorMessage(directiveName: string, argumentName: string): string {
-  return ` The definition for the directive "${directiveName}" does not define an argument named "${argumentName}".`;
+export function unexpectedDirectiveArgumentErrorMessage(directiveName: string, argumentNames: string[]): string {
+  return (
+    ` The definition for the directive "${directiveName}" does not define the following provided argument` +
+    (argumentNames.length > 1 ? 's' : '') +
+    `: "` +
+    argumentNames.join(QUOTATION_JOIN) +
+    `".`
+  );
 }
 
-export function duplicateDirectiveArgumentDefinitionErrorMessage(
+export function duplicateDirectiveArgumentDefinitionsErrorMessage(
   directiveName: string,
   hostPath: string,
-  argumentName: string,
+  argumentNames: string[],
 ): string {
   return (
-    ` The directive "${directiveName}" that is declared on "${hostPath}" ` +
-    `defines the argument named "${argumentName}" more than once.`
+    ` The directive "${directiveName}" that is declared on "${hostPath}" defines the following argument` +
+    (argumentNames.length > 1 ? 's' : '') +
+    ` more than once: "` +
+    argumentNames.join(QUOTATION_JOIN) +
+    `"`
   );
 }
 
@@ -362,9 +379,9 @@ export function invalidKeyDirectivesError(parentTypeName: string, errorMessages:
 }
 
 // Cannot use the constant for maximum type nesting or there will be a cyclical import
-export function maximumTypeNestingExceededFatalError(path: string, maximumTypeNesting: number): Error {
+export function maximumTypeNestingExceededError(path: string, maximumTypeNesting: number): Error {
   return new Error(
-    `Fatal: The type defined at path "${path}" has more than ${maximumTypeNesting} layers of nesting,` +
+    ` The type defined at path "${path}" has more than ${maximumTypeNesting} layers of nesting,` +
       ` or there is a cyclical error.`,
   );
 }
@@ -377,6 +394,26 @@ export function incompatibleParentKindFatalError(parentTypeName: string, expecte
   return new Error(
     `Fatal: Expected "${parentTypeName}" to be type ${kindToTypeString(expectedKind)}` +
       ` but received "${kindToTypeString(actualKind)}".`,
+  );
+}
+
+export function incompatibleParentKindMergeError(
+  parentTypeName: string,
+  expectedTypeString: string,
+  actualTypeString: string,
+): Error {
+  return new Error(
+    ` When merging types, expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`,
+  );
+}
+
+export function incompatibleObjectExtensionOrphanBaseTypeError(
+  parentTypeName: string,
+  actualTypeString: string,
+): Error {
+  return new Error(
+    ` When merging the object extension orphan "${parentTypeName}", expected an existing object base type` +
+      ` but received "${actualTypeString}".`,
   );
 }
 
@@ -412,6 +449,19 @@ export function unexpectedParentKindErrorMessage(
   actualTypeString: string,
 ): string {
   return ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`;
+}
+
+export function unexpectedParentKindForChildError(
+  parentTypeName: string,
+  expectedTypeString: string,
+  actualTypeString: string,
+  childName: string,
+  childTypeString: string,
+): Error {
+  return new Error(
+    ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}"` +
+      ` when handling child "${childName}" of type "${childTypeString}".`,
+  );
 }
 
 export function subgraphValidationError(subgraphName: string, errors: Error[]): Error {
@@ -563,7 +613,7 @@ export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: 
       ` The following argument` +
       (duplicatedArguments.length > 1 ? 's are' : ' is') +
       ` defined more than once: "` +
-      duplicatedArguments.join(`", "`) +
+      duplicatedArguments.join(QUOTATION_JOIN) +
       `"\n`,
   );
 }
@@ -882,4 +932,155 @@ export function orScopesLimitError(maxOrScopes: number, hostPaths: string[]): Er
       hostPaths.join(QUOTATION_JOIN) +
       `"\nIf you require more, please contact support.`,
   );
+}
+
+export function invalidEventDrivenGraphError(errorMessages: string[]): Error {
+  return new Error(
+    `An "Event Driven" graph—a subgraph that defines event driven directives ("@eventsPublish", "@eventsRequest", and` +
+      ` "@eventsPublish")—must not define any resolvers. Consequently, any "@key" definitions must also include the` +
+      ` "resolvable: false" argument. Moreover, only fields that compose part of an entity's (composite) key and are` +
+      ` declared "@external" are permitted.\n` +
+      errorMessages.join('\n'),
+  );
+}
+
+export function invalidRootTypeFieldEventsDirectivesErrorMessage(
+  invalidEventsDirectiveDataByRootFieldPath: Map<string, InvalidRootTypeFieldEventsDirectiveData>,
+): string {
+  let message =
+    ` Root type fields defined in an Event Driven graph must define a valid events` +
+    ` directive:\n  Mutation type fields must define either "@eventsPublish" or "@eventsRequest"\n` +
+    `  Query type fields must define "@eventsRequest"\n  Subscription type fields must define "@eventsSubscribe"\n` +
+    ` The following root field path` +
+    (invalidEventsDirectiveDataByRootFieldPath.size > 1 ? 's are' : ' is') +
+    `invalid:\n`;
+  for (const [fieldPath, data] of invalidEventsDirectiveDataByRootFieldPath) {
+    if (!data.definesDirectives) {
+      message += `  The root field path "${fieldPath}" does not define any valid events directives.\n`;
+    } else {
+      message +=
+        `  The root field path "${fieldPath}" defines the following invalid events directive` +
+        (data.invalidDirectiveNames.length > 1 ? `s` : ``) +
+        `: "@` +
+        data.invalidDirectiveNames.join(`", "@`) +
+        `"\n`;
+    }
+  }
+  return message;
+}
+
+export function invalidEventsDrivenMutationResponseTypeErrorMessage(
+  invalidResponseTypeStringByMutationPath: Map<string, string>,
+): string {
+  let message =
+    ` Mutation type fields defined in an Event Driven graph must return the non-nullable type` +
+    ` "PublishEventResult!", which has the following definition:\n  type PublishEventResult {\n` +
+    `   success: Boolean!\n  }\n However, the following mutation field path` +
+    (invalidResponseTypeStringByMutationPath.size > 1 ? `s are` : ` is`) +
+    ` invalid:\n`;
+  for (const [path, responseTypeString] of invalidResponseTypeStringByMutationPath) {
+    message += `  The mutation field path "${path}" returns "${responseTypeString}".\n`;
+  }
+  return message;
+}
+
+export function invalidRootTypeFieldResponseTypesEventDrivenErrorMessage(
+  invalidResponseTypeStringByRootFieldPath: Map<string, string>,
+): string {
+  let message =
+    ` The named response type of root type fields defined in an Event Driven graph must be a` +
+    ` non-nullable, non-list named type that is either an entity, an interface implemented by` +
+    ` an entity, or a union of which an entity is a member.\n Consequently, the following root field path` +
+    (invalidResponseTypeStringByRootFieldPath.size > 1 ? 's are' : ' is') +
+    ` invalid:\n`;
+  for (const [fieldPath, responseTypeString] of invalidResponseTypeStringByRootFieldPath) {
+    message += `  The root field path "${fieldPath}", which returns the invalid type "${responseTypeString}"\n`;
+  }
+  return message;
+}
+
+export function invalidKeyFieldSetsEventDrivenErrorMessage(
+  invalidKeyFieldSetsByEntityTypeName = new Map<string, string[]>(),
+): string {
+  let message = '';
+  for (const [typeName, keyFieldSets] of invalidKeyFieldSetsByEntityTypeName) {
+    message +=
+      ` The following "@key" FieldSet` +
+      (keyFieldSets.length > 1 ? 's are' : ' is') +
+      ` defined on the entity "${typeName}" without a "resolvable: false" argument:\n` +
+      `  "` +
+      keyFieldSets.join(QUOTATION_JOIN) +
+      `"\n`;
+  }
+  return message;
+}
+
+export function nonExternalKeyFieldNamesEventDrivenErrorMessage(
+  nonExternalKeyFieldNameByFieldPath: Map<string, string>,
+): string {
+  let message =
+    ` The following field` +
+    (nonExternalKeyFieldNameByFieldPath.size > 1 ? 's' : '') +
+    ` compose part of an entity's primary key but are not declared "@external":\n`;
+  for (const [fieldPath, fieldName] of nonExternalKeyFieldNameByFieldPath) {
+    message += `  field "${fieldName}" defined on path "${fieldPath}"\n`;
+  }
+  return message;
+}
+
+export function nonKeyFieldNamesEventDrivenErrorMessage(nonKeyFieldNameByFieldPath: Map<string, string>): string {
+  let message =
+    ` The following field` +
+    (nonKeyFieldNameByFieldPath.size > 1 ? 's are' : ' is') +
+    ` defined despite not composing part of a "@key" directive FieldSet:\n`;
+  for (const [fieldPath, fieldName] of nonKeyFieldNameByFieldPath) {
+    message += `  Field "${fieldName}" defined on path "${fieldPath}"\n`;
+  }
+  return message;
+}
+
+export function nonEntityObjectExtensionsEventDrivenErrorMessage(typeNames: string[]): string {
+  return (
+    ` Only root types and entities (objects that define one or more primary keys with the "@key" directive) may` +
+    ` be defined as object extensions in an Event Driven graph. Consequently, the following object extension` +
+    ` definition` +
+    (typeNames.length > 1 ? 's are' : ' is') +
+    ` invalid:\n  "` +
+    typeNames.join(QUOTATION_JOIN) +
+    `"\n`
+  );
+}
+
+export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames: string[]): string {
+  return (
+    ` Only object definitions whose fields compose part of a "@key" directive's FieldSet may be defined in an` +
+    ` Event Driven graph. Consequently, the following object type definition` +
+    (typeNames.length > 1 ? 's are' : ' is') +
+    ` invalid:\n  "` +
+    typeNames.join(QUOTATION_JOIN) +
+    `"\n`
+  );
+}
+
+export const invalidPublishEventResultObjectErrorMessage =
+  ` The object "PublishEventResult" that was defined in the Event Driven graph is invalid and must instead have` +
+  ` the following definition:\n  type PublishEventResult {\n   success: Boolean!\n  }`;
+
+export function invalidImplementedTypeError(
+  typeName: string,
+  invalidImplementationTypeStringByTypeName: Map<string, string>,
+): Error {
+  let message =
+    ` Only interfaces can be implemented. However, the type "${typeName}" attempts to implement` +
+    `the following invalid type` +
+    (invalidImplementationTypeStringByTypeName.size > 1 ? `s` : ``) +
+    `:\n`;
+  for (const [typeName, typeString] of invalidImplementationTypeStringByTypeName) {
+    message += `  "${typeName}", which is type "${typeString}"\n`;
+  }
+  return new Error(message);
+}
+
+export function selfImplementationError(typeName: string): Error {
+  return new Error(` The interface "${typeName}" must not implement itself.`);
 }

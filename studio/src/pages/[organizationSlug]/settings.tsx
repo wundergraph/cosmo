@@ -779,7 +779,7 @@ const OpenIDConnectProvider = ({
                             </span>
                             <CLI
                               command={data?.signInURL || ""}
-                              spanClassName="w-96"
+                              spanClassName="w-96 truncate"
                             />
                           </div>
                           <div className="flex flex-col gap-y-1">
@@ -788,7 +788,7 @@ const OpenIDConnectProvider = ({
                             </span>
                             <CLI
                               command={data?.signOutURL || ""}
-                              spanClassName="w-96"
+                              spanClassName="w-96 truncate"
                             />
                           </div>
 
@@ -799,7 +799,7 @@ const OpenIDConnectProvider = ({
                             </span>
                             <CLI
                               command={data?.loginURL || ""}
-                              spanClassName="w-96"
+                              spanClassName="w-96 truncate"
                             />
                           </div>
                         </div>
@@ -1061,8 +1061,8 @@ const RBAC = () => {
             <Badge variant="outline">Enterprise feature</Badge>
           </CardTitle>
           <CardDescription>
-            Enabling RBAC allows the fine grain access control of subgraphs and
-            federated graphs.{" "}
+            Enabling RBAC allows the fine grain access control of subgraphs,
+            federated graphs and monographs.{" "}
             <Link
               href={docsBaseURL + "/studio/graph-access-control"}
               className="text-sm text-primary"

@@ -146,7 +146,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
             const keycloakOrgs = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
-            const orgRepo = new OrganizationRepository(tx, opts.defaultBillingPlanId);
+            const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
 
             // delete all the org member roles
             for (const slug of keycloakOrgs) {
@@ -247,7 +247,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
 
           await opts.db.transaction(async (tx) => {
-            const orgRepo = new OrganizationRepository(tx, opts.defaultBillingPlanId);
+            const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
 
             const insertedOrg = await orgRepo.createOrganization({
               organizationName: userEmail.split('@')[0],
@@ -283,7 +283,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         // Create a JWT token containing the session id and user id.
         const jwt = await encrypt<UserSession>({
-          maxAge: sessionExpiresIn,
+          maxAgeInSeconds: sessionExpiresIn,
           token: {
             iss: userId,
             sessionId: insertedSession.id,

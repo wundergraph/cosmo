@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -31,6 +32,15 @@ var (
 	errCouldNotResolveResponse = errors.New("could not resolve response")
 	errInternalServer          = errors.New("internal server error")
 )
+
+type ErrUpgradeFailed struct {
+	StatusCode int
+	SubgraphID string
+}
+
+func (e *ErrUpgradeFailed) Error() string {
+	return fmt.Sprintf("upgrade failed with status code %d", e.StatusCode)
+}
 
 type ReportError interface {
 	error
@@ -65,6 +75,7 @@ type HandlerOptions struct {
 	Authorizer                             *CosmoAuthorizer
 	RateLimiter                            *CosmoRateLimiter
 	RateLimitConfig                        *config.RateLimitConfiguration
+	SubgraphErrorPropagation               config.SubgraphErrorPropagationConfiguration
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -77,9 +88,10 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 			"wundergraph/cosmo/router/graphql_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		authorizer:      opts.Authorizer,
-		rateLimiter:     opts.RateLimiter,
-		rateLimitConfig: opts.RateLimitConfig,
+		authorizer:               opts.Authorizer,
+		rateLimiter:              opts.RateLimiter,
+		rateLimitConfig:          opts.RateLimitConfig,
+		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
 	}
 	return graphQLHandler
 }
@@ -102,8 +114,9 @@ type GraphQLHandler struct {
 	tracer                                 trace.Tracer
 	authorizer                             *CosmoAuthorizer
 
-	rateLimiter     *CosmoRateLimiter
-	rateLimitConfig *config.RateLimitConfiguration
+	rateLimiter              *CosmoRateLimiter
+	rateLimitConfig          *config.RateLimitConfiguration
+	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -167,15 +180,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		if err != nil {
 			if errors.Is(err, ErrUnauthorized) {
-				writeRequestErrors(executionContext, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
+				writeRequestErrors(executionContext, r, w, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), requestLogger)
 			} else if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
-				writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+				writeRequestErrors(executionContext, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
 				return
 			}
 
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
-			writeRequestErrors(executionContext, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+			writeRequestErrors(executionContext, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
 			return
 		}
 	default:
@@ -220,6 +233,7 @@ type Extensions struct {
 	RateLimit     json.RawMessage `json:"rateLimit,omitempty"`
 	Authorization json.RawMessage `json:"authorization,omitempty"`
 	Trace         json.RawMessage `json:"trace,omitempty"`
+	StatusCode    int             `json:"statusCode,omitempty"`
 }
 
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, buf *bytes.Buffer) {
@@ -281,6 +295,20 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
+	case errorTypeUpgradeFailed:
+		response.Errors[0].Message = "Upgrade failed"
+		var upgradeErr *ErrUpgradeFailed
+		if h.subgraphErrorPropagation.StatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
+			response.Errors[0].Extensions = &Extensions{
+				StatusCode: upgradeErr.StatusCode,
+			}
+			if upgradeErr.SubgraphID != "" {
+				response.Errors[0].Message = fmt.Sprintf("Upgrade request failed for Subgraph '%s'.", upgradeErr.SubgraphID)
+			}
+		}
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusOK)
+		}
 	}
 	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
 		traceNode := resolve.GetTrace(ctx.Context(), res.Data)
@@ -299,7 +327,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		requestLogger.Error("unable to write rate limit response", zap.Error(err))
 	}
 	if wsRw, ok := w.(*websocketResponseWriter); ok {
-		wsRw.Flush()
+		_ = wsRw.Flush()
 	}
 }
 
@@ -311,6 +339,7 @@ const (
 	errorTypeUnauthorized
 	errorTypeContextCanceled
 	errorTypeContextTimeout
+	errorTypeUpgradeFailed
 )
 
 func (h *GraphQLHandler) errorType(err error) errorType {
@@ -322,6 +351,10 @@ func (h *GraphQLHandler) errorType(err error) errorType {
 	}
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
+	}
+	var upgradeErr *ErrUpgradeFailed
+	if errors.As(err, &upgradeErr) {
+		return errorTypeUpgradeFailed
 	}
 	var nErr net.Error
 	if errors.As(err, &nErr) {
@@ -380,12 +413,21 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 	addErrorToSpan(ctx.Context(), err)
 }
 
-func writeRequestErrors(ctx context.Context, statusCode int, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
+func writeRequestErrors(ctx context.Context, r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphql.RequestErrors, requestLogger *zap.Logger) {
 	addErrorToSpan(ctx, requestErrors)
 
 	if requestErrors != nil {
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
+		}
+		if r.URL.Query().Has("wg_sse") {
+			_, err := w.Write([]byte("event: next\ndata: "))
+			if err != nil {
+				if requestLogger != nil {
+					requestLogger.Error("error writing response", zap.Error(err))
+				}
+				return
+			}
 		}
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {
@@ -395,6 +437,6 @@ func writeRequestErrors(ctx context.Context, statusCode int, requestErrors graph
 	}
 }
 
-func writeInternalError(ctx context.Context, w http.ResponseWriter, requestLogger *zap.Logger) {
-	writeRequestErrors(ctx, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
+func writeInternalError(ctx context.Context, r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger) {
+	writeRequestErrors(ctx, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), requestLogger)
 }

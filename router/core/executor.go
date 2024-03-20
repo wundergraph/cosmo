@@ -45,8 +45,11 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
 	resolver := resolve.New(ctx, resolve.ResolverOptions{
-		MaxConcurrency: routerEngineConfig.Execution.MaxConcurrentResolvers,
-		Reporter:       reporter,
+		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
+		Reporter:                     reporter,
+		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
+		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.StatusCodes,
+		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
 	})
 
 	// this is the GraphQL Schema that we will expose from our API
@@ -110,19 +113,38 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	// XXX: We support only a single NATS provider for now, but we can easily extend this
 	// since the configuration format already handles multiple sources
 	var nc *nats.Conn
-	for _, eventSource := range routerEngineCfg.Events.Sources {
-		switch eventSource.Provider {
-		case "NATS":
-			if nc != nil {
-				return nil, fmt.Errorf("multiple NATS event sources are not supported")
+	datasourceConfigurations := routerCfg.EngineConfig.GetDatasourceConfigurations()
+	initiatedSourceNames := make([]string, 0)
+	for _, datasourceConfiguration := range datasourceConfigurations {
+		if datasourceConfiguration.CustomEvents == nil {
+			continue
+		}
+	eventsLoop:
+		for _, eventConfiguration := range datasourceConfiguration.CustomEvents.Events {
+			for _, sourceName := range initiatedSourceNames {
+				// if this source name's provider has already been initiated, do not try to initiate again
+				if eventConfiguration.SourceName == sourceName {
+					continue eventsLoop
+				}
 			}
-			var err error
-			nc, err = nats.Connect(eventSource.URL)
-			if err != nil {
-				return nil, fmt.Errorf("failed to connect to NATS: %w", err)
+			eventSource, ok := routerEngineCfg.Events.Sources[eventConfiguration.SourceName]
+			if !ok {
+				return nil, fmt.Errorf("unknown event source name %s", eventConfiguration.SourceName)
 			}
-		default:
-			return nil, fmt.Errorf("unknown event source provider %s", eventSource.Provider)
+			switch eventSource.Provider {
+			case "NATS":
+				if nc != nil {
+					return nil, fmt.Errorf("multiple NATS event sources are not supported")
+				}
+				var err error
+				nc, err = nats.Connect(eventSource.URL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to connect to NATS: %w", err)
+				}
+				initiatedSourceNames = append(initiatedSourceNames, eventConfiguration.SourceName)
+			default:
+				return nil, fmt.Errorf("unknown event source provider %s", eventSource.Provider)
+			}
 		}
 	}
 

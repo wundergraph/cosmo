@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.49.0](https://github.com/wundergraph/cosmo/compare/wgc@0.48.0...wgc@0.49.0) (2024-03-20)
+
+### Features
+
+* show warning when both auth methods are used ([#654](https://github.com/wundergraph/cosmo/issues/654)) ([0ee7d3c](https://github.com/wundergraph/cosmo/commit/0ee7d3ce3ed1d3dbd2c6558492cf96d05fa453b9)) (@StarpTech)
+
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/wgc@0.47.0...wgc@0.48.0) (2024-03-20)
+
+### Features
+
+* monograph support ([#623](https://github.com/wundergraph/cosmo/issues/623)) ([a255f74](https://github.com/wundergraph/cosmo/commit/a255f747d63454e1219760b729d99e4778d56dda)) (@thisisnithin)
+
+# [0.47.0](https://github.com/wundergraph/cosmo/compare/wgc@0.46.1...wgc@0.47.0) (2024-03-18)
+
+### Bug Fixes
+
+* raw output not being a valid json ([#642](https://github.com/wundergraph/cosmo/issues/642)) ([a690338](https://github.com/wundergraph/cosmo/commit/a690338d0a152d76fdc408e272b5b57299752ab2)) (@thisisnithin)
+
+### Features
+
+* allow to update admission url ([#638](https://github.com/wundergraph/cosmo/issues/638)) ([c7f7ee6](https://github.com/wundergraph/cosmo/commit/c7f7ee65f7716d463fb0bf96cf386e54ba5f8b73)) (@StarpTech)
+
+## [0.46.1](https://github.com/wundergraph/cosmo/compare/wgc@0.46.0...wgc@0.46.1) (2024-03-16)
+
+**Note:** Version bump only for package wgc
+
+# [0.46.0](https://github.com/wundergraph/cosmo/compare/wgc@0.45.1...wgc@0.46.0) (2024-03-14)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
+## [0.45.1](https://github.com/wundergraph/cosmo/compare/wgc@0.45.0...wgc@0.45.1) (2024-03-13)
+
+**Note:** Version bump only for package wgc
+
+# [0.45.0](https://github.com/wundergraph/cosmo/compare/wgc@0.44.2...wgc@0.45.0) (2024-03-11)
+
+### Features
+
+* add configurable schema linting ([#596](https://github.com/wundergraph/cosmo/issues/596)) ([c662485](https://github.com/wundergraph/cosmo/commit/c66248529c5bc13e795725c82ba50dbad79451ae)) (@JivusAyrus)
+
 ## [0.44.2](https://github.com/wundergraph/cosmo/compare/wgc@0.44.1...wgc@0.44.2) (2024-03-08)
 
 ### Bug Fixes

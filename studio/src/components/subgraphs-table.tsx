@@ -3,11 +3,8 @@ import { useFeature } from "@/hooks/use-feature";
 import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
-import {
-  ChartBarIcon,
-  CommandLineIcon,
-  EyeIcon,
-} from "@heroicons/react/24/outline";
+import { cn } from "@/lib/utils";
+import { ChartBarIcon, CommandLineIcon } from "@heroicons/react/24/outline";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -53,15 +50,8 @@ import {
   TableRow,
   TableWrapper,
 } from "./ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
-import { cn } from "@/lib/utils";
-import { PiAsterisk } from "react-icons/pi";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const router = useRouter();
@@ -293,12 +283,13 @@ const AddSubgraphUsers = ({
   const isAdmin = user?.currentOrganization.roles.includes("admin");
   const { data } = useQuery(getOrganizationMembers.useQuery());
 
-  const { data: subgraphMembersData, refetch } = useQuery(
-    getSubgraphMembers.useQuery({
+  const { data: subgraphMembersData, refetch } = useQuery({
+    ...getSubgraphMembers.useQuery({
       subgraphName,
       namespace,
     }),
-  );
+    enabled: open,
+  });
 
   const [inviteOptions, setInviteOptions] = useState<string[]>([]);
 
@@ -473,7 +464,12 @@ export const SubgraphsTable = ({
                       </TooltipTrigger>
                       <TooltipContent>Analytics</TooltipContent>
                     </Tooltip>
-                    <Button asChild variant="ghost" size="sm" className="table-action">
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="table-action"
+                    >
                       <Link href={path}>View</Link>
                     </Button>
                   </TableCell>

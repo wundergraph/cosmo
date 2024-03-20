@@ -2,8 +2,9 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import inquirer from 'inquirer';
-import { baseHeaders } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import ora from 'ora';
+import { baseHeaders } from '../../../../core/config.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
@@ -22,6 +23,8 @@ export default (opts: BaseCommandOptions) => {
         process.exit(1);
       }
     }
+
+    const spinner = ora('Federated Graph is being deleted...').start();
     const resp = await opts.client.platform.deleteFederatedGraph(
       {
         name,
@@ -33,9 +36,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`A federated graph called '${name}' was deleted.`)));
+      spinner.succeed(`Federated Graph was deleted successfully.`);
     } else {
-      console.log(`Failed to delete federated graph ${pc.bold(name)}.`);
+      spinner.fail(`Failed to delete federated graph.`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

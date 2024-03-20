@@ -5,7 +5,11 @@ export const envVariables = z
     /**
      * General
      */
-    WEB_BASE_URL: z.string(),
+    WEB_BASE_URL: z.string().url(),
+    /**
+     * CDN
+     */
+    CDN_BASE_URL: z.string().url(),
     DEBUG_SQL: z
       .string()
       .transform((val) => val === 'true')
@@ -109,6 +113,10 @@ export const envVariables = z
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     DEFAULT_PLAN: z.string().optional(), // e.g. developer@1
+    /**
+     * Admission Webhook
+     */
+    AUTH_ADMISSION_JWT_SECRET: z.string(),
   })
   .refine((input) => {
     if (input.STRIPE_WEBHOOK_SECRET && !input.STRIPE_SECRET_KEY) {

@@ -5,6 +5,7 @@ import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
+import ora from 'ora';
 import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
@@ -23,10 +24,6 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--label [labels...]',
     'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.',
-  );
-  command.option(
-    '--header [headers...]',
-    'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
   );
   command.option(
     '--subscription-url [url]',
@@ -50,13 +47,13 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    const spinner = ora('Subgraph is being created...').start();
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
         name,
         namespace: options.namespace,
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
         routingUrl: options.routingUrl,
-        headers: options.header,
         // If the argument is provided but the URL is not, clear it
         subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
         subscriptionProtocol: options.subscriptionProtocol
@@ -70,9 +67,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`A new subgraph called '${name}' was created.`)));
+      spinner.succeed('Subgraph was created successfully.');
     } else {
-      console.log(pc.red(`Failed to create subgraph '${pc.bold(name)}'.`));
+      spinner.fail('Failed to create subgraph.');
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

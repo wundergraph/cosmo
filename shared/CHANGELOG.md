@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.23.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.23.1...@wundergraph/cosmo-shared@0.23.2) (2024-03-20)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.23.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.23.0...@wundergraph/cosmo-shared@0.23.1) (2024-03-20)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.22.1...@wundergraph/cosmo-shared@0.23.0) (2024-03-18)
+
+### Features
+
+* allow to update admission url ([#638](https://github.com/wundergraph/cosmo/issues/638)) ([c7f7ee6](https://github.com/wundergraph/cosmo/commit/c7f7ee65f7716d463fb0bf96cf386e54ba5f8b73)) (@StarpTech)
+
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.22.0...@wundergraph/cosmo-shared@0.22.1) (2024-03-16)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.21.0...@wundergraph/cosmo-shared@0.22.0) (2024-03-14)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.20.17...@wundergraph/cosmo-shared@0.21.0) (2024-03-13)
+
+### Features
+
+* add edfs validation; add event source name keys to config ([#624](https://github.com/wundergraph/cosmo/issues/624)) ([bf03bb8](https://github.com/wundergraph/cosmo/commit/bf03bb8fca1838fefebcb150f8924ec52fb8bdb5)) (@Aenimus)
+
+## [0.20.17](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.20.16...@wundergraph/cosmo-shared@0.20.17) (2024-03-11)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.20.16](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.20.15...@wundergraph/cosmo-shared@0.20.16) (2024-03-08)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

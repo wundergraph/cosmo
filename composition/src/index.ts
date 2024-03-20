@@ -1,5 +1,6 @@
 export * from './ast/utils';
 export * from './errors/errors';
+export * from './errors/utils';
 export * from './federation/federation-factory';
 export * from './federation/utils';
 export * from './federation/walkers';
@@ -14,4 +15,5 @@ export * from './schema-building/type-merging';
 export * from './schema-building/utils';
 export * from './subgraph/subgraph';
 export * from './utils/utils';
+export * from './utils/constants';
 export * from './warnings/warnings';

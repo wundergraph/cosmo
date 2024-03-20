@@ -13,6 +13,7 @@ import {
   incompatibleParentKindFatalError,
   incompatibleSharedEnumError,
   invalidFieldShareabilityError,
+  invalidImplementedTypeError,
   invalidRequiredInputValueError,
   minimumSubgraphRequirementError,
   noConcreteTypesForAbstractTypeError,
@@ -36,6 +37,7 @@ import {
   ENTITIES,
   INACCESSIBLE,
   INPUT_OBJECT,
+  PARENT_DEFINITION_DATA,
   QUERY,
   REQUIRES_SCOPES,
   ROOT_TYPES,
@@ -46,8 +48,8 @@ import {
   addIterableValuesToSet,
   AuthorizationData,
   doSetsHaveAnyOverlap,
-  EntityContainer,
-  EntityContainerByTypeName,
+  EntityData,
+  EntityDataByTypeName,
   EntityInterfaceFederationData,
   getAllMutualEntries,
   getEntriesNotInHashSet,
@@ -127,7 +129,7 @@ export class FederationFactory {
   persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   currentSubgraphName = '';
   childName = '';
-  entityContainersByTypeName: EntityContainerByTypeName;
+  entityContainersByTypeName: EntityDataByTypeName;
   errors: Error[] = [];
   evaluatedObjectLikesBySubgraph = new Map<string, Set<string>>();
   graph: MultiGraph;
@@ -158,7 +160,7 @@ export class FederationFactory {
   constructor(
     authorizationDataByParentTypeName: Map<string, AuthorizationData>,
     concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>,
-    entityContainersByTypeName: EntityContainerByTypeName,
+    entityContainersByTypeName: EntityDataByTypeName,
     entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
     graph: MultiGraph,
     internalSubgraphBySubgraphName: Map<string, InternalSubgraph>,
@@ -179,22 +181,27 @@ export class FederationFactory {
       return interfaces;
     }
     const implementationErrorsMap = new Map<string, ImplementationErrors>();
+    const invalidImplementationTypeStringByTypeName = new Map<string, string>();
     for (const interfaceName of data.implementedInterfaceTypeNames) {
       interfaces.push(stringToNamedTypeNode(interfaceName));
-      const interfaceData = this.parentDefinitionDataByTypeName.get(interfaceName);
-      if (!interfaceData) {
-        this.errors.push(undefinedTypeError(interfaceName));
+      const implementationData = getOrThrowError(
+        this.parentDefinitionDataByTypeName,
+        interfaceName,
+        PARENT_DEFINITION_DATA,
+      );
+      if (implementationData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        invalidImplementationTypeStringByTypeName.set(
+          implementationData.name,
+          kindToTypeString(implementationData.kind),
+        );
         continue;
-      }
-      if (interfaceData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        throw incompatibleParentKindFatalError(interfaceName, Kind.INTERFACE_TYPE_DEFINITION, interfaceData.kind);
       }
       const implementationErrors: ImplementationErrors = {
         invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
         unimplementedFields: [],
       };
       let hasErrors = false;
-      for (const [fieldName, interfaceField] of interfaceData.fieldDataByFieldName) {
+      for (const [fieldName, interfaceField] of implementationData.fieldDataByFieldName) {
         let hasNestedErrors = false;
         const fieldData = data.fieldDataByFieldName.get(fieldName);
         if (!fieldData) {
@@ -261,6 +268,9 @@ export class FederationFactory {
       if (hasErrors) {
         implementationErrorsMap.set(interfaceName, implementationErrors);
       }
+    }
+    if (invalidImplementationTypeStringByTypeName.size > 0) {
+      this.errors.push(invalidImplementedTypeError(data.name, invalidImplementationTypeStringByTypeName));
     }
     if (implementationErrorsMap.size) {
       this.errors.push(
@@ -329,14 +339,14 @@ export class FederationFactory {
       }
     }
     for (const entityAncestorTypeName of entityAncestors) {
-      const entityContainer = getOrThrowError(
+      const entityObjectData = getOrThrowError(
         this.parentDefinitionDataByTypeName,
         entityAncestorTypeName,
         'parentDefinitionDataByTypeName',
       ) as ObjectDefinitionData;
       const mutualEntityAncestorRootTypeFieldSubgraphs = getAllMutualEntries(
         rootTypeFieldSubgraphs,
-        entityContainer.subgraphNames,
+        entityObjectData.subgraphNames,
       );
       const mutualEntityAncestorSubgraphsNames = getAllMutualEntries(
         mutualEntityAncestorRootTypeFieldSubgraphs,
@@ -533,7 +543,7 @@ export class FederationFactory {
     }
   }
 
-  validateKeyFieldSetsForImplicitEntity(entityContainer: EntityContainer) {
+  validateKeyFieldSetsForImplicitEntity(entityData: EntityData) {
     const internalSubgraph = getOrThrowError(
       this.internalSubgraphBySubgraphName,
       this.currentSubgraphName,
@@ -542,28 +552,27 @@ export class FederationFactory {
     const parentContainerByTypeName = internalSubgraph.parentDefinitionDataByTypeName;
     const extensionContainerByTypeName = internalSubgraph.parentExtensionDataByTypeName;
     const implicitEntityContainer =
-      parentContainerByTypeName.get(entityContainer.typeName) ||
-      extensionContainerByTypeName.get(entityContainer.typeName);
+      parentContainerByTypeName.get(entityData.typeName) || extensionContainerByTypeName.get(entityData.typeName);
     if (
       !implicitEntityContainer ||
       (implicitEntityContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
         implicitEntityContainer.kind !== Kind.OBJECT_TYPE_EXTENSION)
     ) {
       throw incompatibleParentKindFatalError(
-        entityContainer.typeName,
+        entityData.typeName,
         Kind.OBJECT_TYPE_DEFINITION,
         implicitEntityContainer?.kind || Kind.NULL,
       );
     }
     const configurationData = getOrThrowError(
       internalSubgraph.configurationDataByParentTypeName,
-      entityContainer.typeName,
+      entityData.typeName,
       'internalSubgraph.configurationDataMap',
     );
     const keyFieldNames = new Set<string>();
     const keys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
-    for (const fieldSet of entityContainer.keyFieldSets) {
+    for (const fieldSet of entityData.keyFieldSets) {
       // Create a new selection set so that the value can be parsed as a new DocumentNode
       const { error, documentNode } = safeParse('{' + fieldSet + '}');
       if (error || !documentNode) {

@@ -4,8 +4,9 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { splitLabel, parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import { splitLabel, parseGraphQLSubscriptionProtocol, isValidSubscriptionProtocol } from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
+import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -20,18 +21,14 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. This will overwrite existing labels.',
   );
   command.option(
     '--unset-labels',
     'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
   );
   command.option(
-    '--header [headers...]',
-    'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
-  );
-  command.option(
-    '--subscription-url [url]',
+    '--subscription-url <url>',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.',
   );
   command.option(
@@ -53,6 +50,19 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    if (options.subscriptionProtocol && !isValidSubscriptionProtocol(options.subscriptionProtocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The subscription protocol '${pc.bold(
+              options.subscriptionProtocol,
+            )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
+          ),
+        ),
+      );
+    }
+
+    const spinner = ora('Subgraph is being updated...').start();
     const resp = await opts.client.platform.updateSubgraph(
       {
         name,
@@ -66,13 +76,11 @@ export default (opts: BaseCommandOptions) => {
             };
           }) ?? [],
         unsetLabels: options.unsetLabels,
-        // If the argument is provided but the URL is not, clear it
-        subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
+        subscriptionUrl: options.subscriptionUrl,
         routingUrl: options.routingUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
-        headers: options.header,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
@@ -80,43 +88,78 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`Subgraph '${name}' was updated.`)));
-    } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
-      console.log(pc.dim(pc.green(`Subgraph called '${name}' was updated.`)));
+    switch (resp.response?.code) {
+      case EnumStatusCode.OK: {
+        spinner.succeed('Subgraph was updated successfully.');
 
-      const compositionErrorsTable = new Table({
-        head: [
-          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-          pc.bold(pc.white('NAMESPACE')),
-          pc.bold(pc.white('ERROR_MESSAGE')),
-        ],
-        colWidths: [30, 30, 120],
-        wordWrap: true,
-      });
+        break;
+      }
+      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
+        spinner.warn('Subgraph was updated but with composition errors.');
 
-      console.log(
-        pc.red(
-          `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
-            'Please check the errors below:',
-          )}`,
-        ),
-      );
-      for (const compositionError of resp.compositionErrors) {
-        compositionErrorsTable.push([
-          compositionError.federatedGraphName,
-          compositionError.namespace,
-          compositionError.message,
-        ]);
+        const compositionErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        console.log(
+          pc.red(
+            `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
+              'Please check the errors below:',
+            )}`,
+          ),
+        );
+        for (const compositionError of resp.compositionErrors) {
+          compositionErrorsTable.push([
+            compositionError.federatedGraphName,
+            compositionError.namespace,
+            compositionError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(compositionErrorsTable.toString());
+
+        break;
       }
-      // Don't exit here with 1 because the change was still applied
-      console.log(compositionErrorsTable.toString());
-    } else {
-      console.log(pc.red(`Failed to update subgraph ${pc.bold(name)}.`));
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
+      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
+        spinner.warn(
+          "Subgraph was updated, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+        );
+
+        const deploymentErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        for (const deploymentError of resp.deploymentErrors) {
+          deploymentErrorsTable.push([
+            deploymentError.federatedGraphName,
+            deploymentError.namespace,
+            deploymentError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(deploymentErrorsTable.toString());
+
+        break;
       }
-      process.exit(1);
+      default: {
+        spinner.fail(`Failed to update subgraph.`);
+        if (resp.response?.details) {
+          console.log(pc.red(pc.bold(resp.response?.details)));
+        }
+        process.exit(1);
+      }
     }
   });
 

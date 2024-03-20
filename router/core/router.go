@@ -164,6 +164,8 @@ type (
 
 		registrationInfo *nodev1.RegistrationInfo
 
+		securityConfiguration config.SecurityConfiguration
+
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
@@ -173,6 +175,8 @@ type (
 		rateLimit *config.RateLimitConfiguration
 
 		webSocketConfiguration *config.WebSocketConfiguration
+
+		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	}
 
 	Server interface {
@@ -1015,9 +1019,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
-		Execution: r.engineExecutionConfiguration,
-		Headers:   r.headerRules,
-		Events:    r.eventsConfig,
+		Execution:                r.engineExecutionConfiguration,
+		Headers:                  r.headerRules,
+		Events:                   r.eventsConfig,
+		SubgraphErrorPropagation: r.subgraphErrorPropagation,
 	}
 
 	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
@@ -1079,6 +1084,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		WebSocketStats:                         r.WebsocketStats,
 		TracerProvider:                         r.tracerProvider,
 		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
+		SubgraphErrorPropagation:               r.subgraphErrorPropagation,
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
@@ -1117,6 +1123,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 	}
 
+	operationBlocker := NewOperationBlocker(&OperationBlockerOptions{
+		BlockMutations:     r.securityConfiguration.BlockMutations,
+		BlockSubscriptions: r.securityConfiguration.BlockSubscriptions,
+		BlockNonPersisted:  r.securityConfiguration.BlockNonPersistedOperations,
+	})
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                      r.logger,
 		Executor:                    executor,
@@ -1124,6 +1136,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		OperationProcessor:          operationParser,
 		Planner:                     operationPlanner,
 		AccessController:            r.accessController,
+		OperationBlocker:            operationBlocker,
 		RouterPublicKey:             publicKey,
 		EnableRequestTracing:        r.engineExecutionConfiguration.EnableRequestTracing,
 		DevelopmentMode:             r.developmentMode,
@@ -1137,6 +1150,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			OperationProcessor:         operationParser,
+			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
 			GraphQLHandler:             graphqlHandler,
 			Metrics:                    routerMetrics,
@@ -1532,6 +1546,12 @@ func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfigur
 	}
 }
 
+func WithSecurityConfig(cfg config.SecurityConfiguration) Option {
+	return func(r *Router) {
+		r.securityConfiguration = cfg
+	}
+}
+
 func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	return func(r *Router) {
 		r.engineExecutionConfiguration = cfg
@@ -1645,6 +1665,12 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
 	return func(r *Router) {
 		r.Config.webSocketConfiguration = cfg
+	}
+}
+
+func WithWithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfiguration) Option {
+	return func(r *Router) {
+		r.Config.subgraphErrorPropagation = cfg
 	}
 }
 

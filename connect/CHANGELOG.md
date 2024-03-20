@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.64.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.64.0...@wundergraph/cosmo-connect@0.64.1) (2024-03-20)
+
+### Bug Fixes
+
+* proto fields ([#655](https://github.com/wundergraph/cosmo/issues/655)) ([e2c5909](https://github.com/wundergraph/cosmo/commit/e2c59090e0207325e423dc38e7b2a6cbae745508)) (@thisisnithin)
+
+# [0.64.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.63.0...@wundergraph/cosmo-connect@0.64.0) (2024-03-20)
+
+### Features
+
+* monograph support ([#623](https://github.com/wundergraph/cosmo/issues/623)) ([a255f74](https://github.com/wundergraph/cosmo/commit/a255f747d63454e1219760b729d99e4778d56dda)) (@thisisnithin)
+
+# [0.63.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.62.0...@wundergraph/cosmo-connect@0.63.0) (2024-03-18)
+
+### Features
+
+* allow to update admission url ([#638](https://github.com/wundergraph/cosmo/issues/638)) ([c7f7ee6](https://github.com/wundergraph/cosmo/commit/c7f7ee65f7716d463fb0bf96cf386e54ba5f8b73)) (@StarpTech)
+
+# [0.62.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.61.0...@wundergraph/cosmo-connect@0.62.0) (2024-03-14)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
+# [0.61.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.60.0...@wundergraph/cosmo-connect@0.61.0) (2024-03-13)
+
+### Features
+
+* add edfs validation; add event source name keys to config ([#624](https://github.com/wundergraph/cosmo/issues/624)) ([bf03bb8](https://github.com/wundergraph/cosmo/commit/bf03bb8fca1838fefebcb150f8924ec52fb8bdb5)) (@Aenimus)
+
+# [0.60.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.59.1...@wundergraph/cosmo-connect@0.60.0) (2024-03-11)
+
+### Features
+
+* add configurable schema linting ([#596](https://github.com/wundergraph/cosmo/issues/596)) ([c662485](https://github.com/wundergraph/cosmo/commit/c66248529c5bc13e795725c82ba50dbad79451ae)) (@JivusAyrus)
+
 ## [0.59.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.59.0...@wundergraph/cosmo-connect@0.59.1) (2024-03-08)
 
 ### Bug Fixes

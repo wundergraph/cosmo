@@ -156,6 +156,11 @@ func (r *subscriptionResolver) InitialPayload(ctx context.Context, repeat *int) 
 	return ch, nil
 }
 
+// ReturnsError is the resolver for the returnsError field.
+func (r *subscriptionResolver) ReturnsError(ctx context.Context) (<-chan *string, error) {
+	return nil, errors.New("this is an error")
+}
+
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 

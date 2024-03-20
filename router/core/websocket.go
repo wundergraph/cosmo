@@ -37,6 +37,7 @@ var (
 
 type WebsocketMiddlewareOptions struct {
 	OperationProcessor *OperationProcessor
+	OperationBlocker   *OperationBlocker
 	Planner            *OperationPlanner
 	GraphQLHandler     *GraphQLHandler
 	Metrics            RouterMetrics
@@ -58,6 +59,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			ctx:                ctx,
 			next:               next,
 			operationProcessor: opts.OperationProcessor,
+			operationBlocker:   opts.OperationBlocker,
 			planner:            opts.Planner,
 			graphqlHandler:     opts.GraphQLHandler,
 			metrics:            opts.Metrics,
@@ -150,6 +152,7 @@ type WebsocketHandler struct {
 	config             *config.WebSocketConfiguration
 	next               http.Handler
 	operationProcessor *OperationProcessor
+	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
 	graphqlHandler     *GraphQLHandler
 	metrics            RouterMetrics
@@ -236,6 +239,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	handler := NewWebsocketConnectionHandler(h.ctx, WebSocketConnectionHandlerOptions{
 		OperationProcessor: h.operationProcessor,
+		OperationBlocker:   h.operationBlocker,
 		Planner:            h.planner,
 		GraphQLHandler:     h.graphqlHandler,
 		Metrics:            h.metrics,
@@ -417,25 +421,27 @@ func (h *WebsocketHandler) runPoller() {
 }
 
 type websocketResponseWriter struct {
-	id           string
-	protocol     wsproto.Proto
-	header       http.Header
-	buf          bytes.Buffer
-	writtenBytes int
-	logger       *zap.Logger
-	stats        WebSocketsStatistics
+	id              string
+	protocol        wsproto.Proto
+	header          http.Header
+	buf             bytes.Buffer
+	writtenBytes    int
+	logger          *zap.Logger
+	stats           WebSocketsStatistics
+	propagateErrors bool
 }
 
 var _ http.ResponseWriter = (*websocketResponseWriter)(nil)
 var _ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
 
-func newWebsocketResponseWriter(id string, protocol wsproto.Proto, logger *zap.Logger, stats WebSocketsStatistics) *websocketResponseWriter {
+func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats WebSocketsStatistics) *websocketResponseWriter {
 	return &websocketResponseWriter{
-		id:       id,
-		protocol: protocol,
-		header:   make(http.Header),
-		logger:   logger.With(zap.String("subscription_id", id)),
-		stats:    stats,
+		id:              id,
+		protocol:        protocol,
+		header:          make(http.Header),
+		logger:          logger.With(zap.String("subscription_id", id)),
+		stats:           stats,
+		propagateErrors: propagateErrors,
 	}
 }
 
@@ -478,7 +484,11 @@ func (rw *websocketResponseWriter) Flush() error {
 		// Check if the result is an error
 		errorsResult := gjson.GetBytes(payload, "errors")
 		if errorsResult.Type == gjson.JSON {
-			err = rw.protocol.WriteGraphQLErrors(rw.id, json.RawMessage(errorsResult.Raw), extensions)
+			if rw.propagateErrors {
+				err = rw.protocol.WriteGraphQLErrors(rw.id, json.RawMessage(errorsResult.Raw), extensions)
+			} else {
+				err = rw.protocol.WriteGraphQLErrors(rw.id, json.RawMessage(`[{"message":"Unable to subscribe"}]`), extensions)
+			}
 		} else {
 			err = rw.protocol.WriteGraphQLData(rw.id, payload, extensions)
 		}
@@ -495,12 +505,14 @@ func (rw *websocketResponseWriter) SubscriptionResponseWriter() resolve.Subscrip
 }
 
 type graphqlError struct {
-	Message string `json:"message"`
+	Message    string      `json:"message"`
+	Extensions *Extensions `json:"extensions,omitempty"`
 }
 
 type WebSocketConnectionHandlerOptions struct {
 	Config             *config.WebSocketConfiguration
 	OperationProcessor *OperationProcessor
+	OperationBlocker   *OperationBlocker
 	Planner            *OperationPlanner
 	GraphQLHandler     *GraphQLHandler
 	Metrics            RouterMetrics
@@ -519,6 +531,7 @@ type WebSocketConnectionHandlerOptions struct {
 type WebSocketConnectionHandler struct {
 	ctx                context.Context
 	operationProcessor *OperationProcessor
+	operationBlocker   *OperationBlocker
 	planner            *OperationPlanner
 	graphqlHandler     *GraphQLHandler
 	metrics            RouterMetrics
@@ -548,6 +561,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 	return &WebSocketConnectionHandler{
 		ctx:                              ctx,
 		operationProcessor:               opts.OperationProcessor,
+		operationBlocker:                 opts.OperationBlocker,
 		planner:                          opts.Planner,
 		graphqlHandler:                   opts.GraphQLHandler,
 		metrics:                          opts.Metrics,
@@ -597,6 +611,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		return nil, nil, err
 	}
 
+	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
+		return nil, nil, blocked
+	}
+
 	if err := operationKit.Normalize(); err != nil {
 		return nil, nil, err
 	}
@@ -615,7 +633,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 
 func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, id resolve.SubscriptionIdentifier) {
 
-	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger, h.stats)
+	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.graphqlHandler.subgraphErrorPropagation.Enabled, h.logger, h.stats)
 
 	_, operationCtx, err := h.parseAndPlan(msg.Payload)
 	if err != nil {

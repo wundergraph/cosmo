@@ -4,6 +4,64 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.79.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.79.0...controlplane@0.79.1) (2024-03-20)
+
+**Note:** Version bump only for package controlplane
+
+# [0.79.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.78.0...controlplane@0.79.0) (2024-03-20)
+
+### Features
+
+* monograph support ([#623](https://github.com/wundergraph/cosmo/issues/623)) ([a255f74](https://github.com/wundergraph/cosmo/commit/a255f747d63454e1219760b729d99e4778d56dda)) (@thisisnithin)
+
+# [0.78.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.77.1...controlplane@0.78.0) (2024-03-18)
+
+### Features
+
+* allow to update admission url ([#638](https://github.com/wundergraph/cosmo/issues/638)) ([c7f7ee6](https://github.com/wundergraph/cosmo/commit/c7f7ee65f7716d463fb0bf96cf386e54ba5f8b73)) (@StarpTech)
+
+## [0.77.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.77.0...controlplane@0.77.1) (2024-03-16)
+
+### Bug Fixes
+
+* improve ui and logs ([#631](https://github.com/wundergraph/cosmo/issues/631)) ([83695b9](https://github.com/wundergraph/cosmo/commit/83695b97d3aca66d70677bc207f874c8aa17bf65)) (@JivusAyrus)
+
+# [0.77.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.76.0...controlplane@0.77.0) (2024-03-14)
+
+### Features
+
+* improve admission controller ([#632](https://github.com/wundergraph/cosmo/issues/632)) ([229bc9f](https://github.com/wundergraph/cosmo/commit/229bc9f5e58d0a936c2c5427b9f30146def87157)) (@StarpTech)
+
+# [0.76.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.75.2...controlplane@0.76.0) (2024-03-14)
+
+### Bug Fixes
+
+* change claim key to support microsoft entra ([#630](https://github.com/wundergraph/cosmo/issues/630)) ([f1bc391](https://github.com/wundergraph/cosmo/commit/f1bc3916f9859525fd36e4879a839e6f3c59fa0d)) (@JivusAyrus)
+
+### Features
+
+* router config signature validation through custom admission webhooks ([#628](https://github.com/wundergraph/cosmo/issues/628)) ([384fd7e](https://github.com/wundergraph/cosmo/commit/384fd7e3372479e96fccc4fc771dc4e9f9c84754)) (@StarpTech)
+
+## [0.75.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.75.1...controlplane@0.75.2) (2024-03-13)
+
+**Note:** Version bump only for package controlplane
+
+## [0.75.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.75.0...controlplane@0.75.1) (2024-03-11)
+
+### Bug Fixes
+
+* dependencies ([#622](https://github.com/wundergraph/cosmo/issues/622)) ([7763060](https://github.com/wundergraph/cosmo/commit/776306054ebb77a883779ae11ffd178b62afbd59)) (@JivusAyrus)
+
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.74.1...controlplane@0.75.0) (2024-03-11)
+
+### Bug Fixes
+
+* subgraphs not found in composition details page ([#619](https://github.com/wundergraph/cosmo/issues/619)) ([f3ea37e](https://github.com/wundergraph/cosmo/commit/f3ea37eb24a60b4f993437b728cf3b3db2166862)) (@JivusAyrus)
+
+### Features
+
+* add configurable schema linting ([#596](https://github.com/wundergraph/cosmo/issues/596)) ([c662485](https://github.com/wundergraph/cosmo/commit/c66248529c5bc13e795725c82ba50dbad79451ae)) (@JivusAyrus)
+
 ## [0.74.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.74.0...controlplane@0.74.1) (2024-03-08)
 
 ### Bug Fixes

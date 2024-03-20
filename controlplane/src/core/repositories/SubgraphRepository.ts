@@ -1,8 +1,9 @@
 import { PlainMessage } from '@bufbuild/protobuf';
-import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, count, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import {
   graphCompositionSubgraphs,
@@ -26,10 +27,10 @@ import {
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { Composer } from '../composition/composer.js';
+import { ComposeDeploymentError, Composer, RouterConfigUploadError } from '../composition/composer.js';
+import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
-import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
@@ -39,6 +40,7 @@ type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
  */
 export class SubgraphRepository {
   constructor(
+    private logger: FastifyBaseLogger,
     private db: PostgresJsDatabase<typeof schema>,
     private organizationId: string,
   ) {}
@@ -114,7 +116,7 @@ export class SubgraphRepository {
       /**
        * 3. Insert into federatedSubgraphs by matching labels
        */
-      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
         labels: uniqueLabels,
         namespaceId: data.namespaceId,
@@ -136,7 +138,7 @@ export class SubgraphRepository {
        * 4. Add the creator as a subgraph member
        */
 
-      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       await subgraphRepo.addSubgraphMember({ subgraphId: insertedSubgraph[0].id, userId: data.createdBy });
 
       return {
@@ -169,16 +171,24 @@ export class SubgraphRepository {
       unsetLabels: boolean;
     },
     blobStorage: BlobStorage,
-  ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
+    admissionConfig: {
+      webhookJWTSecret: string;
+      cdnBaseUrl: string;
+    },
+  ): Promise<{
+    compositionErrors: PlainMessage<CompositionError>[];
+    deploymentErrors: PlainMessage<DeploymentError>[];
+    updatedFederatedGraphs: FederatedGraphDTO[];
+  }> {
+    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
     await this.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(tx);
-      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
       let subgraphChanged = false;
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
@@ -210,24 +220,25 @@ export class SubgraphRepository {
           .execute();
       }
 
-      if (data.subscriptionUrl && data.subscriptionUrl !== subgraph.subscriptionUrl) {
+      if (data.subscriptionUrl !== undefined && data.subscriptionUrl !== subgraph.subscriptionUrl) {
         subgraphChanged = true;
         const url = normalizeURL(data.subscriptionUrl);
         await tx
           .update(subgraphs)
           .set({
-            subscriptionUrl: url,
+            subscriptionUrl: url || null,
           })
           .where(eq(subgraphs.id, subgraph.id))
           .execute();
       }
 
-      if (data.subscriptionProtocol && data.subscriptionProtocol !== subgraph.subscriptionProtocol) {
+      if (data.subscriptionProtocol !== undefined && data.subscriptionProtocol !== subgraph.subscriptionProtocol) {
         subgraphChanged = true;
         await tx
           .update(subgraphs)
           .set({
-            subscriptionProtocol: data.subscriptionProtocol,
+            // ws is the default protocol
+            subscriptionProtocol: data.subscriptionProtocol || 'ws',
           })
           .where(eq(subgraphs.id, subgraph.id))
           .execute();
@@ -306,15 +317,7 @@ export class SubgraphRepository {
       for (const federatedGraph of updatedFederatedGraphs) {
         const composition = await composer.composeFederatedGraph(federatedGraph);
 
-        await composer.deployComposition({
-          composedGraph: composition,
-          composedBy: data.updatedBy,
-          blobStorage,
-          organizationId: this.organizationId,
-        });
-
         // Collect all composition errors
-
         compositionErrors.push(
           ...composition.errors.map((e) => ({
             federatedGraphName: composition.name,
@@ -322,15 +325,37 @@ export class SubgraphRepository {
             message: e.message,
           })),
         );
+
+        const deployment = await composer.deployComposition({
+          composedGraph: composition,
+          composedBy: data.updatedBy,
+          blobStorage,
+          organizationId: this.organizationId,
+          admissionWebhookURL: federatedGraph.admissionWebhookURL,
+          admissionConfig: {
+            cdnBaseUrl: admissionConfig.cdnBaseUrl,
+            jwtSecret: admissionConfig.webhookJWTSecret,
+          },
+        });
+
+        deploymentErrors.push(
+          ...deployment.errors
+            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+            .map((e) => ({
+              federatedGraphName: federatedGraph.name,
+              namespace: federatedGraph.namespace,
+              message: e.message ?? '',
+            })),
+        );
       }
 
       // update the readme of the subgraph
-      if (data.readme) {
+      if (data.readme !== undefined) {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
     });
 
-    return { compositionErrors, updatedFederatedGraphs };
+    return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
   }
 
   public async move(
@@ -338,20 +363,27 @@ export class SubgraphRepository {
       targetId: string;
       subgraphId: string;
       subgraphLabels: Label[];
-      newNamespace: string;
       updatedBy: string;
       currentNamespaceId: string;
       newNamespaceId: string;
     },
     blobStorage: BlobStorage,
-  ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
+    admissionConfig: {
+      jwtSecret: string;
+      cdnBaseUrl: string;
+    },
+  ): Promise<{
+    compositionErrors: PlainMessage<CompositionError>[];
+    updatedFederatedGraphs: FederatedGraphDTO[];
+    deploymentErrors: ComposeDeploymentError[];
+  }> {
+    const deploymentErrors: ComposeDeploymentError[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
     await this.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(tx);
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
 
       updatedFederatedGraphs.push(
         ...(await fedGraphRepo.bySubgraphLabels({ labels: data.subgraphLabels, namespaceId: data.currentNamespaceId })),
@@ -384,16 +416,9 @@ export class SubgraphRepository {
           .execute();
       }
 
-      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
+      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
       for (const federatedGraph of updatedFederatedGraphs) {
         const composition = await composer.composeFederatedGraph(federatedGraph);
-
-        await composer.deployComposition({
-          composedGraph: composition,
-          composedBy: data.updatedBy,
-          blobStorage,
-          organizationId: this.organizationId,
-        });
 
         // Collect all composition errors
         compositionErrors.push(
@@ -403,10 +428,21 @@ export class SubgraphRepository {
             message: e.message,
           })),
         );
+
+        const deployment = await composer.deployComposition({
+          composedGraph: composition,
+          composedBy: data.updatedBy,
+          blobStorage,
+          organizationId: this.organizationId,
+          admissionWebhookURL: federatedGraph.admissionWebhookURL,
+          admissionConfig,
+        });
+
+        deploymentErrors.push(...deployment.errors);
       }
     });
 
-    return { compositionErrors, updatedFederatedGraphs };
+    return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
   }
 
   public addSchemaVersion(data: { targetId: string; subgraphSchema: string }): Promise<SubgraphDTO | undefined> {
@@ -453,7 +489,11 @@ export class SubgraphRepository {
     });
   }
 
-  public async list(opts: ListFilterOptions): Promise<SubgraphDTO[]> {
+  public async list(
+    opts: ListFilterOptions & {
+      federatedGraphTargetIds?: string[];
+    },
+  ): Promise<SubgraphDTO[]> {
     const conditions: SQL<unknown>[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
@@ -461,6 +501,14 @@ export class SubgraphRepository {
 
     if (opts.namespaceId) {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
+    if (opts.supportsFederation !== undefined) {
+      conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
+    }
+
+    if (opts.federatedGraphTargetIds && opts.federatedGraphTargetIds.length > 0) {
+      conditions.push(inArray(schema.federatedGraphs.targetId, opts.federatedGraphTargetIds));
     }
 
     const targets = await this.db
@@ -472,6 +520,11 @@ export class SubgraphRepository {
       .from(schema.targets)
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
       .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
+      .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
+      .innerJoin(
+        schema.federatedGraphs,
+        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
+      )
       .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
       .where(and(...conditions))
       .limit(opts.limit)
@@ -484,6 +537,7 @@ export class SubgraphRepository {
       if (sg === undefined) {
         throw new Error(`Subgraph ${target.name} not found`);
       }
+
       subgraphs.push(sg);
     }
 
@@ -643,7 +697,6 @@ export class SubgraphRepository {
   }): Promise<GetChecksResponse> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
-      published: true,
     });
 
     if (subgraphs.length === 0) {
@@ -664,6 +717,7 @@ export class SubgraphRepository {
         hasClientTraffic: true,
         forcedSuccess: true,
         ghDetails: true,
+        hasLintErrors: true,
       },
       limit,
       offset,
@@ -699,6 +753,7 @@ export class SubgraphRepository {
               checkRunId: c.ghDetails.checkRunId,
             }
           : undefined,
+        hasLintErrors: c.hasLintErrors ?? false,
       })),
       checksCount,
     };
@@ -715,7 +770,6 @@ export class SubgraphRepository {
   }): Promise<number> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
-      published: true,
     });
 
     if (subgraphs.length === 0) {
@@ -767,7 +821,6 @@ export class SubgraphRepository {
 
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId: data.federatedGraphTargetId,
-      published: true,
     });
 
     const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
@@ -798,6 +851,7 @@ export class SubgraphRepository {
             checkRunId: check.ghDetails.checkRunId,
           }
         : undefined,
+      hasLintErrors: check.hasLintErrors ?? false,
     };
   }
 
@@ -913,7 +967,7 @@ export class SubgraphRepository {
    * @param data
    */
   public async getSDLFromLatestComposition(data: { subgraphTargetId: string; federatedGraphTargetId: string }) {
-    const fedRepo = new FederatedGraphRepository(this.db, this.organizationId);
+    const fedRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
     const fedGraphSchemaVersion = await fedRepo.getLatestValidSchemaVersion({ targetId: data.federatedGraphTargetId });
     if (!fedGraphSchemaVersion) {
       return undefined;
@@ -958,11 +1012,17 @@ export class SubgraphRepository {
       .from(targets)
       .innerJoin(subgraphs, eq(targets.id, subgraphs.targetId))
       .innerJoin(subgraphMembers, eq(subgraphs.id, subgraphMembers.subgraphId))
+      .innerJoin(schema.subgraphsToFederatedGraph, eq(subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
+      .innerJoin(
+        schema.federatedGraphs,
+        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
+      )
       .where(
         and(
           eq(targets.type, 'subgraph'),
           eq(targets.organizationId, this.organizationId),
           or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId)),
+          eq(schema.federatedGraphs.supportsFederation, true),
         ),
       );
 
@@ -973,6 +1033,7 @@ export class SubgraphRepository {
       if (sg === undefined) {
         throw new Error(`Subgraph ${graph.name} not found`);
       }
+
       accessibleSubgraphs.push(sg);
     }
 
@@ -986,8 +1047,8 @@ export class SubgraphRepository {
       .where(and(eq(targets.id, targetId), eq(schema.targets.organizationId, this.organizationId)));
   }
 
-  public async getSubgraphMembers(subgraphId: string): Promise<SubgraphMemberDTO[]> {
-    const members = await this.db
+  public getSubgraphMembers(subgraphId: string): Promise<SubgraphMemberDTO[]> {
+    return this.db
       .select({
         subgraphMemberId: subgraphMembers.id,
         userId: subgraphMembers.userId,
@@ -996,12 +1057,10 @@ export class SubgraphRepository {
       .from(subgraphMembers)
       .innerJoin(users, eq(users.id, subgraphMembers.userId))
       .where(eq(subgraphMembers.subgraphId, subgraphId));
-
-    return members;
   }
 
-  public async getSubgraphMembersbyTargetId(targetId: string): Promise<SubgraphMemberDTO[]> {
-    const members = await this.db
+  public getSubgraphMembersByTargetId(targetId: string): Promise<SubgraphMemberDTO[]> {
+    return this.db
       .select({
         subgraphMemberId: subgraphMembers.id,
         userId: subgraphMembers.userId,
@@ -1011,8 +1070,6 @@ export class SubgraphRepository {
       .innerJoin(users, eq(users.id, subgraphMembers.userId))
       .innerJoin(subgraphs, eq(subgraphs.id, subgraphMembers.subgraphId))
       .where(eq(subgraphs.targetId, targetId));
-
-    return members;
   }
 
   public async addSubgraphMember({ subgraphId, userId }: { subgraphId: string; userId: string }) {

@@ -347,6 +347,176 @@ func TestWebSockets(t *testing.T) {
 			}
 		})
 	})
+	t.Run("subscription with upgrade error", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							// This will cause the upgrade to fail
+							w.WriteHeader(http.StatusTeapot)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "error", msg.Type)
+			require.Equal(t, `[{"message":"Upgrade request failed for Subgraph '0'.","extensions":{"statusCode":418}}]`, string(msg.Payload))
+		})
+	})
+	t.Run("subscription with unexposed upgrade error", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.StatusCodes = false
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							// This will cause the upgrade to fail
+							w.WriteHeader(http.StatusTeapot)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "error", msg.Type)
+			require.Equal(t, `[{"message":"Upgrade failed"}]`, string(msg.Payload))
+		})
+	})
+	t.Run("subscription error in resolver", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							// This will cause the upgrade to fail
+							w.WriteHeader(http.StatusTeapot)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { returnsError }"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "error", msg.Type)
+			require.Equal(t, `[{"message":"this is an error","path":["returnsError"]}]`, string(msg.Payload))
+		})
+	})
+	t.Run("subscription error in resolver unexposed", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = false
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							// This will cause the upgrade to fail
+							w.WriteHeader(http.StatusTeapot)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { returnsError }"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "error", msg.Type)
+			require.Equal(t, `[{"message":"Unable to subscribe"}]`, string(msg.Payload))
+		})
+	})
+	t.Run("subscription blocked", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.BlockSubscriptions = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "error", msg.Type)
+			require.Equal(t, `[{"message":"operation type 'subscription' is blocked"}]`, string(msg.Payload))
+		})
+	})
 	t.Run("multiple subscriptions one connection", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
