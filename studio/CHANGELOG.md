@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.74.1](https://github.com/wundergraph/cosmo/compare/studio@0.74.0...studio@0.74.1) (2024-03-20)
+
+### Bug Fixes
+
+* remove connect-src CSP policy ([#656](https://github.com/wundergraph/cosmo/issues/656)) ([faf12ff](https://github.com/wundergraph/cosmo/commit/faf12ff15a0eb8d07a0b00a61927b75d98ce023c)) (@StarpTech)
+
 # [0.74.0](https://github.com/wundergraph/cosmo/compare/studio@0.73.3...studio@0.74.0) (2024-03-20)
 
 ### Features

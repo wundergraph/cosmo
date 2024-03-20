@@ -39,6 +39,11 @@ const lightweightCspHeader = `
   worker-src 'self';
 `;
 
+/**
+ * We can't enforce connect directives yet because the studio can connect to any public router.
+ * @TODO We need to find a way to enforce this without breaking the studio. A possible solution could be to
+ * proxy all requests through an intermediate server to enforce same domain policy.
+ */
 const fullCspHeader = `
   default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
     process.env.NEXT_PUBLIC_COSMO_CP_URL
@@ -69,23 +74,10 @@ const config = {
             key: debugCSP
                 ? "Content-Security-Policy-Report-Only"
                 : "Content-Security-Policy",
-            value: fullCspHeader.replace(/\n/g, ""),
-          },
-        ],
-      },
-      {
-        // Allow the playground to make requests to the public router that can be hosted on a different domain
-        source: "/(.*)/playground",
-        headers: [
-          {
-            key: debugCSP
-              ? "Content-Security-Policy-Report-Only"
-              : "Content-Security-Policy",
             value: lightweightCspHeader.replace(/\n/g, ""),
           },
         ],
-      },
-
+      }
     ];
   },
 };
