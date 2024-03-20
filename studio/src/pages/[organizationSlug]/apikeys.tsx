@@ -311,8 +311,8 @@ const CreateAPIKeyDialog = ({
                         >
                           <Button size="sm" variant="outline">
                             {selectedFedGraphs.length > 0
-                              ? `${selectedFedGraphs.length} federated graphs selected`
-                              : "Select federated graphs"}
+                              ? `${selectedFedGraphs.length} graphs selected`
+                              : "Select graphs"}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="">

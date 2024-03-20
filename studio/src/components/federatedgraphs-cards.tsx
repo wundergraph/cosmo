@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFireworks } from "@/hooks/use-fireworks";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
@@ -25,6 +26,7 @@ import {
   useState,
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
+import { LuSquareDot } from "react-icons/lu";
 import { MdNearbyError } from "react-icons/md";
 import { SiApollographql } from "react-icons/si";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
@@ -463,26 +465,51 @@ export const Empty = ({
   let labels = "team=A";
   return (
     <EmptyState
+      className="h-auto"
       icon={<CommandLineIcon />}
-      title="Create federated graph using CLI"
+      title="No graphs found"
       description={
         <>
-          No federated graphs found. Use the CLI tool to create one.{" "}
+          Use the CLI tool to create either a federated graph ({" "}
           <a
             target="_blank"
             rel="noreferrer"
             href={docsBaseURL + "/cli/federated-graphs/create"}
             className="text-primary"
           >
-            Learn more.
-          </a>
+            docs
+          </a>{" "}
+          ) or a monograph ({" "}
+          <a
+            target="_blank"
+            rel="noreferrer"
+            href={docsBaseURL + "/cli/monograph/create"}
+            className="text-primary"
+          >
+            docs
+          </a>{" "}
+          ).
         </>
       }
       actions={
         <div className="flex flex-col gap-y-6">
-          <CLI
-            command={`npx wgc federated-graph create production --namespace ${router.query.namespace} --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
-          />
+          <Tabs defaultValue="federated" className="mt-8 w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="federated">Federated Graph</TabsTrigger>
+              <TabsTrigger value="monograph">Monograph</TabsTrigger>
+            </TabsList>
+            <TabsContent value="federated">
+              <CLI
+                command={`npx wgc federated-graph create production --namespace ${router.query.namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
+              />
+            </TabsContent>
+            <TabsContent value="monograph">
+              <CLI
+                command={`npx wgc monograph create production --namespace ${router.query.namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
+              />
+            </TabsContent>
+          </Tabs>
+
           {checkUserAccess({
             rolesToBe: ["admin", "developer"],
             userRoles: user?.currentOrganization.roles || [],
@@ -529,7 +556,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
       }
 
       const { host, pathname } = new URL(graph.routingURL);
-      return host + pathname;
+      return host + (pathname === "/" ? "" : pathname);
     } catch {}
   };
 
@@ -580,12 +607,20 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           </p>
           <div className="mb-3 flex flex-wrap items-center gap-x-5">
             <div className="flex items-center gap-x-2">
-              <Component2Icon className="h-4 w-4 text-[#0284C7]" />
-              <p className="text-sm">
-                {`${formatMetric(graph.connectedSubgraphs)} ${
-                  graph.connectedSubgraphs === 1 ? "subgraph" : "subgraphs"
-                }`}
-              </p>
+              {graph.supportsFederation ? (
+                <Component2Icon className="h-4 w-4 text-[#0284C7]" />
+              ) : (
+                <LuSquareDot className="h-4 w-4 text-[#0284C7]" />
+              )}
+              {graph.supportsFederation ? (
+                <p className="text-sm">
+                  {`${formatMetric(graph.connectedSubgraphs)} ${
+                    graph.connectedSubgraphs === 1 ? "subgraph" : "subgraphs"
+                  }`}
+                </p>
+              ) : (
+                <p className="text-sm">monograph</p>
+              )}
             </div>
 
             <TooltipProvider>

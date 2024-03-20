@@ -92,6 +92,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath,
         icon: <HomeIcon className="h-4 w-4" />,
       },
+
       {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
@@ -227,6 +228,7 @@ export const GraphSelect = () => {
       value={selected?.id}
       onValueChange={(gID) => {
         const graph = data?.graphs.find((g) => g.id === gID);
+
         router.push({
           pathname: router.pathname,
           query: {

@@ -218,7 +218,7 @@ const UsagesPage: NextPageWithLayout = () => {
               </div>
               <div className="flex">
                 <dt className="flex-1 px-2 text-sm text-muted-foreground">
-                  Federated graphs
+                  Federated graphs & Monographs
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
                   <FeatureLimit id="federated-graphs" fallback={25} />

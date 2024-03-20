@@ -18,7 +18,7 @@ import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getLatestSubgraphSDL } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -48,7 +48,7 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
         noPadding
       >
         <EmptyState
-          icon={<ExclamationTriangleIcon className="h-10 w-10" />}
+          icon={<ExclamationTriangleIcon />}
           title="Could not retrieve the sdl of the subgraph"
           description={
             data?.response?.details || error?.message || "Please try again"
