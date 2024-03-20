@@ -52,10 +52,10 @@ func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache) *Oper
 	}
 }
 
-func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithMetaData, error) {
+func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOperationContent string) (*planWithMetaData, error) {
 	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
 	if report.HasErrors() {
-		return planWithMetaData{}, &reportError{report: &report}
+		return nil, &reportError{report: &report}
 	}
 
 	validation := astvalidation.DefaultOperationValidator()
@@ -63,23 +63,23 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	// validate the document before planning
 	state := validation.Validate(&doc, p.executor.Definition, &report)
 	if state != astvalidation.Valid {
-		return planWithMetaData{}, &reportError{report: &report}
+		return nil, &reportError{report: &report}
 	}
 
 	planner, err := plan.NewPlanner(p.executor.PlanConfig)
 	if err != nil {
-		return planWithMetaData{}, err
+		return nil, err
 	}
 
 	// create and postprocess the plan
 	preparedPlan := planner.Plan(&doc, p.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
-		return planWithMetaData{}, &reportError{report: &report}
+		return nil, &reportError{report: &report}
 	}
 	post := postprocess.DefaultProcessor()
 	post.Process(preparedPlan)
 
-	return planWithMetaData{
+	return &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
 		schemaDocument:    p.executor.Definition,
@@ -109,7 +109,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 		if err != nil {
 			return nil, err
 		}
-		opContext.preparedPlan = &prepared
+		opContext.preparedPlan = prepared
 		return opContext, nil
 	}
 
@@ -130,8 +130,8 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 			if err != nil {
 				return nil, err
 			}
-			p.planCache.Set(operationID, &prepared, 1)
-			return &prepared, nil
+			p.planCache.Set(operationID, prepared, 1)
+			return prepared, nil
 		})
 		if err != nil {
 			return nil, err

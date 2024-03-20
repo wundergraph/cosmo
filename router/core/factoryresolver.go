@@ -55,7 +55,7 @@ type DefaultFactoryResolver struct {
 	factoryLogger   abstractlogger.Logger
 }
 
-func NewDefaultFactoryResolver(executionCtx context.Context, transportFactory ApiTransportFactory, baseTransport http.RoundTripper, log *zap.Logger, enableSingleFlight bool, natsConnection *nats.Conn) *DefaultFactoryResolver {
+func NewDefaultFactoryResolver(ctx context.Context, transportFactory ApiTransportFactory, baseTransport http.RoundTripper, log *zap.Logger, enableSingleFlight bool, natsConnection *nats.Conn) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
 		Timeout:   transportFactory.DefaultTransportTimeout(),
@@ -75,12 +75,12 @@ func NewDefaultFactoryResolver(executionCtx context.Context, transportFactory Ap
 		transportFactory: transportFactory,
 		static:           &staticdatasource.Factory[staticdatasource.Configuration]{},
 		pubsub: pubsub_datasource.NewFactory(
-			executionCtx,
+			ctx,
 			pubsub.NewNATSConnector(natsConnection),
 		),
 		log:             log,
 		factoryLogger:   factoryLogger,
-		engineCtx:       executionCtx,
+		engineCtx:       ctx,
 		httpClient:      defaultHttpClient,
 		streamingClient: streamingClient,
 	}

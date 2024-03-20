@@ -35,14 +35,14 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(executionCtx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, reporter resolve.Reporter) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(executionCtx, routerConfig, routerEngineConfig)
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, reporter resolve.Reporter) (*Executor, error) {
+	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(executionCtx, resolve.ResolverOptions{
+	resolver := resolve.New(ctx, resolve.ResolverOptions{
 		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
 		Reporter:                     reporter,
 		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
@@ -102,7 +102,7 @@ func (b *ExecutorConfigurationBuilder) Build(executionCtx context.Context, route
 	}, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(executionCtx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -146,7 +146,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(executionCtx co
 	}
 
 	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
-		executionCtx,
+		ctx,
 		NewTransport(b.transportOptions),
 		b.transport,
 		b.logger,
