@@ -120,7 +120,11 @@ const ChecksPage: NextPageWithLayout = () => {
         }
         actions={
           <CLI
-            command={`npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`}
+            command={
+              !graphContext.graph.supportsFederation
+                ? `npx wgc monograph check ${graphContext.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
+                : `npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`
+            }
           />
         }
       />
@@ -135,7 +139,9 @@ const ChecksPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Check</TableHead>
-              <TableHead>Subgraph</TableHead>
+              {graphContext.graph.supportsFederation && (
+                <TableHead>Subgraph</TableHead>
+              )}
               <TableHead>Tasks</TableHead>
               <TableHead></TableHead>
             </TableRow>
@@ -197,7 +203,9 @@ const ChecksPage: NextPageWithLayout = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{subgraphName}</TableCell>
+                      {graphContext.graph?.supportsFederation && (
+                        <TableCell>{subgraphName}</TableCell>
+                      )}
                       <TableCell>
                         <div className="flex flex-wrap items-start gap-2">
                           <Badge variant="outline" className="gap-2 py-1.5">

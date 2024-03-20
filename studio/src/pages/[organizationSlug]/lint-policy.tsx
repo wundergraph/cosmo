@@ -10,6 +10,13 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -27,7 +34,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { docsBaseURL, lintCategories } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, countLintConfigsByCategory } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -42,7 +49,6 @@ import {
 import Link from "next/link";
 import { useContext, useEffect, useState } from "react";
 
-
 const SeverityDropdown = ({
   onChange,
   value,
@@ -51,28 +57,26 @@ const SeverityDropdown = ({
   value: "error" | "warn";
 }) => {
   return (
-    <div className="flex items-center gap-x-2 px-1">
-      <Select
-        value={value}
-        onValueChange={(value) => {
-          onChange(value);
-        }}
-      >
-        <SelectTrigger className="h-8 w-36">
-          <SelectValue placeholder={value} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel>Lint Severity</SelectLabel>
-            {["warn", "error"].map((pageSize) => (
-              <SelectItem key={pageSize} value={`${pageSize}`}>
-                {pageSize}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </div>
+    <Select
+      value={value}
+      onValueChange={(value) => {
+        onChange(value);
+      }}
+    >
+      <SelectTrigger className="h-8 w-36">
+        <SelectValue placeholder={value} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectLabel>Lint Severity</SelectLabel>
+          {["warn", "error"].map((pageSize) => (
+            <SelectItem key={pageSize} value={`${pageSize}`}>
+              {pageSize}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 };
 
@@ -122,122 +126,116 @@ const LintPolicyPage: NextPageWithLayout = () => {
     );
 
   return (
-    <div className="flex w-full flex-col gap-4 border border-1 px-5 pt-5 pb-1 rounded-lg">
+    <div className="space-y-6">
       <div className="flex w-full items-center justify-between">
         <div className="flex flex-col gap-y-1">
-          <span>Enable Linter</span>
+          <h3 className="font-semibold tracking-tight">Enable Linter</h3>
           <p className="text-sm text-muted-foreground">
             Run the lint check on all the check operations of this namespace.
           </p>
         </div>
-        <div>
-          <Switch
-            className="h-18 w-10"
-            checked={linterEnabled}
-            onCheckedChange={(checked) => {
-              setLinterEnabled(checked);
-              mutate(
-                {
-                  namespace,
-                  enableLinting: checked,
-                },
-                {
-                  onSuccess: (d) => {
-                    if (d.response?.code === EnumStatusCode.OK) {
-                      toast({
-                        description: checked
-                          ? "Linter enabled successfully."
-                          : "Linter disabled successfully",
-                        duration: 3000,
-                      });
-                    } else if (d.response?.details) {
-                      toast({
-                        description: d.response.details,
-                        duration: 3000,
-                      });
-                    }
-                    refetch();
-                  },
-                  onError: (error) => {
+        <Switch
+          checked={linterEnabled}
+          onCheckedChange={(checked) => {
+            setLinterEnabled(checked);
+            mutate(
+              {
+                namespace,
+                enableLinting: checked,
+              },
+              {
+                onSuccess: (d) => {
+                  if (d.response?.code === EnumStatusCode.OK) {
                     toast({
                       description: checked
-                        ? "Could not enable the linter. Please try again."
-                        : "Could not disable the linter. Please try again.",
+                        ? "Linter enabled successfully."
+                        : "Linter disabled successfully",
                       duration: 3000,
                     });
-                  },
-                },
-              );
-            }}
-          />
-        </div>
-      </div>
-      <div className=" flex w-full flex-col gap-4">
-        <div className="flex w-full justify-between">
-          <div className="flex flex-col gap-y-1">
-            <span>Lint Rules</span>
-            <p className="text-sm text-muted-foreground">
-              {data.linterEnabled
-                ? "Configure the linter rules and its severity levels for the lint check performed during each check operation of this namespace."
-                : "Enable the linter to configure the lint rules."}{" "}
-              <Link
-                href={docsBaseURL + "/studio/lint-policy"}
-                className="text-primary"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Learn more
-              </Link>
-            </p>
-          </div>
-          <Button
-            className="mt-2"
-            type="submit"
-            variant="default"
-            isLoading={isConfiguring}
-            disabled={!data.linterEnabled}
-            onClick={() => {
-              configureLintRules(
-                {
-                  namespace,
-                  configs: selectedLintRules,
-                },
-                {
-                  onSuccess: (d) => {
-                    if (d.response?.code === EnumStatusCode.OK) {
-                      toast({
-                        description: "Lint Policy applied succesfully.",
-                        duration: 3000,
-                      });
-                    } else if (d.response?.details) {
-                      toast({
-                        description: d.response.details,
-                        duration: 3000,
-                      });
-                    }
-                    refetch();
-                  },
-                  onError: (error) => {
+                  } else if (d.response?.details) {
                     toast({
-                      description:
-                        "Could not apply the lint policy. Please try again.",
+                      description: d.response.details,
                       duration: 3000,
                     });
-                  },
+                  }
+                  refetch();
                 },
-              );
-            }}
-          >
-            Apply
-          </Button>
-        </div>
-        <div className="border-1 overflow-y-auto rounded-md border px-4">
-          <Accordion
-            type="single"
-            collapsible
-            className="h-full w-full overflow-y-auto overflow-x-hidden"
-            disabled={!data.linterEnabled}
-          >
+                onError: (error) => {
+                  toast({
+                    description: checked
+                      ? "Could not enable the linter. Please try again."
+                      : "Could not disable the linter. Please try again.",
+                    duration: 3000,
+                  });
+                },
+              },
+            );
+          }}
+        />
+      </div>
+      <Card>
+        <CardHeader>
+          <div className="flex w-full items-center justify-between">
+            <div className="flex flex-col gap-y-1">
+              <CardTitle>Lint Rules</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                {data.linterEnabled
+                  ? "Configure the linter rules and its severity levels for the lint check performed during each check operation of this namespace."
+                  : "Enable the linter to configure the lint rules."}{" "}
+                <Link
+                  href={docsBaseURL + "/studio/lint-policy"}
+                  className="text-primary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Learn more
+                </Link>
+              </CardDescription>
+            </div>
+            <Button
+              className="mt-2"
+              type="submit"
+              variant="default"
+              isLoading={isConfiguring}
+              disabled={!data.linterEnabled}
+              onClick={() => {
+                configureLintRules(
+                  {
+                    namespace,
+                    configs: selectedLintRules,
+                  },
+                  {
+                    onSuccess: (d) => {
+                      if (d.response?.code === EnumStatusCode.OK) {
+                        toast({
+                          description: "Lint Policy applied succesfully.",
+                          duration: 3000,
+                        });
+                      } else if (d.response?.details) {
+                        toast({
+                          description: d.response.details,
+                          duration: 3000,
+                        });
+                      }
+                      refetch();
+                    },
+                    onError: (error) => {
+                      toast({
+                        description:
+                          "Could not apply the lint policy. Please try again.",
+                        duration: 3000,
+                      });
+                    },
+                  },
+                );
+              }}
+            >
+              Apply
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Accordion type="single" collapsible disabled={!data.linterEnabled}>
             {lintCategories.map((lintCategory, index) => {
               return (
                 <AccordionItem value={index.toString()} key={index.toString()}>
@@ -250,17 +248,14 @@ const LintPolicyPage: NextPageWithLayout = () => {
                   >
                     <div className="flex w-full flex-col items-start gap-y-1">
                       <div className="flex items-center gap-x-2">
-                        <span className="text-lg">{lintCategory.title}</span>
+                        <span>{lintCategory.title}</span>
                         {countByCategory && (
-                          <Badge
-                            variant="muted"
-                            className="mt-[2px] h-[18px] px-2 text-xs"
-                          >
+                          <Badge variant="muted">
                             {`${countByCategory[index]} of ${lintCategory.rules.length}`}
                           </Badge>
                         )}
                       </div>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-left text-muted-foreground">
                         {lintCategory.description}
                       </span>
                     </div>
@@ -270,7 +265,7 @@ const LintPolicyPage: NextPageWithLayout = () => {
                       {lintCategory.rules.map((rule, index) => {
                         return (
                           <div
-                            className="border-1 flex w-full items-center justify-between rounded-md border p-4"
+                            className="flex w-full flex-col justify-between gap-y-4 rounded-md border p-4 md:flex-row md:items-center"
                             key={index + rule.name}
                           >
                             <div className="flex items-start gap-x-4">
@@ -301,7 +296,7 @@ const LintPolicyPage: NextPageWithLayout = () => {
                               <div className="flex flex-col gap-y-1">
                                 <label
                                   htmlFor={rule.name}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                  className="break-all text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
                                   {rule.name}
                                 </label>
@@ -311,32 +306,34 @@ const LintPolicyPage: NextPageWithLayout = () => {
                               </div>
                             </div>
 
-                            <SeverityDropdown
-                              value={
-                                selectedLintRules.find(
-                                  (l) => l.ruleName === rule.name,
-                                )?.severityLevel === LintSeverity.error
-                                  ? "error"
-                                  : "warn"
-                              }
-                              onChange={(value) => {
-                                setSelectedLintRules(
-                                  selectedLintRules.map((l) => {
-                                    if (l.ruleName === rule.name) {
-                                      return {
-                                        ...l,
-                                        severityLevel:
-                                          value === "error"
-                                            ? LintSeverity.error
-                                            : LintSeverity.warn,
-                                      } as LintConfig;
-                                    } else {
-                                      return l;
-                                    }
-                                  }),
-                                );
-                              }}
-                            />
+                            <div className="ml-8 md:ml-0">
+                              <SeverityDropdown
+                                value={
+                                  selectedLintRules.find(
+                                    (l) => l.ruleName === rule.name,
+                                  )?.severityLevel === LintSeverity.error
+                                    ? "error"
+                                    : "warn"
+                                }
+                                onChange={(value) => {
+                                  setSelectedLintRules(
+                                    selectedLintRules.map((l) => {
+                                      if (l.ruleName === rule.name) {
+                                        return {
+                                          ...l,
+                                          severityLevel:
+                                            value === "error"
+                                              ? LintSeverity.error
+                                              : LintSeverity.warn,
+                                        } as LintConfig;
+                                      } else {
+                                        return l;
+                                      }
+                                    }),
+                                  );
+                                }}
+                              />
+                            </div>
                           </div>
                         );
                       })}
@@ -346,9 +343,8 @@ const LintPolicyPage: NextPageWithLayout = () => {
               );
             })}
           </Accordion>
-        </div>
-        <div className="flex w-full justify-end"></div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

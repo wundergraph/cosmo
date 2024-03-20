@@ -6,8 +6,8 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { resolve } from 'pathe';
 import ora from 'ora';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { baseHeaders } from '../../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
@@ -20,7 +20,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--label-matcher [labels...]',
-    'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
+    'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod. This will overwrite existing label matchers.',
   );
   command.option(
     '--unset-label-matchers',
