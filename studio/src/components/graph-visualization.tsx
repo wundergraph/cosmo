@@ -93,9 +93,11 @@ const getLayoutedElements = (
 function GraphVisualization({
   subgraphMetrics,
   federatedGraphMetrics,
+  supportsFederation,
 }: {
   subgraphMetrics?: SubgraphMetrics[];
   federatedGraphMetrics?: FederatedGraphMetrics;
+  supportsFederation: boolean;
 }) {
   const graphData = useContext(GraphContext);
   const reactFlowInstance = useReactFlow();
@@ -109,11 +111,13 @@ function GraphVisualization({
     if (!graphData?.graph) return;
 
     const buildGraphs = (subgraphs: Subgraph[]): Graph[] => {
+      const rootName = supportsFederation ? graphData.graph?.name : "router";
+
       const graphs: Graph[] = [
         {
-          id: `root-${graphData.graph?.name}`,
+          id: `root-${rootName}`,
           kind: "graph",
-          name: graphData.graph?.name!,
+          name: rootName!,
           parentId: "",
           errorRate: federatedGraphMetrics?.errorRate,
           requestRate: federatedGraphMetrics?.requestRate,
@@ -225,6 +229,7 @@ function GraphVisualization({
     graphData?.subgraphs,
     subgraphMetrics,
     federatedGraphMetrics,
+    supportsFederation,
   ]);
 
   const [nodeStates, setNodeStates, onNodesChange] = useNodesState(nodes);

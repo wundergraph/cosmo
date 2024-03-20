@@ -7,14 +7,14 @@ import { baseHeaders } from '../../../../../core/config.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
   command.description(
-    'Creates a new token for a federated graph. The token can be used to authenticate against the control plane from the routers.',
+    'Creates a new token for a federated graph or monograph. The token can be used to authenticate against the control plane from the routers.',
   );
   command.argument('<name>', 'The name of the token to create. Only serves as a reference for the user.');
   command.requiredOption(
     '-g, --graph-name <graphName>',
-    'The name of the federated graph that the token should be created for.',
+    'The name of the federated graph or monograph that the token should be created for.',
   );
-  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
   command.option(
     '-r, --raw',
     'Prints the token in raw format. This is useful if you want to pipe the token into another command.',
@@ -37,9 +37,7 @@ export default (opts: BaseCommandOptions) => {
         return;
       }
 
-      console.log(
-        `${pc.green(`Successfully created token ${pc.bold(name)} for federated graph ${pc.bold(options.graphName)}`)}`,
-      );
+      console.log(`${pc.green(`Successfully created token ${pc.bold(name)} for graph ${pc.bold(options.graphName)}`)}`);
       console.log('');
       console.log(`${pc.bold(resp.token)}\n`);
       console.log(pc.yellow('---'));
@@ -47,7 +45,7 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.yellow(`You can use the token only to authenticate against the Cosmo Platform from the routers.`));
       console.log(pc.yellow('---'));
     } else {
-      console.log(`${pc.red('Could not create token for federated graph')}`);
+      console.log(`${pc.red('Could not create token for graph')}`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

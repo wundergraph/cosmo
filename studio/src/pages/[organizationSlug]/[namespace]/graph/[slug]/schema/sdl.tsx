@@ -1,19 +1,18 @@
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import { ThreadSheet } from "@/components/discussions/thread";
-import { EmptyState } from "@/components/empty-state";
 import {
   GraphContext,
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
+import { EmptySchema } from "@/components/schema/empty-schema-state";
 import {
   SDLViewer,
   SDLViewerActions,
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
 import { SchemaToolbar } from "@/components/schema/toolbar";
-import { CLISteps } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -25,10 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -40,68 +37,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
-
-const Empty = ({ subgraphName }: { subgraphName?: string }) => {
-  const router = useRouter();
-
-  return (
-    <EmptyState
-      icon={<CommandLineIcon />}
-      title={
-        subgraphName
-          ? "Publish subgraph using CLI"
-          : "Create and Publish subgraph using CLI"
-      }
-      description={
-        subgraphName ? (
-          <>
-            Use the CLI tool to publish the subgraph.{" "}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href={docsBaseURL + "/cli/subgraphs/publish"}
-              className="text-primary"
-            >
-              Learn more.
-            </a>
-          </>
-        ) : (
-          <>
-            No subgraphs found. Use the CLI tool to create and publish one.{" "}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href={docsBaseURL + "/cli/subgraphs/publish"}
-              className="text-primary"
-            >
-              Learn more.
-            </a>
-          </>
-        )
-      }
-      actions={
-        <CLISteps
-          steps={
-            subgraphName
-              ? [
-                  {
-                    description: "Publish a subgraph.",
-                    command: `npx wgc subgraph publish ${subgraphName} --namespace ${router.query.namespace} --schema <path-to-schema>`,
-                  },
-                ]
-              : [
-                  {
-                    description:
-                      "Publish a subgraph. If the subgraph does not exist, it will be created.",
-                    command: `npx wgc subgraph publish <subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema> --label <labels> --routing-url <routing-url>`,
-                  },
-                ]
-          }
-        />
-      }
-    />
-  );
-};
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -177,14 +112,16 @@ const SDLPage: NextPageWithLayout = () => {
     subgraphSdl?.response &&
     subgraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND
   ) {
-    content = <Empty subgraphName={activeSubgraph} />;
+    content = <EmptySchema subgraphName={activeSubgraph} />;
   } else if (
     federatedGraphSdl?.response &&
     federatedGraphSdl.response?.code === EnumStatusCode.ERR_NOT_FOUND
   ) {
     validGraph = true;
     content = (
-      <Empty subgraphName={graphData?.subgraphs?.[0]?.name || undefined} />
+      <EmptySchema
+        subgraphName={graphData?.subgraphs?.[0]?.name || undefined}
+      />
     );
   } else {
     content = (
@@ -232,29 +169,48 @@ const SDLPage: NextPageWithLayout = () => {
                   className="w-full md:ml-auto md:w-[200px]"
                 >
                   <SelectValue aria-label={activeGraphWithSDL.title}>
-                    {activeGraphWithSDL.title}
+                    {graphData?.graph?.supportsFederation
+                      ? activeGraphWithSDL.title
+                      : activeSubgraph
+                      ? "Published SDL"
+                      : "Router SDL"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                      <PiGraphLight className="h-3 w-3" /> Graph
-                    </SelectLabel>
-                    <SelectItem value="">{graphName}</SelectItem>
-                  </SelectGroup>
-                  <Separator className="my-2" />
-                  <SelectGroup>
-                    <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                      <Component2Icon className="h-3 w-3" /> Subgraphs
-                    </SelectLabel>
-                    {subgraphs.map(({ name, query }) => {
-                      return (
-                        <SelectItem key={name} value={query}>
-                          {name}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectGroup>
+                  {graphData?.graph?.supportsFederation ? (
+                    <>
+                      <SelectGroup>
+                        <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                          <PiGraphLight className="h-3 w-3" /> Graph
+                        </SelectLabel>
+                        <SelectItem value="">{graphName}</SelectItem>
+                      </SelectGroup>
+                      <Separator className="my-2" />
+                      <SelectGroup>
+                        <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                          <Component2Icon className="h-3 w-3" /> Subgraphs
+                        </SelectLabel>
+                        {subgraphs.map(({ name, query }) => {
+                          return (
+                            <SelectItem key={name} value={query}>
+                              {name}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectGroup>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="">Router SDL</SelectItem>
+                      {subgraphs.map(({ name, query }) => {
+                        return (
+                          <SelectItem key={name} value={query}>
+                            Published SDL
+                          </SelectItem>
+                        );
+                      })}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               <SDLViewerActions

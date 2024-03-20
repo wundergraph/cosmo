@@ -4,7 +4,8 @@ import { CreateClient } from '../core/client/client.js';
 import { config, configDir } from '../core/config.js';
 import { checkForUpdates } from '../utils.js';
 import AuthCommands from './auth/index.js';
-import FederatedGraphCommands from './federated-graph/index.js';
+import MonographCommands from './graph/monograph/index.js';
+import FederatedGraphCommands from './graph/federated-graph/index.js';
 import NamespaceCommands from './namespace/index.js';
 import OperationCommands from './operations/index.js';
 import RouterCommands from './router/index.js';
@@ -22,6 +23,11 @@ WunderGraph Cosmo is the Full Lifecycle GraphQL API Management Solution to manag
 Composition checks, routing, analytics, and distributed tracing all in one platform.
 `);
 
+program.addCommand(
+  MonographCommands({
+    client,
+  }),
+);
 program.addCommand(
   FederatedGraphCommands({
     client,

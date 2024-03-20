@@ -20,10 +20,10 @@ export const handleOutput = async (out: string | undefined, config: string) => {
 export default (opts: BaseCommandOptions) => {
   const command = new Command('fetch');
   command.description(
-    'Fetches the latest valid router config for a federated graph. The output can be piped to a file.',
+    'Fetches the latest valid router config for a federated graph or monograph. The output can be piped to a file.',
   );
-  command.argument('<name>', 'The name of the federated graph to fetch.');
-  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
+  command.argument('<name>', 'The name of the federated graph or monograph to fetch.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.option(
     '--graph-sign-key [string]',
@@ -41,7 +41,7 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code !== EnumStatusCode.OK) {
-      console.log(`${pc.red(`Could not fetch the router config for the federated graph ${pc.bold(name)}`)}`);
+      console.log(`${pc.red(`Could not fetch the router config for the graph ${pc.bold(name)}`)}`);
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

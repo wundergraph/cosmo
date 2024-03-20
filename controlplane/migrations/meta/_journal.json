@@ -589,6 +589,13 @@
       "when": 1710358301380,
       "tag": "0083_naive_deadpool",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "5",
+      "when": 1710820602447,
+      "tag": "0084_goofy_raider",
+      "breakpoints": true
     }
   ]
 }

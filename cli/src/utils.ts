@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
 import boxen from 'boxen';
 import { program } from 'commander';
+import { buildASTSchema, buildClientSchema, printSchema } from 'graphql';
 import yaml from 'js-yaml';
 import pc from 'picocolors';
 import { config, configDir, configFile } from './core/config.js';
@@ -12,12 +13,122 @@ export interface Header {
   value: string;
 }
 
+const introspectionQuery = `query IntrospectionQuery {
+  __schema {
+    queryType {
+      name
+    }
+    mutationType {
+      name
+    }
+    subscriptionType {
+      name
+    }
+    types {
+      ...FullType
+    }
+    directives {
+      name
+      description
+      locations
+      args {
+        ...InputValue
+      }
+    }
+  }
+}
+
+fragment FullType on __Type {
+  kind
+  name
+  description
+  fields(includeDeprecated: true) {
+    name
+    description
+    args {
+      ...InputValue
+    }
+    type {
+      ...TypeRef
+    }
+    isDeprecated
+    deprecationReason
+  }
+  inputFields {
+    ...InputValue
+  }
+  interfaces {
+    ...TypeRef
+  }
+  enumValues(includeDeprecated: true) {
+    name
+    description
+    isDeprecated
+    deprecationReason
+  }
+  possibleTypes {
+    ...TypeRef
+  }
+}
+
+fragment InputValue on __InputValue {
+  name
+  description
+  type {
+    ...TypeRef
+  }
+  defaultValue
+}
+
+fragment TypeRef on __Type {
+  kind
+  name
+  ofType {
+    kind
+    name
+    ofType {
+      kind
+      name
+      ofType {
+        kind
+        name
+        ofType {
+          kind
+          name
+          ofType {
+            kind
+            name
+            ofType {
+              kind
+              name
+              ofType {
+                kind
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+const sdlQuery = `
+  {
+    _service{
+      sdl
+    }
+  }
+`;
+
 export const introspectSubgraph = async ({
   subgraphURL,
   additionalHeaders,
+  rawIntrospection,
 }: {
   subgraphURL: string;
   additionalHeaders: Header[];
+  rawIntrospection?: boolean;
 }): Promise<{ sdl: string; errorMessage?: string; success: boolean }> => {
   const headers = new Headers();
   headers.append('Content-Type', 'application/json');
@@ -26,13 +137,7 @@ export const introspectSubgraph = async ({
   }
 
   const graphql = JSON.stringify({
-    query: `
-        {
-          _service{
-            sdl
-          }
-        }
-      `,
+    query: rawIntrospection ? introspectionQuery : sdlQuery,
     variables: {},
   });
 
@@ -50,9 +155,12 @@ export const introspectSubgraph = async ({
   }
   const body = await response.json();
   const data = body.data;
+
+  const sdl = rawIntrospection ? printSchema(buildClientSchema(data)) : data._service.sdl;
+
   return {
     success: true,
-    sdl: data._service.sdl,
+    sdl,
   };
 };
 

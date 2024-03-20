@@ -4,8 +4,8 @@ import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { baseHeaders } from '../../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');

@@ -1,4 +1,8 @@
 import { readFileSync } from 'node:fs';
+import { PartialMessage } from '@bufbuild/protobuf';
+import { GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Client } from './core/client/client.js';
+import { baseHeaders } from './core/config.js';
 
 // https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
 
@@ -33,3 +37,37 @@ export function useGitHub() {
     root: process.env.GITHUB_WORKSPACE,
   };
 }
+
+export const verifyGitHubIntegration = async (client: Client) => {
+  let gitInfo: PartialMessage<GitInfo> | undefined;
+  const { isPr, commit: commitSha, repository, accountId } = useGitHub();
+  if (isPr && commitSha && repository && accountId) {
+    const [ownerSlug, repositorySlug] = repository?.split('/');
+    gitInfo = {
+      commitSha,
+      accountId,
+      ownerSlug,
+      repositorySlug,
+    };
+  }
+
+  let ignoreErrorsDueToGitHubIntegration = false;
+  if (gitInfo) {
+    const integrationCheckResponse = await client.platform.isGitHubAppInstalled(
+      {
+        gitInfo,
+      },
+      {
+        headers: baseHeaders,
+      },
+    );
+    ignoreErrorsDueToGitHubIntegration = integrationCheckResponse.isInstalled;
+    if (ignoreErrorsDueToGitHubIntegration) {
+      console.log(
+        'GitHub integration detected. The command will succeed and any errors detected will be reflected on commit status instead.',
+      );
+    }
+  }
+
+  return { gitInfo, ignoreErrorsDueToGitHubIntegration };
+};

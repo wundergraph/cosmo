@@ -12,6 +12,14 @@ describe('Util', (ctx) => {
     expect(
       isValidLabels([
         {
+          key: '_internal',
+          value: 'val1',
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
           key: 'key1',
           value: 'val1',
         },

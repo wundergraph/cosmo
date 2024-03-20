@@ -157,7 +157,6 @@ const CompositionsPage: NextPageWithLayout = () => {
                       </TableCell>
                       <TableCell>{createdBy || "-"}</TableCell>
                       <TableCell>
-                        {" "}
                         <Tooltip>
                           <TooltipTrigger>
                             <div className="flex items-center space-x-1">
@@ -177,7 +176,9 @@ const CompositionsPage: NextPageWithLayout = () => {
                                   <MdVerifiedUser className="h-4 w-4 text-amber-500" />
                                   <span>Validated & Signed</span>
                                 </Badge>
-                              ) : null}
+                              ) : (
+                                "-"
+                              )}
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="bottom">
@@ -199,8 +200,8 @@ const CompositionsPage: NextPageWithLayout = () => {
                           </TooltipContent>
                         </Tooltip>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-x-2">
+                      <TableCell className="w-[128px] md:w-auto">
+                        <div className="flex w-max flex-col gap-2 md:flex-row md:items-center">
                           <Badge variant="outline" className="gap-2 py-1.5">
                             {getCheckIcon(isComposable)} <span>Composes</span>
                           </Badge>

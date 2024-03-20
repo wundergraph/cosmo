@@ -49,8 +49,8 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 GraphsDashboardPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
-    "Federated Graphs",
-    "An overview of all your federated graphs",
+    "Graphs",
+    "An overview of all your federated graphs and monographs",
     undefined,
     undefined,
     [<NamespaceSelector key="0" />],

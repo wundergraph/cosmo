@@ -33,6 +33,7 @@ export interface ListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
+  supportsFederation?: boolean;
 }
 
 export interface Label {
@@ -58,6 +59,7 @@ export interface FederatedGraphDTO {
   readme?: string;
   namespace: string;
   namespaceId: string;
+  supportsFederation: boolean;
 }
 
 export interface FederatedGraphChangelogDTO {

@@ -23,7 +23,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
         const cachedInfo = registrationInfoCache.get(authContext.federatedGraphId);

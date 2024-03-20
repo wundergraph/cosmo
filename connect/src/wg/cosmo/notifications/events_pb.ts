@@ -40,46 +40,52 @@ export enum OrganizationEventName {
    * @generated from enum value: FEDERATED_GRAPH_SCHEMA_UPDATED = 0;
    */
   FEDERATED_GRAPH_SCHEMA_UPDATED = 0,
+
+  /**
+   * @generated from enum value: MONOGRAPH_SCHEMA_UPDATED = 1;
+   */
+  MONOGRAPH_SCHEMA_UPDATED = 1,
 }
 // Retrieve enum metadata with: proto3.getEnumType(OrganizationEventName)
 proto3.util.setEnumType(OrganizationEventName, "wg.cosmo.notifications.OrganizationEventName", [
   { no: 0, name: "FEDERATED_GRAPH_SCHEMA_UPDATED" },
+  { no: 1, name: "MONOGRAPH_SCHEMA_UPDATED" },
 ]);
 
 /**
- * @generated from message wg.cosmo.notifications.FederatedGraphSchemaUpdatedMeta
+ * @generated from message wg.cosmo.notifications.GraphSchemaUpdatedMeta
  */
-export class FederatedGraphSchemaUpdatedMeta extends Message<FederatedGraphSchemaUpdatedMeta> {
+export class GraphSchemaUpdatedMeta extends Message<GraphSchemaUpdatedMeta> {
   /**
    * @generated from field: repeated string graphIds = 1;
    */
   graphIds: string[] = [];
 
-  constructor(data?: PartialMessage<FederatedGraphSchemaUpdatedMeta>) {
+  constructor(data?: PartialMessage<GraphSchemaUpdatedMeta>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.notifications.FederatedGraphSchemaUpdatedMeta";
+  static readonly typeName = "wg.cosmo.notifications.GraphSchemaUpdatedMeta";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "graphIds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphSchemaUpdatedMeta {
-    return new FederatedGraphSchemaUpdatedMeta().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphSchemaUpdatedMeta {
+    return new GraphSchemaUpdatedMeta().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FederatedGraphSchemaUpdatedMeta {
-    return new FederatedGraphSchemaUpdatedMeta().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GraphSchemaUpdatedMeta {
+    return new GraphSchemaUpdatedMeta().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FederatedGraphSchemaUpdatedMeta {
-    return new FederatedGraphSchemaUpdatedMeta().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GraphSchemaUpdatedMeta {
+    return new GraphSchemaUpdatedMeta().fromJsonString(jsonString, options);
   }
 
-  static equals(a: FederatedGraphSchemaUpdatedMeta | PlainMessage<FederatedGraphSchemaUpdatedMeta> | undefined, b: FederatedGraphSchemaUpdatedMeta | PlainMessage<FederatedGraphSchemaUpdatedMeta> | undefined): boolean {
-    return proto3.util.equals(FederatedGraphSchemaUpdatedMeta, a, b);
+  static equals(a: GraphSchemaUpdatedMeta | PlainMessage<GraphSchemaUpdatedMeta> | undefined, b: GraphSchemaUpdatedMeta | PlainMessage<GraphSchemaUpdatedMeta> | undefined): boolean {
+    return proto3.util.equals(GraphSchemaUpdatedMeta, a, b);
   }
 }
 
@@ -97,10 +103,16 @@ export class EventMeta extends Message<EventMeta> {
    */
   meta: {
     /**
-     * @generated from field: wg.cosmo.notifications.FederatedGraphSchemaUpdatedMeta federated_graph_schema_updated = 2;
+     * @generated from field: wg.cosmo.notifications.GraphSchemaUpdatedMeta federated_graph_schema_updated = 2;
      */
-    value: FederatedGraphSchemaUpdatedMeta;
+    value: GraphSchemaUpdatedMeta;
     case: "federatedGraphSchemaUpdated";
+  } | {
+    /**
+     * @generated from field: wg.cosmo.notifications.GraphSchemaUpdatedMeta monograph_schema_updated = 3;
+     */
+    value: GraphSchemaUpdatedMeta;
+    case: "monographSchemaUpdated";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<EventMeta>) {
@@ -112,7 +124,8 @@ export class EventMeta extends Message<EventMeta> {
   static readonly typeName = "wg.cosmo.notifications.EventMeta";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "event_name", kind: "enum", T: proto3.getEnumType(OrganizationEventName) },
-    { no: 2, name: "federated_graph_schema_updated", kind: "message", T: FederatedGraphSchemaUpdatedMeta, oneof: "meta" },
+    { no: 2, name: "federated_graph_schema_updated", kind: "message", T: GraphSchemaUpdatedMeta, oneof: "meta" },
+    { no: 3, name: "monograph_schema_updated", kind: "message", T: GraphSchemaUpdatedMeta, oneof: "meta" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventMeta {

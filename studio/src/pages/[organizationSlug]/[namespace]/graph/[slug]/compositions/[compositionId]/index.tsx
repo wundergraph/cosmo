@@ -389,48 +389,49 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                       <div className="relative flex h-full min-h-[60vh] flex-col">
                         <div className="-top-[60px] right-8 px-5 md:absolute md:px-0">
                           <div className="flex gap-x-2">
-                            <Select
-                              value={activeSubgraphName}
-                              onValueChange={(subgraph) =>
-                                router.push({
-                                  pathname: router.pathname,
-                                  query: {
-                                    ...router.query,
-                                    subgraph,
-                                  },
-                                })
-                              }
-                            >
-                              <SelectTrigger
+                            {graphData?.graph?.supportsFederation && (
+                              <Select
                                 value={activeSubgraphName}
-                                className="w-full md:ml-auto md:w-[200px]"
+                                onValueChange={(subgraph) =>
+                                  router.push({
+                                    pathname: router.pathname,
+                                    query: {
+                                      ...router.query,
+                                      subgraph,
+                                    },
+                                  })
+                                }
                               >
-                                <SelectValue aria-label={activeSubgraphName}>
-                                  {activeSubgraphName}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                                    <Component2Icon className="h-3 w-3" />{" "}
-                                    Subgraphs
-                                  </SelectLabel>
-                                  {subgraphs.map(({ name, versionId }) => {
-                                    return (
-                                      <SelectItem key={name} value={name}>
-                                        <div>
-                                          <p>{name}</p>
-                                          <p className="text-xs">
-                                            {versionId.split("-")[0]}
-                                          </p>
-                                        </div>
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-
+                                <SelectTrigger
+                                  value={activeSubgraphName}
+                                  className="w-full md:ml-auto md:w-[200px]"
+                                >
+                                  <SelectValue aria-label={activeSubgraphName}>
+                                    {activeSubgraphName}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                                      <Component2Icon className="h-3 w-3" />{" "}
+                                      Subgraphs
+                                    </SelectLabel>
+                                    {subgraphs.map(({ name, versionId }) => {
+                                      return (
+                                        <SelectItem key={name} value={name}>
+                                          <div>
+                                            <p>{name}</p>
+                                            <p className="text-xs">
+                                              {versionId.split("-")[0]}
+                                            </p>
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            )}
                             <SDLViewerActions sdl={sdlData.sdl} size="icon" />
                           </div>
                         </div>

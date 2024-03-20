@@ -6,7 +6,7 @@ import {
   MetricsFilters,
   RequestMetricsCard,
   getInfoTip,
-  useMetricsFilters
+  useMetricsFilters,
 } from "@/components/analytics/metrics";
 import { RefreshInterval } from "@/components/analytics/refresh-interval";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
@@ -45,7 +45,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { differenceInHours, formatISO, sub } from "date-fns";
 import { useRouter } from "next/router";
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import {
   Area,
   AreaChart,
@@ -235,9 +235,21 @@ const OverviewToolbar = () => {
     refetchInterval: refreshInterval,
   });
 
-  const { filtersList, selectedFilters, resetFilters } = useMetricsFilters(
-    data?.filters ?? [],
-  );
+  const dataFilters = useMemo(() => {
+    if (
+      subgraph?.subgraph?.labels.length === 1 &&
+      subgraph.subgraph.labels[0].key === "_internal"
+    ) {
+      return (
+        data?.filters.filter((f) => f.columnName !== "federatedGraphId") ?? []
+      );
+    }
+
+    return data?.filters ?? [];
+  }, [data?.filters, subgraph?.subgraph?.labels]);
+
+  const { filtersList, selectedFilters, resetFilters } =
+    useMetricsFilters(dataFilters);
 
   const applyParams = useApplyParams();
 
@@ -282,7 +294,7 @@ const OverviewToolbar = () => {
             calendarDaysLimit={analyticsRetention}
           />
 
-          <MetricsFilters filters={data?.filters ?? []} />
+          <MetricsFilters filters={dataFilters} />
           <AnalyticsSelectedFilters
             filters={filtersList}
             selectedFilters={selectedFilters}

@@ -197,7 +197,9 @@ const getDecorationCollection = (
       },
       options: {
         hoverMessage: {
-          value: `${l.message}. (Rule: ${l.lintRuleType ? l.lintRuleType : ""})`,
+          value: `${l.message}. (Rule: ${
+            l.lintRuleType ? l.lintRuleType : ""
+          })`,
         },
         inlineClassName:
           "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
@@ -334,20 +336,22 @@ const CheckDetails = ({
             </dd>
           </div>
 
-          <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
-            <dt className="text-sm text-muted-foreground">Subgraph</dt>
-            <dd>
-              <Link
-                key={id}
-                href={`/${organizationSlug}/${namespace}/graph/${slug}/schema/sdl?subgraph=${data.check.subgraphName}`}
-              >
-                <div className="flex items-center gap-x-1">
-                  <CubeIcon />
-                  {data.check.subgraphName}
-                </div>
-              </Link>
-            </dd>
-          </div>
+          {graphContext.graph?.supportsFederation && (
+            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
+              <dt className="text-sm text-muted-foreground">Subgraph</dt>
+              <dd>
+                <Link
+                  key={id}
+                  href={`/${organizationSlug}/${namespace}/graph/${slug}/schema/sdl?subgraph=${data.check.subgraphName}`}
+                >
+                  <div className="flex items-center gap-x-1">
+                    <CubeIcon />
+                    {data.check.subgraphName}
+                  </div>
+                </Link>
+              </dd>
+            </div>
+          )}
 
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
             <dt className="text-sm text-muted-foreground">Executed</dt>

@@ -62,6 +62,7 @@ export const federatedGraphs = pgTable('federated_graphs', {
   // The admission webhook url. This is the url that the controlplane will use to run admission checks.
   // You can use this to enforce policies on the router config.
   admissionWebhookURL: text('admission_webhook_url'),
+  supportsFederation: boolean('supports_federation').default(true).notNull(),
 });
 
 export const federatedGraphClients = pgTable(
@@ -253,14 +254,14 @@ export const namespaces = pgTable(
   },
 );
 
-export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph'] as const);
+export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph'] as const);
 
 export const targets = pgTable(
   'targets',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    type: targetTypeEnum('type'),
+    type: targetTypeEnum('type').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     labels: text('labels').array(),
     organizationId: uuid('organization_id')
@@ -978,18 +979,26 @@ export const slackIntegrationConfigs = pgTable('slack_integration_configs', {
   endpoint: text('endpoint').notNull(),
 });
 
-export const slackSchemaUpdateEventConfigs = pgTable('slack_schema_update_event_configs', {
-  slackIntegrationConfigId: uuid('slack_integration_config_id')
-    .notNull()
-    .references(() => slackIntegrationConfigs.id, {
-      onDelete: 'cascade',
-    }),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, {
-      onDelete: 'cascade',
-    }),
-});
+export const slackSchemaUpdateEventConfigs = pgTable(
+  'slack_schema_update_event_configs',
+  {
+    slackIntegrationConfigId: uuid('slack_integration_config_id')
+      .notNull()
+      .references(() => slackIntegrationConfigs.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.slackIntegrationConfigId, t.federatedGraphId] }),
+    };
+  },
+);
 
 export const organizationIntegrationRelations = relations(organizationIntegrations, ({ one }) => ({
   organization: one(organizations),

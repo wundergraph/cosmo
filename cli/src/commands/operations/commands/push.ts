@@ -128,7 +128,10 @@ export const parseOperations = (contents: string): PersistedOperation[] => {
 export default (opts: BaseCommandOptions) => {
   const command = new Command('push');
   command.description('Pushes new operations to the registry');
-  command.argument('<graph_name>', 'The name of the federated graph on which the check operations are stored.');
+  command.argument(
+    '<graph_name>',
+    'The name of the federated graph or monograph on which the check operations are stored.',
+  );
   command.requiredOption('-c, --client <client-name>', 'The client identifier to register the operations to');
   command.requiredOption(
     '-f, --file <file>',
@@ -136,7 +139,7 @@ export default (opts: BaseCommandOptions) => {
     collect,
     [],
   );
-  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
+  command.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
   command.option('-q, --quiet', 'Do not print any output', false);
   command.option('--allow-conflicts', 'Exit with success even if there are conflicts', false);
   command.option('--format <output-format>', 'Output format: supported ones are text and json', 'text');

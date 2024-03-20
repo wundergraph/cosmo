@@ -1,6 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { alias } from 'drizzle-orm/pg-core';
+import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { organizationInvitations, organizations, users } from '../../db/schema.js';
 import { OrganizationDTO, OrganizationInvitationDTO, UserDTO } from '../../types/index.js';
@@ -9,6 +10,7 @@ import { UserRepository } from './UserRepository.js';
 
 export class OrganizationInvitationRepository {
   constructor(
+    private logger: FastifyBaseLogger,
     private db: PostgresJsDatabase<typeof schema>,
     private defaultBillingPlanId?: string,
   ) {}
@@ -131,7 +133,7 @@ export class OrganizationInvitationRepository {
 
   public async acceptInvite(input: { userId: string; organizationId: string }) {
     await this.db.transaction(async (tx) => {
-      const orgRepo = new OrganizationRepository(tx, this.defaultBillingPlanId);
+      const orgRepo = new OrganizationRepository(this.logger, tx, this.defaultBillingPlanId);
       await tx
         .update(organizationInvitations)
         .set({ accepted: true })

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { targets } from '../../db/schema.js';
@@ -43,5 +43,19 @@ export class TargetRepository {
       .set({ readme: input.readme })
       .where(and(eq(targets.id, input.id), eq(targets.organizationId, this.organizationId)))
       .execute();
+  }
+
+  public async moveWithoutRecomposition({
+    targetIds,
+    newNamespaceId,
+  }: {
+    targetIds: string[];
+    newNamespaceId: string;
+  }) {
+    if (targetIds.length === 0) {
+      return;
+    }
+
+    await this.db.update(targets).set({ namespaceId: newNamespaceId }).where(inArray(targets.id, targetIds));
   }
 }

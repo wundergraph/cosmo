@@ -26,6 +26,7 @@ export type AuditableType =
   | 'organization'
   | 'subgraph'
   | 'federated_graph'
+  | 'monograph'
   | 'graph_token'
   | 'api_key'
   | 'webhook_config'
@@ -38,7 +39,7 @@ export type AuditableType =
   | 'operation_change_override'
   | 'operation_ignore_all_override';
 
-export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'user';
+export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'monograph' | 'user';
 
 export type AuditActorType = 'user' | 'system' | 'api_key';
 
@@ -63,6 +64,10 @@ export type AuditLogFullAction =
   | 'organization.updated'
   | 'graph_token.created'
   | 'graph_token.deleted'
+  | 'monograph.created'
+  | 'monograph.updated'
+  | 'monograph.deleted'
+  | 'monograph.moved'
   | 'federated_graph.created'
   | 'federated_graph.deleted'
   | 'federated_graph.updated'
