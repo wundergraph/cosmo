@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/wgc@0.47.0...wgc@0.48.0) (2024-03-20)
+
+### Features
+
+* monograph support ([#623](https://github.com/wundergraph/cosmo/issues/623)) ([a255f74](https://github.com/wundergraph/cosmo/commit/a255f747d63454e1219760b729d99e4778d56dda)) (@thisisnithin)
+
 # [0.47.0](https://github.com/wundergraph/cosmo/compare/wgc@0.46.1...wgc@0.47.0) (2024-03-18)
 
 ### Bug Fixes
