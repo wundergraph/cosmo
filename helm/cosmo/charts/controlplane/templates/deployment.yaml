@@ -236,6 +236,26 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: smtpUsername
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: smtpPort
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: smtpHost
+            - name: SMTP_SECURE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: smtpSecure
+            - name: SMTP_REQUIRE_TLS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: smtpRequireTls
             {{- if .Values.configuration.stripeSecretKey }}
             - name: STRIPE_SECRET_KEY
               valueFrom:
