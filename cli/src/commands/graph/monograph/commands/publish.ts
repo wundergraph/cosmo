@@ -19,7 +19,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the monograph.');
   command.option(
     '--fail-on-composition-error',
-    'If set, the command will fail if the composition of the federated graph fails.',
+    'If set, the command will fail if the composition of the monograph fails.',
     false,
   );
   command.option(
