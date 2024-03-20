@@ -4,24 +4,19 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"github.com/nats-io/nats.go"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/config"
-
 	"github.com/hasura/go-graphql-client"
-	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
 func TestEventsNew(t *testing.T) {
-	const (
-		defaultSourceName = "default"
-		myNatsSourceName  = "my-nats"
-	)
 	t.Parallel()
 
 	t.Run("subscribe async", func(t *testing.T) {
@@ -55,7 +50,7 @@ func TestEventsNew(t *testing.T) {
 			})
 
 			wg := &sync.WaitGroup{}
-			wg.Add(3)
+			wg.Add(4)
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				require.NoError(t, errValue)
@@ -105,17 +100,17 @@ func TestEventsNew(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":12}}}`, resTwo.Body)
 
 			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
+			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
 			// Trigger the second subscription via NATS
-			err = xEnv.NatsConnectionBySourceName[myNatsSourceName].Publish("employeeUpdatedMyNats.12", []byte(`{"id":12,"__typename": "Employee"}`))
+			err = xEnv.NatsConnectionMyNats.Publish("employeeUpdatedMyNats.12", []byte(`{"id":12,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NatsConnectionBySourceName[myNatsSourceName].Flush()
+			err = xEnv.NatsConnectionMyNats.Flush()
 			require.NoError(t, err)
 
 			xEnv.WaitForMessagesSent(4, time.Second*10)
@@ -177,10 +172,10 @@ func TestEventsNew(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
+			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
 			wg.Wait()
@@ -259,10 +254,10 @@ func TestEventsNew(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
+			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
 			wg.Wait()
@@ -377,10 +372,10 @@ func TestEventsNew(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
+			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
 			wg.Wait()
@@ -395,19 +390,19 @@ func TestEventsNew(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			firstSub, err := xEnv.NatsConnectionBySourceName[defaultSourceName].Subscribe("getEmployee.3", func(msg *nats.Msg) {
+			firstSub, err := xEnv.NatsConnectionDefault.Subscribe("getEmployee.3", func(msg *nats.Msg) {
 				err := msg.Respond([]byte(`{"id": 3, "__typename": "Employee"}`))
 				require.NoError(t, err)
 			})
 			require.NoError(t, err)
-			require.NoError(t, xEnv.NatsConnectionBySourceName[defaultSourceName].Flush())
+			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
 
-			secondSub, err := xEnv.NatsConnectionBySourceName[myNatsSourceName].Subscribe("getEmployeeMyNats.12", func(msg *nats.Msg) {
+			secondSub, err := xEnv.NatsConnectionMyNats.Subscribe("getEmployeeMyNats.12", func(msg *nats.Msg) {
 				err = msg.Respond([]byte(`{"id": 12, "__typename": "Employee"}`))
 				require.NoError(t, err)
 			})
 			require.NoError(t, err)
-			require.NoError(t, xEnv.NatsConnectionBySourceName[myNatsSourceName].Flush())
+			require.NoError(t, xEnv.NatsConnectionMyNats.Flush())
 
 			t.Cleanup(func() {
 				err = firstSub.Unsubscribe()
@@ -436,13 +431,13 @@ func TestEventsNew(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			firstSub, err := xEnv.NatsConnectionBySourceName[defaultSourceName].SubscribeSync("updateEmployee.3")
+			firstSub, err := xEnv.NatsConnectionDefault.SubscribeSync("updateEmployee.3")
 			require.NoError(t, err)
-			require.NoError(t, xEnv.NatsConnectionBySourceName[defaultSourceName].Flush())
+			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
 
-			secondSub, err := xEnv.NatsConnectionBySourceName[myNatsSourceName].SubscribeSync("updateEmployeeMyNats.12")
+			secondSub, err := xEnv.NatsConnectionMyNats.SubscribeSync("updateEmployeeMyNats.12")
 			require.NoError(t, err)
-			require.NoError(t, xEnv.NatsConnectionBySourceName[myNatsSourceName].Flush())
+			require.NoError(t, xEnv.NatsConnectionMyNats.Flush())
 
 			t.Cleanup(func() {
 				err = firstSub.Unsubscribe()

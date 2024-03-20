@@ -18,6 +18,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/router v0.0.0-20240130110106-5afda68c8d0d
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.26.0
 	google.golang.org/protobuf v1.32.0
@@ -100,7 +101,6 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/urfave/cli/v2 v2.27.1 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.13 // indirect
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect

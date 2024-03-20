@@ -3,6 +3,8 @@ package subgraphs
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"log"
 	"net/http"
 	"os"
@@ -125,42 +127,42 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 }
 
 type SubgraphOptions struct {
-	NatsConnectionBySourceName map[string]*nats.Conn
+	PubSubBySourceName map[string]pubsub_datasource.PubSub
 }
 
 func EmployeesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(employees.NewSchema(opts.NatsConnectionBySourceName))
+	return subgraphHandler(employees.NewSchema(opts.PubSubBySourceName))
 }
 
 func FamilyHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(family.NewSchema(opts.NatsConnectionBySourceName))
+	return subgraphHandler(family.NewSchema(opts.PubSubBySourceName))
 }
 
 func HobbiesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(hobbies.NewSchema(opts.NatsConnectionBySourceName))
+	return subgraphHandler(hobbies.NewSchema(opts.PubSubBySourceName))
 }
 
 func ProductsHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(products.NewSchema(opts.NatsConnectionBySourceName))
+	return subgraphHandler(products.NewSchema(opts.PubSubBySourceName))
 }
 
 func Test1Handler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(test1.NewSchema(opts.NatsConnectionBySourceName))
+	return subgraphHandler(test1.NewSchema(opts.PubSubBySourceName))
 }
 
 func AvailabilityHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(availability.NewSchema(opts.NatsConnectionBySourceName))
+	return subgraphHandler(availability.NewSchema(opts.PubSubBySourceName))
 }
 
 func MoodHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(mood.NewSchema(opts.NatsConnectionBySourceName))
+	return subgraphHandler(mood.NewSchema(opts.PubSubBySourceName))
 }
 
 func CountriesHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(countries.NewSchema(opts.NatsConnectionBySourceName))
+	return subgraphHandler(countries.NewSchema(opts.PubSubBySourceName))
 }
 
-func New(config *Config) (*Subgraphs, error) {
+func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	url := nats.DefaultURL
 	if defaultSourceNameURL := os.Getenv("NATS_URL"); defaultSourceNameURL != "" {
 		url = defaultSourceNameURL
@@ -169,45 +171,38 @@ func New(config *Config) (*Subgraphs, error) {
 	if err != nil {
 		log.Printf("failed to connect to nats source \"default\": %v", err)
 	}
-	secondUrl := "nats://127.0.0.1:4223"
-	if myNatsSourceNameURL := os.Getenv("NATS_URL_TWO"); myNatsSourceNameURL != "" && url != myNatsSourceNameURL {
-		secondUrl = myNatsSourceNameURL
-	}
-	if url == secondUrl {
-		log.Printf("both nats sources are configured to the same url: %s", url)
-	}
-	myNatsConnection, err := nats.Connect(secondUrl)
+	myNatsConnection, err := nats.Connect(url)
 	if err != nil {
 		log.Printf("failed to connect to nats source \"my-nats\": %v", err)
 	}
 
-	natsConnectionBySourceName := map[string]*nats.Conn{
-		"default": defaultConnection,
-		"my-nats": myNatsConnection,
+	pubSubBySourceName := map[string]pubsub_datasource.PubSub{
+		"default": pubsub.NewNATSConnector(defaultConnection).New(ctx),
+		"my-nats": pubsub.NewNATSConnector(myNatsConnection).New(ctx),
 	}
 	var servers []*http.Server
-	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema(natsConnectionBySourceName)); srv != nil {
+	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("family", config.EnableDebug, config.Ports.Family, family.NewSchema(natsConnectionBySourceName)); srv != nil {
+	if srv := newServer("family", config.EnableDebug, config.Ports.Family, family.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, hobbies.NewSchema(natsConnectionBySourceName)); srv != nil {
+	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, hobbies.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema(natsConnectionBySourceName)); srv != nil {
+	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(natsConnectionBySourceName)); srv != nil {
+	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsConnectionBySourceName)); srv != nil {
+	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsConnectionBySourceName)); srv != nil {
+	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(natsConnectionBySourceName)); srv != nil {
+	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{

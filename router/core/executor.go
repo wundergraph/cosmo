@@ -3,8 +3,8 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/pubsub"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"net/http"
 

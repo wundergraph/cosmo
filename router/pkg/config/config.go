@@ -249,14 +249,18 @@ type CDNConfiguration struct {
 	CacheSize BytesString `yaml:"cache_size,omitempty" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
 }
 
-type NatsAuthentication struct {
+type TokenBasedAuthentication struct {
+	Token *string `yaml:"token,omitempty"`
+}
+
+type UsernamePasswordBasedAuthentication struct {
 	Password *string `yaml:"password,omitempty"`
-	Token    *string `yaml:"token,omitempty"`
 	Username *string `yaml:"username,omitempty"`
 }
 
 type Authentication struct {
-	NatsAuthentication `yaml:",inline"`
+	UsernamePasswordBasedAuthentication `yaml:",inline"`
+	TokenBasedAuthentication            `yaml:",inline"`
 }
 
 type EventSource struct {

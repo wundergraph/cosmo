@@ -15,11 +15,11 @@ import (
 // UpdateAvailability is the resolver for the updateAvailability field.
 func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID int, isAvailable bool) (*model.Employee, error) {
 	storage.Set(employeeID, isAvailable)
-	err := r.NatsConnectionBySourceName["default"].Publish(fmt.Sprintf("employeeUpdated.%d", employeeID), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)))
+	err := r.PubSubBySourceName["default"].Publish(ctx, fmt.Sprintf("employeeUpdated.%d", employeeID), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)))
 	if err != nil {
 		return nil, err
 	}
-	err = r.NatsConnectionBySourceName["my-nats"].Publish(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)))
+	err = r.PubSubBySourceName["my-nats"].Publish(ctx, fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)))
 	if err != nil {
 		return nil, err
 	}

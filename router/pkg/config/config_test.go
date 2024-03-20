@@ -192,7 +192,7 @@ func TestValidAuthenticatedNatsProviderWithToken(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestValidAuthenticatedNatsProviderWithCredentials(t *testing.T) {
-	_, err := LoadConfig("./fixtures/events/valid_authenticated_nats_provider_with_credentials.yaml", "")
+func TestValidAuthenticatedNatsProviderWithUsernamePassword(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/valid_authenticated_nats_provider_with_username_password.yaml", "")
 	require.NoError(t, err)
 }

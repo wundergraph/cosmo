@@ -1,7 +1,7 @@
 package subgraph
 
 import (
-	"github.com/nats-io/nats.go"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 // This file will not be regenerated automatically.
@@ -9,5 +9,5 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	NatsConnectionBySourceName map[string]*nats.Conn
+	PubSubBySourceName map[string]pubsub_datasource.PubSub
 }

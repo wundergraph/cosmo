@@ -199,9 +199,9 @@ func TestWebSockets(t *testing.T) {
 				// Trigger the subscription via NATS
 				subject := "employeeUpdated.3"
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionBySourceName[defaultSourceName].Publish(subject, message)
+				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
-				err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
+				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
 			var res testenv.WebSocketMessage
@@ -256,9 +256,9 @@ func TestWebSockets(t *testing.T) {
 				// Trigger the subscription via NATS
 				subject := "employeeUpdated.3"
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionBySourceName[defaultSourceName].Publish(subject, message)
+				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
-				err = xEnv.NatsConnectionBySourceName[defaultSourceName].Flush()
+				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
 			var res testenv.WebSocketMessage
@@ -1036,10 +1036,10 @@ func TestWebSockets(t *testing.T) {
 
 			go func() {
 				time.Sleep(time.Millisecond * 100)
-				err := xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 				time.Sleep(time.Millisecond * 100)
-				err = xEnv.NatsConnectionBySourceName[defaultSourceName].Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 			}()
 
