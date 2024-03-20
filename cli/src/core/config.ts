@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import pc from 'picocolors';
 import yaml from 'js-yaml';
 import envPaths from 'env-paths';
 
@@ -23,6 +24,14 @@ const getLoginDetails = (): { accessToken: string; organizationSlug: string } | 
     return null;
   }
 };
+
+if (process.env.COSMO_API_KEY && getLoginDetails()?.accessToken) {
+  console.log(
+    `${pc.yellow('Warning')} ${pc.dim(
+      'Both COSMO_API_KEY and login credentials found. Environment variable has precedence.\n',
+    )}`,
+  );
+}
 
 export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
