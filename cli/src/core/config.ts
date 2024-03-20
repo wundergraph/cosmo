@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import pc from 'picocolors';
 import path from 'node:path';
+import pc from 'picocolors';
 import yaml from 'js-yaml';
 import envPaths from 'env-paths';
 
