@@ -41,6 +41,8 @@ const lightweightCspHeader = `
 
 /**
  * We can't enforce connect directives yet because the studio can connect to any public router.
+ * @TODO We need to find a way to enforce this without breaking the studio. A possible solution could be to
+ * proxy all requests through an intermediate server to enforce same domain policy.
  */
 const fullCspHeader = `
   default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
