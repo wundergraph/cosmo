@@ -76,7 +76,7 @@ func NewDefaultFactoryResolver(ctx context.Context, transportFactory ApiTranspor
 		static:           &staticdatasource.Factory[staticdatasource.Configuration]{},
 		pubsub: pubsub_datasource.NewFactory(
 			ctx,
-			pubsub.NewNATSConnector(natsConnection),
+			map[string]pubsub_datasource.PubSub{"default": pubsub.NewNATSConnector(natsConnection).New(ctx)},
 		),
 		log:             log,
 		factoryLogger:   factoryLogger,
