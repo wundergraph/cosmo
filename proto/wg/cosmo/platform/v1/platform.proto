@@ -265,8 +265,8 @@ message FederatedGraph {
   optional string readme = 10;
   string target_id = 11;
   string namespace = 12;
-  bool supports_federation = 13;
-  optional string compositionId = 14;
+  optional string compositionId = 13;
+  bool supports_federation = 14;
 }
 
 message GetFederatedGraphsResponse {
