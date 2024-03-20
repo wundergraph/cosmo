@@ -40,10 +40,19 @@ const server = serve({ fetch: app.fetch, port });
 console.log(`Listening on port ${port}`);
 
 const exit = () => {
+  console.log('Exiting gracefully...');
   exiting = true;
-  server.close();
-  // eslint-disable-next-line unicorn/no-process-exit
-  process.exit(0);
+  server.close((err) => {
+    console.log('Server closed');
+    if (err) {
+      console.error(err);
+      // eslint-disable-next-line unicorn/no-process-exit
+      process.exit(1);
+    }
+    // eslint-disable-next-line unicorn/no-process-exit
+    process.exit(0);
+  });
 };
+
 process.on('SIGTERM', exit);
 process.on('SIGINT', exit);
