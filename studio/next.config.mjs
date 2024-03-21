@@ -41,22 +41,21 @@ const lightweightCspHeader = `
 
 /**
  * We can't enforce connect directives yet because the studio can connect to any public router.
- * @TODO We need to find a way to enforce this without breaking the studio. A possible solution could be to
- * proxy all requests through an intermediate server to enforce same domain policy.
+ * Leave it open for now.
  */
-const fullCspHeader = `
-  default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
-    process.env.NEXT_PUBLIC_COSMO_CP_URL
-  };
-  connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
-    process.env.NEXT_PUBLIC_COSMO_CP_URL
-  } https://*.wundergraph.com wss://*.wundergraph.com https://plausible.io https://api.stripe.com https://maps.googleapis.com ${
-    isPreview
-      ? "https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com"
-      : ""
-  };
-  ${lightweightCspHeader}
-`;
+// const fullCspHeader = `
+//   default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
+//     process.env.NEXT_PUBLIC_COSMO_CP_URL
+//   };
+//   connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
+//     process.env.NEXT_PUBLIC_COSMO_CP_URL
+//   } https://*.wundergraph.com wss://*.wundergraph.com https://plausible.io https://api.stripe.com https://maps.googleapis.com ${
+//     isPreview
+//       ? "https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com"
+//       : ""
+//   };
+//   ${lightweightCspHeader}
+// `;
 
 /** @type {import("next").NextConfig} */
 const config = {
