@@ -19,6 +19,7 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -27,8 +28,6 @@ import (
 )
 
 func TestWebSockets(t *testing.T) {
-	const defaultSourceName = "default"
-
 	t.Parallel()
 
 	t.Run("disabled", func(t *testing.T) {
