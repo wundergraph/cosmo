@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -21,13 +22,15 @@ import (
 )
 
 type Loader struct {
-	resolvers []FactoryResolver
+	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan
 	includeInfo bool
 }
 
 type FactoryResolver interface {
-	Resolve(ds *nodev1.DataSourceConfiguration) (plan.PlannerFactory, error)
+	ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error)
+	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
+	ResolvePubsubFactory() (plan.PlannerFactory[pubsub_datasource.Configuration], error)
 }
 
 type ApiTransportFactory interface {
@@ -39,13 +42,19 @@ type ApiTransportFactory interface {
 type DefaultFactoryResolver struct {
 	baseTransport    http.RoundTripper
 	transportFactory ApiTransportFactory
-	graphql          *graphql_datasource.Factory
-	static           *staticdatasource.Factory
-	pubsub           *pubsub_datasource.Factory
-	log              *zap.Logger
+
+	static *staticdatasource.Factory[staticdatasource.Configuration]
+	pubsub *pubsub_datasource.Factory[pubsub_datasource.Configuration]
+	log    *zap.Logger
+
+	engineCtx       context.Context
+	httpClient      *http.Client
+	streamingClient *http.Client
+	factoryLogger   abstractlogger.Logger
 }
 
 func NewDefaultFactoryResolver(
+	ctx context.Context,
 	transportFactory ApiTransportFactory,
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
@@ -69,38 +78,34 @@ func NewDefaultFactoryResolver(
 	return &DefaultFactoryResolver{
 		baseTransport:    baseTransport,
 		transportFactory: transportFactory,
-		static:           &staticdatasource.Factory{},
-		graphql: &graphql_datasource.Factory{
-			HTTPClient:      defaultHttpClient,
-			StreamingClient: streamingClient,
-			Logger:          factoryLogger,
-		},
+		static:           &staticdatasource.Factory[staticdatasource.Configuration]{},
 		pubsub: pubsub,
-		log:    log,
+		log:             log,
+		factoryLogger:   factoryLogger,
+		engineCtx:       ctx,
+		httpClient:      defaultHttpClient,
+		streamingClient: streamingClient,
 	}
 }
 
-func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (plan.PlannerFactory, error) {
-	switch ds.Kind {
-	case nodev1.DataSourceKind_GRAPHQL:
-		factory := &graphql_datasource.Factory{
-			HTTPClient:      d.graphql.HTTPClient,
-			StreamingClient: d.graphql.StreamingClient,
-			Logger:          d.graphql.Logger,
-		}
-		return factory, nil
-	case nodev1.DataSourceKind_STATIC:
-		return d.static, nil
-	case nodev1.DataSourceKind_PUBSUB:
-		return d.pubsub, nil
-	default:
-		return nil, fmt.Errorf("invalid datasource kind %q", ds.Kind)
-	}
+func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.httpClient, d.streamingClient, d.engineCtx, graphql_datasource.WithLogger(d.factoryLogger))
+
+	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, subscriptionClient)
+	return factory, err
 }
 
-func NewLoader(includeInfo bool, resolvers ...FactoryResolver) *Loader {
+func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {
+	return d.static, nil
+}
+
+func (d *DefaultFactoryResolver) ResolvePubsubFactory() (factory plan.PlannerFactory[pubsub_datasource.Configuration], err error) {
+	return d.pubsub, nil
+}
+
+func NewLoader(includeInfo bool, resolver FactoryResolver) *Loader {
 	return &Loader{
-		resolvers:   resolvers,
+		resolver:    resolver,
 		includeInfo: includeInfo,
 	}
 }
@@ -160,22 +165,30 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 	}
 
 	for _, in := range engineConfig.DatasourceConfigurations {
-		factory, err := l.resolveFactory(in)
-		if err != nil {
-			return nil, err
-		}
-		if factory == nil {
-			continue
-		}
-		out := plan.DataSourceConfiguration{
-			ID:      in.Id,
-			Factory: factory,
-		}
+		var out plan.DataSource
+
 		switch in.Kind {
 		case nodev1.DataSourceKind_STATIC:
-			out.Custom = staticdatasource.ConfigJSON(staticdatasource.Configuration{
-				Data: config.LoadStringVariable(in.CustomStatic.Data),
-			})
+			factory, err := l.resolveStaticFactory()
+			if err != nil {
+				return nil, err
+			}
+			if factory == nil {
+				continue
+			}
+
+			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
+				in.Id,
+				factory,
+				l.dataSourceMetaData(in),
+				staticdatasource.Configuration{
+					Data: config.LoadStringVariable(in.CustomStatic.Data),
+				},
+			)
+			if err != nil {
+				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+			}
+
 		case nodev1.DataSourceKind_GRAPHQL:
 			header := http.Header{}
 			for s, httpHeader := range in.CustomGraphql.Fetch.Header {
@@ -229,26 +242,56 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			if err != nil {
 				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
 			}
-			out.Custom = graphql_datasource.ConfigJson(graphql_datasource.Configuration{
-				Fetch: graphql_datasource.FetchConfiguration{
+
+			factory, err := l.resolveGraphqlFactory()
+			if err != nil {
+				return nil, err
+			}
+			if factory == nil {
+				continue
+			}
+
+			schemaConfiguration, err := graphql_datasource.NewSchemaConfiguration(
+				graphqlSchema,
+				&graphql_datasource.FederationConfiguration{
+					Enabled:    in.CustomGraphql.Federation.Enabled,
+					ServiceSDL: in.CustomGraphql.Federation.ServiceSdl,
+				},
+			)
+			if err != nil {
+				return nil, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
+			}
+
+			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
+				Fetch: &graphql_datasource.FetchConfiguration{
 					URL:    fetchUrl,
 					Method: in.CustomGraphql.Fetch.Method.String(),
 					Header: header,
 				},
-				Federation: graphql_datasource.FederationConfiguration{
-					Enabled:    in.CustomGraphql.Federation.Enabled,
-					ServiceSDL: in.CustomGraphql.Federation.ServiceSdl,
-				},
-				Subscription: graphql_datasource.SubscriptionConfiguration{
+				Subscription: &graphql_datasource.SubscriptionConfiguration{
 					URL:                                     subscriptionUrl,
 					UseSSE:                                  subscriptionUseSSE,
 					SSEMethodPost:                           subscriptionSSEMethodPost,
 					ForwardedClientHeaderNames:              forwardedClientHeaders,
 					ForwardedClientHeaderRegularExpressions: forwardedClientRegexps,
 				},
-				UpstreamSchema:         graphqlSchema,
+				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
 			})
+			if err != nil {
+				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
+			}
+
+			out, err = plan.NewDataSourceConfiguration[graphql_datasource.Configuration](
+				in.Id,
+				factory,
+				l.dataSourceMetaData(in),
+				customConfiguration,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+			}
+
 		case nodev1.DataSourceKind_PUBSUB:
 			pubsubEvents := in.GetCustomEvents().GetEvents()
 			events := make([]pubsub_datasource.EventConfiguration, len(pubsubEvents))
@@ -265,67 +308,28 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 					TypeName:   ev.TypeName,
 				}
 			}
-			out.Custom = pubsub_datasource.ConfigJson(pubsub_datasource.Configuration{
-				Events: events,
-			})
+
+			factory, err := l.resolvePubsubFactory()
+			if err != nil {
+				return nil, err
+			}
+			if factory == nil {
+				continue
+			}
+
+			out, err = plan.NewDataSourceConfiguration[pubsub_datasource.Configuration](
+				in.Id,
+				factory,
+				l.dataSourceMetaData(in),
+				pubsub_datasource.Configuration{
+					Events: events,
+				},
+			)
+			if err != nil {
+				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+			}
 		default:
 			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
-		}
-		for _, node := range in.RootNodes {
-			out.RootNodes = append(out.RootNodes, plan.TypeField{
-				TypeName:   node.TypeName,
-				FieldNames: node.FieldNames,
-			})
-		}
-		for _, node := range in.ChildNodes {
-			out.ChildNodes = append(out.ChildNodes, plan.TypeField{
-				TypeName:   node.TypeName,
-				FieldNames: node.FieldNames,
-			})
-		}
-		for _, directive := range in.Directives {
-			out.Directives = append(out.Directives, plan.DirectiveConfiguration{
-				DirectiveName: directive.DirectiveName,
-				RenameTo:      directive.DirectiveName,
-			})
-		}
-		out.FederationMetaData = plan.FederationMetaData{
-			Keys:     nil,
-			Requires: nil,
-			Provides: nil,
-		}
-		for _, keyConfiguration := range in.Keys {
-			out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
-				TypeName:     keyConfiguration.TypeName,
-				FieldName:    keyConfiguration.FieldName,
-				SelectionSet: keyConfiguration.SelectionSet,
-			})
-		}
-		for _, providesConfiguration := range in.Provides {
-			out.FederationMetaData.Provides = append(out.FederationMetaData.Provides, plan.FederationFieldConfiguration{
-				TypeName:     providesConfiguration.TypeName,
-				FieldName:    providesConfiguration.FieldName,
-				SelectionSet: providesConfiguration.SelectionSet,
-			})
-		}
-		for _, requiresConfiguration := range in.Requires {
-			out.FederationMetaData.Requires = append(out.FederationMetaData.Requires, plan.FederationFieldConfiguration{
-				TypeName:     requiresConfiguration.TypeName,
-				FieldName:    requiresConfiguration.FieldName,
-				SelectionSet: requiresConfiguration.SelectionSet,
-			})
-		}
-		for _, entityInterfacesConfiguration := range in.EntityInterfaces {
-			out.FederationMetaData.EntityInterfaces = append(out.FederationMetaData.EntityInterfaces, plan.EntityInterfaceConfiguration{
-				InterfaceTypeName: entityInterfacesConfiguration.InterfaceTypeName,
-				ConcreteTypeNames: entityInterfacesConfiguration.ConcreteTypeNames,
-			})
-		}
-		for _, interfaceObjectConfiguration := range in.InterfaceObjects {
-			out.FederationMetaData.InterfaceObjects = append(out.FederationMetaData.InterfaceObjects, plan.EntityInterfaceConfiguration{
-				InterfaceTypeName: interfaceObjectConfiguration.InterfaceTypeName,
-				ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
-			})
 		}
 
 		outConfig.DataSources = append(outConfig.DataSources, out)
@@ -333,17 +337,86 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 	return &outConfig, nil
 }
 
-func (l *Loader) resolveFactory(ds *nodev1.DataSourceConfiguration) (plan.PlannerFactory, error) {
-	for i := range l.resolvers {
-		factory, err := l.resolvers[i].Resolve(ds)
-		if err != nil {
-			return nil, err
-		}
-		if factory != nil {
-			return factory, nil
-		}
+func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.DataSourceMetadata {
+	var d plan.DirectiveConfigurations = make([]plan.DirectiveConfiguration, 0, len(in.Directives))
+
+	out := &plan.DataSourceMetadata{
+		RootNodes:  make([]plan.TypeField, 0, len(in.RootNodes)),
+		ChildNodes: make([]plan.TypeField, 0, len(in.ChildNodes)),
+		Directives: &d,
+		FederationMetaData: plan.FederationMetaData{
+			Keys:     make([]plan.FederationFieldConfiguration, 0, len(in.Keys)),
+			Requires: make([]plan.FederationFieldConfiguration, 0, len(in.Requires)),
+			Provides: make([]plan.FederationFieldConfiguration, 0, len(in.Provides)),
+		},
 	}
-	return nil, nil
+
+	for _, node := range in.RootNodes {
+		out.RootNodes = append(out.RootNodes, plan.TypeField{
+			TypeName:   node.TypeName,
+			FieldNames: node.FieldNames,
+		})
+	}
+	for _, node := range in.ChildNodes {
+		out.ChildNodes = append(out.ChildNodes, plan.TypeField{
+			TypeName:   node.TypeName,
+			FieldNames: node.FieldNames,
+		})
+	}
+	for _, directive := range in.Directives {
+		*out.Directives = append(*out.Directives, plan.DirectiveConfiguration{
+			DirectiveName: directive.DirectiveName,
+			RenameTo:      directive.DirectiveName,
+		})
+	}
+
+	for _, keyConfiguration := range in.Keys {
+		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
+			TypeName:     keyConfiguration.TypeName,
+			FieldName:    keyConfiguration.FieldName,
+			SelectionSet: keyConfiguration.SelectionSet,
+		})
+	}
+	for _, providesConfiguration := range in.Provides {
+		out.FederationMetaData.Provides = append(out.FederationMetaData.Provides, plan.FederationFieldConfiguration{
+			TypeName:     providesConfiguration.TypeName,
+			FieldName:    providesConfiguration.FieldName,
+			SelectionSet: providesConfiguration.SelectionSet,
+		})
+	}
+	for _, requiresConfiguration := range in.Requires {
+		out.FederationMetaData.Requires = append(out.FederationMetaData.Requires, plan.FederationFieldConfiguration{
+			TypeName:     requiresConfiguration.TypeName,
+			FieldName:    requiresConfiguration.FieldName,
+			SelectionSet: requiresConfiguration.SelectionSet,
+		})
+	}
+	for _, entityInterfacesConfiguration := range in.EntityInterfaces {
+		out.FederationMetaData.EntityInterfaces = append(out.FederationMetaData.EntityInterfaces, plan.EntityInterfaceConfiguration{
+			InterfaceTypeName: entityInterfacesConfiguration.InterfaceTypeName,
+			ConcreteTypeNames: entityInterfacesConfiguration.ConcreteTypeNames,
+		})
+	}
+	for _, interfaceObjectConfiguration := range in.InterfaceObjects {
+		out.FederationMetaData.InterfaceObjects = append(out.FederationMetaData.InterfaceObjects, plan.EntityInterfaceConfiguration{
+			InterfaceTypeName: interfaceObjectConfiguration.InterfaceTypeName,
+			ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
+		})
+	}
+
+	return out
+}
+
+func (l *Loader) resolveGraphqlFactory() (factory plan.PlannerFactory[graphql_datasource.Configuration], err error) {
+	return l.resolver.ResolveGraphqlFactory()
+}
+
+func (l *Loader) resolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {
+	return l.resolver.ResolveStaticFactory()
+}
+
+func (l *Loader) resolvePubsubFactory() (factory plan.PlannerFactory[pubsub_datasource.Configuration], err error) {
+	return l.resolver.ResolvePubsubFactory()
 }
 
 func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {

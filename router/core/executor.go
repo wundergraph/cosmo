@@ -19,7 +19,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -36,7 +35,6 @@ type Executor struct {
 	PlanConfig      plan.Configuration
 	Definition      *ast.Document
 	Resolver        *resolve.Resolver
-	Pool            *pool.Pool
 	RenameTypeNames []resolve.RenameTypeName
 }
 
@@ -104,7 +102,6 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		Definition:      &definition,
 		Resolver:        resolver,
 		RenameTypeNames: renameTypeNames,
-		Pool:            pool.New(),
 	}, nil
 }
 
@@ -160,6 +157,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	}
 
 	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
+		ctx,
 		NewTransport(b.transportOptions),
 		b.transport,
 		b.logger,

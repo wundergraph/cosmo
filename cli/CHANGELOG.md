@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.49.0](https://github.com/wundergraph/cosmo/compare/wgc@0.48.0...wgc@0.49.0) (2024-03-20)
+
+### Features
+
+* show warning when both auth methods are used ([#654](https://github.com/wundergraph/cosmo/issues/654)) ([0ee7d3c](https://github.com/wundergraph/cosmo/commit/0ee7d3ce3ed1d3dbd2c6558492cf96d05fa453b9)) (@StarpTech)
+
 # [0.48.0](https://github.com/wundergraph/cosmo/compare/wgc@0.47.0...wgc@0.48.0) (2024-03-20)
 
 ### Features
