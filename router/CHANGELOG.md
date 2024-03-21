@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.76.0](https://github.com/wundergraph/cosmo/compare/router@0.75.0...router@0.76.0) (2024-03-21)
+
+### Features
+
+* support authentication and multiple sources for nats edfs ([#635](https://github.com/wundergraph/cosmo/issues/635)) ([c6e5c31](https://github.com/wundergraph/cosmo/commit/c6e5c313bee098fcd50cca972a2423d28ecbad70)) (@Aenimus)
+
 # [0.75.0](https://github.com/wundergraph/cosmo/compare/router@0.74.0...router@0.75.0) (2024-03-19)
 
 ### Bug Fixes
