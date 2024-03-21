@@ -44,7 +44,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 }
 
 .graphiql-container {
-  @apply h-screen !font-sans;
+  @apply h-full !font-sans;
 }
 
 .graphiql-button {

@@ -1313,7 +1313,10 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
     data: providerData,
     refetch: refetchOIDCProvider,
     isLoading: fetchingOIDCProvider,
-  } = useQuery(getOIDCProvider.useQuery());
+  } = useQuery({
+    ...getOIDCProvider.useQuery(),
+    queryKey: [user?.currentOrganization.slug || "", "GetOIDCProvider", {}],
+  });
 
   const orgs = user?.organizations?.length || 0;
 

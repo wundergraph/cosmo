@@ -1,5 +1,9 @@
 import { CodeViewer } from "@/components/code-viewer";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -547,36 +551,34 @@ const PlaygroundPage: NextPageWithLayout = () => {
   if (!graphContext?.graph) return null;
 
   return (
-    <PageHeader title="Playground | Studio">
-      <TraceContext.Provider
-        value={{
-          query,
-          headers,
-          response,
-          subgraphs: graphContext.subgraphs,
-        }}
-      >
-        <div className="hidden h-[100%] flex-1 md:flex">
-          <GraphiQL
-            shouldPersistHeaders
-            showPersistHeadersSettings={false}
-            fetcher={fetcher}
-            query={query}
-            variables={variables ? decodeURIComponent(variables) : undefined}
-            onEditQuery={setQuery}
-            headers={headers}
-            onEditHeaders={setHeaders}
-            plugins={[
-              explorerPlugin({
-                showAttribution: false,
-              }),
-            ]}
-            // null stops introspection and undefined forces introspection if schema is null
-            schema={isLoading ? null : schema ?? undefined}
-          />
-          {isMounted && <PlaygroundPortal />}
-        </div>
-      </TraceContext.Provider>
+    <TraceContext.Provider
+      value={{
+        query,
+        headers,
+        response,
+        subgraphs: graphContext.subgraphs,
+      }}
+    >
+      <div className="hidden h-full flex-1 pl-2.5 md:flex">
+        <GraphiQL
+          shouldPersistHeaders
+          showPersistHeadersSettings={false}
+          fetcher={fetcher}
+          query={query}
+          variables={variables ? decodeURIComponent(variables) : undefined}
+          onEditQuery={setQuery}
+          headers={headers}
+          onEditHeaders={setHeaders}
+          plugins={[
+            explorerPlugin({
+              showAttribution: false,
+            }),
+          ]}
+          // null stops introspection and undefined forces introspection if schema is null
+          schema={isLoading ? null : schema ?? undefined}
+        />
+        {isMounted && <PlaygroundPortal />}
+      </div>
       <div className="flex flex-1 items-center justify-center md:hidden">
         <Alert className="m-8">
           <MobileIcon className="h-4 w-4" />
@@ -587,14 +589,22 @@ const PlaygroundPage: NextPageWithLayout = () => {
           </AlertDescription>
         </Alert>
       </div>
-    </PageHeader>
+    </TraceContext.Provider>
   );
 };
 
 PlaygroundPage.getLayout = (page: React.ReactNode) => {
-  return getGraphLayout(page, {
-    title: "Playground",
-  });
+  return getGraphLayout(
+    <PageHeader title="Playground | Studio">
+      <GraphPageLayout
+        title="Playground"
+        subtitle="Execute queries against your graph"
+        noPadding
+      >
+        {page}
+      </GraphPageLayout>
+    </PageHeader>,
+  );
 };
 
 export default PlaygroundPage;
