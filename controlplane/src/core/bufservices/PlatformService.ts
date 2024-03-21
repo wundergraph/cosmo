@@ -128,7 +128,7 @@ import {
   MigrateMonographResponse,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { isValidUrl, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -139,7 +139,6 @@ import {
   FederatedGraphDTO,
   GraphApiKeyJwtPayload,
   GraphCompositionDTO,
-  Label,
   PublishedOperationData,
   SchemaLintIssues,
   SubgraphDTO,
@@ -235,8 +234,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const exists = await namespaceRepo.byName(req.name);
-        if (exists) {
+        const namespace = await namespaceRepo.byName(req.name);
+        if (namespace) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -256,7 +255,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Could not create namespace ${req.name}`,
             },
-            graphs: [],
           };
         }
 
@@ -3275,6 +3273,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetNamespaceDisplayName: graph.namespace,
           });
 
+          orgWebhooks.send({
+            eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+            payload: {
+              monograph: {
+                id: graph.id,
+                name: graph.name,
+                namespace: graph.namespace,
+              },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              actor_id: authContext.userId,
+            },
+          });
+
           return {
             response: {
               code: EnumStatusCode.OK,
@@ -3997,7 +4011,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const apiKeyRepo = new ApiKeyRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
-        const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -4037,26 +4050,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const generatedAPIKey = ApiKeyGenerator.generate();
 
-        // We do not display subgraphs used for monographs in user accessible resources.
-        // So we automatically add them if such graphs are found
-        const monographSubgraphTargetIds = (
-          await subgraphRepo.list({
-            limit: 0,
-            offset: 0,
-            supportsFederation: false,
-            federatedGraphTargetIds: req.federatedGraphTargetIds,
-          })
-        ).map((s) => s.targetId);
-
-        const subgraphTargetIds = new Set([...req.subgraphTargetIds, ...monographSubgraphTargetIds]);
-
         await apiKeyRepo.addAPIKey({
           name: keyName,
           organizationID: authContext.organizationId,
           userID: authContext.userId || req.userID,
           key: generatedAPIKey,
           expiresAt: req.expires,
-          targetIds: [...req.federatedGraphTargetIds, ...subgraphTargetIds],
+          targetIds: [...req.federatedGraphTargetIds, ...req.subgraphTargetIds],
         });
 
         await auditLogRepo.addAuditLog({
@@ -6302,11 +6302,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
         const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            graphs: [],
+          };
+        }
 
         const list: SubgraphDTO[] = await repo.list({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace?.id,
+          namespaceId: namespace.id,
         });
 
         return {
@@ -6372,6 +6381,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     getFederatedGraphs: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
+      req.namespace = req.namespace || DefaultNamespace;
+
       return handleError<PlainMessage<GetFederatedGraphsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
@@ -6381,10 +6392,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const namespace = await namespaceRepo.byName(req.namespace);
 
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Namespace '${req.namespace}' not found`,
+            },
+            graphs: [],
+          };
+        }
+
         const list: FederatedGraphDTO[] = await fedGraphRepo.list({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace?.id,
+          namespaceId: namespace.id,
           supportsFederation: req.supportsFederation,
         });
 
@@ -6435,6 +6456,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getFederatedGraphsBySubgraphLabels: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
+
+      req.namespace = req.namespace || DefaultNamespace;
 
       return handleError<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -8182,7 +8205,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const subgraphs = await subgraphRepo.list({
             limit: 0,
             offset: 0,
-            supportsFederation: true,
           });
 
           return {

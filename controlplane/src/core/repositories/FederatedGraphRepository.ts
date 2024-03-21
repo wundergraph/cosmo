@@ -40,9 +40,9 @@ import {
   DateRange,
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
+  FederatedGraphListFilterOptions,
   GraphApiKeyDTO,
   Label,
-  ListFilterOptions,
   RouterRequestKeysDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -355,7 +355,7 @@ export class FederatedGraphRepository {
     });
   }
 
-  public async list(opts: ListFilterOptions): Promise<FederatedGraphDTO[]> {
+  public async list(opts: FederatedGraphListFilterOptions): Promise<FederatedGraphDTO[]> {
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.type, 'federated'),
       eq(schema.targets.organizationId, this.organizationId),

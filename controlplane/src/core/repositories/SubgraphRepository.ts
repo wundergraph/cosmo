@@ -20,10 +20,10 @@ import {
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
-  ListFilterOptions,
   SchemaCheckDetailsDTO,
   SchemaCheckSummaryDTO,
   SubgraphDTO,
+  SubgraphListFilterOptions,
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -489,11 +489,7 @@ export class SubgraphRepository {
     });
   }
 
-  public async list(
-    opts: ListFilterOptions & {
-      federatedGraphTargetIds?: string[];
-    },
-  ): Promise<SubgraphDTO[]> {
+  public async list(opts: SubgraphListFilterOptions): Promise<SubgraphDTO[]> {
     const conditions: SQL<unknown>[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
@@ -501,14 +497,6 @@ export class SubgraphRepository {
 
     if (opts.namespaceId) {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
-    }
-
-    if (opts.supportsFederation !== undefined) {
-      conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
-    }
-
-    if (opts.federatedGraphTargetIds && opts.federatedGraphTargetIds.length > 0) {
-      conditions.push(inArray(schema.federatedGraphs.targetId, opts.federatedGraphTargetIds));
     }
 
     const targets = await this.db
@@ -519,12 +507,8 @@ export class SubgraphRepository {
       })
       .from(schema.targets)
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      // Left join because version is optional
       .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
-      .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
-      .innerJoin(
-        schema.federatedGraphs,
-        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
-      )
       .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
       .where(and(...conditions))
       .limit(opts.limit)
