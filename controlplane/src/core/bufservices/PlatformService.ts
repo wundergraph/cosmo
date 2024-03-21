@@ -520,7 +520,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: graph.targetId,
-            name: graph.name,
             targetType: 'federatedGraph',
           },
           headers: ctx.requestHeader,
@@ -603,7 +602,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: graph.targetId,
-            name: graph.name,
             targetType: 'federatedGraph',
           },
           headers: ctx.requestHeader,
@@ -670,7 +668,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: graph.targetId,
-            name: graph.name,
             targetType: 'federatedGraph',
           },
           headers: ctx.requestHeader,
@@ -810,7 +807,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: graph.targetId,
-            name: graph.name,
             targetType: 'subgraph',
           },
           headers: ctx.requestHeader,
@@ -1988,7 +1984,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: subgraphs[0].targetId,
-            name: subgraphs[0].name,
             targetType: 'subgraph',
           },
           headers: ctx.requestHeader,
@@ -2175,7 +2170,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             db: opts.db,
             graph: {
               targetId: subgraph.targetId,
-              name: subgraph.name,
               targetType: 'subgraph',
             },
             headers: ctx.requestHeader,
@@ -2826,7 +2820,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             db: opts.db,
             graph: {
               targetId: graph.targetId,
-              name: graph.name,
               targetType: 'federatedGraph',
             },
             headers: ctx.requestHeader,
@@ -2906,7 +2899,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: federatedGraph.targetId,
-            name: federatedGraph.name,
             targetType: 'federatedGraph',
           },
           headers: ctx.requestHeader,
@@ -2986,7 +2978,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: subgraph.targetId,
-            name: subgraph.name,
             targetType: 'subgraph',
           },
           headers: ctx.requestHeader,
@@ -3217,7 +3208,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             db: opts.db,
             graph: {
               targetId: graph.targetId,
-              name: graph.name,
               targetType: 'federatedGraph',
             },
             headers: ctx.requestHeader,
@@ -3347,7 +3337,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: federatedGraph.targetId,
-            name: federatedGraph.name,
             targetType: 'federatedGraph',
           },
           headers: ctx.requestHeader,
@@ -3524,7 +3513,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: subgraph.targetId,
-            name: subgraph.name,
             targetType: 'subgraph',
           },
           headers: ctx.requestHeader,
@@ -4049,6 +4037,31 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const generatedAPIKey = ApiKeyGenerator.generate();
+
+        // check if the user is authorized to perform the action
+        for (const targetId of req.federatedGraphTargetIds) {
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId,
+              targetType: 'federatedGraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+        }
+
+        for (const targetId of req.subgraphTargetIds) {
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId,
+              targetType: 'subgraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+        }
 
         await apiKeyRepo.addAPIKey({
           name: keyName,
@@ -6090,7 +6103,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: subgraph.targetId,
-            name: subgraph.name,
             targetType: 'subgraph',
           },
           headers: ctx.requestHeader,
@@ -6151,7 +6163,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
           graph: {
             targetId: subgraph.targetId,
-            name: subgraph.name,
             targetType: 'subgraph',
           },
           headers: ctx.requestHeader,
