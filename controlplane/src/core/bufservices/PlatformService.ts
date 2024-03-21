@@ -526,6 +526,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
+        const targetIds = [graph.targetId];
+
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: graph.targetId,
+        });
+
+        if (subgraphs.length > 0) {
+          targetIds.push(subgraphs[0].targetId);
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId: subgraphs[0].targetId,
+              targetType: 'subgraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+        }
+
         const newNamespace = await namespaceRepo.byName(req.newNamespace);
         if (!newNamespace) {
           return {
@@ -538,14 +557,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraphs = await subgraphRepo.listByFederatedGraph({
-          federatedGraphTargetId: graph.targetId,
-        });
-
-        const targetIds = [graph.targetId];
-        if (subgraphs.length > 0) {
-          targetIds.push(subgraphs[0].targetId);
-        }
         await targetRepo.moveWithoutRecomposition({
           targetIds,
           newNamespaceId: newNamespace.id,
@@ -584,6 +595,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         req.namespace = req.namespace || DefaultNamespace;
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.name, req.namespace, {
           supportsFederation: false,
@@ -607,6 +619,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           headers: ctx.requestHeader,
           authContext,
         });
+
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: graph.targetId,
+        });
+
+        if (subgraphs.length > 0) {
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId: subgraphs[0].targetId,
+              targetType: 'subgraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+        }
 
         await fedGraphRepo.enableFederationSupport({
           targetId: graph.targetId,
@@ -3197,11 +3225,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          const subgraph = (
-            await subgraphRepo.listByFederatedGraph({
-              federatedGraphTargetId: graph.targetId,
-            })
-          )[0];
+          const subgraphs = await subgraphRepo.listByFederatedGraph({
+            federatedGraphTargetId: graph.targetId,
+          });
+
+          if (subgraphs.length === 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Monograph '${req.name}' does not have any subgraphs`,
+              },
+              compositionErrors: [],
+            };
+          }
+
+          const subgraph = subgraphs[0];
 
           // check if the user is authorized to perform the action
           await opts.authorizer.authorize({
@@ -3209,6 +3247,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             graph: {
               targetId: graph.targetId,
               targetType: 'federatedGraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId: subgraphs[0].targetId,
+              targetType: 'subgraph',
             },
             headers: ctx.requestHeader,
             authContext,
