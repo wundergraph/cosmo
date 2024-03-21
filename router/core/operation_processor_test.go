@@ -3,13 +3,13 @@ package core
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/buger/jsonparser"
 	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 )
@@ -20,7 +20,6 @@ func TestOperationParser(t *testing.T) {
 		Definition:      nil,
 		Resolver:        nil,
 		RenameTypeNames: nil,
-		Pool:            pool.New(),
 	}
 	parser := NewOperationParser(OperationParserOptions{
 		Executor:                executor,
@@ -167,7 +166,6 @@ func TestOperationParserExtensions(t *testing.T) {
 		Definition:      nil,
 		Resolver:        nil,
 		RenameTypeNames: nil,
-		Pool:            pool.New(),
 	}
 	parser := NewOperationParser(OperationParserOptions{
 		Executor:                executor,

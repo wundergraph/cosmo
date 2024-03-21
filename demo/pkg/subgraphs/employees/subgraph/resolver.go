@@ -2,8 +2,8 @@ package subgraph
 
 import (
 	"context"
-	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"reflect"
 	"sync"
 )
@@ -13,8 +13,8 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	mux sync.Mutex
-	NC  *nats.Conn
+	mux                sync.Mutex
+	PubSubBySourceName map[string]pubsub_datasource.PubSub
 }
 
 func (r *Resolver) Employees(ctx context.Context, obj model.RoleType) ([]*model.Employee, error) {

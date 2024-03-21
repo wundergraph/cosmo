@@ -36,9 +36,10 @@ func main() {
 		},
 		EnableDebug: *debug,
 	}
-	subgraphs, err := subgraphs.New(&config)
+	ctx := context.Background()
+	subgraphs, err := subgraphs.New(ctx, &config)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Fatal(subgraphs.ListenAndServe(context.Background()))
+	log.Fatal(subgraphs.ListenAndServe(ctx))
 }

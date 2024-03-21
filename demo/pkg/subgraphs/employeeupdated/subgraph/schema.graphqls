@@ -7,7 +7,8 @@ type PublishEventResult {
 }
 
 type Query {
-    employeeFromEvent(id: ID!): Employee! @eventsRequest(topic: "getEmployee.{{ args.id }}", sourceName: "my-nats")
+    employeeFromEvent(id: ID!): Employee! @eventsRequest(topic: "getEmployee.{{ args.id }}")
+    employeeFromEventMyNats(employeeID: ID!): Employee! @eventsRequest(topic: "getEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
 }
 
 input UpdateEmployeeInput {
@@ -16,11 +17,13 @@ input UpdateEmployeeInput {
 }
 
 type Mutation {
-    updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: "updateEmployee.{{ args.id }}", sourceName: "my-nats")
+    updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: "updateEmployee.{{ args.id }}")
+    updateEmployeeMyNats(employeeID: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: "updateEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
 }
 
 type Subscription {
-    employeeUpdated(employeeID: ID!): Employee! @eventsSubscribe(topic: "employeeUpdated.{{ args.employeeID }}", sourceName: "my-nats")
+    employeeUpdated(employeeID: ID!): Employee! @eventsSubscribe(topic: "employeeUpdated.{{ args.employeeID }}")
+    employeeUpdatedMyNats(id: ID!): Employee! @eventsSubscribe(topic: "employeeUpdatedMyNats.{{ args.id }}", sourceName: "my-nats")
 }
 
 type Employee @key(fields: "id", resolvable: false) {

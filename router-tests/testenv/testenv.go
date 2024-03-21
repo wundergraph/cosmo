@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"io"
 	"log"
 	"math/rand"
@@ -43,9 +45,15 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+const (
+	defaultSourceName = "default"
+	myNatsSourceName  = "my-nats"
+)
+
 var (
 	//go:embed testdata/config.json
-	configJSONTemplate string
+	configJSONTemplate  string
+	demoNatsSourceNames = []string{defaultSourceName, myNatsSourceName}
 )
 
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
@@ -107,16 +115,16 @@ var (
 	envCreateMux sync.Mutex
 )
 
-func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
+type NatsData struct {
+	Connections []*nats.Conn
+	Server      *natsserver.Server
+}
 
-	// Ensure that only one test environment is created at a time
-	// We use freeport to get a free port for NATS and the Router
-	// If we don't lock here, two parallel tests might get the same port
-	envCreateMux.Lock()
-	defer envCreateMux.Unlock()
-
-	ctx, cancel := context.WithCancelCause(context.Background())
-
+func setupNatsServers(t testing.TB) (*NatsData, error) {
+	length := len(demoNatsSourceNames)
+	natsData := &NatsData{
+		Connections: make([]*nats.Conn, 0, length),
+	}
 	natsPort, err := freeport.GetFreePort()
 	if err != nil {
 		t.Fatalf("could not get free port: %s", err)
@@ -129,15 +137,35 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		NoSigs: true,
 	}
 
-	ns := natstest.RunServer(&opts)
-	if ns == nil {
+	natsServer := natstest.RunServer(&opts)
+	if natsServer == nil {
 		t.Fatalf("could not start NATS test server")
 	}
+	natsData.Server = natsServer
+	for range demoNatsSourceNames {
+		natsConnection, err := nats.Connect(natsServer.ClientURL())
+		if err != nil {
+			return nil, err
+		}
+		natsData.Connections = append(natsData.Connections, natsConnection)
+	}
+	return natsData, nil
+}
 
-	nc, err := nats.Connect(ns.ClientURL())
+func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
+	// Ensure that only one test environment is created at a time
+	// We use freeport to get a free port for NATS and the Router
+	// If we don't lock here, two parallel tests might get the same port
+	envCreateMux.Lock()
+	defer envCreateMux.Unlock()
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+
+	natsData, err := setupNatsServers(t)
 	if err != nil {
 		return nil, err
 	}
+	require.Equal(t, 2, len(natsData.Connections))
 
 	counters := &SubgraphRequestCount{
 		Global:       atomic.NewInt64(0),
@@ -152,7 +180,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	employees := &Subgraph{
-		handler:          subgraphs.EmployeesHandler(subgraphOptions(t, ns)),
+		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Employees.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -162,7 +190,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	family := &Subgraph{
-		handler:          subgraphs.FamilyHandler(subgraphOptions(t, ns)),
+		handler:          subgraphs.FamilyHandler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Family.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -172,7 +200,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	hobbies := &Subgraph{
-		handler:          subgraphs.HobbiesHandler(subgraphOptions(t, ns)),
+		handler:          subgraphs.HobbiesHandler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Hobbies.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -182,7 +210,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	products := &Subgraph{
-		handler:          subgraphs.ProductsHandler(subgraphOptions(t, ns)),
+		handler:          subgraphs.ProductsHandler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Products.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -192,7 +220,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	test1 := &Subgraph{
-		handler:          subgraphs.Test1Handler(subgraphOptions(t, ns)),
+		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Test1.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -202,7 +230,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	availability := &Subgraph{
-		handler:          subgraphs.AvailabilityHandler(subgraphOptions(t, ns)),
+		handler:          subgraphs.AvailabilityHandler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Availability.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -212,7 +240,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	mood := &Subgraph{
-		handler:          subgraphs.MoodHandler(subgraphOptions(t, ns)),
+		handler:          subgraphs.MoodHandler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Mood.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -222,7 +250,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	countries := &Subgraph{
-		handler:          subgraphs.CountriesHandler(subgraphOptions(t, ns)),
+		handler:          subgraphs.CountriesHandler(subgraphOptions(ctx, t, natsData.Server)),
 		middleware:       cfg.Subgraphs.Countries.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -280,7 +308,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	client.RetryMax = 10
 	client.RetryWaitMin = 100 * time.Millisecond
 
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, ns)
+	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -361,18 +389,19 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	e := &Environment{
-		t:                    t,
-		graphQLPath:          graphQLPath,
-		absinthePath:         absinthePath,
-		Context:              ctx,
-		cancel:               cancel,
-		Router:               rr,
-		RouterURL:            svr.BaseURL(),
-		RouterClient:         client.StandardClient(),
-		CDN:                  cdn,
-		Nats:                 ns,
-		NC:                   nc,
-		SubgraphRequestCount: counters,
+		t:                     t,
+		graphQLPath:           graphQLPath,
+		absinthePath:          absinthePath,
+		Context:               ctx,
+		cancel:                cancel,
+		Router:                rr,
+		RouterURL:             svr.BaseURL(),
+		RouterClient:          client.StandardClient(),
+		CDN:                   cdn,
+		NatsServer:            natsData.Server,
+		NatsConnectionDefault: natsData.Connections[0],
+		NatsConnectionMyNats:  natsData.Connections[1],
+		SubgraphRequestCount:  counters,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -390,7 +419,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, nil
 }
 
-func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, nats *natsserver.Server) (*core.Router, error) {
+func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsServer *natsserver.Server) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
@@ -453,6 +482,13 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
+	eventSourceBySourceName := make(map[string]config.EventSource, len(demoNatsSourceNames))
+	for _, sourceName := range demoNatsSourceNames {
+		eventSourceBySourceName[sourceName] = config.EventSource{
+			Provider: "NATS",
+			URL:      natsServer.ClientURL(),
+		}
+	}
 	routerOpts := []core.Option{
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
@@ -466,12 +502,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithEvents(config.EventsConfiguration{
-			Sources: map[string]config.EventSource{
-				"my-nats": {
-					Provider: "NATS",
-					URL:      nats.ClientURL(),
-				},
-			},
+			Sources: eventSourceBySourceName,
 		}),
 	}
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
@@ -547,16 +578,17 @@ type Environment struct {
 	graphQLPath  string
 	absinthePath string
 
-	Context              context.Context
-	cancel               context.CancelCauseFunc
-	Router               *core.Router
-	RouterURL            string
-	RouterClient         *http.Client
-	Servers              []*httptest.Server
-	CDN                  *httptest.Server
-	Nats                 *natsserver.Server
-	NC                   *nats.Conn
-	SubgraphRequestCount *SubgraphRequestCount
+	Context               context.Context
+	cancel                context.CancelCauseFunc
+	Router                *core.Router
+	RouterURL             string
+	RouterClient          *http.Client
+	Servers               []*httptest.Server
+	CDN                   *httptest.Server
+	NatsServer            *natsserver.Server
+	NatsConnectionDefault *nats.Conn
+	NatsConnectionMyNats  *nats.Conn
+	SubgraphRequestCount  *SubgraphRequestCount
 
 	extraURLQueryValues url.Values
 }
@@ -846,8 +878,9 @@ func (e *Environment) close() {
 	e.CDN.Close()
 
 	// Close NATS
-	e.NC.Close()
-	e.Nats.Shutdown()
+	e.NatsConnectionDefault.Close()
+	e.NatsConnectionMyNats.Close()
+	e.NatsServer.Shutdown()
 }
 
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
@@ -973,11 +1006,15 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 
 }
 
-func subgraphOptions(t testing.TB, ns *natsserver.Server) *subgraphs.SubgraphOptions {
-	nc, err := nats.Connect(ns.ClientURL())
-	require.NoError(t, err)
+func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.Server) *subgraphs.SubgraphOptions {
+	pubsubBySourceName := make(map[string]pubsub_datasource.PubSub, len(demoNatsSourceNames))
+	for _, sourceName := range demoNatsSourceNames {
+		natsConnection, err := nats.Connect(natsServer.ClientURL())
+		require.NoError(t, err)
+		pubsubBySourceName[sourceName] = pubsub.NewNATSConnector(natsConnection).New(ctx)
+	}
 	return &subgraphs.SubgraphOptions{
-		NC: nc,
+		PubSubBySourceName: pubsubBySourceName,
 	}
 }
 

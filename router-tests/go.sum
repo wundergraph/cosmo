@@ -286,7 +286,7 @@ github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb h1:cPZlYdYy
 github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb/go.mod h1:UvBQ8qqolI/SC+f5Ww75SHR4QR/L5BpDoSswL1zZwZ0=
 github.com/wundergraph/cosmo/router v0.0.0-20240130110106-5afda68c8d0d h1:mxt6wnZhvG8Wrgd543tgXvLLHL+/2fBZpaCRKZU/rus=
 github.com/wundergraph/cosmo/router v0.0.0-20240130110106-5afda68c8d0d/go.mod h1:TDryeIPZWEL4bYyNJh+O2XrJjmSFrG4gK4EM0jcg6yc=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.12 h1:tDq7ghNS3lyf437LuRBNqbM0OoniNW9g5k2C+UXc0cA=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14 h1:ZbjO1Ry35jGZrv6BFHTW6opU2E0LnqS1iWWwCGkW+uo=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=

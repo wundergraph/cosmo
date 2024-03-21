@@ -906,25 +906,60 @@
           "type": "object",
           "description": "The provider configuration by source name",
           "additionalProperties": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "provider": {
-                "type": "string",
-                "description": "The provider of the events. The supported providers are 'NATS'.",
-                "enum": [
-                  "NATS"
-                ]
-              },
-              "url": {
-                "type": "string",
-                "description": "The provider URL. The URL is used to connect to the provider.",
-                "format": "url"
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["provider", "url"],
+                "properties": {
+                  "provider": {
+                    "description": "The events provider. Supported providers include: \"NATS\"",
+                    "enum": [
+                      "NATS"
+                    ]
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "The provider URL. The URL is used to connect to the provider.",
+                    "format": "url"
+                  },
+                  "authentication": {
+                    "type": "object",
+                    "description": "Authentication configuration for the NATS provider.",
+                    "unevaluatedProperties": false,
+                    "properties": {
+                    },
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["token"],
+                        "properties": {
+                          "token": {
+                            "type": "string",
+                            "description": "The token for token-based authentication."
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["username", "password"],
+                        "properties": {
+                          "username": {
+                            "type": "string",
+                            "description": "The username for username/password-based authentication."
+                          },
+                          "password": {
+                            "type": "string",
+                            "description": "The password for username/password-based authentication."
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
               }
-            },
-            "required": [
-              "provider",
-              "url"
             ]
           }
         }
