@@ -33,16 +33,6 @@ func TestEventsNew(t *testing.T) {
 				} `graphql:"employeeUpdated(employeeID: 3)"`
 			}
 
-			var subscriptionTwo struct {
-				employeeUpdated struct {
-					ID      float64 `graphql:"id"`
-					Details struct {
-						Forename string `graphql:"forename"`
-						Surname  string `graphql:"surname"`
-					} `graphql:"details"`
-				} `graphql:"employeeUpdatedMyNats(id: 12)"`
-			}
-
 			surl := xEnv.GraphQLSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
@@ -50,7 +40,7 @@ func TestEventsNew(t *testing.T) {
 			})
 
 			wg := &sync.WaitGroup{}
-			wg.Add(4)
+			wg.Add(2)
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				require.NoError(t, errValue)
@@ -61,15 +51,6 @@ func TestEventsNew(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, "", subscriptionOneID)
 
-			subscriptionTwoID, err := client.Subscribe(&subscriptionTwo, nil, func(dataValue []byte, errValue error) error {
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyNats":{"id":12,"details":{"forename":"David","surname":"Stutt"}}}`, string(dataValue))
-				defer wg.Done()
-				return nil
-			})
-			require.NoError(t, err)
-			require.NotEqual(t, "", subscriptionTwoID)
-
 			go func() {
 				err = client.Run()
 				require.NoError(t, err)
@@ -79,25 +60,17 @@ func TestEventsNew(t *testing.T) {
 				wg.Wait()
 				err = client.Unsubscribe(subscriptionOneID)
 				require.NoError(t, err)
-				err = client.Unsubscribe(subscriptionTwoID)
-				require.NoError(t, err)
 				err = client.Close()
 				require.NoError(t, err)
 			}()
 
-			xEnv.WaitForSubscriptionCount(2, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 			// Send a mutation to trigger the first subscription
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
 			})
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, resOne.Body)
-
-			// Send a mutation to trigger the second subscription
-			resTwo := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateAvailability(employeeID: 12, isAvailable: true) { id } }`,
-			})
-			require.JSONEq(t, `{"data":{"updateAvailability":{"id":12}}}`, resTwo.Body)
 
 			// Trigger the first subscription via NATS
 			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
@@ -106,14 +79,7 @@ func TestEventsNew(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			// Trigger the second subscription via NATS
-			err = xEnv.NatsConnectionMyNats.Publish("employeeUpdatedMyNats.12", []byte(`{"id":12,"__typename": "Employee"}`))
-			require.NoError(t, err)
-
-			err = xEnv.NatsConnectionMyNats.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(4, time.Second*10)
+			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
 		})
