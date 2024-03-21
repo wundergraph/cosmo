@@ -217,11 +217,13 @@
     "Sources": {
       "another-nats": {
         "Provider": "NATS",
-        "URL": "nats://localhost:4223"
+        "URL": "nats://localhost:4223",
+        "Authentication": null
       },
       "default": {
         "Provider": "NATS",
-        "URL": "nats://localhost:4222"
+        "URL": "nats://localhost:4222",
+        "Authentication": null
       }
     }
   },
