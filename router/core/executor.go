@@ -3,10 +3,12 @@ package core
 import (
 	"context"
 	"fmt"
+	"net/http"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"net/http"
 
 	"go.uber.org/zap"
 
@@ -162,9 +164,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
-		&pubsub_datasource.Factory{
-			PubSubBySourceName: pubSubBySourceName,
-		},
+		pubSubBySourceName,
 	))
 
 	// this generates the plan config using the data source factories from the config package

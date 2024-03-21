@@ -59,7 +59,7 @@ func NewDefaultFactoryResolver(
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
-	pubsub *pubsub_datasource.Factory,
+	pubSubBySourceName map[string]pubsub_datasource.PubSub,
 ) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
@@ -79,12 +79,12 @@ func NewDefaultFactoryResolver(
 		baseTransport:    baseTransport,
 		transportFactory: transportFactory,
 		static:           &staticdatasource.Factory[staticdatasource.Configuration]{},
-		pubsub: pubsub,
-		log:             log,
-		factoryLogger:   factoryLogger,
-		engineCtx:       ctx,
-		httpClient:      defaultHttpClient,
-		streamingClient: streamingClient,
+		pubsub:           pubsub_datasource.NewFactory(ctx, pubSubBySourceName),
+		log:              log,
+		factoryLogger:    factoryLogger,
+		engineCtx:        ctx,
+		httpClient:       defaultHttpClient,
+		streamingClient:  streamingClient,
 	}
 }
 
@@ -169,7 +169,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 
 		switch in.Kind {
 		case nodev1.DataSourceKind_STATIC:
-			factory, err := l.resolveStaticFactory()
+			factory, err := l.resolver.ResolveStaticFactory()
 			if err != nil {
 				return nil, err
 			}
@@ -243,7 +243,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
 			}
 
-			factory, err := l.resolveGraphqlFactory()
+			factory, err := l.resolver.ResolveGraphqlFactory()
 			if err != nil {
 				return nil, err
 			}
@@ -309,7 +309,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				}
 			}
 
-			factory, err := l.resolvePubsubFactory()
+			factory, err := l.resolver.ResolvePubsubFactory()
 			if err != nil {
 				return nil, err
 			}
@@ -405,18 +405,6 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	}
 
 	return out
-}
-
-func (l *Loader) resolveGraphqlFactory() (factory plan.PlannerFactory[graphql_datasource.Configuration], err error) {
-	return l.resolver.ResolveGraphqlFactory()
-}
-
-func (l *Loader) resolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {
-	return l.resolver.ResolveStaticFactory()
-}
-
-func (l *Loader) resolvePubsubFactory() (factory plan.PlannerFactory[pubsub_datasource.Configuration], err error) {
-	return l.resolver.ResolvePubsubFactory()
 }
 
 func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {
