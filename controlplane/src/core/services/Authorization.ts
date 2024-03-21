@@ -27,7 +27,6 @@ export class Authorization {
   }: {
     headers: Headers;
     graph: {
-      name: string;
       targetId: string;
       targetType: 'subgraph' | 'federatedGraph';
     };

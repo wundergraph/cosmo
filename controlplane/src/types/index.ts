@@ -29,11 +29,14 @@ export type Feature = {
   limit?: number | null;
 };
 
-export interface ListFilterOptions {
+export interface FederatedGraphListFilterOptions extends SubgraphListFilterOptions {
+  supportsFederation?: boolean;
+}
+
+export interface SubgraphListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
-  supportsFederation?: boolean;
 }
 
 export interface Label {

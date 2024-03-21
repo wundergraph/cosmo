@@ -148,7 +148,7 @@ export class ApiKeyRepository {
 
   public async verifyAPIKeyPermissions({
     apiKey,
-    // accessedTargetId is the target id of the garph on which the user is trying to perform an action on.
+    // accessedTargetId is the target id of the graph on which the user is trying to perform an action on.
     accessedTargetId,
   }: {
     apiKey: string;
