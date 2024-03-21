@@ -1658,21 +1658,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        if (req.gitInfo && opts.githubApp) {
-          const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
-          await githubRepo.createCommitCheck({
-            schemaCheckID,
-            gitInfo: req.gitInfo,
-            compositionErrors,
-            breakingChangesCount: schemaChanges.breakingChanges.length,
-            hasClientTraffic,
-            subgraphName: subgraph.name,
-            organizationSlug: org.slug,
-            webBaseUrl: opts.webBaseUrl,
-            composedGraphs: result.compositions.map((c) => c.name),
-          });
-        }
-
         let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
         if (namespace.enableLinting && newSchemaSDL !== '') {
           const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
@@ -1696,6 +1681,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           hasBreakingChanges,
           hasLintErrors: lintIssues.errors.length > 0,
         });
+
+        if (req.gitInfo && opts.githubApp) {
+          try {
+            const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
+            await githubRepo.createCommitCheck({
+              schemaCheckID,
+              gitInfo: req.gitInfo,
+              compositionErrors,
+              breakingChangesCount: schemaChanges.breakingChanges.length,
+              hasClientTraffic,
+              subgraphName: subgraph.name,
+              organizationSlug: org.slug,
+              webBaseUrl: opts.webBaseUrl,
+              composedGraphs: result.compositions.map((c) => c.name),
+            });
+          } catch (e) {
+            logger.error(e, 'Error creating commit check');
+          }
+        }
 
         return {
           response: {
