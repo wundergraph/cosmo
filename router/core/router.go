@@ -17,6 +17,7 @@ import (
 	"github.com/nats-io/nuid"
 
 	"github.com/redis/go-redis/v9"
+
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -29,6 +30,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
+	brotli "go.withmatt.com/connect-brotli"
+
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
@@ -37,16 +40,11 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
-	brotli "go.withmatt.com/connect-brotli"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/mitchellh/mapstructure"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -54,6 +52,11 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"github.com/wundergraph/cosmo/router/internal/stringsx"
 )
 
 type IPAnonymizationMethod string
@@ -1039,18 +1042,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
 		PersistentOpClient:      r.cdnPersistentOpClient,
 	})
-	// Pre-hash all data source IDs to avoid races
-	// TODO: Ideally, we would do this in the engine itself
-	// Context:
-	// In case we have 2 concurrent requests that need planning and use the same data source
-	// it's possible that we run into a race by either calling Hash() on the same data source
-	// or by calling Planner(), which might have side effects.
-	// E.g. in a Data Source Factory, we might be lazily initializing a client
-	for i := range executor.PlanConfig.DataSources {
-		executor.PlanConfig.DataSources[i].Hash()
-		// Pre-init the Planner for each data source
-		executor.PlanConfig.DataSources[i].Factory.Planner(ctx)
-	}
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler func(http.Handler) http.Handler
