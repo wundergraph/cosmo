@@ -6301,21 +6301,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const repo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
+        // Namespace is optional, if not provided, we get all the subgraphs
         const namespace = await namespaceRepo.byName(req.namespace);
-        if (!namespace) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Namespace '${req.namespace}' not found`,
-            },
-            graphs: [],
-          };
-        }
 
         const list: SubgraphDTO[] = await repo.list({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace.id,
+          namespaceId: namespace?.id,
         });
 
         return {
@@ -6381,8 +6373,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     getFederatedGraphs: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
-      req.namespace = req.namespace || DefaultNamespace;
-
       return handleError<PlainMessage<GetFederatedGraphsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
@@ -6390,22 +6380,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
+        // Namespace is optional, if not provided, we get all the federated graphs
         const namespace = await namespaceRepo.byName(req.namespace);
-
-        if (!namespace) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Namespace '${req.namespace}' not found`,
-            },
-            graphs: [],
-          };
-        }
 
         const list: FederatedGraphDTO[] = await fedGraphRepo.list({
           limit: req.limit,
           offset: req.offset,
-          namespaceId: namespace.id,
+          namespaceId: namespace?.id,
           supportsFederation: req.supportsFederation,
         });
 

@@ -220,15 +220,15 @@ describe('Namespaces', (ctx) => {
      * Verify that the graphs can no longer be found
      */
 
-    graphsRes = await client.getFederatedGraphs({
-      namespace: prod,
-    });
-    expect(graphsRes?.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    graphsRes = await client.getFederatedGraphs({});
+    expect(graphsRes?.response?.code).toBe(EnumStatusCode.OK);
+    expect(graphsRes?.graphs.length).toBe(1);
+    expect(graphsRes?.graphs[0].namespace).toBe(dev);
 
-    const subgraphsAfterDeleteRes = await client.getSubgraphs({
-      namespace: prod,
-    });
-    expect(subgraphsAfterDeleteRes?.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    const subgraphsAfterDeleteRes = await client.getSubgraphs({});
+    expect(subgraphsAfterDeleteRes?.response?.code).toBe(EnumStatusCode.OK);
+    expect(subgraphsAfterDeleteRes?.graphs.length).toBe(1);
+    expect(subgraphsAfterDeleteRes?.graphs[0]?.namespace).toBe(dev);
 
     /**
      * Dev resources are untouched
