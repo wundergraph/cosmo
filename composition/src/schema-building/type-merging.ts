@@ -2,6 +2,8 @@ import { Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode, TypeNode } from 'gr
 import { maximumTypeNestingExceededError } from '../errors/errors';
 import { getMutableTypeNode, MutableIntermediateTypeNode } from './ast';
 import { MAXIMUM_TYPE_NESTING } from '../utils/constants';
+import { stringToNameNode } from '../ast/utils';
+import { FieldData } from './type-definition-data';
 
 enum DivergentType {
   NONE,
@@ -108,4 +110,21 @@ export function getMostRestrictiveMergedTypeNode(
   errors: Error[],
 ): MergedTypeResult {
   return getMergedTypeNode(current, other, hostPath, true, errors);
+}
+
+export function renameNamedTypeName(fieldData: FieldData, newNamedTypeName: string, errors: Error[]) {
+  let typeNode = fieldData.type;
+  for (let i = 0; i < MAXIMUM_TYPE_NESTING; i++) {
+    if (typeNode.kind === Kind.NAMED_TYPE) {
+      fieldData.namedTypeName = newNamedTypeName;
+      typeNode.name = stringToNameNode(newNamedTypeName);
+      return;
+    }
+    typeNode = typeNode.type;
+  }
+  // Use a dummy renamed type if the traversal fails
+  fieldData.type = { kind: Kind.NAMED_TYPE, name: stringToNameNode(newNamedTypeName) };
+  errors.push(
+    maximumTypeNestingExceededError(`${fieldData.originalParentTypeName}.${fieldData.name}`, MAXIMUM_TYPE_NESTING),
+  );
 }

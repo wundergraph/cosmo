@@ -10,6 +10,7 @@ import { ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/st
 import { getOrThrowError } from '../utils/utils';
 import { operationTypeNodeToDefaultType } from '../ast/utils';
 import { ObjectExtensionData } from '../schema-building/type-extension-data';
+import { renameNamedTypeName } from '../schema-building/type-merging';
 
 export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgraph: InternalSubgraph) {
   let parentData: ParentWithFieldsData | undefined;
@@ -29,6 +30,13 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
           fieldName,
           `${parentTypeName}.fieldDataByFieldName`,
         );
+        const operationType = subgraph.operationTypes.get(fieldData.namedTypeName);
+        if (operationType) {
+          const defaultTypeName = getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT);
+          if (fieldData.namedTypeName !== defaultTypeName) {
+            renameNamedTypeName(fieldData, defaultTypeName, ff.errors);
+          }
+        }
         if (overriddenFieldNames?.has(fieldName)) {
           // overridden fields should not trigger shareable errors
           fieldData.isShareableBySubgraphName.delete(subgraph.name);
