@@ -1,0 +1,408 @@
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { FastifyPluginCallback, FastifyRequest } from 'fastify';
+import fp from 'fastify-plugin';
+import * as schema from '../../db/schema.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { UserRepository } from '../repositories/UserRepository.js';
+import ApiKeyAuthenticator, { ApiKeyAuthContext } from '../services/ApiKeyAuthenticator.js';
+import Keycloak from '../services/Keycloak.js';
+
+export type ScimControllerOptions = {
+  db: PostgresJsDatabase<typeof schema>;
+  organizationRepository: OrganizationRepository;
+  userRepository: UserRepository;
+  authenticator: ApiKeyAuthenticator;
+  keycloakClient: Keycloak;
+  keycloakRealm: string;
+};
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    authContext: ApiKeyAuthContext;
+  }
+}
+
+const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fastify, opts, done) {
+  fastify.addContentTypeParser('application/scim+json', { parseAs: 'string' }, function (req, body, done) {
+    try {
+      const json = JSON.parse(body.toString());
+      done(null, json);
+    } catch (err: any) {
+      done(err);
+    }
+  });
+
+  fastify.addHook('preHandler', async (req, res) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+      return res.code(401).send({
+        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+        detail: 'Missing Authorization header.',
+        status: 401,
+      });
+    }
+    const token = authorization.replace(/^bearer\s+/i, '');
+    const authContext = await opts.authenticator.authenticate(token);
+    await opts.keycloakClient.authenticateClient();
+
+    req.authContext = authContext;
+  });
+
+  fastify.get('/', (req, res) => {
+    return res.code(200).send('SCIM');
+  });
+
+  fastify.get<{ Querystring: { filter?: string; start_index: number; count?: number } }>('/Users', async (req, res) => {
+    const authContext = req.authContext;
+
+    const filter = req.query?.filter;
+    const startIndex = req.query?.start_index;
+    const count = req.query?.count;
+
+    const users: { id: string; email: string; userName: string; active: boolean }[] = [];
+
+    if (filter) {
+      const emailFilter = filter.split(' ')[2];
+      const email = emailFilter.replaceAll('"', '');
+      const user = await opts.organizationRepository.getOrganizationMemberByEmail({
+        organizationID: authContext.organizationId,
+        userEmail: email,
+      });
+      if (!user) {
+        return res.code(404).send({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+          detail: 'User not found',
+          status: 404,
+        });
+      }
+      const keycloakUsers = await opts.keycloakClient.client.users.find({
+        realm: opts.keycloakRealm,
+        email: user.email,
+      });
+      if (keycloakUsers.length === 0) {
+        return res.code(404).send({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+          detail: 'User not found',
+          status: 404,
+        });
+      }
+      users.push({
+        id: user.userID,
+        email: user.email,
+        userName: user.email,
+        active: keycloakUsers[0].enabled || true,
+      });
+    } else {
+      const members = await opts.organizationRepository.getMembers({
+        organizationID: authContext.organizationId,
+        offset: startIndex - 1,
+        limit: count,
+      });
+      for (const member of members) {
+        const keycloakUsers = await opts.keycloakClient.client.users.find({
+          realm: opts.keycloakRealm,
+          email: member.email,
+        });
+        if (keycloakUsers.length === 0) {
+          continue;
+        }
+        users.push({
+          id: member.userID,
+          email: member.email,
+          userName: member.email,
+          active: keycloakUsers[0].enabled || true,
+        });
+      }
+    }
+
+    return res.code(200).send({
+      schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
+      totalResults: users.length,
+      startIndex,
+      itemsPerPage: users.length,
+      Resources: users,
+    });
+  });
+
+  fastify.get('/Users/:userID', async (req: FastifyRequest<{ Params: { userID: string } }>, res) => {
+    const authContext = req.authContext;
+
+    const userID = req.params.userID;
+
+    const user = await opts.organizationRepository.getOrganizationMember({
+      organizationID: authContext.organizationId,
+      userID,
+    });
+
+    if (!user) {
+      return res.code(404).send({
+        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+        detail: 'User not found',
+        status: 404,
+      });
+    }
+
+    const keycloakUsers = await opts.keycloakClient.client.users.find({
+      realm: opts.keycloakRealm,
+      email: user.email,
+    });
+    if (keycloakUsers.length === 0) {
+      return res.code(404).send({
+        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+        detail: 'User not found',
+        status: 404,
+      });
+    }
+
+    return res.code(200).send({
+      schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
+      id: user.userID,
+      userName: user.email,
+      name: {
+        givenName: keycloakUsers[0].firstName || '',
+        middleName: '',
+        familyName: keycloakUsers[0].lastName || '',
+      },
+      active: keycloakUsers[0].enabled || true,
+      emails: [
+        {
+          primary: true,
+          value: user.email,
+          type: 'work',
+        },
+      ],
+      groups: [],
+      meta: {
+        resourceType: 'User',
+      },
+    });
+  });
+
+  // create a user
+  fastify.post(
+    '/Users',
+    async (
+      req: FastifyRequest<{
+        Body: {
+          schemas: string[];
+          userName: string;
+          name: { givenName: string; familyName: string };
+          emails: { primary: boolean; value: string; type: string }[];
+          password: string;
+          displayName: string;
+          groups: string[];
+          active: boolean;
+          locale: string;
+          externalId: string;
+        };
+      }>,
+      res,
+    ) => {
+      const authContext = req.authContext;
+
+      const { userName, name, emails, password, displayName, groups, active, locale, externalId } = req.body;
+
+      const email = emails.find((e) => e.primary === true)?.value || userName;
+
+      const user = await opts.userRepository.byEmail(email);
+      if (user) {
+        return res.code(409).send({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+          detail: 'User already exists in the database.',
+          status: 409,
+        });
+      }
+
+      const keycloakUsers = await opts.keycloakClient.client.users.find({
+        realm: opts.keycloakRealm,
+        email,
+      });
+
+      if (keycloakUsers.length > 0) {
+        return res.code(409).send({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+          detail: 'User already exists in the database.',
+          status: 409,
+        });
+      }
+
+      const keycloakUserID = await opts.keycloakClient.addKeycloakUser({
+        realm: opts.keycloakRealm,
+        firstName: name.givenName,
+        lastName: name.familyName,
+        email,
+        password,
+        isPasswordTemp: false,
+      });
+
+      const organizationGroups = await opts.keycloakClient.client.groups.find({
+        max: 1,
+        search: authContext.organizationSlug,
+        realm: opts.keycloakRealm,
+      });
+
+      if (organizationGroups.length === 0) {
+        return res.code(400).send({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+          detail: `Organization group '${authContext.organizationSlug}' not found`,
+          status: 400,
+        });
+      }
+
+      const devGroup = await opts.keycloakClient.fetchViewerChildGroup({
+        realm: opts.keycloakRealm,
+        kcGroupId: organizationGroups[0].id!,
+        orgSlug: authContext.organizationSlug,
+      });
+
+      await opts.keycloakClient.client.users.addToGroup({
+        id: keycloakUserID,
+        realm: opts.keycloakRealm,
+        groupId: devGroup.id!,
+      });
+
+      await opts.userRepository.addUser({ id: keycloakUserID, email });
+      const orgMember = await opts.organizationRepository.addOrganizationMember({
+        userID: keycloakUserID,
+        organizationID: authContext.organizationId,
+      });
+      await opts.organizationRepository.addOrganizationMemberRoles({
+        memberID: orgMember.id,
+        roles: ['viewer'],
+      });
+
+      return res.code(201).send({
+        schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
+        id: keycloakUserID,
+        userName: email,
+        name,
+        emails,
+        displayName,
+        locale,
+        externalId,
+        active,
+        groups,
+        meta: {
+          resourceType: 'User',
+        },
+      });
+    },
+  );
+
+  // update a user
+  fastify.put(
+    '/Users/:userID',
+    async (
+      req: FastifyRequest<{
+        Params: { userID: string };
+        Body: {
+          schemas: string[];
+          id: string;
+          userName: string;
+          name: { givenName?: string; familyName?: string; middleName?: string };
+          emails: { primary: boolean; value: string; type: string }[];
+          password: string;
+          groups: string[];
+          active: boolean;
+        };
+      }>,
+      res,
+    ) => {
+      const authContext = req.authContext;
+
+      const userID = req.params.userID;
+      const { name, emails, password, groups, active } = req.body;
+
+      const user = await opts.organizationRepository.getOrganizationMember({
+        organizationID: authContext.organizationId,
+        userID,
+      });
+
+      if (!user) {
+        return res.code(404).send({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+          detail: 'User not found',
+          status: 404,
+        });
+      }
+
+      const keycloakUsers = await opts.keycloakClient.client.users.find({
+        realm: opts.keycloakRealm,
+        email: user.email,
+      });
+      if (keycloakUsers.length === 0) {
+        return res.code(404).send({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+          detail: 'User not found',
+          status: 404,
+        });
+      }
+
+      await opts.keycloakClient.updateKeycloakUser({
+        id: userID,
+        enabled: active,
+        firstName: name.givenName,
+        lastName: name.familyName,
+        realm: opts.keycloakRealm,
+        groups,
+        password,
+      });
+
+      return res.code(200).send({
+        schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
+        id: userID,
+        userName: user.email,
+        name,
+        emails,
+        active,
+        groups,
+        meta: {
+          resourceType: 'User',
+        },
+      });
+    },
+  );
+
+  // remove the user from the org
+  fastify.patch(
+    '/Users/:userID',
+    async (
+      req: FastifyRequest<{
+        Params: { userID: string };
+        Body: { schemas: string[]; Operations: { op: string; value: { active: boolean } }[] };
+      }>,
+      res,
+    ) => {
+      const authContext = req.authContext;
+
+      const userID = req.params.userID;
+
+      const orgMember = await opts.organizationRepository.getOrganizationMember({
+        organizationID: authContext.organizationId,
+        userID,
+      });
+      if (!orgMember) {
+        return res.code(404).send({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+          detail: 'User not found',
+          status: 404,
+        });
+      }
+
+      const active = req.body.Operations[0].value.active;
+
+      await opts.keycloakClient.updateKeycloakUser({
+        id: userID,
+        enabled: active,
+      });
+
+      return res.code(204);
+    },
+  );
+
+  done();
+};
+
+export default fp(plugin, {
+  encapsulate: true,
+});

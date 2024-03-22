@@ -3411,64 +3411,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.keycloakClient.authenticateClient();
 
-        const groupName = org.slug;
-
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: groupName,
+        await opts.keycloakClient.removeUserFromOrganization({
           realm: opts.keycloakRealm,
+          userID: user.id,
+          groupName: org.slug,
+          roles: orgMember.roles,
         });
-
-        if (organizationGroup.length === 0) {
-          throw new Error(`Organization group '${org.slug}' not found`);
-        }
-
-        for (const role of orgMember.roles) {
-          switch (role) {
-            case 'admin': {
-              const adminGroup = await opts.keycloakClient.fetchAdminChildGroup({
-                realm: opts.keycloakRealm,
-                kcGroupId: organizationGroup[0].id!,
-                orgSlug: groupName,
-              });
-              await opts.keycloakClient.client.users.delFromGroup({
-                id: user.id,
-                groupId: adminGroup.id!,
-                realm: opts.keycloakRealm,
-              });
-              break;
-            }
-            case 'developer': {
-              const devGroup = await opts.keycloakClient.fetchDevChildGroup({
-                realm: opts.keycloakRealm,
-                kcGroupId: organizationGroup[0].id!,
-                orgSlug: groupName,
-              });
-              await opts.keycloakClient.client.users.delFromGroup({
-                id: user.id,
-                groupId: devGroup.id!,
-                realm: opts.keycloakRealm,
-              });
-              break;
-            }
-            case 'viewer': {
-              const viewerGroup = await opts.keycloakClient.fetchViewerChildGroup({
-                realm: opts.keycloakRealm,
-                kcGroupId: organizationGroup[0].id!,
-                orgSlug: groupName,
-              });
-              await opts.keycloakClient.client.users.delFromGroup({
-                id: user.id,
-                groupId: viewerGroup.id!,
-                realm: opts.keycloakRealm,
-              });
-              break;
-            }
-            default: {
-              throw new Error(`Role ${role} does not exist`);
-            }
-          }
-        }
 
         await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
 

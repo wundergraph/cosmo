@@ -45,12 +45,16 @@ export default class Keycloak {
     password,
     isPasswordTemp,
     groups,
+    firstName,
+    lastName,
   }: {
     email: string;
     realm?: string;
     password?: string;
     isPasswordTemp: boolean;
     groups?: string[];
+    firstName?: string;
+    lastName?: string;
   }): Promise<string> {
     const createUserResp = await this.client.users.create({
       email,
@@ -58,6 +62,8 @@ export default class Keycloak {
       emailVerified: true,
       realm: realm || this.realm,
       groups,
+      firstName,
+      lastName,
       credentials: [
         {
           type: 'password',
@@ -68,6 +74,55 @@ export default class Keycloak {
       ],
     });
     return createUserResp.id;
+  }
+
+  public async updateKeycloakUser({
+    realm,
+    id,
+    password,
+    firstName,
+    lastName,
+    groups,
+    enabled,
+  }: {
+    id: string;
+    realm?: string;
+    password?: string;
+    firstName?: string;
+    lastName?: string;
+    groups?: string[];
+    enabled?: boolean;
+  }) {
+    const payload: {
+      credentials?: { type: string; value: string; temporary: boolean }[];
+      firstName?: string;
+      lastName?: string;
+      groups?: string[];
+      enabled?: boolean;
+    } = {};
+    if (password) {
+      payload.credentials = [
+        {
+          type: 'password',
+          // must follow the password policy on keycloak
+          value: password || uid(12) + '@123',
+          temporary: false,
+        },
+      ];
+    }
+    if (firstName) {
+      payload.firstName = firstName;
+    }
+    if (lastName) {
+      payload.lastName = lastName;
+    }
+    if (enabled !== undefined) {
+      payload.enabled = enabled;
+    }
+    if (groups) {
+      payload.groups = groups;
+    }
+    await this.client.users.update({ id, realm: realm || this.realm }, payload);
   }
 
   public async createRole({ realm, roleName }: { realm?: string; roleName: string }) {
@@ -369,5 +424,74 @@ export default class Keycloak {
     }
 
     return viewerChildGroup;
+  }
+
+  public async removeUserFromOrganization({
+    realm,
+    userID,
+    groupName,
+    roles,
+  }: {
+    realm?: string;
+    userID: string;
+    groupName: string;
+    roles: string[];
+  }) {
+    const organizationGroup = await this.client.groups.find({
+      max: 1,
+      search: groupName,
+      realm: realm || this.realm,
+    });
+
+    if (organizationGroup.length === 0) {
+      throw new Error(`Organization group '${groupName}' not found`);
+    }
+
+    for (const role of roles) {
+      switch (role) {
+        case 'admin': {
+          const adminGroup = await this.fetchAdminChildGroup({
+            realm: realm || this.realm,
+            kcGroupId: organizationGroup[0].id!,
+            orgSlug: groupName,
+          });
+          await this.client.users.delFromGroup({
+            id: userID,
+            groupId: adminGroup.id!,
+            realm: realm || this.realm,
+          });
+          break;
+        }
+        case 'developer': {
+          const devGroup = await this.fetchDevChildGroup({
+            realm: realm || this.realm,
+            kcGroupId: organizationGroup[0].id!,
+            orgSlug: groupName,
+          });
+          await this.client.users.delFromGroup({
+            id: userID,
+            groupId: devGroup.id!,
+            realm: realm || this.realm,
+          });
+          break;
+        }
+        case 'viewer': {
+          const viewerGroup = await this.fetchViewerChildGroup({
+            realm: realm || this.realm,
+            kcGroupId: organizationGroup[0].id!,
+            orgSlug: groupName,
+          });
+          await this.client.users.delFromGroup({
+            id: userID,
+            groupId: viewerGroup.id!,
+            realm: realm || this.realm,
+          });
+          break;
+        }
+        default: {
+          throw new Error(`Role ${role} does not exist`);
+        }
+      }
+    }
   }
 }
