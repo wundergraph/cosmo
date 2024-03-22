@@ -33,7 +33,7 @@ upload-artifacthub-manifest:
 	  artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
 
 docs:
-	helm-docs ./cosmo -o CHART.md
+	helm-docs ./cosmo -o README.md
 
 build:
 	mkdir -p generated
