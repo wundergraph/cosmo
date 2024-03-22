@@ -32,12 +32,8 @@ jobs:
       - name: yq - portable yaml processor
         uses: mikefarah/yq@v4.42.1
 
-      - name: Log in to Github Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in with Helm to Container registry
+        run: gh auth token | helm registry login ghcr.io -u ${{ github.actor }} --password-std
 
       - name: Publish Chart
         if: inputs.name == 'cosmo-umbrella'
