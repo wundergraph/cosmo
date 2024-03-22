@@ -11,10 +11,10 @@ interface OrganizationInviteBody {
 export default class Mailer {
   client: Transporter;
 
-  constructor({ username, password }: { username: string; password: string }) {
+  constructor({ host, port, username, password }: { host: string; port: number; username: string; password: string }) {
     this.client = createTransport({
-      host: 'smtp.postmarkapp.com',
-      port: 587,
+      host,
+      port,
       // true for 465, false for other ports, will still upgrade to StartTLS
       secure: false,
       requireTLS: true, // Forces the client to use STARTTLS

@@ -226,6 +226,16 @@ spec:
                   name: {{ include "controlplane.secretName" . }}
                   key: s3StorageUrl
             {{- end }}
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: smtpHost
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: smtpPort
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:

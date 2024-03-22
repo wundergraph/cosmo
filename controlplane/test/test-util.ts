@@ -51,7 +51,7 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
   });
 
   const platformWebhooks = new MockPlatformWebhookService();
-  const mailerClient = new Mailer({ username: '', password: '' });
+  const mailerClient = new Mailer({ host: 'smtp.postmarkapp.com', port: 587, username: '', password: '' });
 
   await server.register(fastifyRedis, {
     host: 'localhost',

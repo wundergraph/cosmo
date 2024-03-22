@@ -92,6 +92,12 @@ export const envVariables = z
     /**
      * Email
      */
+    SMTP_HOST: z.string().default('smtp.postmarkapp.com'),
+    SMTP_PORT: z
+      .string()
+      .default('587')
+      .transform((val) => Number.parseInt(val)),
+
     SMTP_USERNAME: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     /**

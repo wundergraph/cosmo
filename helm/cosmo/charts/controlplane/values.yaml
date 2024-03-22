@@ -181,6 +181,8 @@ configuration:
   slackAppClientId: ''
   slackAppClientSecret: ''
   s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
+  smtpHost: 'smtp.postmarkapp.com'
+  smtpPort: '587'
   smtpUsername: ''
   smtpPassword: ''
   stripeSecretKey: ''

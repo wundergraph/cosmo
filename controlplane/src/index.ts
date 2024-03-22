@@ -37,6 +37,8 @@ const {
   SLACK_APP_CLIENT_ID,
   SLACK_APP_CLIENT_SECRET,
   S3_STORAGE_URL,
+  SMTP_HOST,
+  SMTP_PORT,
   SMTP_USERNAME,
   SMTP_PASSWORD,
   STRIPE_SECRET_KEY,
@@ -102,6 +104,8 @@ const options: BuildConfig = {
     clientSecret: SLACK_APP_CLIENT_SECRET,
   },
   s3StorageUrl: S3_STORAGE_URL,
+  smtpHost: SMTP_HOST,
+  smtpPort: SMTP_PORT,
   smtpUsername: SMTP_USERNAME,
   smtpPassword: SMTP_PASSWORD,
   redis: {
