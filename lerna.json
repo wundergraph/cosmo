@@ -27,7 +27,9 @@
     "keycloak",
     "cdn-server",
     "cdn-server/cdn",
-    "aws-lambda-router"
+    "aws-lambda-router",
+    "helm/cosmo",
+    "helm/cosmo/charts/router"
   ],
   "npmClient": "pnpm",
   "loglevel": "verbose"
