@@ -21,3 +21,10 @@
 .idea/
 *.tmproj
 .vscode/
+# secrets
+*.crt
+*.key
+node_modules
+
+# Release config
+package.json
