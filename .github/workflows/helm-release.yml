@@ -26,6 +26,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: yq - portable yaml processor
+        uses: mikefarah/yq@v4.42.1
+
       - name: Log in to Github Container registry
         uses: docker/login-action@v3
         with:
