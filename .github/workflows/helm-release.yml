@@ -2,14 +2,6 @@ name: Publish Helm Chart
 run-name: Publish ${{ inputs.name }} Helm Chart
 on:
   workflow_dispatch:
-    inputs:
-      name:
-        description: 'Name of the chart to release'
-        required: true
-        type: choice
-        options:
-          - cosmo-umbrella
-          - router
 
 env:
   REGISTRY: ghcr.io
@@ -38,16 +30,13 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          logout: false
 
-      - name: Publish Chart
-        if: inputs.name == 'cosmo-umbrella'
+      - name: Publish Cosmo Chart
         working-directory: helm
         run: |
           make publish-cosmo-chart
 
-      - name: Publish Chart
-        if: inputs.name == 'router'
+      - name: Publish Router Chart
         working-directory: helm
         run: |
           make publish-router-chart
