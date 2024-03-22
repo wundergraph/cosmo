@@ -15,12 +15,12 @@ prod: build-prod
 delete:
 	kapp delete -a cosmo
 
-VERSION := 0.1.0
+VERSION := `yq '.version' ./cosmo/Chart.yaml`
 publish-cosmo-chart:
 	helm package cosmo --version $(VERSION)
 	helm push cosmo-$(VERSION).tgz oci://ghcr.io/wundergraph/cosmo/helm-charts
 
-VERSION := 0.1.0
+VERSION := `yq '.version' ./cosmo/charts/router/Chart.yaml`
 publish-router-chart:
 	cd cosmo/charts/ && helm package router --version $(VERSION)
 	cd cosmo/charts/ && helm push router-$(VERSION).tgz oci://ghcr.io/wundergraph/cosmo/helm-charts
