@@ -183,6 +183,10 @@ configuration:
   s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
   smtpUsername: ''
   smtpPassword: ''
+  smtpHost: 'smtp.postmarkapp.com'
+  smtpPort: 587
+  smtpSecure: false
+  smtpRequireTls: true
   stripeSecretKey: ''
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`
