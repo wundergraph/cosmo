@@ -13,7 +13,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   publish-chart:
@@ -46,8 +45,3 @@ jobs:
         working-directory: helm
         run: |
           VERSION=$(yq '.version' ./cosmo/charts/router/Chart.yaml) make publish-router-chart
-
-      - name: Update docs
-        working-directory: helm
-        run: |
-          make docs
