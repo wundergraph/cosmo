@@ -37,10 +37,10 @@ jobs:
         if: inputs.name == 'cosmo-umbrella'
         working-directory: helm
         run: |
-          VERSION=$(yq '.version' ./cosmo/Chart.yaml) make publish-cosmo-chart
+          make publish-cosmo-chart
 
       - name: Publish Chart
         if: inputs.name == 'router'
         working-directory: helm
         run: |
-          VERSION=$(yq '.version' ./cosmo/charts/router/Chart.yaml) make publish-router-chart
+          make publish-router-chart
