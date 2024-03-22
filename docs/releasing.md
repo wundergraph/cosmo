@@ -34,5 +34,6 @@ Also for non NPM packages, Lerna is used to manage the versioning and releasing 
 
 ### Prerequisites
 
-- [helm](https://helm.sh/docs/intro/install/)
+- [helm](https://helm.sh/docs/intro/install/) Helm is a tool for managing Kubernetes charts.
+- [yq](https://mikefarah.gitbook.io/yq) yq is a lightweight and portable command-line YAML processor.
 - Write access to the gcr.io/wundergraph/cosmo repository
