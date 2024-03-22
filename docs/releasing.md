@@ -30,7 +30,7 @@ Also for non NPM packages, Lerna is used to manage the versioning and releasing 
 
 1. Increase the version in the corresponding `Chart.yaml` file.
 2. Update docs by running `make docs` in the `helm` directory.
-3. Deploy the new chart by running `publish-cosmo-chart` and `publish-router-chart` in the `helm` directory.
+3. Merge and deploy the Charts through the [Release workflow](https://github.com/wundergraph/cosmo/actions/workflows/helm-release.yml). The version from the Chart.yml is picked automatically.
 
 ### Prerequisites
 

@@ -1,15 +1,15 @@
 name: Publish Helm Chart
-run-name: Publish ${{ inputs.name }} Helm Chart with version ${{ inputs.tag }}
+run-name: Publish ${{ inputs.name }} Helm Chart
 on:
   workflow_dispatch:
     inputs:
       name:
         description: 'Name of the chart to release'
         required: true
-      tag:
-        description: 'Tag to release'
-        required: true
-        type: string
+        type: choice
+        options:
+          - cosmo-umbrella
+          - router
 
 env:
   REGISTRY: ghcr.io
@@ -36,13 +36,18 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Chart
-        if: inputs.name == 'cosmo-chart'
+        if: inputs.name == 'cosmo-umbrella'
         working-directory: helm
         run: |
-          VERSION=${{ inputs.tag }} make publish-cosmo-chart
+          VERSION=$(yq '.version' ./cosmo/Chart.yaml) make publish-cosmo-chart
 
       - name: Publish Chart
-        if: inputs.name == 'router-chart'
+        if: inputs.name == 'router'
         working-directory: helm
         run: |
-          VERSION=${{ inputs.tag }} make publish-router-chart
+          VERSION=$(yq '.version' ./cosmo/charts/router/Chart.yaml) make publish-router-chart
+
+      - name: Update docs
+        working-directory: helm
+        run: |
+          make docs
