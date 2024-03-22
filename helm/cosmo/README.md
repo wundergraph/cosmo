@@ -21,27 +21,24 @@ You can use it to deploy a fully functional Cosmo stack for development or produ
 The Cosmo Helm chart gives you a lot of freedom to configure the stack to suit your needs.
 Helm offers two primary ways to configure your stack, statically by passing a `values.yaml` file or dynamically by offering input via the CLI.
 
-For your convenience, we included two different value presets:
+For your convenience, we provide a working configuration preset [`values.yaml`](values.yaml). It includes all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use only. Before you deploy the stack to production, you should create your own secrets.
 
-1. [`values.full.yaml`](values.full.yaml) - Ready to deploy configuration. Include all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use only.
-2. [`values.yaml`](values.yaml). - Only includes the Cosmo Core components. You need to provide your own Clickhouse, PostgreSQL, Keycloak and update the configuration accordingly. See [`values.full.yaml`](values.full.yaml) for an example.
-
-To apply the changes, run:
+To create a release, run:
 
 ```shell
 # Add bitnami repo to install dependencies like postgresql, keycloak and clickhouse
 helm repo add bitnami https://charts.bitnami.com/bitnami
 # Install the helm dependencies
 helm dependency build
-# Install the helm chart with the release name "cosmo" the name is important it used to reference services in values file.
+# Install the helm chart with the release name "cosmo" in the default namespace, the name is important it used to reference services in values file.
 # --atomic ensures that the release is rolled back if it fails to install
-helm install cosmo --atomic -f values.full.yaml .
+helm install cosmo --atomic -f values.yaml .
 ```
 
 ### Run Helm Tests
 
 The Helm chart comes with a set of tests that you can run to ensure that the stack is working as expected.
-Modify the `values.full.yaml` file to enable the tests:
+Modify the `values.yaml` file to enable the tests:
 
 ```yaml
 global:
@@ -103,9 +100,9 @@ We **_strongly recommend_** that if you want to ship this helm chart to producti
 
 ## Configuration and installation details
 
-By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL, Redis, Keycloak and Minio.
-After you have provisioned the databases, you can set the right configuration in the `values.yaml` file and do a `helm upgrade` to apply the changes.
+By default, the chart deploys a ready to use Cosmo stack with a development configuration of Clickhouse, PostgreSQL, Redis, Keycloak and Minio.
 The studio, controlplane, router and collectors are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
+All secrets are stored in the `values.yaml` file. You should replace them with your own secrets before deploying the stack to your cluster.
 
 ## Seed your organization and account
 
@@ -119,7 +116,7 @@ helm upgrade cosmo ./cosmo \
 
 ### Enable S3 storage
 
-The development preset [`values.full.yaml`](values.full.yaml) comes with a Minio instance that is used to store your persistent operations and router state. For production use, we recommend using a hosted version of Minio or any other S3 compatible storage provider.
+The default preset [`values.yaml`](values.yaml) comes with a Minio instance that is used to store your persistent operations and router state. For production use, we recommend using a hosted version of Minio or any other S3 compatible storage provider.
 You need to update the `values.yaml` file accordingly:
 
 ```yaml
@@ -130,7 +127,7 @@ controlplane:
 
 ### CLI Key
 
-In the `global.seed.apiKey` of your `values.full.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
+In the `global.seed.apiKey` of your `values.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
 
 ```sh
 export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
@@ -140,7 +137,7 @@ npx wgc -h
 
 ### Router
 
-The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name> --namespace <namespace>`, set the right configurations in the `values.full.yaml` file.
+The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name> --namespace <namespace>`, set the right configurations in the `values.yaml` file.
 
 ```yaml
 router:
@@ -148,7 +145,7 @@ router:
     graphApiToken: '<changeme>'
 ```
 
-Run `helm upgrade cosmo -f values.full.yaml .` to apply the changes.
+Run `helm upgrade cosmo -f values.yaml .` to apply the changes.
 
 ## Kapp support
 

@@ -1,16 +1,10 @@
-test: build-dev build-prod
-	helm lint -f ./cosmo/values.full.yaml ./cosmo
-	kubeconform -strict -summary generated/cosmo.full.yaml
-
-	helm lint -f ./cosmo/values.yaml ./cosmo
+test: build
+	helm lint --strict -f ./cosmo/values.yaml ./cosmo
 	kubeconform -strict -summary generated/cosmo.yaml
 
-KAPP_ARGS := deploy
-dev: build-dev
-	kapp $(KAPP_ARGS) -a cosmo -f generated/cosmo.full.yaml
-
-prod: build-prod
-	kapp deploy -a cosmo -f ./cosmo.yaml
+KAPP_ARGS:="--logs-all"
+deploy: build
+	kapp deploy $(KAPP_ARGS) -a cosmo -f generated/cosmo.yaml
 
 delete:
 	kapp delete -a cosmo
@@ -41,11 +35,8 @@ upload-artifacthub-manifest:
 docs:
 	helm-docs ./cosmo -o CHART.md
 
-build-dev:
+build:
 	mkdir -p generated
-	helm template cosmo -f ./cosmo/values.full.yaml ./cosmo > generated/cosmo.full.yaml
-
-build-prod:
 	helm template cosmo -f ./cosmo/values.yaml ./cosmo > generated/cosmo.yaml
 
 delete:
