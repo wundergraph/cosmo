@@ -33,7 +33,7 @@ jobs:
         uses: mikefarah/yq@v4.42.1
 
       - name: Log in with Helm to Container registry
-        run: gh auth token | helm registry login ghcr.io -u ${{ github.actor }} --password-std
+        run: gh auth token | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Publish Chart
         if: inputs.name == 'cosmo-umbrella'
