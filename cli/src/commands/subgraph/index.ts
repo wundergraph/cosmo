@@ -13,22 +13,22 @@ import MoveSubgraph from './commands/move.js';
 import FetchSubgraph from './commands/fetch.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schema = new Command('subgraph');
-  schema.description('Provides commands for creating and maintaining subgraphs of a federated graph');
-  schema.addCommand(CreateSubgraphCommand(opts));
-  schema.addCommand(PublishSubgraph(opts));
-  schema.addCommand(CheckSubgraph(opts));
-  schema.addCommand(DeleteSubgraph(opts));
-  schema.addCommand(UpdateSubgraph(opts));
-  schema.addCommand(FixSubGraph(opts));
-  schema.addCommand(ListSubgraphs(opts));
-  schema.addCommand(IntrospectSubgraph(opts));
-  schema.addCommand(MoveSubgraph(opts));
-  schema.addCommand(FetchSubgraph(opts));
+  const command = new Command('subgraph');
+  command.description('Provides commands for creating and maintaining subgraphs of a federated graph');
+  command.addCommand(CreateSubgraphCommand(opts));
+  command.addCommand(PublishSubgraph(opts));
+  command.addCommand(CheckSubgraph(opts));
+  command.addCommand(DeleteSubgraph(opts));
+  command.addCommand(UpdateSubgraph(opts));
+  command.addCommand(FixSubGraph(opts));
+  command.addCommand(ListSubgraphs(opts));
+  command.addCommand(IntrospectSubgraph(opts));
+  command.addCommand(MoveSubgraph(opts));
+  command.addCommand(FetchSubgraph(opts));
 
-  schema.hook('preAction', () => {
+  command.hook('preAction', () => {
     checkAPIKey();
   });
 
-  return schema;
+  return command;
 };

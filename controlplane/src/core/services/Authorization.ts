@@ -27,7 +27,6 @@ export class Authorization {
   }: {
     headers: Headers;
     graph: {
-      name: string;
       targetId: string;
       targetType: 'subgraph' | 'federatedGraph';
     };
@@ -38,7 +37,7 @@ export class Authorization {
       const { targetId, targetType } = graph;
       const { userId, organizationId, isAdmin } = authContext;
 
-      const orgRepo = new OrganizationRepository(db, this.defaultBillingPlanId);
+      const orgRepo = new OrganizationRepository(this.logger, db, this.defaultBillingPlanId);
       const fedRepo = new FederatedGraphRepository(this.logger, db, organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, db, organizationId);
       const apiKeyRepo = new ApiKeyRepository(db);

@@ -3,6 +3,7 @@ import postgres from 'postgres';
 import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { pino } from 'pino';
 import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';
@@ -51,7 +52,7 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
   const userRepo = new UserRepository(db);
-  const orgRepo = new OrganizationRepository(db, userTestData.defaultBillingPlanId);
+  const orgRepo = new OrganizationRepository(pino(), db, userTestData.defaultBillingPlanId);
   const apiKeyRepo = new ApiKeyRepository(db);
 
   await userRepo.addUser({

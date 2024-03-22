@@ -1,5 +1,5 @@
 name: Build and Release Image
-
+run-name: Build and Release ${{ inputs.name }} Image v${{ inputs.tag }}
 on:
   workflow_dispatch:
     inputs:

@@ -3,8 +3,8 @@ import CliTable3 from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import ora from 'ora';
-import { baseHeaders } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { baseHeaders } from '../../../../core/config.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('move');

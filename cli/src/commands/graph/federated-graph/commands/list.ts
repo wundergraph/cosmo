@@ -5,9 +5,9 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import Table from 'cli-table3';
 import logSymbols from 'log-symbols';
 import { join } from 'pathe';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
-import program from '../../index.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { baseHeaders } from '../../../../core/config.js';
+import program from '../../../index.js';
 
 type OutputFile = {
   name: string;
@@ -32,6 +32,7 @@ export default (opts: BaseCommandOptions) => {
         limit: 0,
         offset: 0,
         namespace: options.namespace,
+        supportsFederation: true,
       },
       {
         headers: baseHeaders,

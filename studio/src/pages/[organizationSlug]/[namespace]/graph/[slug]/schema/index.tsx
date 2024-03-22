@@ -16,6 +16,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { EmptySchema } from "@/components/schema/empty-schema-state";
 import {
   SchemaSettings,
   hideDiscussionsKey,
@@ -1238,18 +1239,16 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
         <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin lg:px-8">
           {isLoadingAST && <Loader fullscreen />}
           {!isLoadingAST &&
-            (error || data?.response?.code !== EnumStatusCode.OK || !ast) && (
-              <EmptyState
-                icon={<ExclamationTriangleIcon />}
-                title="Could not retrieve schema"
-                description={
-                  data?.response?.details ||
-                  error?.message ||
-                  "Please try again. The schema might be invalid or does not exist"
-                }
-                actions={<Button onClick={() => refetch()}>Retry</Button>}
-              />
-            )}
+            data?.response?.code === EnumStatusCode.ERR_NOT_FOUND &&
+            !data.sdl && <EmptySchema />}
+          {!isLoadingAST && error && (
+            <EmptyState
+              icon={<ExclamationTriangleIcon />}
+              title="Could not retrieve schema"
+              description={data?.response?.details || error?.message}
+              actions={<Button onClick={() => refetch()}>Retry</Button>}
+            />
+          )}
           {ast && selectedCategory === "deprecated" && (
             <DeprecatedTypes ast={ast} />
           )}

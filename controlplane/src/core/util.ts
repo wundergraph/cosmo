@@ -85,6 +85,13 @@ export const enrichLogger = (
   return newLogger;
 };
 
+export function createInternalLabel(): Label {
+  return {
+    key: '_internal',
+    value: uid(6),
+  };
+}
+
 /**
  * Normalizes labels by removing duplicates.
  * Also performs a simple sort
@@ -276,12 +283,8 @@ export const validateDateRanges = ({
 
   if (validatedDateRange) {
     const startDate = new Date(validatedDateRange.start);
-    const endDate = new Date(validatedDateRange.end);
     if (startDate < subHours(new Date(), limit * 24)) {
       validatedDateRange.start = formatISO(subHours(new Date(), limit * 24));
-    }
-    if (endDate > new Date()) {
-      validatedDateRange.end = formatISO(new Date());
     }
   }
 

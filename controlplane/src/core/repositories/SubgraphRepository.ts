@@ -1,9 +1,9 @@
 import { PlainMessage } from '@bufbuild/protobuf';
+import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, count, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import {
   graphCompositionSubgraphs,
@@ -20,16 +20,16 @@ import {
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
-  ListFilterOptions,
   SchemaCheckDetailsDTO,
   SchemaCheckSummaryDTO,
   SubgraphDTO,
+  SubgraphListFilterOptions,
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { Composer, ComposeDeploymentError, RouterConfigUploadError } from '../composition/composer.js';
-import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { ComposeDeploymentError, Composer, RouterConfigUploadError } from '../composition/composer.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
+import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
@@ -363,7 +363,6 @@ export class SubgraphRepository {
       targetId: string;
       subgraphId: string;
       subgraphLabels: Label[];
-      newNamespace: string;
       updatedBy: string;
       currentNamespaceId: string;
       newNamespaceId: string;
@@ -490,7 +489,7 @@ export class SubgraphRepository {
     });
   }
 
-  public async list(opts: ListFilterOptions): Promise<SubgraphDTO[]> {
+  public async list(opts: SubgraphListFilterOptions): Promise<SubgraphDTO[]> {
     const conditions: SQL<unknown>[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
@@ -508,6 +507,7 @@ export class SubgraphRepository {
       })
       .from(schema.targets)
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      // Left join because version is optional
       .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
       .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
       .where(and(...conditions))
@@ -521,6 +521,7 @@ export class SubgraphRepository {
       if (sg === undefined) {
         throw new Error(`Subgraph ${target.name} not found`);
       }
+
       subgraphs.push(sg);
     }
 
@@ -680,7 +681,6 @@ export class SubgraphRepository {
   }): Promise<GetChecksResponse> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
-      published: true,
     });
 
     if (subgraphs.length === 0) {
@@ -754,7 +754,6 @@ export class SubgraphRepository {
   }): Promise<number> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
-      published: true,
     });
 
     if (subgraphs.length === 0) {
@@ -806,7 +805,6 @@ export class SubgraphRepository {
 
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId: data.federatedGraphTargetId,
-      published: true,
     });
 
     const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
@@ -998,11 +996,17 @@ export class SubgraphRepository {
       .from(targets)
       .innerJoin(subgraphs, eq(targets.id, subgraphs.targetId))
       .innerJoin(subgraphMembers, eq(subgraphs.id, subgraphMembers.subgraphId))
+      .innerJoin(schema.subgraphsToFederatedGraph, eq(subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
+      .innerJoin(
+        schema.federatedGraphs,
+        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
+      )
       .where(
         and(
           eq(targets.type, 'subgraph'),
           eq(targets.organizationId, this.organizationId),
           or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId)),
+          eq(schema.federatedGraphs.supportsFederation, true),
         ),
       );
 
@@ -1013,6 +1017,7 @@ export class SubgraphRepository {
       if (sg === undefined) {
         throw new Error(`Subgraph ${graph.name} not found`);
       }
+
       accessibleSubgraphs.push(sg);
     }
 

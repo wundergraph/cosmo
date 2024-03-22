@@ -157,3 +157,42 @@ func TestDefaults(t *testing.T) {
 
 	g.AssertJson(t, "config_defaults", cfg.Config)
 }
+
+func TestEventsInvalidProvider(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_provider.yaml", "")
+	// Note: If none of the oneOf array matches, the first in the array is compared
+	require.ErrorContains(t, err, "missing properties: 'url'")
+}
+
+func TestInvalidAuthenticatedNatsProviderNoToken(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_authenticated_nats_provider_no_token.yaml", "")
+	// Note: If none of the oneOf array matches, the first in the array is compared
+	require.ErrorContains(t, err, "missing properties: 'token'")
+}
+
+func TestInvalidAuthenticatedNatsProviderNoUsername(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_authenticated_nats_provider_no_username.yaml", "")
+	// Note: If none of the oneOf array matches, the first in the array is compared
+	require.ErrorContains(t, err, "missing properties: 'token'")
+}
+
+func TestInvalidAuthenticatedNatsProviderNoPassword(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/invalid_authenticated_nats_provider_no_password.yaml", "")
+	// Note: If none of the oneOf array matches, the first in the array is compared
+	require.ErrorContains(t, err, "missing properties: 'token'")
+}
+
+func TestValidUnauthenticatedNatsProvider(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/valid_unauthenticated_nats_provider.yaml", "")
+	require.NoError(t, err)
+}
+
+func TestValidAuthenticatedNatsProviderWithToken(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/valid_authenticated_nats_provider_with_token.yaml", "")
+	require.NoError(t, err)
+}
+
+func TestValidAuthenticatedNatsProviderWithUsernamePassword(t *testing.T) {
+	_, err := LoadConfig("./fixtures/events/valid_authenticated_nats_provider_with_username_password.yaml", "")
+	require.NoError(t, err)
+}

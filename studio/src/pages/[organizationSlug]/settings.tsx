@@ -1061,8 +1061,8 @@ const RBAC = () => {
             <Badge variant="outline">Enterprise feature</Badge>
           </CardTitle>
           <CardDescription>
-            Enabling RBAC allows the fine grain access control of subgraphs and
-            federated graphs.{" "}
+            Enabling RBAC allows the fine grain access control of subgraphs,
+            federated graphs and monographs.{" "}
             <Link
               href={docsBaseURL + "/studio/graph-access-control"}
               className="text-sm text-primary"
@@ -1313,7 +1313,10 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
     data: providerData,
     refetch: refetchOIDCProvider,
     isLoading: fetchingOIDCProvider,
-  } = useQuery(getOIDCProvider.useQuery());
+  } = useQuery({
+    ...getOIDCProvider.useQuery(),
+    queryKey: [user?.currentOrganization.slug || "", "GetOIDCProvider", {}],
+  });
 
   const orgs = user?.organizations?.length || 0;
 

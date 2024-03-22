@@ -39,19 +39,23 @@ const lightweightCspHeader = `
   worker-src 'self';
 `;
 
-const fullCspHeader = `
-  default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
-    process.env.NEXT_PUBLIC_COSMO_CP_URL
-  };
-  connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
-    process.env.NEXT_PUBLIC_COSMO_CP_URL
-  } https://*.wundergraph.com wss://*.wundergraph.com https://plausible.io https://api.stripe.com https://maps.googleapis.com ${
-    isPreview
-      ? "https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com"
-      : ""
-  };
-  ${lightweightCspHeader}
-`;
+/**
+ * We can't enforce connect directives yet because the studio can connect to any public router.
+ * Leave it open for now.
+ */
+// const fullCspHeader = `
+//   default-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
+//     process.env.NEXT_PUBLIC_COSMO_CP_URL
+//   };
+//   connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
+//     process.env.NEXT_PUBLIC_COSMO_CP_URL
+//   } https://*.wundergraph.com wss://*.wundergraph.com https://plausible.io https://api.stripe.com https://maps.googleapis.com ${
+//     isPreview
+//       ? "https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com"
+//       : ""
+//   };
+//   ${lightweightCspHeader}
+// `;
 
 /** @type {import("next").NextConfig} */
 const config = {
@@ -69,23 +73,10 @@ const config = {
             key: debugCSP
                 ? "Content-Security-Policy-Report-Only"
                 : "Content-Security-Policy",
-            value: fullCspHeader.replace(/\n/g, ""),
-          },
-        ],
-      },
-      {
-        // Allow the playground to make requests to the public router that can be hosted on a different domain
-        source: "/(.*)/playground",
-        headers: [
-          {
-            key: debugCSP
-              ? "Content-Security-Policy-Report-Only"
-              : "Content-Security-Policy",
             value: lightweightCspHeader.replace(/\n/g, ""),
           },
         ],
-      },
-
+      }
     ];
   },
 };

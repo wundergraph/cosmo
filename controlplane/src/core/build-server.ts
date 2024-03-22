@@ -194,8 +194,8 @@ export default async function build(opts: BuildConfig) {
     webErrorPath: opts.auth.webErrorPath,
   });
 
-  const organizationRepository = new OrganizationRepository(fastify.db, opts.stripe?.defaultPlanId);
-  const orgInvitationRepository = new OrganizationInvitationRepository(fastify.db, opts.stripe?.defaultPlanId);
+  const organizationRepository = new OrganizationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
+  const orgInvitationRepository = new OrganizationInvitationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const userRepo = new UserRepository(fastify.db);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret, userRepo);

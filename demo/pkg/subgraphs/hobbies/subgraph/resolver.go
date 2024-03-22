@@ -1,9 +1,9 @@
 package subgraph
 
 import (
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"reflect"
 
-	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies/subgraph/model"
 )
 
@@ -12,7 +12,7 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	NC *nats.Conn
+	PubSubBySourceName map[string]pubsub_datasource.PubSub
 }
 
 func (r *Resolver) Employees(hobby model.Hobby) ([]*model.Employee, error) {

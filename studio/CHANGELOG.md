@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.74.3](https://github.com/wundergraph/cosmo/compare/studio@0.74.2...studio@0.74.3) (2024-03-21)
+
+### Bug Fixes
+
+* show all subgraphs in organization subgraph list ([#659](https://github.com/wundergraph/cosmo/issues/659)) ([1ebc767](https://github.com/wundergraph/cosmo/commit/1ebc767c9f7f6a632fc107c686be63d470993ee1)) (@StarpTech)
+
+## [0.74.2](https://github.com/wundergraph/cosmo/compare/studio@0.74.1...studio@0.74.2) (2024-03-21)
+
+### Bug Fixes
+
+* missing navbar in playground and settings page refresh ([#660](https://github.com/wundergraph/cosmo/issues/660)) ([4cfe778](https://github.com/wundergraph/cosmo/commit/4cfe7783dcdc7c0e79ef63cf26280816271fe62e)) (@thisisnithin)
+
+## [0.74.1](https://github.com/wundergraph/cosmo/compare/studio@0.74.0...studio@0.74.1) (2024-03-20)
+
+### Bug Fixes
+
+* remove connect-src CSP policy ([#656](https://github.com/wundergraph/cosmo/issues/656)) ([faf12ff](https://github.com/wundergraph/cosmo/commit/faf12ff15a0eb8d07a0b00a61927b75d98ce023c)) (@StarpTech)
+
+# [0.74.0](https://github.com/wundergraph/cosmo/compare/studio@0.73.3...studio@0.74.0) (2024-03-20)
+
+### Features
+
+* monograph support ([#623](https://github.com/wundergraph/cosmo/issues/623)) ([a255f74](https://github.com/wundergraph/cosmo/commit/a255f747d63454e1219760b729d99e4778d56dda)) (@thisisnithin)
+
 ## [0.73.3](https://github.com/wundergraph/cosmo/compare/studio@0.73.2...studio@0.73.3) (2024-03-19)
 
 ### Bug Fixes

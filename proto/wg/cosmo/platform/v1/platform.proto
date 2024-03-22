@@ -24,6 +24,18 @@ message ResponseStatus {
   string message = 2;
 }
 
+message PublishMonographRequest {
+  string name = 1;
+  string namespace = 2;
+  string schema = 3;
+}
+
+message PublishMonographResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
 message PublishFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
@@ -75,6 +87,21 @@ message FixSubgraphSchemaRequest {
   string namespace = 3;
 }
 
+message CreateMonographRequest {
+  string name = 1;
+  string namespace = 2;
+  string routing_url = 3;
+  string graph_url = 4;
+  optional string subscription_url = 5;
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
+  optional string readme = 7;
+  string admissionWebhookURL = 8;
+}
+
+message CreateMonographResponse {
+  Response response = 1;
+}
+
 message CreateFederatedGraphRequest {
   // name is the FQDN of the federated graph e.g. "wg.main"
   string name = 1;
@@ -107,6 +134,15 @@ message CreateFederatedSubgraphRequest {
 message DeleteFederatedGraphRequest {
   string name = 1;
   string namespace = 2;
+}
+
+message DeleteMonographRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeleteMonographResponse {
+  Response response = 1;
 }
 
 message DeleteFederatedSubgraphRequest {
@@ -213,6 +249,7 @@ message GetFederatedGraphsRequest {
   int32 offset = 2;
   bool includeMetrics = 3;
   string namespace = 4;
+  optional bool supports_federation = 5;
 }
 
 message FederatedGraph {
@@ -229,6 +266,7 @@ message FederatedGraph {
   string target_id = 11;
   string namespace = 12;
   optional string compositionId = 13;
+  bool supports_federation = 14;
 }
 
 message GetFederatedGraphsResponse {
@@ -491,6 +529,20 @@ message UpdateFederatedGraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+}
+
+message UpdateMonographRequest {
+  string name = 1;
+  string namespace = 2;
+  string routing_url = 3;
+  string graph_url = 4;
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+  optional string subscription_url = 6;
+  optional string readme = 7;
+}
+
+message UpdateMonographResponse {
+  Response response = 1;
 }
 
 message CheckFederatedGraphRequest {
@@ -1840,6 +1892,15 @@ message ConfigureNamespaceLintConfigResponse {
   Response response = 1;
 }
 
+message MigrateMonographRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message MigrateMonographResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -1849,13 +1910,25 @@ service PlatformService {
 
   rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
   rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}
+  
+  rpc MoveMonograph(MoveGraphRequest) returns (MoveGraphResponse) {}
+  // CreateMonograph creates a monograph on the control plane.
+  rpc CreateMonograph(CreateMonographRequest) returns (CreateMonographResponse) {}
+  // PublishMonograph pushes the schema of the monograph to the control plane.
+  rpc PublishMonograph(PublishMonographRequest) returns (PublishMonographResponse) {}
+  // DeleteMonograph deletes a monograph from the control plane.
+  rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
+  // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+  rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
+  // MigrateMonograph converts a monograph into a federated graph.
+  rpc MigrateMonograph(MigrateMonographRequest) returns (MigrateMonographResponse) {}
 
-  // CreateFederatedGraph creates a federated graph on the control plane.
-  rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
   // CreateFederatedSubgraph creates a federated subgraph on the control plane.
   rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}
   // PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
   rpc PublishFederatedSubgraph(PublishFederatedSubgraphRequest) returns (PublishFederatedSubgraphResponse) {}
+  // CreateFederatedGraph creates a federated graph on the control plane.
+  rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
   // DeleteFederatedGraph deletes a federated graph from the control plane.
   rpc DeleteFederatedGraph(DeleteFederatedGraphRequest) returns (DeleteFederatedGraphResponse) {}
   // DeleteFederatedSubgraph deletes a federated subgraph from the control plane.
