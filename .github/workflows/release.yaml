@@ -3,6 +3,10 @@ name: Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  id-token: write
+
 concurrency:
   group: Production
   cancel-in-progress: false
@@ -48,6 +52,7 @@ jobs:
         run: |
           git config --global user.email "bot@wundergraph.com"
           git config --global user.name "hardworker-bot"
+          pnpm whoami
           pnpm release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}

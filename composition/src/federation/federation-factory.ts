@@ -20,7 +20,6 @@ import {
   noQueryRootTypeError,
   orScopesLimitError,
   undefinedEntityInterfaceImplementationsError,
-  undefinedTypeError,
   unexpectedObjectResponseType,
   unexpectedParentKindErrorMessage,
   unimplementedInterfaceFieldsError,

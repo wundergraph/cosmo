@@ -172,12 +172,17 @@ describe('Namespaces', (ctx) => {
     const dev = 'dev';
     const label = genUniqueLabel('label');
 
-    await client.createNamespace({
+    let nsResponse = await client.createNamespace({
       name: prod,
     });
-    await client.createNamespace({
+
+    expect(nsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    nsResponse = await client.createNamespace({
       name: dev,
     });
+
+    expect(nsResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
@@ -187,27 +192,63 @@ describe('Namespaces', (ctx) => {
     await createFederatedGraph(client, fedGraphName, prod, [joinLabel(label)], 'http://localhost:8080');
     await createFederatedGraph(client, fedGraphName, dev, [joinLabel(label)], 'http://localhost:8081');
 
-    const graphsRes = await client.getFederatedGraphs({});
-    expect(graphsRes?.response?.code).toBe(EnumStatusCode.OK);
-    expect(graphsRes?.graphs.length).toBe(2);
+    /**
+     * Verify that all graphs are created
+     */
 
-    const subgraphsRes = await client.getSubgraphs({});
-    expect(subgraphsRes?.response?.code).toBe(EnumStatusCode.OK);
-    expect(subgraphsRes?.graphs.length).toBe(2);
-
-    await client.deleteNamespace({
-      name: dev,
+    let graphsRes = await client.getFederatedGraphs({
+      namespace: prod,
     });
+    expect(graphsRes?.response?.code).toBe(EnumStatusCode.OK);
+    expect(graphsRes?.graphs.length).toBe(1);
 
-    const graphsAfterDeleteRes = await client.getFederatedGraphs({});
-    expect(graphsAfterDeleteRes?.response?.code).toBe(EnumStatusCode.OK);
-    expect(graphsAfterDeleteRes?.graphs.length).toBe(1);
-    expect(graphsAfterDeleteRes?.graphs[0].namespace).toBe(prod);
+    let subgraphsRes = await client.getSubgraphs({
+      namespace: prod,
+    });
+    expect(subgraphsRes?.response?.code).toBe(EnumStatusCode.OK);
+    expect(subgraphsRes?.graphs.length).toBe(1);
+
+    /**
+     * Delete the prod namespace
+     */
+    const deleteNsResp = await client.deleteNamespace({
+      name: prod,
+    });
+    expect(deleteNsResp?.response?.code).toBe(EnumStatusCode.OK);
+
+    /**
+     * Verify that the graphs can no longer be found
+     */
+
+    graphsRes = await client.getFederatedGraphs({});
+    expect(graphsRes?.response?.code).toBe(EnumStatusCode.OK);
+    expect(graphsRes?.graphs.length).toBe(1);
+    expect(graphsRes?.graphs[0].namespace).toBe(dev);
 
     const subgraphsAfterDeleteRes = await client.getSubgraphs({});
     expect(subgraphsAfterDeleteRes?.response?.code).toBe(EnumStatusCode.OK);
     expect(subgraphsAfterDeleteRes?.graphs.length).toBe(1);
-    expect(subgraphsAfterDeleteRes?.graphs[0].namespace).toBe(prod);
+    expect(subgraphsAfterDeleteRes?.graphs[0]?.namespace).toBe(dev);
+
+    /**
+     * Dev resources are untouched
+     */
+
+    const graphsAfterDeleteRes = await client.getFederatedGraphs({
+      namespace: dev,
+    });
+    expect(graphsAfterDeleteRes?.response?.code).toBe(EnumStatusCode.OK);
+    expect(graphsAfterDeleteRes?.graphs.length).toBe(1);
+
+    subgraphsRes = await client.getSubgraphs({
+      namespace: dev,
+    });
+    expect(subgraphsRes?.response?.code).toBe(EnumStatusCode.OK);
+    expect(subgraphsRes?.graphs.length).toBe(1);
+
+    /**
+     * Check if the config for the dev graph is still in blob storage
+     */
 
     const keys = blobStorage.keys();
     expect(keys.length).toBe(1);

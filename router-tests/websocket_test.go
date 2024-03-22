@@ -19,6 +19,7 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -197,9 +198,9 @@ func TestWebSockets(t *testing.T) {
 				// Trigger the subscription via NATS
 				subject := "employeeUpdated.3"
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NC.Publish(subject, message)
+				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
-				err = xEnv.NC.Flush()
+				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
 			var res testenv.WebSocketMessage
@@ -254,9 +255,9 @@ func TestWebSockets(t *testing.T) {
 				// Trigger the subscription via NATS
 				subject := "employeeUpdated.3"
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NC.Publish(subject, message)
+				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
-				err = xEnv.NC.Flush()
+				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
 			var res testenv.WebSocketMessage
@@ -1034,10 +1035,10 @@ func TestWebSockets(t *testing.T) {
 
 			go func() {
 				time.Sleep(time.Millisecond * 100)
-				err := xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 				time.Sleep(time.Millisecond * 100)
-				err = xEnv.NC.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 			}()
 
