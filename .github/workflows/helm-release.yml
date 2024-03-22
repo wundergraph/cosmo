@@ -26,6 +26,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Helm version
+        run: helm version
+
       - name: yq - portable yaml processor
         uses: mikefarah/yq@v4.42.1
 
