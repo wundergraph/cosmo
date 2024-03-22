@@ -1,0 +1,6 @@
+# Artifact Hub repository metadata file
+# Used to become verified publisher and more - https://artifacthub.io/docs/topics/repositories/#verified-publisher
+repositoryID: f0c9e143-43ca-4d42-a59f-2d811d3ec689
+owners:
+  - name: Dustin Deus
+    email: dustin@wundergraph.com

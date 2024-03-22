@@ -25,6 +25,19 @@ publish-router-chart:
 	cd cosmo/charts/ && helm package router --version $(VERSION)
 	cd cosmo/charts/ && helm push router-$(VERSION).tgz oci://ghcr.io/wundergraph/cosmo/helm-charts
 
+# Required to verify charts on artifacthub.io
+upload-artifacthub-manifest:
+	# Cosmo
+	cd cosmo && oras push \
+	  ghcr.io/wundergraph/cosmo/helm-charts/cosmo:artifacthub.io \
+	  --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+	  artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+	# Router
+	cd cosmo/charts/router && oras push \
+	  ghcr.io/wundergraph/cosmo/helm-charts/router:artifacthub.io \
+	  --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+	  artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+
 docs:
 	helm-docs ./cosmo -o CHART.md
 
