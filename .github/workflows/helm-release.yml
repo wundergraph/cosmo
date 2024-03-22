@@ -32,17 +32,21 @@ jobs:
       - name: yq - portable yaml processor
         uses: mikefarah/yq@v4.42.1
 
-      - name: Log in with Helm to Container registry
-        run: gh auth token | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Log in to Github Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Chart
         if: inputs.name == 'cosmo-umbrella'
         working-directory: helm
         run: |
-          make publish-cosmo-chart VERSION=$(yq '.version' ./cosmo/Chart.yaml)
+          make publish-cosmo-chart
 
       - name: Publish Chart
         if: inputs.name == 'router'
         working-directory: helm
         run: |
-          make publish-router-chart VERSION=$(yq '.version' ./cosmo/charts/router/Chart.yaml)
+          make publish-router-chart
