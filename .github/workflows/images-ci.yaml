@@ -61,7 +61,7 @@ jobs:
             context_path: graphqlmetrics
             platform: [linux/amd64, linux/arm64]
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
     permissions:
       contents: read
       packages: write
