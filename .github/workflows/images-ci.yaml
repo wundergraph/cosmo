@@ -28,7 +28,7 @@ jobs:
   build-and-push-image:
     timeout-minutes: 30
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - container_name: cdn
@@ -113,7 +113,7 @@ jobs:
       - name: Build Docker image (No push)
         uses: docker/build-push-action@v5
         with:
-          push: false
+          push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           file: ${{ matrix.dockerfile }}
           context: ${{ matrix.context_path }}
           tags: ${{ steps.meta.outputs.tags }}
