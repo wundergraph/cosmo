@@ -22,6 +22,14 @@ declare module 'fastify' {
   }
 }
 
+const ScimError = ({ detail, status }: { detail: string; status: number }) => {
+  return {
+    schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+    detail,
+    status,
+  };
+};
+
 const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fastify, opts, done) {
   fastify.addContentTypeParser('application/scim+json', { parseAs: 'string' }, function (req, body, done) {
     try {
@@ -35,11 +43,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
   fastify.addHook('preHandler', async (req, res) => {
     const authorization = req.headers.authorization;
     if (!authorization) {
-      return res.code(401).send({
-        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-        detail: 'Missing Authorization header.',
-        status: 401,
-      });
+      return res.code(401).send(
+        ScimError({
+          detail: 'Missing Authorization header.',
+          status: 401,
+        }),
+      );
     }
     const token = authorization.replace(/^bearer\s+/i, '');
     const authContext = await opts.authenticator.authenticate(token);
@@ -62,29 +71,41 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
     const users: { id: string; email: string; userName: string; active: boolean }[] = [];
 
     if (filter) {
-      const emailFilter = filter.split(' ')[2];
+      // filter=userName eq "${email}"
+      const emailFilters = filter.split(' ');
+      if (emailFilters.length !== 3) {
+        return res.code(400).send(
+          ScimError({
+            detail: 'Wrong filter value.',
+            status: 400,
+          }),
+        );
+      }
+      const emailFilter = emailFilters[2];
       const email = emailFilter.replaceAll('"', '');
       const user = await opts.organizationRepository.getOrganizationMemberByEmail({
         organizationID: authContext.organizationId,
         userEmail: email,
       });
       if (!user) {
-        return res.code(404).send({
-          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-          detail: 'User not found',
-          status: 404,
-        });
+        return res.code(404).send(
+          ScimError({
+            detail: 'User not found',
+            status: 404,
+          }),
+        );
       }
       const keycloakUsers = await opts.keycloakClient.client.users.find({
         realm: opts.keycloakRealm,
         email: user.email,
       });
       if (keycloakUsers.length === 0) {
-        return res.code(404).send({
-          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-          detail: 'User not found',
-          status: 404,
-        });
+        return res.code(404).send(
+          ScimError({
+            detail: 'User not found',
+            status: 404,
+          }),
+        );
       }
       users.push({
         id: user.userID,
@@ -135,11 +156,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
     });
 
     if (!user) {
-      return res.code(404).send({
-        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-        detail: 'User not found',
-        status: 404,
-      });
+      return res.code(404).send(
+        ScimError({
+          detail: 'User not found',
+          status: 404,
+        }),
+      );
     }
 
     const keycloakUsers = await opts.keycloakClient.client.users.find({
@@ -147,11 +169,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       email: user.email,
     });
     if (keycloakUsers.length === 0) {
-      return res.code(404).send({
-        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-        detail: 'User not found',
-        status: 404,
-      });
+      return res.code(404).send(
+        ScimError({
+          detail: 'User not found',
+          status: 404,
+        }),
+      );
     }
 
     return res.code(200).send({
@@ -206,11 +229,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
 
       const user = await opts.userRepository.byEmail(email);
       if (user) {
-        return res.code(409).send({
-          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-          detail: 'User already exists in the database.',
-          status: 409,
-        });
+        return res.code(409).send(
+          ScimError({
+            detail: 'User already exists in the database.',
+            status: 409,
+          }),
+        );
       }
 
       const keycloakUsers = await opts.keycloakClient.client.users.find({
@@ -219,11 +243,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       });
 
       if (keycloakUsers.length > 0) {
-        return res.code(409).send({
-          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-          detail: 'User already exists in the database.',
-          status: 409,
-        });
+        return res.code(409).send(
+          ScimError({
+            detail: 'User already exists in the database.',
+            status: 409,
+          }),
+        );
       }
 
       const keycloakUserID = await opts.keycloakClient.addKeycloakUser({
@@ -242,11 +267,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       });
 
       if (organizationGroups.length === 0) {
-        return res.code(400).send({
-          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-          detail: `Organization group '${authContext.organizationSlug}' not found`,
-          status: 400,
-        });
+        return res.code(400).send(
+          ScimError({
+            detail: `Organization group '${authContext.organizationSlug}' not found`,
+            status: 400,
+          }),
+        );
       }
 
       const devGroup = await opts.keycloakClient.fetchViewerChildGroup({
@@ -319,11 +345,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       });
 
       if (!user) {
-        return res.code(404).send({
-          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-          detail: 'User not found',
-          status: 404,
-        });
+        return res.code(404).send(
+          ScimError({
+            detail: 'User not found',
+            status: 404,
+          }),
+        );
       }
 
       const keycloakUsers = await opts.keycloakClient.client.users.find({
@@ -331,11 +358,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         email: user.email,
       });
       if (keycloakUsers.length === 0) {
-        return res.code(404).send({
-          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-          detail: 'User not found',
-          status: 404,
-        });
+        return res.code(404).send(
+          ScimError({
+            detail: 'User not found',
+            status: 404,
+          }),
+        );
       }
 
       await opts.keycloakClient.updateKeycloakUser({
@@ -382,19 +410,27 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         userID,
       });
       if (!orgMember) {
-        return res.code(404).send({
-          schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
-          detail: 'User not found',
-          status: 404,
-        });
+        return res.code(404).send(
+          ScimError({
+            detail: 'User not found',
+            status: 404,
+          }),
+        );
       }
 
-      const active = req.body.Operations[0].value.active;
+      const operations = req.body.Operations;
 
-      await opts.keycloakClient.updateKeycloakUser({
-        id: userID,
-        enabled: active,
-      });
+      for (const operation of operations) {
+        const value = operation.value;
+        if ('active' in value) {
+          const active = value.active;
+
+          await opts.keycloakClient.updateKeycloakUser({
+            id: userID,
+            enabled: active,
+          });
+        }
+      }
 
       return res.code(204);
     },

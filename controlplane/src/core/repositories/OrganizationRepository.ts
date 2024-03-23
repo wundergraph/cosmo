@@ -337,8 +337,8 @@ export class OrganizationRepository {
 
   public async getMembers({
     organizationID,
-    offset,
-    limit,
+    offset = 0,
+    limit = 999,
   }: {
     organizationID: string;
     offset?: number;
@@ -354,8 +354,8 @@ export class OrganizationRepository {
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .where(eq(organizationsMembers.organizationId, organizationID))
       .orderBy(asc(organizationsMembers.createdAt))
-      .offset(offset || 0)
-      .limit(limit || 999)
+      .offset(offset)
+      .limit(limit)
       .execute();
 
     const members: OrganizationMemberDTO[] = [];
