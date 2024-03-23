@@ -30,7 +30,6 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        os: [ubuntu-latest]
         include:
           - container_name: cdn
             dockerfile: cdn-server/Dockerfile
@@ -60,7 +59,7 @@ jobs:
             dockerfile: graphqlmetrics/Dockerfile
             context_path: graphqlmetrics
             platforms: linux/amd64,linux/arm64
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
