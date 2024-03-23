@@ -1,4 +1,4 @@
-FROM golang:1.21 as builder
+FROM --platform=${BUILDPLATFORM} golang:1.21 as builder
 
 ARG VERSION=dev
 
@@ -19,9 +19,9 @@ COPY . .
 RUN make test
 
 # Build router
-RUN make build VERSION=${VERSION}
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/graphqlmetrics/core.Version=${VERSION}" -a -o graphqlmetrics cmd/main.go
 
-FROM gcr.io/distroless/base-debian12
+FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12
 
 COPY --from=builder /app/graphqlmetrics /graphqlmetrics
 COPY --from=builder /app/migrations /migrations
