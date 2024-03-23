@@ -1,5 +1,6 @@
 import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
+import { MemberRole } from 'src/db/models.js';
 import { uid } from 'uid';
 
 export default class Keycloak {
@@ -105,7 +106,7 @@ export default class Keycloak {
         {
           type: 'password',
           // must follow the password policy on keycloak
-          value: password || uid(12) + '@123',
+          value: password,
           temporary: false,
         },
       ];
@@ -342,17 +343,19 @@ export default class Keycloak {
     });
   }
 
-  public async fetchAdminChildGroup({
+  public async fetchChildGroup({
     realm,
     orgSlug,
     kcGroupId,
+    childGroupType,
   }: {
     realm?: string;
     orgSlug: string;
     kcGroupId: string;
+    childGroupType: MemberRole;
   }) {
     const orgGroups = await this.client.groups.find({
-      search: 'admin',
+      search: childGroupType,
       realm: realm || this.realm,
     });
 
@@ -360,70 +363,14 @@ export default class Keycloak {
       throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
     }
 
-    const adminOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
-    const adminChildGroup = adminOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/admin`);
+    const orgGroup = orgGroups.find((group) => group.id === kcGroupId);
+    const childGroup = orgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/${childGroupType}`);
 
-    if (!adminChildGroup) {
-      throw new Error(`Organization child group '/${orgSlug}/admin' not found`);
+    if (!childGroup) {
+      throw new Error(`Organization child group '/${orgSlug}/${childGroupType}' not found`);
     }
 
-    return adminChildGroup;
-  }
-
-  public async fetchDevChildGroup({
-    realm,
-    orgSlug,
-    kcGroupId,
-  }: {
-    realm?: string;
-    orgSlug: string;
-    kcGroupId: string;
-  }) {
-    const orgGroups = await this.client.groups.find({
-      search: 'developer',
-      realm: realm || this.realm,
-    });
-
-    if (orgGroups.length === 0) {
-      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
-    }
-
-    const devOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
-    const devChildGroup = devOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/developer`);
-
-    if (!devChildGroup) {
-      throw new Error(`Organization child group '/${orgSlug}/developer' not found`);
-    }
-
-    return devChildGroup;
-  }
-
-  public async fetchViewerChildGroup({
-    realm,
-    orgSlug,
-    kcGroupId,
-  }: {
-    realm?: string;
-    orgSlug: string;
-    kcGroupId: string;
-  }) {
-    const orgGroups = await this.client.groups.find({
-      search: 'viewer',
-      realm: realm || this.realm,
-    });
-
-    if (orgGroups.length === 0) {
-      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
-    }
-
-    const viewerOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
-    const viewerChildGroup = viewerOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/viewer`);
-
-    if (!viewerChildGroup) {
-      throw new Error(`Organization child group '/${orgSlug}/viewer' not found`);
-    }
-
-    return viewerChildGroup;
+    return childGroup;
   }
 
   public async removeUserFromOrganization({
@@ -448,50 +395,17 @@ export default class Keycloak {
     }
 
     for (const role of roles) {
-      switch (role) {
-        case 'admin': {
-          const adminGroup = await this.fetchAdminChildGroup({
-            realm: realm || this.realm,
-            kcGroupId: organizationGroup[0].id!,
-            orgSlug: groupName,
-          });
-          await this.client.users.delFromGroup({
-            id: userID,
-            groupId: adminGroup.id!,
-            realm: realm || this.realm,
-          });
-          break;
-        }
-        case 'developer': {
-          const devGroup = await this.fetchDevChildGroup({
-            realm: realm || this.realm,
-            kcGroupId: organizationGroup[0].id!,
-            orgSlug: groupName,
-          });
-          await this.client.users.delFromGroup({
-            id: userID,
-            groupId: devGroup.id!,
-            realm: realm || this.realm,
-          });
-          break;
-        }
-        case 'viewer': {
-          const viewerGroup = await this.fetchViewerChildGroup({
-            realm: realm || this.realm,
-            kcGroupId: organizationGroup[0].id!,
-            orgSlug: groupName,
-          });
-          await this.client.users.delFromGroup({
-            id: userID,
-            groupId: viewerGroup.id!,
-            realm: realm || this.realm,
-          });
-          break;
-        }
-        default: {
-          throw new Error(`Role ${role} does not exist`);
-        }
-      }
+      const childGroup = await this.fetchChildGroup({
+        realm: realm || this.realm,
+        kcGroupId: organizationGroup[0].id!,
+        orgSlug: groupName,
+        childGroupType: role as MemberRole,
+      });
+      await this.client.users.delFromGroup({
+        id: userID,
+        groupId: childGroup.id!,
+        realm: realm || this.realm,
+      });
     }
   }
 }

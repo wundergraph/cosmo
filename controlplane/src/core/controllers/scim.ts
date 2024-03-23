@@ -275,16 +275,17 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         );
       }
 
-      const devGroup = await opts.keycloakClient.fetchViewerChildGroup({
+      const viewerGroup = await opts.keycloakClient.fetchChildGroup({
         realm: opts.keycloakRealm,
         kcGroupId: organizationGroups[0].id!,
         orgSlug: authContext.organizationSlug,
+        childGroupType: 'viewer',
       });
 
       await opts.keycloakClient.client.users.addToGroup({
         id: keycloakUserID,
         realm: opts.keycloakRealm,
-        groupId: devGroup.id!,
+        groupId: viewerGroup.id!,
       });
 
       await opts.userRepository.addUser({ id: keycloakUserID, email });
