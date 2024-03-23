@@ -1,7 +1,7 @@
 import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
-import { MemberRole } from 'src/db/models.js';
 import { uid } from 'uid';
+import { MemberRole } from '../../db/models.js';
 
 export default class Keycloak {
   client: KeycloakAdminClient;
