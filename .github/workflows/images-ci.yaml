@@ -34,26 +34,33 @@ jobs:
           - container_name: cdn
             dockerfile: cdn-server/Dockerfile
             context_path: .
+            os: [ubuntu-latest, macos-latest]
           - container_name: controlplane
             dockerfile: controlplane/Dockerfile
             context_path: .
+            os: [ubuntu-latest, macos-latest]
           - container_name: router
             dockerfile: router/Dockerfile
             context_path: router
+            os: [ubuntu-latest, macos-latest]
           - container_name: studio
             dockerfile: studio/Dockerfile
             context_path: .
+            os: [ubuntu-latest, macos-latest]
           - container_name: keycloak
             dockerfile: keycloak/Dockerfile
             context_path: keycloak
+            os: [ubuntu-latest, macos-latest]
           - container_name: otelcollector
             dockerfile: otelcollector/Dockerfile
             context_path: otelcollector
+            os: [ubuntu-latest, macos-latest]
           - container_name: graphqlmetrics
             dockerfile: graphqlmetrics/Dockerfile
             context_path: graphqlmetrics
+            os: [ubuntu-latest, macos-latest]
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       packages: write
@@ -92,8 +99,9 @@ jobs:
             # use custom value instead of git tag
             type=match,pattern=[a-zA-Z-_]+@(.*),group=1
 
-      - name: Install Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3.2.0
 
       # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
       # For now, we will disable the push step for Pull Requests
