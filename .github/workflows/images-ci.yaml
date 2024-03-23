@@ -42,18 +42,6 @@ jobs:
           - container_name: router
             dockerfile: router/Dockerfile
             context_path: router
-          - container_name: studio
-            dockerfile: studio/Dockerfile
-            context_path: .
-          - container_name: keycloak
-            dockerfile: keycloak/Dockerfile
-            context_path: keycloak
-          - container_name: otelcollector
-            dockerfile: otelcollector/Dockerfile
-            context_path: otelcollector
-          - container_name: graphqlmetrics
-            dockerfile: graphqlmetrics/Dockerfile
-            context_path: graphqlmetrics
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
