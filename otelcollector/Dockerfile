@@ -1,5 +1,8 @@
 FROM --platform=${BUILDPLATFORM} golang:1.21 as builder
 
+ARG TARGETOS
+ARG TARGETARCH
+
 WORKDIR /app
 
 # Download binary from github

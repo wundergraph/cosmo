@@ -1,5 +1,5 @@
-name: Build and Push Docker images
-
+name: Build Docker images
+run-name: Build Docker image ${{ matrix.container_name }}
 on:
   push:
     branches:
@@ -29,6 +29,7 @@ jobs:
   build-and-push-image:
     timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         include:
           - container_name: cdn
