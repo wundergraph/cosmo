@@ -1,5 +1,4 @@
-name: Build Docker images
-run-name: Build Docker image ${{ matrix.container_name }}
+name: Build Docker images for CI
 on:
   push:
     branches:
