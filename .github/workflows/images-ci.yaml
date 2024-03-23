@@ -31,29 +31,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [linux/amd64, linux/arm64]
         include:
           - container_name: cdn
             dockerfile: cdn-server/Dockerfile
             context_path: .
+            platform: [linux/amd64, linux/arm64]
           - container_name: controlplane
             dockerfile: controlplane/Dockerfile
             context_path: .
+            platform: [linux/amd64, linux/arm64]
           - container_name: router
             dockerfile: router/Dockerfile
             context_path: router
+            platform: [linux/amd64, linux/arm64]
           - container_name: studio
             dockerfile: studio/Dockerfile
             context_path: .
+            platform: [linux/amd64, linux/arm64]
           - container_name: keycloak
             dockerfile: keycloak/Dockerfile
             context_path: keycloak
+            platform: [linux/amd64, linux/arm64]
           - container_name: otelcollector
             dockerfile: otelcollector/Dockerfile
             context_path: otelcollector
+            platform: [linux/amd64, linux/arm64]
           - container_name: graphqlmetrics
             dockerfile: graphqlmetrics/Dockerfile
             context_path: graphqlmetrics
+            platform: [linux/amd64, linux/arm64]
 
     runs-on: ubuntu-latest
     permissions:
