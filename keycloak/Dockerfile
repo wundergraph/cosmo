@@ -14,10 +14,6 @@ RUN ./build.sh
 
 FROM --platform=${BUILDPLATFORM} bitnami/keycloak:22.0.5
 
-LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
-LABEL org.opencontainers.image.description="Cosmo Keycloak Distribution"
-LABEL org.opencontainers.image.licenses="Apache-2.0"
-
 COPY --from=0 /app/target/*.jar /opt/bitnami/keycloak/providers/
 
 EXPOSE 8080

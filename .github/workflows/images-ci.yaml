@@ -35,30 +35,37 @@ jobs:
             dockerfile: cdn-server/Dockerfile
             context_path: .
             platforms: linux/amd64,linux/arm64
+            container_description: "CDN Server"
           - container_name: controlplane
             dockerfile: controlplane/Dockerfile
             context_path: .
+            container_description: "Control Plane"
             platforms: linux/amd64,linux/arm64
           - container_name: router
             dockerfile: router/Dockerfile
             context_path: router
+            container_description: "Router"
             platforms: linux/amd64,linux/arm64
           - container_name: studio
             dockerfile: studio/Dockerfile
             context_path: .
             platforms: linux/amd64,linux/arm64
+            container_description: "Studio"
           - container_name: keycloak
             dockerfile: keycloak/Dockerfile
             context_path: keycloak
             platforms: linux/amd64,linux/arm64
+            container_description: "Keycloak"
           - container_name: otelcollector
             dockerfile: otelcollector/Dockerfile
             context_path: otelcollector
             platforms: linux/amd64,linux/arm64
+            container_description: "OpenTelemetry Collector"
           - container_name: graphqlmetrics
             dockerfile: graphqlmetrics/Dockerfile
             context_path: graphqlmetrics
             platforms: linux/amd64,linux/arm64
+            container_description: "GraphQL Metrics"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -117,5 +124,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platforms }}
+          outputs:
+            type=image,name=target,annotation-index.org.opencontainers.image.description=${{ matrix.container_description }}
+            type=image,name=target,annotation-index.org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
+            type=image,name=target,annotation-index.org.opencontainers.image.licenses="Apache-2.0"
           build-args: |
             VERSION=${{ github.sha }}

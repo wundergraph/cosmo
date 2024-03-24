@@ -27,10 +27,6 @@ RUN pnpm run --filter=./connect --filter=./shared --filter=./studio --filter=./c
 
 FROM --platform=${BUILDPLATFORM} node:lts-alpine
 
-LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
-LABEL org.opencontainers.image.description="Cosmo Studio"
-LABEL org.opencontainers.image.licenses="Apache-2.0"
-
 WORKDIR /app
 
 ENV NODE_ENV production
