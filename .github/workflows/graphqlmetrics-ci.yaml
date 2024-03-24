@@ -72,3 +72,21 @@ jobs:
       - name: Build
         working-directory: ./graphqlmetrics
         run: make build
+
+  build_push_image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: graphqlmetrics
+          dockerfile: graphqlmetrics/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: graphqlmetrics
+          image_description: "Cosmo GraphQL Metrics Collector"

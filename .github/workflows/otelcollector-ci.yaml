@@ -1,0 +1,34 @@
+name: OTELCollector CI
+on:
+  pull_request:
+    paths:
+      - "otelcollector/**/*"
+      - ".github/workflows/otelcollector-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+
+  build_push_image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: otelcollector
+          dockerfile: otelcollector/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: otelcollector
+          image_description: "Cosmo OTEL Collector"
+

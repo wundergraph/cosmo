@@ -1,7 +1,9 @@
-FROM golang:1.21 as builder
+FROM --platform=${BUILDPLATFORM} golang:1.21 as builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 ARG VERSION=dev
-
 ENV VERSION=$VERSION
 
 WORKDIR /app/
@@ -19,9 +21,9 @@ COPY . .
 RUN make test
 
 # Build router
-RUN make build VERSION=${VERSION}
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=${VERSION}" -a -o router cmd/router/main.go
 
-FROM gcr.io/distroless/base-debian12
+FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12
 
 COPY --from=builder /app/router /router
 
