@@ -1,4 +1,4 @@
-name: Build Docker images for CI
+name: Build & Push Docker Images for CI
 on:
   push:
     branches:
@@ -104,15 +104,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3.2.0
-
-      # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
-      # For now, we will disable the push step for Pull Requests
-      - name: Build Docker image (No push)
+      - name: Build & Push Docker Image
         uses: docker/build-push-action@v5
         with:
+          # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+          # For now, we will disable the push to the GitHub Container Registry for external contributors
           push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           file: ${{ matrix.dockerfile }}
           context: ${{ matrix.context_path }}
