@@ -125,8 +125,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platforms }}
           outputs:
-            type=image,name=target,annotation-index.org.opencontainers.image.description="${{ matrix.container_description }}"
-            type=image,name=target,annotation-index.org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
-            type=image,name=target,annotation-index.org.opencontainers.image.licenses="Apache-2.0"
+            type=image,name=target,annotation-index.org.opencontainers.image.description='${{ matrix.container_description }}'
+            type=image,name=target,annotation-index.org.opencontainers.image.source='https://github.com/wundergraph/cosmo'
+            type=image,name=target,annotation-index.org.opencontainers.image.licenses='Apache-2.0'
           build-args: |
             VERSION=${{ github.sha }}
