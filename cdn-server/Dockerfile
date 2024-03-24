@@ -1,7 +1,3 @@
-LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
-LABEL org.opencontainers.image.description="Cosmo CDN Server"
-LABEL org.opencontainers.image.licenses="Apache-2.0"
-
 FROM --platform=${BUILDPLATFORM} node:lts as builder
 
 WORKDIR /app
@@ -25,6 +21,10 @@ RUN pnpm run --filter=./cdn-server/cdn --filter=./cdn-server build
 RUN pnpm --filter=./cdn-server --prod deploy pruned
 
 FROM --platform=${BUILDPLATFORM} node:lts-slim
+
+LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
+LABEL org.opencontainers.image.description="Cosmo CDN Server"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 WORKDIR /app
 

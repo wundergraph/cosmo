@@ -1,7 +1,3 @@
-LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
-LABEL org.opencontainers.image.description="GraphQL metrics for Cosmo"
-LABEL org.opencontainers.image.licenses="Apache-2.0"
-
 FROM --platform=${BUILDPLATFORM} golang:1.21 as builder
 
 ARG TARGETOS
@@ -28,6 +24,10 @@ RUN make test
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/graphqlmetrics/core.Version=${VERSION}" -a -o graphqlmetrics cmd/main.go
 
 FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12
+
+LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
+LABEL org.opencontainers.image.description="GraphQL metrics for Cosmo"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 COPY --from=builder /app/graphqlmetrics /graphqlmetrics
 COPY --from=builder /app/migrations /migrations

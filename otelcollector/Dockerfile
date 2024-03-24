@@ -1,7 +1,3 @@
-LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
-LABEL org.opencontainers.image.description="Cosmo OpenTelemetry Collector"
-LABEL org.opencontainers.image.licenses="Apache-2.0"
-
 FROM --platform=${BUILDPLATFORM} golang:1.21 as builder
 
 ARG TARGETOS
@@ -21,6 +17,10 @@ RUN ./ocb --config otelcol-builder.yaml \
     && /app/otelcol-dev/otelcol --version
 
 FROM --platform=${BUILDPLATFORM} golang:1.21
+
+LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
+LABEL org.opencontainers.image.description="Cosmo OpenTelemetry Collector"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 COPY ./otel-config.yaml /etc/otel-config.yaml
 COPY --from=builder /app/otelcol-dev/otelcol /otelcol
