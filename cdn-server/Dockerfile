@@ -1,3 +1,7 @@
+LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
+LABEL org.opencontainers.image.description="Cosmo CDN Server"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
 FROM --platform=${BUILDPLATFORM} node:lts as builder
 
 WORKDIR /app

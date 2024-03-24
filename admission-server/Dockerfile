@@ -1,4 +1,4 @@
-FROM node:lts as builder
+FROM --platform=${BUILDPLATFORM} node:lts as builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ RUN pnpm run --filter=./admission-server build
 # Deploy
 RUN pnpm --filter=./admission-server --prod deploy pruned
 
-FROM node:lts-slim
+FROM --platform=${BUILDPLATFORM} node:lts-slim
 
 WORKDIR /app
 

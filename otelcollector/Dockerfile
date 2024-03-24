@@ -1,3 +1,7 @@
+LABEL org.opencontainers.image.source="https://github.com/wundergraph/cosmo"
+LABEL org.opencontainers.image.description="Cosmo OpenTelemetry Collector"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
 FROM --platform=${BUILDPLATFORM} golang:1.21 as builder
 
 ARG TARGETOS
