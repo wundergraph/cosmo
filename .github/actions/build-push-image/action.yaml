@@ -1,5 +1,5 @@
-name: "Build and Push Image"
-description: "This action to build and push docker image for CI"
+name: "Build and Push Image (PR only)"
+description: "This action to build and push docker image for CI in Pull Request only."
 inputs:
   image_description:
     description: "The description of the container"
