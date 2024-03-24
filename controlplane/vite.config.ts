@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    pool: 'forks',
     // Increase the timeout for integration tests
     testTimeout: 20_000,
     teardownTimeout: 10_000,
