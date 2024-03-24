@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/studio@0.74.3...studio@0.75.0) (2024-03-24)
+
+### Features
+
+* multi platform docker builds ([#665](https://github.com/wundergraph/cosmo/issues/665)) ([4c24d70](https://github.com/wundergraph/cosmo/commit/4c24d7075bd48cd946a1037bffc0c4fcaef74289)) (@StarpTech)
+
 ## [0.74.3](https://github.com/wundergraph/cosmo/compare/studio@0.74.2...studio@0.74.3) (2024-03-21)
 
 ### Bug Fixes
