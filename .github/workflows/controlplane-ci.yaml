@@ -56,6 +56,12 @@ jobs:
           KEYCLOAK_DATABASE_USER: postgres
         ports:
           - 8080:8080
+        options: >-
+          --health-cmd "curl -f http://localhost:8080/auth/realms/master"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 5
+          --health-start-period 30s
     steps:
       - uses: actions/checkout@v4
         with:
