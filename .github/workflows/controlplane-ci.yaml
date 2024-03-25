@@ -49,6 +49,7 @@ jobs:
         env:
           KEYCLOAK_ADMIN: admin
           KEYCLOAK_ADMIN_PASSWORD: changeme
+          KEYCLOAK_DATABASE_HOST: dev-file
         ports:
           - 8080:8080
         options: >-
