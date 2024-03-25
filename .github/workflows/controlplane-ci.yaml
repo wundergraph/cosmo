@@ -52,12 +52,7 @@ jobs:
           KEYCLOAK_DATABASE_HOST: dev-file
         ports:
           - 8080:8080
-        options: >-
-          --health-cmd "curl -f http://localhost:8080/auth/realms/master"
-          --health-interval 30s
-          --health-timeout 10s
-          --health-retries 5
-          --health-start-period 30s
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,6 +71,14 @@ jobs:
 
       - name: Build
         run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition build
+      
+      - name: Check if keycloak is up
+        uses: jtalk/url-health-check-action@v4
+        with:
+          url: http://localhost:8080/health/ready
+          max-attempts: 5
+          retry-delay: 5s
+          retry-all: false
 
       - name: Test
         run: pnpm run --filter controlplane test
