@@ -1,4 +1,4 @@
-FROM timbru31/java-node:11-jdk-18
+FROM --platform=${BUILDPLATFORM} timbru31/java-node:11-jdk-18
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY ./theme .
 
 RUN ./build.sh
 
-FROM bitnami/keycloak:22.0.5
+FROM --platform=${BUILDPLATFORM} bitnami/keycloak:22.0.5
 
 COPY --from=0 /app/target/*.jar /opt/bitnami/keycloak/providers/
 

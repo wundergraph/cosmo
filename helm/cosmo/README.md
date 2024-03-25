@@ -1,175 +1,165 @@
-# Cosmo Helm Chart
+# cosmo
 
-Navigating the stars with the Cosmo Helm Chart. This chart is a collection of subcharts that make up the Cosmo stack.
-You can use it to deploy a fully functional Cosmo stack for development or production use.
+For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-> [!TIP]
-> As part of an enterprise subscription, we provide exclusive documentation on how to effectively operate and run WunderGraph Cosmo on all common container platforms such as EKS, GKE, AKS, Fargate, and Google Cloud Run. This includes migration support and configuration guidance. Don't spend time tinkering with its internals; let us do the heavy lifting for you.
-> [Contact us](https://wundergraph.com/contact/sales) for more information.
+![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
-## Getting started
+This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
-### Prerequisites
+**Homepage:** <https://github.com/wundergraph/cosmo>
 
-- A running Kubernetes cluster, with support for:
-  - PersistentVolume (only development)
-  - Ingress Controller
-- [Helm 3.2.0+](https://helm.sh/docs/intro/install/) installed locally
+## Maintainers
 
-### Configuring the stack
+| Name | Email | Url |
+| ---- | ------ | --- |
+| Dustin Deus | <dustin@wundergraph.com> | <https://github.com/StarpTech> |
 
-The Cosmo Helm chart gives you a lot of freedom to configure the stack to suit your needs.
-Helm offers two primary ways to configure your stack, statically by passing a `values.yaml` file or dynamically by offering input via the CLI.
+## Requirements
 
-For your convenience, we included two different value presets:
+| Repository | Name | Version |
+|------------|------|---------|
+|  | cdn | ^0 |
+|  | controlplane | ^0 |
+|  | graphqlmetrics | ^0 |
+|  | otelcollector | ^0 |
+|  | router | ^0 |
+|  | studio | ^0 |
+| https://charts.bitnami.com/bitnami | clickhouse | ^5.0.2 |
+| https://charts.bitnami.com/bitnami | keycloak | ^17.3.1 |
+| https://charts.bitnami.com/bitnami | minio | 12.10.0 |
+| https://charts.bitnami.com/bitnami | postgresql | 12.8.0 |
+| https://charts.bitnami.com/bitnami | redis | 18.9.1 |
 
-1. [`values.full.yaml`](values.full.yaml) - Ready to deploy configuration. Include all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use only.
-2. [`values.yaml`](values.yaml). - Only includes the Cosmo Core components. You need to provide your own Clickhouse, PostgreSQL, Keycloak and update the configuration accordingly. See [`values.full.yaml`](values.full.yaml) for an example.
+## Values
 
-To apply the changes, run:
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| cdn.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
+| clickhouse.auth.password | string | `"changeme"` |  |
+| clickhouse.auth.username | string | `"default"` |  |
+| clickhouse.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.clickhouse.wundergraph.com/deployment"` |  |
+| clickhouse.image.tag | string | `"23.8.3"` |  |
+| clickhouse.initdbScripts."db-init.sql" | string | `"CREATE DATABASE cosmo;\n"` |  |
+| clickhouse.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
+| clickhouse.persistence.size | string | `"2Gi"` |  |
+| clickhouse.replicaCount | int | `1` |  |
+| clickhouse.shards | int | `1` |  |
+| clickhouse.zookeeper.enabled | bool | `false` |  |
+| controlplane.configuration.allowedOrigins[0] | string | `"http://studio.wundergraph.local"` |  |
+| controlplane.configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
+| controlplane.configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` |  |
+| controlplane.configuration.clickhouseDsn | string | `"http://default:changeme@cosmo-clickhouse:8123/?database=cosmo"` |  |
+| controlplane.configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&max_execution_time=60"` |  |
+| controlplane.configuration.databaseUrl | string | `"postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"` |  |
+| controlplane.configuration.debugSQL | bool | `false` |  |
+| controlplane.configuration.logLevel | string | `"debug"` |  |
+| controlplane.configuration.redisHost | string | `"cosmo-redis-master"` |  |
+| controlplane.configuration.redisPort | int | `6379` |  |
+| controlplane.configuration.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
+| global.cdn.enabled | bool | `true` |  |
+| global.cdn.port | int | `8787` |  |
+| global.cdn.webUrl | string | `"http://cdn.wundergraph.local"` |  |
+| global.clickhouse.enabled | bool | `true` |  |
+| global.controlplane.admissionJwtSecret | string | `"uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW"` |  |
+| global.controlplane.enabled | bool | `true` |  |
+| global.controlplane.jwtSecret | string | `"1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM"` |  |
+| global.controlplane.port | int | `3001` |  |
+| global.controlplane.webUrl | string | `"http://controlplane.wundergraph.local"` |  |
+| global.graphqlmetrics.enabled | bool | `true` |  |
+| global.graphqlmetrics.port | int | `4005` |  |
+| global.graphqlmetrics.webUrl | string | `"http://graphqlmetrics.wundergraph.local"` |  |
+| global.helmTests.enabled | bool | `false` |  |
+| global.keycloak.adminPassword | string | `"changeme"` |  |
+| global.keycloak.adminUser | string | `"admin"` |  |
+| global.keycloak.apiUrl | string | `"http://cosmo-keycloak:8080"` |  |
+| global.keycloak.clientId | string | `"studio"` |  |
+| global.keycloak.database | string | `"keycloak"` |  |
+| global.keycloak.databasePassword | string | `"changeme"` |  |
+| global.keycloak.databaseSchema | string | `"public"` |  |
+| global.keycloak.databaseUsername | string | `"postgres"` |  |
+| global.keycloak.enabled | bool | `true` |  |
+| global.keycloak.loginRealm | string | `"master"` |  |
+| global.keycloak.port | int | `8080` |  |
+| global.keycloak.realm | string | `"cosmo"` |  |
+| global.keycloak.webUrl | string | `"http://keycloak.wundergraph.local"` |  |
+| global.minio.enabled | bool | `true` |  |
+| global.otelcollector.enabled | bool | `true` |  |
+| global.otelcollector.port | int | `4318` |  |
+| global.otelcollector.webUrl | string | `"http://otelcollector.wundergraph.local"` |  |
+| global.postgresql.enabled | bool | `true` |  |
+| global.redis.enabled | bool | `true` |  |
+| global.router.enabled | bool | `false` | Disabled by default because we don't have a token yet |
+| global.router.port | int | `3002` |  |
+| global.router.webUrl | string | `"http://router.wundergraph.local"` |  |
+| global.seed | object | `{"apiKey":"cosmo_669b576aaadc10ee1ae81d9193425705","enabled":true,"firstName":"Foo","lastName":"Bar","organizationName":"WunderGraph","organizationSlug":"wundergraph","userEmail":"foo@wundergraph.com","userPassword":"wunder@123"}` | Enable this once to seed a new organization |
+| global.seed.apiKey | string | `"cosmo_669b576aaadc10ee1ae81d9193425705"` | Important: Remove this once the organization has been seeded and create a new secret |
+| global.studio.enabled | bool | `true` |  |
+| global.studio.port | int | `3000` |  |
+| global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
+| graphqlmetrics.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
+| ingress.annotations | object | `{}` |  |
+| ingress.enabled | bool | `true` |  |
+| keycloak.auth.adminPassword | string | `"changeme"` |  |
+| keycloak.auth.adminUser | string | `"admin"` |  |
+| keycloak.cache.enabled | bool | `false` |  |
+| keycloak.externalDatabase.database | string | `"keycloak"` |  |
+| keycloak.externalDatabase.host | string | `"cosmo-postgresql"` |  |
+| keycloak.externalDatabase.port | int | `5432` |  |
+| keycloak.externalDatabase.user | string | `"postgres"` |  |
+| keycloak.extraEnvVars[0].name | string | `"KEYCLOAK_EXTRA_ARGS"` |  |
+| keycloak.extraEnvVars[0].value | string | `"--import-realm --health-enabled=true"` |  |
+| keycloak.extraEnvVars[1].name | string | `"KEYCLOAK_DATABASE_PASSWORD"` |  |
+| keycloak.extraEnvVars[1].value | string | `"changeme"` |  |
+| keycloak.extraVolumeMounts[0].mountPath | string | `"/opt/bitnami/keycloak/data/import/realm.json"` |  |
+| keycloak.extraVolumeMounts[0].name | string | `"realm-config-volume"` |  |
+| keycloak.extraVolumeMounts[0].readOnly | bool | `true` |  |
+| keycloak.extraVolumeMounts[0].subPath | string | `"realm.json"` |  |
+| keycloak.extraVolumes[0].configMap.name | string | `"keycloak-realm"` |  |
+| keycloak.extraVolumes[0].name | string | `"realm-config-volume"` |  |
+| keycloak.image.pullPolicy | string | `"IfNotPresent"` |  |
+| keycloak.image.registry | string | `"ghcr.io"` |  |
+| keycloak.image.repository | string | `"wundergraph/cosmo/keycloak"` |  |
+| keycloak.image.tag | string | `"latest"` |  |
+| keycloak.podAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.keycloak.wundergraph.com/deployment"` |  |
+| keycloak.podAnnotations."kapp.k14s.io/change-rule.postgresql" | string | `"upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"` |  |
+| keycloak.postgresql.enabled | bool | `false` |  |
+| keycloak.production | bool | `false` |  |
+| keycloak.replicaCount | int | `1` |  |
+| keycloak.service.ports.http | int | `8080` |  |
+| keycloak.startupProbe.enabled | bool | `true` |  |
+| minio.auth.rootPassword | string | `"changeme"` |  |
+| minio.auth.rootUser | string | `"minio"` |  |
+| minio.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.minio.wundergraph.com/deployment"` |  |
+| minio.defaultBuckets | string | `"cosmo"` |  |
+| minio.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
+| minio.persistence.size | string | `"1Gi"` |  |
+| minio.service.ports.minio | int | `9000` |  |
+| minio.service.ports.minio_admin | int | `9001` |  |
+| otelcollector.configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
+| postgresql.auth.database | string | `"controlplane"` |  |
+| postgresql.auth.password | string | `"changeme"` |  |
+| postgresql.auth.username | string | `"postgres"` |  |
+| postgresql.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.postgresql.wundergraph.com/deployment"` |  |
+| postgresql.primary.initdb.password | string | `"changeme"` |  |
+| postgresql.primary.initdb.scripts."01_init_keycloak.sql" | string | `"-- Create the database for Keycloak\nCREATE DATABASE \"keycloak\";\n"` |  |
+| postgresql.primary.initdb.user | string | `"postgres"` |  |
+| postgresql.primary.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
+| postgresql.primary.persistence.size | string | `"1Gi"` |  |
+| postgresql.service.ports.postgres | int | `5432` |  |
+| redis.auth.enabled | bool | `false` |  |
+| redis.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.redis.wundergraph.com/deployment"` |  |
+| redis.commonConfiguration | string | `"# Enable AOF https://redis.io/topics/persistence#append-only-file\nappendonly yes\n# Enable RDB persistence (backup every 24h)\nsave \"86400 1\"\n# Disable maxmemory-policy https://redis.io/topics/lru-cache#eviction-policies\nmaxmemory-policy noeviction\n# Set maxmemory to 100mb\nmaxmemory 100mb"` |  |
+| redis.master.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
+| redis.master.persistence.enabled | bool | `true` |  |
+| redis.master.persistence.size | string | `"1Gi"` |  |
+| redis.replica.replicaCount | int | `0` |  |
+| router.configuration.cdnUrl | string | `"http://cosmo-cdn:8787"` | The URL of the Cosmo CDN. Should be internal to the cluster. |
+| router.configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |
+| router.configuration.graphApiToken | string | `""` |  |
+| router.configuration.graphqlMetricsCollectorUrl | string | `"http://cosmo-graphqlmetrics:4005"` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. |
+| router.configuration.logLevel | string | `"info"` | Log level of the router |
+| router.configuration.otelCollectorUrl | string | `"http://cosmo-otelcollector:4318"` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. |
+| router.deploymentStrategy.rollingUpdate.maxSurge | int | `1` |  |
+| router.deploymentStrategy.rollingUpdate.maxUnavailable | int | `0` |  |
+| router.terminationGracePeriodSeconds | int | `60` |  |
 
-```shell
-# Add bitnami repo to install dependencies like postgresql, keycloak and clickhouse
-helm repo add bitnami https://charts.bitnami.com/bitnami
-# Install the helm dependencies
-helm dependency build
-# Install the helm chart with the release name "cosmo" the name is important it used to reference services in values file.
-# --atomic ensures that the release is rolled back if it fails to install
-helm install cosmo --atomic -f values.full.yaml .
-```
-
-### Run Helm Tests
-
-The Helm chart comes with a set of tests that you can run to ensure that the stack is working as expected.
-Modify the `values.full.yaml` file to enable the tests:
-
-```yaml
-global:
-  helmTests:
-    enabled: true
-```
-
-and run:
-
-```shell
-helm test cosmo
-```
-
-you should see the following output after a few seconds:
-
-```shell
-❯ helm test cosmo
-NAME: cosmo cosmo
-LAST DEPLOYED: Tue Nov 21 22:50:40 2023
-NAMESPACE: default
-STATUS: deployed
-REVISION: 2
-TEST SUITE:     cosmo-controlplane-test-connection
-Last Started:   Tue Nov 21 22:51:07 2023
-Last Completed: Tue Nov 21 22:51:10 2023
-Phase:          Succeeded
-TEST SUITE:     cosmo-graphqlmetrics-test-connection
-Last Started:   Tue Nov 21 22:51:10 2023
-Last Completed: Tue Nov 21 22:51:14 2023
-Phase:          Succeeded
-TEST SUITE:     cosmo-otelcollector-test-connection
-Last Started:   Tue Nov 21 22:51:14 2023
-Last Completed: Tue Nov 21 22:51:18 2023
-Phase:          Succeeded
-TEST SUITE:     cosmo-studio-test-connection
-Last Started:   Tue Nov 21 22:51:18 2023
-Last Completed: Tue Nov 21 22:51:22 2023
-Phase:          Succeeded
-```
-
-### Removing stack after use
-
-In order to prevent any costs, you can remove the stack after use with:
-
-```shell
-helm uninstall cosmo
-```
-
-> [!CAUTION]
-> Volumes might not be automatically removed, so you may need to manually remove them with `kubectl delete pvc -l release=my-release`
-
-## Production use
-
-We **_strongly recommend_** that if you want to ship this helm chart to production you either:
-
-- Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Redis ([Aiven.io](https://aiven.io/redis)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/)), Minio ([Minio Cloud](https://min.io/)) or any other S3 compatible storage provider.
-- Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator),[Redis](https://artifacthub.io/packages/helm/bitnami/redis), [Keycloak](https://www.keycloak.org/operator/installation), [Minio](https://github.com/minio/operator) Kubernetes operator of your choice.
-- Use [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com/login) ✨
-
-## Configuration and installation details
-
-By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL, Redis, Keycloak and Minio.
-After you have provisioned the databases, you can set the right configuration in the `values.yaml` file and do a `helm upgrade` to apply the changes.
-The studio, controlplane, router and collectors are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
-
-## Seed your organization and account
-
-The seed is a special component that is used to seed your organization and admin account. It is only needed once and can be disabled after the initial setup. This user allows you to invite people or configure SSO. Ensure that your postgres and keycloak are running before you enable the seed to avoid any issues.
-Update the `global.seed` values in the `values.yaml` file accordingly and run:
-
-```shell
-helm upgrade cosmo ./cosmo \
-  --set global.seed.enabled=true
-```
-
-### Enable S3 storage
-
-The development preset [`values.full.yaml`](values.full.yaml) comes with a Minio instance that is used to store your persistent operations and router state. For production use, we recommend using a hosted version of Minio or any other S3 compatible storage provider.
-You need to update the `values.yaml` file accordingly:
-
-```yaml
-controlplane:
-  configuration:
-    s3StorageUrl: 'http://minio:changeme@cosmo-minio:9000/cosmo'
-```
-
-### CLI Key
-
-In the `global.seed.apiKey` of your `values.full.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
-
-```sh
-export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
-export COSMO_API_URL="http://<your-public-controlplane-url>"
-npx wgc -h
-```
-
-### Router
-
-The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name> --namespace <namespace>`, set the right configurations in the `values.full.yaml` file.
-
-```yaml
-router:
-  configuration:
-    graphApiToken: '<changeme>'
-```
-
-Run `helm upgrade cosmo -f values.full.yaml .` to apply the changes.
-
-## Kapp support
-
-The Helm chart is also compatible with [Kapp](https://get-kapp.io/). Kapp is an alternative way to manage Kubernetes resources. We make use of [Versioned Resources](https://carvel.dev/kapp/docs/v0.58.x/diff/#versioned-resources) to ensure that your Pod is restarted when your config changes.
-We also make use of [Apply Ordering](https://carvel.dev/kapp/docs/v0.58.x/apply-ordering/) to avoid unnecessary restarts of your Pods when the dependencies are not ready yet.
-
-You can render the Helm chart and manage the stack with Kapp with the following command:
-
-```shell
-kapp -y deploy -a cosmo -f <(helm template cosmo ./cosmo \
-	  --set global.seed.enabled=true
-```
-
-Delete the stack with:
-
-```shell
-kapp delete -a cosmo
-```
-
-### Tips
-
-It is strongly recommended to use immutable tags in a production environment. This ensures your deployment does not change automatically if the same tag is updated with a different image.
-You can use a tool like [kbld](https://get-kbld.io/) to make sure your images are resolved to immutable tags.
-WunderGraph will release a new chart updating its containers if a new version of the main container, significant changes, or critical vulnerabilities exist.

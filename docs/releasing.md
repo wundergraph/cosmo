@@ -28,11 +28,12 @@ Also for non NPM packages, Lerna is used to manage the versioning and releasing 
 
 ## Helm Charts
 
-1. Increase the version in the corresponding `Chart.yaml` file.
+1. Create a PR and increase the version in the corresponding `Chart.yaml` file.
 2. Update docs by running `make docs` in the `helm` directory.
-3. Deploy the new chart by running `publish-cosmo-chart` and `publish-router-chart` in the `helm` directory.
+3. Merge the PR and deploy the Charts through the [Release workflow](https://github.com/wundergraph/cosmo/actions/workflows/helm-release.yml). The version from the Chart.yml is picked automatically.
 
 ### Prerequisites
 
-- [helm](https://helm.sh/docs/intro/install/)
+- [helm](https://helm.sh/docs/intro/install/) Helm is a tool for managing Kubernetes charts.
+- [yq](https://mikefarah.gitbook.io/yq) yq is a lightweight and portable command-line YAML processor.
 - Write access to the gcr.io/wundergraph/cosmo repository
