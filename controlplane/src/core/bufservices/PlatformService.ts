@@ -1038,8 +1038,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           const labelMatchers = [joinLabel(label)];
 
+          let subgraphName = req.name;
+          if (await subgraphRepo.exists(req.name, req.namespace)) {
+            subgraphName = req.name + label.value;
+          }
+
           const subgraph = await subgraphRepo.create({
-            name: req.name,
+            name: subgraphName,
             namespace: req.namespace,
             namespaceId: namespace.id,
             createdBy: authContext.userId,
