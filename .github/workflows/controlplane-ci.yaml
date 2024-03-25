@@ -67,3 +67,21 @@ jobs:
         run: pnpm run --filter controlplane test
         env:
           DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
+
+  build_push_image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: .
+          dockerfile: controlplane/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: controlplane
+          image_description: "Cosmo Controlplane"

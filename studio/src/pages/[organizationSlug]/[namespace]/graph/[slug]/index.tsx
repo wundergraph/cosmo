@@ -331,7 +331,11 @@ const GraphOverviewPage: NextPageWithLayout = () => {
           </Card>
           <Alert
             variant={
-              emptyGraph ? "default" : validGraph ? "default" : "destructive"
+              emptyGraph
+                ? "destructive"
+                : validGraph
+                ? "default"
+                : "destructive"
             }
             className="scrollbar-custom max-h-[15rem] w-full overflow-auto"
           >
