@@ -46,9 +46,6 @@ jobs:
           --health-retries 5
       keycloak:
         image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
-        credentials:
-          username: ${{secrets.DOCKER_USERNAME}}
-          password: ${{secrets.DOCKER_PASSWORD}}
         env:
           KEYCLOAK_ADMIN: admin
           KEYCLOAK_ADMIN_PASSWORD: changeme
