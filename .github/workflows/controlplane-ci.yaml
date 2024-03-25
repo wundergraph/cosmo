@@ -44,6 +44,21 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      keycloak:
+        image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
+        credentials:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
+        env:
+          KEYCLOAK_ADMIN: admin
+          KEYCLOAK_ADMIN_PASSWORD: changeme
+          KEYCLOAK_DATABASE_PORT: 5432
+          KEYCLOAK_DATABASE_HOST: postgres
+          KEYCLOAK_DATABASE_NAME: keycloak
+          KEYCLOAK_DATABASE_PASSWORD: changeme
+          KEYCLOAK_DATABASE_USER: postgres
+        ports:
+          - 8080:8080
     steps:
       - uses: actions/checkout@v4
         with:

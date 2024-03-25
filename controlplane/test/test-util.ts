@@ -140,7 +140,7 @@ export const SetupKeycloak = async ({
   realmName: string;
 }) => {
   await keycloakClient.authenticateClient();
-  const name = await keycloakClient.client.realms.create({
+  await keycloakClient.client.realms.create({
     realm: realmName,
     enabled: true,
     displayName: realmName,
