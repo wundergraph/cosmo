@@ -85,7 +85,7 @@ export const enrichLogger = (
   return newLogger;
 };
 
-export function createInternalLabel(): Label {
+export function createRandomInternalLabel(): Label {
   return {
     key: '_internal',
     value: uid(6),
