@@ -190,7 +190,7 @@ import {
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
-  createInternalLabel,
+  createRandomInternalLabel,
   enrichLogger,
   extractOperationNames,
   formatSubscriptionProtocol,
@@ -1034,13 +1034,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          const label = createInternalLabel();
+          const label = createRandomInternalLabel();
 
           const labelMatchers = [joinLabel(label)];
 
           let subgraphName = req.name;
           if (await subgraphRepo.exists(req.name, req.namespace)) {
-            subgraphName = req.name + label.value;
+            subgraphName = `${req.name}-${label.value}`;
           }
 
           const subgraph = await subgraphRepo.create({
