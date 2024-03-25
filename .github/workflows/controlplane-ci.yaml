@@ -78,7 +78,7 @@ jobs:
           url: http://localhost:8080/health/ready
           max-attempts: 5
           retry-delay: 5s
-          retry-all: false
+          retry-all: true
 
       - name: Test
         run: pnpm run --filter controlplane test
