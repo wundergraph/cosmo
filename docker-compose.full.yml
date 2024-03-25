@@ -134,7 +134,6 @@ services:
 
   keycloak:
     image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
-    platform: linux/amd64
     environment:
       KEYCLOAK_EXTRA_ARGS: '--import-realm --health-enabled=true'
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
@@ -205,7 +204,6 @@ services:
 
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
-    platform: linux/amd64
     environment:
       CLICKHOUSE_DSN: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}'
       INGEST_JWT_SECRET: ${INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
@@ -222,7 +220,6 @@ services:
 
   otelcollector:
     image: ghcr.io/wundergraph/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
-    platform: linux/amd64
     environment:
       CLICKHOUSE_ENDPOINT: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4'
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
@@ -238,7 +235,6 @@ services:
 
   controlplane:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
     environment:
       DB_URL: 'postgresql://postgres:changeme@postgres:5432/controlplane'
       PORT: 3001
@@ -288,7 +284,6 @@ services:
 
   router:
     image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
-    platform: linux/amd64
     environment:
       LOG_LEVEL: info
       CORS_ALLOW_CREDENTIALS: true
@@ -313,7 +308,6 @@ services:
 
   studio:
     image: ghcr.io/wundergraph/cosmo/studio:${DC_STUDIO_VERSION:-latest}
-    platform: linux/amd64
     environment:
       NEXT_PUBLIC_COSMO_CP_URL: http://localhost:3001
       NEXT_PUBLIC_COSMO_STUDIO_URL: http://localhost:3000
@@ -327,7 +321,6 @@ services:
 
   seed:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
     command:
       - '/app/dist/bin/seed.js'
     environment:
@@ -356,7 +349,6 @@ services:
 
   clickhouse-migration:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
     command: node dist/bin/ch-migrate.js
     depends_on:
       - clickhouse
@@ -370,7 +362,6 @@ services:
 
   database-migration:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
     command: node dist/bin/db-migrate.js
     depends_on:
       - postgres
