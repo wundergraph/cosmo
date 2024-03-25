@@ -49,11 +49,6 @@ jobs:
         env:
           KEYCLOAK_ADMIN: admin
           KEYCLOAK_ADMIN_PASSWORD: changeme
-          KEYCLOAK_DATABASE_PORT: 5432
-          KEYCLOAK_DATABASE_HOST: postgres
-          KEYCLOAK_DATABASE_NAME: keycloak
-          KEYCLOAK_DATABASE_PASSWORD: changeme
-          KEYCLOAK_DATABASE_USER: postgres
         ports:
           - 8080:8080
         options: >-
