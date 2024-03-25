@@ -678,7 +678,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			return
 		}
 	}
-
 	resolveCtx := &resolve.Context{
 		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
@@ -688,6 +687,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
 		TracingOptions:  operationCtx.traceOptions,
 		Extensions:      operationCtx.extensions,
+	}
+	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
+		resolveCtx.InitialPayload = operationCtx.initialPayload
 	}
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, buildRequestContext(nil, h.r, operationCtx, h.logger)))
 	if h.graphqlHandler.authorizer != nil {
