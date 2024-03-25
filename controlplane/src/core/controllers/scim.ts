@@ -61,89 +61,98 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
     return res.code(200).send('SCIM');
   });
 
-  fastify.get<{ Querystring: { filter?: string; start_index: number; count?: number } }>('/Users', async (req, res) => {
-    const authContext = req.authContext;
+  fastify.get<{ Querystring: { filter?: string; start_index?: number; count?: number } }>(
+    '/Users',
+    async (req, res) => {
+      const authContext = req.authContext;
 
-    const filter = req.query?.filter;
-    const startIndex = req.query?.start_index;
-    const count = req.query?.count;
+      const filter = req.query?.filter;
+      const startIndex = req.query?.start_index;
+      const count = req.query?.count;
 
-    const users: { id: string; email: string; userName: string; active: boolean }[] = [];
+      const users: { id: string; email: string; userName: string; active: boolean }[] = [];
 
-    if (filter) {
-      // filter=userName eq "${email}"
-      const emailFilters = filter.split(' ');
-      if (emailFilters.length !== 3) {
-        return res.code(400).send(
-          ScimError({
-            detail: 'Wrong filter value.',
-            status: 400,
-          }),
-        );
-      }
-      const emailFilter = emailFilters[2];
-      const email = emailFilter.replaceAll('"', '');
-      const user = await opts.organizationRepository.getOrganizationMemberByEmail({
-        organizationID: authContext.organizationId,
-        userEmail: email,
-      });
-      if (!user) {
-        return res.code(404).send(
-          ScimError({
-            detail: 'User not found',
-            status: 404,
-          }),
-        );
-      }
-      const keycloakUsers = await opts.keycloakClient.client.users.find({
-        realm: opts.keycloakRealm,
-        email: user.email,
-      });
-      if (keycloakUsers.length === 0) {
-        return res.code(404).send(
-          ScimError({
-            detail: 'User not found',
-            status: 404,
-          }),
-        );
-      }
-      users.push({
-        id: user.userID,
-        email: user.email,
-        userName: user.email,
-        active: keycloakUsers[0].enabled || true,
-      });
-    } else {
-      const members = await opts.organizationRepository.getMembers({
-        organizationID: authContext.organizationId,
-        offset: startIndex - 1,
-        limit: count,
-      });
-      for (const member of members) {
+      if (filter) {
+        // filter=userName eq "${email}"
+        const emailFilters = filter.split(' ');
+        if (emailFilters.length !== 3) {
+          return res.code(400).send(
+            ScimError({
+              detail: 'Wrong filter value.',
+              status: 400,
+            }),
+          );
+        }
+        const emailFilter = emailFilters[2];
+        const email = emailFilter.replaceAll('"', '');
+        const user = await opts.organizationRepository.getOrganizationMemberByEmail({
+          organizationID: authContext.organizationId,
+          userEmail: email,
+        });
+        if (!user) {
+          return res.code(404).send(
+            ScimError({
+              detail: 'User not found',
+              status: 404,
+            }),
+          );
+        }
         const keycloakUsers = await opts.keycloakClient.client.users.find({
           realm: opts.keycloakRealm,
-          email: member.email,
+          email: user.email,
         });
         if (keycloakUsers.length === 0) {
-          continue;
+          return res.code(404).send(
+            ScimError({
+              detail: 'User not found',
+              status: 404,
+            }),
+          );
         }
         users.push({
-          id: member.userID,
-          email: member.email,
-          userName: member.email,
+          id: user.userID,
+          email: user.email,
+          userName: user.email,
           active: keycloakUsers[0].enabled || true,
         });
+      } else {
+        const filters: { organizationID: string; startIndex?: number; count?: number } = {
+          organizationID: authContext.organizationId,
+        };
+        if (startIndex !== undefined) {
+          // subtracting 1 as they send 1 for the 1st index
+          filters.startIndex = startIndex - 1;
+        }
+        if (count !== undefined) {
+          filters.count = count;
+        }
+        const members = await opts.organizationRepository.getMembers(filters);
+        for (const member of members) {
+          const keycloakUsers = await opts.keycloakClient.client.users.find({
+            realm: opts.keycloakRealm,
+            email: member.email,
+          });
+          if (keycloakUsers.length === 0) {
+            continue;
+          }
+          users.push({
+            id: member.userID,
+            email: member.email,
+            userName: member.email,
+            active: keycloakUsers[0].enabled || true,
+          });
+        }
       }
-    }
 
-    return res.code(200).send({
-      schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
-      totalResults: users.length,
-      startIndex,
-      itemsPerPage: users.length,
-      Resources: users,
-    });
-  });
+      return res.code(200).send({
+        schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
+        totalResults: users.length,
+        startIndex,
+        itemsPerPage: users.length,
+        Resources: users,
+      });
+    },
+  );
 
   fastify.get('/Users/:userID', async (req: FastifyRequest<{ Params: { userID: string } }>, res) => {
     const authContext = req.authContext;
@@ -186,7 +195,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         middleName: '',
         familyName: keycloakUsers[0].lastName || '',
       },
-      active: keycloakUsers[0].enabled || true,
+      active: keycloakUsers[0].enabled,
       emails: [
         {
           primary: true,
@@ -429,11 +438,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           await opts.keycloakClient.updateKeycloakUser({
             id: userID,
             enabled: active,
+            realm: opts.keycloakRealm,
           });
         }
       }
 
-      return res.code(204);
+      return res.code(204).send();
     },
   );
 

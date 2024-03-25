@@ -48,6 +48,7 @@ export default class Keycloak {
     groups,
     firstName,
     lastName,
+    id,
   }: {
     email: string;
     realm?: string;
@@ -56,6 +57,7 @@ export default class Keycloak {
     groups?: string[];
     firstName?: string;
     lastName?: string;
+    id?: string;
   }): Promise<string> {
     const createUserResp = await this.client.users.create({
       email,
@@ -73,6 +75,7 @@ export default class Keycloak {
           temporary: isPasswordTemp,
         },
       ],
+      id,
     });
     return createUserResp.id;
   }
