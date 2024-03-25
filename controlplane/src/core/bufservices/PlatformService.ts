@@ -998,6 +998,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
+          if (await subgraphRepo.exists(req.name, req.namespace)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `The subgraph ${req.name} being created for the monograph already exists in the namespace`,
+              },
+            };
+          }
+
           if (!isValidUrl(req.routingUrl)) {
             return {
               response: {
@@ -1038,13 +1047,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           const labelMatchers = [joinLabel(label)];
 
-          let subgraphName = req.name;
-          if (await subgraphRepo.exists(req.name, req.namespace)) {
-            subgraphName = `${req.name}-${label.value}`;
-          }
-
           const subgraph = await subgraphRepo.create({
-            name: subgraphName,
+            name: req.name,
             namespace: req.namespace,
             namespaceId: namespace.id,
             createdBy: authContext.userId,
