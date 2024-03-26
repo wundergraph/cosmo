@@ -39,17 +39,16 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
 
   const { authenticator, userTestData } = createTestAuthenticator();
 
-  const realm = 'test';
-  const loginRealm = 'master';
-  const apiUrl = 'http://localhost:8080';
-  const clientId = 'studio';
-  const adminUser = 'admin';
-  const adminPassword = 'changeme';
+  const realm = process.env.KC_TEST_REALM || '';
+  const apiUrl = process.env.KC_TEST_API_URL || '';
+  const clientId = process.env.KC_TEST_CLIENT_ID || '';
+  const adminUser = process.env.KC_TEST_ADMIN_USER || '';
+  const adminPassword = process.env.KC_TEST_ADMIN_PASSWORD || '';
   const webBaseUrl = 'http://localhost:3000';
 
   const keycloakClient = new Keycloak({
     apiUrl,
-    realm: loginRealm,
+    realm,
     clientId,
     adminUser,
     adminPassword,
@@ -127,6 +126,7 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
     blobStorage,
     baseAddress: addr,
     keycloakClient,
+    realm,
   };
 };
 
@@ -140,12 +140,6 @@ export const SetupKeycloak = async ({
   realmName: string;
 }) => {
   await keycloakClient.authenticateClient();
-  await keycloakClient.client.realms.create({
-    realm: realmName,
-    enabled: true,
-    displayName: realmName,
-    registrationEmailAsUsername: true,
-  });
   const id = await keycloakClient.addKeycloakUser({
     email: userTestData.email,
     realm: realmName,
@@ -157,18 +151,6 @@ export const SetupKeycloak = async ({
     realm: realmName,
     userID: id,
     organizationSlug: userTestData.organizationSlug,
-  });
-};
-
-export const removeKeycloakSetup = async ({
-  keycloakClient,
-  realmName,
-}: {
-  keycloakClient: Keycloak;
-  realmName: string;
-}) => {
-  await keycloakClient.client.realms.del({
-    realm: realmName,
   });
 };
 

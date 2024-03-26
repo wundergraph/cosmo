@@ -44,14 +44,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      keycloak:
-        image: ghcr.io/wundergraph/cosmo/keycloak:latest
-        env:
-          KEYCLOAK_ADMIN: admin
-          KEYCLOAK_ADMIN_PASSWORD: changeme
-          KEYCLOAK_DATABASE_HOST: dev-file
-        ports:
-          - 8080:8080
 
     steps:
       - uses: actions/checkout@v4
@@ -71,19 +63,15 @@ jobs:
 
       - name: Build
         run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition build
-      
-      - name: Check if keycloak is up
-        uses: jtalk/url-health-check-action@v4
-        with:
-          url: http://localhost:8080/health/ready
-          max-attempts: 15
-          retry-delay: 30s
-          retry-all: true
-
       - name: Test
         run: pnpm run --filter controlplane test
         env:
           DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
+          KC_TEST_REALM: ${{secrets.KC_TEST_REALM}}
+          KC_TEST_CLIENT_ID: ${{secrets.KC_TEST_CLIENT_ID}}
+          KC_TEST_ADMIN_USER: ${{secrets.KC_TEST_ADMIN_USER}}
+          KC_TEST_ADMIN_PASSWORD: ${{secrets.KC_TEST_ADMIN_PASSWORD}}
+          KC_TEST_API_URL: ${{secrets.KC_TEST_API_URL}}
 
   build_push_image:
     runs-on: ubuntu-latest

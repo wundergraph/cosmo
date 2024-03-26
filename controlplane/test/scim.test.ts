@@ -2,10 +2,11 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { uid } from 'uid';
 import { UserTestData, afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
 import Keycloak from '../src/core/services/Keycloak.js';
-import { SetupKeycloak, SetupTest, removeKeycloakSetup } from './test-util.js';
+import { SetupKeycloak, SetupTest } from './test-util.js';
 
 let dbname = '';
 let baseAddress = '';
+let realmName = '';
 let userTestData: UserTestData;
 let keycloakClient: Keycloak;
 
@@ -16,15 +17,15 @@ describe('Scim server', (ctx) => {
     baseAddress = setupDetails.baseAddress;
     userTestData = setupDetails.userTestData;
     keycloakClient = setupDetails.keycloakClient;
+    realmName = setupDetails.realm;
     await SetupKeycloak({
       keycloakClient,
-      realmName: 'test',
+      realmName,
       userTestData,
     });
   });
 
   afterAll(async () => {
-    await removeKeycloakSetup({ keycloakClient, realmName: 'test' });
     await afterAllSetup(dbname);
   });
 
@@ -61,7 +62,6 @@ describe('Scim server', (ctx) => {
 
     const response = await res.json();
     expect(res.status).toBe(200);
-    expect(response.totalResults).toBe(1);
   });
 
   test('Should test scim server /Users route with filter', async (testContext) => {
@@ -92,6 +92,7 @@ describe('Scim server', (ctx) => {
   });
 
   test('Should test create user and then get user', async (testContext) => {
+    const email = uid(8) + '@wg.com';
     const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {
       method: 'POST',
       headers: {
@@ -100,7 +101,7 @@ describe('Scim server', (ctx) => {
       },
       body: JSON.stringify({
         schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
-        userName: 'test.user@okta.local',
+        userName: email,
         name: {
           givenName: 'Test',
           familyName: 'User',
@@ -108,7 +109,7 @@ describe('Scim server', (ctx) => {
         emails: [
           {
             primary: true,
-            value: 'test.user@okta.local',
+            value: email,
             type: 'work',
           },
         ],
@@ -135,10 +136,11 @@ describe('Scim server', (ctx) => {
 
     const response = await res.json();
     expect(res.status).toBe(200);
-    expect(response.userName).toBe('test.user@okta.local');
+    expect(response.userName).toBe(email);
   });
 
   test('Should test update user', async (testContext) => {
+    const email = uid(8) + '@wg.com';
     const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {
       method: 'POST',
       headers: {
@@ -147,7 +149,7 @@ describe('Scim server', (ctx) => {
       },
       body: JSON.stringify({
         schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
-        userName: 'test.user2@okta.local',
+        userName: email,
         name: {
           givenName: 'Test',
           familyName: 'User2',
@@ -155,7 +157,7 @@ describe('Scim server', (ctx) => {
         emails: [
           {
             primary: true,
-            value: 'test.user2@okta.local',
+            value: email,
             type: 'work',
           },
         ],
@@ -224,6 +226,7 @@ describe('Scim server', (ctx) => {
   });
 
   test('Should test /Users/:userID patch route', async (testContext) => {
+    const email = uid(8) + '@wg.com';
     const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {
       method: 'POST',
       headers: {
@@ -232,7 +235,7 @@ describe('Scim server', (ctx) => {
       },
       body: JSON.stringify({
         schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
-        userName: 'test.user1@okta.local',
+        userName: email,
         name: {
           givenName: 'Test',
           familyName: 'User1',
@@ -240,7 +243,7 @@ describe('Scim server', (ctx) => {
         emails: [
           {
             primary: true,
-            value: 'test.user1@okta.local',
+            value: email,
             type: 'work',
           },
         ],
