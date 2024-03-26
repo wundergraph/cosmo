@@ -44,7 +44,7 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
   const apiUrl = 'http://localhost:8080';
   const clientId = 'studio';
   const adminUser = 'admin';
-  const adminPassword = 'admin';
+  const adminPassword = 'changeme';
   const webBaseUrl = 'http://localhost:3000';
 
   const keycloakClient = new Keycloak({
