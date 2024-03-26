@@ -7,4 +7,4 @@ unzip keycloak-${KC_VERSION}.zip
 
 cd keycloak-${KC_VERSION}
 
-KEYCLOAK_ADMIN=admin KEYCLOAK_ADMIN_PASSWORD=admin ./bin/kc.sh start
+KEYCLOAK_ADMIN=admin KEYCLOAK_ADMIN_PASSWORD=admin ./bin/kc.sh start-dev

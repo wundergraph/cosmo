@@ -70,7 +70,7 @@ jobs:
           java-version: '20.0.2'
 
       - name: Setup Keycloak
-        run: .github/scripts/setup-keycloak.sh
+        run: nohup .github/scripts/setup-keycloak.sh &
 
       - name: Test
         run: pnpm run --filter controlplane test
