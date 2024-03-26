@@ -14,7 +14,7 @@ SELECT
     ResourceAttributes[ 'service.instance.id' ] as ServiceInstanceID,
     toLowCardinality(Attributes[ 'wg.router.cluster.name' ]) as ClusterName,
     toLowCardinality(ResourceAttributes[ 'host.name' ]) as Hostname,
-    MetricName as MetricName,
+    toLowCardinality(MetricName) as MetricName,
     sum(Value) as MetricValue
 FROM
     cosmo.otel_metrics_sum
