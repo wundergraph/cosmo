@@ -45,10 +45,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       keycloak:
-        image: ghcr.io/wundergraph/cosmo/keycloak:latest
+        image: quay.io/keycloak/keycloak:22.0.4
         env:
           KEYCLOAK_ADMIN: admin
-          KEYCLOAK_ADMIN_PASSWORD: changeme
+          KEYCLOAK_ADMIN_PASSWORD: admin
           KEYCLOAK_DATABASE_HOST: dev-file
         ports:
           - 8080:8080
