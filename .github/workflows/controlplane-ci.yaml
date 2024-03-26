@@ -45,10 +45,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       keycloak:
-        image: quay.io/keycloak/keycloak:22.0.4
+        image: ghcr.io/wundergraph/cosmo/keycloak:latest
         env:
           KEYCLOAK_ADMIN: admin
-          KEYCLOAK_ADMIN_PASSWORD: admin
+          KEYCLOAK_ADMIN_PASSWORD: changeme
           KEYCLOAK_DATABASE_HOST: dev-file
         ports:
           - 8080:8080
@@ -76,7 +76,7 @@ jobs:
         uses: jtalk/url-health-check-action@v4
         with:
           url: http://localhost:8080/health/ready
-          max-attempts: 10
+          max-attempts: 15
           retry-delay: 30s
           retry-all: true
 
