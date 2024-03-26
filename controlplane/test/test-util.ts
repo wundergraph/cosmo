@@ -79,8 +79,8 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
       platformWebhooks,
       webBaseUrl,
       slack: {
-        clientID: '',
-        clientSecret: '',
+        clientID: '1',
+        clientSecret: 'test',
       },
       cdnBaseUrl: 'http://localhost:11000',
       admissionWebhookJWTSecret: 'secret',
