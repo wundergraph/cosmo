@@ -605,9 +605,9 @@ export class OrganizationRepository {
       }
 
       if (graph.supportsFederation) {
-        monographIds.push(graph.id);
-      } else {
         federatedGraphIds.push(graph.id);
+      } else {
+        monographIds.push(graph.id);
       }
     }
 
@@ -922,9 +922,9 @@ export class OrganizationRepository {
             }
 
             if (graph.supportsFederation) {
-              monographIds.push(graph.id);
-            } else {
               federatedGraphIds.push(graph.id);
+            } else {
+              monographIds.push(graph.id);
             }
           }
 
