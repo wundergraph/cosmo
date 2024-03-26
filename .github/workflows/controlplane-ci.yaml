@@ -64,6 +64,10 @@ jobs:
       - name: Build
         run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition build
 
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+
       - name: Setup Keycloak
         run: .github/scripts/setup-keycloak.sh
 
