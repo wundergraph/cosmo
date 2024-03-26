@@ -67,7 +67,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '21'
+          java-version: '20.0.2'
 
       - name: Setup Keycloak
         run: .github/scripts/setup-keycloak.sh
