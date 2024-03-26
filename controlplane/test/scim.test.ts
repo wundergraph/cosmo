@@ -2,7 +2,7 @@ import { uid } from 'uid';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import Keycloak from '../src/core/services/Keycloak.js';
 import { UserTestData, afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
-import { SetupKeycloak, SetupTest, removeUsers } from './test-util.js';
+import { SetupKeycloak, SetupTest, removeKeycloakSetup } from './test-util.js';
 
 let dbname = '';
 let baseAddress = '';
@@ -10,7 +10,6 @@ let realmName = '';
 let userTestData: UserTestData;
 let keycloakClient: Keycloak;
 let server: any;
-const userIds: string[] = [];
 
 describe('Scim server', (ctx) => {
   beforeAll(async () => {
@@ -22,20 +21,15 @@ describe('Scim server', (ctx) => {
     keycloakClient = setupDetails.keycloakClient;
     realmName = setupDetails.realm;
     server = setupDetails.server;
-    const id = await SetupKeycloak({
+    await SetupKeycloak({
       keycloakClient,
       realmName,
       userTestData,
     });
-    userIds.push(id);
   });
 
   afterAll(async () => {
-    await removeUsers({
-      realmName,
-      keycloakClient,
-      userIds,
-    });
+    await removeKeycloakSetup({ keycloakClient, realmName });
     await server?.close();
     await afterAllSetup(dbname);
   });
@@ -73,6 +67,7 @@ describe('Scim server', (ctx) => {
 
     const response = await res.json();
     expect(res.status).toBe(200);
+    expect(response.totalResults).toBe(1);
   });
 
   test('Should test scim server /Users route with filter', async (testContext) => {
@@ -100,6 +95,7 @@ describe('Scim server', (ctx) => {
 
     const response = await res.json();
     expect(res.status).toBe(200);
+    expect(response.userName).toBe(userTestData.email);
   });
 
   test('Should test create user and then get user', async (testContext) => {
@@ -136,7 +132,6 @@ describe('Scim server', (ctx) => {
     const createUserBody = await createUserResp.json();
 
     expect(createUserResp.status).toBe(201);
-    userIds.push(createUserBody.id);
 
     const res = await fetch(`${baseAddress}/scim/v2/Users/${createUserBody.id}`, {
       method: 'GET',
@@ -183,7 +178,6 @@ describe('Scim server', (ctx) => {
     });
 
     const createUserBody = await createUserResp.json();
-    userIds.push(createUserBody.id);
 
     expect(createUserResp.status).toBe(201);
 
@@ -270,7 +264,6 @@ describe('Scim server', (ctx) => {
     });
 
     const createUserBody = await createUserResp.json();
-    userIds.push(createUserBody.id);
 
     expect(createUserResp.status).toBe(201);
 
