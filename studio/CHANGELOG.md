@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.1](https://github.com/wundergraph/cosmo/compare/studio@0.75.0...studio@0.75.1) (2024-03-26)
+
+### Bug Fixes
+
+* conflicting subgraph name on monograph creation ([#668](https://github.com/wundergraph/cosmo/issues/668)) ([1b57233](https://github.com/wundergraph/cosmo/commit/1b57233f6f91b4219e60d975a8f7727129bd9ea6)) (@thisisnithin)
+
 # [0.75.0](https://github.com/wundergraph/cosmo/compare/studio@0.74.3...studio@0.75.0) (2024-03-24)
 
 ### Features
