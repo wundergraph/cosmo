@@ -1,31 +1,42 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { uid } from 'uid';
-import { UserTestData, afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import Keycloak from '../src/core/services/Keycloak.js';
-import { SetupKeycloak, SetupTest } from './test-util.js';
+import { UserTestData, afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
+import { SetupKeycloak, SetupTest, removeUsers } from './test-util.js';
 
 let dbname = '';
 let baseAddress = '';
 let realmName = '';
 let userTestData: UserTestData;
 let keycloakClient: Keycloak;
+let server: any;
+const userIds: string[] = [];
 
 describe('Scim server', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
+
     const setupDetails = await SetupTest({ dbname });
     baseAddress = setupDetails.baseAddress;
     userTestData = setupDetails.userTestData;
     keycloakClient = setupDetails.keycloakClient;
     realmName = setupDetails.realm;
-    await SetupKeycloak({
+    server = setupDetails.server;
+    const id = await SetupKeycloak({
       keycloakClient,
       realmName,
       userTestData,
     });
+    userIds.push(id);
   });
 
   afterAll(async () => {
+    await removeUsers({
+      realmName,
+      keycloakClient,
+      userIds,
+    });
+    await server?.close();
     await afterAllSetup(dbname);
   });
 
@@ -125,6 +136,7 @@ describe('Scim server', (ctx) => {
     const createUserBody = await createUserResp.json();
 
     expect(createUserResp.status).toBe(201);
+    userIds.push(createUserBody.id);
 
     const res = await fetch(`${baseAddress}/scim/v2/Users/${createUserBody.id}`, {
       method: 'GET',
@@ -171,6 +183,7 @@ describe('Scim server', (ctx) => {
     });
 
     const createUserBody = await createUserResp.json();
+    userIds.push(createUserBody.id);
 
     expect(createUserResp.status).toBe(201);
 
@@ -257,6 +270,7 @@ describe('Scim server', (ctx) => {
     });
 
     const createUserBody = await createUserResp.json();
+    userIds.push(createUserBody.id);
 
     expect(createUserResp.status).toBe(201);
 

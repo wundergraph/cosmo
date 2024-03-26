@@ -152,6 +152,24 @@ export const SetupKeycloak = async ({
     userID: id,
     organizationSlug: userTestData.organizationSlug,
   });
+  return id;
+};
+
+export const removeUsers = async ({
+  userIds,
+  keycloakClient,
+  realmName,
+}: {
+  userIds: string[];
+  keycloakClient: Keycloak;
+  realmName: string;
+}) => {
+  for (const id of userIds) {
+    await keycloakClient.client.users.del({
+      realm: realmName,
+      id,
+    });
+  }
 };
 
 export const createSubgraph = async (
