@@ -66,6 +66,7 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
+          distribution: 'zulu'
           java-version: '21'
 
       - name: Setup Keycloak
