@@ -1076,6 +1076,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		TracerProvider:                         r.tracerProvider,
 		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:               r.subgraphErrorPropagation,
+		EngineRequestHooks:                     NewEngineRequestHooks(ro.metricStore),
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
