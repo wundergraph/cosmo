@@ -69,7 +69,11 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
       toolbar={
         <Toolbar className="w-auto flex-nowrap py-0">
           <div className="mr-auto" />
-          <SDLViewerActions sdl={data?.sdl ?? ""} size="icon-sm" />
+          <SDLViewerActions
+            sdl={data?.sdl ?? ""}
+            size="icon-sm"
+            targetName={name}
+          />
           <SchemaSettings size="icon-sm" />
         </Toolbar>
       }
