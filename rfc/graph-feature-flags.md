@@ -240,3 +240,68 @@ npx wgc subgraph publish products --schema ../demo/subgraphs/products/products.g
 ```
 
 Now this feature is available to all users of the staging environment.
+
+## Alternative ways to expose & enable Feature Flags
+
+It would also be possible to make all available feature flag introspectable using the `__features` field in the `Query` type.
+This would allow clients, like Cosmo Studio, to show all available feature flags with a description and a toggle to enable or disable them.
+
+```graphql
+type Query {
+  __features: [FeatureFlag!]!
+}
+
+type FeatureFlag {
+  name: String!
+  subgraph: String!
+  description: String!
+}
+```
+
+Query:
+
+```graphql
+{
+  __features {
+    name
+    subgraph
+    description
+  }
+}
+```
+
+Example response:
+
+```json
+{
+  "__features": [
+    {
+      "name": "experimental",
+      "subgraph": "products",
+      "description": "Enables the experimental feature for the products Subgraph"
+    }
+  ]
+}
+```
+
+## Set feature flags using the extensions field in the GraphQL Request
+
+It would also be possible to set feature flags using the `extensions` field in the GraphQL Request.
+This could be an alternative to setting feature flags using cookies or headers:
+
+```graphql
+query {
+  products {
+    id
+    name
+  }
+}
+
+{
+  "extensions": {
+    "featureFlags": {
+      "products.experimental": true
+    }
+  }
+}
+```
