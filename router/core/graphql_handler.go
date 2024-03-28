@@ -145,7 +145,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = h.configureRateLimiting(ctx)
 
-	defer propagateSubgraphErrors(ctx)
+	defer propagateSubgraphErrors(ctx, requestLogger)
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
@@ -408,9 +408,16 @@ func addErrorToSpan(ctx context.Context, err error) {
 	rtrace.AttachErrToSpan(span, err)
 }
 
-func propagateSubgraphErrors(ctx *resolve.Context) {
+func propagateSubgraphErrors(ctx *resolve.Context, requestLogger *zap.Logger) {
+	// Get subgraph errors
 	err := ctx.SubgraphErrors()
+	// Add error to span
 	addErrorToSpan(ctx.Context(), err)
+	// Check if there are subgraph errors
+	if err != nil {
+		// Log errors to know that errors occurred
+		requestLogger.Error("error detected in subgraphs", zap.Error(err))
+	}
 }
 
 func writeRequestErrors(ctx context.Context, r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphql.RequestErrors, requestLogger *zap.Logger) {
