@@ -24,6 +24,10 @@ spec:
       name: "{{ include "controlplane.fullname" . }}-database-migration"
       labels:
         {{- include "controlplane.labels" . | nindent 8 }}
+      {{- with .Values.jobPodAnnotations }}
+      annotations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       restartPolicy: OnFailure
       {{- with .Values.imagePullSecrets }}
