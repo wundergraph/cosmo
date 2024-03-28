@@ -6,9 +6,9 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_by_operation_quarter_hourly_
         'UTC'
     ) as Timestamp,
     SpanAttributes [ 'wg.operation.name' ] as OperationName,
-    SpanAttributes [ 'wg.operation.type' ] as OperationType,
+    toLowCardinality(SpanAttributes [ 'wg.operation.type' ]) as OperationType,
     SpanAttributes [ 'wg.federated_graph.id'] as FederatedGraphID,
-    SpanAttributes ['wg.organization.id'] as OrganizationID,
+    toLowCardinality(SpanAttributes ['wg.organization.id']) as OrganizationID,
     mapContains(SpanAttributes, 'wg.subscription') as IsSubscription,
     count() AS TotalRequests,
     countIf(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error')) AS TotalRequestsError,

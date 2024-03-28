@@ -8,7 +8,7 @@ SELECT
     ) as Timestamp,
     SpanAttributes [ 'http.status_code' ] as HttpStatusCode,
     if(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error'), true, false) as HasError,
-    SpanAttributes ['wg.organization.id'] as OrganizationID,
+    toLowCardinality(SpanAttributes ['wg.organization.id']) as OrganizationID,
     SpanAttributes [ 'wg.federated_graph.id'] as FederatedGraphID,
     count() AS TotalRequests,
     quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,

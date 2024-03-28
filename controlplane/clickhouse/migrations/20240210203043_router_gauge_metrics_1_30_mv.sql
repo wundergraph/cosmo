@@ -13,8 +13,8 @@ SELECT
     toLowCardinality(ResourceAttributes[ 'service.version' ]) as ServiceVersion,
     ResourceAttributes[ 'service.instance.id' ] as ServiceInstanceID,
     toLowCardinality(Attributes[ 'wg.router.cluster.name' ]) as ClusterName,
-    ResourceAttributes[ 'host.name' ] as Hostname,
-    MetricName as MetricName,
+    toLowCardinality(ResourceAttributes[ 'host.name' ]) as Hostname,
+    toLowCardinality(MetricName) as MetricName,
     Value as MetricValue
 FROM
     cosmo.otel_metrics_gauge
