@@ -1,0 +1,12 @@
+version: '1'
+
+router_config_path: "../router.json"
+
+graphql_path: '/'
+playground_enabled: true
+introspection_enabled: true
+playground_path: '/graphiql'
+
+override_routing_url:
+  subgraphs:
+    products: '${SUBGRAPH_PRODUCTS_URL}'

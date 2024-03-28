@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/akrylysov/algnhsa"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/wundergraph/cosmo/aws-lambda-router/internal"
@@ -12,14 +16,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"os"
-	"time"
 )
 
 const (
 	telemetryServiceName = "aws-lambda-router"
-	routerConfigPath     = "router.json"
 )
 
 var (
@@ -29,6 +29,8 @@ var (
 	stage             = os.Getenv("STAGE")
 	graphApiToken     = os.Getenv("GRAPH_API_TOKEN")
 	httpPort          = os.Getenv("HTTP_PORT")
+	routerConfigPath  = os.Getenv("ROUTER_CONFIG_PATH")
+	configPath        = os.Getenv("CONFIG_PATH")
 )
 
 func main() {
@@ -48,6 +50,7 @@ func main() {
 		internal.WithGraphApiToken(graphApiToken),
 		internal.WithLogger(logger),
 		internal.WithRouterConfigPath(routerConfigPath),
+		internal.WithConfigPath(configPath),
 		internal.WithTelemetryServiceName(telemetryServiceName),
 		internal.WithStage(stage),
 		internal.WithTraceSampleRate(defaultSampleRate),
