@@ -1,6 +1,7 @@
 import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
 import { uid } from 'uid';
+import { MemberRole } from '../../db/models.js';
 
 export default class Keycloak {
   client: KeycloakAdminClient;
@@ -45,12 +46,18 @@ export default class Keycloak {
     password,
     isPasswordTemp,
     groups,
+    firstName,
+    lastName,
+    id,
   }: {
     email: string;
     realm?: string;
     password?: string;
     isPasswordTemp: boolean;
     groups?: string[];
+    firstName?: string;
+    lastName?: string;
+    id?: string;
   }): Promise<string> {
     const createUserResp = await this.client.users.create({
       email,
@@ -58,6 +65,8 @@ export default class Keycloak {
       emailVerified: true,
       realm: realm || this.realm,
       groups,
+      firstName,
+      lastName,
       credentials: [
         {
           type: 'password',
@@ -66,8 +75,58 @@ export default class Keycloak {
           temporary: isPasswordTemp,
         },
       ],
+      id,
     });
     return createUserResp.id;
+  }
+
+  public async updateKeycloakUser({
+    realm,
+    id,
+    password,
+    firstName,
+    lastName,
+    groups,
+    enabled,
+  }: {
+    id: string;
+    realm?: string;
+    password?: string;
+    firstName?: string;
+    lastName?: string;
+    groups?: string[];
+    enabled?: boolean;
+  }) {
+    const payload: {
+      credentials?: { type: string; value: string; temporary: boolean }[];
+      firstName?: string;
+      lastName?: string;
+      groups?: string[];
+      enabled?: boolean;
+    } = {};
+    if (password) {
+      payload.credentials = [
+        {
+          type: 'password',
+          // must follow the password policy on keycloak
+          value: password,
+          temporary: false,
+        },
+      ];
+    }
+    if (firstName) {
+      payload.firstName = firstName;
+    }
+    if (lastName) {
+      payload.lastName = lastName;
+    }
+    if (enabled !== undefined) {
+      payload.enabled = enabled;
+    }
+    if (groups) {
+      payload.groups = groups;
+    }
+    await this.client.users.update({ id, realm: realm || this.realm }, payload);
   }
 
   public async createRole({ realm, roleName }: { realm?: string; roleName: string }) {
@@ -287,17 +346,19 @@ export default class Keycloak {
     });
   }
 
-  public async fetchAdminChildGroup({
+  public async fetchChildGroup({
     realm,
     orgSlug,
     kcGroupId,
+    childGroupType,
   }: {
     realm?: string;
     orgSlug: string;
     kcGroupId: string;
+    childGroupType: MemberRole;
   }) {
     const orgGroups = await this.client.groups.find({
-      search: 'admin',
+      search: childGroupType,
       realm: realm || this.realm,
     });
 
@@ -305,69 +366,49 @@ export default class Keycloak {
       throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
     }
 
-    const adminOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
-    const adminChildGroup = adminOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/admin`);
+    const orgGroup = orgGroups.find((group) => group.id === kcGroupId);
+    const childGroup = orgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/${childGroupType}`);
 
-    if (!adminChildGroup) {
-      throw new Error(`Organization child group '/${orgSlug}/admin' not found`);
+    if (!childGroup) {
+      throw new Error(`Organization child group '/${orgSlug}/${childGroupType}' not found`);
     }
 
-    return adminChildGroup;
+    return childGroup;
   }
 
-  public async fetchDevChildGroup({
+  public async removeUserFromOrganization({
     realm,
-    orgSlug,
-    kcGroupId,
+    userID,
+    groupName,
+    roles,
   }: {
     realm?: string;
-    orgSlug: string;
-    kcGroupId: string;
+    userID: string;
+    groupName: string;
+    roles: string[];
   }) {
-    const orgGroups = await this.client.groups.find({
-      search: 'developer',
+    const organizationGroup = await this.client.groups.find({
+      max: 1,
+      search: groupName,
       realm: realm || this.realm,
     });
 
-    if (orgGroups.length === 0) {
-      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
+    if (organizationGroup.length === 0) {
+      throw new Error(`Organization group '${groupName}' not found`);
     }
 
-    const devOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
-    const devChildGroup = devOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/developer`);
-
-    if (!devChildGroup) {
-      throw new Error(`Organization child group '/${orgSlug}/developer' not found`);
+    for (const role of roles) {
+      const childGroup = await this.fetchChildGroup({
+        realm: realm || this.realm,
+        kcGroupId: organizationGroup[0].id!,
+        orgSlug: groupName,
+        childGroupType: role as MemberRole,
+      });
+      await this.client.users.delFromGroup({
+        id: userID,
+        groupId: childGroup.id!,
+        realm: realm || this.realm,
+      });
     }
-
-    return devChildGroup;
-  }
-
-  public async fetchViewerChildGroup({
-    realm,
-    orgSlug,
-    kcGroupId,
-  }: {
-    realm?: string;
-    orgSlug: string;
-    kcGroupId: string;
-  }) {
-    const orgGroups = await this.client.groups.find({
-      search: 'viewer',
-      realm: realm || this.realm,
-    });
-
-    if (orgGroups.length === 0) {
-      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
-    }
-
-    const viewerOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
-    const viewerChildGroup = viewerOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/viewer`);
-
-    if (!viewerChildGroup) {
-      throw new Error(`Organization child group '/${orgSlug}/viewer' not found`);
-    }
-
-    return viewerChildGroup;
   }
 }

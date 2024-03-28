@@ -14,6 +14,7 @@ import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
 import AuthController from './controllers/auth.js';
+import ScimController from './controllers/scim.js';
 import GitHubWebhookController from './controllers/github.js';
 import StripeWebhookController from './controllers/stripe.js';
 import { pkceCodeVerifierCookieName, userSessionCookieName } from './crypto/jwt.js';
@@ -339,6 +340,16 @@ export default async function build(opts: BuildConfig) {
     keycloakRealm: opts.keycloak.realm,
     platformWebhooks,
     defaultBillingPlanId: opts.stripe?.defaultPlanId,
+  });
+
+  await fastify.register(ScimController, {
+    organizationRepository,
+    userRepository: userRepo,
+    authenticator: apiKeyAuth,
+    prefix: '/scim/v2',
+    db: fastify.db,
+    keycloakClient,
+    keycloakRealm: opts.keycloak.realm,
   });
 
   // Must be registered after custom fastify routes

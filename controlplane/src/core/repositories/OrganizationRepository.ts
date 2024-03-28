@@ -302,7 +302,48 @@ export class OrganizationRepository {
     } as OrganizationMemberDTO;
   }
 
-  public async getMembers(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
+  public async getOrganizationMemberByEmail(input: {
+    organizationID: string;
+    userEmail: string;
+  }): Promise<OrganizationMemberDTO | null> {
+    const orgMember = await this.db
+      .select({
+        userID: users.id,
+        email: users.email,
+        memberID: organizationsMembers.id,
+      })
+      .from(organizationsMembers)
+      .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .where(and(eq(organizationsMembers.organizationId, input.organizationID), eq(users.email, input.userEmail)))
+      .orderBy(asc(organizationsMembers.createdAt))
+      .execute();
+
+    if (orgMember.length === 0) {
+      return null;
+    }
+
+    const userRoles = await this.getOrganizationMemberRoles({
+      organizationID: input.organizationID,
+      userID: orgMember[0].userID,
+    });
+
+    return {
+      userID: orgMember[0].userID,
+      orgMemberID: orgMember[0].memberID,
+      email: orgMember[0].email,
+      roles: userRoles,
+    } as OrganizationMemberDTO;
+  }
+
+  public async getMembers({
+    organizationID,
+    offset = 0,
+    limit = 999,
+  }: {
+    organizationID: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<OrganizationMemberDTO[]> {
     const orgMembers = await this.db
       .select({
         userID: users.id,
@@ -311,8 +352,10 @@ export class OrganizationRepository {
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .where(eq(organizationsMembers.organizationId, input.organizationID))
+      .where(eq(organizationsMembers.organizationId, organizationID))
       .orderBy(asc(organizationsMembers.createdAt))
+      .offset(offset)
+      .limit(limit)
       .execute();
 
     const members: OrganizationMemberDTO[] = [];

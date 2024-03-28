@@ -13,3 +13,5 @@ tsconfig.tsbuildinfo
 lerna-debug.log
 .DS_Store
 /demo/cmd/subscriptiontest/subscriptiontest
+.github/scripts/keycloak-22.0.4/**
+.github/scripts/keycloak-22.0.4.zip
