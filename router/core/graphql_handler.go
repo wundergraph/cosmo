@@ -130,6 +130,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := &resolve.Context{
 		Variables: operationCtx.Variables(),
+		Files:     operationCtx.Files(),
 		Request: resolve.Request{
 			Header: r.Header,
 		},

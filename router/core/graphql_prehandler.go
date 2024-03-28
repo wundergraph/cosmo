@@ -3,19 +3,20 @@ package core
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/cosmo/router/pkg/art"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/mazrean/formstream"
+	httpform "github.com/mazrean/formstream/http"
+	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -25,9 +26,16 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
-
+	"github.com/wundergraph/cosmo/router/pkg/art"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
+)
+
+const (
+	MAX_SUPPORTED_FILES_UPLOAD = 10
 )
 
 type PreHandlerOptions struct {
@@ -160,29 +168,83 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metrics.Finish(finalErr, statusCode, writtenBytes)
 		}()
 
+		var body []byte
+		var files []httpclient.File
+		var err error
 		// XXX: This buffer needs to be returned to the pool only
 		// AFTER we're done with body (retrieved from parser.ReadBody())
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
+		if r.Header.Get("Content-Type") == "" || r.Header.Get("Content-Type") == "application/json" {
+			body, err = h.operationProcessor.ReadBody(buf, r.Body)
+			if err != nil {
+				finalErr = err
 
-		body, err := h.operationProcessor.ReadBody(buf, r.Body)
-		if err != nil {
-			finalErr = err
+				// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
+				// It means that EOF was encountered in the middle of reading the body. This is not a server error.
+				if errors.Is(err, io.ErrUnexpectedEOF) {
+					requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
+				} else {
+					requestLogger.Error("failed to read request body", zap.Error(err))
+				}
 
-			// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
-			// It means that EOF was encountered in the middle of reading the body. This is not a server error.
-			if errors.Is(err, io.ErrUnexpectedEOF) {
-				requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
-			} else {
-				requestLogger.Error("failed to read request body", zap.Error(err))
+				writeRequestErrors(r.Context(), r, w, http.StatusBadRequest, graphql.RequestErrorsFromError(err), requestLogger)
+				return
+			}
+		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+			parser, err := httpform.NewParser(r)
+			if err != nil {
+				h.writeOperationError(r.Context(), r, w, requestLogger, err)
+				return
 			}
 
-			writeRequestErrors(r.Context(), r, w, http.StatusBadRequest, graphql.RequestErrorsFromError(err), requestLogger)
-			return
+			err = parser.Register("operations", func(reader io.Reader, header formstream.Header) error {
+				body, err = h.operationProcessor.ReadBody(buf, reader)
+				if err != nil {
+					return err
+				}
+				return nil
+			}, formstream.WithRequiredPart("operations"), formstream.WithRequiredPart("map"))
+			if err != nil {
+				h.writeOperationError(r.Context(), r, w, requestLogger, err)
+				return
+			}
+
+			// We will register a handler for each file in the request. AFAIK, we can't know how many files we have
+			// before parsing the request, so we will support 10 files max.
+			for i := 0; i < MAX_SUPPORTED_FILES_UPLOAD; i++ {
+				fileKey := fmt.Sprintf("%d", i)
+				err = parser.Register(fileKey, func(reader io.Reader, header formstream.Header) error {
+					// Create and open a temporary file to store the file content
+					// This file will be deleted after the request is done
+					file, err := os.CreateTemp("", "tempfile-")
+					if err != nil {
+						return err
+					}
+					defer file.Close()
+					_, err = io.Copy(file, reader)
+					if err != nil {
+						return err
+					}
+					files = append(files, httpclient.NewFile(file.Name(), header.FileName()))
+
+					return nil
+				}, formstream.WithRequiredPart(fileKey))
+				if err != nil {
+					h.writeOperationError(r.Context(), r, w, requestLogger, err)
+					return
+				}
+			}
+
+			err = parser.Parse()
+			if err != nil {
+				h.writeOperationError(r.Context(), r, w, requestLogger, err)
+				return
+			}
 		}
 
 		/**
-		* Parse the operation
+		 * Parse the operation
 		 */
 
 		if !traceOptions.ExcludeParseStats {
@@ -193,7 +255,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			trace.WithSpanKind(trace.SpanKindInternal),
 		)
 
-		operationKit, err := h.operationProcessor.NewKit(body)
+		operationKit, err := h.operationProcessor.NewKit(body, files)
 		defer operationKit.Free()
 
 		if err != nil {
