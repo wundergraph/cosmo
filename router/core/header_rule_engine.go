@@ -2,9 +2,10 @@ package core
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"regexp"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
@@ -76,6 +77,17 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 	for _, rule := range requestRules {
 		// Forwards the matching client request header to the upstream
 		if rule.Operation == config.HeaderRuleOperationPropagate {
+
+			// Rename the header
+			if rule.Rename != "" {
+				value := ctx.Request().Header.Get(rule.Named)
+				if value != "" {
+					request.Header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
+				} else if rule.Default != "" {
+					request.Header.Set(rule.Rename, rule.Default)
+				}
+				continue
+			}
 
 			// Exact match
 			if rule.Named != "" {

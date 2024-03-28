@@ -159,6 +159,8 @@ type RequestHeaderRule struct {
 	Matching string `yaml:"matching"`
 	// Named is the exact header name to match
 	Named string `yaml:"named"`
+	// Rename renames the header's key to the provided value
+	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
 }
