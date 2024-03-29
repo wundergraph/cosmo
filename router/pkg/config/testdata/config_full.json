@@ -106,18 +106,21 @@
           "Operation": "propagate",
           "Matching": "",
           "Named": "X-Test-Header",
+          "Rename": "",
           "Default": ""
         },
         {
           "Operation": "propagate",
           "Matching": "(?i)^X-Custom-.*",
           "Named": "",
+          "Rename": "",
           "Default": ""
         },
         {
           "Operation": "propagate",
           "Matching": "",
           "Named": "X-User-Id",
+          "Rename": "",
           "Default": "123"
         }
       ]
@@ -129,6 +132,7 @@
             "Operation": "propagate",
             "Matching": "",
             "Named": "Subgraph-Secret",
+            "Rename": "",
             "Default": "some-secret"
           }
         ]
