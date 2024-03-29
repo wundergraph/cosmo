@@ -83,10 +83,13 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 				value := ctx.Request().Header.Get(rule.Named)
 				if value != "" {
 					request.Header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
+					request.Header.Del(rule.Named)
+					continue
 				} else if rule.Default != "" {
 					request.Header.Set(rule.Rename, rule.Default)
+					request.Header.Del(rule.Named)
+					continue
 				}
-				continue
 			}
 
 			// Exact match
