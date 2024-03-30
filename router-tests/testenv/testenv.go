@@ -422,7 +422,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	}
 
-	e.waitForServer(ctx, e.RouterURL+"/health/live")
+	e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
 
 	return e, nil
 }
@@ -682,8 +682,11 @@ type TestResponse struct {
 	Proto    string
 }
 
-func (e *Environment) waitForServer(ctx context.Context, url string) {
+func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs int, maxAttempts int) {
 	for {
+		if maxAttempts == 0 {
+			e.t.Fatalf("timed out waiting for server to be ready")
+		}
 		select {
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for router to be ready")
@@ -697,7 +700,8 @@ func (e *Environment) waitForServer(ctx context.Context, url string) {
 			if resp.StatusCode == 200 {
 				return
 			}
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
+			maxAttempts--
 		}
 	}
 }
