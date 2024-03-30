@@ -1,6 +1,8 @@
 package otel
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"go.opentelemetry.io/otel/attribute"
+)
 
 const (
 	WgOperationName               = attribute.Key("wg.operation.name")
@@ -23,8 +25,8 @@ const (
 	WgEngineRequestTracingEnabled = attribute.Key("wg.engine.request_tracing_enabled")
 	WgRouterRootSpan              = attribute.Key("wg.router.root_span")
 	WgRouterClusterName           = attribute.Key("wg.router.cluster.name")
-	WgSubgraphError               = attribute.Key("wg.subgraph.error")
-	WgSubgraphErrorCode           = attribute.Key("wg.subgraph.error_code")
+	WgSubgraphErrorExtendedCode   = attribute.Key("wg.subgraph.error.extended_code")
+	WgSubgraphErrorMessage        = attribute.Key("wg.subgraph.error.message")
 )
 
 var (

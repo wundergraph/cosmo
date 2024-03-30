@@ -24,8 +24,6 @@ import (
 )
 
 var (
-	mp *sdkmetric.MeterProvider
-
 	// Please version the used meters if you change the buckets.
 
 	// 0kb-20MB
@@ -51,7 +49,7 @@ const (
 )
 
 var (
-	//
+	// temporalitySelector is a function that selects the temporality for a given instrument kind.
 	// Short story about when we choose delta and when we choose cumulative temporality:
 	//
 	// Delta temporalities are reported as completed intervals. They don't build upon each other.
@@ -110,9 +108,7 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	}
 	opts = append(opts, sdkmetric.WithReader(promExporter))
 
-	mp = sdkmetric.NewMeterProvider(opts...)
-
-	return mp, registry, nil
+	return sdkmetric.NewMeterProvider(opts...), registry, nil
 }
 
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
@@ -185,28 +181,34 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 		return nil, err
 	}
 
-	if c.OpenTelemetry.Enabled {
-		for _, exp := range c.OpenTelemetry.Exporters {
-			if exp.Disabled {
-				continue
-			}
+	if c.OpenTelemetry.TestReader != nil {
+		mp := sdkmetric.NewMeterProvider(append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))...)
+		// Set the global MeterProvider to the SDK metric provider.
+		otel.SetMeterProvider(mp)
 
-			exporter, err := createOTELExporter(log, exp)
-			if err != nil {
-				log.Error("creating OTEL metrics exporter", zap.Error(err))
-				return nil, err
-			}
-
-			opts = append(opts, sdkmetric.WithReader(
-				sdkmetric.NewPeriodicReader(exporter,
-					sdkmetric.WithTimeout(defaultExportTimeout),
-					sdkmetric.WithInterval(defaultExportInterval),
-				),
-			))
-		}
+		return mp, nil
 	}
 
-	mp = sdkmetric.NewMeterProvider(opts...)
+	for _, exp := range c.OpenTelemetry.Exporters {
+		if exp.Disabled {
+			continue
+		}
+
+		exporter, err := createOTELExporter(log, exp)
+		if err != nil {
+			log.Error("creating OTEL metrics exporter", zap.Error(err))
+			return nil, err
+		}
+
+		opts = append(opts, sdkmetric.WithReader(
+			sdkmetric.NewPeriodicReader(exporter,
+				sdkmetric.WithTimeout(defaultExportTimeout),
+				sdkmetric.WithInterval(defaultExportInterval),
+			),
+		))
+	}
+
+	mp := sdkmetric.NewMeterProvider(opts...)
 	// Set the global MeterProvider to the SDK metric provider.
 	otel.SetMeterProvider(mp)
 

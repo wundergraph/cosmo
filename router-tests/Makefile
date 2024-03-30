@@ -3,6 +3,8 @@ SHELL := bash
 test:
 	go test -race ./...
 
+test-fresh: clean-testcache test
+
 test-no-race:
 	go test ./...
 
@@ -12,7 +14,7 @@ lint:
 
 LOOPS=20
 test-stability:
-	for ((i=1; i <= ${LOOPS}; ++i)) do make clean-testcache;make test; done
+	for ((i=1; i <= ${LOOPS}; ++i)) do make test-fresh; done
 
 clean-testcache:
 	go clean -testcache
@@ -20,4 +22,4 @@ clean-testcache:
 update-test-config:
 	./update-config.sh
 
-.PHONY: test test-no-race lint test-stability clean-testcache update-test-config
+.PHONY: test test-no-race lint test-stability clean-testcache update-test-config test-fresh

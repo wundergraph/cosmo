@@ -171,9 +171,9 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 }
 
 func traceConfig(cfg *config.Telemetry) *trace.Config {
-	var exporters []*trace.Exporter
+	var exporters []*trace.ExporterConfig
 	for _, exp := range cfg.Tracing.Exporters {
-		exporters = append(exporters, &trace.Exporter{
+		exporters = append(exporters, &trace.ExporterConfig{
 			Disabled:      exp.Disabled,
 			Endpoint:      exp.Endpoint,
 			Exporter:      exp.Exporter,

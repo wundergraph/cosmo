@@ -107,7 +107,7 @@ services:
       - primary
 
   clickhouse:
-    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24}
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.1}
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}

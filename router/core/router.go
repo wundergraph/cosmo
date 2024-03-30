@@ -392,7 +392,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
-			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.Exporter{
+			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
 				Endpoint: endpoint,
 				Exporter: otelconfig.ExporterOLTPHTTP,
 				HTTPPath: "/v1/traces",
@@ -708,6 +708,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 				Enabled: r.ipAnonymization.Enabled,
 				Method:  rtrace.IPAnonymizationMethod(r.ipAnonymization.Method),
 			},
+			MemoryExporter: r.traceConfig.TestMemoryExporter,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
@@ -730,11 +731,15 @@ func (r *Router) bootstrap(ctx context.Context) error {
 				}
 			}()
 		}
-		mp, err := rmetric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig, r.instanceID)
-		if err != nil {
-			return fmt.Errorf("failed to start trace agent: %w", err)
+
+		if r.metricConfig.OpenTelemetry.Enabled {
+			mp, err := rmetric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig, r.instanceID)
+			if err != nil {
+				return fmt.Errorf("failed to start trace agent: %w", err)
+			}
+			r.otlpMeterProvider = mp
 		}
-		r.otlpMeterProvider = mp
+
 	}
 
 	r.gqlMetricsExporter = graphqlmetrics.NewNoopExporter()
@@ -975,6 +980,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			rmetric.WithOtlpMeterProvider(r.otlpMeterProvider),
 			rmetric.WithLogger(r.logger),
 			rmetric.WithProcessStartTime(r.processStartTime),
+			rmetric.WithRouterRuntimeMetrics(r.metricConfig.OpenTelemetry.RouterRuntime),
 			rmetric.WithAttributes(
 				baseAttributes...,
 			),
@@ -1076,7 +1082,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		TracerProvider:                         r.tracerProvider,
 		Authorizer:                             NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:               r.subgraphErrorPropagation,
-		EngineRequestHooks:                     NewEngineRequestHooks(ro.metricStore),
+		EngineLoaderHooks:                      NewEngineRequestHooks(ro.metricStore),
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {

@@ -9,8 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"io"
 	"log"
 	"math/rand"
@@ -90,6 +94,8 @@ type Config struct {
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DisableWebSockets                  bool
 	TLSConfig                          *core.TlsConfig
+	TraceExporter                      trace.SpanExporter
+	MetricReader                       metric.Reader
 }
 
 type SubgraphsConfig struct {
@@ -506,9 +512,30 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}),
 	}
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
+
+	if testConfig.TraceExporter != nil {
+		routerOpts = append(routerOpts, core.WithTracing(&rtrace.Config{
+			Enabled:            true,
+			Sampler:            1,
+			TestMemoryExporter: testConfig.TraceExporter,
+		}))
+	}
+
+	if testConfig.MetricReader != nil {
+		routerOpts = append(routerOpts, core.WithMetrics(&rmetric.Config{
+			OpenTelemetry: rmetric.OpenTelemetry{
+				Enabled:       true,
+				RouterRuntime: false,
+				TestReader:    testConfig.MetricReader,
+			},
+		}))
+
+	}
+
 	if testConfig.OverrideGraphQLPath != "" {
 		routerOpts = append(routerOpts, core.WithGraphQLPath(testConfig.OverrideGraphQLPath))
 	}
+
 	if !testConfig.DisableWebSockets {
 		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
 			Enabled: true,
@@ -642,9 +669,13 @@ func (e *Environment) waitForRouterConnection(ctx context.Context) {
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for router to be ready")
 		default:
-			resp, err := e.RouterClient.Get(e.RouterURL)
-			if err == nil {
-				_ = resp.Body.Close()
+			req, err := http.NewRequest("GET", e.RouterURL+"/health/live", nil)
+			if err != nil {
+				e.t.Fatalf("Could not create request for health check")
+			}
+			req.Header.Set("User-Agent", "Router-tests")
+			resp, err := e.RouterClient.Do(req)
+			if resp.StatusCode == 200 {
 				return
 			}
 			time.Sleep(time.Millisecond * 100)

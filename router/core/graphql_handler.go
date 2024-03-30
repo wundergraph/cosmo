@@ -76,7 +76,7 @@ type HandlerOptions struct {
 	RateLimiter                            *CosmoRateLimiter
 	RateLimitConfig                        *config.RateLimitConfiguration
 	SubgraphErrorPropagation               config.SubgraphErrorPropagationConfiguration
-	EngineRequestHooks                     resolve.RequestHooks
+	EngineLoaderHooks                      resolve.LoaderHooks
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -93,7 +93,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		rateLimiter:              opts.RateLimiter,
 		rateLimitConfig:          opts.RateLimitConfig,
 		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
-		engineRequestHooks:       opts.EngineRequestHooks,
+		engineLoaderHooks:        opts.EngineLoaderHooks,
 	}
 	return graphQLHandler
 }
@@ -119,7 +119,7 @@ type GraphQLHandler struct {
 	rateLimiter              *CosmoRateLimiter
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	engineRequestHooks       resolve.RequestHooks
+	engineLoaderHooks        resolve.LoaderHooks
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -146,8 +146,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = WithAuthorizationExtension(ctx)
 		ctx.SetAuthorizer(h.authorizer)
 	}
-	if h.engineRequestHooks != nil {
-		ctx.SetRequestHooks(h.engineRequestHooks)
+	if h.engineLoaderHooks != nil {
+		ctx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
 	ctx = h.configureRateLimiting(ctx)
 
@@ -411,6 +411,7 @@ func addErrorToSpan(ctx context.Context, err error) {
 	}
 
 	reqCtx.error = err
+
 	rtrace.AttachErrToSpan(span, err)
 }
 

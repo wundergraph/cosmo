@@ -2,6 +2,7 @@ package metric
 
 import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"net/url"
 	"regexp"
 )
@@ -37,6 +38,8 @@ type OpenTelemetry struct {
 	Enabled       bool
 	RouterRuntime bool
 	Exporters     []*OpenTelemetryExporter
+	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
+	TestReader sdkmetric.Reader
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
@@ -63,12 +66,14 @@ func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
 type Config struct {
 	// Name represents the service name for metrics. The default value is cosmo-router.
 	Name string
+
 	// Version represents the service version for metrics. The default value is dev.
 	Version string
 
 	// OpenTelemetry includes the OpenTelemetry configuration
 	OpenTelemetry OpenTelemetry
 
+	// Prometheus includes the Prometheus configuration
 	Prometheus Prometheus
 }
 
@@ -78,6 +83,7 @@ func (c *Config) IsEnabled() bool {
 
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
+
 	return &Config{
 		Name:    DefaultServerName,
 		Version: serviceVersion,
