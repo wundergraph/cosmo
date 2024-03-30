@@ -82,7 +82,14 @@ var (
 )
 
 func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceID string) (*sdkmetric.MeterProvider, *prometheus.Registry, error) {
-	registry := prometheus.NewRegistry()
+
+	var registry *prometheus.Registry
+	if c.Prometheus.TestRegistry != nil {
+		registry = c.Prometheus.TestRegistry
+	} else {
+		registry = prometheus.NewRegistry()
+	}
+
 	registry.MustRegister(collectors.NewGoCollector())
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
@@ -279,7 +286,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVer
 		// Filter out attributes that match the excludeMetricAttributes regexes
 		s.AttributeFilter = attributeFilter
 
-		// Use different histogram buckets for Prometheus
+		// Use different histogram buckets for PrometheusConfig
 		if i.Unit == unitBytes && i.Kind == sdkmetric.InstrumentKindHistogram {
 			s.Aggregation = bytesBucketHistogram
 		} else if i.Unit == unitMilliseconds && i.Kind == sdkmetric.InstrumentKindHistogram {
@@ -316,7 +323,7 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion s
 	return []sdkmetric.Option{
 		// Record information about this application in a Resource.
 		sdkmetric.WithResource(r),
-		// Use different histogram buckets for Prometheus and OTLP
+		// Use different histogram buckets for PrometheusConfig and OTLP
 		sdkmetric.WithView(sdkmetric.NewView(
 			sdkmetric.Instrument{
 				Kind: sdkmetric.InstrumentKindHistogram,

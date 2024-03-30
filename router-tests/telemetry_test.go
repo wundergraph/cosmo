@@ -2,7 +2,6 @@ package integration
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -38,55 +37,55 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			assert.Len(t, sn, 8)
+			require.Len(t, sn, 8)
 
 			/**
 			* Spans
 			 */
 
 			// Pre-Handler Operation steps
-			assert.Equal(t, "Operation - Parse", sn[0].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
+			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 
-			assert.Equal(t, "Operation - Normalize", sn[1].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
+			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 
-			assert.Equal(t, "Operation - Validate", sn[2].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
+			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 
-			assert.Equal(t, "Operation - Plan", sn[3].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
+			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 
 			// Engine Transport
-			assert.Equal(t, "query unnamed", sn[4].Name())
-			assert.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
+			require.Equal(t, "query unnamed", sn[4].Name())
+			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 
 			// Engine Loader Hooks
-			assert.Equal(t, "Engine - Fetch", sn[5].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 
 			// GraphQL handler
-			assert.Equal(t, "Operation - Execute", sn[6].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
+			require.Equal(t, "Operation - Execute", sn[6].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
 			// Root Server middleware
-			assert.Equal(t, "query unnamed", sn[7].Name())
-			assert.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+			require.Equal(t, "query unnamed", sn[7].Name())
+			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
 
 			/**
 			* Metrics
 			 */
 			rm := metricdata.ResourceMetrics{}
 			err := metricReader.Collect(context.Background(), &rm)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
@@ -300,30 +299,30 @@ func TestTelemetry(t *testing.T) {
 				},
 			}
 
-			assert.Equal(t, 1, len(rm.ScopeMetrics))
-			assert.Equal(t, 5, len(rm.ScopeMetrics[0].Metrics))
+			require.Equal(t, 1, len(rm.ScopeMetrics))
+			require.Equal(t, 5, len(rm.ScopeMetrics[0].Metrics))
 
 			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			// Total number of requests
-			assert.Equal(t, int64(1), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of requests")
-			assert.Equal(t, int64(1), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of requests")
+			require.Equal(t, int64(1), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of requests")
+			require.Equal(t, int64(1), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of requests")
 
 			// Response time histogram
-			assert.Greater(t, rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(0), "response time histogram")
-			assert.NotEmpty(t, rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Histogram[float64]).DataPoints[1].Sum, float64(0), "response time histogram")
+			require.Greater(t, rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(0), "response time histogram")
+			require.NotEmpty(t, rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Histogram[float64]).DataPoints[1].Sum, float64(0), "response time histogram")
 
 			// Total number of request bytes
-			assert.Equal(t, int64(28), rm.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of request bytes")
-			assert.Equal(t, int64(38), rm.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of request bytes")
+			require.Equal(t, int64(28), rm.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of request bytes")
+			require.Equal(t, int64(38), rm.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of request bytes")
 
 			// Total number of response bytes
-			assert.Equal(t, int64(117), rm.ScopeMetrics[0].Metrics[3].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of response bytes")
-			assert.Equal(t, int64(117), rm.ScopeMetrics[0].Metrics[3].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of response bytes")
+			require.Equal(t, int64(117), rm.ScopeMetrics[0].Metrics[3].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of response bytes")
+			require.Equal(t, int64(117), rm.ScopeMetrics[0].Metrics[3].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of response bytes")
 
 			// Number of requests in flight
-			assert.Equal(t, int64(0), rm.ScopeMetrics[0].Metrics[4].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "number of requests in flight")
-			assert.Equal(t, int64(0), rm.ScopeMetrics[0].Metrics[4].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "number of requests in flight")
+			require.Equal(t, int64(0), rm.ScopeMetrics[0].Metrics[4].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "number of requests in flight")
+			require.Equal(t, int64(0), rm.ScopeMetrics[0].Metrics[4].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "number of requests in flight")
 
 		})
 	})
@@ -342,44 +341,44 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			assert.Len(t, sn, 8)
+			require.Len(t, sn, 8)
 
 			// Pre-Handler Operation steps
-			assert.Equal(t, "Operation - Parse", sn[0].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
+			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 
-			assert.Equal(t, "Operation - Normalize", sn[1].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
+			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 
-			assert.Equal(t, "Operation - Validate", sn[2].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
+			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 
-			assert.Equal(t, "Operation - Plan", sn[3].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
+			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 
 			// Engine Transport
-			assert.Equal(t, "query myQuery", sn[4].Name())
-			assert.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
+			require.Equal(t, "query myQuery", sn[4].Name())
+			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 
 			// Engine Loader Hooks
-			assert.Equal(t, "Engine - Fetch", sn[5].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 
 			// GraphQL handler
-			assert.Equal(t, "Operation - Execute", sn[6].Name())
-			assert.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
+			require.Equal(t, "Operation - Execute", sn[6].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
 			// Root Server middleware
-			assert.Equal(t, "query myQuery", sn[7].Name())
-			assert.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
-			assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+			require.Equal(t, "query myQuery", sn[7].Name())
+			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
 		})
 	})
 }

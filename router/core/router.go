@@ -724,6 +724,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 				return fmt.Errorf("failed to create Prometheus exporter: %w", err)
 			}
 			r.promMeterProvider = mp
+
 			r.prometheusServer = rmetric.NewPrometheusServer(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
 			go func() {
 				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

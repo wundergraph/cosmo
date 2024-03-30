@@ -233,7 +233,7 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
 			Exporters:     openTelemetryExporters,
 		},
-		Prometheus: metric.Prometheus{
+		Prometheus: metric.PrometheusConfig{
 			Enabled:             cfg.Metrics.Prometheus.Enabled,
 			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
 			Path:                cfg.Metrics.Prometheus.Path,

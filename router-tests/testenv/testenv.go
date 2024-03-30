@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -96,6 +97,7 @@ type Config struct {
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
 	MetricReader                       metric.Reader
+	PrometheusRegistry                 *prometheus.Registry
 }
 
 type SubgraphsConfig struct {
@@ -420,7 +422,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	}
 
-	e.waitForRouterConnection(ctx)
+	e.waitForServer(ctx, e.RouterURL+"/health/live")
 
 	return e, nil
 }
@@ -507,6 +509,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithListenerAddr(listenerAddr),
 		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
+		core.WithInstanceID("test-instance"),
 		core.WithEvents(config.EventsConfiguration{
 			Sources: eventSourceBySourceName,
 		}),
@@ -521,8 +524,24 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}))
 	}
 
+	var prometheusConfig rmetric.PrometheusConfig
+
+	if testConfig.PrometheusRegistry != nil {
+		port, err := freeport.GetFreePort()
+		if err != nil {
+			return nil, fmt.Errorf("could not get free port: %w", err)
+		}
+		prometheusConfig = rmetric.PrometheusConfig{
+			Enabled:      true,
+			ListenAddr:   fmt.Sprintf("localhost:%d", port),
+			Path:         "/metrics",
+			TestRegistry: testConfig.PrometheusRegistry,
+		}
+	}
+
 	if testConfig.MetricReader != nil {
 		routerOpts = append(routerOpts, core.WithMetrics(&rmetric.Config{
+			Prometheus: prometheusConfig,
 			OpenTelemetry: rmetric.OpenTelemetry{
 				Enabled:       true,
 				RouterRuntime: false,
@@ -663,13 +682,13 @@ type TestResponse struct {
 	Proto    string
 }
 
-func (e *Environment) waitForRouterConnection(ctx context.Context) {
+func (e *Environment) waitForServer(ctx context.Context, url string) {
 	for {
 		select {
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for router to be ready")
 		default:
-			req, err := http.NewRequest("GET", e.RouterURL+"/health/live", nil)
+			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				e.t.Fatalf("Could not create request for health check")
 			}
