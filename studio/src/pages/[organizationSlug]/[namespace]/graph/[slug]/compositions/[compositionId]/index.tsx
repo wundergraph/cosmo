@@ -369,7 +369,11 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                     sdlData.sdl !== "" && (
                       <div className="relative flex h-full min-h-[60vh] flex-col">
                         <div className="-top-[60px] right-8 w-max px-5 md:absolute md:w-auto md:px-0">
-                          <SDLViewerActions sdl={sdlData.sdl} size="icon" />
+                          <SDLViewerActions
+                            sdl={sdlData.sdl}
+                            size="icon"
+                            targetName={graphData?.graph?.name}
+                          />
                         </div>
                         <SDLViewerMonaco schema={sdlData.sdl} />
                       </div>
@@ -432,7 +436,11 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                                 </SelectContent>
                               </Select>
                             )}
-                            <SDLViewerActions sdl={sdlData.sdl} size="icon" />
+                            <SDLViewerActions
+                              sdl={sdlData.sdl}
+                              size="icon"
+                              targetName={activeSubgraphName}
+                            />
                           </div>
                         </div>
                         <SDLViewerMonaco schema={sdlData.sdl} />

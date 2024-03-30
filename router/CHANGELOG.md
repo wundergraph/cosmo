@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.78.0](https://github.com/wundergraph/cosmo/compare/router@0.77.0...router@0.78.0) (2024-03-25)
+
+### Features
+
+* add initial payload on WS origin connections ([#667](https://github.com/wundergraph/cosmo/issues/667)) ([989fa2f](https://github.com/wundergraph/cosmo/commit/989fa2fc9908c1067f74172facef317349f105e1)) (@jensneuse)
+
 # [0.77.0](https://github.com/wundergraph/cosmo/compare/router@0.76.0...router@0.77.0) (2024-03-24)
 
 ### Features

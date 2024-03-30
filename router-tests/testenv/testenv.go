@@ -908,8 +908,8 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 }
 
 func (e *Environment) close() {
-	// Give the router some time to shut down
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Gracefully shutdown router

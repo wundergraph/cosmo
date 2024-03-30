@@ -190,7 +190,7 @@ import {
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
-  createInternalLabel,
+  createRandomInternalLabel,
   enrichLogger,
   extractOperationNames,
   formatSubscriptionProtocol,
@@ -998,6 +998,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
+          if (await subgraphRepo.exists(req.name, req.namespace)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `The subgraph ${req.name} being created for the monograph already exists in the namespace`,
+              },
+            };
+          }
+
           if (!isValidUrl(req.routingUrl)) {
             return {
               response: {
@@ -1034,7 +1043,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
-          const label = createInternalLabel();
+          const label = createRandomInternalLabel();
 
           const labelMatchers = [joinLabel(label)];
 

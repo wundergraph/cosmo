@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.80.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.80.1...controlplane@0.80.2) (2024-03-28)
+
+### Bug Fixes
+
+* improve error handling in the migrator ([#673](https://github.com/wundergraph/cosmo/issues/673)) ([8270368](https://github.com/wundergraph/cosmo/commit/82703687066d5ca9af5b4f0eca33007d513cfdb4)) (@JivusAyrus)
+
+## [0.80.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.80.0...controlplane@0.80.1) (2024-03-26)
+
+### Bug Fixes
+
+* conflicting subgraph name on monograph creation ([#668](https://github.com/wundergraph/cosmo/issues/668)) ([1b57233](https://github.com/wundergraph/cosmo/commit/1b57233f6f91b4219e60d975a8f7727129bd9ea6)) (@thisisnithin)
+* webhook and slack retrieving incorrect graph list ([#671](https://github.com/wundergraph/cosmo/issues/671)) ([0cb4f36](https://github.com/wundergraph/cosmo/commit/0cb4f3644430a73a9d18a2792a025e81260ff8be)) (@thisisnithin)
+
 # [0.80.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.79.4...controlplane@0.80.0) (2024-03-24)
 
 ### Features
