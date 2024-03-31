@@ -47,6 +47,10 @@ func (f *EngineLoaderHooks) OnLoad(ctx context.Context, dataSourceID string) con
 	}
 
 	reqContext := getRequestContext(ctx)
+	if reqContext == nil {
+		return ctx
+	}
+
 	ctx, span := f.tracer.Start(ctx, "Engine - Fetch")
 
 	subgraph := reqContext.SubgraphByID(dataSourceID)
