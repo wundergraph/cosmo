@@ -67,10 +67,15 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 		return
 	}
 
+	reqContext := getRequestContext(ctx)
+
+	if reqContext == nil {
+		return
+	}
+
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
-	reqContext := getRequestContext(ctx)
 	activeSubgraph := reqContext.SubgraphByID(dataSourceID)
 
 	baseAttributes := []attribute.KeyValue{
