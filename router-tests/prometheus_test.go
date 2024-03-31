@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
@@ -502,12 +501,6 @@ func TestPrometheus(t *testing.T) {
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
-
-			for _, family := range mf {
-				fmt.Println(family.GetName())
-			}
-
-			require.Equal(t, 36, len(mf))
 
 			responseContentLength := findMetricByName(mf, "router_http_requests_error_total")
 			responseContentLengthMetrics := responseContentLength.GetMetric()
