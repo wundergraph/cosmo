@@ -21,6 +21,8 @@ import (
 func TestTelemetry(t *testing.T) {
 	t.Parallel()
 
+	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+
 	t.Run("Trace unnamed GraphQL operation with metrics", func(t *testing.T) {
 		t.Parallel()
 

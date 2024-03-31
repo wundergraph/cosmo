@@ -1023,6 +1023,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
 				},
 			},
+			TracerProvider:                r.tracerProvider,
 			LocalhostFallbackInsideDocker: r.localhostFallbackInsideDocker,
 			Logger:                        r.logger,
 		},
