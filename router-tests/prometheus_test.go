@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,8 @@ import (
 
 func TestPrometheus(t *testing.T) {
 	t.Parallel()
+
+	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 
 	t.Run("Collect and export OTEL metrics to Prometheus from named operation", func(t *testing.T) {
 		t.Parallel()
@@ -501,6 +504,10 @@ func TestPrometheus(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, 36, len(mf))
+
+			for _, family := range mf {
+				fmt.Println(family.GetName())
+			}
 
 			responseContentLength := findMetricByName(mf, "router_http_requests_error_total")
 			responseContentLengthMetrics := responseContentLength.GetMetric()
