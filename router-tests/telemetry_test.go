@@ -15,6 +15,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"net/http"
 	"testing"
 )
 
@@ -386,6 +387,98 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, "query myQuery", sn[7].Name())
 			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+		})
+	})
+
+	t.Run("Subgraph error produces a span event per GraphQL error", func(t *testing.T) {
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			Subgraphs: testenv.SubgraphsConfig{
+				Products: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","extensions":{"code":"YOUR_ERROR_CODE"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id details { forename surname } notes } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","extensions":{"code":"YOUR_ERROR_CODE"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
+
+			// The request to the employees subgraph succeeded
+			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+
+			given := attribute.NewSet(sn[5].Attributes()...)
+			want := attribute.NewSet([]attribute.KeyValue{
+				semconv.HTTPStatusCode(200),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgComponentName.String("engine-loader"),
+				otel.WgOperationHash.String("16884868987896027258"),
+				otel.WgOperationName.String("myQuery"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationType.String("query"),
+				otel.WgSubgraphName.String("employees"),
+				otel.WgSubgraphID.String("0"),
+			}...)
+
+			require.True(t, given.Equals(&want))
+
+			// The request to the products subgraph failed with a 403 status code
+			require.Equal(t, "Engine - Fetch", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
+
+			given = attribute.NewSet(sn[7].Attributes()...)
+			want = attribute.NewSet([]attribute.KeyValue{
+				otel.WgSubgraphName.String("products"),
+				otel.WgSubgraphID.String("3"),
+				semconv.HTTPStatusCode(403),
+				otel.WgComponentName.String("engine-loader"),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String("myQuery"),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("16884868987896027258"),
+				// Downstream errors
+				otel.WgSubgraphErrorExtendedCode.String("UNAUTHORIZED,YOUR_ERROR_CODE"),
+			}...)
+
+			require.True(t, given.Equals(&want))
+
+			require.Equal(t, sdktrace.Status{Code: codes.Error, Description: `Failed to fetch Subgraph '3' at path: 'query.employees.@'.
+Downstream errors:
+1. Subgraph error, Message: Unauthorized, Extension Code: UNAUTHORIZED
+2. Subgraph error, Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE
+`}, sn[7].Status())
+
+			events := sn[7].Events()
+			require.Len(t, events, 3, "expected 2 events, one for the fetch and one two downstream GraphQL errors")
+			require.Equal(t, "exception", events[0].Name)
+
+			require.Equal(t, "Downstream error 1", events[1].Name)
+			require.Equal(t, []attribute.KeyValue{
+				otel.WgSubgraphErrorExtendedCode.String("UNAUTHORIZED"),
+				otel.WgSubgraphErrorMessage.String("Unauthorized"),
+			}, events[1].Attributes)
+
+			require.Equal(t, "Downstream error 2", events[2].Name)
+			require.Equal(t, []attribute.KeyValue{
+				otel.WgSubgraphErrorExtendedCode.String("YOUR_ERROR_CODE"),
+				otel.WgSubgraphErrorMessage.String("MyErrorMessage"),
+			}, events[2].Attributes)
+
 		})
 	})
 }

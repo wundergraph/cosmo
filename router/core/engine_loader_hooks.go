@@ -127,8 +127,8 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 
 		baseAttributes = append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(strings.Join(errorCodesAttr, ",")))
 
-		span.SetAttributes(baseAttributes...)
-
 		f.metricStore.MeasureRequestError(ctx, baseAttributes...)
 	}
+
+	span.SetAttributes(baseAttributes...)
 }
