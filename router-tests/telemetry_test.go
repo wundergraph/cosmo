@@ -390,6 +390,40 @@ func TestTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Origin connectivity issue is traced", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			Subgraphs: testenv.SubgraphsConfig{
+				Products: testenv.SubgraphConfig{
+					CloseOnStart: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id details { forename surname } notes } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
+
+			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+
+			require.Equal(t, "Engine - Fetch", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
+			require.Equal(t, codes.Error, sn[7].Status().Code)
+			require.Contains(t, sn[7].Status().Description, "connect: connection refused\nFailed to fetch Subgraph '3' at path: 'query.employees.@'.")
+
+			events := sn[7].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
+			require.Equal(t, "exception", events[0].Name)
+		})
+	})
+
 	t.Run("Subgraph error produces a span event per GraphQL error", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
