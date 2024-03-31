@@ -697,7 +697,7 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 			}
 			req.Header.Set("User-Agent", "Router-tests")
 			resp, err := e.RouterClient.Do(req)
-			if resp.StatusCode == 200 {
+			if err == nil && resp.StatusCode == 200 {
 				return
 			}
 			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
