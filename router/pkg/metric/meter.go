@@ -91,6 +91,8 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	}
 
 	registry.MustRegister(collectors.NewGoCollector())
+
+	// Only available on Linux and Windows systems
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	promExporter, err := otelprom.New(
