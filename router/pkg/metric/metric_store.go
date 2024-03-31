@@ -105,7 +105,7 @@ func NewStore(opts ...Option) (Store, error) {
 		}
 	}
 
-	// Create Otlp metrics exported to OTEL
+	// Create OTLP metrics exported to OTEL
 	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.baseAttributes)
 	if err != nil {
 		return nil, err

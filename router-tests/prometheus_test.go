@@ -503,11 +503,11 @@ func TestPrometheus(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			require.Equal(t, 36, len(mf))
-
 			for _, family := range mf {
 				fmt.Println(family.GetName())
 			}
+
+			require.Equal(t, 36, len(mf))
 
 			responseContentLength := findMetricByName(mf, "router_http_requests_error_total")
 			responseContentLengthMetrics := responseContentLength.GetMetric()
