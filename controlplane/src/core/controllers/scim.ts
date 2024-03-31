@@ -30,6 +30,7 @@ const ScimError = ({ detail, status }: { detail: string; status: number }) => {
   };
 };
 
+// https://developer.okta.com/docs/reference/scim/scim-20/
 const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fastify, opts, done) {
   fastify.addContentTypeParser('application/scim+json', { parseAs: 'string' }, function (req, body, done) {
     try {
@@ -386,6 +387,8 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         password,
       });
 
+      await opts.userRepository.updateUser({ id: userID, active });
+
       return res.code(200).send({
         schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
         id: userID,
@@ -440,6 +443,8 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
             enabled: active,
             realm: opts.keycloakRealm,
           });
+
+          await opts.userRepository.updateUser({ id: userID, active });
         }
       }
 

@@ -604,6 +604,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
   email: text('email').unique().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  active: boolean('active').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const sessions = pgTable('sessions', {

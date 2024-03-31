@@ -11,7 +11,8 @@ let userTestData: UserTestData;
 let keycloakClient: Keycloak;
 let server: any;
 
-describe('Scim server', (ctx) => {
+// https://developer.okta.com/docs/reference/scim/scim-20/
+describe('Scim server v2.0', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
 

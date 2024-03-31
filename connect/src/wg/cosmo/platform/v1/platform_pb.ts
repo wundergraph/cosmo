@@ -5539,6 +5539,11 @@ export class OrgMember extends Message<OrgMember> {
    */
   orgMemberID = "";
 
+  /**
+   * @generated from field: bool active = 5;
+   */
+  active = false;
+
   constructor(data?: PartialMessage<OrgMember>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5551,6 +5556,7 @@ export class OrgMember extends Message<OrgMember> {
     { no: 2, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "orgMemberID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrgMember {

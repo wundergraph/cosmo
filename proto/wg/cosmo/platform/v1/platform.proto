@@ -746,6 +746,7 @@ message OrgMember{
   string email = 2;
   repeated string roles = 3;
   string orgMemberID = 4;
+  bool active = 5;
 }
 
 message PendingOrgInvitation{

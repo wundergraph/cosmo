@@ -278,6 +278,7 @@ export class OrganizationRepository {
         userID: users.id,
         email: users.email,
         memberID: organizationsMembers.id,
+        active: users.active,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -299,7 +300,8 @@ export class OrganizationRepository {
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
-    } as OrganizationMemberDTO;
+      active: orgMember[0].active,
+    };
   }
 
   public async getOrganizationMemberByEmail(input: {
@@ -311,6 +313,7 @@ export class OrganizationRepository {
         userID: users.id,
         email: users.email,
         memberID: organizationsMembers.id,
+        active: users.active,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -332,7 +335,8 @@ export class OrganizationRepository {
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
-    } as OrganizationMemberDTO;
+      active: orgMember[0].active,
+    };
   }
 
   public async getMembers({
@@ -349,6 +353,7 @@ export class OrganizationRepository {
         userID: users.id,
         email: users.email,
         memberID: organizationsMembers.id,
+        active: users.active,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -373,6 +378,7 @@ export class OrganizationRepository {
         orgMemberID: member.memberID,
         email: member.email,
         roles: roles.map((role) => role.role),
+        active: member.active,
       } as OrganizationMemberDTO);
     }
     return members;

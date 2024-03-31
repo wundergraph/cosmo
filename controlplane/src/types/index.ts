@@ -172,6 +172,7 @@ export interface OrganizationMemberDTO {
   orgMemberID: string;
   email: string;
   roles: string[];
+  active: boolean;
 }
 
 export interface OrganizationInvitationDTO {
