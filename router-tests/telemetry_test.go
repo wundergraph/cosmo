@@ -37,7 +37,7 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8)
+			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
 
 			/**
 			* Spans
@@ -87,6 +87,223 @@ func TestTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
+			httpRequestsMetric := metricdata.Metrics{
+				Name:        "router.http.requests",
+				Description: "Total number of requests",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 1,
+						},
+					},
+				},
+			}
+
+			requestDurationMetric := metricdata.Metrics{
+				Name:        "router.http.request.duration_milliseconds",
+				Description: "Server latency in milliseconds",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Sum: 0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Sum: 0,
+						},
+					},
+				},
+			}
+
+			requestContentLengthMetric := metricdata.Metrics{
+				Name:        "router.http.request.content_length",
+				Description: "Total number of request bytes",
+				Unit:        "bytes",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Value: 28,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 38,
+						},
+					},
+				},
+			}
+
+			responseContentLengthMetric := metricdata.Metrics{
+				Name:        "router.http.response.content_length",
+				Description: "Total number of response bytes",
+				Unit:        "bytes",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Value: 117,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.HTTPStatusCode(200),
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 117,
+						},
+					},
+				},
+			}
+
+			requestInFlightMetric := metricdata.Metrics{
+				Name:        "router.http.requests.in_flight.count",
+				Description: "Number of requests in flight",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+								otel.WgSubgraphID.String("0"),
+								otel.WgSubgraphName.String("employees"),
+							),
+							Value: 0,
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -94,235 +311,23 @@ func TestTelemetry(t *testing.T) {
 					Version:   "0.0.1",
 				},
 				Metrics: []metricdata.Metrics{
-					{
-						Name:        "router.http.requests",
-						Description: "Total number of requests",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-										otel.WgSubgraphID.String("0"),
-										otel.WgSubgraphName.String("employees"),
-									),
-								},
-								{
-									Attributes: attribute.NewSet(
-										semconv.HTTPStatusCode(200),
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-							},
-						},
-					},
-					{
-						Name:        "router.http.request.duration_milliseconds",
-						Description: "Server latency in milliseconds",
-						Unit:        "ms",
-						Data: metricdata.Histogram[float64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.HistogramDataPoint[float64]{
-								{
-									Attributes: attribute.NewSet(
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-										otel.WgSubgraphID.String("0"),
-										otel.WgSubgraphName.String("employees"),
-									),
-								},
-								{
-									Attributes: attribute.NewSet(
-										semconv.HTTPStatusCode(200),
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-							},
-						},
-					},
-					{
-						Name:        "router.http.request.content_length",
-						Description: "Total number of request bytes",
-						Unit:        "bytes",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-										otel.WgSubgraphID.String("0"),
-										otel.WgSubgraphName.String("employees"),
-									),
-								},
-								{
-									Attributes: attribute.NewSet(
-										semconv.HTTPStatusCode(200),
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-							},
-						},
-					},
-					{
-						Name:        "router.http.response.content_length",
-						Description: "Total number of response bytes",
-						Unit:        "bytes",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										semconv.HTTPStatusCode(200),
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-										otel.WgSubgraphID.String("0"),
-										otel.WgSubgraphName.String("employees"),
-									),
-								},
-								{
-									Attributes: attribute.NewSet(
-										semconv.HTTPStatusCode(200),
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-							},
-						},
-					},
-					{
-						Name:        "router.http.requests.in_flight.count",
-						Description: "Number of requests in flight",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-								{
-									Attributes: attribute.NewSet(
-										otel.WgClientName.String("unknown"),
-										otel.WgClientVersion.String("missing"),
-										otel.WgFederatedGraphID.String("graph"),
-										otel.WgOperationHash.String("14226210703439426856"),
-										otel.WgOperationName.String(""),
-										otel.WgOperationProtocol.String("http"),
-										otel.WgOperationType.String("query"),
-										otel.WgRouterClusterName.String(""),
-										otel.WgRouterConfigVersion.String(""),
-										otel.WgRouterVersion.String("dev"),
-										otel.WgSubgraphID.String("0"),
-										otel.WgSubgraphName.String("employees"),
-									),
-								},
-							},
-						},
-					},
+					httpRequestsMetric,
+					requestDurationMetric,
+					requestContentLengthMetric,
+					responseContentLengthMetric,
+					requestInFlightMetric,
 				},
 			}
 
-			require.Equal(t, 1, len(rm.ScopeMetrics))
-			require.Equal(t, 5, len(rm.ScopeMetrics[0].Metrics))
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 5, len(rm.ScopeMetrics[0].Metrics), "expected 5 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
 
 			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
-			// Total number of requests
-			require.Equal(t, int64(1), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of requests")
-			require.Equal(t, int64(1), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of requests")
-
-			// Response time histogram
-			require.Greater(t, rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(0), "response time histogram")
-			require.NotEmpty(t, rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Histogram[float64]).DataPoints[1].Sum, float64(0), "response time histogram")
-
-			// Total number of request bytes
-			require.Equal(t, int64(28), rm.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of request bytes")
-			require.Equal(t, int64(38), rm.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of request bytes")
-
-			// Total number of response bytes
-			require.Equal(t, int64(117), rm.ScopeMetrics[0].Metrics[3].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "total number of response bytes")
-			require.Equal(t, int64(117), rm.ScopeMetrics[0].Metrics[3].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "total number of response bytes")
-
-			// Number of requests in flight
-			require.Equal(t, int64(0), rm.ScopeMetrics[0].Metrics[4].Data.(metricdata.Sum[int64]).DataPoints[0].Value, "number of requests in flight")
-			require.Equal(t, int64(0), rm.ScopeMetrics[0].Metrics[4].Data.(metricdata.Sum[int64]).DataPoints[1].Value, "number of requests in flight")
+			metricdatatest.AssertEqual(t, httpRequestsMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, rm.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
 
 		})
 	})
@@ -341,7 +346,7 @@ func TestTelemetry(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 8)
+			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
 
 			// Pre-Handler Operation steps
 			require.Equal(t, "Operation - Parse", sn[0].Name())
