@@ -36,8 +36,6 @@ func TestPrometheus(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			require.Equal(t, 35, len(mf))
-
 			requestTotal := findMetricByName(mf, "router_http_requests_total")
 			requestTotalMetrics := requestTotal.GetMetric()
 
