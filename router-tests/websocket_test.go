@@ -152,7 +152,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: not authenticated","path":["employees",0,"startDate"]}]`, string(res.Payload))
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
@@ -210,7 +210,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate'. Reason: not authenticated","path":["employeeUpdated","startDate"]}]`, string(res.Payload))
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"]}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
