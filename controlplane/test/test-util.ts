@@ -111,6 +111,12 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
 
   await seedTest(databaseConnectionUrl, userTestData);
 
+  await organizationRepository.updateFeature({
+    organizationId: userTestData.organizationId,
+    id: 'scim',
+    enabled: true,
+  });
+
   const transport = createConnectTransport({
     httpVersion: '1.1',
     baseUrl: addr,
