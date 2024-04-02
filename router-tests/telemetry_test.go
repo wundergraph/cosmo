@@ -271,7 +271,7 @@ func TestTelemetry(t *testing.T) {
 			}
 
 			requestInFlightMetric := metricdata.Metrics{
-				Name:        "router.http.requests.in_flight.count",
+				Name:        "router.http.requests.in_flight",
 				Description: "Number of requests in flight",
 				Unit:        "",
 				Data: metricdata.Sum[int64]{

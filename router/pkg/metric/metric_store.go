@@ -18,8 +18,8 @@ const (
 	ServerLatencyHistogram        = "router.http.request.duration_milliseconds" // Incoming end to end duration, milliseconds
 	RequestContentLengthCounter   = "router.http.request.content_length"        // Incoming request bytes total
 	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
-	InFlightRequestsUpDownCounter = "router.http.requests.in_flight.count"      // Number of requests in flight
-	RequestError                  = "router.http.requests.error"                // Incoming request error count
+	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
+	RequestError                  = "router.http.requests.error"                // Total request error count
 
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
@@ -32,7 +32,7 @@ var (
 	RequestCounterOptions     = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription(RequestCounterDescription),
 	}
-	RequestErrorCounterDescription = "Total number of failed request errors"
+	RequestErrorCounterDescription = "Total number of failed request"
 	RequestErrorCounterOptions     = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription(RequestErrorCounterDescription),
 	}

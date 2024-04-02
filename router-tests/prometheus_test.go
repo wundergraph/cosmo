@@ -149,7 +149,7 @@ func TestPrometheus(t *testing.T) {
 				},
 			}, requestTotalMetrics[1].Label)
 
-			requestsInFlight := findMetricByName(mf, "router_http_requests_in_flight_count")
+			requestsInFlight := findMetricByName(mf, "router_http_requests_in_flight")
 			requestsInFlightMetrics := requestsInFlight.GetMetric()
 
 			require.Len(t, requestsInFlightMetrics, 2)
