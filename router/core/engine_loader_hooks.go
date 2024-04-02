@@ -109,15 +109,25 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 			// Extract downstream errors
 			if len(subgraphError.DownstreamErrors) > 0 {
 				for i, downstreamError := range subgraphError.DownstreamErrors {
-					if downstreamError.Extensions != nil && downstreamError.Extensions.Code != "" {
-						errorCodesAttr = append(errorCodesAttr, downstreamError.Extensions.Code)
+					var errorCode string
+					if downstreamError.Extensions != nil {
+						if ok := downstreamError.Extensions["code"]; ok != nil {
+							if code, ok := downstreamError.Extensions["code"].(string); ok {
+								errorCode = code
+							}
+						}
+
 					}
-					span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
-						trace.WithAttributes(
-							rotel.WgSubgraphErrorExtendedCode.String(downstreamError.Extensions.Code),
-							rotel.WgSubgraphErrorMessage.String(downstreamError.Message),
-						),
-					)
+
+					if errorCode != "" {
+						errorCodesAttr = append(errorCodesAttr, errorCode)
+						span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
+							trace.WithAttributes(
+								rotel.WgSubgraphErrorExtendedCode.String(errorCode),
+								rotel.WgSubgraphErrorMessage.String(downstreamError.Message),
+							),
+						)
+					}
 				}
 			}
 		}
@@ -125,7 +135,9 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 		// Reduce cardinality of error codes
 		slices.Sort(errorCodesAttr)
 
-		baseAttributes = append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(strings.Join(errorCodesAttr, ",")))
+		if len(errorCodesAttr) > 0 {
+			baseAttributes = append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(strings.Join(errorCodesAttr, ",")))
+		}
 
 		f.metricStore.MeasureRequestError(ctx, baseAttributes...)
 	}

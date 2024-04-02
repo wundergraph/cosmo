@@ -104,7 +104,7 @@ dc-federation-demo:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs up --remove-orphans --detach
 
 dc-subgraphs-demo:
-	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach --build
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach
 
 dc-subgraphs-demo-down:
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
