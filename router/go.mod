@@ -34,7 +34,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/sjson v1.2.5
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14.0.20240401111536-eb889bdb092e
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14.0.20240402111218-9a3a409d7821
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
