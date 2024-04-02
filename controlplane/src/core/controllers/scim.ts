@@ -53,6 +53,20 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
     }
     const token = authorization.replace(/^bearer\s+/i, '');
     const authContext = await opts.authenticator.authenticate(token);
+
+    const feature = await opts.organizationRepository.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'scim',
+    });
+    if (!feature?.enabled) {
+      return res.code(400).send(
+        ScimError({
+          detail: 'Scim feature is not enabled for this organization.',
+          status: 400,
+        }),
+      );
+    }
+
     await opts.keycloakClient.authenticateClient();
 
     req.authContext = authContext;

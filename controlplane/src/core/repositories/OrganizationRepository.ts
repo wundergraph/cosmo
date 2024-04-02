@@ -1137,6 +1137,7 @@ export class OrganizationRepository {
       support: false,
       oidc: false,
       ai: false,
+      scim: false,
     };
 
     for (const feature of features) {

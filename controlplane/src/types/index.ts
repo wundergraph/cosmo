@@ -17,7 +17,8 @@ export type FeatureIds =
   | 'security'
   | 'support'
   | 'ai'
-  | 'oidc';
+  | 'oidc'
+  | 'scim';
 
 export type Features = {
   [key in FeatureIds]: Feature;

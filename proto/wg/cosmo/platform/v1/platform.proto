@@ -1559,19 +1559,18 @@ message GetUserAccessibleResourcesResponse {
   repeated Graph subgraphs = 3;
 }
 
-message UpdateAISettingsRequest {
+enum Feature {
+  rbac = 0;
+  ai = 1;
+  scim = 2;
+}
+
+message UpdateFeatureSettingsRequest {
   bool enable = 1;
+  Feature featureId = 2;
 }
 
-message UpdateAISettingsResponse {
-  Response response = 1;
-}
-
-message UpdateRBACSettingsRequest {
-  bool enable = 1;
-}
-
-message UpdateRBACSettingsResponse {
+message UpdateFeatureSettingsResponse {
   Response response = 1;
 }
 
@@ -2080,10 +2079,8 @@ service PlatformService {
   rpc GetChangelogBySchemaVersion(GetChangelogBySchemaVersionRequest) returns (GetChangelogBySchemaVersionResponse) {}
   // GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
   rpc GetUserAccessibleResources(GetUserAccessibleResourcesRequest) returns (GetUserAccessibleResourcesResponse) {}
-  // UpdateRBACSettings updates rbac setting of the organization
-  rpc UpdateRBACSettings(UpdateRBACSettingsRequest) returns (UpdateRBACSettingsResponse) {}
-  // UpdateAISettings updates ai setting of the organization
-  rpc UpdateAISettings(UpdateAISettingsRequest) returns (UpdateAISettingsResponse) {}
+  // UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
+  rpc UpdateFeatureSettings(UpdateFeatureSettingsRequest) returns (UpdateFeatureSettingsResponse) {}
   // AddSubgraphMember adds a user to the subgraph
   rpc AddSubgraphMember(AddSubgraphMemberRequest) returns (AddSubgraphMemberResponse) {}
   // RemoveSubgraphMember removes a member from the subgraph

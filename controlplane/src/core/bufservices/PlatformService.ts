@@ -10,6 +10,7 @@ import {
   AddReadmeResponse,
   AddSubgraphMemberResponse,
   AuditLog,
+  Feature,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
@@ -115,15 +116,14 @@ import {
   RequestSeriesItem,
   Router,
   SetDiscussionResolutionResponse,
-  UpdateAISettingsResponse,
   UpdateDiscussionCommentResponse,
+  UpdateFeatureSettingsResponse,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateMonographResponse,
   UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
-  UpdateRBACSettingsResponse,
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
@@ -136,6 +136,7 @@ import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
 import {
   DateRange,
+  FeatureIds,
   FederatedGraphDTO,
   GraphApiKeyJwtPayload,
   GraphCompositionDTO,
@@ -6030,10 +6031,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateRBACSettings: (req, ctx) => {
+    updateFeatureSettings: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateRBACSettingsResponse>>(ctx, logger, async () => {
+      return handleError<PlainMessage<UpdateFeatureSettingsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
@@ -6048,9 +6049,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let featureId: FeatureIds;
+        switch (req.featureId) {
+          case Feature.rbac: {
+            featureId = 'rbac';
+            break;
+          }
+          case Feature.ai: {
+            featureId = 'ai';
+            break;
+          }
+          case Feature.scim: {
+            featureId = 'scim';
+            break;
+          }
+          default: {
+            throw new Error(`Feature doesnt exist`);
+          }
+        }
+
         await orgRepo.updateFeature({
           organizationId: authContext.organizationId,
-          id: 'rbac',
+          id: featureId,
           enabled: req.enable,
         });
 
@@ -8273,30 +8293,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
-        };
-      });
-    },
-
-    updateAISettings: (req, ctx) => {
-      let logger = getLogger(ctx, opts.logger);
-
-      return handleError<PlainMessage<UpdateAISettingsResponse>>(ctx, logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        logger = enrichLogger(ctx, logger, authContext);
-
-        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-
-        const enabled = await orgRepo.updateFeature({
-          id: 'ai',
-          organizationId: authContext.organizationId,
-          enabled: req.enable,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          enabled,
         };
       });
     },
