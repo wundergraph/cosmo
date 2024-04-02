@@ -5969,6 +5969,11 @@ export class CreateAPIKeyRequest extends Message<CreateAPIKeyRequest> {
    */
   subgraphTargetIds: string[] = [];
 
+  /**
+   * @generated from field: repeated string permissions = 6;
+   */
+  permissions: string[] = [];
+
   constructor(data?: PartialMessage<CreateAPIKeyRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5982,6 +5987,7 @@ export class CreateAPIKeyRequest extends Message<CreateAPIKeyRequest> {
     { no: 3, name: "expires", kind: "enum", T: proto3.getEnumType(ExpiresAt) },
     { no: 4, name: "federatedGraphTargetIds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "subgraphTargetIds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "permissions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAPIKeyRequest {

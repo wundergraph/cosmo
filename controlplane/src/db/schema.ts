@@ -1146,6 +1146,16 @@ export const apiKeyResources = pgTable('api_key_resources', {
   targetId: uuid('target_id').references(() => targets.id, { onDelete: 'set null' }),
 });
 
+export const apiKeyPermissions = pgTable('api_key_permissions', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  apiKeyId: uuid('api_key_id')
+    .notNull()
+    .references(() => apiKeys.id, {
+      onDelete: 'cascade',
+    }),
+  permission: text('permission').notNull(),
+});
+
 export const subgraphMembers = pgTable(
   'subgraph_members',
   {

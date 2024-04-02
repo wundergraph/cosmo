@@ -603,6 +603,13 @@
       "when": 1711913487797,
       "tag": "0085_typical_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "5",
+      "when": 1712089183502,
+      "tag": "0086_low_steel_serpent",
+      "breakpoints": true
     }
   ]
 }

@@ -84,6 +84,7 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
     userID: userTestData.userId,
     expiresAt: ExpiresAt.NEVER,
     targetIds: [],
+    permissions: ['scim'],
   });
 
   const namespaceRepo = new NamespaceRepository(db, insertedOrg.id);

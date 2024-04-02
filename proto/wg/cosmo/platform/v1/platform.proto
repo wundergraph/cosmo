@@ -799,6 +799,7 @@ message CreateAPIKeyRequest {
   ExpiresAt expires = 3;
   repeated string federatedGraphTargetIds = 4;
   repeated string subgraphTargetIds = 5;
+  repeated string permissions = 6;
 }
 
 message CreateAPIKeyResponse {

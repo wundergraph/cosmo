@@ -37,6 +37,7 @@ import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
 import { fastifyLoggerId } from './util.js';
+import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -198,6 +199,7 @@ export default async function build(opts: BuildConfig) {
   const orgInvitationRepository = new OrganizationInvitationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const userRepo = new UserRepository(fastify.db);
+  const apiKeyRepository = new ApiKeyRepository(fastify.db);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
@@ -345,6 +347,7 @@ export default async function build(opts: BuildConfig) {
   await fastify.register(ScimController, {
     organizationRepository,
     userRepository: userRepo,
+    apiKeyRepository,
     authenticator: apiKeyAuth,
     prefix: '/scim/v2',
     db: fastify.db,

@@ -23,6 +23,7 @@ import ScimController from '../src/core/controllers/scim.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
+import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 
 export const SetupTest = async function ({ dbname, chClient }: { dbname: string; chClient?: ClickHouseClient }) {
   const log = pino();
@@ -94,10 +95,12 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
 
   const organizationRepository = new OrganizationRepository(log, server.db, '');
   const userRepository = new UserRepository(server.db);
+  const apiKeyRepository = new ApiKeyRepository(server.db);
   const apiKeyAuth = new ApiKeyAuthenticator(server.db, organizationRepository);
   await server.register(ScimController, {
     organizationRepository,
     userRepository,
+    apiKeyRepository,
     authenticator: apiKeyAuth,
     prefix: '/scim/v2',
     db: server.db,

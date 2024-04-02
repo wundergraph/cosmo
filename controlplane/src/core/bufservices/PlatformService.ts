@@ -4128,6 +4128,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           key: generatedAPIKey,
           expiresAt: req.expires,
           targetIds: [...req.federatedGraphTargetIds, ...req.subgraphTargetIds],
+          permissions: req.permissions,
         });
 
         await auditLogRepo.addAuditLog({

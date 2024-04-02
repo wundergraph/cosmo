@@ -6,11 +6,13 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { UserRepository } from '../repositories/UserRepository.js';
 import ApiKeyAuthenticator, { ApiKeyAuthContext } from '../services/ApiKeyAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
+import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 
 export type ScimControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
   organizationRepository: OrganizationRepository;
   userRepository: UserRepository;
+  apiKeyRepository: ApiKeyRepository;
   authenticator: ApiKeyAuthenticator;
   keycloakClient: Keycloak;
   keycloakRealm: string;
@@ -62,6 +64,16 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       return res.code(400).send(
         ScimError({
           detail: 'Scim feature is not enabled for this organization.',
+          status: 400,
+        }),
+      );
+    }
+
+    const isAuthorized = await opts.apiKeyRepository.verifyAPIKeyPermissions({ apiKey: token, permission: 'scim' });
+    if (!isAuthorized) {
+      return res.code(400).send(
+        ScimError({
+          detail: 'API key doesnt have the permission to perform scim operations.',
           status: 400,
         }),
       );
