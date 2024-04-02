@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { DocumentNode, parse, printSchema } from 'graphql';
+import { DocumentNode, parse } from 'graphql';
+import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FieldConfiguration, FederationResult } from '@wundergraph/composition';
@@ -297,7 +298,9 @@ export class Composer {
         namespace: federatedGraph.namespace,
         namespaceId: federatedGraph.namespaceId,
         targetID: federatedGraph.targetId,
-        composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
+        composedSchema: result?.federatedGraphSchema
+          ? printSchemaWithDirectives(result.federatedGraphSchema)
+          : undefined,
         errors: errors || [],
         fieldConfigurations: result?.fieldConfigurations || [],
         subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
@@ -349,7 +352,9 @@ export class Composer {
           namespaceId: graph.namespaceId,
           targetID: graph.targetId,
           fieldConfigurations: result?.fieldConfigurations || [],
-          composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
+          composedSchema: result?.federatedGraphSchema
+            ? printSchemaWithDirectives(result.federatedGraphSchema)
+            : undefined,
           errors: errors || [],
           subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
         });

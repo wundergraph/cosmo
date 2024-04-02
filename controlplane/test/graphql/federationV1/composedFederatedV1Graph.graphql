@@ -1,3 +1,7 @@
+schema {
+  query: Query
+}
+
 directive @tag(
   name: String!
 ) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
@@ -22,8 +26,8 @@ type User {
 }
 
 type Product {
-  id: ID!
-  sku: String
+  id: ID! @tag(name: "hi-from-products") @tag(name: "hi-from-inventory")
+  sku: String @tag(name: "hi-from-products")
   package: String
   variation: ProductVariation
   dimensions: ProductDimension
@@ -37,7 +41,7 @@ type ProductVariation {
 
 type ProductDimension {
   size: String
-  weight: Float
+  weight: Float @tag(name: "hi-from-inventory-value-type-field")
 }
 
 type DeliveryEstimates {

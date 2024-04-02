@@ -11,6 +11,7 @@ require (
 	github.com/rs/cors v1.10.1
 	github.com/vektah/gqlparser/v2 v2.5.10
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
+	github.com/wundergraph/cosmo/router v0.0.0-20240328090455-8aa618e478fe
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.23.1
@@ -50,7 +51,6 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/phf/go-queue v0.0.0-20170504031614-9abe38d0371d // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
