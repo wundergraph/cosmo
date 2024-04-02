@@ -401,10 +401,7 @@ func addErrorToSpan(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
-	span := trace.SpanFromContext(ctx)
-	if err == nil {
-		return
-	}
+
 	reqCtx := getRequestContext(ctx)
 	if reqCtx == nil {
 		return
@@ -412,7 +409,7 @@ func addErrorToSpan(ctx context.Context, err error) {
 
 	reqCtx.error = err
 
-	rtrace.AttachErrToSpan(span, err)
+	rtrace.AttachErrToSpan(trace.SpanFromContext(ctx), err)
 }
 
 func propagateSubgraphErrors(ctx *resolve.Context) {

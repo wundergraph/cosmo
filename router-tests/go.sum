@@ -306,6 +306,8 @@ github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14.0.20240401111536-eb889bd
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14.0.20240401111536-eb889bdb092e/go.mod h1:e71oBiNorTfjTi6eDRCFoIoJiFWcwiQ0eObm75VzJh0=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14.0.20240402111218-9a3a409d7821 h1:21IqO36WJYuKCTvD2EXgZ2yZMZL/M06uFZaLjHlMhXc=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.14.0.20240402111218-9a3a409d7821/go.mod h1:e71oBiNorTfjTi6eDRCFoIoJiFWcwiQ0eObm75VzJh0=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.15 h1:W2ZsKlq8icAKJ86y3KvprnVOn+Tm207CeRUXwA/Jjaw=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.15/go.mod h1:e71oBiNorTfjTi6eDRCFoIoJiFWcwiQ0eObm75VzJh0=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 github.com/yusufpapurcu/wmi v1.2.3 h1:E1ctvB7uKFMOJw3fdOW32DwGE9I7t++CRUEMKvFoFiw=
