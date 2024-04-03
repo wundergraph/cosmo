@@ -207,7 +207,7 @@ export async function checkAuth(silent = false) {
 
     // Update the api key with the new access token
     config.apiKey = data.access_token;
-  } catch {
-    program.error(pc.red('Failed to refresh access token. Please login again with `wgc auth login`'));
+  } catch (e: any) {
+    throw new Error('Failed to parse the response from the identity server: ' + e.toString());
   }
 }
