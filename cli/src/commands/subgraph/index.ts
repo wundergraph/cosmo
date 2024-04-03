@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../core/types/types.js';
-import { checkAPIKey } from '../../utils.js';
+import { checkAuth } from '../auth/utils.js';
 import CheckSubgraph from './commands/check.js';
 import CreateSubgraphCommand from './commands/create.js';
 import PublishSubgraph from './commands/publish.js';
@@ -26,8 +26,8 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(MoveSubgraph(opts));
   command.addCommand(FetchSubgraph(opts));
 
-  command.hook('preAction', () => {
-    checkAPIKey();
+  command.hook('preAction', async (thisCmd) => {
+    await checkAuth();
   });
 
   return command;

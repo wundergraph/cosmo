@@ -3,7 +3,7 @@ import CliTable3 from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import ora from 'ora';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -21,7 +21,7 @@ export default (opts: BaseCommandOptions) => {
         newNamespace: options.to,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

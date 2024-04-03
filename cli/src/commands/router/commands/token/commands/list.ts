@@ -3,7 +3,7 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
-import { baseHeaders } from '../../../../../core/config.js';
+import { getBaseHeaders } from '../../../../../core/config.js';
 import program from '../../../../index.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -20,7 +20,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

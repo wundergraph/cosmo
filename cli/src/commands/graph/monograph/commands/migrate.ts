@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import ora from 'ora';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
-import { baseHeaders } from '../../../../core/config.js';
+import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -29,7 +29,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

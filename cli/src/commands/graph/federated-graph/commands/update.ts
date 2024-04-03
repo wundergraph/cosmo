@@ -7,7 +7,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { resolve } from 'pathe';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import { baseHeaders } from '../../../../core/config.js';
+import { getBaseHeaders } from '../../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
@@ -58,7 +58,7 @@ export default (opts: BaseCommandOptions) => {
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

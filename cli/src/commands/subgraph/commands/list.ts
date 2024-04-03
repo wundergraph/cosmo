@@ -5,7 +5,7 @@ import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { join } from 'pathe';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import program from '../../index.js';
 
@@ -31,7 +31,7 @@ export default (opts: BaseCommandOptions) => {
         offset: 0,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

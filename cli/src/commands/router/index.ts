@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../core/types/types.js';
-import { checkAPIKey } from '../../utils.js';
+import { checkAuth } from '../auth/utils.js';
 import ComposeRouterConfig from './commands/compose.js';
 import FetchRouterConfig from './commands/fetch.js';
 import RouterTokenCommands from './commands/token/index.js';
@@ -18,11 +18,11 @@ export default (opts: BaseCommandOptions) => {
   );
   cmd.addCommand(DownloadRouterBinaryConfig(opts));
 
-  cmd.hook('preAction', (thisCmd) => {
+  cmd.hook('preAction', async (thisCmd) => {
     if (['compose', 'download-binary'].includes(thisCmd.args[0])) {
       return;
     }
-    checkAPIKey();
+    await checkAuth();
   });
 
   return cmd;

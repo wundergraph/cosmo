@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { PartialMessage } from '@bufbuild/protobuf';
 import { GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Client } from './core/client/client.js';
-import { baseHeaders } from './core/config.js';
+import { getBaseHeaders } from './core/config.js';
 
 // https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
 
@@ -58,7 +58,7 @@ export const verifyGitHubIntegration = async (client: Client) => {
         gitInfo,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
     ignoreErrorsDueToGitHubIntegration = integrationCheckResponse.isInstalled;

@@ -4,7 +4,7 @@ import { Command, program } from 'commander';
 import { endOfDay, formatISO, startOfDay, subDays } from 'date-fns';
 import pc from 'picocolors';
 import { join } from 'pathe';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../core/types/types.js';
 
 type OutputFile = {
@@ -56,7 +56,7 @@ export default (opts: CommonGraphCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 
