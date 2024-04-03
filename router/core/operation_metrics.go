@@ -24,6 +24,8 @@ func (p OperationProtocol) String() string {
 	return string(p)
 }
 
+// OperationMetrics is a struct that holds the metrics for an operation. It should be created on the parent router request
+// subgraph metrics are created in the transport or engine loader hooks.
 type OperationMetrics struct {
 	requestContentLength int64
 	routerMetrics        RouterMetrics
@@ -48,12 +50,13 @@ func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int) {
 
 	ctx := context.Background()
 
-	if err != nil {
-		// We don't store false values in the metrics, so only add the error attribute if it's true, DON'T CHANGE THIS
-		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(true))
-	}
-
 	rm := m.routerMetrics.MetricStore()
+
+	if err != nil {
+		// We don't store false values in the metrics, so only add the error attribute if it's true
+		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(true))
+		rm.MeasureRequestError(ctx, m.metricBaseFields...)
+	}
 
 	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(statusCode))
 	rm.MeasureRequestCount(ctx, m.metricBaseFields...)
