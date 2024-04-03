@@ -314,6 +314,48 @@ describe('Argument federation tests', () => {
       ]),
     );
   });
+
+  test('that the @deperecated directive is persisted on arguments in the federated schema #1.1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(normalizeString(
+      versionOneSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity implements Identifiable {
+          field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
+          id: Int!
+          test: Float!
+        }
+
+        interface Identifiable {
+          id: Int!
+        }
+        
+        type Query {
+          entity: Entity!
+        }
+    `));
+  });
+
+  test('that the @deperecated directive is persisted on arguments in the federated schema #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphG]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(normalizeString(
+      versionOneSchemaQueryAndPersistedDirectiveDefinitions + `
+        type Entity implements Identifiable {
+          field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
+          id: Int!
+          test: Float!
+        }
+
+        interface Identifiable {
+          id: Int!
+        }
+        
+        type Query {
+          entity: Entity!
+        }
+    `));
+  });
 });
 
 function subgraphWithArgument(name: string, typeName: string): Subgraph {
@@ -433,6 +475,36 @@ const subgraphF: Subgraph = {
     extend type Entity @key(fields: "id") @tag(name: "subgraph-f") {
       id: ID!
         field(one: Int = null @tag(name: "extension"), two: Int = null @tag(name: "extension"), three: String = null @deprecated(reason: "just because"), four: String = null): String
+    }
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    interface Identifiable {
+      id: Int!
+    }
+    
+    type Entity implements Identifiable @key(fields: "id") {
+      id: Int!
+      field("one" one: Int!, "two" two: String, three: String @deprecated(reason: "Just because")): String
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "id") {
+      id: Int!
+      test: Float!
     }
   `),
 };

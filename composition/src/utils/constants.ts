@@ -5,13 +5,15 @@ import {
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
+  CONSUMER,
   DEFAULT,
   DEPRECATED,
+  EDFS_EVENTS_PUBLISH,
+  EDFS_EVENTS_REQUEST,
+  EDFS_EVENTS_SUBSCRIBE,
+  EDFS_STREAM_CONFIGURATION,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
-  EVENTS_PUBLISH,
-  EVENTS_REQUEST,
-  EVENTS_SUBSCRIBE,
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
@@ -40,13 +42,15 @@ import {
   SHAREABLE,
   SOURCE_NAME,
   SPECIFIED_BY,
+  STREAM_NAME,
   STRING_SCALAR,
+  SUBJECT,
+  SUBJECTS,
   TAG,
-  TOPIC,
   UNION_UPPER,
   URL_LOWER,
 } from './string-constants';
-import { MutableDirectiveDefinitionNode, MutableScalarNode } from '../schema-building/ast';
+import { MutableDirectiveDefinitionNode, MutableInputObjectNode, MutableScalarNode } from '../schema-building/ast';
 
 export const BASE_SCALARS = new Set<string>([
   '_Any',
@@ -103,12 +107,12 @@ const EXTERNAL_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @eventsPublish(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
+// directive @edfs__eventsPublish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
 const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(TOPIC),
+      name: stringToNameNode(SUBJECT),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
@@ -129,16 +133,16 @@ const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EVENTS_PUBLISH),
+  name: stringToNameNode(EDFS_EVENTS_PUBLISH),
   repeatable: false,
 };
 
-// directive @eventsRequest(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
+// directive @edfs__eventsRequest(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
 const EVENTS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(TOPIC),
+      name: stringToNameNode(SUBJECT),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
@@ -159,19 +163,25 @@ const EVENTS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EVENTS_REQUEST),
+  name: stringToNameNode(EDFS_EVENTS_REQUEST),
   repeatable: false,
 };
 
-// directive @eventsSubscribe(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
+// directive @edfs__eventsSubscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
 const EVENTS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(TOPIC),
+      name: stringToNameNode(SUBJECTS),
       type: {
         kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(STRING_SCALAR),
+          },
+        },
       },
     },
     {
@@ -186,10 +196,15 @@ const EVENTS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
         value: DEFAULT,
       },
     },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode('streamConfiguration'),
+      type: stringToNamedTypeNode(EDFS_STREAM_CONFIGURATION),
+    },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EVENTS_SUBSCRIBE),
+  name: stringToNameNode(EDFS_EVENTS_SUBSCRIBE),
   repeatable: false,
 };
 
@@ -310,9 +325,9 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
   [DEPRECATED, DEPRECATED_DEFINITION],
   [EXTENDS, EXTENDS_DEFINITION],
   [EXTERNAL, EXTERNAL_DEFINITION],
-  [EVENTS_PUBLISH, EVENTS_PUBLISH_DEFINITION],
-  [EVENTS_REQUEST, EVENTS_REQUEST_DEFINITION],
-  [EVENTS_SUBSCRIBE, EVENTS_SUBSCRIBE_DEFINITION],
+  [EDFS_EVENTS_PUBLISH, EVENTS_PUBLISH_DEFINITION],
+  [EDFS_EVENTS_REQUEST, EVENTS_REQUEST_DEFINITION],
+  [EDFS_EVENTS_SUBSCRIBE, EVENTS_SUBSCRIBE_DEFINITION],
   [KEY, KEY_DEFINITION],
   [PROVIDES, PROVIDES_DEFINITION],
   [REQUIRES, REQUIRES_DEFINITION],
@@ -498,14 +513,17 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   DEPRECATED_DEFINITION,
   EXTENDS_DEFINITION,
   EXTERNAL_DEFINITION,
-  EVENTS_PUBLISH_DEFINITION,
-  EVENTS_REQUEST_DEFINITION,
-  EVENTS_SUBSCRIBE_DEFINITION,
   KEY_DEFINITION,
   PROVIDES_DEFINITION,
   REQUIRES_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   TAG_DEFINITION,
+];
+
+export const EVENT_DRIVEN_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
+  EVENTS_PUBLISH_DEFINITION,
+  EVENTS_REQUEST_DEFINITION,
+  EVENTS_SUBSCRIBE_DEFINITION,
 ];
 
 export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
@@ -524,9 +542,39 @@ export const FIELD_SET_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
   name: stringToNameNode(FIELD_SET_SCALAR),
 };
 
+// scalar openfed__Scope
 export const SCOPE_SCALAR_DEFINITION: MutableScalarNode = {
   kind: Kind.SCALAR_TYPE_DEFINITION,
   name: stringToNameNode(SCOPE_SCALAR),
+};
+
+/*
+* input edfs__StreamConfiguration {
+*   consumer: String!
+*   streamName: String!
+* }
+* */
+export const STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode = {
+  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  name: stringToNameNode(EDFS_STREAM_CONFIGURATION),
+  fields: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CONSUMER),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(STREAM_NAME),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+  ],
 };
 
 export const MAXIMUM_TYPE_NESTING = 30;
@@ -537,9 +585,9 @@ export const baseDirectives = `
   directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
   directive @extends on INTERFACE | OBJECT
   directive @external on FIELD_DEFINITION | OBJECT
-  directive @eventsPublish(topic: String!, sourceID: String) on FIELD_DEFINITION
-  directive @eventsRequest(topic: String!, sourceID: String) on FIELD_DEFINITION
-  directive @eventsSubscribe(topic: String!, sourceID: String) on FIELD_DEFINITION
+  directive @edfs__eventsPublish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
+  directive @edfs__eventsRequest(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
+  directive @edfs__eventsSubscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
   directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
   directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
   directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
@@ -555,4 +603,8 @@ export const baseDirectives = `
   directive @shareable on FIELD_DEFINITION | OBJECT
   scalar openfed__FieldSet
   scalar openfed__Scope
+  input edfs__StreamConfiguration {
+    consumer: String!
+    streamName: String!
+  }
 `;

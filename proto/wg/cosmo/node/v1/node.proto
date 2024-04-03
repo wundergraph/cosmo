@@ -199,12 +199,18 @@ enum EventType {
   SUBSCRIBE = 2;
 }
 
+message StreamConfiguration {
+  string consumer = 1;
+  string steam_name = 2;
+}
+
 message EventConfiguration {
   EventType type = 1;
   string type_name = 2;
   string field_name = 3;
-  string topic = 4;
+  repeated string subjects = 4;
   string source_name = 5;
+  StreamConfiguration stream_configuration = 6;
 }
 
 message DataSourceCustom_Events {

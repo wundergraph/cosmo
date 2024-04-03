@@ -3,9 +3,16 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
+import type {
+  BinaryReadOptions,
+  FieldList,
+  JsonReadOptions,
+  JsonValue,
+  PartialMessage,
+  PlainMessage,
+} from '@bufbuild/protobuf';
+import { Message, proto3, protoInt64 } from '@bufbuild/protobuf';
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from '../../common/common_pb.js';
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -1370,6 +1377,49 @@ export class DataSourceCustom_GraphQL extends Message<DataSourceCustom_GraphQL> 
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.StreamConfiguration
+ */
+export class StreamConfiguration extends Message<StreamConfiguration> {
+  /**
+   * @generated from field: string consumer = 1;
+   */
+  consumer = "";
+
+  /**
+   * @generated from field: string steam_name = 2;
+   */
+  steamName = "";
+
+  constructor(data?: PartialMessage<StreamConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.StreamConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "consumer", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "steam_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamConfiguration {
+    return new StreamConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamConfiguration {
+    return new StreamConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamConfiguration {
+    return new StreamConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamConfiguration | PlainMessage<StreamConfiguration> | undefined, b: StreamConfiguration | PlainMessage<StreamConfiguration> | undefined): boolean {
+    return proto3.util.equals(StreamConfiguration, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.EventConfiguration
  */
 export class EventConfiguration extends Message<EventConfiguration> {
@@ -1389,14 +1439,19 @@ export class EventConfiguration extends Message<EventConfiguration> {
   fieldName = "";
 
   /**
-   * @generated from field: string topic = 4;
+   * @generated from field: repeated string subjects = 4;
    */
-  topic = "";
+  subjects: string[] = [];
 
   /**
    * @generated from field: string source_name = 5;
    */
   sourceName = "";
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.StreamConfiguration stream_configuration = 6;
+   */
+  streamConfiguration?: StreamConfiguration;
 
   constructor(data?: PartialMessage<EventConfiguration>) {
     super();
@@ -1409,8 +1464,9 @@ export class EventConfiguration extends Message<EventConfiguration> {
     { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(EventType) },
     { no: 2, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "subjects", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "source_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "stream_configuration", kind: "message", T: StreamConfiguration },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventConfiguration {
@@ -1752,7 +1808,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   url?: ConfigurationVariable;
 
   /**
-   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. 
+   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead.
    *
    * @generated from field: optional bool useSSE = 3;
    */

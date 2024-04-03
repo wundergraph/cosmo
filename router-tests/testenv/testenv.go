@@ -139,10 +139,11 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 	}
 
 	opts := natsserver.Options{
-		Host:   "localhost",
-		Port:   natsPort,
-		NoLog:  true,
-		NoSigs: true,
+		Host:      "localhost",
+		NoLog:     true,
+		NoSigs:    true,
+		JetStream: true,
+		Port:      natsPort,
 	}
 
 	natsServer := natstest.RunServer(&opts)
