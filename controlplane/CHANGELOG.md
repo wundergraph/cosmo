@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.80.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.80.2...controlplane@0.80.3) (2024-04-03)
+
+### Bug Fixes
+
+* use printSchemaWithDirectives instead of printSchema ([#676](https://github.com/wundergraph/cosmo/issues/676)) ([2884103](https://github.com/wundergraph/cosmo/commit/288410317150bdd6b14db1f46a8d10448a7c9c07)) (@JivusAyrus)
+
 ## [0.80.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.80.1...controlplane@0.80.2) (2024-03-28)
 
 ### Bug Fixes
