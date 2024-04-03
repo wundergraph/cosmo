@@ -335,7 +335,7 @@ func TestTelemetry(t *testing.T) {
 		})
 	})
 
-	t.Run("Trace named operation", func(t *testing.T) {
+	t.Run("Trace named operation with parent-child relationship", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -354,37 +354,45 @@ func TestTelemetry(t *testing.T) {
 			// Pre-Handler Operation steps
 			require.Equal(t, "Operation - Parse", sn[0].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, sn[0].Parent().SpanID(), sn[7].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 
 			require.Equal(t, "Operation - Normalize", sn[1].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, sn[1].Parent().SpanID(), sn[7].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
 
 			require.Equal(t, "Operation - Validate", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
+			require.Equal(t, sn[2].Parent().SpanID(), sn[7].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
 
 			require.Equal(t, "Operation - Plan", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, sn[3].Parent().SpanID(), sn[7].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
 
 			// Engine Transport
 			require.Equal(t, "query myQuery", sn[4].Name())
 			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
+			require.Equal(t, sn[4].Parent().SpanID(), sn[5].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
 
 			// Engine Loader Hooks
 			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			require.Equal(t, sn[5].Parent().SpanID(), sn[6].SpanContext().SpanID())
 			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
 
 			// GraphQL handler
 			require.Equal(t, "Operation - Execute", sn[6].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			require.Equal(t, sn[6].Parent().SpanID(), sn[7].SpanContext().SpanID())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
 
 			// Root Server middleware
 			require.Equal(t, "query myQuery", sn[7].Name())
+			require.Equal(t, sn[7].ChildSpanCount(), 5)
 			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
 		})

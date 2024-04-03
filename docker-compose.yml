@@ -55,7 +55,7 @@ services:
 
   # Only to test prometheus integration
   prometheus:
-    image: prom/prometheus:v2.47.2
+    image: prom/prometheus:v2.51.1
     command:
       - --web.enable-remote-write-receiver
       - --enable-feature=native-histograms
