@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Toolbar } from "@/components/ui/toolbar";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
@@ -56,9 +55,9 @@ const GraphToolbar = () => {
 
 const GraphsDashboardPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
-  const [namespace] = useLocalStorage("namespace", "default");
-
   const router = useRouter();
+  const namespace = router.query.namespace as string;
+
   const type = (router.query.type as string) || "all-graphs";
 
   const { data, isLoading, error, refetch } = useQuery({
