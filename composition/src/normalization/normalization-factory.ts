@@ -768,7 +768,11 @@ export class NormalizationFactory {
     overriddenFieldNamesForParent.add(this.childName);
   }
 
-  getEventPublishAndRequestConfiguration(eventType: EventType, directive: ConstDirectiveNode, errorMessages: string[]): EventConfiguration | undefined {
+  getEventPublishAndRequestConfiguration(
+    eventType: EventType,
+    directive: ConstDirectiveNode,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
     const subjects: string[] = [];
     let sourceName = DEFAULT;
     for (const argumentNode of directive.arguments || []) {
@@ -797,7 +801,10 @@ export class NormalizationFactory {
     return { fieldName: this.childName, sourceName, subjects, type: eventType };
   }
 
-  getEventSubscribeConfiguration(directive: ConstDirectiveNode, errorMessages: string[]): EventConfiguration | undefined {
+  getEventSubscribeConfiguration(
+    directive: ConstDirectiveNode,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
     const subjects: string[] = [];
     let sourceName = DEFAULT;
     let consumer = '';
@@ -865,12 +872,14 @@ export class NormalizationFactory {
             }
           }
           if (!isValid || missingRequiredFieldNames.size > 0) {
-            errorMessages.push(invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
-              [...missingRequiredFieldNames],
-              [...duplicateRequiredFieldNames],
-              [...invalidRequiredFieldNames],
-              [...invalidFieldNames]
-            ));
+            errorMessages.push(
+              invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
+                [...missingRequiredFieldNames],
+                [...duplicateRequiredFieldNames],
+                [...invalidRequiredFieldNames],
+                [...invalidFieldNames],
+              ),
+            );
           }
         }
       }
@@ -883,7 +892,7 @@ export class NormalizationFactory {
       sourceName,
       subjects,
       type: SUBSCRIBE,
-      ...(consumer && streamName) ? { streamConfiguration: { consumer, streamName, } } : {},
+      ...(consumer && streamName ? { streamConfiguration: { consumer, streamName } } : {}),
     };
   }
 
@@ -914,9 +923,7 @@ export class NormalizationFactory {
       }
 
       if (errorMessages.length > 0) {
-        this.errors.push(invalidEventDirectiveError(
-          directive.name.value, fieldPath, errorMessages,
-        ));
+        this.errors.push(invalidEventDirectiveError(directive.name.value, fieldPath, errorMessages));
         continue;
       }
 

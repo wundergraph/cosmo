@@ -318,8 +318,10 @@ describe('Argument federation tests', () => {
   test('that the @deperecated directive is persisted on arguments in the federated schema #1.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
     expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(normalizeString(
-      versionOneSchemaQueryAndPersistedDirectiveDefinitions + `
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          `
         type Entity implements Identifiable {
           field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
           id: Int!
@@ -333,14 +335,18 @@ describe('Argument federation tests', () => {
         type Query {
           entity: Entity!
         }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that the @deperecated directive is persisted on arguments in the federated schema #1.2', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphG]);
     expect(errors).toBeUndefined();
-    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(normalizeString(
-      versionOneSchemaQueryAndPersistedDirectiveDefinitions + `
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          `
         type Entity implements Identifiable {
           field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
           id: Int!
@@ -354,7 +360,9 @@ describe('Argument federation tests', () => {
         type Query {
           entity: Entity!
         }
-    `));
+    `,
+      ),
+    );
   });
 });
 

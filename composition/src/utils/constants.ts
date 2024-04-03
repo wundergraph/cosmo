@@ -549,11 +549,11 @@ export const SCOPE_SCALAR_DEFINITION: MutableScalarNode = {
 };
 
 /*
-* input edfs__StreamConfiguration {
-*   consumer: String!
-*   streamName: String!
-* }
-* */
+ * input edfs__StreamConfiguration {
+ *   consumer: String!
+ *   streamName: String!
+ * }
+ * */
 export const STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode = {
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
   name: stringToNameNode(EDFS_STREAM_CONFIGURATION),

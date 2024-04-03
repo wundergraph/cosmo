@@ -107,14 +107,14 @@ export function configurationDataMapToDataSourceConfiguration(
           subjects: event.subjects,
           type: eventType(event.type),
           typeName,
-          ...(event.streamConfiguration)
+          ...(event.streamConfiguration
             ? {
-              streamConfiguration: new StreamConfiguration({
-                consumer: event.streamConfiguration.consumer,
-                steamName: event.streamConfiguration.streamName,
-              }),
-            }
-            : {},
+                streamConfiguration: new StreamConfiguration({
+                  consumer: event.streamConfiguration.consumer,
+                  steamName: event.streamConfiguration.streamName,
+                }),
+              }
+            : {}),
         }),
       );
     }

@@ -110,7 +110,7 @@ describe('events Configuration tests', () => {
                   type: 'subscribe',
                   streamConfiguration: {
                     consumer: 'consumer',
-                    streamName: 'streamName'
+                    streamName: 'streamName',
                   },
                 },
               ],
@@ -127,8 +127,10 @@ describe('events Configuration tests', () => {
           ],
         ]),
       );
-      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(normalizeString(
-        versionOneFullEventDefinitions + `
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          versionOneFullEventDefinitions +
+            `
         type Entity @key(fields: "id", resolvable: false) {
           id: ID! @external
         }
@@ -156,7 +158,9 @@ describe('events Configuration tests', () => {
         }
         
         scalar openfed__FieldSet
-      `));
+      `,
+        ),
+      );
     });
 
     test('that events configuration is correctly generated if Subscription is renamed', () => {
@@ -277,8 +281,9 @@ describe('events Configuration tests', () => {
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(errors![0]).toStrictEqual(
         invalidEventDirectiveError(directiveName, rootFieldPath, [
-          invalidEventSubjectsItemErrorMessage, invalidEventSourceNameErrorMessage,
-        ])
+          invalidEventSubjectsItemErrorMessage,
+          invalidEventSourceNameErrorMessage,
+        ]),
       );
       expect(errors![1]).toStrictEqual(
         invalidDirectiveError(directiveName, rootFieldPath, [
@@ -305,84 +310,75 @@ describe('events Configuration tests', () => {
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(errors![0]).toStrictEqual(
         invalidDirectiveError(directiveName, rootFieldPath, [
-          undefinedRequiredArgumentsErrorMessage(
-            directiveName, rootFieldPath, ['subjects'], []
-          ),
-        ])
+          undefinedRequiredArgumentsErrorMessage(directiveName, rootFieldPath, ['subjects'], []),
+        ]),
       );
-      expect(errors![1]).toStrictEqual(invalidEventDrivenGraphError([
-        invalidRootTypeFieldEventsDirectivesErrorMessage(
-          new Map<string, InvalidRootTypeFieldEventsDirectiveData>([
-            [rootFieldPath, { definesDirectives: false, invalidDirectiveNames: [] }],
-          ]),
-        ),
-      ]));
+      expect(errors![1]).toStrictEqual(
+        invalidEventDrivenGraphError([
+          invalidRootTypeFieldEventsDirectivesErrorMessage(
+            new Map<string, InvalidRootTypeFieldEventsDirectiveData>([
+              [rootFieldPath, { definesDirectives: false, invalidDirectiveNames: [] }],
+            ]),
+          ),
+        ]),
+      );
     });
 
     test('that an error is returned if edfs__StreamConfiguration is undefined', () => {
       const { errors } = normalizeSubgraph(subgraphO.definitions, subgraphO.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(invalidEventDrivenGraphError([
-        undefinedStreamConfigurationInputErrorMessage
-      ]));
+      expect(errors![0]).toStrictEqual(invalidEventDrivenGraphError([undefinedStreamConfigurationInputErrorMessage]));
     });
 
     test('that an error is returned if edfs__StreamConfiguration is improperly defined', () => {
       const { errors } = normalizeSubgraph(subgraphP.definitions, subgraphP.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(invalidEventDrivenGraphError([
-        invalidStreamConfigurationInputErrorMessage
-      ]));
+      expect(errors![0]).toStrictEqual(invalidEventDrivenGraphError([invalidStreamConfigurationInputErrorMessage]));
     });
 
     test('that an error is returned if streamConfiguration input is invalid #1', () => {
       const { errors } = normalizeSubgraph(subgraphQ.definitions, subgraphQ.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(invalidEventDirectiveError(
-        'edfs__eventsSubscribe',
-        'Subscription.entitySubscription',
-        [invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
-          ['streamName'],
-          ['consumer'],
-          [],
-          ['invalidField'],
-        )],
-      ));
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError('edfs__eventsSubscribe', 'Subscription.entitySubscription', [
+          invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
+            ['streamName'],
+            ['consumer'],
+            [],
+            ['invalidField'],
+          ),
+        ]),
+      );
     });
 
     test('that an error is returned if streamConfiguration input is invalid #2', () => {
       const { errors } = normalizeSubgraph(subgraphS.definitions, subgraphS.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(invalidEventDirectiveError(
-        'edfs__eventsSubscribe',
-        'Subscription.entitySubscription',
-        [invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
-          [],
-          [],
-          ['consumer', 'streamName'],
-          [],
-        )],
-      ));
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError('edfs__eventsSubscribe', 'Subscription.entitySubscription', [
+          invalidEventDrivenStreamConfigurationInputFieldsErrorMessage([], [], ['consumer', 'streamName'], []),
+        ]),
+      );
     });
 
     test('that an error is returned if streamConfiguration input is invalid #3', () => {
       const { errors } = normalizeSubgraph(subgraphT.definitions, subgraphT.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(invalidEventDirectiveError(
-        'edfs__eventsSubscribe',
-        'Subscription.entitySubscription',
-        [invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
-          ['consumer', 'streamName'],
-          [],
-          [],
-          ['invalidFieldOne', 'invalidFieldTwo'],
-        )],
-      ));
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError('edfs__eventsSubscribe', 'Subscription.entitySubscription', [
+          invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
+            ['consumer', 'streamName'],
+            [],
+            [],
+            ['invalidFieldOne', 'invalidFieldTwo'],
+          ),
+        ]),
+      );
     });
   });
 

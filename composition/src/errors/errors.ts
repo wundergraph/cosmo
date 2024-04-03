@@ -1012,24 +1012,46 @@ export function invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
   let message = invalidEventDrivenStreamConfigurationInputErrorMessage;
   const errorMessages: string[] = [];
   if (missingRequiredFieldNames.length > 0) {
-    errorMessages.push(`The following required field` + (missingRequiredFieldNames.length > 1 ? `s were` : ` was`) +
-      ` not defined: "` + missingRequiredFieldNames.join(QUOTATION_JOIN) +`".`);
+    errorMessages.push(
+      `The following required field` +
+        (missingRequiredFieldNames.length > 1 ? `s were` : ` was`) +
+        ` not defined: "` +
+        missingRequiredFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
   }
   if (duplicateRequiredFieldNames.length > 0) {
-    errorMessages.push(`The following required field` + (duplicateRequiredFieldNames.length > 1 ? `s were` : ` was`) +
-      ` defined more than once: "` + duplicateRequiredFieldNames.join(QUOTATION_JOIN) +`".`);
+    errorMessages.push(
+      `The following required field` +
+        (duplicateRequiredFieldNames.length > 1 ? `s were` : ` was`) +
+        ` defined more than once: "` +
+        duplicateRequiredFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
   }
   if (invalidRequiredFieldNames.length > 0) {
-    errorMessages.push(`The following required field` + (invalidRequiredFieldNames.length > 1 ? `s were` : ` was`) +
-      ` not type "String!" with a minimum length of 1: "` + invalidRequiredFieldNames.join(QUOTATION_JOIN) +`".`);
+    errorMessages.push(
+      `The following required field` +
+        (invalidRequiredFieldNames.length > 1 ? `s were` : ` was`) +
+        ` not type "String!" with a minimum length of 1: "` +
+        invalidRequiredFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
   }
   if (invalidFieldNames.length > 0) {
-    errorMessages.push(`The following field` + (invalidFieldNames.length > 1 ? `s are` : ` is`) +
-      ` not part of a valid "edfs__StreamConfiguration" input definition: "`
-      + invalidFieldNames.join(QUOTATION_JOIN) +`".`);
+    errorMessages.push(
+      `The following field` +
+        (invalidFieldNames.length > 1 ? `s are` : ` is`) +
+        ` not part of a valid "edfs__StreamConfiguration" input definition: "` +
+        invalidFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
   }
-  message += `\n However, the provided input was invalid for the following reason` +
-  (errorMessages.length > 1 ? `s` : ``) + `:\n  ` + errorMessages.join(`\n  `);
+  message +=
+    `\n However, the provided input was invalid for the following reason` +
+    (errorMessages.length > 1 ? `s` : ``) +
+    `:\n  ` +
+    errorMessages.join(`\n  `);
   return message;
 }
 
@@ -1129,22 +1151,22 @@ export function selfImplementationError(typeName: string): Error {
   return new Error(` The interface "${typeName}" must not implement itself.`);
 }
 
-export const invalidEventSubjectErrorMessage =
-  `The "subject" argument must be string with a minimum length of one.`;
+export const invalidEventSubjectErrorMessage = `The "subject" argument must be string with a minimum length of one.`;
 
-export const invalidEventSubjectsErrorMessage =
-  `The "subjects" argument must be a list of strings.`;
+export const invalidEventSubjectsErrorMessage = `The "subjects" argument must be a list of strings.`;
 
 export const invalidEventSubjectsItemErrorMessage =
   `Each item in the "subjects" argument list must be a string with a minimum length of one.` +
   ` However, at least one value provided in the list was invalid.`;
 
-export const invalidEventSourceNameErrorMessage =
-  `If explicitly defined, the "sourceName" argument must be a string with a minimum length of one.`;
+export const invalidEventSourceNameErrorMessage = `If explicitly defined, the "sourceName" argument must be a string with a minimum length of one.`;
 
 export function invalidEventDirectiveError(directiveName: string, fieldPath: string, errorMessages: string[]): Error {
   return new Error(
     `The event directive "${directiveName}" declared on "${fieldPath}" is invalid for the following` +
-    ` reason` + (errorMessages.length > 1 ? `s` : ``) + `:\n ` + errorMessages.join(`\n `)
+      ` reason` +
+      (errorMessages.length > 1 ? `s` : ``) +
+      `:\n ` +
+      errorMessages.join(`\n `),
   );
 }
