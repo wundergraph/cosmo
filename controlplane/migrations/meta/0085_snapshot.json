@@ -1,9 +1,52 @@
 {
-  "id": "98e2e22b-c5df-4954-8644-5280eee15953",
+  "id": "f57f2220-97cc-4b55-bacc-586908a65cf7",
   "prevId": "e7466e0a-a242-4b6a-b4bb-877e9f61c96a",
   "version": "5",
   "dialect": "pg",
   "tables": {
+    "api_key_permissions": {
+      "name": "api_key_permissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "api_key_id": {
+          "name": "api_key_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permission": {
+          "name": "permission",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "api_key_permissions_api_key_id_api_keys_id_fk": {
+          "name": "api_key_permissions_api_key_id_api_keys_id_fk",
+          "tableFrom": "api_key_permissions",
+          "tableTo": "api_keys",
+          "columnsFrom": [
+            "api_key_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "api_key_resources": {
       "name": "api_key_resources",
       "schema": "",
