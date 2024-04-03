@@ -11,6 +11,8 @@ import (
 
 type NoopMetrics struct{}
 
+func (n NoopMetrics) MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue) {}
+
 func NewNoopMetrics() Store {
 	return &NoopMetrics{}
 }

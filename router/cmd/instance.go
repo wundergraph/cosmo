@@ -171,9 +171,9 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 }
 
 func traceConfig(cfg *config.Telemetry) *trace.Config {
-	var exporters []*trace.Exporter
+	var exporters []*trace.ExporterConfig
 	for _, exp := range cfg.Tracing.Exporters {
-		exporters = append(exporters, &trace.Exporter{
+		exporters = append(exporters, &trace.ExporterConfig{
 			Disabled:      exp.Disabled,
 			Endpoint:      exp.Endpoint,
 			Exporter:      exp.Exporter,
@@ -233,7 +233,7 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
 			Exporters:     openTelemetryExporters,
 		},
-		Prometheus: metric.Prometheus{
+		Prometheus: metric.PrometheusConfig{
 			Enabled:             cfg.Metrics.Prometheus.Enabled,
 			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
 			Path:                cfg.Metrics.Prometheus.Path,

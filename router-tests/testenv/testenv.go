@@ -9,6 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"io"
 	"log"
 	"math/rand"
@@ -21,9 +28,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/hashicorp/go-cleanhttp"
 
@@ -91,6 +95,9 @@ type Config struct {
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DisableWebSockets                  bool
 	TLSConfig                          *core.TlsConfig
+	TraceExporter                      trace.SpanExporter
+	MetricReader                       metric.Reader
+	PrometheusRegistry                 *prometheus.Registry
 }
 
 type SubgraphsConfig struct {
@@ -415,7 +422,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	}
 
-	e.waitForRouterConnection(ctx)
+	e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
 
 	return e, nil
 }
@@ -502,14 +509,52 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithListenerAddr(listenerAddr),
 		core.WithWithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
+		core.WithInstanceID("test-instance"),
 		core.WithEvents(config.EventsConfiguration{
 			Sources: eventSourceBySourceName,
 		}),
 	}
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
+
+	if testConfig.TraceExporter != nil {
+		routerOpts = append(routerOpts, core.WithTracing(&rtrace.Config{
+			Enabled:            true,
+			Sampler:            1,
+			TestMemoryExporter: testConfig.TraceExporter,
+		}))
+	}
+
+	var prometheusConfig rmetric.PrometheusConfig
+
+	if testConfig.PrometheusRegistry != nil {
+		port, err := freeport.GetFreePort()
+		if err != nil {
+			return nil, fmt.Errorf("could not get free port: %w", err)
+		}
+		prometheusConfig = rmetric.PrometheusConfig{
+			Enabled:      true,
+			ListenAddr:   fmt.Sprintf("localhost:%d", port),
+			Path:         "/metrics",
+			TestRegistry: testConfig.PrometheusRegistry,
+		}
+	}
+
+	if testConfig.MetricReader != nil {
+		routerOpts = append(routerOpts, core.WithMetrics(&rmetric.Config{
+			Prometheus: prometheusConfig,
+			OpenTelemetry: rmetric.OpenTelemetry{
+				Enabled:       true,
+				RouterRuntime: false,
+				TestReader:    testConfig.MetricReader,
+			},
+		}))
+
+	}
+
 	if testConfig.OverrideGraphQLPath != "" {
 		routerOpts = append(routerOpts, core.WithGraphQLPath(testConfig.OverrideGraphQLPath))
 	}
+
 	if !testConfig.DisableWebSockets {
 		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
 			Enabled: true,
@@ -637,18 +682,26 @@ type TestResponse struct {
 	Proto    string
 }
 
-func (e *Environment) waitForRouterConnection(ctx context.Context) {
+func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs int, maxAttempts int) {
 	for {
+		if maxAttempts == 0 {
+			e.t.Fatalf("timed out waiting for server to be ready")
+		}
 		select {
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for router to be ready")
 		default:
-			resp, err := e.RouterClient.Get(e.RouterURL)
-			if err == nil {
-				_ = resp.Body.Close()
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				e.t.Fatalf("Could not create request for health check")
+			}
+			req.Header.Set("User-Agent", "Router-tests")
+			resp, err := e.RouterClient.Do(req)
+			if err == nil && resp.StatusCode == 200 {
 				return
 			}
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
+			maxAttempts--
 		}
 	}
 }

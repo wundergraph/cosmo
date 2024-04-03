@@ -36,6 +36,8 @@ type (
 		Config            *Config
 		ServiceInstanceID string
 		IPAnonymization   *IPAnonymizationConfig
+		// MemoryExporter is used for testing purposes
+		MemoryExporter sdktrace.SpanExporter
 	}
 )
 
@@ -44,7 +46,7 @@ const (
 	Redact IPAnonymizationMethod = "redact"
 )
 
-func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, error) {
+func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid OpenTelemetry endpoint: %w", err)
@@ -172,42 +174,49 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 	}
 
 	if config.Config.Enabled {
-		for _, exp := range config.Config.Exporters {
-			if exp.Disabled {
-				continue
-			}
 
-			// Default to OLTP HTTP
-			if exp.Exporter == "" {
-				exp.Exporter = otelconfig.ExporterOLTPHTTP
-			}
+		// Either memory exporter or the configured exporters are used.
+		if config.MemoryExporter != nil {
+			opts = append(opts, sdktrace.WithSyncer(config.MemoryExporter))
+		} else {
+			for _, exp := range config.Config.Exporters {
+				if exp.Disabled {
+					continue
+				}
 
-			exporter, err := createExporter(config.Logger, exp)
-			if err != nil {
-				config.Logger.Error("creating exporter", zap.Error(err))
-				return nil, err
-			}
+				// Default to OLTP HTTP
+				if exp.Exporter == "" {
+					exp.Exporter = otelconfig.ExporterOLTPHTTP
+				}
 
-			batchTimeout := exp.BatchTimeout
-			if batchTimeout == 0 {
-				batchTimeout = DefaultBatchTimeout
-			}
+				exporter, err := createExporter(config.Logger, exp)
+				if err != nil {
+					config.Logger.Error("creating exporter", zap.Error(err))
+					return nil, err
+				}
 
-			exportTimeout := exp.ExportTimeout
-			if exportTimeout == 0 {
-				exportTimeout = DefaultExportTimeout
-			}
+				batchTimeout := exp.BatchTimeout
+				if batchTimeout == 0 {
+					batchTimeout = DefaultBatchTimeout
+				}
 
-			// Always be sure to batch in production.
-			opts = append(opts,
-				sdktrace.WithBatcher(exporter,
-					sdktrace.WithBatchTimeout(batchTimeout),
-					sdktrace.WithExportTimeout(exportTimeout),
-					sdktrace.WithMaxExportBatchSize(512),
-					sdktrace.WithMaxQueueSize(2048),
-				),
-			)
+				exportTimeout := exp.ExportTimeout
+				if exportTimeout == 0 {
+					exportTimeout = DefaultExportTimeout
+				}
+
+				// Always be sure to batch in production.
+				opts = append(opts,
+					sdktrace.WithBatcher(exporter,
+						sdktrace.WithBatchTimeout(batchTimeout),
+						sdktrace.WithExportTimeout(exportTimeout),
+						sdktrace.WithMaxExportBatchSize(512),
+						sdktrace.WithMaxQueueSize(2048),
+					),
+				)
+			}
 		}
+
 	}
 
 	tp := sdktrace.NewTracerProvider(opts...)

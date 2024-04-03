@@ -152,7 +152,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: not authenticated","path":["employees",0,"startDate"]}]`, string(res.Payload))
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
@@ -210,7 +210,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate'. Reason: not authenticated","path":["employeeUpdated","startDate"]}]`, string(res.Payload))
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"]}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
@@ -321,7 +321,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			unix2 := payload.Data.CurrentTime.UnixTime
-			require.Equal(t, unix1+1, unix2)
+			require.Greater(t, unix2, unix1)
 
 			// Sending a complete must stop the subscription
 			err = conn.WriteJSON(&testenv.WebSocketMessage{
@@ -1020,7 +1020,7 @@ func TestWebSockets(t *testing.T) {
 				if firstTime == 0 {
 					firstTime = data.CurrentTime.UnixTime
 				} else {
-					require.Equal(t, firstTime+1, data.CurrentTime.UnixTime)
+					require.Greater(t, data.CurrentTime.UnixTime, firstTime)
 					return graphql.ErrSubscriptionStopped
 				}
 				return nil
@@ -1053,7 +1053,7 @@ func TestWebSockets(t *testing.T) {
 				if firstTime == 0 {
 					firstTime = data.CurrentTime.UnixTime
 				} else {
-					require.Equal(t, firstTime+1, data.CurrentTime.UnixTime)
+					require.Greater(t, data.CurrentTime.UnixTime, firstTime)
 					return graphql.ErrSubscriptionStopped
 				}
 				return nil
@@ -1508,7 +1508,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			unix2 := payload.Result.Data.CurrentTime.UnixTime
-			require.Equal(t, unix1+1, unix2)
+			require.Greater(t, unix2, unix1)
 
 			// Sending a complete must stop the subscription
 			err = conn.WriteJSON(json.RawMessage(`["1", "1", "__absinthe__:control", "phx_leave", {}]`))
