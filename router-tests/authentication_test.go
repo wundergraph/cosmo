@@ -127,7 +127,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: not authenticated","path":["employees",0,"startDate"]}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]}],"data":null}`, string(data))
 		})
 	})
 	t.Run("scopes required valid token no scopes", func(t *testing.T) {
@@ -152,7 +152,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: missing required scopes","path":["employees",0,"startDate"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(data))
 		})
 	})
 	t.Run("scopes required valid token AND scopes present", func(t *testing.T) {
@@ -206,7 +206,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate'. Reason: missing required scopes","path":["employees",0,"startDate"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
 		})
 	})
 	t.Run("reject unauthorized missing scope", func(t *testing.T) {
@@ -397,7 +397,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.description'. Reason: missing required scopes","path":["topSecretFederationFacts",2,"description"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"EntityFact","fieldName":"description"},"required":[["read:entity","read:scalar"],["read:entity","read:all"]]}],"actualScopes":["read:fact","read:miscellaneous"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.description', Reason: missing required scopes.","path":["topSecretFederationFacts",2,"description"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"EntityFact","fieldName":"description"},"required":[["read:entity","read:scalar"],["read:entity","read:all"]]}],"actualScopes":["read:fact","read:miscellaneous"]}}}`, string(data))
 		})
 	})
 	t.Run("return unauthenticated error if a field requiring authentication is queried", func(t *testing.T) {
@@ -417,7 +417,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"factTypes":null}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes', Reason: not authenticated.","path":["factTypes"]}],"data":{"factTypes":null}}`, string(data))
 		})
 	})
 	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned", func(t *testing.T) {
@@ -437,7 +437,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"factTypes":null,"productTypes":[{"upc":"cosmo"},{},{}]}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes', Reason: not authenticated.","path":["factTypes"]}],"data":{"factTypes":null,"productTypes":[{"upc":"cosmo"},{},{}]}}`, string(data))
 		})
 	})
 	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned (reordered fields)", func(t *testing.T) {
@@ -457,7 +457,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes'. Reason: not authenticated","path":["factTypes"]}],"data":{"productTypes":[{"upc":"cosmo"},{},{}],"factTypes":null}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.factTypes', Reason: not authenticated.","path":["factTypes"]}],"data":{"productTypes":[{"upc":"cosmo"},{},{}],"factTypes":null}}`, string(data))
 		})
 	})
 	t.Run("data requiring authentication is returned when authenticated", func(t *testing.T) {
@@ -536,7 +536,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Mutation.addFact.description'. Reason: missing required scopes","path":["addFact","description"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"MiscellaneousFact","fieldName":"description"},"required":[["read:miscellaneous","read:scalar"],["read:miscellaneous","read:all"]]}],"actualScopes":["write:fact","read:miscellaneous"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Mutation.addFact.description', Reason: missing required scopes.","path":["addFact","description"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"MiscellaneousFact","fieldName":"description"},"required":[["read:miscellaneous","read:scalar"],["read:miscellaneous","read:all"]]}],"actualScopes":["write:fact","read:miscellaneous"]}}}`, string(data))
 		})
 	})
 	t.Run("mutation with scope missing for mutation root field", func(t *testing.T) {
@@ -563,7 +563,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at path 'mutation'. Reason: missing required scopes"}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at Path 'mutation', Reason: missing required scopes."}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
 		})
 	})
 	t.Run("mutation with scope missing for mutation root field (with reject)", func(t *testing.T) {
