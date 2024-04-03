@@ -173,7 +173,7 @@ export async function checkAuth(silent = false) {
     program.error(pc.red('Refresh token has expired. Please login again with `wgc auth login`'));
   }
 
-  // Refresh tokens with the refresh token
+  // Refresh tokens with the offline token
   const resp = await fetch(`${config.kcApiURL}/realms/${config.kcRealm}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: {
