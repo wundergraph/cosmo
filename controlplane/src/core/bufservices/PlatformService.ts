@@ -127,6 +127,8 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
+  GetUserAccessiblePermissionsResponse,
+  Permission,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
@@ -207,6 +209,7 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { apiKeyPermissions } from '../constants.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -9207,6 +9210,48 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             } as LintConfig;
           }),
           linterEnabled: namespace.enableLinting,
+        };
+      });
+    },
+
+    getUserAccessiblePermissions: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetUserAccessiblePermissionsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const organizationRepository = new OrganizationRepository(logger, opts.db);
+
+        if (!authContext.isAdmin) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            permissions: [],
+          };
+        }
+
+        const permissions: Permission[] = [];
+        for (const permission of apiKeyPermissions) {
+          if (permission.value === 'scim') {
+            const feature = await organizationRepository.getFeature({
+              organizationId: authContext.organizationId,
+              featureId: 'scim',
+            });
+            if (feature?.enabled) {
+              permissions.push({
+                displayName: permission.displayName,
+                value: permission.value,
+              } as Permission);
+            }
+          }
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          permissions,
         };
       });
     },

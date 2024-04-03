@@ -57,6 +57,7 @@ import {
   createAPIKey,
   deleteAPIKey,
   getAPIKeys,
+  getUserAccessiblePermissions,
   getUserAccessibleResources,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -89,6 +90,7 @@ const CreateAPIKeyDialog = ({
   const { mutate, isPending } = useMutation(createAPIKey.useMutation());
 
   const { data } = useQuery(getUserAccessibleResources.useQuery());
+  const { data: permissionsData } = useQuery(getUserAccessiblePermissions.useQuery());
   const federatedGraphs = data?.federatedGraphs || [];
   const subgraphs = data?.subgraphs || [];
   const isAdmin = user?.currentOrganization.roles.includes("admin");
@@ -102,8 +104,6 @@ const CreateAPIKeyDialog = ({
     "6 months": ExpiresAt.SIX_MONTHS,
     "1 year": ExpiresAt.ONE_YEAR,
   };
-
-  const apiKeyPermissions = ["scim"];
 
   const [expires, setExpires] = useState(expiresOptions[0]);
   const [open, setOpen] = useState(false);
@@ -271,7 +271,7 @@ const CreateAPIKeyDialog = ({
               </SelectContent>
             </Select>
           </div>
-          {isAdmin && (
+          {isAdmin && permissionsData && permissionsData.permissions.length > 0 && (
             <div className="mt-2 flex flex-col gap-y-3">
               <div className="flex flex-col gap-y-1">
                 <span className="text-base font-semibold">Permissions</span>
@@ -281,26 +281,26 @@ const CreateAPIKeyDialog = ({
                   }
                 </span>
               </div>
-              {apiKeyPermissions.map((permission) => {
+              {permissionsData.permissions.map((permission) => {
                 return (
                   <div
                     className="flex items-center gap-x-2"
-                    key={permission}
+                    key={permission.value}
                   >
                     <Checkbox
                       id="scim"
-                      checked={selectedPermissions.includes(permission)}
+                      checked={selectedPermissions.includes(permission.value)}
                       onCheckedChange={(checked) => {
                         if (checked) {
                           setSelectedPermissions([
                             ...Array.from(
-                              new Set([...selectedPermissions, permission]),
+                              new Set([...selectedPermissions, permission.value]),
                             ),
                           ]);
                         } else {
                           setSelectedPermissions([
                             ...selectedPermissions.filter(
-                              (p) => p !== permission,
+                              (p) => p !== permission.value,
                             ),
                           ]);
                         }
@@ -310,7 +310,7 @@ const CreateAPIKeyDialog = ({
                       htmlFor="scim"
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize"
                     >
-                      {permission}
+                      {permission.displayName}
                     </label>
                   </div>
                 );

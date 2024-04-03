@@ -15064,3 +15064,120 @@ export class MigrateMonographResponse extends Message<MigrateMonographResponse> 
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.GetUserAccessiblePermissionsRequest
+ */
+export class GetUserAccessiblePermissionsRequest extends Message<GetUserAccessiblePermissionsRequest> {
+  constructor(data?: PartialMessage<GetUserAccessiblePermissionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetUserAccessiblePermissionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserAccessiblePermissionsRequest {
+    return new GetUserAccessiblePermissionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserAccessiblePermissionsRequest {
+    return new GetUserAccessiblePermissionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserAccessiblePermissionsRequest {
+    return new GetUserAccessiblePermissionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserAccessiblePermissionsRequest | PlainMessage<GetUserAccessiblePermissionsRequest> | undefined, b: GetUserAccessiblePermissionsRequest | PlainMessage<GetUserAccessiblePermissionsRequest> | undefined): boolean {
+    return proto3.util.equals(GetUserAccessiblePermissionsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.Permission
+ */
+export class Permission extends Message<Permission> {
+  /**
+   * @generated from field: string displayName = 1;
+   */
+  displayName = "";
+
+  /**
+   * @generated from field: string value = 2;
+   */
+  value = "";
+
+  constructor(data?: PartialMessage<Permission>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Permission";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "displayName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Permission {
+    return new Permission().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Permission {
+    return new Permission().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Permission {
+    return new Permission().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Permission | PlainMessage<Permission> | undefined, b: Permission | PlainMessage<Permission> | undefined): boolean {
+    return proto3.util.equals(Permission, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse
+ */
+export class GetUserAccessiblePermissionsResponse extends Message<GetUserAccessiblePermissionsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Permission permissions = 2;
+   */
+  permissions: Permission[] = [];
+
+  constructor(data?: PartialMessage<GetUserAccessiblePermissionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "permissions", kind: "message", T: Permission, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserAccessiblePermissionsResponse {
+    return new GetUserAccessiblePermissionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserAccessiblePermissionsResponse {
+    return new GetUserAccessiblePermissionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserAccessiblePermissionsResponse {
+    return new GetUserAccessiblePermissionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserAccessiblePermissionsResponse | PlainMessage<GetUserAccessiblePermissionsResponse> | undefined, b: GetUserAccessiblePermissionsResponse | PlainMessage<GetUserAccessiblePermissionsResponse> | undefined): boolean {
+    return proto3.util.equals(GetUserAccessiblePermissionsResponse, a, b);
+  }
+}
+

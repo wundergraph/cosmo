@@ -1902,6 +1902,18 @@ message MigrateMonographResponse {
   Response response = 1;
 }
 
+message GetUserAccessiblePermissionsRequest {}
+
+message Permission {
+  string displayName = 1;
+  string value = 2;
+}
+
+message GetUserAccessiblePermissionsResponse {
+  Response response = 1;
+  repeated Permission permissions = 2;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2106,6 +2118,8 @@ service PlatformService {
   rpc SetDiscussionResolution(SetDiscussionResolutionRequest) returns (SetDiscussionResolutionResponse) {}
   // AddReadme adds a readme of a target, can be a subgraph or a federated graph
   rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
+  // GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
+  rpc GetUserAccessiblePermissions(GetUserAccessiblePermissionsRequest) returns (GetUserAccessiblePermissionsResponse) {}
 
   // Analytics
   rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {
