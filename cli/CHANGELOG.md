@@ -4,8 +4,6 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
-# [0.50.0](https://github.com/wundergraph/cosmo/compare/wgc@0.49.1...wgc@0.50.0) (2024-04-03)
-
 ### Features
 
 * use offline token, refresh token implementation ([#686](https://github.com/wundergraph/cosmo/issues/686)) ([4429319](https://github.com/wundergraph/cosmo/commit/442931935e979f53b0b093fbad217a2c91807f8e)) (@StarpTech)
