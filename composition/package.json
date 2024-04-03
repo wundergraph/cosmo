@@ -9,6 +9,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo"
+  },
   "scripts": {
     "dev": "tsc --watch",
     "build": "del dist && tsc",
