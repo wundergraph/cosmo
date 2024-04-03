@@ -641,6 +641,7 @@ func TestEventsNew(t *testing.T) {
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdatedStream(id: 12) { id }}"}`),
 			})
+			require.NoError(t, err)
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
 			err = conn.ReadJSON(&msg)
