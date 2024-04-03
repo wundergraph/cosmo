@@ -3,7 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Command } from 'commander';
 import { join } from 'pathe';
 import pc from 'picocolors';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: CommonGraphCommandOptions) => {
@@ -21,7 +21,7 @@ export default (opts: CommonGraphCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

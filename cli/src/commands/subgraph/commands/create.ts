@@ -6,7 +6,7 @@ import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import ora from 'ora';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -62,7 +62,7 @@ export default (opts: BaseCommandOptions) => {
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

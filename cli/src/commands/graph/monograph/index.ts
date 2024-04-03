@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { checkAPIKey } from '../../../utils.js';
 import FetchMonographCommand from '../common/fetch.js';
 import GetMonographChangelog from '../common/changelog.js';
+import { checkAuth } from '../../auth/utils.js';
 import CreateMonographCommand from './commands/create.js';
 import PublishMonographCommand from './commands/publish.js';
 import UpdateMonographCommand from './commands/update.js';
@@ -28,8 +28,8 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(FetchMonographCommand({ ...opts, isMonograph: true }));
   command.addCommand(GetMonographChangelog({ ...opts, isMonograph: true }));
 
-  command.hook('preAction', () => {
-    checkAPIKey();
+  command.hook('preAction', async () => {
+    await checkAuth();
   });
 
   return command;
