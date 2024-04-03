@@ -25,18 +25,10 @@ const getLoginDetails = (): { accessToken: string; organizationSlug: string } | 
   }
 };
 
-if (process.env.COSMO_API_KEY && getLoginDetails()?.accessToken) {
-  console.log(
-    `${pc.yellow('Warning')} ${pc.dim(
-      'Both COSMO_API_KEY and login credentials found. Environment variable has precedence.\n',
-    )}`,
-  );
-}
-
 export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
   // environment var first to allow overriding
-  apiKey: process.env.COSMO_API_KEY || getLoginDetails()?.accessToken,
+  apiKey: process.env.COSMO_API_KEY,
   kcApiURL: process.env.KC_API_URL || 'https://accounts.wundergraph.com/auth',
   webURL: process.env.COSMO_WEB_URL || 'https://cosmo.wundergraph.com',
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
@@ -46,8 +38,10 @@ export const config = {
   disableUpdateCheck: process.env.DISABLE_UPDATE_CHECK || 'false',
 };
 
-export const baseHeaders: HeadersInit = {
-  'user-agent': `cosmo-cli/${info.version}`,
-  authorization: 'Bearer ' + config.apiKey,
-  'cosmo-org-slug': getLoginDetails()?.organizationSlug || '',
+export const getBaseHeaders = (): HeadersInit => {
+  return {
+    'user-agent': `cosmo-cli/${info.version}`,
+    authorization: 'Bearer ' + config.apiKey,
+    'cosmo-org-slug': getLoginDetails()?.organizationSlug || '',
+  };
 };

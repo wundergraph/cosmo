@@ -6,7 +6,7 @@ import Table from 'cli-table3';
 import logSymbols from 'log-symbols';
 import { join } from 'pathe';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import { baseHeaders } from '../../../../core/config.js';
+import { getBaseHeaders } from '../../../../core/config.js';
 import program from '../../../index.js';
 
 type OutputFile = {
@@ -35,7 +35,7 @@ export default (opts: BaseCommandOptions) => {
         supportsFederation: true,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 
