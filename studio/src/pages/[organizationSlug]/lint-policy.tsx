@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { docsBaseURL, lintCategories } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, countLintConfigsByCategory } from "@/lib/utils";
@@ -47,6 +46,7 @@ import {
   LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useContext, useEffect, useState } from "react";
 
 const SeverityDropdown = ({
@@ -82,7 +82,8 @@ const SeverityDropdown = ({
 
 const LintPolicyPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
-  const [namespace] = useLocalStorage("namespace", "default");
+  const router = useRouter();
+  const namespace = router.query.namespace as string;
   const { data, isLoading, refetch, error } = useQuery({
     ...getNamespaceLintConfig.useQuery({
       namespace,
