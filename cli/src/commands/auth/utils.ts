@@ -122,8 +122,6 @@ export const startPollingForAccessToken = async ({
     }
     const body: KeycloakTokenResponse = await response.json();
 
-    console.log(body);
-
     const present = new Date();
     return {
       success: true,
