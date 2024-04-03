@@ -76,6 +76,9 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 			Durable:        streamConfiguration.Consumer, // Durable consumers are not removed automatically regardless of the InactiveThreshold
 			FilterSubjects: subjects,
 		})
+		if err != nil {
+			return newEDFSNatsError(fmt.Errorf(`failed to create or update consumer "%s": %w`, streamConfiguration.Consumer, err))
+		}
 		if consumer == nil {
 			return newEDFSNatsError(fmt.Errorf(`consumer "%s" is nil; it is likely the nats stream "%s" does not exist`, streamConfiguration.Consumer, streamConfiguration.StreamName))
 		}
