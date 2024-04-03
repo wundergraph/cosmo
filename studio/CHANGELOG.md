@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.76.0](https://github.com/wundergraph/cosmo/compare/studio@0.75.2...studio@0.76.0) (2024-04-03)
+
+### Bug Fixes
+
+* remove namespace from local storage ([#687](https://github.com/wundergraph/cosmo/issues/687)) ([13f3a17](https://github.com/wundergraph/cosmo/commit/13f3a17bf9de7d29fc51285804b15a4f6497cd83)) (@JivusAyrus)
+
+### Features
+
+* implement scim server ([#664](https://github.com/wundergraph/cosmo/issues/664)) ([12591da](https://github.com/wundergraph/cosmo/commit/12591da32ef62e9498855ceda37beba72835a801)) (@JivusAyrus)
+
 ## [0.75.2](https://github.com/wundergraph/cosmo/compare/studio@0.75.1...studio@0.75.2) (2024-03-28)
 
 ### Bug Fixes
