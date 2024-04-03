@@ -208,6 +208,9 @@ export async function checkAuth(silent = false) {
     // Update the api key with the new access token
     config.apiKey = data.access_token;
   } catch (e: any) {
-    throw new Error('Failed to parse the response from the identity server: ' + e.toString());
+    throw new Error(
+      'Failed to parse the response from the identity server. If the issue persists, please contact support. Error: ' +
+        e.toString(),
+    );
   }
 }
