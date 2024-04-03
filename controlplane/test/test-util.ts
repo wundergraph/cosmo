@@ -25,7 +25,17 @@ import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 
-export const SetupTest = async function ({ dbname, chClient }: { dbname: string; chClient?: ClickHouseClient }) {
+export const SetupTest = async function ({
+  dbname,
+  chClient,
+  enableScim,
+  createScimKey,
+}: {
+  dbname: string;
+  chClient?: ClickHouseClient;
+  enableScim?: boolean;
+  createScimKey?: boolean;
+}) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
   const server = Fastify({
@@ -112,13 +122,15 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
     port: 0,
   });
 
-  await seedTest(databaseConnectionUrl, userTestData);
+  await seedTest(databaseConnectionUrl, userTestData, createScimKey);
 
-  await organizationRepository.updateFeature({
-    organizationId: userTestData.organizationId,
-    id: 'scim',
-    enabled: true,
-  });
+  if (enableScim) {
+    await organizationRepository.updateFeature({
+      organizationId: userTestData.organizationId,
+      id: 'scim',
+      enabled: true,
+    });
+  }
 
   const transport = createConnectTransport({
     httpVersion: '1.1',

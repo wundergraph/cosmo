@@ -16,7 +16,7 @@ describe('Scim server v2.0', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
 
-    const setupDetails = await SetupTest({ dbname });
+    const setupDetails = await SetupTest({ dbname, enableScim: true, createScimKey: true });
     baseAddress = setupDetails.baseAddress;
     userTestData = setupDetails.userTestData;
     keycloakClient = setupDetails.keycloakClient;
@@ -300,5 +300,79 @@ describe('Scim server v2.0', (ctx) => {
     expect(res.status).toBe(200);
     expect(response.userName).toBe(createUserBody.userName);
     expect(response.active).toBe(false);
+  });
+});
+
+describe('Scim server when scim is not enabled v2.0', (ctx) => {
+  beforeAll(async () => {
+    dbname = await beforeAllSetup();
+
+    const setupDetails = await SetupTest({ dbname, enableScim: false, createScimKey: false });
+    baseAddress = setupDetails.baseAddress;
+    userTestData = setupDetails.userTestData;
+    keycloakClient = setupDetails.keycloakClient;
+    realmName = setupDetails.realm;
+    server = setupDetails.server;
+    await SetupKeycloak({
+      keycloakClient,
+      realmName,
+      userTestData,
+    });
+  });
+
+  afterAll(async () => {
+    await removeKeycloakSetup({ keycloakClient, realmName });
+    await server?.close();
+    await afterAllSetup(dbname);
+  });
+
+  test('Should test scim server when scim feature is not enabled', async (testContext) => {
+    const res = await fetch(`${baseAddress}/scim/v2/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${userTestData.apiKey}`,
+        'Content-Type': 'application/scim+json',
+      },
+    });
+    const response = await res.json();
+    expect(res.status).toBe(400);
+    expect(response.detail).toBe('Scim feature is not enabled for this organization.');
+  });
+});
+
+describe('Scim server when scim is enabled, but no scim key', (ctx) => {
+  beforeAll(async () => {
+    dbname = await beforeAllSetup();
+
+    const setupDetails = await SetupTest({ dbname, enableScim: true, createScimKey: false });
+    baseAddress = setupDetails.baseAddress;
+    userTestData = setupDetails.userTestData;
+    keycloakClient = setupDetails.keycloakClient;
+    realmName = setupDetails.realm;
+    server = setupDetails.server;
+    await SetupKeycloak({
+      keycloakClient,
+      realmName,
+      userTestData,
+    });
+  });
+
+  afterAll(async () => {
+    await removeKeycloakSetup({ keycloakClient, realmName });
+    await server?.close();
+    await afterAllSetup(dbname);
+  });
+
+  test('Should test scim server when the key passed is not scim key', async (testContext) => {
+    const res = await fetch(`${baseAddress}/scim/v2/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${userTestData.apiKey}`,
+        'Content-Type': 'application/scim+json',
+      },
+    });
+    const response = await res.json();
+    expect(res.status).toBe(400);
+    expect(response.detail).toBe('API key doesnt have the permission to perform scim operations.');
   });
 });

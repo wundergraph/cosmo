@@ -47,7 +47,7 @@ export function genUniqueLabel(prefix = 'prefix'): Label {
   return { key: prefix + '-' + genID(), value: genID() };
 }
 
-export async function seedTest(databaseConnectionUrl: string, userTestData: UserTestData) {
+export async function seedTest(databaseConnectionUrl: string, userTestData: UserTestData, createScimKey?: boolean) {
   const queryConnection = postgres(databaseConnectionUrl);
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
@@ -84,7 +84,7 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
     userID: userTestData.userId,
     expiresAt: ExpiresAt.NEVER,
     targetIds: [],
-    permissions: ['scim'],
+    permissions: createScimKey ? ['scim'] : [],
   });
 
   const namespaceRepo = new NamespaceRepository(db, insertedOrg.id);
