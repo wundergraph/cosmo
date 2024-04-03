@@ -42,7 +42,7 @@ export const NamespaceSelector = () => {
     }
 
     setNamespaces(data.namespaces.map((ns) => ns.name));
-  }, [applyParams, data, namespace, namespaceParam, setNamespaces]);
+  }, [applyParams, data, namespace, setNamespaces]);
 
   if (!namespaceParam && !!namespace) {
     applyParams({
