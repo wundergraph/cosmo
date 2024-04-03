@@ -2,6 +2,7 @@ import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -109,6 +110,7 @@ const MemberCard = ({
   acceptedInvite,
   isAdmin,
   isCurrentUser,
+  active,
   refresh,
 }: {
   email: string;
@@ -117,6 +119,7 @@ const MemberCard = ({
   acceptedInvite: boolean;
   isAdmin: boolean;
   isCurrentUser: boolean;
+  active?: boolean;
   refresh: () => void;
 }) => {
   const user = useContext(UserContext);
@@ -140,6 +143,7 @@ const MemberCard = ({
         <span>{email}</span>
       </div>
       <div className="flex items-center gap-x-4 text-muted-foreground">
+        {active === false && <Badge variant="destructive">Disabled</Badge>}
         <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
           {acceptedInvite && role ? (
             <span className="text-sm">{sentenceCase(role)}</span>
@@ -359,6 +363,7 @@ const MembersPage: NextPageWithLayout = () => {
               acceptedInvite={true}
               isAdmin={isAdmin || false}
               isCurrentUser={member.email === user.email}
+              active={member.active}
               refresh={() => refetch()}
             />
           );

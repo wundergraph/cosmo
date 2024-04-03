@@ -17,7 +17,8 @@ export type FeatureIds =
   | 'security'
   | 'support'
   | 'ai'
-  | 'oidc';
+  | 'oidc'
+  | 'scim';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -172,6 +173,7 @@ export interface OrganizationMemberDTO {
   orgMemberID: string;
   email: string;
   roles: string[];
+  active: boolean;
 }
 
 export interface OrganizationInvitationDTO {

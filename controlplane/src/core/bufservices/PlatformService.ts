@@ -10,6 +10,7 @@ import {
   AddReadmeResponse,
   AddSubgraphMemberResponse,
   AuditLog,
+  Feature,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
@@ -22,6 +23,7 @@ import {
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
   CreateIntegrationResponse,
+  CreateMonographResponse,
   CreateNamespaceResponse,
   CreateOIDCProviderResponse,
   CreateOperationIgnoreAllOverrideResponse,
@@ -34,10 +36,12 @@ import {
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   DeleteIntegrationResponse,
+  DeleteMonographResponse,
   DeleteNamespaceResponse,
   DeleteOIDCProviderResponse,
   DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
+  DeploymentError,
   EnableLintingForTheNamespaceResponse,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
@@ -96,8 +100,10 @@ import {
   LintConfig,
   LintSeverity,
   MigrateFromApolloResponse,
+  MigrateMonographResponse,
   MoveGraphResponse,
   PublishFederatedSubgraphResponse,
+  PublishMonographResponse,
   PublishPersistedOperationsResponse,
   PublishedOperation,
   PublishedOperationStatus,
@@ -110,23 +116,19 @@ import {
   RequestSeriesItem,
   Router,
   SetDiscussionResolutionResponse,
-  UpdateAISettingsResponse,
   UpdateDiscussionCommentResponse,
+  UpdateFeatureSettingsResponse,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
+  UpdateMonographResponse,
   UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
-  UpdateRBACSettingsResponse,
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
-  CreateMonographResponse,
-  PublishMonographResponse,
-  UpdateMonographResponse,
-  DeleteMonographResponse,
-  MigrateMonographResponse,
-  DeploymentError,
+  GetUserAccessiblePermissionsResponse,
+  Permission,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
@@ -136,6 +138,7 @@ import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
 import {
   DateRange,
+  FeatureIds,
   FederatedGraphDTO,
   GraphApiKeyJwtPayload,
   GraphCompositionDTO,
@@ -178,6 +181,7 @@ import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { parseTimeFilters } from '../repositories/analytics/util.js';
 import type { RouterOptions } from '../routes.js';
+import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
 import { BillingService } from '../services/BillingService.js';
@@ -205,7 +209,7 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { AdmissionError } from '../services/AdmissionWebhookController.js';
+import { apiKeyPermissions } from '../constants.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -4127,6 +4131,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           key: generatedAPIKey,
           expiresAt: req.expires,
           targetIds: [...req.federatedGraphTargetIds, ...req.subgraphTargetIds],
+          permissions: req.permissions,
         });
 
         await auditLogRepo.addAuditLog({
@@ -4281,64 +4286,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.keycloakClient.authenticateClient();
 
-        const groupName = org.slug;
-
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: groupName,
+        await opts.keycloakClient.removeUserFromOrganization({
           realm: opts.keycloakRealm,
+          userID: user.id,
+          groupName: org.slug,
+          roles: orgMember.roles,
         });
-
-        if (organizationGroup.length === 0) {
-          throw new Error(`Organization group '${org.slug}' not found`);
-        }
-
-        for (const role of orgMember.roles) {
-          switch (role) {
-            case 'admin': {
-              const adminGroup = await opts.keycloakClient.fetchAdminChildGroup({
-                realm: opts.keycloakRealm,
-                kcGroupId: organizationGroup[0].id!,
-                orgSlug: groupName,
-              });
-              await opts.keycloakClient.client.users.delFromGroup({
-                id: user.id,
-                groupId: adminGroup.id!,
-                realm: opts.keycloakRealm,
-              });
-              break;
-            }
-            case 'developer': {
-              const devGroup = await opts.keycloakClient.fetchDevChildGroup({
-                realm: opts.keycloakRealm,
-                kcGroupId: organizationGroup[0].id!,
-                orgSlug: groupName,
-              });
-              await opts.keycloakClient.client.users.delFromGroup({
-                id: user.id,
-                groupId: devGroup.id!,
-                realm: opts.keycloakRealm,
-              });
-              break;
-            }
-            case 'viewer': {
-              const viewerGroup = await opts.keycloakClient.fetchViewerChildGroup({
-                realm: opts.keycloakRealm,
-                kcGroupId: organizationGroup[0].id!,
-                orgSlug: groupName,
-              });
-              await opts.keycloakClient.client.users.delFromGroup({
-                id: user.id,
-                groupId: viewerGroup.id!,
-                realm: opts.keycloakRealm,
-              });
-              break;
-            }
-            default: {
-              throw new Error(`Role ${role} does not exist`);
-            }
-          }
-        }
 
         await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
 
@@ -5299,22 +5252,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
         const highPriorityRole = getHighestPriorityRole({ userRoles });
 
-        const adminChildGroup = await opts.keycloakClient.fetchAdminChildGroup({
+        const adminChildGroup = await opts.keycloakClient.fetchChildGroup({
           realm: opts.keycloakRealm,
           orgSlug: org.slug,
           kcGroupId: organizationGroups[0].id!,
+          childGroupType: 'admin',
         });
 
-        const devChildGroup = await opts.keycloakClient.fetchDevChildGroup({
+        const devChildGroup = await opts.keycloakClient.fetchChildGroup({
           realm: opts.keycloakRealm,
           orgSlug: org.slug,
           kcGroupId: organizationGroups[0].id!,
+          childGroupType: 'developer',
         });
 
-        const viewerChildGroup = await opts.keycloakClient.fetchViewerChildGroup({
+        const viewerChildGroup = await opts.keycloakClient.fetchChildGroup({
           realm: opts.keycloakRealm,
           orgSlug: org.slug,
           kcGroupId: organizationGroups[0].id!,
+          childGroupType: 'viewer',
         });
 
         if (req.role === 'admin') {
@@ -6020,10 +5976,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             throw new Error(`Organization group '${groupName}' not found`);
           }
 
-          const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+          const devGroup = await opts.keycloakClient.fetchChildGroup({
             realm: opts.keycloakRealm,
             kcGroupId: organizationGroups[0].id!,
             orgSlug: groupName,
+            childGroupType: 'developer',
           });
 
           const keycloakUser = await opts.keycloakClient.client.users.find({
@@ -6078,10 +6035,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateRBACSettings: (req, ctx) => {
+    updateFeatureSettings: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<UpdateRBACSettingsResponse>>(ctx, logger, async () => {
+      return handleError<PlainMessage<UpdateFeatureSettingsResponse>>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
@@ -6096,9 +6053,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let featureId: FeatureIds;
+        switch (req.featureId) {
+          case Feature.rbac: {
+            featureId = 'rbac';
+            break;
+          }
+          case Feature.ai: {
+            featureId = 'ai';
+            break;
+          }
+          case Feature.scim: {
+            featureId = 'scim';
+            break;
+          }
+          default: {
+            throw new Error(`Feature doesnt exist`);
+          }
+        }
+
         await orgRepo.updateFeature({
           organizationId: authContext.organizationId,
-          id: 'rbac',
+          id: featureId,
           enabled: req.enable,
         });
 
@@ -8325,30 +8301,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateAISettings: (req, ctx) => {
-      let logger = getLogger(ctx, opts.logger);
-
-      return handleError<PlainMessage<UpdateAISettingsResponse>>(ctx, logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        logger = enrichLogger(ctx, logger, authContext);
-
-        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-
-        const enabled = await orgRepo.updateFeature({
-          id: 'ai',
-          organizationId: authContext.organizationId,
-          enabled: req.enable,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          enabled,
-        };
-      });
-    },
-
     getBillingPlans: (req, ctx) => {
       const logger = ctx.values.get<FastifyBaseLogger>({ id: Symbol('logger'), defaultValue: opts.logger });
 
@@ -9258,6 +9210,48 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             } as LintConfig;
           }),
           linterEnabled: namespace.enableLinting,
+        };
+      });
+    },
+
+    getUserAccessiblePermissions: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetUserAccessiblePermissionsResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+        const organizationRepository = new OrganizationRepository(logger, opts.db);
+
+        if (!authContext.isAdmin) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            permissions: [],
+          };
+        }
+
+        const permissions: Permission[] = [];
+        for (const permission of apiKeyPermissions) {
+          if (permission.value === 'scim') {
+            const feature = await organizationRepository.getFeature({
+              organizationId: authContext.organizationId,
+              featureId: 'scim',
+            });
+            if (feature?.enabled) {
+              permissions.push({
+                displayName: permission.displayName,
+                value: permission.value,
+              } as Permission);
+            }
+          }
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          permissions,
         };
       });
     },

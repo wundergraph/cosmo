@@ -59,7 +59,7 @@ export class Authorization {
       // we verify the permissions of the api key only if rbac is enabled
       // first dealing with api keys
       if (token && token.startsWith('cosmo')) {
-        const verified = await apiKeyRepo.verifyAPIKeyPermissions({ apiKey: token, accessedTargetId: targetId });
+        const verified = await apiKeyRepo.verifyAPIKeyResources({ apiKey: token, accessedTargetId: targetId });
         if (verified) {
           return;
         } else {

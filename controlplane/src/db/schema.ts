@@ -604,6 +604,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
   email: text('email').unique().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  active: boolean('active').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const sessions = pgTable('sessions', {
@@ -1142,6 +1144,16 @@ export const apiKeyResources = pgTable('api_key_resources', {
       onDelete: 'cascade',
     }),
   targetId: uuid('target_id').references(() => targets.id, { onDelete: 'set null' }),
+});
+
+export const apiKeyPermissions = pgTable('api_key_permissions', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  apiKeyId: uuid('api_key_id')
+    .notNull()
+    .references(() => apiKeys.id, {
+      onDelete: 'cascade',
+    }),
+  permission: text('permission').notNull(),
 });
 
 export const subgraphMembers = pgTable(

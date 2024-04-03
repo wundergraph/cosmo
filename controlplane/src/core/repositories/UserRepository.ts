@@ -59,4 +59,13 @@ export class UserRepository {
   public async deleteUser(input: { id: string }) {
     await this.db.delete(users).where(eq(users.id, input.id)).execute();
   }
+
+  // only to update the active attribute
+  public async updateUser(input: { id: string; active: boolean }) {
+    await this.db
+      .update(users)
+      .set({ active: input.active, updatedAt: new Date() })
+      .where(eq(users.id, input.id))
+      .execute();
+  }
 }

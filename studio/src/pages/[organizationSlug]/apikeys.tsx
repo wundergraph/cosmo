@@ -57,6 +57,7 @@ import {
   createAPIKey,
   deleteAPIKey,
   getAPIKeys,
+  getUserAccessiblePermissions,
   getUserAccessibleResources,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -89,6 +90,7 @@ const CreateAPIKeyDialog = ({
   const { mutate, isPending } = useMutation(createAPIKey.useMutation());
 
   const { data } = useQuery(getUserAccessibleResources.useQuery());
+  const { data: permissionsData } = useQuery(getUserAccessiblePermissions.useQuery());
   const federatedGraphs = data?.federatedGraphs || [];
   const subgraphs = data?.subgraphs || [];
   const isAdmin = user?.currentOrganization.roles.includes("admin");
@@ -110,6 +112,7 @@ const CreateAPIKeyDialog = ({
   const [selectedFedGraphs, setSelectedFedGraphs] = useState<string[]>([]);
   // target ids of the selected subgraphs
   const [selectedSubgraphs, setSelectedSubgraphs] = useState<string[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string>();
 
   const createAPIKeyInputSchema = z.object({
@@ -150,6 +153,7 @@ const CreateAPIKeyDialog = ({
         expires: expiresOptionsMappingToEnum[expires],
         federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
         subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
+        permissions: selectedPermissions,
       },
       {
         onSuccess: (d) => {
@@ -174,6 +178,7 @@ const CreateAPIKeyDialog = ({
     setSelectedAllResources(false);
     setSelectedFedGraphs([]);
     setSelectedSubgraphs([]);
+    setSelectedPermissions([]);
   };
 
   const groupedSubgraphs = subgraphs.reduce<
@@ -266,8 +271,54 @@ const CreateAPIKeyDialog = ({
               </SelectContent>
             </Select>
           </div>
+          {isAdmin && permissionsData && permissionsData.permissions.length > 0 && (
+            <div className="mt-2 flex flex-col gap-y-3">
+              <div className="flex flex-col gap-y-1">
+                <span className="text-base font-semibold">Permissions</span>
+                <span className="text-sm text-muted-foreground">
+                  {
+                    "Select permissions for the API key."
+                  }
+                </span>
+              </div>
+              {permissionsData.permissions.map((permission) => {
+                return (
+                  <div
+                    className="flex items-center gap-x-2"
+                    key={permission.value}
+                  >
+                    <Checkbox
+                      id="scim"
+                      checked={selectedPermissions.includes(permission.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedPermissions([
+                            ...Array.from(
+                              new Set([...selectedPermissions, permission.value]),
+                            ),
+                          ]);
+                        } else {
+                          setSelectedPermissions([
+                            ...selectedPermissions.filter(
+                              (p) => p !== permission.value,
+                            ),
+                          ]);
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="scim"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize"
+                    >
+                      {permission.displayName}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {rbac && (
-            <div className="mt-4 flex flex-col gap-y-3">
+            <div className="mt-3 flex flex-col gap-y-3">
               <div className="flex flex-col gap-y-1">
                 <span className="text-base font-semibold">
                   Select Resources
