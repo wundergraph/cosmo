@@ -503,9 +503,10 @@ func TestPrometheus(t *testing.T) {
 			responseContentLength := findMetricByName(mf, "router_http_requests_error_total")
 			responseContentLengthMetrics := responseContentLength.GetMetric()
 
-			require.Len(t, responseContentLengthMetrics, 2)
+			require.Len(t, responseContentLengthMetrics, 3)
 			require.Len(t, responseContentLengthMetrics[0].Label, 12)
 			require.Len(t, responseContentLengthMetrics[1].Label, 16)
+			require.Len(t, responseContentLengthMetrics[2].Label, 16)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
@@ -563,7 +564,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				{
 					Name:  PointerOf("wg_subgraph_error_extended_code"),
-					Value: PointerOf("UNAUTHORIZED,YOUR_ERROR_CODE"),
+					Value: PointerOf("UNAUTHORIZED"),
 				},
 				{
 					Name:  PointerOf("wg_subgraph_id"),
@@ -574,6 +575,74 @@ func TestPrometheus(t *testing.T) {
 					Value: PointerOf("products"),
 				},
 			}, responseContentLengthMetrics[1].Label)
+
+			// Error metric for the subgraph error
+			require.Equal(t, []*io_prometheus_client.LabelPair{
+				{
+					Name:  PointerOf("http_status_code"),
+					Value: PointerOf("403"),
+				},
+				{
+					Name:  PointerOf("otel_scope_name"),
+					Value: PointerOf("cosmo.router.prometheus"),
+				},
+				{
+					Name:  PointerOf("otel_scope_version"),
+					Value: PointerOf("0.0.1"),
+				},
+				{
+					Name:  PointerOf("wg_client_name"),
+					Value: PointerOf("unknown"),
+				},
+				{
+					Name:  PointerOf("wg_client_version"),
+					Value: PointerOf("missing"),
+				},
+				{
+					Name:  PointerOf("wg_component_name"),
+					Value: PointerOf("engine-loader"),
+				},
+				{
+					Name:  PointerOf("wg_federated_graph_id"),
+					Value: PointerOf("graph"),
+				},
+				{
+					Name:  PointerOf("wg_operation_name"),
+					Value: PointerOf("myQuery"),
+				},
+				{
+					Name:  PointerOf("wg_operation_protocol"),
+					Value: PointerOf("http"),
+				},
+				{
+					Name:  PointerOf("wg_operation_type"),
+					Value: PointerOf("query"),
+				},
+				{
+					Name:  PointerOf("wg_router_cluster_name"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_config_version"),
+					Value: PointerOf(""),
+				},
+				{
+					Name:  PointerOf("wg_router_version"),
+					Value: PointerOf("dev"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_error_extended_code"),
+					Value: PointerOf("YOUR_ERROR_CODE"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_id"),
+					Value: PointerOf("3"),
+				},
+				{
+					Name:  PointerOf("wg_subgraph_name"),
+					Value: PointerOf("products"),
+				},
+			}, responseContentLengthMetrics[2].Label)
 		})
 	})
 }
