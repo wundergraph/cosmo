@@ -1,6 +1,5 @@
 import 'dotenv/config';
-
-import { execSync } from 'node:child_process';
+import { execa } from 'execa';
 
 const CLICKHOUSE_DSN = process.env.CLICKHOUSE_MIGRATION_DSN || process.env.CLICKHOUSE_DSN;
 
@@ -11,13 +10,22 @@ if (!CLICKHOUSE_DSN) {
 console.log(`Migrating ClickHouse database`);
 
 try {
-  const child = execSync(
-    `dbmate --wait --wait-timeout 30s -u '${CLICKHOUSE_DSN}' --no-dump-schema -d clickhouse/migrations up`,
-  );
-  console.log(child.toString());
+  const { stdout } = await execa('dbmate', [
+    '--wait',
+    '--wait-timeout',
+    '30s',
+    '-u',
+    CLICKHOUSE_DSN,
+    '--no-dump-schema',
+    '-d',
+    'clickhouse/migrations',
+    'up',
+  ]);
+  console.log(stdout);
   console.log(`ClickHouse database migrated`);
 } catch (error: any) {
-  console.error(`ClickHouse database migration failed with exit code ${error.status}\n\tDetails: ${error.message}`);
+  console.error(`ClickHouse database migration failed\n`);
+  console.error(error);
   // eslint-disable-next-line unicorn/no-process-exit
   process.exit(1);
 }
