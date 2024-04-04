@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.50.1](https://github.com/wundergraph/cosmo/compare/wgc@0.50.0...wgc@0.50.1) (2024-04-04)
+
+### Bug Fixes
+
+* don't enforce org slug when using API key ([#688](https://github.com/wundergraph/cosmo/issues/688)) ([f5f7b4e](https://github.com/wundergraph/cosmo/commit/f5f7b4e5237d0d3a91a60c1878c0bf89dd721bee)) (@StarpTech)
+
 # [0.50.0](https://github.com/wundergraph/cosmo/compare/wgc@0.49.1...wgc@0.50.0) (2024-04-03)
 
 ### Features
