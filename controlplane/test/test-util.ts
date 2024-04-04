@@ -15,12 +15,27 @@ import routes from '../src/core/routes.js';
 import { Authorization } from '../src/core/services/Authorization.js';
 import Keycloak from '../src/core/services/Keycloak.js';
 import Mailer from '../src/core/services/Mailer.js';
-import { createTestAuthenticator, seedTest } from '../src/core/test-util.js';
+import { createTestAuthenticator, seedTest, UserTestData } from '../src/core/test-util.js';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { Label } from '../src/types/index.js';
+import ScimController from '../src/core/controllers/scim.js';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
+import { UserRepository } from '../src/core/repositories/UserRepository.js';
+import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
+import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 
-export const SetupTest = async function ({ dbname, chClient }: { dbname: string; chClient?: ClickHouseClient }) {
+export const SetupTest = async function ({
+  dbname,
+  chClient,
+  enableScim,
+  createScimKey,
+}: {
+  dbname: string;
+  chClient?: ClickHouseClient;
+  enableScim?: boolean;
+  createScimKey?: boolean;
+}) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
   const server = Fastify({
@@ -36,6 +51,7 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
   const { authenticator, userTestData } = createTestAuthenticator();
 
   const realm = 'test';
+  const loginRealm = 'master';
   const apiUrl = 'http://localhost:8080';
   const clientId = 'studio';
   const adminUser = 'admin';
@@ -44,7 +60,7 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
 
   const keycloakClient = new Keycloak({
     apiUrl,
-    realm,
+    realm: loginRealm,
     clientId,
     adminUser,
     adminPassword,
@@ -74,8 +90,8 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
       platformWebhooks,
       webBaseUrl,
       slack: {
-        clientID: '',
-        clientSecret: '',
+        clientID: '1',
+        clientSecret: 'test',
       },
       cdnBaseUrl: 'http://localhost:11000',
       admissionWebhookJWTSecret: 'secret',
@@ -87,11 +103,34 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
     }),
   });
 
+  const organizationRepository = new OrganizationRepository(log, server.db, '');
+  const userRepository = new UserRepository(server.db);
+  const apiKeyRepository = new ApiKeyRepository(server.db);
+  const apiKeyAuth = new ApiKeyAuthenticator(server.db, organizationRepository);
+  await server.register(ScimController, {
+    organizationRepository,
+    userRepository,
+    apiKeyRepository,
+    authenticator: apiKeyAuth,
+    prefix: '/scim/v2',
+    db: server.db,
+    keycloakClient,
+    keycloakRealm: realm,
+  });
+
   const addr = await server.listen({
     port: 0,
   });
 
-  await seedTest(databaseConnectionUrl, userTestData);
+  await seedTest(databaseConnectionUrl, userTestData, createScimKey);
+
+  if (enableScim) {
+    await organizationRepository.updateFeature({
+      organizationId: userTestData.organizationId,
+      id: 'scim',
+      enabled: true,
+    });
+  }
 
   const transport = createConnectTransport({
     httpVersion: '1.1',
@@ -101,7 +140,58 @@ export const SetupTest = async function ({ dbname, chClient }: { dbname: string;
   const platformClient = createPromiseClient(PlatformService, transport);
   const nodeClient = createPromiseClient(NodeService, transport);
 
-  return { client: platformClient, nodeClient, server, userTestData, blobStorage };
+  return {
+    client: platformClient,
+    nodeClient,
+    server,
+    userTestData,
+    blobStorage,
+    baseAddress: addr,
+    keycloakClient,
+    realm,
+  };
+};
+
+export const SetupKeycloak = async ({
+  keycloakClient,
+  userTestData,
+  realmName,
+}: {
+  keycloakClient: Keycloak;
+  userTestData: UserTestData;
+  realmName: string;
+}) => {
+  await keycloakClient.authenticateClient();
+  await keycloakClient.client.realms.create({
+    realm: realmName,
+    enabled: true,
+    displayName: realmName,
+    registrationEmailAsUsername: true,
+  });
+  const id = await keycloakClient.addKeycloakUser({
+    email: userTestData.email,
+    realm: realmName,
+    isPasswordTemp: false,
+    password: 'wunder@123',
+    id: userTestData.userId,
+  });
+  await keycloakClient.seedGroup({
+    realm: realmName,
+    userID: id,
+    organizationSlug: userTestData.organizationSlug,
+  });
+};
+
+export const removeKeycloakSetup = async ({
+  keycloakClient,
+  realmName,
+}: {
+  keycloakClient: Keycloak;
+  realmName: string;
+}) => {
+  await keycloakClient.client.realms.del({
+    realm: realmName,
+  });
 };
 
 export const createSubgraph = async (

@@ -216,6 +216,11 @@ const SDLPage: NextPageWithLayout = () => {
               <SDLViewerActions
                 className="w-auto"
                 sdl={activeGraphWithSDL.sdl ?? ""}
+                targetName={
+                  activeGraphWithSDL.title !== ""
+                    ? activeGraphWithSDL.title
+                    : undefined
+                }
               />
               <SchemaSettings />
             </div>

@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.49.1",
+  "version": "0.50.1",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/index.js",
@@ -9,8 +9,14 @@
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
   },
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo"
   },
   "scripts": {
     "build": "del dist && tsc",
@@ -29,7 +35,6 @@
   ],
   "license": "Apache-2.0",
   "dependencies": {
-    "@bufbuild/buf": "^1.27.2",
     "@bufbuild/protobuf": "^1.4.1",
     "@connectrpc/connect": "^1.1.3",
     "@connectrpc/connect-node": "^1.1.3",

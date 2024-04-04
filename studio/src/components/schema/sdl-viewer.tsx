@@ -96,15 +96,21 @@ export const SDLViewerActions = ({
   sdl,
   className,
   size = "icon",
+  targetName,
 }: {
   sdl: string;
   className?: string;
   size?: "icon" | "icon-sm";
+  targetName?: string;
 }) => {
   const { toast, dismiss } = useToast();
 
   const downloadSDL = () => {
-    downloadStringAsFile(sdl, `schema.graphql`, `application/graphql`);
+    downloadStringAsFile(
+      sdl,
+      targetName ? `${targetName}.graphql` : `schema.graphql`,
+      `application/graphql`,
+    );
   };
 
   const copySDL = () => {

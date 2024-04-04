@@ -5,7 +5,7 @@ import inquirer from 'inquirer';
 import Table from 'cli-table3';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
@@ -33,7 +33,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 
