@@ -5,17 +5,13 @@ import jwtDecode from 'jwt-decode';
 import inquirer from 'inquirer';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { DecodedAccessToken, performDeviceAuth, startPollingForAccessToken } from '../utils.js';
-import UserConfig from '../user-config.js';
+import { updateConfigFile } from '../../../utils.js';
 
 export default (opts: BaseCommandOptions) => {
   const loginCommand = new Command('login');
   loginCommand.description('Login a user into the Cosmo platform. Supports browser-based authentication.');
 
   loginCommand.action(async () => {
-    const userConfig = new UserConfig();
-    // checks if the config file exists and checks if the access token is not expired
-    userConfig.validateToken();
-
     const resp = await performDeviceAuth();
     if (!resp.success) {
       program.error('Could not perform authentication. Please try again');
@@ -58,7 +54,7 @@ export default (opts: BaseCommandOptions) => {
       choices: [...organizations],
     });
 
-    userConfig.loadToken({ ...accessTokenResp.response, organizationSlug: selectedOrganization.organizationSlug });
+    updateConfigFile({ ...accessTokenResp.response, organizationSlug: selectedOrganization.organizationSlug });
 
     console.log(pc.green('Logged in Successfully!'));
   });
