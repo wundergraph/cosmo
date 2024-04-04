@@ -20,7 +20,9 @@ type Subgraph struct {
 	URL string `goja:"url"`
 	// Schema is the SDL of the subgraph as a string. If empty, the schema
 	// is retrieved from the URL using the _service query.
-	Schema string `goja:"schema"`
+	Schema               string `goja:"schema"`
+	SubscriptionURL      string `goja:"subscription_url"`
+	SubscriptionProtocol string `goja:"subscription_protocol"`
 }
 
 type FieldConfiguration struct {

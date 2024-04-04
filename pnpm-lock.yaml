@@ -20,7 +20,7 @@ importers:
         version: 1.4.1(@bufbuild/protobuf@1.4.1)
       '@commitlint/cli':
         specifier: 19.2.1
-        version: 19.2.1(@types/node@20.11.26)(typescript@5.3.2)
+        version: 19.2.1(@types/node@18.19.21)(typescript@5.3.2)
       '@commitlint/config-conventional':
         specifier: 19.1.0
         version: 19.1.0
@@ -56,7 +56,7 @@ importers:
         version: 3.0.3
       vitest:
         specifier: 1.4.0
-        version: 1.4.0(@types/node@20.11.26)
+        version: 1.4.0(@types/node@18.19.21)
 
   admission-server:
     dependencies:
@@ -409,6 +409,9 @@ importers:
       eslint:
         specifier: ^8.57.0
         version: 8.57.0
+      execa:
+        specifier: ^8.0.1
+        version: 8.0.1
       fastify:
         specifier: ^4.26.1
         version: 4.26.1
@@ -3041,14 +3044,14 @@ packages:
     dev: false
     optional: true
 
-  /@commitlint/cli@19.2.1(@types/node@20.11.26)(typescript@5.3.2):
+  /@commitlint/cli@19.2.1(@types/node@18.19.21)(typescript@5.3.2):
     resolution: {integrity: sha512-cbkYUJsLqRomccNxvoJTyv5yn0bSy05BBizVyIcLACkRbVUqYorC351Diw/XFSWC/GtpwiwT2eOvQgFZa374bg==}
     engines: {node: '>=v18'}
     hasBin: true
     dependencies:
       '@commitlint/format': 19.0.3
       '@commitlint/lint': 19.1.0
-      '@commitlint/load': 19.2.0(@types/node@20.11.26)(typescript@5.3.2)
+      '@commitlint/load': 19.2.0(@types/node@18.19.21)(typescript@5.3.2)
       '@commitlint/read': 19.2.1
       '@commitlint/types': 19.0.3
       execa: 8.0.1
@@ -3117,7 +3120,7 @@ packages:
       '@commitlint/types': 19.0.3
     dev: true
 
-  /@commitlint/load@19.2.0(@types/node@20.11.26)(typescript@5.3.2):
+  /@commitlint/load@19.2.0(@types/node@18.19.21)(typescript@5.3.2):
     resolution: {integrity: sha512-XvxxLJTKqZojCxaBQ7u92qQLFMMZc4+p9qrIq/9kJDy8DOrEa7P1yx7Tjdc2u2JxIalqT4KOGraVgCE7eCYJyQ==}
     engines: {node: '>=v18'}
     dependencies:
@@ -3127,7 +3130,7 @@ packages:
       '@commitlint/types': 19.0.3
       chalk: 5.3.0
       cosmiconfig: 9.0.0(typescript@5.3.2)
-      cosmiconfig-typescript-loader: 5.0.0(@types/node@20.11.26)(cosmiconfig@9.0.0)(typescript@5.3.2)
+      cosmiconfig-typescript-loader: 5.0.0(@types/node@18.19.21)(cosmiconfig@9.0.0)(typescript@5.3.2)
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       lodash.uniq: 4.5.0
@@ -10963,7 +10966,7 @@ packages:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
     dev: false
 
-  /cosmiconfig-typescript-loader@5.0.0(@types/node@20.11.26)(cosmiconfig@9.0.0)(typescript@5.3.2):
+  /cosmiconfig-typescript-loader@5.0.0(@types/node@18.19.21)(cosmiconfig@9.0.0)(typescript@5.3.2):
     resolution: {integrity: sha512-+8cK7jRAReYkMwMiG+bxhcNKiHJDM6bR9FD/nGBXOWdMLuYawjF5cGrtLilJ+LGd3ZjCXnJjR5DkfWPoIVlqJA==}
     engines: {node: '>=v16'}
     peerDependencies:
@@ -10971,7 +10974,7 @@ packages:
       cosmiconfig: '>=8.2'
       typescript: '>=4'
     dependencies:
-      '@types/node': 20.11.26
+      '@types/node': 18.19.21
       cosmiconfig: 9.0.0(typescript@5.3.2)
       jiti: 1.19.1
       typescript: 5.3.2
