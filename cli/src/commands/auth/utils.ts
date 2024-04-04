@@ -140,10 +140,6 @@ export const startPollingForAccessToken = async ({
 export async function checkAuth(silent = false) {
   const userConfig = readConfigFile();
 
-  if (!userConfig.organizationSlug) {
-    program.error(pc.red('Organization slug is not set. Please run `wgc auth login` to set the organization slug.'));
-  }
-
   if (config.apiKey && userConfig.accessToken) {
     console.error(
       `${pc.yellow('Warning')} ${pc.dim(
@@ -155,6 +151,10 @@ export async function checkAuth(silent = false) {
   // API Key is present and assumed to be valid
   if (config.apiKey) {
     return;
+  }
+
+  if (!userConfig.organizationSlug) {
+    program.error(pc.red('Organization slug is not set. Please run `wgc auth login` to set the organization slug.'));
   }
 
   // Access token is present and does not expire in the next 60 seconds
