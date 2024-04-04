@@ -2,6 +2,12 @@
 
 package model
 
+type Query struct {
+}
+
+type Subscription struct {
+}
+
 type TimestampedString struct {
 	// The value of the string.
 	Value string `json:"value"`

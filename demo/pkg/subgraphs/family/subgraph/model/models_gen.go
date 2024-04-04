@@ -112,6 +112,9 @@ func (this Pony) GetName() string   { return this.Name }
 
 func (Pony) IsAnimal() {}
 
+type Query struct {
+}
+
 type SearchInput struct {
 	HasPets     *bool              `json:"hasPets,omitempty"`
 	Nationality *Nationality       `json:"nationality,omitempty"`
