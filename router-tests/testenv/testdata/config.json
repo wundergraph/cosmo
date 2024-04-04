@@ -42,14 +42,16 @@
               "tag",
               "role",
               "updatedAt",
-              "startDate"
+              "startDate",
+              "derivedID"
             ]
           },
           {
             "typeName": "Consultancy",
             "fieldNames": [
               "upc",
-              "lead"
+              "lead",
+              "isLeadAvailable"
             ]
           },
           {
@@ -168,7 +170,7 @@
           },
           "federation": {
             "enabled": true,
-            "serviceSdl": "directive @goField(\n\tforceResolver: Boolean\n\tname: String\n\tomittable: Boolean\n) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION\n\ntype Query {\n  employee(id: Int!): Employee\n  employees: [Employee!]!\n  products: [Products!]!\n  teammates(team: Department!): [Employee!]!\n}\n\ntype Mutation {\n  updateEmployeeTag(id: Int!, tag: String!): Employee\n}\n\ntype Subscription {\n  \"\"\"\n  `currentTime` will return a stream of `Time` objects.\n  \"\"\"\n  currentTime: Time!\n  countEmp(max: Int! intervalMilliseconds: Int!): Int!\n  countEmp2(max: Int! intervalMilliseconds: Int!): Int!\n}\n\nenum Department {\n  ENGINEERING\n  MARKETING\n  OPERATIONS\n}\n\ninterface RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nenum EngineerType {\n  BACKEND\n  FRONTEND\n  FULLSTACK\n}\n\ninterface Identifiable {\n  id: Int!\n}\n\ntype Engineer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  engineerType: EngineerType!\n}\n\ntype Marketer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nenum OperationType {\n  FINANCE\n  HUMAN_RESOURCES\n}\n\ntype Operator implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  operatorType: [OperationType!]!\n}\n\ntype Details {\n  forename: String! @shareable\n  location: Country!\n  surname: String! @shareable\n  pastLocations: [City!]!\n}\n\ntype City {\n  type: String!\n  name: String!\n  country: Country\n}\n\n# Using a nested key field simply because it can showcase potential bug\n# vectors / Federation capabilities.\ntype Country @key(fields: \"key { name }\", resolvable: false) {\n  key: CountryKey!\n}\n\ntype CountryKey {\n  name: String!\n}\n\ntype Employee implements Identifiable @key(fields: \"id\") {\n  details: Details! @shareable\n  id: Int!\n  tag: String!\n  role: RoleType!\n  notes: String @shareable\n  updatedAt: String!\n  startDate: String! @requiresScopes(scopes: [[\"read:employee\", \"read:private\"], [\"read:all\"]])\n}\n\ntype Time {\n  unixTime: Int!\n  timeStamp: String!\n}\n\nunion Products = Consultancy | Cosmo | SDK\n\ninterface IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n}\n\ntype Consultancy @key(fields: \"upc\") {\n  upc: ID!\n  lead: Employee!\n}\n\ntype Cosmo implements IProduct @key(fields: \"upc\") {\n  upc: ID!\n  engineers: [Employee!]!\n  lead: Employee!\n}\n\ntype SDK implements IProduct @key(fields: \"upc\") {\n  upc: ID!\n  engineers: [Employee!]!\n  owner: Employee!\n}\n"
+            "serviceSdl": "directive @goField(\n  forceResolver: Boolean\n  name: String\n  omittable: Boolean\n) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION\n\ntype Query {\n  employee(id: Int!): Employee\n  employees: [Employee]\n  products: [Products!]!\n  teammates(team: Department!): [Employee!]!\n}\n\ntype Mutation {\n  updateEmployeeTag(id: Int!, tag: String!): Employee\n}\n\ntype Subscription {\n  \"\"\"\n  `currentTime` will return a stream of `Time` objects.\n  \"\"\"\n  currentTime: Time!\n  countEmp(max: Int!, intervalMilliseconds: Int!): Int!\n  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!\n}\n\nenum Department {\n  ENGINEERING\n  MARKETING\n  OPERATIONS\n}\n\ninterface RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nenum EngineerType {\n  BACKEND\n  FRONTEND\n  FULLSTACK\n}\n\ninterface Identifiable {\n  id: Int!\n}\n\ntype Engineer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  engineerType: EngineerType!\n}\n\ntype Marketer implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n}\n\nenum OperationType {\n  FINANCE\n  HUMAN_RESOURCES\n}\n\ntype Operator implements RoleType {\n  departments: [Department!]!\n  title: [String!]!\n  employees: [Employee!]! @goField(forceResolver: true)\n  operatorType: [OperationType!]!\n}\n\ntype Details {\n  forename: String! @shareable\n  location: Country!\n  surname: String! @shareable\n  pastLocations: [City!]!\n}\n\ntype City {\n  type: String!\n  name: String!\n  country: Country\n}\n\n# Using a nested key field simply because it can showcase potential bug\n# vectors / Federation capabilities.\ntype Country @key(fields: \"key { name }\", resolvable: false) {\n  key: CountryKey!\n}\n\ntype CountryKey {\n  name: String!\n}\n\ntype Employee implements Identifiable @key(fields: \"id\") {\n  details: Details! @shareable\n  id: Int!\n  tag: String!\n  role: RoleType!\n  notes: String @shareable\n  updatedAt: String!\n  startDate: String! @requiresScopes(scopes: [[\"read:employee\", \"read:private\"], [\"read:all\"]])\n  derivedID: Int! @requires(fields: \"id\")\n  # From the `availability` service. Only defined for use in @requires\n  isAvailable: Boolean! @external\n}\n\ntype Time {\n  unixTime: Int!\n  timeStamp: String!\n}\n\nunion Products = Consultancy | Cosmo | SDK\n\ninterface IProduct {\n  upc: ID!\n  engineers: [Employee!]!\n}\n\ntype Consultancy @key(fields: \"upc\") {\n  upc: ID!\n  lead: Employee!\n  isLeadAvailable: Boolean @requires(fields: \"lead { isAvailable }\")\n}\n\ntype Cosmo implements IProduct @key(fields: \"upc\") {\n  upc: ID!\n  engineers: [Employee!]!\n  lead: Employee!\n}\n\ntype SDK implements IProduct @key(fields: \"upc\") {\n  upc: ID!\n  engineers: [Employee!]!\n  owner: Employee!\n}\n"
           },
           "upstreamSchema": {
             "key": "7ca56b7592222b795cafd01267e86f974c7d0de5"
@@ -197,6 +199,18 @@
           {
             "typeName": "SDK",
             "selectionSet": "upc"
+          }
+        ],
+        "requires": [
+          {
+            "typeName": "Employee",
+            "fieldName": "derivedID",
+            "selectionSet": "id"
+          },
+          {
+            "typeName": "Consultancy",
+            "fieldName": "isLeadAvailable",
+            "selectionSet": "lead { isAvailable }"
           }
         ]
       },

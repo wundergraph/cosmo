@@ -37,8 +37,9 @@ type City struct {
 }
 
 type Consultancy struct {
-	Upc  string    `json:"upc"`
-	Lead *Employee `json:"lead"`
+	Upc             string    `json:"upc"`
+	Lead            *Employee `json:"lead"`
+	IsLeadAvailable *bool     `json:"isLeadAvailable,omitempty"`
 }
 
 func (Consultancy) IsProducts() {}
@@ -86,13 +87,15 @@ type Details struct {
 }
 
 type Employee struct {
-	Details   *Details `json:"details"`
-	ID        int      `json:"id"`
-	Tag       string   `json:"tag"`
-	Role      RoleType `json:"role"`
-	Notes     *string  `json:"notes,omitempty"`
-	UpdatedAt string   `json:"updatedAt"`
-	StartDate string   `json:"startDate"`
+	Details     *Details `json:"details"`
+	ID          int      `json:"id"`
+	Tag         string   `json:"tag"`
+	Role        RoleType `json:"role"`
+	Notes       *string  `json:"notes,omitempty"`
+	UpdatedAt   string   `json:"updatedAt"`
+	StartDate   string   `json:"startDate"`
+	DerivedID   int      `json:"derivedID"`
+	IsAvailable bool     `json:"isAvailable"`
 }
 
 func (Employee) IsIdentifiable() {}
