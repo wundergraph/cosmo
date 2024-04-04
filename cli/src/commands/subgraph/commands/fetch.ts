@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import { join } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import program from '../../index.js';
 
@@ -32,7 +32,7 @@ export default (opts: BaseCommandOptions) => {
           namespace: options.namespace,
         },
         {
-          headers: baseHeaders,
+          headers: getBaseHeaders(),
         },
       );
 
@@ -45,7 +45,7 @@ export default (opts: BaseCommandOptions) => {
           namespace: options.namespace,
         },
         {
-          headers: baseHeaders,
+          headers: getBaseHeaders(),
         },
       );
 
