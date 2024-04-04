@@ -104,6 +104,9 @@ type Employee implements Identifiable @key(fields: "id") {
   notes: String @shareable
   updatedAt: String!
   startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+  derivedID: Int! @requires(fields: "id")
+  # From the `availability` service. Only defined for use in @requires
+  isAvailable: Boolean! @external
   rootFieldThrowsError: String @goField(forceResolver: true)
   rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
 }
@@ -128,6 +131,7 @@ interface IProduct {
 type Consultancy @key(fields: "upc") {
   upc: ID!
   lead: Employee!
+  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
 }
 
 type Cosmo implements IProduct @key(fields: "upc") {

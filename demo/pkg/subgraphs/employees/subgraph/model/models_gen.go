@@ -37,8 +37,9 @@ type City struct {
 }
 
 type Consultancy struct {
-	Upc  string    `json:"upc"`
-	Lead *Employee `json:"lead"`
+	Upc             string    `json:"upc"`
+	Lead            *Employee `json:"lead"`
+	IsLeadAvailable *bool     `json:"isLeadAvailable,omitempty"`
 }
 
 func (Consultancy) IsProducts() {}
@@ -93,6 +94,8 @@ type Employee struct {
 	Notes                 *string       `json:"notes,omitempty"`
 	UpdatedAt             string        `json:"updatedAt"`
 	StartDate             string        `json:"startDate"`
+	DerivedID             int           `json:"derivedID"`
+	IsAvailable           bool          `json:"isAvailable"`
 	RootFieldThrowsError  *string       `json:"rootFieldThrowsError,omitempty"`
 	RootFieldErrorWrapper *ErrorWrapper `json:"rootFieldErrorWrapper,omitempty"`
 }

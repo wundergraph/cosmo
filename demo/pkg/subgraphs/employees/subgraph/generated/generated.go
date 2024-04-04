@@ -62,8 +62,9 @@ type ComplexityRoot struct {
 	}
 
 	Consultancy struct {
-		Lead func(childComplexity int) int
-		Upc  func(childComplexity int) int
+		IsLeadAvailable func(childComplexity int) int
+		Lead            func(childComplexity int) int
+		Upc             func(childComplexity int) int
 	}
 
 	Cosmo struct {
@@ -88,8 +89,10 @@ type ComplexityRoot struct {
 	}
 
 	Employee struct {
+		DerivedID             func(childComplexity int) int
 		Details               func(childComplexity int) int
 		ID                    func(childComplexity int) int
+		IsAvailable           func(childComplexity int) int
 		Notes                 func(childComplexity int) int
 		Role                  func(childComplexity int) int
 		RootFieldErrorWrapper func(childComplexity int) int
@@ -247,6 +250,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.City.Type(childComplexity), true
 
+	case "Consultancy.isLeadAvailable":
+		if e.complexity.Consultancy.IsLeadAvailable == nil {
+			break
+		}
+
+		return e.complexity.Consultancy.IsLeadAvailable(childComplexity), true
+
 	case "Consultancy.lead":
 		if e.complexity.Consultancy.Lead == nil {
 			break
@@ -324,6 +334,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Details.Surname(childComplexity), true
 
+	case "Employee.derivedID":
+		if e.complexity.Employee.DerivedID == nil {
+			break
+		}
+
+		return e.complexity.Employee.DerivedID(childComplexity), true
+
 	case "Employee.details":
 		if e.complexity.Employee.Details == nil {
 			break
@@ -337,6 +354,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Employee.ID(childComplexity), true
+
+	case "Employee.isAvailable":
+		if e.complexity.Employee.IsAvailable == nil {
+			break
+		}
+
+		return e.complexity.Employee.IsAvailable(childComplexity), true
 
 	case "Employee.notes":
 		if e.complexity.Employee.Notes == nil {
@@ -914,6 +938,9 @@ type Employee implements Identifiable @key(fields: "id") {
   notes: String @shareable
   updatedAt: String!
   startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+  derivedID: Int! @requires(fields: "id")
+  # From the ` + "`" + `availability` + "`" + ` service. Only defined for use in @requires
+  isAvailable: Boolean! @external
   rootFieldThrowsError: String @goField(forceResolver: true)
   rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
 }
@@ -938,6 +965,7 @@ interface IProduct {
 type Consultancy @key(fields: "upc") {
   upc: ID!
   lead: Employee!
+  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
 }
 
 type Cosmo implements IProduct @key(fields: "upc") {
@@ -1507,12 +1535,57 @@ func (ec *executionContext) fieldContext_Consultancy_lead(ctx context.Context, f
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
 				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Consultancy_isLeadAvailable(ctx context.Context, field graphql.CollectedField, obj *model.Consultancy) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Consultancy_isLeadAvailable(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsLeadAvailable, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	fc.Result = res
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Consultancy_isLeadAvailable(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Consultancy",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1615,6 +1688,10 @@ func (ec *executionContext) fieldContext_Cosmo_engineers(ctx context.Context, fi
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -1679,6 +1756,10 @@ func (ec *executionContext) fieldContext_Cosmo_lead(ctx context.Context, field g
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -2285,6 +2366,94 @@ func (ec *executionContext) fieldContext_Employee_startDate(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Employee_derivedID(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_derivedID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DerivedID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_derivedID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Employee_isAvailable(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_isAvailable(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsAvailable, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_isAvailable(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Employee_rootFieldThrowsError(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 	if err != nil {
@@ -2514,6 +2683,10 @@ func (ec *executionContext) fieldContext_Engineer_employees(ctx context.Context,
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -2612,6 +2785,8 @@ func (ec *executionContext) fieldContext_Entity_findConsultancyByUpc(ctx context
 				return ec.fieldContext_Consultancy_upc(ctx, field)
 			case "lead":
 				return ec.fieldContext_Consultancy_lead(ctx, field)
+			case "isLeadAvailable":
+				return ec.fieldContext_Consultancy_isLeadAvailable(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Consultancy", field.Name)
 		},
@@ -2746,6 +2921,10 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -3054,6 +3233,10 @@ func (ec *executionContext) fieldContext_Marketer_employees(ctx context.Context,
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -3115,6 +3298,10 @@ func (ec *executionContext) fieldContext_Mutation_updateEmployeeTag(ctx context.
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -3278,6 +3465,10 @@ func (ec *executionContext) fieldContext_Operator_employees(ctx context.Context,
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -3383,6 +3574,10 @@ func (ec *executionContext) fieldContext_Query_employee(ctx context.Context, fie
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -3455,6 +3650,10 @@ func (ec *executionContext) fieldContext_Query_employeeAsList(ctx context.Contex
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -3527,6 +3726,10 @@ func (ec *executionContext) fieldContext_Query_employees(ctx context.Context, fi
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -3635,6 +3838,10 @@ func (ec *executionContext) fieldContext_Query_teammates(ctx context.Context, fi
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -3710,6 +3917,10 @@ func (ec *executionContext) fieldContext_Query_firstEmployee(ctx context.Context
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -4050,6 +4261,10 @@ func (ec *executionContext) fieldContext_SDK_engineers(ctx context.Context, fiel
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -4114,6 +4329,10 @@ func (ec *executionContext) fieldContext_SDK_owner(ctx context.Context, field gr
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "derivedID":
+				return ec.fieldContext_Employee_derivedID(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
 			case "rootFieldThrowsError":
 				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
 			case "rootFieldErrorWrapper":
@@ -6447,6 +6666,8 @@ func (ec *executionContext) _Consultancy(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "isLeadAvailable":
+			out.Values[i] = ec._Consultancy_isLeadAvailable(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6691,6 +6912,16 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "startDate":
 			out.Values[i] = ec._Employee_startDate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "derivedID":
+			out.Values[i] = ec._Employee_derivedID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "isAvailable":
+			out.Values[i] = ec._Employee_isAvailable(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
