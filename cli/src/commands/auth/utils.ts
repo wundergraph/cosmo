@@ -137,7 +137,7 @@ export const startPollingForAccessToken = async ({
 
 // checks if either of access token or api key are present
 // if not, it will try to refresh the access token
-export async function checkAuth(silent = false) {
+export async function checkAuth() {
   const userConfig = readConfigFile();
 
   if (config.apiKey && userConfig.accessToken) {
