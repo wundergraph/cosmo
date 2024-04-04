@@ -1,5 +1,5 @@
 import { FieldConfiguration, federateSubgraphs as realFederateSubgraphs } from '@wundergraph/composition';
-import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, normalizeURL, SubscriptionProtocol } from '@wundergraph/cosmo-shared';
 import { DocumentNode, parse, print, printSchema } from 'graphql';
 
 export type Subgraph = {
@@ -7,7 +7,7 @@ export type Subgraph = {
   name: string;
   url: string;
   subscription_url?: string;
-  subscription_protocol?: 'ws' | 'sse' | 'sse_post';
+  subscription_protocol?: SubscriptionProtocol;
 };
 
 export type FederatedGraph = {
