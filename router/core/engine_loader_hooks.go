@@ -136,10 +136,19 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 		slices.Sort(errorCodesAttr)
 
 		if len(errorCodesAttr) > 0 {
+
+			// Create individual metrics for each error code
+			for _, code := range errorCodesAttr {
+				f.metricStore.MeasureRequestError(ctx,
+					// Add only the error code as an attribute
+					append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(code))...,
+				)
+			}
+
+			// Add this after the metrics have been created
+			// The list might be used for post-processing
 			baseAttributes = append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(strings.Join(errorCodesAttr, ",")))
 		}
-
-		f.metricStore.MeasureRequestError(ctx, baseAttributes...)
 	}
 
 	span.SetAttributes(baseAttributes...)
