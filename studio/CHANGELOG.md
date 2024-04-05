@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.76.2](https://github.com/wundergraph/cosmo/compare/studio@0.76.1...studio@0.76.2) (2024-04-05)
+
+### Bug Fixes
+
+* stringify org cookie before comparison ([#698](https://github.com/wundergraph/cosmo/issues/698)) ([3e5f346](https://github.com/wundergraph/cosmo/commit/3e5f346682c2843bc47b5e396022e2a81764d0c0)) (@StarpTech)
+
 ## [0.76.1](https://github.com/wundergraph/cosmo/compare/studio@0.76.0...studio@0.76.1) (2024-04-03)
 
 **Note:** Version bump only for package studio
