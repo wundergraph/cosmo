@@ -1089,9 +1089,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
 		handlerOpts.RateLimitConfig = r.Config.rateLimit
-
 		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the redis connection string %s: %w", r.Config.rateLimit.Storage.Url, err)
 		}
