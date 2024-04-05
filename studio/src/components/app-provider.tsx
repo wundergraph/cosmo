@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { ReactNode, createContext, useEffect, useState } from "react";
-import { useCookies } from "react-cookie";
+import { useCookieOrganization } from "@/hooks/use-cookie-organization";
 
 export const UserContext = createContext<User | undefined>(undefined);
 
@@ -106,18 +106,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // we store the current org slug in a cookie, so that we can redirect to the correct org after login
   // as well as being able to access the cookie on the server.
-  const [cookies, setCookie] = useCookies(["cosmo_org"]);
+  const [cookieOrgSlug, setOrgSlugCookie] = useCookieOrganization();
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (currentOrgSlug && currentOrgSlug !== "undefined") {
-      setCookie("cosmo_org", currentOrgSlug, {
-        path: "/",
-        maxAge: 3600 * 24 * 365, // 1 year
-        sameSite: "lax",
-      });
+    if (currentOrgSlug && typeof currentOrgSlug === "string") {
+      setOrgSlugCookie(currentOrgSlug);
     }
-  }, [currentOrgSlug, router, setCookie]);
+  }, [currentOrgSlug, router, setOrgSlugCookie]);
 
   const { data, error, isFetching } = useQuery<
     Session | null,
@@ -148,7 +144,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       router.replace(`/login?redirectURL=${redirectURL}`);
     } else if (data && !error) {
       const currentOrg = data.organizations.find(
-        (org) => org.slug === cookies.cosmo_org,
+        (org) => org.slug === cookieOrgSlug,
       );
 
       const organization = currentOrg || data.organizations[0];
@@ -207,7 +203,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         );
       }
     }
-  }, [router, data, isFetching, error, cookies.cosmo_org]);
+  }, [router, data, isFetching, error, cookieOrgSlug]);
 
   if (!transport) {
     return <UserContext.Provider value={user}>{children}</UserContext.Provider>;

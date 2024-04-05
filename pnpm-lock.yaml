@@ -20,7 +20,7 @@ importers:
         version: 1.4.1(@bufbuild/protobuf@1.4.1)
       '@commitlint/cli':
         specifier: 19.2.1
-        version: 19.2.1(@types/node@18.19.21)(typescript@5.3.2)
+        version: 19.2.1(@types/node@20.11.26)(typescript@5.3.2)
       '@commitlint/config-conventional':
         specifier: 19.1.0
         version: 19.1.0
@@ -56,7 +56,7 @@ importers:
         version: 3.0.3
       vitest:
         specifier: 1.4.0
-        version: 1.4.0(@types/node@18.19.21)
+        version: 1.4.0(@types/node@20.11.26)
 
   admission-server:
     dependencies:
@@ -790,8 +790,8 @@ importers:
         specifier: 18.2.0
         version: 18.2.0
       react-cookie:
-        specifier: ^6.1.1
-        version: 6.1.1(react@18.2.0)
+        specifier: ^7.1.4
+        version: 7.1.4(react@18.2.0)
       react-date-range:
         specifier: ^1.4.0
         version: 1.4.0(date-fns@2.30.0)(react@18.2.0)
@@ -3044,14 +3044,14 @@ packages:
     dev: false
     optional: true
 
-  /@commitlint/cli@19.2.1(@types/node@18.19.21)(typescript@5.3.2):
+  /@commitlint/cli@19.2.1(@types/node@20.11.26)(typescript@5.3.2):
     resolution: {integrity: sha512-cbkYUJsLqRomccNxvoJTyv5yn0bSy05BBizVyIcLACkRbVUqYorC351Diw/XFSWC/GtpwiwT2eOvQgFZa374bg==}
     engines: {node: '>=v18'}
     hasBin: true
     dependencies:
       '@commitlint/format': 19.0.3
       '@commitlint/lint': 19.1.0
-      '@commitlint/load': 19.2.0(@types/node@18.19.21)(typescript@5.3.2)
+      '@commitlint/load': 19.2.0(@types/node@20.11.26)(typescript@5.3.2)
       '@commitlint/read': 19.2.1
       '@commitlint/types': 19.0.3
       execa: 8.0.1
@@ -3120,7 +3120,7 @@ packages:
       '@commitlint/types': 19.0.3
     dev: true
 
-  /@commitlint/load@19.2.0(@types/node@18.19.21)(typescript@5.3.2):
+  /@commitlint/load@19.2.0(@types/node@20.11.26)(typescript@5.3.2):
     resolution: {integrity: sha512-XvxxLJTKqZojCxaBQ7u92qQLFMMZc4+p9qrIq/9kJDy8DOrEa7P1yx7Tjdc2u2JxIalqT4KOGraVgCE7eCYJyQ==}
     engines: {node: '>=v18'}
     dependencies:
@@ -3130,7 +3130,7 @@ packages:
       '@commitlint/types': 19.0.3
       chalk: 5.3.0
       cosmiconfig: 9.0.0(typescript@5.3.2)
-      cosmiconfig-typescript-loader: 5.0.0(@types/node@18.19.21)(cosmiconfig@9.0.0)(typescript@5.3.2)
+      cosmiconfig-typescript-loader: 5.0.0(@types/node@20.11.26)(cosmiconfig@9.0.0)(typescript@5.3.2)
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       lodash.uniq: 4.5.0
@@ -8730,13 +8730,8 @@ packages:
       '@types/node': 20.11.26
     dev: true
 
-  /@types/cookie@0.5.1:
-    resolution: {integrity: sha512-COUnqfB2+ckwXXSFInsFdOAWQzCCx+a5hq2ruyj+Vjund94RJQd4LG2u9hnvJrTgunKAaax7ancBYlDrNYxA0g==}
-    dev: false
-
   /@types/cookie@0.6.0:
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
-    dev: true
 
   /@types/d3-array@3.0.5:
     resolution: {integrity: sha512-Qk7fpJ6qFp+26VeQ47WY0mkwXaiq8+76RJcncDEfMc2ocRzXLO67bLFRNI4OX1aGBoPzsM5Y2T+/m1pldOgD+A==}
@@ -10966,7 +10961,7 @@ packages:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
     dev: false
 
-  /cosmiconfig-typescript-loader@5.0.0(@types/node@18.19.21)(cosmiconfig@9.0.0)(typescript@5.3.2):
+  /cosmiconfig-typescript-loader@5.0.0(@types/node@20.11.26)(cosmiconfig@9.0.0)(typescript@5.3.2):
     resolution: {integrity: sha512-+8cK7jRAReYkMwMiG+bxhcNKiHJDM6bR9FD/nGBXOWdMLuYawjF5cGrtLilJ+LGd3ZjCXnJjR5DkfWPoIVlqJA==}
     engines: {node: '>=v16'}
     peerDependencies:
@@ -10974,7 +10969,7 @@ packages:
       cosmiconfig: '>=8.2'
       typescript: '>=4'
     dependencies:
-      '@types/node': 18.19.21
+      '@types/node': 20.11.26
       cosmiconfig: 9.0.0(typescript@5.3.2)
       jiti: 1.19.1
       typescript: 5.3.2
@@ -18291,15 +18286,15 @@ packages:
       react: 18.2.0
     dev: false
 
-  /react-cookie@6.1.1(react@18.2.0):
-    resolution: {integrity: sha512-fuFRpf8LH6SfmVMowDUIRywJF5jAUDUWrm0EI5VdXfTl5bPcJ7B0zWbuYpT0Tvikx7Gs18MlvAT+P+744dUz2g==}
+  /react-cookie@7.1.4(react@18.2.0):
+    resolution: {integrity: sha512-wDxxa/HYaSXSMlyWJvJ5uZTzIVtQTPf1gMksFgwAz/2/W3lCtY8r4OChCXMPE7wax0PAdMY97UkNJedGv7KnDw==}
     peerDependencies:
       react: 18.2.0
     dependencies:
       '@types/hoist-non-react-statics': 3.3.5
       hoist-non-react-statics: 3.3.2
       react: 18.2.0
-      universal-cookie: 6.1.1
+      universal-cookie: 7.1.4
     dev: false
 
   /react-date-range@1.4.0(date-fns@2.30.0)(react@18.2.0):
@@ -20336,11 +20331,11 @@ packages:
       unist-util-visit-parents: 6.0.1
     dev: false
 
-  /universal-cookie@6.1.1:
-    resolution: {integrity: sha512-33S9x3CpdUnnjwTNs2Fgc41WGve2tdLtvaK2kPSbZRc5pGpz2vQFbRWMxlATsxNNe/Cy8SzmnmbuBM85jpZPtA==}
+  /universal-cookie@7.1.4:
+    resolution: {integrity: sha512-Q+DVJsdykStWRMtXr2Pdj3EF98qZHUH/fXv/gwFz/unyToy1Ek1w5GsWt53Pf38tT8Gbcy5QNsj61Xe9TggP4g==}
     dependencies:
-      '@types/cookie': 0.5.1
-      cookie: 0.5.0
+      '@types/cookie': 0.6.0
+      cookie: 0.6.0
     dev: false
 
   /universal-github-app-jwt@1.1.1:
