@@ -208,8 +208,7 @@ rate_limit:
   enabled: true
   strategy: "simple"
   storage:
-    addr: "localhost:6379"
-    password: "test"
+    url: "redis://:test@localhost:6379"
     key_prefix: "cosmo_rate_limit"
   simple_strategy:
     rate: 60
