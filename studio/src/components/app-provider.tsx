@@ -110,7 +110,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (currentOrgSlug && currentOrgSlug !== "undefined") {
+    if (currentOrgSlug) {
       setOrgSlugCookie(currentOrgSlug as string);
     }
   }, [currentOrgSlug, router, setOrgSlugCookie]);
