@@ -851,7 +851,8 @@
             "url": {
               "type": "string",
               "description": "The connection URL. The value is specified as a string with the format 'scheme://host:port'.",
-              "default": "redis://localhost:6379"
+              "default": "redis://localhost:6379",
+              "format": "url"
             },
             "key_prefix": {
               "type": "string",
