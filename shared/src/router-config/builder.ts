@@ -99,7 +99,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     );
     const { childNodes, entityInterfaces, events, interfaceObjects, keys, provides, requires, rootNodes } =
       configurationDataMapToDataSourceConfiguration(subgraph.configurationDataMap);
-    const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
+    const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
     let kind: DataSourceKind;
     // eslint-disable-next-line camelcase
     let customGraphql: DataSourceCustom_GraphQL | undefined;

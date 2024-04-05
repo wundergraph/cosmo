@@ -161,9 +161,7 @@
           },
           "subscription": {
             "enabled": true,
-            "url": {
-              "staticVariableContent": "http://localhost:4001/graphql"
-            },
+            "url": {},
             "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
@@ -302,9 +300,7 @@
           },
           "subscription": {
             "enabled": true,
-            "url": {
-              "staticVariableContent": "http://localhost:4002/graphql"
-            },
+            "url": {},
             "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
@@ -432,9 +428,7 @@
           },
           "subscription": {
             "enabled": true,
-            "url": {
-              "staticVariableContent": "http://localhost:4003/graphql"
-            },
+            "url": {},
             "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
@@ -557,9 +551,7 @@
           },
           "subscription": {
             "enabled": true,
-            "url": {
-              "staticVariableContent": "http://localhost:4004/graphql"
-            },
+            "url": {},
             "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
@@ -634,9 +626,7 @@
           },
           "subscription": {
             "enabled": true,
-            "url": {
-              "staticVariableContent": "http://localhost:4006/graphql"
-            },
+            "url": {},
             "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
@@ -680,9 +670,7 @@
           },
           "subscription": {
             "enabled": true,
-            "url": {
-              "staticVariableContent": "http://localhost:4007/graphql"
-            },
+            "url": {},
             "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
@@ -732,9 +720,7 @@
           },
           "subscription": {
             "enabled": true,
-            "url": {
-              "staticVariableContent": "http://localhost:4008/graphql"
-            },
+            "url": {},
             "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
@@ -786,9 +772,7 @@
           },
           "subscription": {
             "enabled": true,
-            "url": {
-              "staticVariableContent": "http://localhost:4009/graphql"
-            },
+            "url": {},
             "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
