@@ -103,8 +103,9 @@ full-demo-down:
 dc-federation-demo:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs up --remove-orphans --detach
 
+DC_FLAGS=
 dc-subgraphs-demo:
-	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS)
 
 dc-subgraphs-demo-down:
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
@@ -116,14 +117,24 @@ docker-push-local:
 	docker compose --file docker-compose.cosmo.yml push --no-cache
 
 docker-build-minikube: docker-build-local
-	minikube image load ghcr.io/wundergraph/cosmo/studio:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/controlplane:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/otelcollector:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/router:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/graphqlmetrics:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/cdn:latest
+	docker image save -o mk-studio.tar ghcr.io/wundergraph/cosmo/studio:latest && \
+	docker image save -o mk-controlplane.tar ghcr.io/wundergraph/cosmo/controlplane:latest && \
+	docker image save -o mk-otelcollector.tar ghcr.io/wundergraph/cosmo/otelcollector:latest && \
+	docker image save -o mk-router.tar ghcr.io/wundergraph/cosmo/router:latest && \
+	docker image save -o mk-graphqlmetrics.tar ghcr.io/wundergraph/cosmo/graphqlmetrics:latest && \
+	docker image save -o mk-keycloak.tar ghcr.io/wundergraph/cosmo/keycloak:latest && \
+	docker image save -o mk-cdn.tar ghcr.io/wundergraph/cosmo/cdn:latest
+
+	minikube image load mk-studio.tar && \
+	minikube image load mk-controlplane.tar && \
+	minikube image load mk-otelcollector.tar && \
+	minikube image load mk-router.tar && \
+	minikube image load mk-graphqlmetrics.tar && \
+	minikube image load mk-keycloak.tar && \
+	minikube image load mk-cdn.tar
 	minikube cache reload
+
+	del mk-*.tar
 
 run-subgraphs-local:
 	cd demo && go run cmd/all/main.go
