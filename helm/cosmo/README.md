@@ -39,7 +39,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.auth.username | string | `"default"` |  |
 | clickhouse.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.clickhouse.wundergraph.com/deployment"` |  |
 | clickhouse.image.tag | string | `"23.8.3"` |  |
-| clickhouse.initdbScripts."db-init.sql" | string | `"CREATE DATABASE cosmo;\n"` |  |
+| clickhouse.initdbScripts."db-init.sh" | string | `"#!/bin/bash\nset -e\nclickhouse-client --user $CLICKHOUSE_ADMIN_USER --password $CLICKHOUSE_ADMIN_PASSWORD -n <<-EOSQL\n  CREATE DATABASE IF NOT EXISTS cosmo;\nEOSQL\n"` |  |
 | clickhouse.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | clickhouse.persistence.size | string | `"2Gi"` |  |
 | clickhouse.replicaCount | int | `1` |  |
