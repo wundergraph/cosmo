@@ -409,6 +409,9 @@ importers:
       eslint:
         specifier: ^8.57.0
         version: 8.57.0
+      execa:
+        specifier: ^8.0.1
+        version: 8.0.1
       fastify:
         specifier: ^4.26.1
         version: 4.26.1
@@ -787,8 +790,8 @@ importers:
         specifier: 18.2.0
         version: 18.2.0
       react-cookie:
-        specifier: ^6.1.1
-        version: 6.1.1(react@18.2.0)
+        specifier: ^7.1.4
+        version: 7.1.4(react@18.2.0)
       react-date-range:
         specifier: ^1.4.0
         version: 1.4.0(date-fns@2.30.0)(react@18.2.0)
@@ -8727,13 +8730,8 @@ packages:
       '@types/node': 20.11.26
     dev: true
 
-  /@types/cookie@0.5.1:
-    resolution: {integrity: sha512-COUnqfB2+ckwXXSFInsFdOAWQzCCx+a5hq2ruyj+Vjund94RJQd4LG2u9hnvJrTgunKAaax7ancBYlDrNYxA0g==}
-    dev: false
-
   /@types/cookie@0.6.0:
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
-    dev: true
 
   /@types/d3-array@3.0.5:
     resolution: {integrity: sha512-Qk7fpJ6qFp+26VeQ47WY0mkwXaiq8+76RJcncDEfMc2ocRzXLO67bLFRNI4OX1aGBoPzsM5Y2T+/m1pldOgD+A==}
@@ -18288,15 +18286,15 @@ packages:
       react: 18.2.0
     dev: false
 
-  /react-cookie@6.1.1(react@18.2.0):
-    resolution: {integrity: sha512-fuFRpf8LH6SfmVMowDUIRywJF5jAUDUWrm0EI5VdXfTl5bPcJ7B0zWbuYpT0Tvikx7Gs18MlvAT+P+744dUz2g==}
+  /react-cookie@7.1.4(react@18.2.0):
+    resolution: {integrity: sha512-wDxxa/HYaSXSMlyWJvJ5uZTzIVtQTPf1gMksFgwAz/2/W3lCtY8r4OChCXMPE7wax0PAdMY97UkNJedGv7KnDw==}
     peerDependencies:
       react: 18.2.0
     dependencies:
       '@types/hoist-non-react-statics': 3.3.5
       hoist-non-react-statics: 3.3.2
       react: 18.2.0
-      universal-cookie: 6.1.1
+      universal-cookie: 7.1.4
     dev: false
 
   /react-date-range@1.4.0(date-fns@2.30.0)(react@18.2.0):
@@ -20333,11 +20331,11 @@ packages:
       unist-util-visit-parents: 6.0.1
     dev: false
 
-  /universal-cookie@6.1.1:
-    resolution: {integrity: sha512-33S9x3CpdUnnjwTNs2Fgc41WGve2tdLtvaK2kPSbZRc5pGpz2vQFbRWMxlATsxNNe/Cy8SzmnmbuBM85jpZPtA==}
+  /universal-cookie@7.1.4:
+    resolution: {integrity: sha512-Q+DVJsdykStWRMtXr2Pdj3EF98qZHUH/fXv/gwFz/unyToy1Ek1w5GsWt53Pf38tT8Gbcy5QNsj61Xe9TggP4g==}
     dependencies:
-      '@types/cookie': 0.5.1
-      cookie: 0.5.0
+      '@types/cookie': 0.6.0
+      cookie: 0.6.0
     dev: false
 
   /universal-github-app-jwt@1.1.1:
