@@ -36,7 +36,9 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           },
           "subscription": {
             "enabled": true,
-            "url": {},
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
+            },
             "protocol": 0
           },
           "federation": {
@@ -100,7 +102,9 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           },
           "subscription": {
             "enabled": true,
-            "url": {},
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
+            },
             "protocol": 0
           },
           "federation": {
@@ -160,7 +164,9 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           },
           "subscription": {
             "enabled": true,
-            "url": {},
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-reviews.fly.dev/graphql"
+            },
             "protocol": 0
           },
           "federation": {
@@ -220,7 +226,9 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           },
           "subscription": {
             "enabled": true,
-            "url": {},
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-inventory.fly.dev/graphql"
+            },
             "protocol": 0
           },
           "federation": {
