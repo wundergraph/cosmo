@@ -9,15 +9,13 @@ deploy: build
 delete:
 	kapp delete -a cosmo
 
-VERSION := $(shell yq '.version' ./cosmo/Chart.yaml)
 publish-cosmo-chart:
-	helm package cosmo --version $(VERSION)
-	helm push cosmo-$(VERSION).tgz oci://ghcr.io/wundergraph/cosmo/helm-charts
+	helm package cosmo --version $(shell yq '.version' ./cosmo/Chart.yaml)
+	helm push cosmo-$(shell yq '.version' ./cosmo/Chart.yaml).tgz oci://ghcr.io/wundergraph/cosmo/helm-charts
 
-VERSION := $(shell yq '.version' ./cosmo/charts/router/Chart.yaml)
 publish-router-chart:
-	cd cosmo/charts/ && helm package router --version $(VERSION)
-	cd cosmo/charts/ && helm push router-$(VERSION).tgz oci://ghcr.io/wundergraph/cosmo/helm-charts
+	cd cosmo/charts/ && helm package router --version $(shell yq '.version' ./cosmo/charts/router/Chart.yaml)
+	cd cosmo/charts/ && helm push router-$(shell yq '.version' ./cosmo/charts/router/Chart.yaml).tgz oci://ghcr.io/wundergraph/cosmo/helm-charts
 
 # Required to verify charts on artifacthub.io
 upload-artifacthub-manifest:
