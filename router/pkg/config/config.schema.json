@@ -846,24 +846,43 @@
         },
         "storage": {
           "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "addr": {
-              "type": "string",
-              "description": "The url of the redis server. The url is specified as a string with the format 'scheme://host:port'.",
-              "format": "url",
-              "default": "localhost:6379"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "addr": {
+                  "type": "string",
+                  "description": "The connection tuple. The value is specified as a string with the format 'host:port'.",
+                  "format": "string",
+                  "default": "localhost:6379"
+                },
+                "password": {
+                  "type": "string",
+                  "description": "The password of the redis server."
+                },
+                "key_prefix": {
+                  "type": "string",
+                  "description": "The prefix of the keys used to store the rate limit data.",
+                  "default": "cosmo_rate_limit"
+                }
+              }
             },
-            "password": {
-              "type": "string",
-              "description": "The password of the redis server."
-            },
-            "key_prefix": {
-              "type": "string",
-              "description": "The prefix of the keys used to store the rate limit data.",
-              "default": "cosmo_rate_limit"
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "The connection URL. The value is specified as a string with the format 'scheme://host:port'."
+                },
+                "key_prefix": {
+                  "type": "string",
+                  "description": "The prefix of the keys used to store the rate limit data.",
+                  "default": "cosmo_rate_limit"
+                }
+              }
             }
-          }
+          ]
         },
         "debug": {
           "type": "boolean",
