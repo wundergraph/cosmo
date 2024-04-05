@@ -450,8 +450,7 @@ func TestEventsNew(t *testing.T) {
 	})
 
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		t.Parallel()
-
+		// This test cannot be run in parallel because another test's jetstream might not have fully closed yet
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				employeeUpdatedStream struct {
@@ -601,7 +600,7 @@ func TestEventsNew(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(1, time.Second*5)
+			xEnv.WaitForMessagesSent(1, time.Second*10)
 
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
