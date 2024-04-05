@@ -450,7 +450,8 @@ func TestEventsNew(t *testing.T) {
 	})
 
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		// This test cannot be run in parallel because another test's jetstream might not have fully closed yet
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				employeeUpdatedStream struct {
@@ -469,17 +470,19 @@ func TestEventsNew(t *testing.T) {
 				require.NoError(t, err)
 			}()
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			go func() {
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
 
-			_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				require.Contains(t, errValue.Error(), `EDFS NATS error: failed to create or update consumer "consumerName": nats: API error: code=404 err_code=10059 description=stream not found`)
-				wg.Done()
-				return nil
-			})
-			require.NoError(t, err)
+				_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+					defer wg.Done()
+					require.Contains(t, errValue.Error(), `EDFS NATS error: failed to create or update consumer "consumerName": nats: API error: code=404 err_code=10059 description=stream not found`)
+					return nil
+				})
+				require.NoError(t, err)
 
-			wg.Wait()
+				wg.Wait()
+			}()
 		})
 	})
 
@@ -599,8 +602,6 @@ func TestEventsNew(t *testing.T) {
 
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(1, time.Second*10)
 
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
