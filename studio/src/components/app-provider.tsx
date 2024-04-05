@@ -111,11 +111,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!router.isReady) return;
     if (currentOrgSlug && currentOrgSlug !== "undefined") {
-      setOrgSlugCookie(currentOrgSlug, {
-        path: "/",
-        maxAge: 3600 * 24 * 365, // 1 year
-        sameSite: "lax",
-      });
+      setOrgSlugCookie(currentOrgSlug as string);
     }
   }, [currentOrgSlug, router, setOrgSlugCookie]);
 

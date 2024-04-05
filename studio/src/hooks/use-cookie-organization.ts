@@ -1,11 +1,13 @@
 import { useCookies } from "react-cookie";
 import { useMemo } from "react";
 
-export const useCookieOrganization = () => {
-  const [cookies, setCookie] = useCookies(["cosmo_org"]);
+const orgCookieName = "cosmo_org";
+
+export const useCookieOrganization = (): [string, (slug: string) => void] => {
+  const [cookies, setCookie] = useCookies([orgCookieName]);
   const setOrgSlug = useMemo(() => {
     return (slug: string) => {
-      setCookie("cosmo_org", slug, {
+      setCookie(orgCookieName, slug, {
         path: "/",
         maxAge: 3600 * 24 * 365, // 1 year
         sameSite: "lax",
