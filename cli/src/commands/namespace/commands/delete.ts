@@ -3,7 +3,7 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import inquirer from 'inquirer';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
@@ -27,7 +27,7 @@ export default (opts: BaseCommandOptions) => {
         name,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

@@ -55,7 +55,7 @@ services:
 
   # Only to test prometheus integration
   prometheus:
-    image: prom/prometheus:v2.47.2
+    image: prom/prometheus:v2.51.1
     command:
       - --web.enable-remote-write-receiver
       - --enable-feature=native-histograms
@@ -107,7 +107,7 @@ services:
       - primary
 
   clickhouse:
-    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24}
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.1}
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
