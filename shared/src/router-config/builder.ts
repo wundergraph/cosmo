@@ -153,7 +153,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           // When changing this, please do it in the router subgraph override as well
           url: new ConfigurationVariable({
             kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
-            staticVariableContent: subgraph.subscriptionUrl ?? subgraph.url,
+            staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
           }),
           protocol: subscriptionProtocol,
         },
