@@ -1090,22 +1090,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
 		handlerOpts.RateLimitConfig = r.Config.rateLimit
 
-		var client *redis.Client
+		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
 
-		if r.Config.rateLimit.Storage.Url != "" {
-			options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
-
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse the redis connection string %s: %w", r.Config.rateLimit.Storage.Url, err)
-			}
-
-			client = redis.NewClient(options)
-		} else {
-			client = redis.NewClient(&redis.Options{
-				Addr:     r.Config.rateLimit.Storage.Addr,
-				Password: r.Config.rateLimit.Storage.Password,
-			})
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse the redis connection string %s: %w", r.Config.rateLimit.Storage.Url, err)
 		}
+
+		client := redis.NewClient(options)
 
 		err = client.FlushDB(ctx).Err()
 		if err != nil {
