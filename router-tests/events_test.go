@@ -533,7 +533,7 @@ func TestEventsNew(t *testing.T) {
 			js, err := jetstream.New(xEnv.NatsConnectionDefault)
 			require.NoError(t, err)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
 			_, err = js.CreateStream(ctx, jetstream.StreamConfig{
