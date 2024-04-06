@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.79.2](https://github.com/wundergraph/cosmo/compare/router@0.79.1...router@0.79.2) (2024-04-06)
+
+### Bug Fixes
+
+* remove unused host-cpu metric ([#703](https://github.com/wundergraph/cosmo/issues/703)) ([a664631](https://github.com/wundergraph/cosmo/commit/a664631477d8b30b2448f8284db257f4d33446e6)) (@StarpTech)
+
 ## [0.79.1](https://github.com/wundergraph/cosmo/compare/router@0.79.0...router@0.79.1) (2024-04-04)
 
 ### Bug Fixes
