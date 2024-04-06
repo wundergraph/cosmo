@@ -3,8 +3,6 @@ package metric
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/process"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -209,14 +207,6 @@ func (r *RuntimeMetrics) Start() error {
 		func(ctx context.Context, o otelmetric.Observer) error {
 			lock.Lock()
 			defer lock.Unlock()
-
-			hostCPUTimeSlice, err := cpu.TimesWithContext(ctx, false)
-			if err != nil {
-				return err
-			}
-			if len(hostCPUTimeSlice) != 1 {
-				return fmt.Errorf("host CPU usage: incorrect summary count")
-			}
 
 			/**
 			* Process CPU usage. Support on Linux, Mac, and Windows but not on BSD.
