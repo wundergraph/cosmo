@@ -45,25 +45,25 @@ func TestEventsNew(t *testing.T) {
 			wg.Add(2)
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				defer wg.Done()
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEqual(t, "", subscriptionOneID)
 
 			go func() {
-				err = client.Run()
-				require.NoError(t, err)
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
 			}()
 
 			go func() {
 				wg.Wait()
-				err = client.Unsubscribe(subscriptionOneID)
-				require.NoError(t, err)
-				err = client.Close()
-				require.NoError(t, err)
+				unsubscribeErr := client.Unsubscribe(subscriptionOneID)
+				require.NoError(t, unsubscribeErr)
+				clientCloseErr := client.Close()
+				require.NoError(t, clientCloseErr)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -117,17 +117,17 @@ func TestEventsNew(t *testing.T) {
 			wg.Add(2)
 
 			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				defer wg.Done()
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEqual(t, "", subscriptionID)
 
 			go func() {
-				err := client.Run()
-				require.NoError(t, err)
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
@@ -449,43 +449,6 @@ func TestEventsNew(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			var subscription struct {
-				employeeUpdatedStream struct {
-					ID float64 `graphql:"id"`
-				} `graphql:"employeeUpdatedStream(id: 12)"`
-			}
-
-			surl := xEnv.GraphQLSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
-
-			go func() {
-				err := client.Run()
-				require.NoError(t, err)
-			}()
-
-			go func() {
-				wg := &sync.WaitGroup{}
-				wg.Add(1)
-
-				_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-					defer wg.Done()
-					require.Contains(t, errValue.Error(), `EDFS NATS error: failed to create or update consumer "consumerName": nats: API error: code=404 err_code=10059 description=stream not found`)
-					return nil
-				})
-				require.NoError(t, err)
-
-				wg.Wait()
-			}()
-		})
-	})
-
 	t.Run("subscribe to multiple subjects", func(t *testing.T) {
 		t.Parallel()
 
@@ -570,7 +533,7 @@ func TestEventsNew(t *testing.T) {
 			js, err := jetstream.New(xEnv.NatsConnectionDefault)
 			require.NoError(t, err)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			_, err = js.CreateStream(ctx, jetstream.StreamConfig{
@@ -578,9 +541,7 @@ func TestEventsNew(t *testing.T) {
 				Subjects: []string{"employeeUpdated.>"},
 			})
 			require.NoError(t, err)
-			t.Cleanup(func() {
-				_ = js.DeleteStream(context.Background(), "streamName")
-			})
+			defer js.DeleteStream(context.Background(), "streamName")
 
 			// conn.Close() is called in  a cleanup defined in the function
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
@@ -659,6 +620,39 @@ func TestEventsNew(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 			require.Equal(t, float64(15), payload.Data.EmployeeUpdatedStream.ID)
+		})
+	})
+
+	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscription struct {
+				employeeUpdatedStream struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdatedStream(id: 12)"`
+			}
+
+			surl := xEnv.GraphQLSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
+				require.Contains(t, errValue.Error(), `EDFS NATS error: failed to create or update consumer "consumerName": nats: API error: code=404 err_code=10059 description=stream not found`)
+				return nil
+			})
+			require.NoError(t, err)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			wg.Wait()
 		})
 	})
 }
