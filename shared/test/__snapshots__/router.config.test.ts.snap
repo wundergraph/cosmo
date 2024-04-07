@@ -6,7 +6,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
     "defaultFlushInterval": "500",
     "datasourceConfigurations": [
       {
-        "kind": 1,
+        "kind": "GRAPHQL",
         "rootNodes": [
           {
             "typeName": "Query",
@@ -29,15 +29,17 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "url": {
               "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
             },
-            "method": 1,
+            "method": "POST",
             "body": {},
             "baseUrl": {},
             "path": {}
           },
           "subscription": {
             "enabled": true,
-            "url": {},
-            "protocol": 0
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
             "enabled": true,
@@ -57,7 +59,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         ]
       },
       {
-        "kind": 1,
+        "kind": "GRAPHQL",
         "rootNodes": [
           {
             "typeName": "Query",
@@ -93,15 +95,17 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "url": {
               "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
             },
-            "method": 1,
+            "method": "POST",
             "body": {},
             "baseUrl": {},
             "path": {}
           },
           "subscription": {
             "enabled": true,
-            "url": {},
-            "protocol": 0
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
             "enabled": true,
@@ -121,7 +125,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         ]
       },
       {
-        "kind": 1,
+        "kind": "GRAPHQL",
         "rootNodes": [
           {
             "typeName": "User",
@@ -153,15 +157,17 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "url": {
               "staticVariableContent": "https://wg-federation-demo-reviews.fly.dev/graphql"
             },
-            "method": 1,
+            "method": "POST",
             "body": {},
             "baseUrl": {},
             "path": {}
           },
           "subscription": {
             "enabled": true,
-            "url": {},
-            "protocol": 0
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-reviews.fly.dev/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
             "enabled": true,
@@ -196,7 +202,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         ]
       },
       {
-        "kind": 1,
+        "kind": "GRAPHQL",
         "rootNodes": [
           {
             "typeName": "Product",
@@ -213,15 +219,17 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "url": {
               "staticVariableContent": "https://wg-federation-demo-inventory.fly.dev/graphql"
             },
-            "method": 1,
+            "method": "POST",
             "body": {},
             "baseUrl": {},
             "path": {}
           },
           "subscription": {
             "enabled": true,
-            "url": {},
-            "protocol": 0
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-inventory.fly.dev/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
           },
           "federation": {
             "enabled": true,
