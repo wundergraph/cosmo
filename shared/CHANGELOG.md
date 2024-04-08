@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.23.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.23.4...@wundergraph/cosmo-shared@0.23.5) (2024-04-08)
+
+### Bug Fixes
+
+* provide default subscription protocol for composition-go ([#702](https://github.com/wundergraph/cosmo/issues/702)) ([53140ea](https://github.com/wundergraph/cosmo/commit/53140eabcc960bd95626837da308c86674aeb8a4)) (@Aenimus)
+
 ## [0.23.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.23.3...@wundergraph/cosmo-shared@0.23.4) (2024-04-03)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.76.3](https://github.com/wundergraph/cosmo/compare/studio@0.76.2...studio@0.76.3) (2024-04-08)
+
+### Bug Fixes
+
+* align tables make them entire clickable ([#696](https://github.com/wundergraph/cosmo/issues/696)) ([75c9bda](https://github.com/wundergraph/cosmo/commit/75c9bdaf51d0e83f7723257d4eeba7ddbb43186a)) (@JivusAyrus)
+
 ## [0.76.2](https://github.com/wundergraph/cosmo/compare/studio@0.76.1...studio@0.76.2) (2024-04-05)
 
 ### Bug Fixes
