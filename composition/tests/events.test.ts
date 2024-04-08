@@ -576,10 +576,7 @@ describe('events Configuration tests', () => {
               new Map<string, InvalidRootTypeFieldEventsDirectiveData>([
                 ['Query.findEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_PUBLISH] }],
                 ['Mutation.publishEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_SUBSCRIBE] }],
-                [
-                  'Subscription.entitySubscription',
-                  { definesDirectives: true, invalidDirectiveNames: [EDFS_REQUEST] },
-                ],
+                ['Subscription.entitySubscription', { definesDirectives: true, invalidDirectiveNames: [EDFS_REQUEST] }],
               ]),
             ),
           ]),
