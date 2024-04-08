@@ -55,9 +55,9 @@
     },
     "scale@1": {
       "name": "Scale",
-      "price": 2499,
+      "price": 3499,
       "active": true,
-      "stripePriceId": "price_1P3H8mKHknvMloVzCl6cjmAd",
+      "stripePriceId": "price_1P3MCcKHknvMloVzs1ehNEUr",
       "weight": 2,
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
