@@ -100,7 +100,7 @@ import {
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
-  invalidPublishEventResultObjectErrorMessage,
+  invalidEdfsPublishResultObjectErrorMessage,
   invalidRootTypeDefinitionError,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
@@ -130,10 +130,10 @@ import {
   AUTHENTICATED,
   CONSUMER,
   DEFAULT,
-  EDFS_EVENTS_PUBLISH,
-  EDFS_EVENTS_REQUEST,
-  EDFS_EVENTS_SUBSCRIBE,
-  EDFS_PUBLISH_EVENT_RESULT,
+  EDFS_PUBLISH,
+  EDFS_REQUEST,
+  EDFS_SUBSCRIBE,
+  EDFS_PUBLISH_RESULT,
   EDFS_STREAM_CONFIGURATION,
   ENTITIES_FIELD,
   EVENT_DIRECTIVE_NAMES,
@@ -906,15 +906,15 @@ export class NormalizationFactory {
       const errorMessages: string[] = [];
       let eventConfiguration: EventConfiguration | undefined;
       switch (directive.name.value) {
-        case EDFS_EVENTS_PUBLISH: {
+        case EDFS_PUBLISH: {
           eventConfiguration = this.getEventPublishAndRequestConfiguration(PUBLISH, directive, errorMessages);
           break;
         }
-        case EDFS_EVENTS_REQUEST: {
+        case EDFS_REQUEST: {
           eventConfiguration = this.getEventPublishAndRequestConfiguration(REQUEST, directive, errorMessages);
           break;
         }
-        case EDFS_EVENTS_SUBSCRIBE: {
+        case EDFS_SUBSCRIBE: {
           eventConfiguration = this.getEventSubscribeConfiguration(directive, errorMessages);
           break;
         }
@@ -945,22 +945,22 @@ export class NormalizationFactory {
     if (!operationTypeNode) {
       switch (parentTypeName) {
         case MUTATION:
-          return new Set<string>([EDFS_EVENTS_PUBLISH, EDFS_EVENTS_REQUEST]);
+          return new Set<string>([EDFS_PUBLISH, EDFS_REQUEST]);
         case QUERY:
-          return new Set<string>([EDFS_EVENTS_REQUEST]);
+          return new Set<string>([EDFS_REQUEST]);
         case SUBSCRIPTION:
-          return new Set<string>([EDFS_EVENTS_SUBSCRIBE]);
+          return new Set<string>([EDFS_SUBSCRIBE]);
         default:
           return;
       }
     }
     switch (operationTypeNode) {
       case OperationTypeNode.MUTATION:
-        return new Set<string>([EDFS_EVENTS_REQUEST, EDFS_EVENTS_PUBLISH]);
+        return new Set<string>([EDFS_REQUEST, EDFS_PUBLISH]);
       case OperationTypeNode.QUERY:
-        return new Set<string>([EDFS_EVENTS_REQUEST]);
+        return new Set<string>([EDFS_REQUEST]);
       case OperationTypeNode.SUBSCRIPTION:
-        return new Set<string>([EDFS_EVENTS_SUBSCRIBE]);
+        return new Set<string>([EDFS_SUBSCRIBE]);
       default:
         return;
     }
@@ -973,7 +973,7 @@ export class NormalizationFactory {
     invalidResponseTypeStringByRootFieldPath: Map<string, string>,
     invalidResponseTypeNameByMutationPath: Map<string, string>,
   ) {
-    const isMutation = validEventsDirectiveNames.has(EDFS_EVENTS_PUBLISH);
+    const isMutation = validEventsDirectiveNames.has(EDFS_PUBLISH);
     for (const [fieldName, fieldData] of data.fieldDataByFieldName) {
       const fieldPath = `${fieldData.originalParentTypeName}.${fieldName}`;
       const definedEventsDirectiveNames = new Set<string>();
@@ -1050,8 +1050,8 @@ export class NormalizationFactory {
     }
   }
 
-  isPublishEventResultValid(): boolean {
-    const data = this.parentDefinitionDataByTypeName.get(EDFS_PUBLISH_EVENT_RESULT);
+  isEdfsPublishResultValid(): boolean {
+    const data = this.parentDefinitionDataByTypeName.get(EDFS_PUBLISH_RESULT);
     if (!data) {
       return true;
     }
@@ -1135,8 +1135,8 @@ export class NormalizationFactory {
       );
     }
     for (const [typeName, data] of this.parentDefinitionDataByTypeName) {
-      // validate edfs__PublishEventResult and edfs__StreamConfiguration separately
-      if (typeName === EDFS_PUBLISH_EVENT_RESULT || typeName === EDFS_STREAM_CONFIGURATION) {
+      // validate edfs__PublishResult and edfs__StreamConfiguration separately
+      if (typeName === EDFS_PUBLISH_RESULT || typeName === EDFS_STREAM_CONFIGURATION) {
         continue;
       }
       if (data.kind !== Kind.OBJECT_TYPE_DEFINITION) {
@@ -1167,8 +1167,8 @@ export class NormalizationFactory {
         nonKeyFieldNameByFieldPath,
       );
     }
-    if (!this.isPublishEventResultValid()) {
-      errorMessages.push(invalidPublishEventResultObjectErrorMessage);
+    if (!this.isEdfsPublishResultValid()) {
+      errorMessages.push(invalidEdfsPublishResultObjectErrorMessage);
     }
     const streamConfigurationInputData = this.parentDefinitionDataByTypeName.get(EDFS_STREAM_CONFIGURATION);
     if (!streamConfigurationInputData) {

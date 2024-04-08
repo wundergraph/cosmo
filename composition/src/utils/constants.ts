@@ -8,9 +8,9 @@ import {
   CONSUMER,
   DEFAULT,
   DEPRECATED,
-  EDFS_EVENTS_PUBLISH,
-  EDFS_EVENTS_REQUEST,
-  EDFS_EVENTS_SUBSCRIBE,
+  EDFS_PUBLISH,
+  EDFS_REQUEST,
+  EDFS_SUBSCRIBE,
   EDFS_STREAM_CONFIGURATION,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
@@ -107,8 +107,8 @@ const EXTERNAL_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__eventsPublish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
-const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
+// directive @edfs__publish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
+const EDFS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -133,12 +133,12 @@ const EVENTS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EDFS_EVENTS_PUBLISH),
+  name: stringToNameNode(EDFS_PUBLISH),
   repeatable: false,
 };
 
-// directive @edfs__eventsRequest(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
-const EVENTS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
+// directive @edfs__request(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
+const EDFS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -163,12 +163,12 @@ const EVENTS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EDFS_EVENTS_REQUEST),
+  name: stringToNameNode(EDFS_REQUEST),
   repeatable: false,
 };
 
-// directive @edfs__eventsSubscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
-const EVENTS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
+// directive @edfs__subscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
+const EDFS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -204,7 +204,7 @@ const EVENTS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EDFS_EVENTS_SUBSCRIBE),
+  name: stringToNameNode(EDFS_SUBSCRIBE),
   repeatable: false,
 };
 
@@ -325,9 +325,9 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
   [DEPRECATED, DEPRECATED_DEFINITION],
   [EXTENDS, EXTENDS_DEFINITION],
   [EXTERNAL, EXTERNAL_DEFINITION],
-  [EDFS_EVENTS_PUBLISH, EVENTS_PUBLISH_DEFINITION],
-  [EDFS_EVENTS_REQUEST, EVENTS_REQUEST_DEFINITION],
-  [EDFS_EVENTS_SUBSCRIBE, EVENTS_SUBSCRIBE_DEFINITION],
+  [EDFS_PUBLISH, EDFS_PUBLISH_DEFINITION],
+  [EDFS_REQUEST, EDFS_REQUEST_DEFINITION],
+  [EDFS_SUBSCRIBE, EDFS_SUBSCRIBE_DEFINITION],
   [KEY, KEY_DEFINITION],
   [PROVIDES, PROVIDES_DEFINITION],
   [REQUIRES, REQUIRES_DEFINITION],
@@ -521,9 +521,9 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
 ];
 
 export const EVENT_DRIVEN_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
-  EVENTS_PUBLISH_DEFINITION,
-  EVENTS_REQUEST_DEFINITION,
-  EVENTS_SUBSCRIBE_DEFINITION,
+  EDFS_PUBLISH_DEFINITION,
+  EDFS_REQUEST_DEFINITION,
+  EDFS_SUBSCRIBE_DEFINITION,
 ];
 
 export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
@@ -585,9 +585,9 @@ export const baseDirectives = `
   directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
   directive @extends on INTERFACE | OBJECT
   directive @external on FIELD_DEFINITION | OBJECT
-  directive @edfs__eventsPublish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
-  directive @edfs__eventsRequest(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
-  directive @edfs__eventsSubscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
+  directive @edfs__publish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
+  directive @edfs__request(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
+  directive @edfs__subscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
   directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
   directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
   directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION

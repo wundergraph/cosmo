@@ -936,8 +936,8 @@ export function orScopesLimitError(maxOrScopes: number, hostPaths: string[]): Er
 
 export function invalidEventDrivenGraphError(errorMessages: string[]): Error {
   return new Error(
-    `An "Event Driven" graph—a subgraph that defines event driven directives ("@edfs__eventsPublish", "@edfs__eventsRequest", and` +
-      ` "@edfs__eventsPublish")—must not define any resolvers. Consequently, any "@key" definitions must also include the` +
+    `An "Event Driven" graph—a subgraph that defines event driven directives ("@edfs__publish", "@edfs__request", and` +
+      ` "@edfs__publish")—must not define any resolvers. Consequently, any "@key" definitions must also include the` +
       ` "resolvable: false" argument. Moreover, only fields that compose part of an entity's (composite) key and are` +
       ` declared "@external" are permitted.\n` +
       errorMessages.join('\n'),
@@ -949,8 +949,8 @@ export function invalidRootTypeFieldEventsDirectivesErrorMessage(
 ): string {
   let message =
     ` Root type fields defined in an Event Driven graph must define a valid events` +
-    ` directive:\n  Mutation type fields must define either "@edfs__eventsPublish" or "@edfs__eventsRequest"\n` +
-    `  Query type fields must define "@edfs__eventsRequest"\n  Subscription type fields must define "@edfs__eventsSubscribe"\n` +
+    ` directive:\n  Mutation type fields must define either "@edfs__publish" or "@edfs__request"\n` +
+    `  Query type fields must define "@edfs__request"\n  Subscription type fields must define "@edfs__subscribe"\n` +
     ` The following root field path` +
     (invalidEventsDirectiveDataByRootFieldPath.size > 1 ? 's are' : ' is') +
     `invalid:\n`;
@@ -974,7 +974,7 @@ export function invalidEventDrivenMutationResponseTypeErrorMessage(
 ): string {
   let message =
     ` Mutation type fields defined in an Event Driven graph must return the non-nullable type` +
-    ` "edfs__PublishEventResult!", which has the following definition:\n  type edfs__PublishEventResult {\n` +
+    ` "edfs__PublishResult!", which has the following definition:\n  type edfs__PublishResult {\n` +
     `   success: Boolean!\n  }\n However, the following mutation field path` +
     (invalidResponseTypeStringByMutationPath.size > 1 ? `s are` : ` is`) +
     ` invalid:\n`;
@@ -1118,13 +1118,13 @@ export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames:
   );
 }
 
-export const invalidPublishEventResultObjectErrorMessage =
-  ` The object "edfs__PublishEventResult" that was defined in the Event Driven graph is invalid and must instead have` +
-  ` the following definition:\n  type edfs__PublishEventResult {\n   success: Boolean!\n  }`;
+export const invalidEdfsPublishResultObjectErrorMessage =
+  ` The object "edfs__PublishResult" that was defined in the Event Driven graph is invalid and must instead have` +
+  ` the following definition:\n  type edfs__PublishResult {\n   success: Boolean!\n  }`;
 
 export const undefinedStreamConfigurationInputErrorMessage =
   ` The input object "edfs__StreamConfiguration" must be defined in the event-driven graph to satisfy the` +
-  `"@edfs__eventsSubscribe" directive.\n Define the following input in your event-driven graph:\n` +
+  `"@edfs__subscribe" directive.\n Define the following input in your event-driven graph:\n` +
   `  input edfs__StreamConfiguration {\n   consumer: String!\n   streamName: String!\n  }`;
 
 export const invalidStreamConfigurationInputErrorMessage =

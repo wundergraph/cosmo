@@ -104,9 +104,9 @@ export const versionOnePersistedDirectiveDefinitions = `
 `;
 
 export const eventDirectiveDefinitions = `
-  directive @edfs__eventsPublish(sourceName: String! = "default", subject: String!) on FIELD_DEFINITION
-  directive @edfs__eventsRequest(sourceName: String! = "default", subject: String!) on FIELD_DEFINITION
-  directive @edfs__eventsSubscribe(sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
+  directive @edfs__publish(sourceName: String! = "default", subject: String!) on FIELD_DEFINITION
+  directive @edfs__request(sourceName: String! = "default", subject: String!) on FIELD_DEFINITION
+  directive @edfs__subscribe(sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
 `;
 
 export const versionOneSchemaQueryAndPersistedDirectiveDefinitions =

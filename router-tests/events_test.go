@@ -633,8 +633,11 @@ func TestEventsNew(t *testing.T) {
 
 			js, err := jetstream.New(xEnv.NatsConnectionDefault)
 			require.NoError(t, err)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			defer js.DeleteStream(ctx, "streamName")
 
-			stream, err := js.Stream(context.Background(), "streamName")
+			stream, err := js.Stream(ctx, "streamName")
 			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
 			require.Equal(t, nil, stream)
 

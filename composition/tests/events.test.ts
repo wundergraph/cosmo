@@ -29,9 +29,9 @@ import {
 import { parse } from 'graphql';
 import {
   DEFAULT,
-  EDFS_EVENTS_PUBLISH,
-  EDFS_EVENTS_REQUEST,
-  EDFS_EVENTS_SUBSCRIBE,
+  EDFS_PUBLISH,
+  EDFS_REQUEST,
+  EDFS_SUBSCRIBE,
   SOURCE_NAME,
   SUBJECTS,
 } from '../src/utils/string-constants';
@@ -67,11 +67,11 @@ describe('events Configuration tests', () => {
             },
           ],
           [
-            'edfs__PublishEventResult',
+            'edfs__PublishResult',
             {
               fieldNames: new Set<string>(['success']),
               isRootNode: false,
-              typeName: 'edfs__PublishEventResult',
+              typeName: 'edfs__PublishResult',
             },
           ],
           [
@@ -136,19 +136,19 @@ describe('events Configuration tests', () => {
         }
         
         type Mutation {
-          updateEntity(id: ID!, name: String!): edfs__PublishEventResult! @edfs__eventsPublish(subject: "updateEntity.{{ args.id }}")
+          updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__publish(subject: "updateEntity.{{ args.id }}")
         }
         
         type Query {
-          findEntity(id: ID!): Entity! @edfs__eventsRequest(subject: "findEntity.{{ args.id }}")
+          findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
         }
       
         type Subscription {
-          entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"], sourceName: "kafka")
-          entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__eventsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumer: "consumer", streamName: "streamName"})
+          entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"], sourceName: "kafka")
+          entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__subscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumer: "consumer", streamName: "streamName"})
         }
       
-        type edfs__PublishEventResult {
+        type edfs__PublishResult {
          success: Boolean!
         }
         
@@ -221,11 +221,11 @@ describe('events Configuration tests', () => {
             },
           ],
           [
-            'edfs__PublishEventResult',
+            'edfs__PublishResult',
             {
               fieldNames: new Set<string>(['success']),
               isRootNode: false,
-              typeName: 'edfs__PublishEventResult',
+              typeName: 'edfs__PublishResult',
             },
           ],
           [
@@ -277,7 +277,7 @@ describe('events Configuration tests', () => {
       const { errors } = normalizeSubgraph(subgraphN.definitions, subgraphN.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(3);
-      const directiveName = 'edfs__eventsSubscribe';
+      const directiveName = 'edfs__subscribe';
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(errors![0]).toStrictEqual(
         invalidEventDirectiveError(directiveName, rootFieldPath, [
@@ -306,7 +306,7 @@ describe('events Configuration tests', () => {
       const { errors } = normalizeSubgraph(subgraphR.definitions, subgraphR.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
-      const directiveName = 'edfs__eventsSubscribe';
+      const directiveName = 'edfs__subscribe';
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(errors![0]).toStrictEqual(
         invalidDirectiveError(directiveName, rootFieldPath, [
@@ -343,7 +343,7 @@ describe('events Configuration tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidEventDirectiveError('edfs__eventsSubscribe', 'Subscription.entitySubscription', [
+        invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
           invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
             ['streamName'],
             ['consumer'],
@@ -359,7 +359,7 @@ describe('events Configuration tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidEventDirectiveError('edfs__eventsSubscribe', 'Subscription.entitySubscription', [
+        invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
           invalidEventDrivenStreamConfigurationInputFieldsErrorMessage([], [], ['consumer', 'streamName'], []),
         ]),
       );
@@ -370,7 +370,7 @@ describe('events Configuration tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidEventDirectiveError('edfs__eventsSubscribe', 'Subscription.entitySubscription', [
+        invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
           invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
             ['consumer', 'streamName'],
             [],
@@ -574,11 +574,11 @@ describe('events Configuration tests', () => {
           invalidEventDrivenGraphError([
             invalidRootTypeFieldEventsDirectivesErrorMessage(
               new Map<string, InvalidRootTypeFieldEventsDirectiveData>([
-                ['Query.findEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_EVENTS_PUBLISH] }],
-                ['Mutation.publishEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_EVENTS_SUBSCRIBE] }],
+                ['Query.findEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_PUBLISH] }],
+                ['Mutation.publishEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_SUBSCRIBE] }],
                 [
                   'Subscription.entitySubscription',
-                  { definesDirectives: true, invalidDirectiveNames: [EDFS_EVENTS_REQUEST] },
+                  { definesDirectives: true, invalidDirectiveNames: [EDFS_REQUEST] },
                 ],
               ]),
             ),
@@ -587,7 +587,7 @@ describe('events Configuration tests', () => {
       );
     });
 
-    test('that an error is returned if a mutation type field does not return "edfs__PublishEventResult"', () => {
+    test('that an error is returned if a mutation type field does not return "edfs__PublishResult"', () => {
       const { errors } = federateSubgraphs([subgraphL]);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
@@ -606,20 +606,20 @@ describe('events Configuration tests', () => {
 
 const subgraphStringA = `
   type Query {
-    findEntity(id: ID!): Entity! @edfs__eventsRequest(subject: "findEntity.{{ args.id }}")
+    findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
   }
 
-  type edfs__PublishEventResult {
+  type edfs__PublishResult {
    success: Boolean!
   }
   
   type Mutation {
-    updateEntity(id: ID!, name: String!): edfs__PublishEventResult! @edfs__eventsPublish(subject: "updateEntity.{{ args.id }}")
+    updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__publish(subject: "updateEntity.{{ args.id }}")
   }
 
   type Subscription {
-    entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"], sourceName: "kafka")
-    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__eventsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumer: "consumer", streamName: "streamName"})
+    entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"], sourceName: "kafka")
+    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__subscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumer: "consumer", streamName: "streamName"})
   }
   
   type Entity @key(fields: "id", resolvable: false) {
@@ -638,7 +638,7 @@ const subgraphStringB = `
   }
   
   type Subscriptions {
-    entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+    entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
   }
   
   type Entity @key(fields: "id", resolvable: false) {
@@ -653,19 +653,19 @@ const subgraphStringB = `
 
 const subgraphStringC = `
   type Query {
-    findEntity(id: ID!): Entity! @edfs__eventsRequest(subject: "findEntity.{{ args.id }}", sourceName: "myQuerySourceName")
+    findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}", sourceName: "myQuerySourceName")
   }
 
-  type edfs__PublishEventResult {
+  type edfs__PublishResult {
    success: Boolean!
   }
   
   type Mutation {
-    updateEntity(id: ID!, name: String!): edfs__PublishEventResult! @edfs__eventsPublish(subject: "updateEntity.{{ args.id }}", sourceName: "myMutationSourceName")
+    updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__publish(subject: "updateEntity.{{ args.id }}", sourceName: "myMutationSourceName")
   }
   
   type Subscription {
-    entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"], sourceName: "mySubscriptionSourceName")
+    entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"], sourceName: "mySubscriptionSourceName")
   }
   
   type Entity @key(fields: "id", resolvable: false) {
@@ -683,11 +683,11 @@ const subgraphC: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity! @edfs__eventsRequest(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -707,11 +707,11 @@ const subgraphD: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity! @edfs__eventsRequest(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -734,17 +734,17 @@ const subgraphE: Subgraph = {
     }
     
     
-    type edfs__PublishEventResult {
+    type edfs__PublishResult {
      success: Boolean!
     }
     
     type Mutation {
-      publishEntity(id: ID!): edfs__PublishEventResult!
+      publishEntity(id: ID!): edfs__PublishResult!
     }
     
     type Subscription {
       subscribeEntity(id: ID!): Entity!
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -763,11 +763,11 @@ const subgraphF: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      requestEntity(id: ID!): String! @edfs__eventsRequest(subject: "findEntity.{{ args.id }}")
+      requestEntity(id: ID!): String! @edfs__request(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -786,11 +786,11 @@ const subgraphG: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity! @edfs__eventsRequest(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id") {
@@ -809,11 +809,11 @@ const subgraphH: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(fieldSet: String!): Entity! @edfs__eventsRequest(subject: "findEntity.{{ args.fieldSet }}")
+      findEntity(fieldSet: String!): Entity! @edfs__request(subject: "findEntity.{{ args.fieldSet }}")
     }
     
     type Subscription {
-      entitySubscription(fieldSet: String!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
+      entitySubscription(fieldSet: String!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
     
     type Entity @key(fields: "id object { id }", resolvable: false) {
@@ -837,11 +837,11 @@ const subgraphI: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(fieldSet: String!): Interface! @edfs__eventsRequest(subject: "findEntity.{{ args.fieldSet }}")
+      findEntity(fieldSet: String!): Interface! @edfs__request(subject: "findEntity.{{ args.fieldSet }}")
     }
     
     type Subscription {
-      entitySubscription(fieldSet: String!): Interface! @edfs__eventsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
+      entitySubscription(fieldSet: String!): Interface! @edfs__subscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
     
     interface Interface {
@@ -869,11 +869,11 @@ const subgraphJ: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(fieldSet: String!): Union! @edfs__eventsRequest(subject: "findEntity.{{ args.fieldSet }}")
+      findEntity(fieldSet: String!): Union! @edfs__request(subject: "findEntity.{{ args.fieldSet }}")
     }
     
     type Subscription {
-      entitySubscription(fieldSet: String!): Union! @edfs__eventsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
+      entitySubscription(fieldSet: String!): Union! @edfs__subscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
     
     union Union = Entity
@@ -899,19 +899,19 @@ const subgraphK: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity! @edfs__eventsPublish(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity! @edfs__publish(subject: "findEntity.{{ args.id }}")
     }
     
-    type edfs__PublishEventResult {
+    type edfs__PublishResult {
      success: Boolean!
     }
     
     type Mutation {
-      publishEntity(id: ID!): edfs__PublishEventResult! @edfs__eventsSubscribe(subjects: ["publishEntity.{{ args.id }}"])
+      publishEntity(id: ID!): edfs__PublishResult! @edfs__subscribe(subjects: ["publishEntity.{{ args.id }}"])
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsRequest(subject: "entities.{{ args.id }}")
+      entitySubscription(id: ID!): Entity! @edfs__request(subject: "entities.{{ args.id }}")
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -930,11 +930,11 @@ const subgraphL: Subgraph = {
   url: '',
   definitions: parse(`
     type Mutation {
-      publishEntity(id: ID!): Entity! @edfs__eventsPublish(subject: "publishEntity.{{ args.id }}")
+      publishEntity(id: ID!): Entity! @edfs__publish(subject: "publishEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -953,11 +953,11 @@ const subgraphM: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity @edfs__eventsRequest(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity @edfs__request(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): [Entity!]! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): [Entity!]! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -976,7 +976,7 @@ const subgraphN: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: [1], subjects: ["topic"], sourceName: false, sourceName: "sourceName", unknownArgument: null)
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: [1], subjects: ["topic"], sourceName: false, sourceName: "sourceName", unknownArgument: null)
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -995,7 +995,7 @@ const subgraphO: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -1009,7 +1009,7 @@ const subgraphP: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -1025,7 +1025,7 @@ const subgraphQ: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(
         subjects: ["entities.{{ args.id }}"],
         streamConfiguration: { consumer: "consumerName", consumer: "hello", invalidField: 1 }
       )
@@ -1047,7 +1047,7 @@ const subgraphR: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe
+      entitySubscription(id: ID!): Entity! @edfs__subscribe
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -1066,7 +1066,7 @@ const subgraphS: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(
         subjects: ["entities.{{ args.id }}"],
         streamConfiguration: { consumer: 1, streamName: "", }
       )
@@ -1088,7 +1088,7 @@ const subgraphT: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__eventsSubscribe(
+      entitySubscription(id: ID!): Entity! @edfs__subscribe(
         subjects: ["entities.{{ args.id }}"],
         streamConfiguration: { invalidFieldOne: 1, invalidFieldTwo: "test", }
       )
