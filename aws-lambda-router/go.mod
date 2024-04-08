@@ -120,6 +120,4 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
-go 1.21
-
-toolchain go1.21.9
+go 1.21.0

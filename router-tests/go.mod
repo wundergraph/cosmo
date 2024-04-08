@@ -1,8 +1,6 @@
 module github.com/wundergraph/cosmo/router-tests
 
-go 1.21
-
-toolchain go1.21.9
+go 1.21.0
 
 require (
 	github.com/buger/jsonparser v1.1.1
