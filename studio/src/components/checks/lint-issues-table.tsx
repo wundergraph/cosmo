@@ -52,10 +52,7 @@ export const LintIssuesTable = ({
         </TableHeader>
         <TableBody>
           {lintIssues.map((l, i) => (
-            <TableRow
-              key={l.severity + l.message}
-              className="group hover:bg-secondary/20"
-            >
+            <TableRow key={l.severity + l.message} className="group">
               <TableCell
                 className={cn(
                   l.severity === LintSeverity.error
@@ -84,8 +81,9 @@ export const LintIssuesTable = ({
                   <Tooltip delayDuration={100}>
                     <TooltipTrigger asChild>
                       <Button
+                        asChild
                         variant="ghost"
-                        size="icon-sm"
+                        size="sm"
                         className="table-action"
                       >
                         <Link
@@ -99,7 +97,7 @@ export const LintIssuesTable = ({
                               : ""
                           }`}
                         >
-                          <EyeOpenIcon />
+                          View
                         </Link>
                       </Button>
                     </TooltipTrigger>

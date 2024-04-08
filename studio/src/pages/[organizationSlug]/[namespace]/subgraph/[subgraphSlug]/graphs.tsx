@@ -109,13 +109,12 @@ export const FederatedGraphsTable = ({
               return (
                 <TableRow
                   key={name}
-                  className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+                  className="group cursor-pointer py-1 hover:bg-secondary/30"
+                  onClick={() => router.push(path)}
                 >
                   <TableCell className="px-4 font-medium">{name}</TableCell>
-                  <TableCell className="px-4 text-muted-foreground hover:text-current">
-                    <Link target="_blank" rel="noreferrer" href={routingURL}>
-                      {routingURL}
-                    </Link>
+                  <TableCell className="px-4 text-muted-foreground">
+                    {routingURL}
                   </TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">

@@ -205,10 +205,7 @@ const Row = ({
   );
 
   return (
-    <TableRow
-      key={changeType + message}
-      className="group hover:bg-secondary/20"
-    >
+    <TableRow key={changeType + message} className="group">
       <TableCell
         className={cn(
           isBreaking ? "text-destructive" : "text-muted-foreground",

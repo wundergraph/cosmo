@@ -61,8 +61,6 @@ const CompositionsPage: NextPageWithLayout = () => {
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
-  const graphContext = useContext(GraphContext);
-
   const { data, isLoading, error, refetch } = useQuery(
     getCompositions.useQuery({
       fedGraphName: router.query.slug as string,
@@ -76,7 +74,12 @@ const CompositionsPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data?.response?.code !== EnumStatusCode.OK)
+  if (
+    !data ||
+    !data?.compositions ||
+    error ||
+    data?.response?.code !== EnumStatusCode.OK
+  )
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -87,8 +90,6 @@ const CompositionsPage: NextPageWithLayout = () => {
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
-
-  if (!data?.compositions || !graphContext?.graph) return null;
 
   const noOfPages = Math.ceil(data.count / limit);
 
