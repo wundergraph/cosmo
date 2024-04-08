@@ -1,11 +1,13 @@
 name: Helm CI
 on:
-  push:
-    branches: [main]
   pull_request:
     paths:
       - "helm/**/*"
       - ".github/workflows/helm-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
 
 env:
   CI: true
