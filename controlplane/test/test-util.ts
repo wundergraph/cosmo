@@ -7,6 +7,7 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import { expect } from 'vitest';
+import postgres from 'postgres';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import database from '../src/core/plugins/database.js';
@@ -122,7 +123,13 @@ export const SetupTest = async function ({
     port: 0,
   });
 
-  await seedTest(databaseConnectionUrl, userTestData, createScimKey);
+  const queryConnection = postgres(databaseConnectionUrl);
+
+  await seedTest(queryConnection, userTestData, createScimKey);
+
+  await queryConnection.end({
+    timeout: 1,
+  });
 
   if (enableScim) {
     await organizationRepository.updateFeature({
