@@ -2282,26 +2282,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         }
 
-        const { compositionErrors, updatedFederatedGraphs, deploymentErrors } = await subgraphRepo.update(
-          {
-            targetId: subgraph.targetId,
-            labels: req.labels,
-            unsetLabels: req.unsetLabels ?? false,
-            routingUrl: req.routingUrl,
-            subscriptionUrl: req.subscriptionUrl,
-            schemaSDL: subgraphSchemaSDL,
-            subscriptionProtocol: req.subscriptionProtocol
-              ? formatSubscriptionProtocol(req.subscriptionProtocol)
-              : undefined,
-            updatedBy: authContext.userId,
-            namespaceId: namespace.id,
-          },
-          opts.blobStorage,
-          {
-            cdnBaseUrl: opts.cdnBaseUrl,
-            webhookJWTSecret: opts.admissionWebhookJWTSecret,
-          },
-        );
+        const { compositionErrors, updatedFederatedGraphs, deploymentErrors, subgraphChanged } =
+          await subgraphRepo.update(
+            {
+              targetId: subgraph.targetId,
+              labels: req.labels,
+              unsetLabels: req.unsetLabels ?? false,
+              routingUrl: req.routingUrl,
+              subscriptionUrl: req.subscriptionUrl,
+              schemaSDL: subgraphSchemaSDL,
+              subscriptionProtocol:
+                req.subscriptionProtocol === undefined
+                  ? undefined
+                  : formatSubscriptionProtocol(req.subscriptionProtocol),
+              updatedBy: authContext.userId,
+              namespaceId: namespace.id,
+            },
+            opts.blobStorage,
+            {
+              cdnBaseUrl: opts.cdnBaseUrl,
+              webhookJWTSecret: opts.admissionWebhookJWTSecret,
+            },
+          );
 
         for (const graph of updatedFederatedGraphs) {
           orgWebhooks.send({
@@ -2384,6 +2386,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return {
           response: {
             code: EnumStatusCode.OK,
+            details: subgraphChanged ? undefined : 'Detected no new changes to publish.',
           },
           compositionErrors: [],
           deploymentErrors: [],

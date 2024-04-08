@@ -95,7 +95,7 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Subgraph published successfully.');
+        spinner.succeed(resp.response?.details || 'Subgraph published successfully.');
 
         break;
       }
