@@ -691,7 +691,7 @@ export const Empty = ({
       actions={
         <div className="mt-2">
           {checkUserAccess({
-            rolesToBe: ["admin", "developers"],
+            rolesToBe: ["admin", "developer"],
             userRoles: user?.currentOrganization.roles || [],
           }) && (
             <CreateAPIKey
@@ -813,7 +813,7 @@ const APIKeysPage: NextPageWithLayout = () => {
             </div>
             <div>
               {checkUserAccess({
-                rolesToBe: ["admin", "developers"],
+                rolesToBe: ["admin", "developer"],
                 userRoles: user?.currentOrganization.roles || [],
               }) && (
                 <CreateAPIKey
