@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/dop251/goja v0.0.0-20230906160731-9410bcaa81d2
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	rogchap.com/v8go v0.9.0
 )
 
