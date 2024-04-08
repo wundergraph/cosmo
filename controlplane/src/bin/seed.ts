@@ -54,7 +54,7 @@ try {
   // Ensure keycloak is up and running
   await keycloakClient.authenticateClient();
 
-  // Ensure that the database is up and running
+  // Create database connection. TLS is optionally.
   const connectionConfig = await buildDatabaseConnectionConfig({
     tls:
       databaseTlsCa || databaseTlsCert || databaseTlsKey
@@ -65,6 +65,8 @@ try {
     ...connectionConfig,
     max: 1,
   });
+
+  // Ensure that the database is up and running
   await queryConnection`SELECT 1 FROM users;`;
 
   const users = await keycloakClient.client.users.find({
