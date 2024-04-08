@@ -6,6 +6,7 @@ import postgres from 'postgres';
 import { seedTest } from '../core/test-util.js';
 import Keycloak from '../core/services/Keycloak.js';
 import { ApiKeyGenerator } from '../core/services/ApiGenerator.js';
+import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 
 const realm = process.env.KC_REALM || 'cosmo';
 const loginRealm = process.env.KC_LOGIN_REALM || 'master';
@@ -24,6 +25,9 @@ const userLastName = process.env.USER_LAST_NAME || 'bar';
 const organizationName = process.env.ORGANIZATION_NAME || 'wundergraph';
 const organizationSlug = process.env.ORGANIZATION_SLUG || 'wundergraph';
 const databaseConnectionUrl = process.env.DB_URL || 'postgresql://postgres:changeme@localhost:5432/controlplane';
+const databaseTlsCa = process.env.DB_TLS_CA;
+const databaseTlsCert = process.env.DB_TLS_CERT;
+const databaseTlsKey = process.env.DB_TLS_KEY;
 
 const keycloakClient = new Keycloak({
   apiUrl,
@@ -50,10 +54,20 @@ try {
   // Ensure keycloak is up and running
   await keycloakClient.authenticateClient();
 
+  // Create database connection. TLS is optionally.
+  const connectionConfig = await buildDatabaseConnectionConfig({
+    tls:
+      databaseTlsCa || databaseTlsCert || databaseTlsKey
+        ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
+        : undefined,
+  });
+  const queryConnection = postgres(databaseConnectionUrl, {
+    ...connectionConfig,
+    max: 1,
+  });
+
   // Ensure that the database is up and running
-  const queryConnection = postgres(databaseConnectionUrl);
   await queryConnection`SELECT 1 FROM users;`;
-  await queryConnection.end({ timeout: 1 });
 
   const users = await keycloakClient.client.users.find({
     realm,
@@ -117,13 +131,17 @@ try {
     groupId: adminGroup.id,
   });
 
-  await seedTest(databaseConnectionUrl, {
+  await seedTest(queryConnection, {
     apiKey,
     email: user.email,
     organizationName: user.organization.name,
     organizationSlug: user.organization.slug,
     userId: keycloakUserID,
     organizationId,
+  });
+
+  await queryConnection.end({
+    timeout: 1,
   });
 
   console.log(`User created with id ${keycloakUserID}, email "${user.email}"`);

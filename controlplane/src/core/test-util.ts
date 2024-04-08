@@ -47,8 +47,7 @@ export function genUniqueLabel(prefix = 'prefix'): Label {
   return { key: prefix + '-' + genID(), value: genID() };
 }
 
-export async function seedTest(databaseConnectionUrl: string, userTestData: UserTestData, createScimKey?: boolean) {
-  const queryConnection = postgres(databaseConnectionUrl);
+export async function seedTest(queryConnection: postgres.Sql, userTestData: UserTestData, createScimKey?: boolean) {
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
   const userRepo = new UserRepository(db);
@@ -95,10 +94,6 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
   if (!ns) {
     throw new Error(`Could not create ${DefaultNamespace} namespace`);
   }
-
-  await queryConnection.end({
-    timeout: 1,
-  });
 }
 
 export function createTestAuthenticator(): {
