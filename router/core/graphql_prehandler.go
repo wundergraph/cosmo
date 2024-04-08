@@ -12,13 +12,15 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
+	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"go.opentelemetry.io/otel/attribute"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
@@ -27,7 +29,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/pool"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 )
 
 type PreHandlerOptions struct {
@@ -126,7 +127,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					err := errors.New("invalid request token. Router version 0.42.1 or above is required to use request tracing in production")
 					finalErr = err
 					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-					writeRequestErrors(r.Context(), r, w, http.StatusForbidden, graphql.RequestErrorsFromError(err), requestLogger)
+					writeRequestErrors(r.Context(), r, w, http.StatusForbidden, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 					return
 				}
 
@@ -177,7 +178,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				requestLogger.Error("failed to read request body", zap.Error(err))
 			}
 
-			writeRequestErrors(r.Context(), r, w, http.StatusBadRequest, graphql.RequestErrorsFromError(err), requestLogger)
+			writeRequestErrors(r.Context(), r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 			return
 		}
 
@@ -224,7 +225,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
-			writeRequestErrors(r.Context(), r, w, http.StatusOK, graphql.RequestErrorsFromError(blocked), requestLogger)
+			writeRequestErrors(r.Context(), r, w, http.StatusOK, graphqlerrors.RequestErrorsFromError(blocked), requestLogger)
 			return
 		}
 
@@ -365,7 +366,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				rtrace.AttachErrToSpan(authenticateSpan, err)
 				authenticateSpan.End()
 
-				writeRequestErrors(authenticateSpanCtx, r, w, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), requestLogger)
+				writeRequestErrors(authenticateSpanCtx, r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 				return
 			}
 
@@ -445,17 +446,17 @@ func (h *PreHandler) writeOperationError(ctx context.Context, r *http.Request, w
 	switch {
 	case errors.As(err, &inputErr):
 		requestLogger.Debug(inputErr.Error())
-		writeRequestErrors(ctx, r, w, inputErr.StatusCode(), graphql.RequestErrorsFromError(err), requestLogger)
+		writeRequestErrors(ctx, r, w, inputErr.StatusCode(), graphqlerrors.RequestErrorsFromError(err), requestLogger)
 	case errors.As(err, &poNotFoundErr):
 		requestLogger.Debug("persisted operation not found",
 			zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
 			zap.String("clientName", poNotFoundErr.ClientName()))
-		writeRequestErrors(ctx, r, w, http.StatusBadRequest, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), requestLogger)
+		writeRequestErrors(ctx, r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
 		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 
-		requestErrors := graphql.RequestErrorsFromOperationReport(*report)
+		requestErrors := graphqlerrors.RequestErrorsFromOperationReport(*report)
 		if len(requestErrors) > 0 {
 			writeRequestErrors(ctx, r, w, http.StatusOK, requestErrors, requestLogger)
 			return
