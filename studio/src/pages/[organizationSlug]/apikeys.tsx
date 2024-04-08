@@ -669,6 +669,8 @@ export const Empty = ({
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
+  const user = useContext(UserContext);
+
   return (
     <EmptyState
       icon={<KeyIcon />}
@@ -688,12 +690,17 @@ export const Empty = ({
       }
       actions={
         <div className="mt-2">
-          <CreateAPIKey
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            open={open}
-            setOpen={setOpen}
-          />
+          {checkUserAccess({
+            rolesToBe: ["admin", "developers"],
+            userRoles: user?.currentOrganization.roles || [],
+          }) && (
+            <CreateAPIKey
+              apiKey={apiKey}
+              setApiKey={setApiKey}
+              open={open}
+              setOpen={setOpen}
+            />
+          )}
         </div>
       }
     />
