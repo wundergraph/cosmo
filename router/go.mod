@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/router
 
-go 1.21
+go 1.21.0
 
 require (
 	connectrpc.com/connect v1.11.1
@@ -30,8 +30,8 @@ require (
 	github.com/redis/go-redis/v9 v9.4.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sebdah/goldie/v2 v2.5.3
-	github.com/shirou/gopsutil/v3 v3.24.1
-	github.com/stretchr/testify v1.8.4
+	github.com/shirou/gopsutil/v3 v3.24.3
+	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.16
@@ -54,7 +54,7 @@ require (
 	go.uber.org/zap v1.26.0
 	go.withmatt.com/connect-brotli v0.4.0
 	golang.org/x/sync v0.6.0
-	golang.org/x/sys v0.17.0
+	golang.org/x/sys v0.18.0
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.32.0
 )
@@ -66,6 +66,7 @@ require (
 	github.com/bytedance/sonic v1.10.0-rc // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
+	github.com/chenzhuoyu/iasm v0.9.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.15.0 // indirect
@@ -107,12 +108,13 @@ require (
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/sosodev/duration v1.2.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/yusufpapurcu/wmi v1.2.3 // indirect
+	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.23.1 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

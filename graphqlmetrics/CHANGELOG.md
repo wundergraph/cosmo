@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.15.0...graphqlmetrics@0.15.1) (2024-04-08)
+
+### Bug Fixes
+
+* provide default subscription protocol for composition-go ([#702](https://github.com/wundergraph/cosmo/issues/702)) ([53140ea](https://github.com/wundergraph/cosmo/commit/53140eabcc960bd95626837da308c86674aeb8a4)) (@Aenimus)
+
 # [0.15.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.14.0...graphqlmetrics@0.15.0) (2024-03-24)
 
 ### Features
