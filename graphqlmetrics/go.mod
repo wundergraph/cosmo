@@ -1,6 +1,7 @@
 module github.com/wundergraph/cosmo/graphqlmetrics
 
 go 1.21
+
 toolchain go1.21.9
 
 require (
