@@ -1,5 +1,10 @@
 .PHONY: build
 
+bump-router:
+	go get github.com/wundergraph/cosmo/router@upgrade
+	go mod tidy
+	cd .. && go work sync
+
 VERSION?=dev
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=$(VERSION)" -a -o bootstrap cmd/main.go
