@@ -631,6 +631,13 @@ func TestEventsNew(t *testing.T) {
 				} `graphql:"employeeUpdatedStream(id: 12)"`
 			}
 
+			js, err := jetstream.New(xEnv.NatsConnectionDefault)
+			require.NoError(t, err)
+
+			stream, err := js.Stream(context.Background(), "streamName")
+			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
+			require.Equal(t, nil, stream)
+
 			surl := xEnv.GraphQLSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			t.Cleanup(func() {
@@ -640,7 +647,7 @@ func TestEventsNew(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
 				defer wg.Done()
 				require.Contains(t, errValue.Error(), `EDFS NATS error: failed to create or update consumer "consumerName": nats: API error: code=404 err_code=10059 description=stream not found`)
 				return nil

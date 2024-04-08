@@ -64,12 +64,12 @@ func (p *natsPubSub) ensureConn() error {
 
 func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater resolve.SubscriptionUpdater, streamConfiguration *pubsub_datasource.StreamConfiguration) error {
 	if err := p.ensureConn(); err != nil {
-		return err
+		return newEDFSNatsError(fmt.Errorf(`failed to ensure nats connection: %w`, err))
 	}
 	if streamConfiguration != nil {
 		js, err := jetstream.New(p.conn)
 		if err != nil {
-			return err
+			return newEDFSNatsError(fmt.Errorf(`failed to create jetstream: %w`, err))
 		}
 
 		consumer, err := js.CreateOrUpdateConsumer(ctx, streamConfiguration.StreamName, jetstream.ConsumerConfig{
@@ -105,22 +105,28 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 		return nil
 	}
 
+	msgChan := make(chan *nats.Msg)
+	subscriptions := make([]*nats.Subscription, len(subjects))
 	for _, subject := range subjects {
-		subscription, err := p.conn.SubscribeSync(subject)
+		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
-			return newEDFSNatsError(fmt.Errorf("error subscribing to NATS subject %s: %w", subject, err))
+			return newEDFSNatsError(fmt.Errorf(`error subscribing to NATS subject "%s": %w`, subject, err))
 		}
-		go func() {
-			for {
-				msg, err := subscription.NextMsgWithContext(ctx)
-				if err != nil {
-					_ = subscription.Unsubscribe()
-					return
-				}
-				updater.Update(msg.Data)
-			}
-		}()
+		subscriptions = append(subscriptions, subscription)
 	}
+	go func() {
+		for {
+			select {
+			case msg := <-msgChan:
+				updater.Update(msg.Data)
+			case <-ctx.Done():
+				for _, subscription := range subscriptions {
+					_ = subscription.Unsubscribe()
+				}
+				return
+			}
+		}
+	}()
 	return nil
 }
 

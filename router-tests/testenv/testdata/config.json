@@ -923,7 +923,7 @@
               "sourceName": "default",
               "streamConfiguration": {
                 "consumer": "consumerName",
-                "steamName": "streamName"
+                "streamName": "streamName"
               }
             }
           ]

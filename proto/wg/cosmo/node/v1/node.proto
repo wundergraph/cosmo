@@ -201,7 +201,7 @@ enum EventType {
 
 message StreamConfiguration {
   string consumer = 1;
-  string steam_name = 2;
+  string stream_name = 2;
 }
 
 message EventConfiguration {

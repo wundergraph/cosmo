@@ -304,7 +304,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				if ev.StreamConfiguration != nil {
 					streamConfiguration = &pubsub_datasource.StreamConfiguration{
 						Consumer:   ev.StreamConfiguration.Consumer,
-						StreamName: ev.StreamConfiguration.SteamName,
+						StreamName: ev.StreamConfiguration.StreamName,
 					}
 				}
 				events[ii] = pubsub_datasource.EventConfiguration{

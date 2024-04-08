@@ -1379,9 +1379,9 @@ export class StreamConfiguration extends Message<StreamConfiguration> {
   consumer = "";
 
   /**
-   * @generated from field: string steam_name = 2;
+   * @generated from field: string stream_name = 2;
    */
-  steamName = "";
+  streamName = "";
 
   constructor(data?: PartialMessage<StreamConfiguration>) {
     super();
@@ -1392,7 +1392,7 @@ export class StreamConfiguration extends Message<StreamConfiguration> {
   static readonly typeName = "wg.cosmo.node.v1.StreamConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "consumer", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "steam_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stream_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamConfiguration {

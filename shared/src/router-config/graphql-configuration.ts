@@ -111,7 +111,7 @@ export function configurationDataMapToDataSourceConfiguration(
             ? {
                 streamConfiguration: new StreamConfiguration({
                   consumer: event.streamConfiguration.consumer,
-                  steamName: event.streamConfiguration.streamName,
+                  streamName: event.streamConfiguration.streamName,
                 }),
               }
             : {}),
