@@ -5,17 +5,18 @@ import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { SubgraphsTable } from "@/components/subgraphs-table";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getSubgraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { useRouter } from "next/router";
 import { useContext } from "react";
 
 const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
-  const [namespace] = useLocalStorage("namespace", "default");
+  const router = useRouter();
+  const namespace = router.query.namespace as string;
 
   const { data, isLoading, error, refetch } = useQuery({
     ...getSubgraphs.useQuery({

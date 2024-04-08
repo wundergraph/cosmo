@@ -471,8 +471,6 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
 		cfg.Config.SubgraphErrorPropagation.StatusCodes = true
-		cfg.Config.EngineExecutionConfiguration.Debug.ReportMemoryUsage = true
-		cfg.Config.EngineExecutionConfiguration.Debug.ReportWebSocketConnections = true
 	}
 
 	return cfg, nil
