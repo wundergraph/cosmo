@@ -101,7 +101,7 @@ const Organizations = () => {
             );
             if (currentOrg) {
               router.replace(
-                isOrganizationRoot
+                isOrganizationRoot && currentPage !== "invitations"
                   ? `/${currentOrg.slug}/${currentPage}`
                   : `/${currentOrg.slug}`,
               );
