@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
 )
 
@@ -106,12 +106,12 @@ type ModuleContext struct {
 // Please never write errors directly to the http.ResponseWriter. The function takes care of logging and tracking
 // the error in the underlying telemetry system.
 func WriteResponseError(ctx RequestContext, err error) {
-	var errs graphql.RequestErrors
+	var errs graphqlerrors.RequestErrors
 
 	if err != nil {
-		errs = graphql.RequestErrorsFromError(err)
+		errs = graphqlerrors.RequestErrorsFromError(err)
 	} else {
-		errs = graphql.RequestErrorsFromError(errors.New("Internal Error"))
+		errs = graphqlerrors.RequestErrorsFromError(errors.New("Internal Error"))
 	}
 
 	writeRequestErrors(ctx.Request().Context(), ctx.Request(), ctx.ResponseWriter(), http.StatusInternalServerError, errs, ctx.Logger())
