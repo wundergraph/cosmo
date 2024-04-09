@@ -5,7 +5,7 @@ import {
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
-  CONSUMER,
+  CONSUMER_NAME,
   DEFAULT,
   DEPRECATED,
   EDFS_PUBLISH,
@@ -550,7 +550,7 @@ export const SCOPE_SCALAR_DEFINITION: MutableScalarNode = {
 
 /*
  * input edfs__StreamConfiguration {
- *   consumer: String!
+ *   consumerName: String!
  *   streamName: String!
  * }
  * */
@@ -560,7 +560,7 @@ export const STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode = {
   fields: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(CONSUMER),
+      name: stringToNameNode(CONSUMER_NAME),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
@@ -604,7 +604,7 @@ export const baseDirectives = `
   scalar openfed__FieldSet
   scalar openfed__Scope
   input edfs__StreamConfiguration {
-    consumer: String!
+    consumerName: String!
     streamName: String!
   }
 `;
