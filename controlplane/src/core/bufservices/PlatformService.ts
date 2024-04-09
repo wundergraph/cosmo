@@ -2389,7 +2389,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           compositionErrors: [],
           deploymentErrors: [],
-          message: subgraphChanged ? undefined : 'Detected no new changes to publish.',
+          hasChanged: subgraphChanged,
         };
       });
     },
