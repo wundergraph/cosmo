@@ -848,15 +848,11 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "addr": {
+            "url": {
               "type": "string",
-              "description": "The url of the redis server. The url is specified as a string with the format 'scheme://host:port'.",
-              "format": "url",
-              "default": "localhost:6379"
-            },
-            "password": {
-              "type": "string",
-              "description": "The password of the redis server."
+              "description": "The connection URL. The value is specified as a string with the format 'scheme://host:port'.",
+              "default": "redis://localhost:6379",
+              "format": "url"
             },
             "key_prefix": {
               "type": "string",

@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/nats-io/nats.go"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
@@ -44,25 +44,25 @@ func TestEventsNew(t *testing.T) {
 			wg.Add(2)
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				defer wg.Done()
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEqual(t, "", subscriptionOneID)
 
 			go func() {
-				err := client.Run()
-				require.NoError(t, err)
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
 			}()
 
 			go func() {
 				wg.Wait()
-				err := client.Unsubscribe(subscriptionOneID)
-				require.NoError(t, err)
-				err = client.Close()
-				require.NoError(t, err)
+				unsubscribeErr := client.Unsubscribe(subscriptionOneID)
+				require.NoError(t, unsubscribeErr)
+				clientCloseErr := client.Close()
+				require.NoError(t, clientCloseErr)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -116,17 +116,17 @@ func TestEventsNew(t *testing.T) {
 			wg.Add(2)
 
 			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				defer wg.Done()
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEqual(t, "", subscriptionID)
 
 			go func() {
-				err := client.Run()
-				require.NoError(t, err)
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
@@ -445,6 +445,217 @@ func TestEventsNew(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "updateEmployeeMyNats.12", msgTwo.Subject)
 			require.Equal(t, `{"employeeID":12,"update":{"name":"David Stutt","email":"stutt@wundergraph.com"}}`, string(msgTwo.Data))
+		})
+	})
+
+	t.Run("subscribe to multiple subjects", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			type subscriptionPayload struct {
+				Data struct {
+					EmployeeUpdatedMyNats struct {
+						ID float64 `graphql:"id"`
+					} `graphql:"employeeUpdatedMyNats(id: 12)"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in  a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*20)
+
+			// Trigger the first subscription via NATS
+			err = xEnv.NatsConnectionMyNats.Publish("employeeUpdatedMyNats.12", []byte(`{"id":13,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionMyNats.Flush()
+			require.NoError(t, err)
+
+			xEnv.WaitForMessagesSent(1, time.Second*5)
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(13), payload.Data.EmployeeUpdatedMyNats.ID)
+
+			// Trigger the first subscription via NATS
+			err = xEnv.NatsConnectionMyNats.Publish("employeeUpdatedMyNatsTwo.12", []byte(`{"id":99,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionMyNats.Flush()
+			require.NoError(t, err)
+
+			xEnv.WaitForMessagesSent(2, time.Second*5)
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
+		})
+	})
+
+	t.Run("subscribe with stream and consumer", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			type subscriptionPayload struct {
+				Data struct {
+					EmployeeUpdatedStream struct {
+						ID float64 `graphql:"id"`
+					} `graphql:"employeeUpdatedStream(id: 12)"`
+				} `json:"data"`
+			}
+
+			js, err := jetstream.New(xEnv.NatsConnectionDefault)
+			require.NoError(t, err)
+
+			_, err = js.CreateOrUpdateStream(xEnv.Context, jetstream.StreamConfig{
+				Name:     "streamName",
+				Subjects: []string{"employeeUpdated.>"},
+				Storage:  jetstream.MemoryStorage,
+			})
+			require.NoError(t, err)
+
+			// conn.Close() is called in  a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdatedStream(id: 12) { id }}"}`),
+			})
+
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			// Trigger the first subscription via NATS
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":13,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(13), payload.Data.EmployeeUpdatedStream.ID)
+
+			// Stop the subscription
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "complete",
+			})
+			require.NoError(t, err)
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+
+			var complete testenv.WebSocketMessage
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "1", complete.ID)
+			require.Equal(t, "complete", complete.Type)
+
+			// Publish the second event while the subscription is unsubscribed
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":14,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			// Publish the third event while the subscription is unsubscribed
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":15,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "2",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdatedStream(id: 12) { id }}"}`),
+			})
+			require.NoError(t, err)
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "2", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(14), payload.Data.EmployeeUpdatedStream.ID)
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "2", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(15), payload.Data.EmployeeUpdatedStream.ID)
+		})
+	})
+
+	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscription struct {
+				employeeUpdatedStream struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdatedStream(id: 12)"`
+			}
+
+			js, err := jetstream.New(xEnv.NatsConnectionDefault)
+			require.NoError(t, err)
+
+			stream, err := js.Stream(xEnv.Context, "streamName")
+			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
+			require.Equal(t, nil, stream)
+
+			surl := xEnv.GraphQLSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
+				require.Contains(t, errValue.Error(), `EDFS NATS error: failed to create or update consumer "consumerName": nats: API error: code=404 err_code=10059 description=stream not found`)
+				return nil
+			})
+			require.NoError(t, err)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			wg.Wait()
 		})
 	})
 }
