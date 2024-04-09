@@ -186,7 +186,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 		return nil, err
 	}
 
-	_, err = js.CreateStream(ctx, jetstream.StreamConfig{
+	_, err = js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:     "streamName",
 		Subjects: []string{"employeeUpdated.>"},
 	})

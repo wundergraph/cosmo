@@ -89,13 +89,13 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 					return
 				default:
 				}
-				msgBatch, err := consumer.FetchNoWait(1)
-				if err != nil {
+				msgBatch, consumerFetchErr := consumer.FetchNoWait(1)
+				if consumerFetchErr != nil {
 					return
 				}
 				for msg := range msgBatch.Messages() {
-					err = msg.Ack()
-					if err != nil {
+					ackErr := msg.Ack()
+					if ackErr != nil {
 						return
 					}
 					updater.Update(msg.Data())
@@ -107,12 +107,12 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 
 	msgChan := make(chan *nats.Msg)
 	subscriptions := make([]*nats.Subscription, len(subjects))
-	for _, subject := range subjects {
+	for i, subject := range subjects {
 		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
 			return newEDFSNatsError(fmt.Errorf(`error subscribing to NATS subject "%s": %w`, subject, err))
 		}
-		subscriptions = append(subscriptions, subscription)
+		subscriptions[i] = subscription
 	}
 	go func() {
 		for {
