@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
@@ -139,7 +140,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 	}
 
 	// create dir in tmp for nats server
-	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%d", rand.Intn(1000)))
+	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
 	err = os.MkdirAll(natsDir, os.ModePerm)
 	if err != nil {
 		t.Fatalf("could not create nats dir: %s", err)
