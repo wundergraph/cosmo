@@ -884,7 +884,7 @@ const subgraphA: Subgraph = {
   url: '',
   definitions: parse(`
     directive @external on FIELD_DEFINITION | OBJECT
-    directive @key(fields: String!) on INTERFACE | OBJECT
+    directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
     directive @provides(fields: String!) on FIELD_DEFINITION
     directive @requires(fields: String!) on FIELD_DEFINITION
     directive @shareable on FIELD_DEFINITION | OBJECT
@@ -908,6 +908,8 @@ const subgraphA: Subgraph = {
       name: String! @shareable
       pp: Int! @shareable
     }
+    
+    scalar openfed__FieldSet
   `),
 };
 

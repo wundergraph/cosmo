@@ -208,7 +208,7 @@ const EDFS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @key(fields: openfed__FieldSet!) on INTERFACE | OBJECT
+// directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
 const KEY_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
