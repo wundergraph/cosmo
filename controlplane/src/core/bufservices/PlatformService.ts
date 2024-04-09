@@ -2386,10 +2386,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return {
           response: {
             code: EnumStatusCode.OK,
-            details: subgraphChanged ? undefined : 'Detected no new changes to publish.',
           },
           compositionErrors: [],
           deploymentErrors: [],
+          message: subgraphChanged ? undefined : 'Detected no new changes to publish.',
         };
       });
     },

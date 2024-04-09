@@ -59,6 +59,7 @@ message PublishFederatedSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  optional string message = 4;
 }
 
 message GitInfo {
