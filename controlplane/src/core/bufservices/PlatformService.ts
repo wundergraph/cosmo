@@ -10,7 +10,6 @@ import {
   AddReadmeResponse,
   AddSubgraphMemberResponse,
   AuditLog,
-  Feature,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
@@ -43,19 +42,20 @@ import {
   DeleteRouterTokenResponse,
   DeploymentError,
   EnableLintingForTheNamespaceResponse,
+  Feature,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GenerateRouterTokenResponse,
-  GetAPIKeysResponse,
   GetAllDiscussionsResponse,
   GetAllOverridesResponse,
   GetAnalyticsViewResponse,
+  GetAPIKeysResponse,
   GetAuditLogsResponse,
   GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckOperationsResponse,
-  GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
+  GetCheckSummaryResponse,
   GetClientsResponse,
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
@@ -64,8 +64,8 @@ import {
   GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
-  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsBySubgraphLabelsResponse,
+  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
@@ -83,8 +83,8 @@ import {
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
   GetPersistedOperationsResponse,
-  GetRouterTokensResponse,
   GetRoutersResponse,
+  GetRouterTokensResponse,
   GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
   GetSubgraphMembersResponse,
@@ -93,6 +93,7 @@ import {
   GetSubgraphSDLFromLatestCompositionResponse,
   GetSubgraphsResponse,
   GetTraceResponse,
+  GetUserAccessiblePermissionsResponse,
   GetUserAccessibleResourcesResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
@@ -102,11 +103,12 @@ import {
   MigrateFromApolloResponse,
   MigrateMonographResponse,
   MoveGraphResponse,
+  Permission,
+  PublishedOperation,
+  PublishedOperationStatus,
   PublishFederatedSubgraphResponse,
   PublishMonographResponse,
   PublishPersistedOperationsResponse,
-  PublishedOperation,
-  PublishedOperationStatus,
   RemoveInvitationResponse,
   RemoveOperationIgnoreAllOverrideResponse,
   RemoveOperationOverridesResponse,
@@ -121,19 +123,17 @@ import {
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateMonographResponse,
-  UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
+  UpdateOrgMemberRoleResponse,
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
-  GetUserAccessiblePermissionsResponse,
-  Permission,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, buildASTSchema, parse } from 'graphql';
+import { buildASTSchema, DocumentNode, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
 import {
@@ -152,7 +152,7 @@ import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { schemaLintCheck } from '../composition/schemaLint.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
-import { PublicError } from '../errors/errors.js';
+import { AuthenticationError, PublicError } from '../errors/errors.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
@@ -187,10 +187,10 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { BillingService } from '../services/BillingService.js';
 import OidcProvider from '../services/OidcProvider.js';
 import {
+  collectOperationUsageStats,
   InspectorOperationResult,
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
-  collectOperationUsageStats,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -4691,6 +4691,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -4702,9 +4703,34 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // Check if the user is authorized to subscribe to the events of the federated / mono graphs
+        for (const eventMeta of req.eventsMeta) {
+          if (!eventMeta.meta.value) {
+            continue;
+          }
+          for (const graphId of eventMeta.meta.value.graphIds) {
+            const graph = await fedRepo.byId(graphId);
+            if (!graph) {
+              throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHORIZED, `Not authorized to access graph`);
+            }
+            await opts.authorizer.authorize({
+              db: opts.db,
+              graph: {
+                targetId: graph.targetId,
+                targetType: 'federatedGraph',
+              },
+              headers: ctx.requestHeader,
+              authContext,
+            });
+          }
+        }
+
         await orgRepo.createWebhookConfig({
           organizationId: authContext.organizationId,
-          ...req,
+          eventsMeta: req.eventsMeta,
+          key: req.key,
+          events: req.events,
+          endpoint: req.endpoint,
         });
 
         await auditLogRepo.addAuditLog({
@@ -4734,6 +4760,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+        const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -4745,9 +4772,36 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // Check if the user is authorized to subscribe to the events of the federated / mono graphs
+        for (const eventMeta of req.eventsMeta) {
+          if (!eventMeta.meta.value) {
+            continue;
+          }
+          for (const graphId of eventMeta.meta.value.graphIds) {
+            const graph = await fedRepo.byId(graphId);
+            if (!graph) {
+              throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHORIZED, `Not authorized to access graph`);
+            }
+            await opts.authorizer.authorize({
+              db: opts.db,
+              graph: {
+                targetId: graph.targetId,
+                targetType: 'federatedGraph',
+              },
+              headers: ctx.requestHeader,
+              authContext,
+            });
+          }
+        }
+
         await orgRepo.updateWebhookConfig({
           organizationId: authContext.organizationId,
-          ...req,
+          id: req.id,
+          endpoint: req.endpoint,
+          events: req.events,
+          key: req.key,
+          eventsMeta: req.eventsMeta,
+          shouldUpdateKey: req.shouldUpdateKey,
         });
 
         await auditLogRepo.addAuditLog({
@@ -4790,7 +4844,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const config = await orgRepo.deleteWebhookConfig({
           organizationId: authContext.organizationId,
-          ...req,
+          id: req.id,
         });
 
         if (!config) {

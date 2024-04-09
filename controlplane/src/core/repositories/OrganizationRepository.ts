@@ -714,7 +714,12 @@ export class OrganizationRepository {
         set.key = input.key;
       }
 
-      await tx.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
+      await tx
+        .update(organizationWebhooks)
+        .set(set)
+        .where(
+          and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)),
+        );
 
       const graphIds: string[] = [];
       for (const eventMeta of input.eventsMeta) {
