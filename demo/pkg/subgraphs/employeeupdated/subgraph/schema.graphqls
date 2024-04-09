@@ -1,14 +1,10 @@
-directive @eventsRequest(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
-directive @eventsPublish(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
-directive @eventsSubscribe(topic: String!, sourceName: String! = "default") on FIELD_DEFINITION
-
-type PublishEventResult {
-    success: Boolean!
-}
+directive @edfs__request(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
+directive @edfs__publish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
+directive @edfs__subscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
 
 type Query {
-    employeeFromEvent(id: ID!): Employee! @eventsRequest(topic: "getEmployee.{{ args.id }}")
-    employeeFromEventMyNats(employeeID: ID!): Employee! @eventsRequest(topic: "getEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
+    employeeFromEvent(id: ID!): Employee! @edfs__request(subject: "getEmployee.{{ args.id }}")
+    employeeFromEventMyNats(employeeID: ID!): Employee! @edfs__request(subject: "getEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
 }
 
 input UpdateEmployeeInput {
@@ -17,15 +13,25 @@ input UpdateEmployeeInput {
 }
 
 type Mutation {
-    updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: "updateEmployee.{{ args.id }}")
-    updateEmployeeMyNats(employeeID: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: "updateEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
+    updateEmployee(id: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__publish(subject: "updateEmployee.{{ args.id }}")
+    updateEmployeeMyNats(employeeID: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__publish(subject: "updateEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
 }
 
 type Subscription {
-    employeeUpdated(employeeID: ID!): Employee! @eventsSubscribe(topic: "employeeUpdated.{{ args.employeeID }}")
-    employeeUpdatedMyNats(id: ID!): Employee! @eventsSubscribe(topic: "employeeUpdatedMyNats.{{ args.id }}", sourceName: "my-nats")
+    employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"])
+    employeeUpdatedMyNats(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], sourceName: "my-nats")
+    employeeUpdatedStream(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumer: "consumerName", streamName: "streamName"})
 }
 
 type Employee @key(fields: "id", resolvable: false) {
   id: Int! @external
+}
+
+type edfs__PublishResult {
+    success: Boolean!
+}
+
+input edfs__StreamConfiguration {
+    consumer: String!
+    streamName: String!
 }
