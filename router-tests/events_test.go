@@ -533,15 +533,12 @@ func TestEventsNew(t *testing.T) {
 			js, err := jetstream.New(xEnv.NatsConnectionDefault)
 			require.NoError(t, err)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			_, err = js.CreateStream(ctx, jetstream.StreamConfig{
+			_, err = js.CreateOrUpdateStream(xEnv.Context, jetstream.StreamConfig{
 				Name:     "streamName",
 				Subjects: []string{"employeeUpdated.>"},
+				Storage:  jetstream.MemoryStorage,
 			})
 			require.NoError(t, err)
-			defer js.DeleteStream(context.Background(), "streamName")
 
 			// conn.Close() is called in  a cleanup defined in the function
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
@@ -635,7 +632,6 @@ func TestEventsNew(t *testing.T) {
 			require.NoError(t, err)
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			defer js.DeleteStream(ctx, "streamName")
 
 			stream, err := js.Stream(ctx, "streamName")
 			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())

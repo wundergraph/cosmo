@@ -138,12 +138,27 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		t.Fatalf("could not get free port: %s", err)
 	}
 
+	// create dir in tmp for nats server
+	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%d", rand.Intn(1000)))
+	err = os.MkdirAll(natsDir, os.ModePerm)
+	if err != nil {
+		t.Fatalf("could not create nats dir: %s", err)
+	}
+
+	t.Cleanup(func() {
+		err := os.RemoveAll(natsDir)
+		if err != nil {
+			panic(fmt.Errorf("could not remove temporary nats directory, %w", err))
+		}
+	})
+
 	opts := natsserver.Options{
 		Host:      "localhost",
 		NoLog:     true,
 		NoSigs:    true,
 		JetStream: true,
 		Port:      natsPort,
+		StoreDir:  natsDir,
 	}
 
 	natsServer := natstest.RunServer(&opts)
