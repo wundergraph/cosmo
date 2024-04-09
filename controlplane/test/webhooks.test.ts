@@ -58,7 +58,7 @@ describe('Webhooks', (ctx) => {
     await server.close();
   });
 
-  test('Should be possible to subscribe for a federated graph that dont belong to the same organization', async (testContext) => {
+  test('Should be possible to subscribe for a federated graph that belong to the same organization', async (testContext) => {
     const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const aliceFedGraphId = genID('fedGraph');
