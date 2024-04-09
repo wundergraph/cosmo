@@ -16,16 +16,16 @@ describe('Scim server v2.0', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
 
-    const setupDetails = await SetupTest({ dbname, enableScim: true, createScimKey: true });
+    const setupDetails = await SetupTest({ dbname, enabledFeatures: ['scim'], createScimKey: true });
     baseAddress = setupDetails.baseAddress;
-    userTestData = setupDetails.userTestData;
+    userTestData = setupDetails.users.adminAliceCompanyA;
     keycloakClient = setupDetails.keycloakClient;
     realmName = setupDetails.realm;
     server = setupDetails.server;
     await SetupKeycloak({
       keycloakClient,
       realmName,
-      userTestData,
+      userTestData: setupDetails.users.adminAliceCompanyA,
     });
   });
 
@@ -307,16 +307,16 @@ describe('Scim server when scim is not enabled v2.0', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
 
-    const setupDetails = await SetupTest({ dbname, enableScim: false, createScimKey: false });
+    const setupDetails = await SetupTest({ dbname, createScimKey: false });
     baseAddress = setupDetails.baseAddress;
-    userTestData = setupDetails.userTestData;
+    userTestData = setupDetails.users.adminAliceCompanyA;
     keycloakClient = setupDetails.keycloakClient;
     realmName = setupDetails.realm;
     server = setupDetails.server;
     await SetupKeycloak({
       keycloakClient,
       realmName,
-      userTestData,
+      userTestData: setupDetails.users.adminAliceCompanyA,
     });
   });
 
@@ -344,16 +344,16 @@ describe('Scim server when scim is enabled, but no scim key', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
 
-    const setupDetails = await SetupTest({ dbname, enableScim: true, createScimKey: false });
+    const setupDetails = await SetupTest({ dbname, enabledFeatures: ['scim'], createScimKey: false });
     baseAddress = setupDetails.baseAddress;
-    userTestData = setupDetails.userTestData;
+    userTestData = setupDetails.users.adminAliceCompanyA;
     keycloakClient = setupDetails.keycloakClient;
     realmName = setupDetails.realm;
     server = setupDetails.server;
     await SetupKeycloak({
       keycloakClient,
       realmName,
-      userTestData,
+      userTestData: setupDetails.users.adminAliceCompanyA,
     });
   });
 
