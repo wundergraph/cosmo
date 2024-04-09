@@ -110,7 +110,7 @@ export function configurationDataMapToDataSourceConfiguration(
           ...(event.streamConfiguration
             ? {
                 streamConfiguration: new StreamConfiguration({
-                  consumer: event.streamConfiguration.consumer,
+                  consumerName: event.streamConfiguration.consumerName,
                   streamName: event.streamConfiguration.streamName,
                 }),
               }

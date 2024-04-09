@@ -1,7 +1,7 @@
 export type EventType = 'subscribe' | 'publish' | 'request';
 
 export type StreamConfiguration = {
-  consumer: string;
+  consumerName: string;
   streamName: string;
 };
 

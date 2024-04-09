@@ -109,7 +109,7 @@ describe('events Configuration tests', () => {
                   subjects: ['firstSub.{{ args.firstID }}', 'secondSub.{{ args.secondID }}'],
                   type: 'subscribe',
                   streamConfiguration: {
-                    consumer: 'consumer',
+                    consumerName: 'consumer',
                     streamName: 'streamName',
                   },
                 },
@@ -145,7 +145,7 @@ describe('events Configuration tests', () => {
       
         type Subscription {
           entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"], sourceName: "kafka")
-          entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__subscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumer: "consumer", streamName: "streamName"})
+          entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__subscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName"})
         }
       
         type edfs__PublishResult {
@@ -153,7 +153,7 @@ describe('events Configuration tests', () => {
         }
         
         input edfs__StreamConfiguration {
-          consumer: String!
+          consumerName: String!
           streamName: String!
         }
         
@@ -346,7 +346,7 @@ describe('events Configuration tests', () => {
         invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
           invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
             ['streamName'],
-            ['consumer'],
+            ['consumerName'],
             [],
             ['invalidField'],
           ),
@@ -360,7 +360,7 @@ describe('events Configuration tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
-          invalidEventDrivenStreamConfigurationInputFieldsErrorMessage([], [], ['consumer', 'streamName'], []),
+          invalidEventDrivenStreamConfigurationInputFieldsErrorMessage([], [], ['consumerName', 'streamName'], []),
         ]),
       );
     });
@@ -372,7 +372,7 @@ describe('events Configuration tests', () => {
       expect(errors![0]).toStrictEqual(
         invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
           invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
-            ['consumer', 'streamName'],
+            ['consumerName', 'streamName'],
             [],
             [],
             ['invalidFieldOne', 'invalidFieldTwo'],
@@ -518,7 +518,7 @@ describe('events Configuration tests', () => {
         }
         
         input edfs__StreamConfiguration {
-          consumer: String!
+          consumerName: String!
           streamName: String!
         }
      `,
@@ -557,7 +557,7 @@ describe('events Configuration tests', () => {
         union Union = Entity
         
         input edfs__StreamConfiguration {
-          consumer: String!
+          consumerName: String!
           streamName: String!
         }
      `,
@@ -616,7 +616,7 @@ const subgraphStringA = `
 
   type Subscription {
     entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"], sourceName: "kafka")
-    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__subscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumer: "consumer", streamName: "streamName"})
+    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__subscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName"})
   }
   
   type Entity @key(fields: "id", resolvable: false) {
@@ -624,7 +624,7 @@ const subgraphStringA = `
   }
   
   input edfs__StreamConfiguration {
-    consumer: String!
+    consumerName: String!
     streamName: String!
   }
 `;
@@ -643,7 +643,7 @@ const subgraphStringB = `
   }
   
   input edfs__StreamConfiguration {
-    consumer: String!
+    consumerName: String!
     streamName: String!
   }
 `;
@@ -670,7 +670,7 @@ const subgraphStringC = `
   }
   
   input edfs__StreamConfiguration {
-    consumer: String!
+    consumerName: String!
     streamName: String!
   }
 `;
@@ -693,7 +693,7 @@ const subgraphC: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -716,7 +716,7 @@ const subgraphD: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -749,7 +749,7 @@ const subgraphE: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -772,7 +772,7 @@ const subgraphF: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -795,7 +795,7 @@ const subgraphG: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -823,7 +823,7 @@ const subgraphH: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -855,7 +855,7 @@ const subgraphI: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -885,7 +885,7 @@ const subgraphJ: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -916,7 +916,7 @@ const subgraphK: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -939,7 +939,7 @@ const subgraphL: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -962,7 +962,7 @@ const subgraphM: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -981,7 +981,7 @@ const subgraphN: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -1024,7 +1024,7 @@ const subgraphQ: Subgraph = {
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__subscribe(
         subjects: ["entities.{{ args.id }}"],
-        streamConfiguration: { consumer: "consumerName", consumer: "hello", invalidField: 1 }
+        streamConfiguration: { consumerName: "consumerName", consumerName: "hello", invalidField: 1 }
       )
     }
     
@@ -1033,7 +1033,7 @@ const subgraphQ: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -1052,7 +1052,7 @@ const subgraphR: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -1065,7 +1065,7 @@ const subgraphS: Subgraph = {
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__subscribe(
         subjects: ["entities.{{ args.id }}"],
-        streamConfiguration: { consumer: 1, streamName: "", }
+        streamConfiguration: { consumerName: 1, streamName: "", }
       )
     }
     
@@ -1074,7 +1074,7 @@ const subgraphS: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
@@ -1096,7 +1096,7 @@ const subgraphT: Subgraph = {
     }
     
     input edfs__StreamConfiguration {
-      consumer: String!
+      consumerName: String!
       streamName: String!
     }
   `),
