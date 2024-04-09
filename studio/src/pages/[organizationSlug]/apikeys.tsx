@@ -144,7 +144,7 @@ const CreateAPIKeyDialog = ({
       selectedFedGraphs.length === 0 &&
       selectedSubgraphs.length === 0
     ) {
-      setErrorMsg("Please select atleast one of the resource.");
+      setErrorMsg("Please select at least one of the resource.");
       return;
     }
 
@@ -196,6 +196,22 @@ const CreateAPIKeyDialog = ({
 
     return result;
   }, {});
+
+  // When rbac is enabled and this is the case for enterprise users
+  // you can only create an API key if you are an admin or have access to at least one federated graph or subgraph
+  if (
+    rbac &&
+    !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
+  ) {
+    return (
+      <Button disabled>
+        <div className="flex items-center gap-x-2">
+          <PlusIcon />
+          <span>New API key</span>
+        </div>
+      </Button>
+    );
+  }
 
   const groupedFederatedGraphs = federatedGraphs.reduce<
     Record<string, GetUserAccessibleResourcesResponse_Graph[]>
