@@ -300,12 +300,20 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				if err != nil {
 					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", ev.Type.String(), in.Id, err)
 				}
+				var streamConfiguration *pubsub_datasource.StreamConfiguration
+				if ev.StreamConfiguration != nil {
+					streamConfiguration = &pubsub_datasource.StreamConfiguration{
+						Consumer:   ev.StreamConfiguration.Consumer,
+						StreamName: ev.StreamConfiguration.StreamName,
+					}
+				}
 				events[ii] = pubsub_datasource.EventConfiguration{
-					FieldName:  ev.FieldName,
-					SourceName: ev.SourceName,
-					Topic:      ev.Topic,
-					Type:       eventType,
-					TypeName:   ev.TypeName,
+					FieldName:           ev.FieldName,
+					SourceName:          ev.SourceName,
+					StreamConfiguration: streamConfiguration,
+					Subjects:            ev.Subjects,
+					Type:                eventType,
+					TypeName:            ev.TypeName,
 				}
 			}
 

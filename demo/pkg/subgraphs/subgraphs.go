@@ -3,18 +3,18 @@ package subgraphs
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"log"
-	"net/http"
-	"os"
-	"strconv"
-
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"golang.org/x/sync/errgroup"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability"
@@ -180,6 +180,20 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 		"default": pubsub.NewNATSConnector(defaultConnection).New(ctx),
 		"my-nats": pubsub.NewNATSConnector(myNatsConnection).New(ctx),
 	}
+
+	js, err := jetstream.New(defaultConnection)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:     "streamName",
+		Subjects: []string{"employeeUpdated.>"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	var servers []*http.Server
 	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema(pubSubBySourceName)); srv != nil {
 		servers = append(servers, srv)
