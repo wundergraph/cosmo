@@ -303,7 +303,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				var streamConfiguration *pubsub_datasource.StreamConfiguration
 				if ev.StreamConfiguration != nil {
 					streamConfiguration = &pubsub_datasource.StreamConfiguration{
-						Consumer:   ev.StreamConfiguration.Consumer,
+						Consumer:   ev.StreamConfiguration.ConsumerName,
 						StreamName: ev.StreamConfiguration.StreamName,
 					}
 				}

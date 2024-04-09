@@ -1001,7 +1001,7 @@ export function invalidRootTypeFieldResponseTypesEventDrivenErrorMessage(
 
 export const invalidEventDrivenStreamConfigurationInputErrorMessage =
   `The "streamConfiguration" argument must be a valid input object with the following form:\n` +
-  `  input edfs__StreamConfiguration {\n    consumer: String!\n    streamName: String!\n  }`;
+  `  input edfs__StreamConfiguration {\n    consumerName: String!\n    streamName: String!\n  }`;
 
 export function invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
   missingRequiredFieldNames: string[],
@@ -1125,12 +1125,12 @@ export const invalidEdfsPublishResultObjectErrorMessage =
 export const undefinedStreamConfigurationInputErrorMessage =
   ` The input object "edfs__StreamConfiguration" must be defined in the event-driven graph to satisfy the` +
   `"@edfs__subscribe" directive.\n Define the following input in your event-driven graph:\n` +
-  `  input edfs__StreamConfiguration {\n   consumer: String!\n   streamName: String!\n  }`;
+  `  input edfs__StreamConfiguration {\n   consumerName: String!\n   streamName: String!\n  }`;
 
 export const invalidStreamConfigurationInputErrorMessage =
   ` The input object "edfs__StreamConfiguration" that was defined in the Event Driven graph is invalid and must` +
   ` instead have the following definition:\n  input edfs__StreamConfiguration {\n` +
-  `   consumer: String!\n   streamName: String!\n  }`;
+  `   consumerName: String!\n   streamName: String!\n  }`;
 
 export function invalidImplementedTypeError(
   typeName: string,

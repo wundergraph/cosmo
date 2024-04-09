@@ -128,7 +128,7 @@ import {
 } from '../errors/errors';
 import {
   AUTHENTICATED,
-  CONSUMER,
+  CONSUMER_NAME,
   DEFAULT,
   EDFS_PUBLISH,
   EDFS_REQUEST,
@@ -807,7 +807,7 @@ export class NormalizationFactory {
   ): EventConfiguration | undefined {
     const subjects: string[] = [];
     let sourceName = DEFAULT;
-    let consumer = '';
+    let consumerName = '';
     let streamName = '';
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
@@ -840,7 +840,7 @@ export class NormalizationFactory {
           }
           let isValid = true;
           const invalidFieldNames = new Set<string>();
-          const missingRequiredFieldNames = new Set<string>([CONSUMER, STREAM_NAME]);
+          const missingRequiredFieldNames = new Set<string>([CONSUMER_NAME, STREAM_NAME]);
           const duplicateRequiredFieldNames = new Set<string>();
           const invalidRequiredFieldNames = new Set<string>();
           for (const field of argumentNode.value.fields) {
@@ -863,8 +863,8 @@ export class NormalizationFactory {
               continue;
             }
             switch (fieldName) {
-              case CONSUMER:
-                consumer = field.value.value;
+              case CONSUMER_NAME:
+                consumerName = field.value.value;
                 break;
               case STREAM_NAME:
                 streamName = field.value.value;
@@ -892,7 +892,7 @@ export class NormalizationFactory {
       sourceName,
       subjects,
       type: SUBSCRIBE,
-      ...(consumer && streamName ? { streamConfiguration: { consumer, streamName } } : {}),
+      ...(consumerName && streamName ? { streamConfiguration: { consumerName: consumerName, streamName } } : {}),
     };
   }
 
@@ -1082,7 +1082,7 @@ export class NormalizationFactory {
     if (streamConfigurationInputData.inputValueDataByValueName.size != 2) {
       return false;
     }
-    const requiredInputValueNames = new Set<string>([CONSUMER, STREAM_NAME]);
+    const requiredInputValueNames = new Set<string>([CONSUMER_NAME, STREAM_NAME]);
     for (const [inputValueName, inputValueData] of streamConfigurationInputData.inputValueDataByValueName) {
       if (!requiredInputValueNames.has(inputValueName)) {
         return false;
