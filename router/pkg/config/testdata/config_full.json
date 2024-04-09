@@ -201,8 +201,7 @@
       "RejectExceedingRequests": true
     },
     "Storage": {
-      "Addr": "localhost:6379",
-      "Password": "test",
+      "Url": "redis://:test@localhost:6379",
       "KeyPrefix": "cosmo_rate_limit"
     },
     "Debug": false
