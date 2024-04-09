@@ -644,7 +644,8 @@ describe('Normalization tests', () => {
       }
       
       scalar openfed__FieldSet
-     `),
+     `,
+      ),
     );
   });
 
