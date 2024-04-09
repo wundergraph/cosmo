@@ -20,7 +20,7 @@ type Mutation {
 type Subscription {
     employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"])
     employeeUpdatedMyNats(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], sourceName: "my-nats")
-    employeeUpdatedStream(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumer: "consumerName", streamName: "streamName"})
+    employeeUpdatedStream(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName"})
 }
 
 type Employee @key(fields: "id", resolvable: false) {
@@ -32,6 +32,6 @@ type edfs__PublishResult {
 }
 
 input edfs__StreamConfiguration {
-    consumer: String!
+    consumerName: String!
     streamName: String!
 }
