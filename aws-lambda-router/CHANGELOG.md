@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.5.0...aws-lambda-router@0.6.0) (2024-04-09)
+
+### Features
+
+* support edfs subscription stream/consumer; multiple subjects ([#685](https://github.com/wundergraph/cosmo/issues/685)) ([c70b2ae](https://github.com/wundergraph/cosmo/commit/c70b2aefd39c45b5f98eae8a3c43f639d56064b2)) (@Aenimus)
+
 # [0.5.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.4.0...aws-lambda-router@0.5.0) (2024-03-24)
 
 ### Features
