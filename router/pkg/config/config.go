@@ -232,7 +232,7 @@ type RateLimitConfiguration struct {
 }
 
 type RedisConfiguration struct {
-	Url       string `yaml:"url,omitempty" default:"redis://localhost:6379" envconfig:"REDIS_URL"`
+	Url       string `yaml:"url,omitempty" default:"redis://localhost:6379" envconfig:"RATE_LIMIT_REDIS_URL"`
 	KeyPrefix string `yaml:"key_prefix,omitempty" default:"cosmo_rate_limit" envconfig:"RATE_LIMIT_REDIS_KEY_PREFIX"`
 }
 
