@@ -18,6 +18,7 @@ export class Authorization {
   /**
    * Authorize a user.
    * The function will check if the user has permissions to perform the action.
+   * It must be called after the user is authenticated and always before a federated graph or subgraph action.
    */
   public async authorize({
     headers,
@@ -33,31 +34,33 @@ export class Authorization {
     db: PostgresJsDatabase<typeof schema>;
     authContext: AuthContext;
   }) {
+    const { targetId, targetType } = graph;
+    const { userId, organizationId, isAdmin } = authContext;
+
+    const orgRepo = new OrganizationRepository(this.logger, db, this.defaultBillingPlanId);
+    const fedRepo = new FederatedGraphRepository(this.logger, db, organizationId);
+    const subgraphRepo = new SubgraphRepository(this.logger, db, organizationId);
+    const apiKeyRepo = new ApiKeyRepository(db);
+
+    const authorization = headers.get('authorization');
+    const token = authorization?.replace(/^bearer\s+/i, '');
+
+    /**
+     * We check if the organization has the rbac feature enabled.
+     * If it is not enabled, we return because the user is authorized to perform all the actions.
+     * This only works because we validate before if the user has write access to the organization.
+     * @TODO: Move hasWriteAccess check to the Authorization service.
+     */
+    const rbacEnabled = await orgRepo.isFeatureEnabled(organizationId, 'rbac');
+    if (!rbacEnabled) {
+      return;
+    }
+
     try {
-      const { targetId, targetType } = graph;
-      const { userId, organizationId, isAdmin } = authContext;
-
-      const orgRepo = new OrganizationRepository(this.logger, db, this.defaultBillingPlanId);
-      const fedRepo = new FederatedGraphRepository(this.logger, db, organizationId);
-      const subgraphRepo = new SubgraphRepository(this.logger, db, organizationId);
-      const apiKeyRepo = new ApiKeyRepository(db);
-
-      const authorization = headers.get('authorization');
-      const token = authorization?.replace(/^bearer\s+/i, '');
-
-      const organization = await orgRepo.byId(organizationId);
-      if (!organization) {
-        throw new Error('Organization not found');
-      }
-
-      // checking if rbac is enabled, if not return
-      const rbacEnabled = await orgRepo.isFeatureEnabled(organization.id, 'rbac');
-      if (!rbacEnabled) {
-        return;
-      }
-
-      // we verify the permissions of the api key only if rbac is enabled
-      // first dealing with api keys
+      /**
+       * If the user is using an API key, we verify if the API key has access to the resource.
+       * We only do this because RBAC is enabled otherwise the key is handled as an admin key.
+       */
       if (token && token.startsWith('cosmo')) {
         const verified = await apiKeyRepo.verifyAPIKeyResources({ apiKey: token, accessedTargetId: targetId });
         if (verified) {
@@ -67,28 +70,40 @@ export class Authorization {
         }
       }
 
-      // an admin is authorized to perform all the actions
+      /**
+       * An admin is authorized to perform all the actions even if RBAC is enabled.
+       */
       if (isAdmin) {
         return;
       }
 
+      /**
+       * We check if the user has access to the resource.
+       */
+
       if (targetType === 'federatedGraph') {
         const fedGraph = await fedRepo.byTargetId(targetId);
         if (!(fedGraph?.creatorUserId && fedGraph.creatorUserId === userId)) {
-          throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'Not authorized');
+          throw new Error('User is not authorized to perform the current action in the federated graph');
         }
-      } else {
+      } else if (targetType === 'subgraph') {
         const subgraph = await subgraphRepo.byTargetId(targetId);
         const subgraphMembers = await subgraphRepo.getSubgraphMembersByTargetId(targetId);
         const userIds = subgraphMembers.map((s) => s.userId);
 
         if (!((subgraph?.creatorUserId && subgraph.creatorUserId === userId) || userIds.includes(userId))) {
-          throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'Not authorized');
+          throw new Error(
+            'User is not authorized to perform the current action in the federated graph because the user is not a member of the subgraph',
+          );
         }
+      } else {
+        throw new Error('User is not authorized to perform the current action as the target type is not supported');
       }
-    } catch {
+    } catch (err: any) {
+      this.logger.error(err, 'User is not authorized to perform the current action as RBAC is enabled.');
+
       throw new AuthorizationError(
-        EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+        EnumStatusCode.ERROR_NOT_AUTHORIZED,
         'You are not authorized to perform the current action as RBAC is enabled. Please communicate with the organization admin to gain access.',
       );
     }

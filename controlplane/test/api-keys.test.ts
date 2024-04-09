@@ -17,36 +17,60 @@ describe('API Keys', (ctx) => {
   });
 
   test('Should be able to create and delete a api key', async (testContext) => {
-    const { client, userTestData, server } = await SetupTest({ dbname });
+    const { client, users, server } = await SetupTest({ dbname });
 
     let response: CreateAPIKeyResponse;
-    response = await client.createAPIKey({ name: uid(8), expires: ExpiresAt.NEVER, userID: userTestData.userId });
+    response = await client.createAPIKey({
+      name: uid(8),
+      expires: ExpiresAt.NEVER,
+      userID: users.adminAliceCompanyA.userId,
+    });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    response = await client.createAPIKey({ name: uid(8), expires: ExpiresAt.THIRTY_DAYS, userID: userTestData.userId });
+    response = await client.createAPIKey({
+      name: uid(8),
+      expires: ExpiresAt.THIRTY_DAYS,
+      userID: users.adminAliceCompanyA.userId,
+    });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    response = await client.createAPIKey({ name: uid(8), expires: ExpiresAt.SIX_MONTHS, userID: userTestData.userId });
+    response = await client.createAPIKey({
+      name: uid(8),
+      expires: ExpiresAt.SIX_MONTHS,
+      userID: users.adminAliceCompanyA.userId,
+    });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    response = await client.createAPIKey({ name: uid(8), expires: ExpiresAt.ONE_YEAR, userID: userTestData.userId });
+    response = await client.createAPIKey({
+      name: uid(8),
+      expires: ExpiresAt.ONE_YEAR,
+      userID: users.adminAliceCompanyA.userId,
+    });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
     // test to check that 2 api keys cant have the same name
-    response = await client.createAPIKey({ name: 'test', expires: ExpiresAt.ONE_YEAR, userID: userTestData.userId });
+    response = await client.createAPIKey({
+      name: 'test',
+      expires: ExpiresAt.ONE_YEAR,
+      userID: users.adminAliceCompanyA.userId,
+    });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    response = await client.createAPIKey({ name: 'test', expires: ExpiresAt.ONE_YEAR, userID: userTestData.userId });
+    response = await client.createAPIKey({
+      name: 'test',
+      expires: ExpiresAt.ONE_YEAR,
+      userID: users.adminAliceCompanyA.userId,
+    });
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
 
     // test when api key name is wrong
     response = await client.createAPIKey({
       name: 'a'.repeat(100),
       expires: ExpiresAt.NEVER,
-      userID: userTestData.userId,
+      userID: users.adminAliceCompanyA.userId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
     response = await client.createAPIKey({
       name: '',
       expires: ExpiresAt.NEVER,
-      userID: userTestData.userId,
+      userID: users.adminAliceCompanyA.userId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
