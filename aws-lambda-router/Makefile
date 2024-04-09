@@ -33,3 +33,8 @@ sync:
 
 create-lambda-zip: build fetch-router-config
 	zip -r lambda.zip bootstrap router.json
+
+bump-deps:
+	go get github.com/wundergraph/cosmo/router@upgrade
+	go mod tidy
+	cd .. && go work sync
