@@ -936,8 +936,8 @@ export function orScopesLimitError(maxOrScopes: number, hostPaths: string[]): Er
 
 export function invalidEventDrivenGraphError(errorMessages: string[]): Error {
   return new Error(
-    `An "Event Driven" graph—a subgraph that defines event driven directives ("@eventsPublish", "@eventsRequest", and` +
-      ` "@eventsPublish")—must not define any resolvers. Consequently, any "@key" definitions must also include the` +
+    `An "Event Driven" graph—a subgraph that defines event driven directives ("@edfs__publish", "@edfs__request", and` +
+      ` "@edfs__publish")—must not define any resolvers. Consequently, any "@key" definitions must also include the` +
       ` "resolvable: false" argument. Moreover, only fields that compose part of an entity's (composite) key and are` +
       ` declared "@external" are permitted.\n` +
       errorMessages.join('\n'),
@@ -949,8 +949,8 @@ export function invalidRootTypeFieldEventsDirectivesErrorMessage(
 ): string {
   let message =
     ` Root type fields defined in an Event Driven graph must define a valid events` +
-    ` directive:\n  Mutation type fields must define either "@eventsPublish" or "@eventsRequest"\n` +
-    `  Query type fields must define "@eventsRequest"\n  Subscription type fields must define "@eventsSubscribe"\n` +
+    ` directive:\n  Mutation type fields must define either "@edfs__publish" or "@edfs__request"\n` +
+    `  Query type fields must define "@edfs__request"\n  Subscription type fields must define "@edfs__subscribe"\n` +
     ` The following root field path` +
     (invalidEventsDirectiveDataByRootFieldPath.size > 1 ? 's are' : ' is') +
     `invalid:\n`;
@@ -969,12 +969,12 @@ export function invalidRootTypeFieldEventsDirectivesErrorMessage(
   return message;
 }
 
-export function invalidEventsDrivenMutationResponseTypeErrorMessage(
+export function invalidEventDrivenMutationResponseTypeErrorMessage(
   invalidResponseTypeStringByMutationPath: Map<string, string>,
 ): string {
   let message =
     ` Mutation type fields defined in an Event Driven graph must return the non-nullable type` +
-    ` "PublishEventResult!", which has the following definition:\n  type PublishEventResult {\n` +
+    ` "edfs__PublishResult!", which has the following definition:\n  type edfs__PublishResult {\n` +
     `   success: Boolean!\n  }\n However, the following mutation field path` +
     (invalidResponseTypeStringByMutationPath.size > 1 ? `s are` : ` is`) +
     ` invalid:\n`;
@@ -996,6 +996,62 @@ export function invalidRootTypeFieldResponseTypesEventDrivenErrorMessage(
   for (const [fieldPath, responseTypeString] of invalidResponseTypeStringByRootFieldPath) {
     message += `  The root field path "${fieldPath}", which returns the invalid type "${responseTypeString}"\n`;
   }
+  return message;
+}
+
+export const invalidEventDrivenStreamConfigurationInputErrorMessage =
+  `The "streamConfiguration" argument must be a valid input object with the following form:\n` +
+  `  input edfs__StreamConfiguration {\n    consumer: String!\n    streamName: String!\n  }`;
+
+export function invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
+  missingRequiredFieldNames: string[],
+  duplicateRequiredFieldNames: string[],
+  invalidRequiredFieldNames: string[],
+  invalidFieldNames: string[],
+): string {
+  let message = invalidEventDrivenStreamConfigurationInputErrorMessage;
+  const errorMessages: string[] = [];
+  if (missingRequiredFieldNames.length > 0) {
+    errorMessages.push(
+      `The following required field` +
+        (missingRequiredFieldNames.length > 1 ? `s were` : ` was`) +
+        ` not defined: "` +
+        missingRequiredFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (duplicateRequiredFieldNames.length > 0) {
+    errorMessages.push(
+      `The following required field` +
+        (duplicateRequiredFieldNames.length > 1 ? `s were` : ` was`) +
+        ` defined more than once: "` +
+        duplicateRequiredFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (invalidRequiredFieldNames.length > 0) {
+    errorMessages.push(
+      `The following required field` +
+        (invalidRequiredFieldNames.length > 1 ? `s were` : ` was`) +
+        ` not type "String!" with a minimum length of 1: "` +
+        invalidRequiredFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  if (invalidFieldNames.length > 0) {
+    errorMessages.push(
+      `The following field` +
+        (invalidFieldNames.length > 1 ? `s are` : ` is`) +
+        ` not part of a valid "edfs__StreamConfiguration" input definition: "` +
+        invalidFieldNames.join(QUOTATION_JOIN) +
+        `".`,
+    );
+  }
+  message +=
+    `\n However, the provided input was invalid for the following reason` +
+    (errorMessages.length > 1 ? `s` : ``) +
+    `:\n  ` +
+    errorMessages.join(`\n  `);
   return message;
 }
 
@@ -1062,9 +1118,19 @@ export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames:
   );
 }
 
-export const invalidPublishEventResultObjectErrorMessage =
-  ` The object "PublishEventResult" that was defined in the Event Driven graph is invalid and must instead have` +
-  ` the following definition:\n  type PublishEventResult {\n   success: Boolean!\n  }`;
+export const invalidEdfsPublishResultObjectErrorMessage =
+  ` The object "edfs__PublishResult" that was defined in the Event Driven graph is invalid and must instead have` +
+  ` the following definition:\n  type edfs__PublishResult {\n   success: Boolean!\n  }`;
+
+export const undefinedStreamConfigurationInputErrorMessage =
+  ` The input object "edfs__StreamConfiguration" must be defined in the event-driven graph to satisfy the` +
+  `"@edfs__subscribe" directive.\n Define the following input in your event-driven graph:\n` +
+  `  input edfs__StreamConfiguration {\n   consumer: String!\n   streamName: String!\n  }`;
+
+export const invalidStreamConfigurationInputErrorMessage =
+  ` The input object "edfs__StreamConfiguration" that was defined in the Event Driven graph is invalid and must` +
+  ` instead have the following definition:\n  input edfs__StreamConfiguration {\n` +
+  `   consumer: String!\n   streamName: String!\n  }`;
 
 export function invalidImplementedTypeError(
   typeName: string,
@@ -1083,4 +1149,24 @@ export function invalidImplementedTypeError(
 
 export function selfImplementationError(typeName: string): Error {
   return new Error(` The interface "${typeName}" must not implement itself.`);
+}
+
+export const invalidEventSubjectErrorMessage = `The "subject" argument must be string with a minimum length of one.`;
+
+export const invalidEventSubjectsErrorMessage = `The "subjects" argument must be a list of strings.`;
+
+export const invalidEventSubjectsItemErrorMessage =
+  `Each item in the "subjects" argument list must be a string with a minimum length of one.` +
+  ` However, at least one value provided in the list was invalid.`;
+
+export const invalidEventSourceNameErrorMessage = `If explicitly defined, the "sourceName" argument must be a string with a minimum length of one.`;
+
+export function invalidEventDirectiveError(directiveName: string, fieldPath: string, errorMessages: string[]): Error {
+  return new Error(
+    `The event directive "${directiveName}" declared on "${fieldPath}" is invalid for the following` +
+      ` reason` +
+      (errorMessages.length > 1 ? `s` : ``) +
+      `:\n ` +
+      errorMessages.join(`\n `),
+  );
 }

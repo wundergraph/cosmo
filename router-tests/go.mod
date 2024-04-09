@@ -20,7 +20,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/router v0.0.0-20240328090455-8aa618e478fe
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.16
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.18
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/sdk/metric v1.24.0

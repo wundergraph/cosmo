@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"io"
 	"net"
 	"net/http"
@@ -315,6 +316,11 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK)
 		}
+	case errorTypeEDFSNats:
+		response.Errors[0].Message = fmt.Sprintf("EDFS NATS error: %s", err.Error())
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusInternalServerError)
+		}
 	}
 	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
 		traceNode := resolve.GetTrace(ctx.Context(), res.Data)
@@ -346,6 +352,7 @@ const (
 	errorTypeContextCanceled
 	errorTypeContextTimeout
 	errorTypeUpgradeFailed
+	errorTypeEDFSNats
 )
 
 func (h *GraphQLHandler) errorType(err error) errorType {
@@ -367,6 +374,10 @@ func (h *GraphQLHandler) errorType(err error) errorType {
 		if nErr.Timeout() {
 			return errorTypeContextTimeout
 		}
+	}
+	var edfsErr *pubsub.EDFSNatsError
+	if errors.As(err, &edfsErr) {
+		return errorTypeEDFSNats
 	}
 	return errorTypeUnknown
 }

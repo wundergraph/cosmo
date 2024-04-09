@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
@@ -138,11 +139,27 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		t.Fatalf("could not get free port: %s", err)
 	}
 
+	// create dir in tmp for nats server
+	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
+	err = os.MkdirAll(natsDir, os.ModePerm)
+	if err != nil {
+		t.Fatalf("could not create nats dir: %s", err)
+	}
+
+	t.Cleanup(func() {
+		err := os.RemoveAll(natsDir)
+		if err != nil {
+			panic(fmt.Errorf("could not remove temporary nats directory, %w", err))
+		}
+	})
+
 	opts := natsserver.Options{
-		Host:   "localhost",
-		Port:   natsPort,
-		NoLog:  true,
-		NoSigs: true,
+		Host:      "localhost",
+		NoLog:     true,
+		NoSigs:    true,
+		JetStream: true,
+		Port:      natsPort,
+		StoreDir:  natsDir,
 	}
 
 	natsServer := natstest.RunServer(&opts)

@@ -12,7 +12,7 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.10
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
 	github.com/wundergraph/cosmo/router v0.0.0-20240325103441-b6688db6f396
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.16
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.18
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1

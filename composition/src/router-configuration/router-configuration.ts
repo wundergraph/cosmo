@@ -1,10 +1,16 @@
 export type EventType = 'subscribe' | 'publish' | 'request';
 
+export type StreamConfiguration = {
+  consumer: string;
+  streamName: string;
+};
+
 export type EventConfiguration = {
   fieldName: string;
   sourceName: string;
-  topic: string;
+  subjects: string[];
   type: EventType;
+  streamConfiguration?: StreamConfiguration;
 };
 
 export type FieldConfiguration = {

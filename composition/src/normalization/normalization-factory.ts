@@ -43,6 +43,7 @@ import {
   BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
   BASE_DIRECTIVE_DEFINITIONS,
   BASE_SCALARS,
+  EVENT_DRIVEN_DIRECTIVE_DEFINITIONS,
   FIELD_SET_SCALAR_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
   VERSION_TWO_DIRECTIVE_DEFINITIONS,
@@ -83,20 +84,27 @@ import {
   expectedEntityError,
   incompatibleExtensionError,
   incompatibleExtensionKindsError,
-  incompatibleParentKindFatalError,
   invalidArgumentsError,
   invalidDirectiveArgumentTypeErrorMessage,
   invalidDirectiveError,
+  invalidEventDirectiveError,
   invalidEventDrivenGraphError,
-  invalidEventsDrivenMutationResponseTypeErrorMessage,
+  invalidEventDrivenMutationResponseTypeErrorMessage,
+  invalidEventDrivenStreamConfigurationInputErrorMessage,
+  invalidEventDrivenStreamConfigurationInputFieldsErrorMessage,
+  invalidEventSourceNameErrorMessage,
+  invalidEventSubjectErrorMessage,
+  invalidEventSubjectsErrorMessage,
+  invalidEventSubjectsItemErrorMessage,
   invalidImplementedTypeError,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
-  invalidPublishEventResultObjectErrorMessage,
+  invalidEdfsPublishResultObjectErrorMessage,
   invalidRootTypeDefinitionError,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
+  invalidStreamConfigurationInputErrorMessage,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
   noBaseTypeExtensionError,
@@ -113,19 +121,22 @@ import {
   subgraphValidationFailureError,
   undefinedObjectLikeParentError,
   undefinedRequiredArgumentsErrorMessage,
+  undefinedStreamConfigurationInputErrorMessage,
   undefinedTypeError,
-  unexpectedDirectiveArgumentErrorMessage,
   unexpectedKindFatalError,
   unimplementedInterfaceFieldsError,
 } from '../errors/errors';
 import {
   AUTHENTICATED,
+  CONSUMER,
   DEFAULT,
+  EDFS_PUBLISH,
+  EDFS_REQUEST,
+  EDFS_SUBSCRIBE,
+  EDFS_PUBLISH_RESULT,
+  EDFS_STREAM_CONFIGURATION,
   ENTITIES_FIELD,
   EVENT_DIRECTIVE_NAMES,
-  EVENTS_PUBLISH,
-  EVENTS_REQUEST,
-  EVENTS_SUBSCRIBE,
   EXTENDS,
   EXTERNAL,
   FIELDS,
@@ -134,12 +145,11 @@ import {
   MUTATION,
   N_A,
   NON_NULLABLE_BOOLEAN,
-  NON_NULLABLE_PUBLISH_EVENT_RESULT,
+  NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
+  NON_NULLABLE_STRING,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
-  PARENT_DEFINITION_DATA,
   PUBLISH,
-  PUBLISH_EVENT_RESULT,
   QUERY,
   REQUEST,
   REQUIRES_SCOPES,
@@ -148,10 +158,14 @@ import {
   SCOPES,
   SERVICE_FIELD,
   SOURCE_NAME,
+  STREAM_CONFIGURATION,
+  STREAM_CONFIGURATION_FIELD_NAMES,
+  STREAM_NAME,
+  SUBJECT,
+  SUBJECTS,
   SUBSCRIBE,
   SUBSCRIPTION,
   SUCCESS,
-  TOPIC,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, EventConfiguration, EventType } from '../router-configuration/router-configuration';
@@ -754,62 +768,175 @@ export class NormalizationFactory {
     overriddenFieldNamesForParent.add(this.childName);
   }
 
+  getEventPublishAndRequestConfiguration(
+    eventType: EventType,
+    directive: ConstDirectiveNode,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
+    const subjects: string[] = [];
+    let sourceName = DEFAULT;
+    for (const argumentNode of directive.arguments || []) {
+      switch (argumentNode.name.value) {
+        case SUBJECT: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventSubjectErrorMessage);
+            continue;
+          }
+          subjects.push(argumentNode.value.value);
+          break;
+        }
+        case SOURCE_NAME: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventSourceNameErrorMessage);
+            continue;
+          }
+          sourceName = argumentNode.value.value;
+          break;
+        }
+      }
+    }
+    if (errorMessages.length > 0) {
+      return;
+    }
+    return { fieldName: this.childName, sourceName, subjects, type: eventType };
+  }
+
+  getEventSubscribeConfiguration(
+    directive: ConstDirectiveNode,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
+    const subjects: string[] = [];
+    let sourceName = DEFAULT;
+    let consumer = '';
+    let streamName = '';
+    for (const argumentNode of directive.arguments || []) {
+      switch (argumentNode.name.value) {
+        case SUBJECTS: {
+          if (argumentNode.value.kind !== Kind.LIST) {
+            errorMessages.push(invalidEventSubjectsErrorMessage);
+            continue;
+          }
+          for (const value of argumentNode.value.values) {
+            if (value.kind !== Kind.STRING || value.value.length < 1) {
+              errorMessages.push(invalidEventSubjectsItemErrorMessage);
+              break;
+            }
+            subjects.push(value.value);
+          }
+          break;
+        }
+        case SOURCE_NAME: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventSourceNameErrorMessage);
+            continue;
+          }
+          sourceName = argumentNode.value.value;
+          break;
+        }
+        case STREAM_CONFIGURATION: {
+          if (argumentNode.value.kind !== Kind.OBJECT || argumentNode.value.fields.length < 1) {
+            errorMessages.push(invalidEventDrivenStreamConfigurationInputErrorMessage);
+            continue;
+          }
+          let isValid = true;
+          const invalidFieldNames = new Set<string>();
+          const missingRequiredFieldNames = new Set<string>([CONSUMER, STREAM_NAME]);
+          const duplicateRequiredFieldNames = new Set<string>();
+          const invalidRequiredFieldNames = new Set<string>();
+          for (const field of argumentNode.value.fields) {
+            const fieldName = field.name.value;
+            if (!STREAM_CONFIGURATION_FIELD_NAMES.has(fieldName)) {
+              invalidFieldNames.add(fieldName);
+              isValid = false;
+              continue;
+            }
+            if (missingRequiredFieldNames.has(fieldName)) {
+              missingRequiredFieldNames.delete(fieldName);
+            } else {
+              duplicateRequiredFieldNames.add(fieldName);
+              isValid = false;
+              continue;
+            }
+            if (field.value.kind !== Kind.STRING || field.value.value.length < 1) {
+              invalidRequiredFieldNames.add(fieldName);
+              isValid = false;
+              continue;
+            }
+            switch (fieldName) {
+              case CONSUMER:
+                consumer = field.value.value;
+                break;
+              case STREAM_NAME:
+                streamName = field.value.value;
+                break;
+            }
+          }
+          if (!isValid || missingRequiredFieldNames.size > 0) {
+            errorMessages.push(
+              invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
+                [...missingRequiredFieldNames],
+                [...duplicateRequiredFieldNames],
+                [...invalidRequiredFieldNames],
+                [...invalidFieldNames],
+              ),
+            );
+          }
+        }
+      }
+    }
+    if (errorMessages.length > 0) {
+      return;
+    }
+    return {
+      fieldName: this.childName,
+      sourceName,
+      subjects,
+      type: SUBSCRIBE,
+      ...(consumer && streamName ? { streamConfiguration: { consumer, streamName } } : {}),
+    };
+  }
+
   extractEventDirectivesToConfiguration(node: FieldDefinitionNode) {
     // Validation is handled elsewhere
     if (!node.directives) {
       return;
     }
+    const fieldPath = `${this.renamedParentTypeName || this.originalParentTypeName}.${this.childName}`;
     for (const directive of node.directives) {
-      let eventType: EventType;
+      const errorMessages: string[] = [];
+      let eventConfiguration: EventConfiguration | undefined;
       switch (directive.name.value) {
-        case EVENTS_PUBLISH: {
-          eventType = PUBLISH;
+        case EDFS_PUBLISH: {
+          eventConfiguration = this.getEventPublishAndRequestConfiguration(PUBLISH, directive, errorMessages);
           break;
         }
-        case EVENTS_REQUEST: {
-          eventType = REQUEST;
+        case EDFS_REQUEST: {
+          eventConfiguration = this.getEventPublishAndRequestConfiguration(REQUEST, directive, errorMessages);
           break;
         }
-        case EVENTS_SUBSCRIBE: {
-          eventType = SUBSCRIBE;
+        case EDFS_SUBSCRIBE: {
+          eventConfiguration = this.getEventSubscribeConfiguration(directive, errorMessages);
           break;
         }
         default:
           continue;
       }
-      let topic: string | undefined;
-      let sourceName: string | undefined;
-      for (const argumentNode of directive.arguments || []) {
-        if (argumentNode.value.kind !== Kind.STRING) {
-          continue;
-        }
-        switch (argumentNode.name.value) {
-          case TOPIC: {
-            topic = argumentNode.value.value;
-            break;
-          }
-          case SOURCE_NAME: {
-            sourceName = argumentNode.value.value;
-            break;
-          }
-        }
+
+      if (errorMessages.length > 0) {
+        this.errors.push(invalidEventDirectiveError(directive.name.value, fieldPath, errorMessages));
+        continue;
       }
 
-      if (!topic) {
-        return;
+      // should never happen
+      if (!eventConfiguration) {
+        continue;
       }
 
-      const configuration = getValueOrDefault(
+      getValueOrDefault(
         this.eventsConfigurations,
         this.renamedParentTypeName || this.originalParentTypeName,
         () => [],
-      );
-      configuration.push({
-        type: eventType,
-        fieldName: this.childName,
-        topic,
-        sourceName: sourceName || DEFAULT,
-      });
+      ).push(eventConfiguration);
     }
   }
 
@@ -818,22 +945,22 @@ export class NormalizationFactory {
     if (!operationTypeNode) {
       switch (parentTypeName) {
         case MUTATION:
-          return new Set<string>([EVENTS_PUBLISH, EVENTS_REQUEST]);
+          return new Set<string>([EDFS_PUBLISH, EDFS_REQUEST]);
         case QUERY:
-          return new Set<string>([EVENTS_REQUEST]);
+          return new Set<string>([EDFS_REQUEST]);
         case SUBSCRIPTION:
-          return new Set<string>([EVENTS_SUBSCRIBE]);
+          return new Set<string>([EDFS_SUBSCRIBE]);
         default:
           return;
       }
     }
     switch (operationTypeNode) {
       case OperationTypeNode.MUTATION:
-        return new Set<string>([EVENTS_REQUEST, EVENTS_PUBLISH]);
+        return new Set<string>([EDFS_REQUEST, EDFS_PUBLISH]);
       case OperationTypeNode.QUERY:
-        return new Set<string>([EVENTS_REQUEST]);
+        return new Set<string>([EDFS_REQUEST]);
       case OperationTypeNode.SUBSCRIPTION:
-        return new Set<string>([EVENTS_SUBSCRIBE]);
+        return new Set<string>([EDFS_SUBSCRIBE]);
       default:
         return;
     }
@@ -846,7 +973,7 @@ export class NormalizationFactory {
     invalidResponseTypeStringByRootFieldPath: Map<string, string>,
     invalidResponseTypeNameByMutationPath: Map<string, string>,
   ) {
-    const isMutation = validEventsDirectiveNames.has(EVENTS_PUBLISH);
+    const isMutation = validEventsDirectiveNames.has(EDFS_PUBLISH);
     for (const [fieldName, fieldData] of data.fieldDataByFieldName) {
       const fieldPath = `${fieldData.originalParentTypeName}.${fieldName}`;
       const definedEventsDirectiveNames = new Set<string>();
@@ -869,7 +996,7 @@ export class NormalizationFactory {
       }
       if (isMutation) {
         const typeString = printTypeNode(fieldData.type);
-        if (typeString !== NON_NULLABLE_PUBLISH_EVENT_RESULT) {
+        if (typeString !== NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT) {
           invalidResponseTypeNameByMutationPath.set(fieldPath, typeString);
         }
         continue;
@@ -923,8 +1050,8 @@ export class NormalizationFactory {
     }
   }
 
-  isPublishEventResultValid(): boolean {
-    const data = this.parentDefinitionDataByTypeName.get(PUBLISH_EVENT_RESULT);
+  isEdfsPublishResultValid(): boolean {
+    const data = this.parentDefinitionDataByTypeName.get(EDFS_PUBLISH_RESULT);
     if (!data) {
       return true;
     }
@@ -946,6 +1073,26 @@ export class NormalizationFactory {
       }
     }
     return true;
+  }
+
+  isStreamConfigurationInputObjectValid(streamConfigurationInputData: ParentDefinitionData): boolean {
+    if (streamConfigurationInputData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+      return false;
+    }
+    if (streamConfigurationInputData.inputValueDataByValueName.size != 2) {
+      return false;
+    }
+    const requiredInputValueNames = new Set<string>([CONSUMER, STREAM_NAME]);
+    for (const [inputValueName, inputValueData] of streamConfigurationInputData.inputValueDataByValueName) {
+      if (!requiredInputValueNames.has(inputValueName)) {
+        return false;
+      }
+      requiredInputValueNames.delete(inputValueName);
+      if (printTypeNode(inputValueData.type) !== NON_NULLABLE_STRING) {
+        return false;
+      }
+    }
+    return requiredInputValueNames.size < 1;
   }
 
   validateEventDrivenSubgraph() {
@@ -988,11 +1135,11 @@ export class NormalizationFactory {
       );
     }
     for (const [typeName, data] of this.parentDefinitionDataByTypeName) {
-      if (data.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+      // validate edfs__PublishResult and edfs__StreamConfiguration separately
+      if (typeName === EDFS_PUBLISH_RESULT || typeName === EDFS_STREAM_CONFIGURATION) {
         continue;
       }
-      // validate PublishEventResult separately
-      if (typeName === PUBLISH_EVENT_RESULT) {
+      if (data.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         continue;
       }
       // If a required events directive is returned, the parent type is a root type
@@ -1020,14 +1167,20 @@ export class NormalizationFactory {
         nonKeyFieldNameByFieldPath,
       );
     }
-    if (!this.isPublishEventResultValid()) {
-      errorMessages.push(invalidPublishEventResultObjectErrorMessage);
+    if (!this.isEdfsPublishResultValid()) {
+      errorMessages.push(invalidEdfsPublishResultObjectErrorMessage);
+    }
+    const streamConfigurationInputData = this.parentDefinitionDataByTypeName.get(EDFS_STREAM_CONFIGURATION);
+    if (!streamConfigurationInputData) {
+      errorMessages.push(undefinedStreamConfigurationInputErrorMessage);
+    } else if (!this.isStreamConfigurationInputObjectValid(streamConfigurationInputData)) {
+      errorMessages.push(invalidStreamConfigurationInputErrorMessage);
     }
     if (invalidEventsDirectiveDataByRootFieldPath.size > 0) {
       errorMessages.push(invalidRootTypeFieldEventsDirectivesErrorMessage(invalidEventsDirectiveDataByRootFieldPath));
     }
     if (invalidResponseTypeNameByMutationPath.size > 0) {
-      errorMessages.push(invalidEventsDrivenMutationResponseTypeErrorMessage(invalidResponseTypeNameByMutationPath));
+      errorMessages.push(invalidEventDrivenMutationResponseTypeErrorMessage(invalidResponseTypeNameByMutationPath));
     }
     if (invalidResponseTypeStringByRootFieldPath.size > 0) {
       errorMessages.push(
@@ -1116,6 +1269,11 @@ export class NormalizationFactory {
         this.directiveDefinitionByDirectiveName.set(directiveDefinition.name.value, directiveDefinition);
       }
       definitions.push(SCOPE_SCALAR_DEFINITION);
+    }
+    if (this.isEventDrivenSubgraph) {
+      for (const directiveDefinition of EVENT_DRIVEN_DIRECTIVE_DEFINITIONS) {
+        definitions.push(directiveDefinition);
+      }
     }
     for (const directiveDefinition of this.customDirectiveDefinitions.values()) {
       definitions.push(directiveDefinition);
