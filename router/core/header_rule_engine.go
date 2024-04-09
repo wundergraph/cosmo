@@ -77,7 +77,6 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 	for _, rule := range requestRules {
 		// Forwards the matching client request header to the upstream
 		if rule.Operation == config.HeaderRuleOperationPropagate {
-
 			// Rename the header
 			if rule.Rename != "" {
 				value := ctx.Request().Header.Get(rule.Named)

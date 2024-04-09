@@ -86,7 +86,7 @@ func TestReNamedPropagateHeaderRule(t *testing.T) {
 	assert.Empty(t, updatedClientReq.Header.Get("X-Test-2"))
 }
 
-func TestReNamedMatichingPropagateHeaderRule(t *testing.T) {
+func TestReNamedMatchingPropagateHeaderRule(t *testing.T) {
 
 	ht, err := NewHeaderTransformer(config.HeaderRules{
 		All: config.GlobalHeaderRule{
@@ -126,8 +126,8 @@ func TestReNamedMatichingPropagateHeaderRule(t *testing.T) {
 
 	assert.Equal(t, "default", updatedClientReq.Header.Get("X-Test-Renamed-1"))
 	assert.Empty(t, updatedClientReq.Header.Get("X-Test-Renamed-2"))
-	assert.Empty(t, updatedClientReq.Header.Get("X-Test-1"))
-	assert.Empty(t, updatedClientReq.Header.Get("X-Test-2"))
+	assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-1"))
+	assert.Equal(t, "test2", updatedClientReq.Header.Get("X-Test-2"))
 }
 
 func TestRegexPropagateHeaderRule(t *testing.T) {
