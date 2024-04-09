@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.81.0](https://github.com/wundergraph/cosmo/compare/router@0.80.0...router@0.81.0) (2024-04-09)
+
+### Features
+
+* support Redis connection strings in router ([#697](https://github.com/wundergraph/cosmo/issues/697)) ([f7793c5](https://github.com/wundergraph/cosmo/commit/f7793c58ad7a8024d07c1a287bbe9a2b1c58846f)) (@akoenig)
+
 # [0.80.0](https://github.com/wundergraph/cosmo/compare/router@0.79.2...router@0.80.0) (2024-04-09)
 
 ### Features
