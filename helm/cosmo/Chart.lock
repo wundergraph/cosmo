@@ -25,12 +25,12 @@ dependencies:
   version: 17.3.1
 - name: clickhouse
   repository: https://charts.bitnami.com/bitnami
-  version: 5.2.2
+  version: 5.0.2
 - name: minio
   repository: https://charts.bitnami.com/bitnami
   version: 12.10.0
 - name: redis
   repository: https://charts.bitnami.com/bitnami
   version: 18.9.1
-digest: sha256:291a7e0532b0ca98e7d040d36b794910d658de3184f7b06c4292f387d610b60a
-generated: "2024-04-10T10:24:34.111092+02:00"
+digest: sha256:80b32cdc61e0ac9d64f291afdcfb8efa1bfbf985db686d779fbd1bfe97b1949d
+generated: "2024-04-10T10:52:54.566097+02:00"

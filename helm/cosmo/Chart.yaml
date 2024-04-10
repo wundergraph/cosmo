@@ -61,7 +61,7 @@ dependencies:
     repository: 'https://charts.bitnami.com/bitnami'
     condition: global.keycloak.enabled
   - name: clickhouse
-    version: '5.2.2'
+    version: '5.0.2'
     condition: global.clickhouse.enabled
     repository: 'https://charts.bitnami.com/bitnami'
   - name: minio
