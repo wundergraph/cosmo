@@ -159,7 +159,7 @@ describe('Webhooks', (ctx) => {
     });
 
     if (!jimGraph.graph) {
-      throw new Error('Bob Graph could not be found');
+      throw new Error('Jim Graph could not be found');
     }
 
     expect(jimGraph.response?.code).toBe(EnumStatusCode.OK);
@@ -230,7 +230,7 @@ describe('Webhooks', (ctx) => {
     });
 
     if (!jimGraph.graph) {
-      throw new Error('Bob Graph could not be found');
+      throw new Error('Jim Graph could not be found');
     }
 
     expect(jimGraph.response?.code).toBe(EnumStatusCode.OK);
@@ -301,7 +301,7 @@ describe('Webhooks', (ctx) => {
     });
 
     if (!jimGraph.graph) {
-      throw new Error('Bob Graph could not be found');
+      throw new Error('Jim Graph could not be found');
     }
 
     expect(jimGraph.response?.code).toBe(EnumStatusCode.OK);
