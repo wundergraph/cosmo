@@ -8,9 +8,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { FaGoogle } from "react-icons/fa";
 import { BsBuildingLock } from "react-icons/bs";
-import { useCookies } from "react-cookie";
 import { useEffect } from "react";
 import { z } from "zod";
+import useCookie from "@/hooks/use-cookie";
 
 const loginUrl = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login`;
 
@@ -44,14 +44,14 @@ const LoginPage: NextPageWithLayout = () => {
 
   const { redirectURL, sso } = querySchema.parse(router.query);
 
-  const [cookies] = useCookies(["cosmo_idp_hint"]);
+  const [cosmoIdpHintCookieValue] = useCookie("cosmo_idp_hint");
 
   useEffect(() => {
     if (!router.isReady || sso) return;
-    if (cookies && cookies.cosmo_idp_hint) {
-      router.replace(`/login?sso=${cookies.cosmo_idp_hint}`);
+    if (cosmoIdpHintCookieValue) {
+      router.replace(`/login?sso=${cosmoIdpHintCookieValue}`);
     }
-  }, [cookies, sso, router]);
+  }, [cosmoIdpHintCookieValue, sso, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center xl:items-start xl:justify-start">
