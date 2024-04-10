@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.82.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.1...controlplane@0.82.2) (2024-04-09)
+
+### Bug Fixes
+
+* authenticate organization id before updating webhooks ([#713](https://github.com/wundergraph/cosmo/issues/713)) ([64e78e2](https://github.com/wundergraph/cosmo/commit/64e78e29ec750c993faa661b241cb1f0edb4bbb3)) (@StarpTech)
+
+## [0.82.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.0...controlplane@0.82.1) (2024-04-09)
+
+**Note:** Version bump only for package controlplane
+
+# [0.82.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.81.2...controlplane@0.82.0) (2024-04-08)
+
+### Features
+
+* support TLS in organization seed ([#707](https://github.com/wundergraph/cosmo/issues/707)) ([2596c7a](https://github.com/wundergraph/cosmo/commit/2596c7a2e249465f777f120136afb66c1f0903ab)) (@StarpTech)
+
 ## [0.81.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.81.1...controlplane@0.81.2) (2024-04-04)
 
 ### Bug Fixes

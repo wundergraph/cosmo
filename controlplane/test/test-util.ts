@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
@@ -7,6 +8,7 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import { expect } from 'vitest';
+import postgres from 'postgres';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import database from '../src/core/plugins/database.js';
@@ -15,10 +17,16 @@ import routes from '../src/core/routes.js';
 import { Authorization } from '../src/core/services/Authorization.js';
 import Keycloak from '../src/core/services/Keycloak.js';
 import Mailer from '../src/core/services/Mailer.js';
-import { createTestAuthenticator, seedTest, UserTestData } from '../src/core/test-util.js';
+import {
+  createTestAuthenticator,
+  createTestContext,
+  seedTest,
+  TestAuthenticatorOptions,
+  UserTestData,
+} from '../src/core/test-util.js';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
-import { Label } from '../src/types/index.js';
+import { FeatureIds, Label } from '../src/types/index.js';
 import ScimController from '../src/core/controllers/scim.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
@@ -28,13 +36,15 @@ import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 export const SetupTest = async function ({
   dbname,
   chClient,
-  enableScim,
+  enabledFeatures,
+  enableMultiUsers,
   createScimKey,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
-  enableScim?: boolean;
+  enableMultiUsers?: boolean;
   createScimKey?: boolean;
+  enabledFeatures?: FeatureIds[];
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -48,7 +58,19 @@ export const SetupTest = async function ({
     runMigration: true,
   });
 
-  const { authenticator, userTestData } = createTestAuthenticator();
+  const companyAOrganizationId = randomUUID();
+  const aliceContext = createTestContext('company-a', companyAOrganizationId);
+
+  const users: TestAuthenticatorOptions = {
+    adminAliceCompanyA: aliceContext,
+  };
+
+  if (enableMultiUsers) {
+    users.adminBobCompanyA = createTestContext('company-a', companyAOrganizationId);
+    users.adminJimCompanyB = createTestContext('company-b', randomUUID());
+  }
+
+  const authenticator = createTestAuthenticator(users);
 
   const realm = 'test';
   const loginRealm = 'master';
@@ -122,14 +144,47 @@ export const SetupTest = async function ({
     port: 0,
   });
 
-  await seedTest(databaseConnectionUrl, userTestData, createScimKey);
+  const queryConnection = postgres(databaseConnectionUrl);
 
-  if (enableScim) {
-    await organizationRepository.updateFeature({
-      organizationId: userTestData.organizationId,
-      id: 'scim',
-      enabled: true,
-    });
+  await seedTest(queryConnection, users.adminAliceCompanyA, createScimKey);
+
+  if (enableMultiUsers) {
+    if (users.adminBobCompanyA) {
+      await seedTest(queryConnection, users.adminBobCompanyA, createScimKey);
+    }
+    if (users.adminJimCompanyB) {
+      await seedTest(queryConnection, users.adminJimCompanyB, createScimKey);
+    }
+  }
+
+  await queryConnection.end({
+    timeout: 1,
+  });
+
+  if (enabledFeatures) {
+    for (const feature of enabledFeatures) {
+      await organizationRepository.updateFeature({
+        organizationId: users.adminAliceCompanyA.organizationId,
+        id: feature,
+        enabled: true,
+      });
+      if (enableMultiUsers) {
+        if (users.adminBobCompanyA) {
+          await organizationRepository.updateFeature({
+            organizationId: users.adminBobCompanyA.organizationId,
+            id: feature,
+            enabled: true,
+          });
+        }
+        if (users.adminJimCompanyB) {
+          await organizationRepository.updateFeature({
+            organizationId: users.adminJimCompanyB.organizationId,
+            id: feature,
+            enabled: true,
+          });
+        }
+      }
+    }
   }
 
   const transport = createConnectTransport({
@@ -144,10 +199,11 @@ export const SetupTest = async function ({
     client: platformClient,
     nodeClient,
     server,
-    userTestData,
+    users,
     blobStorage,
     baseAddress: addr,
     keycloakClient,
+    authenticator,
     realm,
   };
 };
