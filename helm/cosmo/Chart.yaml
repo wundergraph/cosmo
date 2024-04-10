@@ -57,11 +57,11 @@ dependencies:
     condition: global.postgresql.enabled
     repository: 'https://charts.bitnami.com/bitnami'
   - name: keycloak
-    version: '^17.3.1'
+    version: '17.3.1'
     repository: 'https://charts.bitnami.com/bitnami'
     condition: global.keycloak.enabled
   - name: clickhouse
-    version: '^5.0.2'
+    version: '5.2.2'
     condition: global.clickhouse.enabled
     repository: 'https://charts.bitnami.com/bitnami'
   - name: minio
