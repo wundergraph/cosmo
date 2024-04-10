@@ -4772,6 +4772,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const webhook = await orgRepo.getWebhookConfigById(req.id, authContext.organizationId);
+        if (!webhook) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Webhook config not found`,
+            },
+          };
+        }
+
         // Check if the user is authorized to subscribe to the events of the federated / mono graphs
         for (const eventMeta of req.eventsMeta) {
           if (!eventMeta.meta.value) {
@@ -4838,6 +4848,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR,
               details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        const webhook = await orgRepo.getWebhookConfigById(req.id, authContext.organizationId);
+        if (!webhook) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Webhook config not found`,
             },
           };
         }

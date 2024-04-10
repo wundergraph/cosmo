@@ -683,6 +683,22 @@ export class OrganizationRepository {
     return meta as PlainMessage<EventMeta>[];
   }
 
+  public async getWebhookConfigById(id: string, organizationId: string): Promise<WebhooksConfigDTO | null> {
+    const res = await this.db.query.organizationWebhooks.findFirst({
+      where: and(eq(organizationWebhooks.id, id), eq(organizationWebhooks.organizationId, organizationId)),
+    });
+
+    if (!res) {
+      return null;
+    }
+
+    return {
+      id: res.id,
+      endpoint: res.endpoint ?? '',
+      events: res.events ?? [],
+    };
+  }
+
   public async getWebhookConfigs(organizationId: string): Promise<WebhooksConfigDTO[]> {
     const res = await this.db.query.organizationWebhooks.findMany({
       where: eq(organizationWebhooks.organizationId, organizationId),
