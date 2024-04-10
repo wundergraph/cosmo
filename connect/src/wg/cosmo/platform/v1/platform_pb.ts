@@ -7402,6 +7402,11 @@ export class CreateOrganizationWebhookConfigResponse extends Message<CreateOrgan
    */
   response?: Response;
 
+  /**
+   * @generated from field: string webhook_config_id = 2;
+   */
+  webhookConfigId = "";
+
   constructor(data?: PartialMessage<CreateOrganizationWebhookConfigResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -7411,6 +7416,7 @@ export class CreateOrganizationWebhookConfigResponse extends Message<CreateOrgan
   static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationWebhookConfigResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "webhook_config_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationWebhookConfigResponse {
