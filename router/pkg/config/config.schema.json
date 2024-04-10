@@ -687,7 +687,13 @@
             "request": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/traffic_shaping_header_rule"
+                "$ref": "#/definitions/request_header_rule"
+              }
+            },
+            "response": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/response_header_rule"
               }
             }
           }
@@ -701,7 +707,13 @@
               "request": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/traffic_shaping_header_rule"
+                  "$ref": "#/definitions/request_header_rule"
+                }
+              },
+              "response": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/response_header_rule"
                 }
               }
             }
@@ -906,7 +918,10 @@
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["provider", "url"],
+                "required": [
+                  "provider",
+                  "url"
+                ],
                 "properties": {
                   "provider": {
                     "description": "The events provider. Supported providers include: \"NATS\"",
@@ -929,7 +944,9 @@
                       {
                         "type": "object",
                         "additionalProperties": false,
-                        "required": ["token"],
+                        "required": [
+                          "token"
+                        ],
                         "properties": {
                           "token": {
                             "type": "string",
@@ -940,7 +957,10 @@
                       {
                         "type": "object",
                         "additionalProperties": false,
-                        "required": ["username", "password"],
+                        "required": [
+                          "username",
+                          "password"
+                        ],
                         "properties": {
                           "username": {
                             "type": "string",
@@ -1128,17 +1148,17 @@
           "description": "Enable error propagation. If the value is true, Subgraph errors will be propagated to the client."
         },
         "status_codes": {
-            "type": "boolean",
-            "default": false,
-            "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."
+          "type": "boolean",
+          "default": false,
+          "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."
         }
       }
     }
   },
   "definitions": {
-    "traffic_shaping_header_rule": {
+    "request_header_rule": {
       "type": "object",
-      "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+      "description": "The configuration for the request header rule. The request header rule is used to modify the headers of the incoming requests and how they are propagated to your subgraphs. See https://cosmo-docs.wundergraph.com/router/proxy-capabilities#forward-http-headers-to-subgraphs for more information.",
       "additionalProperties": false,
       "properties": {
         "op": {
@@ -1171,6 +1191,51 @@
             "default-value"
           ],
           "description": "The default value of the header in case it is not present in the request."
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    "response_header_rule": {
+      "type": "object",
+      "description": "The configuration for the response header rule. The response header rule is used to modify the response headers of client requests.",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": [
+            "propagate"
+          ],
+          "examples": [
+            "propagate"
+          ],
+          "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
+        },
+        "matching": {
+          "type": "string",
+          "examples": [
+            "(?i)^X-Custom-.*"
+          ],
+          "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
+        },
+        "named": {
+          "type": "string",
+          "examples": [
+            "X-Test-Header"
+          ],
+          "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
+        },
+        "default": {
+          "type": "string",
+          "examples": [
+            "default-value"
+          ],
+          "description": "The default value of the header in case it is not present in the request."
+        },
+        "override_client_request": {
+          "type": "boolean",
+          "description": "Override the client request header. If the value is true, the client request header is overridden with the response header from the subgraph request."
         }
       },
       "required": [
