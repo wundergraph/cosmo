@@ -586,8 +586,8 @@ export class OrganizationRepository {
     key: string;
     events: string[];
     eventsMeta: EventMeta[];
-  }) {
-    await this.db.transaction(async (tx) => {
+  }): Promise<string> {
+    return await this.db.transaction(async (tx) => {
       const createWebhookResult = await tx
         .insert(organizationWebhooks)
         .values({
@@ -598,8 +598,8 @@ export class OrganizationRepository {
         })
         .returning();
 
-      if (!input.eventsMeta) {
-        return;
+      if (createWebhookResult.length === 0) {
+        throw new Error('Failed to create webhook');
       }
 
       for (const eventMeta of input.eventsMeta) {
@@ -620,6 +620,8 @@ export class OrganizationRepository {
           }
         }
       }
+
+      return createWebhookResult[0].id;
     });
   }
 

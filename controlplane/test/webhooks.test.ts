@@ -200,7 +200,7 @@ describe('Webhooks', (ctx) => {
     await server.close();
   });
 
-  test('Should not be possible to update a webhook for a federated graph that dont belong to the user organization', async (testContext) => {
+  test('Should not be possible to create a webhook for a federated graph that dont belong to the user organization', async (testContext) => {
     const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const aliceFedGraphId = genID('fedGraph');
@@ -251,7 +251,7 @@ describe('Webhooks', (ctx) => {
     expect(aliceGraph.graph?.name).toBe(aliceFedGraphId);
 
     // Alice should not be able to subscribe to Jim's graph
-    const createWebhook = await client.updateOrganizationWebhookConfig({
+    const createWebhook = await client.createOrganizationWebhookConfig({
       endpoint: 'http://localhost:8081',
       eventsMeta: [
         {
@@ -267,6 +267,96 @@ describe('Webhooks', (ctx) => {
     });
 
     expect(createWebhook.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  });
+
+  test('Should not be possible to update a webhook for a federated graph that dont belong to the user organization', async (testContext) => {
+    const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+
+    const aliceFedGraphId = genID('fedGraph');
+    const jimFedGraphId = genID('fedGraph');
+
+    const createAliceGraphRes = await client.createFederatedGraph({
+      name: aliceFedGraphId,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+    });
+
+    expect(createAliceGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    authenticator.changeUser(TestUser.adminJimCompanyB);
+
+    const createJimGraphRes = await client.createFederatedGraph({
+      name: jimFedGraphId,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+    });
+
+    expect(createJimGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const jimGraph = await client.getFederatedGraphByName({
+      name: jimFedGraphId,
+      namespace: 'default',
+    });
+
+    if (!jimGraph.graph) {
+      throw new Error('Bob Graph could not be found');
+    }
+
+    expect(jimGraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(jimGraph.graph?.name).toBe(jimFedGraphId);
+
+    authenticator.changeUser(TestUser.adminAliceCompanyA);
+
+    const aliceGraph = await client.getFederatedGraphByName({
+      name: aliceFedGraphId,
+      namespace: 'default',
+    });
+
+    if (!aliceGraph.graph) {
+      throw new Error('Alice Graph could not be found');
+    }
+
+    expect(aliceGraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(aliceGraph.graph?.name).toBe(aliceFedGraphId);
+
+    const createAliceWebhook = await client.createOrganizationWebhookConfig({
+      endpoint: 'http://localhost:8081',
+      eventsMeta: [
+        {
+          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+          meta: {
+            case: 'federatedGraphSchemaUpdated',
+            value: {
+              graphIds: [aliceGraph.graph.id],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(createAliceWebhook.response?.code).toBe(EnumStatusCode.OK);
+
+    authenticator.changeUser(TestUser.adminJimCompanyB);
+
+    const updateAliceWebhook = await client.updateOrganizationWebhookConfig({
+      id: createAliceWebhook.webhookConfigId,
+      endpoint: 'http://localhost:8081',
+      eventsMeta: [
+        {
+          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+          meta: {
+            case: 'federatedGraphSchemaUpdated',
+            value: {
+              graphIds: [aliceGraph.graph.id],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(updateAliceWebhook.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     await server.close();
   });
