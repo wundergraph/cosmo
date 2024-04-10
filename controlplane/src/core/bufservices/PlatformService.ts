@@ -4700,6 +4700,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR,
               details: `The user doesnt have the permissions to perform this operation`,
             },
+            webhookConfigId: '',
           };
         }
 
@@ -4725,7 +4726,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        await orgRepo.createWebhookConfig({
+        const webhookConfigId = await orgRepo.createWebhookConfig({
           organizationId: authContext.organizationId,
           eventsMeta: req.eventsMeta,
           key: req.key,
@@ -4748,6 +4749,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+          webhookConfigId,
         };
       });
     },
@@ -4768,6 +4770,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR,
               details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        if (!req.id) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Webhook config id is required`,
+            },
+          };
+        }
+
+        const webhook = await orgRepo.getWebhookConfigById(req.id, authContext.organizationId);
+        if (!webhook) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Webhook config not found`,
             },
           };
         }
@@ -4838,6 +4859,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR,
               details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        if (!req.id) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Webhook config id is required`,
+            },
+          };
+        }
+
+        const webhook = await orgRepo.getWebhookConfigById(req.id, authContext.organizationId);
+        if (!webhook) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Webhook config not found`,
             },
           };
         }
