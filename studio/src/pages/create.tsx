@@ -70,7 +70,6 @@ const CreateOrganization: NextPageWithLayout = () => {
 };
 
 const OrganizationForm = () => {
-  const user = useUser();
   const router = useRouter();
 
   type OrganizationDetailsInput = z.infer<typeof schema>;
@@ -297,10 +296,7 @@ const OrganizationForm = () => {
           className="ml-auto"
           isLoading={isPending}
           type="submit"
-          disabled={
-            !form.formState.isValid ||
-            !user?.currentOrganization.roles.includes("admin")
-          }
+          disabled={!form.formState.isValid}
         >
           {availablePlans?.length
             ? "Continue to payment"
