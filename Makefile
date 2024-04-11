@@ -138,3 +138,13 @@ docker-build-minikube: docker-build-local
 
 run-subgraphs-local:
 	cd demo && go run cmd/all/main.go
+
+sync-go-workspace:
+	go work sync
+	cd router && go mod tidy
+	cd router-tests && make bump-deps
+	cd demo && go mod tidy
+	cd aws-lambda-router && make bump-deps
+	cd composition-go && go mod tidy
+	cd graphqlmetrics && go mod tidy
+	go work sync
