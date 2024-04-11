@@ -586,8 +586,8 @@ export class OrganizationRepository {
     key: string;
     events: string[];
     eventsMeta: EventMeta[];
-  }) {
-    await this.db.transaction(async (tx) => {
+  }): Promise<string> {
+    return await this.db.transaction(async (tx) => {
       const createWebhookResult = await tx
         .insert(organizationWebhooks)
         .values({
@@ -598,8 +598,8 @@ export class OrganizationRepository {
         })
         .returning();
 
-      if (!input.eventsMeta) {
-        return;
+      if (createWebhookResult.length === 0) {
+        throw new Error('Failed to create webhook');
       }
 
       for (const eventMeta of input.eventsMeta) {
@@ -620,6 +620,8 @@ export class OrganizationRepository {
           }
         }
       }
+
+      return createWebhookResult[0].id;
     });
   }
 
@@ -681,6 +683,22 @@ export class OrganizationRepository {
     });
 
     return meta as PlainMessage<EventMeta>[];
+  }
+
+  public async getWebhookConfigById(id: string, organizationId: string): Promise<WebhooksConfigDTO | null> {
+    const res = await this.db.query.organizationWebhooks.findFirst({
+      where: and(eq(organizationWebhooks.id, id), eq(organizationWebhooks.organizationId, organizationId)),
+    });
+
+    if (!res) {
+      return null;
+    }
+
+    return {
+      id: res.id,
+      endpoint: res.endpoint ?? '',
+      events: res.events ?? [],
+    };
   }
 
   public async getWebhookConfigs(organizationId: string): Promise<WebhooksConfigDTO[]> {
