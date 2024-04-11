@@ -18,9 +18,9 @@ require (
 	github.com/redis/go-redis/v9 v9.4.0
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/stretchr/testify v1.9.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20240409131607-bef964f3060b
-	github.com/wundergraph/cosmo/router v0.0.0-20240409135420-d570aea9dbbb
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.20
+	github.com/wundergraph/cosmo/demo v0.0.0-20240410195325-1bcf716de716
+	github.com/wundergraph/cosmo/router v0.0.0-20240410195325-1bcf716de716
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.21
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/sdk/metric v1.24.0
