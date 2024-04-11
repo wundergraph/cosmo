@@ -800,6 +800,7 @@ message CreateAPIKeyRequest {
   repeated string federatedGraphTargetIds = 4;
   repeated string subgraphTargetIds = 5;
   repeated string permissions = 6;
+  bool selectedAllResources = 7;
 }
 
 message CreateAPIKeyResponse {

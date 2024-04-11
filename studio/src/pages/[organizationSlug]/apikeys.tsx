@@ -144,7 +144,7 @@ const CreateAPIKeyDialog = ({
       selectedFedGraphs.length === 0 &&
       selectedSubgraphs.length === 0
     ) {
-      setErrorMsg("Please select at least one of the resource.");
+      setErrorMsg("Please select at least one of the resources.");
       return;
     }
 
@@ -156,6 +156,7 @@ const CreateAPIKeyDialog = ({
         federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
         subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
         permissions: selectedPermissions,
+        selectedAllResources,
       },
       {
         onSuccess: (d) => {
@@ -330,34 +331,10 @@ const CreateAPIKeyDialog = ({
                   Select Resources
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  {
-                    "Select resources the API key can access, or choose 'All resources' to include current and future resources."
-                  }
+                  {"Select resources the API key can access."}
                 </span>
               </div>
               <div className="flex flex-col gap-y-2">
-                {isAdmin && (
-                  <div className="flex items-center gap-x-2">
-                    <Checkbox
-                      id="all-resources"
-                      checked={selectedAllResources}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedAllResources(true);
-                          setErrorMsg(undefined);
-                        } else {
-                          setSelectedAllResources(false);
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor="all-resources"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      All Resources
-                    </label>
-                  </div>
-                )}
                 {federatedGraphs.length > 0 && (
                   <div className="flex flex-col gap-y-1">
                     <div>
@@ -477,6 +454,37 @@ const CreateAPIKeyDialog = ({
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
+                    </div>
+                  </div>
+                )}
+                {isAdmin && (
+                  <div className="mt-2 flex flex-col gap-y-2">
+                    <div className="flex items-start gap-x-2">
+                      <Checkbox
+                        id="all-resources"
+                        checked={selectedAllResources}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedAllResources(true);
+                            setErrorMsg(undefined);
+                          } else {
+                            setSelectedAllResources(false);
+                          }
+                        }}
+                      />
+                      <div className="flex flex-col gap-y-1">
+                        <label
+                          htmlFor="all-resources"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          All Resources
+                        </label>
+                        <span className="text-sm text-muted-foreground">
+                          {
+                            "Choose 'All resources' to include all the current and future resources"
+                          }
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
