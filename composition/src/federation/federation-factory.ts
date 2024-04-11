@@ -90,7 +90,7 @@ import {
   DefinitionWithFieldsData,
   ObjectDefinitionData,
   ParentDefinitionData,
-  ParentWithFieldsData as NormalizationObjectLikeData,
+  ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
 } from '../schema-building/type-definition-data';
 import {
@@ -128,7 +128,7 @@ export class FederationFactory {
   persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   currentSubgraphName = '';
   childName = '';
-  entityContainersByTypeName: EntityDataByTypeName;
+  entityDataByTypeName: Map<string, EntityData>;
   errors: Error[] = [];
   evaluatedObjectLikesBySubgraph = new Map<string, Set<string>>();
   graph: MultiGraph;
@@ -167,7 +167,7 @@ export class FederationFactory {
   ) {
     this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
     this.concreteTypeNamesByAbstractTypeName = concreteTypeNamesByAbstractTypeName;
-    this.entityContainersByTypeName = entityContainersByTypeName;
+    this.entityDataByTypeName = entityContainersByTypeName;
     this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.graph = graph;
     this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
@@ -295,7 +295,7 @@ export class FederationFactory {
       if (entityAncestorName === parentTypeName) {
         const hasOverlap = doSetsHaveAnyOverlap(
           fieldSubgraphs,
-          getOrThrowError(this.entityContainersByTypeName, entityAncestorName, ENTITIES).subgraphNames,
+          getOrThrowError(this.entityDataByTypeName, entityAncestorName, ENTITIES).subgraphNames,
         );
         this.graphPaths.set(path, hasOverlap);
         return hasOverlap;
@@ -402,7 +402,7 @@ export class FederationFactory {
         doSetsHaveAnyOverlap(rootTypeFieldData.subgraphs, fieldData.subgraphNames) ||
         this.isFieldResolvableByEntityAncestor(entityAncestors, fieldData.subgraphNames, parentTypeName);
       const newCurrentFieldPath = currentFieldPath + (isParentAbstract ? ' ' : '.') + fieldName;
-      const entity = this.entityContainersByTypeName.get(namedFieldTypeName);
+      const entity = this.entityDataByTypeName.get(namedFieldTypeName);
       if (isFieldResolvable) {
         // The base scalars are not in this.parentMap
         if (BASE_SCALARS.has(namedFieldTypeName)) {
@@ -530,7 +530,7 @@ export class FederationFactory {
       if (!doSetsHaveAnyOverlap(concreteTypeData.subgraphNames, rootTypeFieldData.subgraphs)) {
         continue;
       }
-      const entity = this.entityContainersByTypeName.get(concreteTypeName);
+      const entity = this.entityDataByTypeName.get(concreteTypeName);
       this.evaluateResolvabilityOfObject(
         concreteTypeData,
         rootTypeFieldData,
@@ -542,25 +542,27 @@ export class FederationFactory {
     }
   }
 
-  validateKeyFieldSetsForImplicitEntity(entityData: EntityData) {
+  addValidPrimaryKeyTargetsToEntityData(entityData?: EntityData) {
+    if (!entityData) {
+      return;
+    }
     const internalSubgraph = getOrThrowError(
       this.internalSubgraphBySubgraphName,
       this.currentSubgraphName,
       'internalSubgraphBySubgraphName',
     );
-    const parentContainerByTypeName = internalSubgraph.parentDefinitionDataByTypeName;
-    const extensionContainerByTypeName = internalSubgraph.parentExtensionDataByTypeName;
-    const implicitEntityContainer =
-      parentContainerByTypeName.get(entityData.typeName) || extensionContainerByTypeName.get(entityData.typeName);
+    const parentDefinitionDataByTypeName = internalSubgraph.parentDefinitionDataByTypeName;
+    const parentExtensionDataByTypeName = internalSubgraph.parentExtensionDataByTypeName;
+    const objectData =
+      parentDefinitionDataByTypeName.get(entityData.typeName) || parentExtensionDataByTypeName.get(entityData.typeName);
     if (
-      !implicitEntityContainer ||
-      (implicitEntityContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-        implicitEntityContainer.kind !== Kind.OBJECT_TYPE_EXTENSION)
+      !objectData ||
+      (objectData.kind !== Kind.OBJECT_TYPE_DEFINITION && objectData.kind !== Kind.OBJECT_TYPE_EXTENSION)
     ) {
       throw incompatibleParentKindFatalError(
         entityData.typeName,
         Kind.OBJECT_TYPE_DEFINITION,
-        implicitEntityContainer?.kind || Kind.NULL,
+        objectData?.kind || Kind.NULL,
       );
     }
     const configurationData = getOrThrowError(
@@ -569,7 +571,7 @@ export class FederationFactory {
       'internalSubgraph.configurationDataMap',
     );
     const keyFieldNames = new Set<string>();
-    const keys: RequiredFieldConfiguration[] = [];
+    const implicitKeys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     for (const fieldSet of entityData.keyFieldSets) {
       // Create a new selection set so that the value can be parsed as a new DocumentNode
@@ -578,7 +580,7 @@ export class FederationFactory {
         // This would be caught as an error elsewhere
         continue;
       }
-      const parentContainers: NormalizationObjectLikeData[] = [implicitEntityContainer];
+      const parentDatas: ParentWithFieldsData[] = [objectData];
       const definedFields: Set<string>[] = [];
       let currentDepth = -1;
       let shouldDefineSelectionSet = true;
@@ -594,14 +596,14 @@ export class FederationFactory {
         },
         Field: {
           enter(node) {
-            const parentContainer = parentContainers[currentDepth];
+            const parentData = parentDatas[currentDepth];
             // If an object-like was just visited, a selection set should have been entered
             if (shouldDefineSelectionSet) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
             const fieldName = node.name.value;
-            const fieldData = parentContainer.fieldDataByFieldName.get(fieldName);
+            const fieldData = parentData.fieldDataByFieldName.get(fieldName);
             // undefined if the field does not exist on the parent
             if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
               shouldAddKeyFieldSet = false;
@@ -619,22 +621,22 @@ export class FederationFactory {
               return;
             }
             // The child could itself be a parent and could exist as an object extension
-            const childContainer =
-              parentContainerByTypeName.get(namedTypeName) || extensionContainerByTypeName.get(namedTypeName);
-            if (!childContainer) {
+            const fieldNamedTypeData =
+              parentDefinitionDataByTypeName.get(namedTypeName) || parentExtensionDataByTypeName.get(namedTypeName);
+            if (!fieldNamedTypeData) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
             if (
-              childContainer.kind === Kind.OBJECT_TYPE_DEFINITION ||
-              childContainer.kind === Kind.OBJECT_TYPE_EXTENSION
+              fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
+              fieldNamedTypeData.kind === Kind.OBJECT_TYPE_EXTENSION
             ) {
               shouldDefineSelectionSet = true;
-              parentContainers.push(childContainer);
+              parentDatas.push(fieldNamedTypeData);
               return;
             }
             // interfaces and unions are invalid in a key directive
-            if (isKindAbstract(childContainer.kind)) {
+            if (isKindAbstract(fieldNamedTypeData.kind)) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
@@ -654,7 +656,7 @@ export class FederationFactory {
             }
             currentDepth += 1;
             shouldDefineSelectionSet = false;
-            if (currentDepth < 0 || currentDepth >= parentContainers.length) {
+            if (currentDepth < 0 || currentDepth >= parentDatas.length) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
@@ -667,7 +669,7 @@ export class FederationFactory {
             }
             // Empty selection sets would be a parse error, so it is unnecessary to handle them
             currentDepth -= 1;
-            parentContainers.pop();
+            parentDatas.pop();
             definedFields.pop();
           },
         },
@@ -677,15 +679,27 @@ export class FederationFactory {
       }
       // Add any top-level fields that compose the key in case they are external
       addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
-      keys.push({
+      implicitKeys.push({
         fieldName: '',
         selectionSet: getNormalizedFieldSet(documentNode),
         disableEntityResolver: true,
       });
     }
-    if (keys.length > 0) {
+    if (implicitKeys.length < 1) {
+      return;
+    }
+    if (!configurationData.keys || configurationData.keys.length < 1) {
       configurationData.isRootNode = true;
-      configurationData.keys = keys;
+      configurationData.keys = implicitKeys;
+      return;
+    }
+    const existingKeys = new Set<string>(configurationData.keys.map((key) => key.selectionSet));
+    for (const implicitKey of implicitKeys) {
+      if (existingKeys.has(implicitKey.selectionSet)) {
+        continue;
+      }
+      configurationData.keys.push(implicitKey);
+      existingKeys.add(implicitKey.selectionSet);
     }
   }
 
@@ -838,7 +852,7 @@ export class FederationFactory {
             continue;
           }
           // The subgraph locations of the interface object must be added to the concrete types that implement it
-          const entity = this.entityContainersByTypeName.get(concreteTypeName);
+          const entity = this.entityDataByTypeName.get(concreteTypeName);
           if (entity) {
             // TODO error if not an entity
             entity.subgraphNames.add(subgraphName);
@@ -1243,7 +1257,7 @@ export class FederationFactory {
               rootTypeFieldData,
               fieldPath,
               new Set<string>(),
-              this.entityContainersByTypeName.has(namedRootFieldTypeName) ? [namedRootFieldTypeName] : [],
+              this.entityDataByTypeName.has(namedRootFieldTypeName) ? [namedRootFieldTypeName] : [],
             );
             continue;
           case Kind.INTERFACE_TYPE_DEFINITION:
@@ -1255,7 +1269,7 @@ export class FederationFactory {
               rootTypeFieldData,
               fieldPath,
               new Set<string>(),
-              this.entityContainersByTypeName.has(namedRootFieldTypeName) ? [namedRootFieldTypeName] : [],
+              this.entityDataByTypeName.has(namedRootFieldTypeName) ? [namedRootFieldTypeName] : [],
             );
             continue;
           default:
