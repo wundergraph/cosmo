@@ -96,7 +96,7 @@ export default (opts: BaseCommandOptions) => {
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
         spinner.succeed(
-          resp?.hasChanged === false ? 'Detected no new changes to publish.' : 'Subgraph published successfully.',
+          resp?.hasChanged === false ? 'No new changes to publish.' : 'Subgraph published successfully.',
         );
 
         break;
