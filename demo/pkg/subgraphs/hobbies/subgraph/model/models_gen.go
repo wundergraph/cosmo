@@ -129,12 +129,18 @@ func (this Programming) GetEmployees() []*Employee {
 	return interfaceSlice
 }
 
+type Query struct {
+}
+
 type Sdk struct {
 	Upc             string                `json:"upc"`
 	ClientLanguages []ProgrammingLanguage `json:"clientLanguages"`
 }
 
 func (Sdk) IsEntity() {}
+
+type Subscription struct {
+}
 
 type Travelling struct {
 	Employees      []*Employee `json:"employees"`

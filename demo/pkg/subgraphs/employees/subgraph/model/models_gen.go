@@ -177,6 +177,9 @@ func (this Marketer) GetEmployees() []*Employee {
 	return interfaceSlice
 }
 
+type Mutation struct {
+}
+
 type Operator struct {
 	Departments  []Department    `json:"departments"`
 	Title        []string        `json:"title"`
@@ -216,6 +219,9 @@ func (this Operator) GetEmployees() []*Employee {
 	return interfaceSlice
 }
 
+type Query struct {
+}
+
 type Sdk struct {
 	Upc       string      `json:"upc"`
 	Engineers []*Employee `json:"engineers"`
@@ -238,6 +244,9 @@ func (this Sdk) GetEngineers() []*Employee {
 }
 
 func (Sdk) IsEntity() {}
+
+type Subscription struct {
+}
 
 type Time struct {
 	UnixTime  int    `json:"unixTime"`
