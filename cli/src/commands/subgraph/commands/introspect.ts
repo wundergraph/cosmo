@@ -19,6 +19,7 @@ export default (opts: BaseCommandOptions) => {
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.The headers are passed in the format <key>=<value> <key>=<value>.Use quotes if there exists space in the key/value.',
   );
   command.option('-o, --out [string]', 'Destination file for the SDL.');
+  command.option('--use-raw-introspection', 'This will use the standard introspection query.');
   command.action(async (options) => {
     const resp = await introspectSubgraph({
       subgraphURL: options.routingUrl,
@@ -30,6 +31,7 @@ export default (opts: BaseCommandOptions) => {
             value,
           };
         }) || [],
+      rawIntrospection: options.useRawIntrospection,
     });
 
     if (resp.success !== true) {

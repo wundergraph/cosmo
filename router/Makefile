@@ -14,7 +14,7 @@ lint:
 bump-engine:
 	go get github.com/wundergraph/graphql-go-tools/v2@upgrade
 	go mod tidy
-	cd .. && go work sync
+	cd .. && make sync-go-workspace
 
 VERSION?=dev
 build:
