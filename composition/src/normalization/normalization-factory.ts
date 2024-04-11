@@ -1,5 +1,6 @@
 import {
   ConstDirectiveNode,
+  ConstValueNode,
   DefinitionNode,
   DirectiveDefinitionNode,
   DirectiveNode,
@@ -107,6 +108,9 @@ import {
   invalidStreamConfigurationInputErrorMessage,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
+  invalidEventSubjectTemplatePrefixErrorMessage,
+  invalidEventSubjectTemplateArgsLevelErrorMessage,
+  invalidEventSubjectCharactersErrorMessage,
   noBaseTypeExtensionError,
   noFieldDefinitionsError,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
@@ -802,6 +806,7 @@ export class NormalizationFactory {
   }
 
   getEventSubscribeConfiguration(
+    node: FieldDefinitionNode,
     directive: ConstDirectiveNode,
     errorMessages: string[],
   ): EventConfiguration | undefined {
@@ -816,13 +821,15 @@ export class NormalizationFactory {
             errorMessages.push(invalidEventSubjectsErrorMessage);
             continue;
           }
+
           for (const value of argumentNode.value.values) {
-            if (value.kind !== Kind.STRING || value.value.length < 1) {
-              errorMessages.push(invalidEventSubjectsItemErrorMessage);
+            if (this.validateEventSubscribetionSubjects(value, errorMessages) === false) {
               break;
             }
+
             subjects.push(value.value);
           }
+
           break;
         }
         case SOURCE_NAME: {
@@ -896,6 +903,49 @@ export class NormalizationFactory {
     };
   }
 
+  validateEventSubscribetionSubjects(value: ConstValueNode, errorMessages: string[]): boolean {
+    const val = value.value;
+
+    if (value.kind !== Kind.STRING || value.value.length < 1) {
+      errorMessages.push(invalidEventSubjectsItemErrorMessage);
+
+      return false;
+    }
+
+    const regex = /^[a-zA-Z0-9.*>\{{2}\}{2}\s]+$/;
+    if (!regex.test(value.value)) {
+        errorMessages.push(invalidEventSubjectCharactersErrorMessage);
+       
+        return false;
+    }
+
+    if (val.includes('{{')) {
+      return this.validateSubjectTemplate(val, errorMessages)
+    }
+
+    return this.validateSubjectStatic(val, errorMessages);
+  }
+
+  validateSubjectTemplate(value: string, errorMessages: string[]): boolean {
+    if (value.match(/{{(\s+)?args\./g)?.length === undefined) {
+      errorMessages.push(invalidEventSubjectTemplatePrefixErrorMessage);
+
+      return false;
+    }
+
+    if (value.match(/{{(\s+)?args\.\w+\./g)?.length !== undefined) {
+      errorMessages.push(invalidEventSubjectTemplateArgsLevelErrorMessage);
+      
+      return false;
+    }
+
+    return true
+  }
+
+  validateSubjectStatic(value: string, errorMessages: string[]): boolean {
+    return true;
+  }
+
   extractEventDirectivesToConfiguration(node: FieldDefinitionNode) {
     // Validation is handled elsewhere
     if (!node.directives) {
@@ -915,7 +965,7 @@ export class NormalizationFactory {
           break;
         }
         case EDFS_SUBSCRIBE: {
-          eventConfiguration = this.getEventSubscribeConfiguration(directive, errorMessages);
+          eventConfiguration = this.getEventSubscribeConfiguration(node, directive, errorMessages);
           break;
         }
         default:

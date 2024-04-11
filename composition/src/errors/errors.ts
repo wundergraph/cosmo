@@ -1153,7 +1153,15 @@ export function selfImplementationError(typeName: string): Error {
 
 export const invalidEventSubjectErrorMessage = `The "subject" argument must be string with a minimum length of one.`;
 
+export const invalidEventSubjectTemplatePrefixErrorMessage = `The "subject" argument must start with the "args." prefix.`;
+
+export const invalidEventSubjectTemplateArgsLevelErrorMessage = `The "subject" argument must have single level.`;
+
 export const invalidEventSubjectsErrorMessage = `The "subjects" argument must be a list of strings.`;
+
+export const invalidEventSubjectTemplateErrorMessage = `The "subject" argument must be a string or a list of strings.`;
+
+export const invalidEventSubjectCharactersErrorMessage = `The "subject" argument contains invalide characters for subject names.`;
 
 export const invalidEventSubjectsItemErrorMessage =
   `Each item in the "subjects" argument list must be a string with a minimum length of one.` +

@@ -15,6 +15,9 @@ import {
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
   invalidStreamConfigurationInputErrorMessage,
+  invalidEventSubjectTemplatePrefixErrorMessage,
+  invalidEventSubjectTemplateArgsLevelErrorMessage,
+  invalidEventSubjectCharactersErrorMessage,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
@@ -130,7 +133,7 @@ describe('events Configuration tests', () => {
       expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
         normalizeString(
           versionOneFullEventDefinitions +
-            `
+          `
         type Entity @key(fields: "id", resolvable: false) {
           id: ID! @external
         }
@@ -382,6 +385,72 @@ describe('events Configuration tests', () => {
     });
   });
 
+  describe('EDFS subject validation tests', () => {
+    test('should return error subject argument contains invalid characters for subject names', () => {
+      const { errors } = normalizeSubgraph(invalidSubgraphSubjectCharacters.definitions, invalidSubgraphSubjectCharacters.name);
+
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+
+      const directiveName = 'edfs__subscribe';
+      const rootFieldPath = 'Subscription.employeeUpdated';
+
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError(directiveName, rootFieldPath, [
+          invalidEventSubjectCharactersErrorMessage,
+        ]),
+      );
+    });
+
+    test('should return error subject must be string with a minimum length of one', () => {
+      const { errors } = normalizeSubgraph(invalidSubgraphSubjectEmpty.definitions, invalidSubgraphSubjectEmpty.name);
+
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+
+      const directiveName = 'edfs__subscribe';
+      const rootFieldPath = 'Subscription.employeeUpdated';
+
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError(directiveName, rootFieldPath, [
+          invalidEventSubjectsItemErrorMessage,
+        ]),
+      );
+    });
+
+    test('should return error subject invalide prefix', () => {
+      const { errors } = normalizeSubgraph(invalidSubgraphSubjectPrefix.definitions, invalidSubgraphSubjectPrefix.name);
+
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+
+      const directiveName = 'edfs__subscribe';
+      const rootFieldPath = 'Subscription.employeeUpdated';
+
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError(directiveName, rootFieldPath, [
+          invalidEventSubjectTemplatePrefixErrorMessage,
+        ]),
+      );
+    });
+
+    test('should return error subject args allowed single level', () => {
+      const { errors } = normalizeSubgraph(invalidSubgraphSubjectArgsLevel.definitions, invalidSubgraphSubjectPrefix.name);
+
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+
+      const directiveName = 'edfs__subscribe';
+      const rootFieldPath = 'Subscription.employeeUpdated';
+
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError(directiveName, rootFieldPath, [
+          invalidEventSubjectTemplateArgsLevelErrorMessage,
+        ]),
+      );
+    });
+  });
+
   describe('Federation tests', () => {
     test('that an error is returned if the subgraph includes fields that are not part of an entity key', () => {
       const { errors } = federateSubgraphs([subgraphC]);
@@ -494,8 +563,8 @@ describe('events Configuration tests', () => {
           query: Query
           subscription: Subscription
         }` +
-            versionOnePersistedDirectiveDefinitions +
-            `
+          versionOnePersistedDirectiveDefinitions +
+          `
         type Entity implements Interface {
           id: ID!
           object: Object
@@ -535,8 +604,8 @@ describe('events Configuration tests', () => {
           query: Query
           subscription: Subscription
         }` +
-            versionOnePersistedDirectiveDefinitions +
-            `
+          versionOnePersistedDirectiveDefinitions +
+          `
         type Entity {
           id: ID!
           object: Object
@@ -1095,6 +1164,91 @@ const subgraphT: Subgraph = {
       id: ID! @external
     }
     
+    input edfs__StreamConfiguration {
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const invalidSubgraphSubjectEmpty: Subgraph = {
+  name: 'invalid-subgraph-subject-empty',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: [""],
+      streamConfiguration: { consumerName: "consumer", streamName: "streamName", }
+      )
+    }
+
+    type Employee @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__StreamConfiguration {
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const invalidSubgraphSubjectCharacters: Subgraph = {
+  name: 'invalid-subgraph-subject-characters',
+  url: '',
+  definitions: parse(`
+      type Subscription {
+        employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["entities.{ args2.employeeID }", "entitiesл.{{args.employeeID}}"],
+        streamConfiguration: { consumerName: "consumer", streamName: "streamName", }
+        )
+      }
+
+      type Employee @key(fields: "id", resolvable: false) {
+        id: ID! @external
+      }
+
+      input edfs__StreamConfiguration {
+        consumerName: String!
+        streamName: String!
+      }
+    `),
+};
+
+
+const invalidSubgraphSubjectPrefix: Subgraph = {
+  name: 'invalid-subgraph-subject-prefix',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["entities.{{ args2.employeeID }}"],
+      streamConfiguration: { consumerName: "consumer", streamName: "streamName", }
+      )
+    }
+
+    type Employee @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__StreamConfiguration {
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const invalidSubgraphSubjectArgsLevel: Subgraph = {
+  name: 'invalid-subgraph-subject-args-level',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["entities.{{ args.employee.ID }}"],
+      streamConfiguration: { consumerName: "consumer", streamName: "streamName", }
+      )
+    }
+
+    type Employee @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
     input edfs__StreamConfiguration {
       consumerName: String!
       streamName: String!
