@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.76.6](https://github.com/wundergraph/cosmo/compare/studio@0.76.5...studio@0.76.6) (2024-04-10)
+
+### Bug Fixes
+
+* read / set cookie values as strings ([#720](https://github.com/wundergraph/cosmo/issues/720)) ([d3c4ad9](https://github.com/wundergraph/cosmo/commit/d3c4ad93ac08c8aaabd92c8f911de3e1eec5a343)) (@StarpTech)
+* url overflow in federated graph card ([#719](https://github.com/wundergraph/cosmo/issues/719)) ([34dec36](https://github.com/wundergraph/cosmo/commit/34dec36e8cb36c275dd15bce111ad27f2124c259)) (@thisisnithin)
+
+## [0.76.5](https://github.com/wundergraph/cosmo/compare/studio@0.76.4...studio@0.76.5) (2024-04-10)
+
+**Note:** Version bump only for package studio
+
 ## [0.76.4](https://github.com/wundergraph/cosmo/compare/studio@0.76.3...studio@0.76.4) (2024-04-09)
 
 ### Bug Fixes
