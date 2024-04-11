@@ -15,9 +15,20 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: '0.1.4'
+version: '0.1.5'
 
 home: https://github.com/wundergraph/cosmo
+
+# See https://artifacthub.io/docs/topics/annotations/helm/
+annotations:
+  artifacthub.io/changes: |
+    - kind: changed
+      description: "Pin dependencies to the latest stable version"
+  artifacthub.io/links: |
+    - name: source
+      url: https://github.com/wundergraph/cosmo/helm/cosmo
+    - name: support
+      url: https://github.com/wundergraph/cosmo/issues
 
 keywords:
   - wundergraph
@@ -57,11 +68,11 @@ dependencies:
     condition: global.postgresql.enabled
     repository: 'https://charts.bitnami.com/bitnami'
   - name: keycloak
-    version: '^17.3.1'
+    version: '17.3.1'
     repository: 'https://charts.bitnami.com/bitnami'
     condition: global.keycloak.enabled
   - name: clickhouse
-    version: '^5.0.2'
+    version: '5.0.2'
     condition: global.clickhouse.enabled
     repository: 'https://charts.bitnami.com/bitnami'
   - name: minio

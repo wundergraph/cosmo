@@ -595,7 +595,7 @@ describe('Normalization tests', () => {
     const { errors, normalizationResult } = normalizeSubgraphFromString(`
       directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
       directive @external on FIELD_DEFINITION | OBJECT
-      directive @key(fields: String!) repeatable on OBJECT
+      directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
       directive @provides(fields: String!) on FIELD_DEFINITION
       directive @requires(fields: String!) on FIELD_DEFINITION
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT | INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
@@ -617,6 +617,8 @@ describe('Normalization tests', () => {
       type Pepper {
         age: Int
       }
+      
+      scalar openfed__FieldSet
     `);
     expect(errors).toBeUndefined();
     const subgraphString = normalizationResult!.subgraphString;
@@ -639,7 +641,10 @@ describe('Normalization tests', () => {
       
       type Pepper {
         age: Int
-      }`,
+      }
+      
+      scalar openfed__FieldSet
+     `,
       ),
     );
   });
@@ -1800,9 +1805,6 @@ describe('Normalization tests', () => {
       normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @composeDirective(name: String!) repeatable on SCHEMA
-      directive @eventsPublish(sourceName: String! = "default", topic: String!) on FIELD_DEFINITION
-      directive @eventsRequest(sourceName: String! = "default", topic: String!) on FIELD_DEFINITION
-      directive @eventsSubscribe(sourceName: String! = "default", topic: String!) on FIELD_DEFINITION
       directive @extends on INTERFACE | OBJECTdirective @external on FIELD_DEFINITION | OBJECT
       directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       directive @interfaceObject on OBJECT

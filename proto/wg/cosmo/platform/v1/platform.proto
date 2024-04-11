@@ -975,6 +975,7 @@ message CreateOrganizationWebhookConfigRequest {
 
 message CreateOrganizationWebhookConfigResponse {
   Response response = 1;
+  string webhook_config_id = 2;
 }
 
 message GetOrganizationWebhookConfigsRequest {}

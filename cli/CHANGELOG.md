@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.51.0](https://github.com/wundergraph/cosmo/compare/wgc@0.50.4...wgc@0.51.0) (2024-04-10)
+
+### Features
+
+* enable raw introspection for subgraphs ([#721](https://github.com/wundergraph/cosmo/issues/721)) ([bd6668f](https://github.com/wundergraph/cosmo/commit/bd6668ffbbcf156468f0876e3ae79db23201eb36)) (@thisisnithin)
+
+## [0.50.4](https://github.com/wundergraph/cosmo/compare/wgc@0.50.3...wgc@0.50.4) (2024-04-10)
+
+**Note:** Version bump only for package wgc
+
+## [0.50.3](https://github.com/wundergraph/cosmo/compare/wgc@0.50.2...wgc@0.50.3) (2024-04-09)
+
+**Note:** Version bump only for package wgc
+
 ## [0.50.2](https://github.com/wundergraph/cosmo/compare/wgc@0.50.1...wgc@0.50.2) (2024-04-08)
 
 ### Bug Fixes
