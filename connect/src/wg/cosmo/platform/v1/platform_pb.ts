@@ -5975,9 +5975,9 @@ export class CreateAPIKeyRequest extends Message<CreateAPIKeyRequest> {
   permissions: string[] = [];
 
   /**
-   * @generated from field: bool selectedAllResources = 7;
+   * @generated from field: bool allowAllResources = 7;
    */
-  selectedAllResources = false;
+  allowAllResources = false;
 
   constructor(data?: PartialMessage<CreateAPIKeyRequest>) {
     super();
@@ -5993,7 +5993,7 @@ export class CreateAPIKeyRequest extends Message<CreateAPIKeyRequest> {
     { no: 4, name: "federatedGraphTargetIds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "subgraphTargetIds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 6, name: "permissions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 7, name: "selectedAllResources", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "allowAllResources", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAPIKeyRequest {

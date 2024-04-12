@@ -156,7 +156,7 @@ const CreateAPIKeyDialog = ({
         federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
         subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
         permissions: selectedPermissions,
-        selectedAllResources,
+        allowAllResources: selectedAllResources,
       },
       {
         onSuccess: (d) => {

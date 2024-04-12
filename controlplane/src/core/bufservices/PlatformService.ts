@@ -4131,7 +4131,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             });
           }
 
-          if (req.selectedAllResources && !authContext.isAdmin) {
+          if (req.allowAllResources && !authContext.isAdmin) {
             return {
               response: {
                 code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
@@ -4144,7 +4144,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           if (
             req.federatedGraphTargetIds.length === 0 &&
             req.subgraphTargetIds.length === 0 &&
-            !req.selectedAllResources
+            !req.allowAllResources
           ) {
             return {
               response: {

@@ -24,28 +24,28 @@ describe('API Keys', (ctx) => {
       name: uid(8),
       expires: ExpiresAt.NEVER,
       userID: users.adminAliceCompanyA.userId,
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     response = await client.createAPIKey({
       name: uid(8),
       expires: ExpiresAt.THIRTY_DAYS,
       userID: users.adminAliceCompanyA.userId,
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     response = await client.createAPIKey({
       name: uid(8),
       expires: ExpiresAt.SIX_MONTHS,
       userID: users.adminAliceCompanyA.userId,
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     response = await client.createAPIKey({
       name: uid(8),
       expires: ExpiresAt.ONE_YEAR,
       userID: users.adminAliceCompanyA.userId,
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
@@ -54,14 +54,14 @@ describe('API Keys', (ctx) => {
       name: 'test',
       expires: ExpiresAt.ONE_YEAR,
       userID: users.adminAliceCompanyA.userId,
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     response = await client.createAPIKey({
       name: 'test',
       expires: ExpiresAt.ONE_YEAR,
       userID: users.adminAliceCompanyA.userId,
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
 
@@ -70,7 +70,7 @@ describe('API Keys', (ctx) => {
       name: 'a'.repeat(100),
       expires: ExpiresAt.NEVER,
       userID: users.adminAliceCompanyA.userId,
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
@@ -78,7 +78,7 @@ describe('API Keys', (ctx) => {
       name: '',
       expires: ExpiresAt.NEVER,
       userID: users.adminAliceCompanyA.userId,
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
@@ -136,7 +136,7 @@ describe('Create API Keys as admins with RBAC enabled', (ctx) => {
       userID: users.adminAliceCompanyA.userId,
       subgraphTargetIds: ids,
       federatedGraphTargetIds: [],
-      selectedAllResources: false,
+      allowAllResources: false,
     });
 
     console.log(response);
@@ -154,7 +154,7 @@ describe('Create API Keys as admins with RBAC enabled', (ctx) => {
       userID: users.adminAliceCompanyA.userId,
       subgraphTargetIds: [],
       federatedGraphTargetIds: [],
-      selectedAllResources: true,
+      allowAllResources: true,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
@@ -170,7 +170,7 @@ describe('Create API Keys as admins with RBAC enabled', (ctx) => {
       userID: users.adminAliceCompanyA.userId,
       subgraphTargetIds: [],
       federatedGraphTargetIds: [],
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Can not create an api key without associating it with any resources.');
@@ -229,7 +229,7 @@ describe('Create API Keys as developers with RBAC enabled', (ctx) => {
       userID: users.devJoeCompanyA?.userId,
       subgraphTargetIds: ids,
       federatedGraphTargetIds: [],
-      selectedAllResources: false,
+      allowAllResources: false,
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
@@ -251,7 +251,7 @@ describe('Create API Keys as developers with RBAC enabled', (ctx) => {
       userID: users.devJoeCompanyA?.userId,
       subgraphTargetIds: [],
       federatedGraphTargetIds: [],
-      selectedAllResources: true,
+      allowAllResources: true,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(response.response?.details).toBe(
@@ -272,7 +272,7 @@ describe('Create API Keys as developers with RBAC enabled', (ctx) => {
       userID: users.devJoeCompanyA?.userId,
       subgraphTargetIds: [],
       federatedGraphTargetIds: [],
-      selectedAllResources: false,
+      allowAllResources: false,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Can not create an api key without associating it with any resources.');
