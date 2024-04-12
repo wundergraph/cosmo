@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.21.0...@wundergraph/composition@0.22.0) (2024-04-11)
+
+### Features
+
+* support entity targets (implicit keys) ([#724](https://github.com/wundergraph/cosmo/issues/724)) ([4aa2c86](https://github.com/wundergraph/cosmo/commit/4aa2c86961384d913e964437b7ea369accb891c7)) (@Aenimus)
+
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.20.3...@wundergraph/composition@0.21.0) (2024-04-09)
+
+### Features
+
+* support edfs subscription stream/consumer; multiple subjects ([#685](https://github.com/wundergraph/cosmo/issues/685)) ([c70b2ae](https://github.com/wundergraph/cosmo/commit/c70b2aefd39c45b5f98eae8a3c43f639d56064b2)) (@Aenimus)
+
+## [0.20.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.20.2...@wundergraph/composition@0.20.3) (2024-04-03)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 ## [0.20.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.20.1...@wundergraph/composition@0.20.2) (2024-03-21)
 
 ### Bug Fixes

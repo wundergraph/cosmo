@@ -1,4 +1,6 @@
-go 1.21
+go 1.21.0
+
+toolchain go1.21.8
 
 use (
 	./aws-lambda-router
@@ -9,4 +11,4 @@ use (
 	./router-tests
 )
 
-//replace github.com/wundergraph/graphql-go-tools/v2 => ../graphql-go-tools/v2
+// replace github.com/wundergraph/graphql-go-tools/v2 => ../graphql-go-tools/v2

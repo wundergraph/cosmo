@@ -308,7 +308,9 @@ export const RunRouterCommand = ({
           {token ? (
             token
           ) : (
-            <span className="font-bold text-white">{"<graph-api-token>"}</span>
+            <span className="font-bold text-secondary-foreground">
+              {"<graph-api-token>"}
+            </span>
           )}{" "}
           \
         </span>
@@ -378,7 +380,9 @@ export const RunRouterCommand = ({
               <div className="flex items-center justify-between rounded border border-input bg-background p-4">
                 <code className="break-word whitespace-pre-wrap rounded font-mono text-xs leading-normal text-muted-foreground">
                   {`npx wgc router token create `}
-                  <span className="font-bold text-white">{"<name>"}</span>
+                  <span className="font-bold text-secondary-foreground">
+                    {"<name>"}
+                  </span>
                   {` ${namespace ? `-n ${namespace}` : ""} -g ${graphName}`}
                 </code>
                 <Button
@@ -593,16 +597,22 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
 
         <div className="mt-3 flex flex-1 flex-col items-start px-6">
           <div className="text-base font-semibold">{graph.name}</div>
-          <p
-            className={cn(
-              "mb-5 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
-              {
-                italic: !graph.routingURL,
-              },
-            )}
-          >
-            {parsedURL()}
-          </p>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <p
+                className={cn(
+                  "mb-5 w-full truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
+                  {
+                    italic: !graph.routingURL,
+                  },
+                )}
+              >
+                {parsedURL()}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent>{parsedURL()}</TooltipContent>
+          </Tooltip>
+
           <div className="mb-3 flex flex-wrap items-center gap-x-5">
             <div className="flex items-center gap-x-2">
               {graph.supportsFederation ? (

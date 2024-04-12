@@ -1,11 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
 import boxen from 'boxen';
-import { program } from 'commander';
-import { buildASTSchema, buildClientSchema, printSchema } from 'graphql';
+import { buildClientSchema, printSchema } from 'graphql';
 import yaml from 'js-yaml';
 import pc from 'picocolors';
-import { config, configDir, configFile } from './core/config.js';
+import { config, configFile } from './core/config.js';
 import { KeycloakToken } from './commands/auth/utils.js';
 
 export interface Header {
@@ -169,21 +168,6 @@ export const introspectSubgraph = async ({
  */
 export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
   return federateSubgraphs(subgraphs);
-}
-
-// checks if either of access token or api key are present
-export function checkAPIKey() {
-  if (!config.apiKey) {
-    program.error(
-      pc.yellow(
-        `Not authenticated. Please run ${pc.bold(
-          'wgc auth login',
-        )} or create an API key and set as environment variable ${pc.bold('COSMO_API_KEY')}.` +
-          '\n' +
-          'Without an AccessToken/API key, you will not be able to interact with the control plane.',
-      ) + '\n',
-    );
-  }
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;

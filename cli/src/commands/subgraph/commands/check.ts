@@ -1,13 +1,11 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { PartialMessage } from '@bufbuild/protobuf';
-import { GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { useGitHub, verifyGitHubIntegration } from '../../../github.js';
+import { verifyGitHubIntegration } from '../../../github.js';
 import { handleCheckResult } from '../../../handle-check-result.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -50,7 +48,7 @@ export default (opts: BaseCommandOptions) => {
         delete: options.delete,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

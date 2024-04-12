@@ -4,6 +4,46 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.51.1](https://github.com/wundergraph/cosmo/compare/wgc@0.51.0...wgc@0.51.1) (2024-04-11)
+
+**Note:** Version bump only for package wgc
+
+# [0.51.0](https://github.com/wundergraph/cosmo/compare/wgc@0.50.4...wgc@0.51.0) (2024-04-10)
+
+### Features
+
+* enable raw introspection for subgraphs ([#721](https://github.com/wundergraph/cosmo/issues/721)) ([bd6668f](https://github.com/wundergraph/cosmo/commit/bd6668ffbbcf156468f0876e3ae79db23201eb36)) (@thisisnithin)
+
+## [0.50.4](https://github.com/wundergraph/cosmo/compare/wgc@0.50.3...wgc@0.50.4) (2024-04-10)
+
+**Note:** Version bump only for package wgc
+
+## [0.50.3](https://github.com/wundergraph/cosmo/compare/wgc@0.50.2...wgc@0.50.3) (2024-04-09)
+
+**Note:** Version bump only for package wgc
+
+## [0.50.2](https://github.com/wundergraph/cosmo/compare/wgc@0.50.1...wgc@0.50.2) (2024-04-08)
+
+### Bug Fixes
+
+* provide default subscription protocol for composition-go ([#702](https://github.com/wundergraph/cosmo/issues/702)) ([53140ea](https://github.com/wundergraph/cosmo/commit/53140eabcc960bd95626837da308c86674aeb8a4)) (@Aenimus)
+
+## [0.50.1](https://github.com/wundergraph/cosmo/compare/wgc@0.50.0...wgc@0.50.1) (2024-04-04)
+
+### Bug Fixes
+
+* don't enforce org slug when using API key ([#688](https://github.com/wundergraph/cosmo/issues/688)) ([f5f7b4e](https://github.com/wundergraph/cosmo/commit/f5f7b4e5237d0d3a91a60c1878c0bf89dd721bee)) (@StarpTech)
+
+# [0.50.0](https://github.com/wundergraph/cosmo/compare/wgc@0.49.1...wgc@0.50.0) (2024-04-03)
+
+### Features
+
+* use offline token, refresh token implementation ([#686](https://github.com/wundergraph/cosmo/issues/686)) ([4429319](https://github.com/wundergraph/cosmo/commit/442931935e979f53b0b093fbad217a2c91807f8e)) (@)
+
+### Features
+
+* use offline token, refresh token implementation ([#686](https://github.com/wundergraph/cosmo/issues/686)) ([4429319](https://github.com/wundergraph/cosmo/commit/442931935e979f53b0b093fbad217a2c91807f8e)) (@StarpTech)
+
 ## [0.49.1](https://github.com/wundergraph/cosmo/compare/wgc@0.49.0...wgc@0.49.1) (2024-03-21)
 
 **Note:** Version bump only for package wgc

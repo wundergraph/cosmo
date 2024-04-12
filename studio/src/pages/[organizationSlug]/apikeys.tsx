@@ -57,6 +57,7 @@ import {
   createAPIKey,
   deleteAPIKey,
   getAPIKeys,
+  getUserAccessiblePermissions,
   getUserAccessibleResources,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -89,6 +90,9 @@ const CreateAPIKeyDialog = ({
   const { mutate, isPending } = useMutation(createAPIKey.useMutation());
 
   const { data } = useQuery(getUserAccessibleResources.useQuery());
+  const { data: permissionsData } = useQuery(
+    getUserAccessiblePermissions.useQuery(),
+  );
   const federatedGraphs = data?.federatedGraphs || [];
   const subgraphs = data?.subgraphs || [];
   const isAdmin = user?.currentOrganization.roles.includes("admin");
@@ -110,6 +114,7 @@ const CreateAPIKeyDialog = ({
   const [selectedFedGraphs, setSelectedFedGraphs] = useState<string[]>([]);
   // target ids of the selected subgraphs
   const [selectedSubgraphs, setSelectedSubgraphs] = useState<string[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string>();
 
   const createAPIKeyInputSchema = z.object({
@@ -139,7 +144,7 @@ const CreateAPIKeyDialog = ({
       selectedFedGraphs.length === 0 &&
       selectedSubgraphs.length === 0
     ) {
-      setErrorMsg("Please select atleast one of the resource.");
+      setErrorMsg("Please select at least one of the resource.");
       return;
     }
 
@@ -150,6 +155,7 @@ const CreateAPIKeyDialog = ({
         expires: expiresOptionsMappingToEnum[expires],
         federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
         subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
+        permissions: selectedPermissions,
       },
       {
         onSuccess: (d) => {
@@ -174,6 +180,7 @@ const CreateAPIKeyDialog = ({
     setSelectedAllResources(false);
     setSelectedFedGraphs([]);
     setSelectedSubgraphs([]);
+    setSelectedPermissions([]);
   };
 
   const groupedSubgraphs = subgraphs.reduce<
@@ -190,21 +197,8 @@ const CreateAPIKeyDialog = ({
     return result;
   }, {});
 
-  const groupedFederatedGraphs = federatedGraphs.reduce<
-    Record<string, GetUserAccessibleResourcesResponse_Graph[]>
-  >((result, graph) => {
-    const { namespace, name } = graph;
-
-    if (!result[namespace]) {
-      result[namespace] = [];
-    }
-
-    result[namespace].push(graph);
-
-    return result;
-  }, {});
-
-  // check if the user has access to create api keys only when rbac is enabled
+  // When rbac is enabled and this is the case for enterprise users
+  // you can only create an API key if you are an admin or have access to at least one federated graph or subgraph
   if (
     rbac &&
     !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
@@ -218,6 +212,20 @@ const CreateAPIKeyDialog = ({
       </Button>
     );
   }
+
+  const groupedFederatedGraphs = federatedGraphs.reduce<
+    Record<string, GetUserAccessibleResourcesResponse_Graph[]>
+  >((result, graph) => {
+    const { namespace, name } = graph;
+
+    if (!result[namespace]) {
+      result[namespace] = [];
+    }
+
+    result[namespace].push(graph);
+
+    return result;
+  }, {});
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -266,8 +274,57 @@ const CreateAPIKeyDialog = ({
               </SelectContent>
             </Select>
           </div>
+          {isAdmin &&
+            permissionsData &&
+            permissionsData.permissions.length > 0 && (
+              <div className="mt-2 flex flex-col gap-y-3">
+                <div className="flex flex-col gap-y-1">
+                  <span className="text-base font-semibold">Permissions</span>
+                  <span className="text-sm text-muted-foreground">
+                    {"Select permissions for the API key."}
+                  </span>
+                </div>
+                {permissionsData.permissions.map((permission) => {
+                  return (
+                    <div
+                      className="flex items-center gap-x-2"
+                      key={permission.value}
+                    >
+                      <Checkbox
+                        id="scim"
+                        checked={selectedPermissions.includes(permission.value)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedPermissions([
+                              ...Array.from(
+                                new Set([
+                                  ...selectedPermissions,
+                                  permission.value,
+                                ]),
+                              ),
+                            ]);
+                          } else {
+                            setSelectedPermissions([
+                              ...selectedPermissions.filter(
+                                (p) => p !== permission.value,
+                              ),
+                            ]);
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="scim"
+                        className="text-sm font-medium capitalize leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {permission.displayName}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           {rbac && (
-            <div className="mt-4 flex flex-col gap-y-3">
+            <div className="mt-3 flex flex-col gap-y-3">
               <div className="flex flex-col gap-y-1">
                 <span className="text-base font-semibold">
                   Select Resources
@@ -628,6 +685,8 @@ export const Empty = ({
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
+  const user = useContext(UserContext);
+
   return (
     <EmptyState
       icon={<KeyIcon />}
@@ -647,12 +706,17 @@ export const Empty = ({
       }
       actions={
         <div className="mt-2">
-          <CreateAPIKey
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            open={open}
-            setOpen={setOpen}
-          />
+          {checkUserAccess({
+            rolesToBe: ["admin", "developer"],
+            userRoles: user?.currentOrganization.roles || [],
+          }) && (
+            <CreateAPIKey
+              apiKey={apiKey}
+              setApiKey={setApiKey}
+              open={open}
+              setOpen={setOpen}
+            />
+          )}
         </div>
       }
     />

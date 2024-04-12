@@ -18,7 +18,8 @@ const (
 	ServerLatencyHistogram        = "router.http.request.duration_milliseconds" // Incoming end to end duration, milliseconds
 	RequestContentLengthCounter   = "router.http.request.content_length"        // Incoming request bytes total
 	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
-	InFlightRequestsUpDownCounter = "router.http.requests.in_flight.count"      // Number of requests in flight
+	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
+	RequestError                  = "router.http.requests.error"                // Total request error count
 
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
@@ -30,6 +31,10 @@ var (
 	RequestCounterDescription = "Total number of requests"
 	RequestCounterOptions     = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription(RequestCounterDescription),
+	}
+	RequestErrorCounterDescription = "Total number of failed request"
+	RequestErrorCounterOptions     = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription(RequestErrorCounterDescription),
 	}
 	ServerLatencyHistogramDescription = "Server latency in milliseconds"
 	ServerLatencyHistogramOptions     = []otelmetric.Float64HistogramOption{
@@ -43,6 +48,7 @@ var (
 	}
 	ResponseContentLengthCounterDescription = "Total number of response bytes"
 	ResponseContentLengthCounterOptions     = []otelmetric.Int64CounterOption{
+		otelmetric.WithUnit("bytes"),
 		otelmetric.WithDescription(ResponseContentLengthCounterDescription),
 	}
 	InFlightRequestsUpDownCounterDescription = "Number of requests in flight"
@@ -59,6 +65,7 @@ type (
 		promMeterProvider *metric.MeterProvider
 
 		runtimeMetrics   *RuntimeMetrics
+		enableRuntime    bool
 		processStartTime time.Time
 
 		otlpRequestMetrics Store
@@ -74,6 +81,7 @@ type (
 		MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue)
 		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
 		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
+		MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue)
 		Flush(ctx context.Context) error
 	}
 )
@@ -87,15 +95,17 @@ func NewStore(opts ...Option) (Store, error) {
 		opt(h)
 	}
 
-	// Create runtime metrics exported to OTEL
-	h.runtimeMetrics = NewRuntimeMetrics(h.logger, h.otelMeterProvider, h.baseAttributes, h.processStartTime)
+	if h.enableRuntime {
+		// Create runtime metrics exported to OTEL
+		h.runtimeMetrics = NewRuntimeMetrics(h.logger, h.otelMeterProvider, h.baseAttributes, h.processStartTime)
 
-	// Start runtime metrics
-	if err := h.runtimeMetrics.Start(); err != nil {
-		return nil, err
+		// Start runtime metrics
+		if err := h.runtimeMetrics.Start(); err != nil {
+			return nil, err
+		}
 	}
 
-	// Create Otlp metrics exported to OTEL
+	// Create OTLP metrics exported to OTEL
 	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.baseAttributes)
 	if err != nil {
 		return nil, err
@@ -144,6 +154,11 @@ func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time
 	h.promRequestMetrics.MeasureLatency(ctx, requestStartTime, attr...)
 }
 
+func (h *Metrics) MeasureRequestError(ctx context.Context, attr ...attribute.KeyValue) {
+	h.otlpRequestMetrics.MeasureRequestError(ctx, attr...)
+	h.promRequestMetrics.MeasureRequestError(ctx, attr...)
+}
+
 // Flush flushes the metrics to the backend synchronously.
 func (h *Metrics) Flush(ctx context.Context) error {
 
@@ -155,8 +170,10 @@ func (h *Metrics) Flush(ctx context.Context) error {
 	if err := h.promRequestMetrics.Flush(ctx); err != nil {
 		errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", err))
 	}
-	if err := h.runtimeMetrics.Stop(); err != nil {
-		errors.Join(err, fmt.Errorf("failed to stop runtime metrics: %w", err))
+	if h.runtimeMetrics != nil {
+		if err := h.runtimeMetrics.Stop(); err != nil {
+			errors.Join(err, fmt.Errorf("failed to stop runtime metrics: %w", err))
+		}
 	}
 
 	return err
@@ -190,5 +207,11 @@ func WithPromMeterProvider(promMeterProvider *metric.MeterProvider) Option {
 func WithProcessStartTime(processStartTime time.Time) Option {
 	return func(h *Metrics) {
 		h.processStartTime = processStartTime
+	}
+}
+
+func WithRouterRuntimeMetrics(enableRuntime bool) Option {
+	return func(h *Metrics) {
+		h.enableRuntime = enableRuntime
 	}
 }

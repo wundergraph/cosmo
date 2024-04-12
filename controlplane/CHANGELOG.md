@@ -4,6 +4,60 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.82.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.3...controlplane@0.82.4) (2024-04-11)
+
+**Note:** Version bump only for package controlplane
+
+## [0.82.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.2...controlplane@0.82.3) (2024-04-10)
+
+### Bug Fixes
+
+* validate whether webhook exists ([#718](https://github.com/wundergraph/cosmo/issues/718)) ([81065d2](https://github.com/wundergraph/cosmo/commit/81065d20e4c47b66bf47edc3b590c9d6e217e046)) (@StarpTech)
+
+## [0.82.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.1...controlplane@0.82.2) (2024-04-09)
+
+### Bug Fixes
+
+* authenticate organization id before updating webhooks ([#713](https://github.com/wundergraph/cosmo/issues/713)) ([64e78e2](https://github.com/wundergraph/cosmo/commit/64e78e29ec750c993faa661b241cb1f0edb4bbb3)) (@StarpTech)
+
+## [0.82.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.0...controlplane@0.82.1) (2024-04-09)
+
+**Note:** Version bump only for package controlplane
+
+# [0.82.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.81.2...controlplane@0.82.0) (2024-04-08)
+
+### Features
+
+* support TLS in organization seed ([#707](https://github.com/wundergraph/cosmo/issues/707)) ([2596c7a](https://github.com/wundergraph/cosmo/commit/2596c7a2e249465f777f120136afb66c1f0903ab)) (@StarpTech)
+
+## [0.81.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.81.1...controlplane@0.81.2) (2024-04-04)
+
+### Bug Fixes
+
+* create database clickhouse, arm incompatibilities ([c88dd50](https://github.com/wundergraph/cosmo/commit/c88dd507318334d40e9352a69a5df32d047d94f4)) (@StarpTech)
+
+## [0.81.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.81.0...controlplane@0.81.1) (2024-04-03)
+
+**Note:** Version bump only for package controlplane
+
+# [0.81.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.80.3...controlplane@0.81.0) (2024-04-03)
+
+### Features
+
+* implement scim server ([#664](https://github.com/wundergraph/cosmo/issues/664)) ([12591da](https://github.com/wundergraph/cosmo/commit/12591da32ef62e9498855ceda37beba72835a801)) (@JivusAyrus)
+
+## [0.80.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.80.2...controlplane@0.80.3) (2024-04-03)
+
+### Bug Fixes
+
+* use printSchemaWithDirectives instead of printSchema ([#676](https://github.com/wundergraph/cosmo/issues/676)) ([2884103](https://github.com/wundergraph/cosmo/commit/288410317150bdd6b14db1f46a8d10448a7c9c07)) (@JivusAyrus)
+
+## [0.80.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.80.1...controlplane@0.80.2) (2024-03-28)
+
+### Bug Fixes
+
+* improve error handling in the migrator ([#673](https://github.com/wundergraph/cosmo/issues/673)) ([8270368](https://github.com/wundergraph/cosmo/commit/82703687066d5ca9af5b4f0eca33007d513cfdb4)) (@JivusAyrus)
+
 ## [0.80.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.80.0...controlplane@0.80.1) (2024-03-26)
 
 ### Bug Fixes

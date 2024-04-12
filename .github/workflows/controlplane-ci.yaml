@@ -44,6 +44,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,6 +63,14 @@ jobs:
 
       - name: Build
         run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition build
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '20.0.2'
+
+      - name: Setup Keycloak
+        run: nohup .github/scripts/setup-keycloak.sh &
 
       - name: Test
         run: pnpm run --filter controlplane test

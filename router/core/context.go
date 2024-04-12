@@ -114,6 +114,9 @@ type RequestContext interface {
 	// ActiveSubgraph returns the current subgraph to which the request is made to
 	ActiveSubgraph(subgraphRequest *http.Request) *Subgraph
 
+	// SubgraphByID return the subgraph by its ID
+	SubgraphByID(subgraphID string) *Subgraph
+
 	// Authentication returns the authentication information for the request, if any
 	Authentication() authentication.Authentication
 }
@@ -312,6 +315,15 @@ func (c *requestContext) GetStringMapStringSlice(key string) (smss map[string][]
 func (c *requestContext) ActiveSubgraph(subgraphRequest *http.Request) *Subgraph {
 	for _, sg := range c.subgraphs {
 		if sg.Url != nil && sg.Url.String() == subgraphRequest.URL.String() {
+			return &sg
+		}
+	}
+	return nil
+}
+
+func (c *requestContext) SubgraphByID(subgraphID string) *Subgraph {
+	for _, sg := range c.subgraphs {
+		if sg.Url != nil && sg.Id == subgraphID {
 			return &sg
 		}
 	}

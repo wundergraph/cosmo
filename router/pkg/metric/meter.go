@@ -24,8 +24,6 @@ import (
 )
 
 var (
-	mp *sdkmetric.MeterProvider
-
 	// Please version the used meters if you change the buckets.
 
 	// 0kb-20MB
@@ -51,7 +49,7 @@ const (
 )
 
 var (
-	//
+	// temporalitySelector is a function that selects the temporality for a given instrument kind.
 	// Short story about when we choose delta and when we choose cumulative temporality:
 	//
 	// Delta temporalities are reported as completed intervals. They don't build upon each other.
@@ -84,8 +82,17 @@ var (
 )
 
 func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceID string) (*sdkmetric.MeterProvider, *prometheus.Registry, error) {
-	registry := prometheus.NewRegistry()
+
+	var registry *prometheus.Registry
+	if c.Prometheus.TestRegistry != nil {
+		registry = c.Prometheus.TestRegistry
+	} else {
+		registry = prometheus.NewRegistry()
+	}
+
 	registry.MustRegister(collectors.NewGoCollector())
+
+	// Only available on Linux and Windows systems
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	promExporter, err := otelprom.New(
@@ -110,9 +117,7 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	}
 	opts = append(opts, sdkmetric.WithReader(promExporter))
 
-	mp = sdkmetric.NewMeterProvider(opts...)
-
-	return mp, registry, nil
+	return sdkmetric.NewMeterProvider(opts...), registry, nil
 }
 
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
@@ -185,28 +190,34 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 		return nil, err
 	}
 
-	if c.OpenTelemetry.Enabled {
-		for _, exp := range c.OpenTelemetry.Exporters {
-			if exp.Disabled {
-				continue
-			}
+	if c.OpenTelemetry.TestReader != nil {
+		mp := sdkmetric.NewMeterProvider(append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))...)
+		// Set the global MeterProvider to the SDK metric provider.
+		otel.SetMeterProvider(mp)
 
-			exporter, err := createOTELExporter(log, exp)
-			if err != nil {
-				log.Error("creating OTEL metrics exporter", zap.Error(err))
-				return nil, err
-			}
-
-			opts = append(opts, sdkmetric.WithReader(
-				sdkmetric.NewPeriodicReader(exporter,
-					sdkmetric.WithTimeout(defaultExportTimeout),
-					sdkmetric.WithInterval(defaultExportInterval),
-				),
-			))
-		}
+		return mp, nil
 	}
 
-	mp = sdkmetric.NewMeterProvider(opts...)
+	for _, exp := range c.OpenTelemetry.Exporters {
+		if exp.Disabled {
+			continue
+		}
+
+		exporter, err := createOTELExporter(log, exp)
+		if err != nil {
+			log.Error("creating OTEL metrics exporter", zap.Error(err))
+			return nil, err
+		}
+
+		opts = append(opts, sdkmetric.WithReader(
+			sdkmetric.NewPeriodicReader(exporter,
+				sdkmetric.WithTimeout(defaultExportTimeout),
+				sdkmetric.WithInterval(defaultExportInterval),
+			),
+		))
+	}
+
+	mp := sdkmetric.NewMeterProvider(opts...)
 	// Set the global MeterProvider to the SDK metric provider.
 	otel.SetMeterProvider(mp)
 
@@ -277,7 +288,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVer
 		// Filter out attributes that match the excludeMetricAttributes regexes
 		s.AttributeFilter = attributeFilter
 
-		// Use different histogram buckets for Prometheus
+		// Use different histogram buckets for PrometheusConfig
 		if i.Unit == unitBytes && i.Kind == sdkmetric.InstrumentKindHistogram {
 			s.Aggregation = bytesBucketHistogram
 		} else if i.Unit == unitMilliseconds && i.Kind == sdkmetric.InstrumentKindHistogram {
@@ -314,7 +325,7 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion s
 	return []sdkmetric.Option{
 		// Record information about this application in a Resource.
 		sdkmetric.WithResource(r),
-		// Use different histogram buckets for Prometheus and OTLP
+		// Use different histogram buckets for PrometheusConfig and OTLP
 		sdkmetric.WithView(sdkmetric.NewView(
 			sdkmetric.Instrument{
 				Kind: sdkmetric.InstrumentKindHistogram,

@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -24,8 +24,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 |  | otelcollector | ^0 |
 |  | router | ^0 |
 |  | studio | ^0 |
-| https://charts.bitnami.com/bitnami | clickhouse | ^5.0.2 |
-| https://charts.bitnami.com/bitnami | keycloak | ^17.3.1 |
+| https://charts.bitnami.com/bitnami | clickhouse | 5.0.2 |
+| https://charts.bitnami.com/bitnami | keycloak | 17.3.1 |
 | https://charts.bitnami.com/bitnami | minio | 12.10.0 |
 | https://charts.bitnami.com/bitnami | postgresql | 12.8.0 |
 | https://charts.bitnami.com/bitnami | redis | 18.9.1 |
@@ -39,7 +39,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.auth.username | string | `"default"` |  |
 | clickhouse.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.clickhouse.wundergraph.com/deployment"` |  |
 | clickhouse.image.tag | string | `"23.8.3"` |  |
-| clickhouse.initdbScripts."db-init.sql" | string | `"CREATE DATABASE cosmo;\n"` |  |
+| clickhouse.initdbScripts."db-init.sh" | string | `"#!/bin/bash\nset -e\nclickhouse-client --user $CLICKHOUSE_ADMIN_USER --password $CLICKHOUSE_ADMIN_PASSWORD -n <<-EOSQL\n  CREATE DATABASE IF NOT EXISTS cosmo;\nEOSQL\n"` |  |
 | clickhouse.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | clickhouse.persistence.size | string | `"2Gi"` |  |
 | clickhouse.replicaCount | int | `1` |  |

@@ -137,7 +137,7 @@ npx wgc -h
 
 ### Router
 
-The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name> --namespace <namespace>`, set the right configurations in the `values.yaml` file.
+The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc router token create <token-name> -g <graph-name> -n <namespace>`, set the right configurations in the `values.yaml` file.
 
 ```yaml
 router:

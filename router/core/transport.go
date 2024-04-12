@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"io"
 	"net/http"
 	"net/url"
@@ -275,6 +276,7 @@ type TransportFactory struct {
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
 	logger                        *zap.Logger
+	tracerProvider                *sdktrace.TracerProvider
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -287,6 +289,7 @@ type TransportOptions struct {
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
 	Logger                        *zap.Logger
+	TracerProvider                *sdktrace.TracerProvider
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
@@ -298,6 +301,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
+		tracerProvider:                opts.TracerProvider,
 	}
 }
 
@@ -310,6 +314,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 		[]otelhttp.Option{
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 			otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
+			otelhttp.WithTracerProvider(t.tracerProvider),
 		},
 		trace.WithPreHandler(func(r *http.Request) {
 			span := otrace.SpanFromContext(r.Context())

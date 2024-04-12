@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../core/types/types.js';
-import { checkAPIKey } from '../../utils.js';
+import { checkAuth } from '../auth/utils.js';
 import Create from './commands/create.js';
 import Delete from './commands/delete.js';
 import List from './commands/list.js';
@@ -14,8 +14,8 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(Delete(opts));
   command.addCommand(List(opts));
 
-  command.hook('preAction', () => {
-    checkAPIKey();
+  command.hook('preAction', async () => {
+    await checkAuth();
   });
 
   return command;

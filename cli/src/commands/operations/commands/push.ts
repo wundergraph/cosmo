@@ -8,7 +8,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { PublishedOperationStatus, PersistedOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { getBaseHeaders } from '../../../core/config.js';
 
 type OperationOutputStatus = 'created' | 'up_to_date' | 'conflict';
 
@@ -164,7 +164,7 @@ export default (opts: BaseCommandOptions) => {
         clientName: options.client,
         operations,
       },
-      { headers: baseHeaders },
+      { headers: getBaseHeaders() },
     );
     if (result.response?.code === EnumStatusCode.OK) {
       if (options.quiet) {

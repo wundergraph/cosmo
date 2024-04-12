@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.24.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.24.1...@wundergraph/cosmo-shared@0.24.2) (2024-04-11)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.24.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.24.0...@wundergraph/cosmo-shared@0.24.1) (2024-04-10)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.23.5...@wundergraph/cosmo-shared@0.24.0) (2024-04-09)
+
+### Features
+
+* support edfs subscription stream/consumer; multiple subjects ([#685](https://github.com/wundergraph/cosmo/issues/685)) ([c70b2ae](https://github.com/wundergraph/cosmo/commit/c70b2aefd39c45b5f98eae8a3c43f639d56064b2)) (@Aenimus)
+
+## [0.23.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.23.4...@wundergraph/cosmo-shared@0.23.5) (2024-04-08)
+
+### Bug Fixes
+
+* provide default subscription protocol for composition-go ([#702](https://github.com/wundergraph/cosmo/issues/702)) ([53140ea](https://github.com/wundergraph/cosmo/commit/53140eabcc960bd95626837da308c86674aeb8a4)) (@Aenimus)
+
+## [0.23.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.23.3...@wundergraph/cosmo-shared@0.23.4) (2024-04-03)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.23.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.23.2...@wundergraph/cosmo-shared@0.23.3) (2024-03-21)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

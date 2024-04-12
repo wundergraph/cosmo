@@ -4,7 +4,7 @@ import { Command, program } from 'commander';
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
 import { join } from 'pathe';
-import { baseHeaders, config } from '../../../core/config.js';
+import { getBaseHeaders, config } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { GraphToken } from '../../auth/utils.js';
 import { makeSignature, safeCompare } from '../../../core/signature.js';
@@ -36,7 +36,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: baseHeaders,
+        headers: getBaseHeaders(),
       },
     );
 

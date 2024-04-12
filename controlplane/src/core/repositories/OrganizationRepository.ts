@@ -278,6 +278,7 @@ export class OrganizationRepository {
         userID: users.id,
         email: users.email,
         memberID: organizationsMembers.id,
+        active: users.active,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -299,20 +300,67 @@ export class OrganizationRepository {
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
-    } as OrganizationMemberDTO;
+      active: orgMember[0].active,
+    };
   }
 
-  public async getMembers(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
+  public async getOrganizationMemberByEmail(input: {
+    organizationID: string;
+    userEmail: string;
+  }): Promise<OrganizationMemberDTO | null> {
+    const orgMember = await this.db
+      .select({
+        userID: users.id,
+        email: users.email,
+        memberID: organizationsMembers.id,
+        active: users.active,
+      })
+      .from(organizationsMembers)
+      .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .where(and(eq(organizationsMembers.organizationId, input.organizationID), eq(users.email, input.userEmail)))
+      .orderBy(asc(organizationsMembers.createdAt))
+      .execute();
+
+    if (orgMember.length === 0) {
+      return null;
+    }
+
+    const userRoles = await this.getOrganizationMemberRoles({
+      organizationID: input.organizationID,
+      userID: orgMember[0].userID,
+    });
+
+    return {
+      userID: orgMember[0].userID,
+      orgMemberID: orgMember[0].memberID,
+      email: orgMember[0].email,
+      roles: userRoles,
+      active: orgMember[0].active,
+    };
+  }
+
+  public async getMembers({
+    organizationID,
+    offset = 0,
+    limit = 999,
+  }: {
+    organizationID: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<OrganizationMemberDTO[]> {
     const orgMembers = await this.db
       .select({
         userID: users.id,
         email: users.email,
         memberID: organizationsMembers.id,
+        active: users.active,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .where(eq(organizationsMembers.organizationId, input.organizationID))
+      .where(eq(organizationsMembers.organizationId, organizationID))
       .orderBy(asc(organizationsMembers.createdAt))
+      .offset(offset)
+      .limit(limit)
       .execute();
 
     const members: OrganizationMemberDTO[] = [];
@@ -330,6 +378,7 @@ export class OrganizationRepository {
         orgMemberID: member.memberID,
         email: member.email,
         roles: roles.map((role) => role.role),
+        active: member.active,
       } as OrganizationMemberDTO);
     }
     return members;
@@ -537,8 +586,8 @@ export class OrganizationRepository {
     key: string;
     events: string[];
     eventsMeta: EventMeta[];
-  }) {
-    await this.db.transaction(async (tx) => {
+  }): Promise<string> {
+    return await this.db.transaction(async (tx) => {
       const createWebhookResult = await tx
         .insert(organizationWebhooks)
         .values({
@@ -549,8 +598,8 @@ export class OrganizationRepository {
         })
         .returning();
 
-      if (!input.eventsMeta) {
-        return;
+      if (createWebhookResult.length === 0) {
+        throw new Error('Failed to create webhook');
       }
 
       for (const eventMeta of input.eventsMeta) {
@@ -571,6 +620,8 @@ export class OrganizationRepository {
           }
         }
       }
+
+      return createWebhookResult[0].id;
     });
   }
 
@@ -634,6 +685,22 @@ export class OrganizationRepository {
     return meta as PlainMessage<EventMeta>[];
   }
 
+  public async getWebhookConfigById(id: string, organizationId: string): Promise<WebhooksConfigDTO | null> {
+    const res = await this.db.query.organizationWebhooks.findFirst({
+      where: and(eq(organizationWebhooks.id, id), eq(organizationWebhooks.organizationId, organizationId)),
+    });
+
+    if (!res) {
+      return null;
+    }
+
+    return {
+      id: res.id,
+      endpoint: res.endpoint ?? '',
+      events: res.events ?? [],
+    };
+  }
+
   public async getWebhookConfigs(organizationId: string): Promise<WebhooksConfigDTO[]> {
     const res = await this.db.query.organizationWebhooks.findMany({
       where: eq(organizationWebhooks.organizationId, organizationId),
@@ -665,7 +732,12 @@ export class OrganizationRepository {
         set.key = input.key;
       }
 
-      await tx.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
+      await tx
+        .update(organizationWebhooks)
+        .set(set)
+        .where(
+          and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)),
+        );
 
       const graphIds: string[] = [];
       for (const eventMeta of input.eventsMeta) {
@@ -1088,6 +1160,7 @@ export class OrganizationRepository {
       support: false,
       oidc: false,
       ai: false,
+      scim: false,
     };
 
     for (const feature of features) {

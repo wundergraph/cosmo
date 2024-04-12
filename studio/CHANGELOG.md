@@ -4,6 +4,55 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.76.6](https://github.com/wundergraph/cosmo/compare/studio@0.76.5...studio@0.76.6) (2024-04-10)
+
+### Bug Fixes
+
+* read / set cookie values as strings ([#720](https://github.com/wundergraph/cosmo/issues/720)) ([d3c4ad9](https://github.com/wundergraph/cosmo/commit/d3c4ad93ac08c8aaabd92c8f911de3e1eec5a343)) (@StarpTech)
+* url overflow in federated graph card ([#719](https://github.com/wundergraph/cosmo/issues/719)) ([34dec36](https://github.com/wundergraph/cosmo/commit/34dec36e8cb36c275dd15bce111ad27f2124c259)) (@thisisnithin)
+
+## [0.76.5](https://github.com/wundergraph/cosmo/compare/studio@0.76.4...studio@0.76.5) (2024-04-10)
+
+**Note:** Version bump only for package studio
+
+## [0.76.4](https://github.com/wundergraph/cosmo/compare/studio@0.76.3...studio@0.76.4) (2024-04-09)
+
+### Bug Fixes
+
+* everyone with write access can create api keys ([#711](https://github.com/wundergraph/cosmo/issues/711)) ([c473a28](https://github.com/wundergraph/cosmo/commit/c473a28cd3dad169cadea1a79572c36eff610992)) (@StarpTech)
+
+## [0.76.3](https://github.com/wundergraph/cosmo/compare/studio@0.76.2...studio@0.76.3) (2024-04-08)
+
+### Bug Fixes
+
+* align tables make them entire clickable ([#696](https://github.com/wundergraph/cosmo/issues/696)) ([75c9bda](https://github.com/wundergraph/cosmo/commit/75c9bdaf51d0e83f7723257d4eeba7ddbb43186a)) (@JivusAyrus)
+
+## [0.76.2](https://github.com/wundergraph/cosmo/compare/studio@0.76.1...studio@0.76.2) (2024-04-05)
+
+### Bug Fixes
+
+* stringify org cookie before comparison ([#698](https://github.com/wundergraph/cosmo/issues/698)) ([3e5f346](https://github.com/wundergraph/cosmo/commit/3e5f346682c2843bc47b5e396022e2a81764d0c0)) (@StarpTech)
+
+## [0.76.1](https://github.com/wundergraph/cosmo/compare/studio@0.76.0...studio@0.76.1) (2024-04-03)
+
+**Note:** Version bump only for package studio
+
+# [0.76.0](https://github.com/wundergraph/cosmo/compare/studio@0.75.2...studio@0.76.0) (2024-04-03)
+
+### Bug Fixes
+
+* remove namespace from local storage ([#687](https://github.com/wundergraph/cosmo/issues/687)) ([13f3a17](https://github.com/wundergraph/cosmo/commit/13f3a17bf9de7d29fc51285804b15a4f6497cd83)) (@JivusAyrus)
+
+### Features
+
+* implement scim server ([#664](https://github.com/wundergraph/cosmo/issues/664)) ([12591da](https://github.com/wundergraph/cosmo/commit/12591da32ef62e9498855ceda37beba72835a801)) (@JivusAyrus)
+
+## [0.75.2](https://github.com/wundergraph/cosmo/compare/studio@0.75.1...studio@0.75.2) (2024-03-28)
+
+### Bug Fixes
+
+* make the downloaded file name the same as the target name ([#672](https://github.com/wundergraph/cosmo/issues/672)) ([b3fd9df](https://github.com/wundergraph/cosmo/commit/b3fd9dfc3b1bb499ded7df9b6b7a0ca19d0f6301)) (@JivusAyrus)
+
 ## [0.75.1](https://github.com/wundergraph/cosmo/compare/studio@0.75.0...studio@0.75.1) (2024-03-26)
 
 ### Bug Fixes

@@ -2,6 +2,7 @@ package trace
 
 import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"net/url"
 	"time"
 )
@@ -21,7 +22,7 @@ const (
 	DefaultExportTimeout = 30 * time.Second
 )
 
-type Exporter struct {
+type ExporterConfig struct {
 	Disabled bool
 	Endpoint string
 
@@ -55,11 +56,13 @@ type Config struct {
 	Sampler float64
 	// ExportGraphQLVariables defines if and how GraphQL variables should be exported as span attributes.
 	ExportGraphQLVariables ExportGraphQLVariables
-	Exporters              []*Exporter
+	Exporters              []*ExporterConfig
 	Propagators            []Propagator
+	// TestMemoryExporter is used for testing purposes. If set, the exporter will be used instead of the configured exporters.
+	TestMemoryExporter sdktrace.SpanExporter
 }
 
-func DefaultExporter(cfg *Config) *Exporter {
+func DefaultExporter(cfg *Config) *ExporterConfig {
 	for _, exporter := range cfg.Exporters {
 		if exporter.Disabled {
 			continue
@@ -82,15 +85,15 @@ func DefaultExporter(cfg *Config) *Exporter {
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
-		Enabled: false,
-		Name:    ServerName,
-		Version: serviceVersion,
-		Sampler: 1,
+		Enabled:     false,
+		Name:        ServerName,
+		Version:     serviceVersion,
+		Sampler:     1,
 		WithNewRoot: false,
 		ExportGraphQLVariables: ExportGraphQLVariables{
 			Enabled: true,
 		},
-		Exporters: []*Exporter{
+		Exporters: []*ExporterConfig{
 			{
 				Disabled:      false,
 				Endpoint:      "http://localhost:4318",

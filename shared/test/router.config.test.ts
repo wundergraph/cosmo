@@ -79,7 +79,6 @@ describe('Router Config Builder', () => {
       schemaVersionId: '',
     });
     const json = routerConfig.toJsonString({
-      enumAsInteger: true,
       emitDefaultValues: false,
     });
     const out = JSON.stringify(JSON.parse(json), null, 2);

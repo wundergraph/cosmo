@@ -136,7 +136,7 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               return (
                 <TableRow
                   key={id}
-                  className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+                  className="group py-1"
                 >
                   <TableCell className="align-top font-medium">
                     <span className="flex items-center space-x-2">

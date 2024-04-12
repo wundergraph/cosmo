@@ -1,3 +1,7 @@
+schema {
+  query: Query
+}
+
 directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 
 directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
@@ -22,7 +26,7 @@ type Query {
 
 type Panda {
   name: ID!
-  favoriteFood: String
+  favoriteFood: String @tag(name: "nom-nom-nom")
 }
 
 interface SkuItf {
@@ -45,7 +49,7 @@ type ProductDimension {
 }
 
 type User {
-  email: ID!
+  email: ID! @tag(name: "test-from-users")
   totalProductsCreated: Int
   name: String
 }
@@ -70,7 +74,7 @@ interface ProductItf implements SkuItf {
 }
 
 type Product implements ProductItf & SkuItf {
-  id: ID!
+  id: ID! @tag(name: "hi-from-products")
   sku: String
   name: String
   package: String

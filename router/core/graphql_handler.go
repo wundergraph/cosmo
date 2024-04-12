@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"io"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -24,7 +27,6 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
@@ -76,6 +78,7 @@ type HandlerOptions struct {
 	RateLimiter                            *CosmoRateLimiter
 	RateLimitConfig                        *config.RateLimitConfiguration
 	SubgraphErrorPropagation               config.SubgraphErrorPropagationConfiguration
+	EngineLoaderHooks                      resolve.LoaderHooks
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -92,6 +95,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		rateLimiter:              opts.RateLimiter,
 		rateLimitConfig:          opts.RateLimitConfig,
 		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
+		engineLoaderHooks:        opts.EngineLoaderHooks,
 	}
 	return graphQLHandler
 }
@@ -117,6 +121,7 @@ type GraphQLHandler struct {
 	rateLimiter              *CosmoRateLimiter
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+	engineLoaderHooks        resolve.LoaderHooks
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +147,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.authorizer != nil {
 		ctx = WithAuthorizationExtension(ctx)
 		ctx.SetAuthorizer(h.authorizer)
+	}
+	if h.engineLoaderHooks != nil {
+		ctx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
 	ctx = h.configureRateLimiting(ctx)
 
@@ -180,15 +188,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		if err != nil {
 			if errors.Is(err, ErrUnauthorized) {
-				writeRequestErrors(executionContext, r, w, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), requestLogger)
+				writeRequestErrors(executionContext, r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 			} else if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
-				writeRequestErrors(executionContext, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
+				writeRequestErrors(executionContext, r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
 				return
 			}
 
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
-			writeRequestErrors(executionContext, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
+			writeRequestErrors(executionContext, r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
 			return
 		}
 	default:
@@ -309,6 +317,11 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK)
 		}
+	case errorTypeEDFSNats:
+		response.Errors[0].Message = fmt.Sprintf("EDFS NATS error: %s", err.Error())
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusInternalServerError)
+		}
 	}
 	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
 		traceNode := resolve.GetTrace(ctx.Context(), res.Data)
@@ -340,6 +353,7 @@ const (
 	errorTypeContextCanceled
 	errorTypeContextTimeout
 	errorTypeUpgradeFailed
+	errorTypeEDFSNats
 )
 
 func (h *GraphQLHandler) errorType(err error) errorType {
@@ -361,6 +375,10 @@ func (h *GraphQLHandler) errorType(err error) errorType {
 		if nErr.Timeout() {
 			return errorTypeContextTimeout
 		}
+	}
+	var edfsErr *pubsub.EDFSNatsError
+	if errors.As(err, &edfsErr) {
+		return errorTypeEDFSNats
 	}
 	return errorTypeUnknown
 }
@@ -395,17 +413,15 @@ func addErrorToSpan(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
-	span := trace.SpanFromContext(ctx)
-	if err == nil {
-		return
-	}
+
 	reqCtx := getRequestContext(ctx)
 	if reqCtx == nil {
 		return
 	}
 
 	reqCtx.error = err
-	rtrace.AttachErrToSpan(span, err)
+
+	rtrace.AttachErrToSpan(trace.SpanFromContext(ctx), err)
 }
 
 func propagateSubgraphErrors(ctx *resolve.Context, requestLogger *zap.Logger) {
@@ -420,7 +436,7 @@ func propagateSubgraphErrors(ctx *resolve.Context, requestLogger *zap.Logger) {
 	}
 }
 
-func writeRequestErrors(ctx context.Context, r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphql.RequestErrors, requestLogger *zap.Logger) {
+func writeRequestErrors(ctx context.Context, r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) {
 	addErrorToSpan(ctx, requestErrors)
 
 	if requestErrors != nil {
@@ -445,5 +461,5 @@ func writeRequestErrors(ctx context.Context, r *http.Request, w http.ResponseWri
 }
 
 func writeInternalError(ctx context.Context, r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger) {
-	writeRequestErrors(ctx, r, w, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), requestLogger)
+	writeRequestErrors(ctx, r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 }

@@ -5,17 +5,17 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
-// RequestMeasurements holds the metrics for the request.
-type RequestMeasurements struct {
+// Measurements holds the metrics for the request.
+type Measurements struct {
 	counters       map[string]otelmetric.Int64Counter
 	histograms     map[string]otelmetric.Float64Histogram
 	upDownCounters map[string]otelmetric.Int64UpDownCounter
 }
 
-// createRequestMeasures creates the request measures. Used to create measures for both Prometheus and OTLP metric stores.
-func createRequestMeasures(meter otelmetric.Meter) (*RequestMeasurements, error) {
+// createMeasures creates the measures. Used to create measures for both Prometheus and OTLP metric stores.
+func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 
-	h := &RequestMeasurements{
+	h := &Measurements{
 		counters:       map[string]otelmetric.Int64Counter{},
 		histograms:     map[string]otelmetric.Float64Histogram{},
 		upDownCounters: map[string]otelmetric.Int64UpDownCounter{},
@@ -30,6 +30,16 @@ func createRequestMeasures(meter otelmetric.Meter) (*RequestMeasurements, error)
 	}
 
 	h.counters[RequestCounter] = requestCounter
+
+	requestError, err := meter.Int64Counter(
+		RequestError,
+		RequestErrorCounterOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request error counter: %w", err)
+	}
+
+	h.counters[RequestError] = requestError
 
 	serverLatencyMeasure, err := meter.Float64Histogram(
 		ServerLatencyHistogram,

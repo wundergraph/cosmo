@@ -153,6 +153,19 @@ export default class ApolloMigrator {
     }
     const body = await response.json();
     const data = body.data;
+
+    if (!data || !data?.graph || !data.graph?.variants) {
+      this.logger.error(
+        { data, user: { id: this.userId, email: this.userEmail } },
+        'Could not fetch the graph details from apollo.',
+      );
+      return {
+        success: false,
+        fedGraphRoutingURL: '',
+        subgraphs: [],
+        errorMessage: 'Could not fetch the graph details from apollo.',
+      };
+    }
     const variants: any[] = data.graph.variants;
 
     const variant = variants.find((v: { name: string }) => v.name === this.variantName);
@@ -169,6 +182,20 @@ export default class ApolloMigrator {
         errorMessage: 'Could not find the requested variant of the graph.',
       };
     }
+
+    if (!variant.subgraphs) {
+      this.logger.error(
+        { data, user: { id: this.userId, email: this.userEmail } },
+        'Could not fetch the subgraph details of the requested variant from apollo.',
+      );
+      return {
+        success: false,
+        fedGraphRoutingURL: '',
+        subgraphs: [],
+        errorMessage: 'Could not fetch the subgraph details of the requested variant from apollo.',
+      };
+    }
+
     const subgraphs: any[] = variant.subgraphs;
 
     if (!subgraphs || subgraphs.length === 0) {

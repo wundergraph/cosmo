@@ -596,6 +596,13 @@
       "when": 1710820602447,
       "tag": "0084_goofy_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "5",
+      "when": 1712150441547,
+      "tag": "0085_slimy_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }

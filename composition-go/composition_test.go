@@ -34,6 +34,7 @@ var subgraphs = []*Subgraph{
 		  type Nested4 {
 			name: String
 		  }`,
+		SubscriptionProtocol: "ws",
 	},
 	{
 		Name: "B",
@@ -56,6 +57,7 @@ var subgraphs = []*Subgraph{
 		  type Nested4 {
 			age: Int @authenticated
 		  }`,
+		SubscriptionProtocol: "ws",
 	},
 }
 

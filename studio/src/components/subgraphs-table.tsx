@@ -411,7 +411,11 @@ export const SubgraphsTable = ({
                 )}`;
               }
               return (
-                <TableRow key={name} className="py-1 even:bg-secondary/20">
+                <TableRow
+                  key={name}
+                  className=" group cursor-pointer py-1 hover:bg-secondary/30"
+                  onClick={() => router.push(path)}
+                >
                   <TableCell className="px-4 font-medium">{name}</TableCell>
                   <TableCell className="px-4 text-muted-foreground">
                     {routingURL}
@@ -453,7 +457,12 @@ export const SubgraphsTable = ({
                     )}
                     <Tooltip delayDuration={200}>
                       <TooltipTrigger asChild>
-                        <Button asChild variant="ghost" size="icon-sm">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon-sm"
+                          className="table-action"
+                        >
                           <Link
                             onClick={(e) => e.stopPropagation()}
                             href={analyticsPath}
