@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -31,6 +32,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	brotli "go.withmatt.com/connect-brotli"
+	brotli_enc "gopkg.in/kothar/brotli-go.v0/enc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
@@ -924,9 +926,22 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			h.ServeHTTP(w, r)
 		})
 	})
+
+	// Adds Brotli compressor
+	compressor := middleware.NewCompressor(5)
+	compressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+		params := brotli_enc.NewBrotliParams()
+		params.SetQuality(level)
+		return brotli_enc.NewBrotliWriter(params, w)
+	})
+
+	// Adds deflate & gzip compressor
+	httpRouter.Use(middleware.AllowContentEncoding("deflate", "gzip"))
+
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
+
 	// Register the trace middleware before the request logger, so we can log the trace ID
 	if traceHandler != nil {
 		httpRouter.Use(traceHandler.Handler)

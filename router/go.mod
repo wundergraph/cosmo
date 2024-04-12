@@ -118,6 +118,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
+	gopkg.in/kothar/brotli-go.v0 v0.0.0-20170728081549-771231d473d6
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
