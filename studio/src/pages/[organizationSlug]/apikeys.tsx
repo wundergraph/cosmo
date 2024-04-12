@@ -498,7 +498,14 @@ const CreateAPIKeyDialog = ({
           <Button
             className="mt-2"
             type="submit"
-            disabled={!isValid || !!errorMsg}
+            disabled={
+              !isValid ||
+              !!errorMsg ||
+              (rbac &&
+                !selectedAllResources &&
+                selectedFedGraphs.length === 0 &&
+                selectedSubgraphs.length === 0)
+            }
             variant="default"
             isLoading={isPending}
           >
