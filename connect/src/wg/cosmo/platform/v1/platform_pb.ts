@@ -665,6 +665,11 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
    */
   deploymentErrors: DeploymentError[] = [];
 
+  /**
+   * @generated from field: optional bool hasChanged = 4;
+   */
+  hasChanged?: boolean;
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -676,6 +681,7 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "hasChanged", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphResponse {
