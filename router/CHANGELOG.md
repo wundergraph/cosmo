@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.82.0](https://github.com/wundergraph/cosmo/compare/router@0.81.0...router@0.82.0) (2024-04-11)
+
+### Features
+
+* support entity targets (implicit keys) ([#724](https://github.com/wundergraph/cosmo/issues/724)) ([4aa2c86](https://github.com/wundergraph/cosmo/commit/4aa2c86961384d913e964437b7ea369accb891c7)) (@Aenimus)
+
 # [0.81.0](https://github.com/wundergraph/cosmo/compare/router@0.80.0...router@0.81.0) (2024-04-09)
 
 ### Features
