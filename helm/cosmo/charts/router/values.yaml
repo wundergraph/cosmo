@@ -84,6 +84,13 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
+istioGateway:
+  # enabled: true
+  # gatewayName: istio-ingress
+  # hosts:
+  #   - host: router.wundergraph.local
+  #     credentialName: istio-ingressgateway-certs
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
