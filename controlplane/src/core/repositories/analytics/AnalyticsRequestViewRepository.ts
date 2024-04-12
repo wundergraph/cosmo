@@ -553,24 +553,54 @@ export class AnalyticsRequestViewRepository {
   private getBaseFiltersForGroup = (name: AnalyticsViewGroupName) => {
     const filters = { ...this.baseFilters };
 
+    let baseFiltersForGroup: BaseFilters = {};
+
     switch (name) {
       case AnalyticsViewGroupName.None: {
-        const { p95, ...rest } = filters;
-        return rest;
+        const {
+          traceId,
+          operationName,
+          operationType,
+          durationInNano,
+          statusCode,
+          httpStatusCode,
+          operationPersistedId,
+          operationHash,
+          clientName,
+          clientVersion,
+        } = filters;
+        baseFiltersForGroup = {
+          traceId,
+          operationName,
+          operationType,
+          durationInNano,
+          statusCode,
+          httpStatusCode,
+          operationPersistedId,
+          operationHash,
+          clientName,
+          clientVersion,
+        };
+        break;
       }
       case AnalyticsViewGroupName.OperationName: {
-        const { durationInNano, clientName, statusMessages, ...rest } = filters;
-        return rest;
+        const { operationName, operationType } = filters;
+        baseFiltersForGroup = { operationName, operationType };
+        break;
       }
       case AnalyticsViewGroupName.Client: {
         const { clientName, p95, clientVersion } = filters;
-        return { clientName, p95, clientVersion };
+        baseFiltersForGroup = { clientName, p95, clientVersion };
+        break;
       }
       case AnalyticsViewGroupName.HttpStatusCode: {
         const { p95, httpStatusCode } = filters;
-        return { p95, httpStatusCode };
+        baseFiltersForGroup = { p95, httpStatusCode };
+        break;
       }
     }
+
+    return baseFiltersForGroup;
   };
 
   private getFilters(
@@ -635,22 +665,11 @@ export class AnalyticsRequestViewRepository {
   // Omit fields that are not supported in the grouped views to prevent errors
   // in the generated sql queries
   private omitGroupedFilters(name: AnalyticsViewGroupName, filters: AnalyticsFilter[]) {
-    switch (name) {
-      case AnalyticsViewGroupName.None: {
-        return filters.filter((f) => f.field !== 'p95');
-      }
-      case AnalyticsViewGroupName.OperationName: {
-        return filters.filter(
-          (f) => !['durationInNano', 'clientName', 'clientVersion', 'statusMessages'].includes(f.field),
-        );
-      }
-      case AnalyticsViewGroupName.Client: {
-        return filters.filter((f) => ['clientName', 'p95', 'clientVersion'].includes(f.field));
-      }
-      case AnalyticsViewGroupName.HttpStatusCode: {
-        return filters.filter((f) => ['p95', 'httpStatusCode'].includes(f.field));
-      }
-    }
+    const baseFilters = this.getBaseFiltersForGroup(name);
+
+    const allowedColumnNames = new Set(Object.entries(baseFilters).map(([_, f]) => f.columnName));
+
+    return filters.filter((f) => allowedColumnNames.has(f.field));
   }
 
   private getSortOrder = (id?: string, desc?: boolean) => {
