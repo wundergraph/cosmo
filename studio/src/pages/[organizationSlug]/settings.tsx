@@ -50,8 +50,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useHasFeature } from "@/hooks/use-has-feature";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useIsCreator } from "@/hooks/use-is-creator";
 import { useUser } from "@/hooks/use-user";
@@ -375,7 +375,7 @@ const OpenIDConnectProvider = ({
   refetch: () => void;
 }) => {
   const user = useUser();
-  const oidc = useHasFeature("oidc");
+  const oidc = useFeature("oidc");
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
@@ -840,7 +840,7 @@ const OpenIDConnectProvider = ({
 
 const CosmoAi = () => {
   const router = useRouter();
-  const ai = useHasFeature("ai");
+  const ai = useFeature("ai");
   const queryClient = useQueryClient();
   const { mutate, isPending, data } = useMutation(
     updateFeatureSettings.useMutation(),
@@ -913,7 +913,7 @@ const CosmoAi = () => {
     );
   };
 
-  const action = ai ? (
+  const action = ai?.enabled ? (
     <Button
       className="md:ml-auto"
       type="submit"
@@ -966,7 +966,7 @@ const CosmoAi = () => {
 const RBAC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const rbac = useHasFeature("rbac");
+  const rbac = useFeature("rbac");
   const { mutate, isPending } = useMutation(
     updateFeatureSettings.useMutation(),
   );
@@ -1038,7 +1038,7 @@ const RBAC = () => {
     );
   };
 
-  const action = rbac ? (
+  const action = rbac?.enabled ? (
     <Button
       className="md:ml-auto"
       type="submit"
@@ -1103,7 +1103,7 @@ const RBAC = () => {
 const Scim = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const scim = useHasFeature("scim");
+  const scim = useFeature("scim");
   const { mutate, isPending } = useMutation(
     updateFeatureSettings.useMutation(),
   );
@@ -1175,7 +1175,7 @@ const Scim = () => {
     );
   };
 
-  const action = scim ? (
+  const action = scim?.enabled ? (
     <Button
       className="md:ml-auto"
       type="submit"
