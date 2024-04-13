@@ -77,8 +77,8 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 	for _, rule := range requestRules {
 		// Forwards the matching client request header to the upstream
 		if rule.Operation == config.HeaderRuleOperationPropagate {
-			// Rename the header
-			if rule.Rename != "" {
+			// Rename the header when name is provided
+			if rule.Rename != "" && rule.Named != "" {
 				value := ctx.Request().Header.Get(rule.Named)
 				if value != "" {
 					request.Header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
@@ -113,7 +113,21 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 					// Headers are case-insensitive, but Go canonicalize them
 					// Issue: https://github.com/golang/go/issues/37834
 					if regex.MatchString(name) {
-						request.Header.Set(name, ctx.Request().Header.Get(name))
+						// Rename the header when matiching is provided
+						if rule.Rename != "" {
+							value := ctx.Request().Header.Get(name)
+							if value != "" {
+								request.Header.Set(rule.Rename, ctx.Request().Header.Get(name))
+								request.Header.Del(name)
+							} else if rule.Default != "" {
+								request.Header.Set(rule.Rename, rule.Default)
+								request.Header.Del(name)
+							}
+
+						} else {
+
+							request.Header.Set(name, ctx.Request().Header.Get(name))
+						}
 					}
 				}
 				continue
