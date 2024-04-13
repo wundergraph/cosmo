@@ -179,17 +179,19 @@ export class SubgraphRepository {
     compositionErrors: PlainMessage<CompositionError>[];
     deploymentErrors: PlainMessage<DeploymentError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
+    subgraphChanged: boolean;
   }> {
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
+    let subgraphChanged = false;
+    let labelChanged = false;
 
     await this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
       const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
-      let subgraphChanged = false;
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
@@ -244,7 +246,6 @@ export class SubgraphRepository {
           .execute();
       }
 
-      let labelChanged = false;
       if (data.labels && data.labels.length > 0) {
         labelChanged = hasLabelsChanged(subgraph.labels, data.labels);
       }
@@ -355,7 +356,12 @@ export class SubgraphRepository {
       }
     });
 
-    return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
+    return {
+      compositionErrors,
+      updatedFederatedGraphs,
+      deploymentErrors,
+      subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
+    };
   }
 
   public async move(
