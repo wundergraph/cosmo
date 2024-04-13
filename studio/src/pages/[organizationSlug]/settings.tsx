@@ -1233,7 +1233,7 @@ const Scim = () => {
           </Button>
         )}
       </CardHeader>
-      {scim && (
+      {scim?.enabled && (
         <CardContent>
           <div className="flex flex-col gap-y-2">
             <span className="px-1">SCIM server url</span>
