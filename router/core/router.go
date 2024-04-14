@@ -928,12 +928,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	})
 
 	// Adds Brotli compressor
-	compressor := middleware.NewCompressor(5)
-	compressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+	brCompressor := middleware.NewCompressor(5)
+	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
 		params := brotli_enc.NewBrotliParams()
 		params.SetQuality(level)
 		return brotli_enc.NewBrotliWriter(params, w)
 	})
+	httpRouter.Use(brCompressor.Handler)
 
 	// Adds deflate & gzip compressor
 	httpRouter.Use(middleware.AllowContentEncoding("deflate", "gzip"))
