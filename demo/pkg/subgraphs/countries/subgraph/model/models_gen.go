@@ -12,3 +12,6 @@ func (Country) IsEntity() {}
 type CountryKey struct {
 	Name string `json:"name"`
 }
+
+type Query struct {
+}
