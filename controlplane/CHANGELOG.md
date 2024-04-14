@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.82.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.4...controlplane@0.82.5) (2024-04-12)
+
+### Bug Fixes
+
+* analytics group filter omission ([#729](https://github.com/wundergraph/cosmo/issues/729)) ([ba316af](https://github.com/wundergraph/cosmo/commit/ba316affc5cd413d93731d04ad3e58e214827f9b)) (@thisisnithin)
+* inform users if there is nothing new to publish ([#710](https://github.com/wundergraph/cosmo/issues/710)) ([faf01fc](https://github.com/wundergraph/cosmo/commit/faf01fc9e398ef70873abeec8eee06e797cbabf3)) (@JivusAyrus)
+* let everybody create orgs ([#709](https://github.com/wundergraph/cosmo/issues/709)) ([13ac13c](https://github.com/wundergraph/cosmo/commit/13ac13c64859204c46744a1d54638773dff6e30a)) (@JivusAyrus)
+
 ## [0.82.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.3...controlplane@0.82.4) (2024-04-11)
 
 **Note:** Version bump only for package controlplane
