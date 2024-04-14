@@ -114,7 +114,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 					// Issue: https://github.com/golang/go/issues/37834
 					if regex.MatchString(name) {
 						// Rename the header when matiching is provided
-						if rule.Rename != "" {
+						if rule.Rename != "" && rule.Named == "" {
 							value := ctx.Request().Header.Get(name)
 							if value != "" {
 								request.Header.Set(rule.Rename, ctx.Request().Header.Get(name))
