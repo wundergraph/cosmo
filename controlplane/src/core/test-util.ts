@@ -6,6 +6,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { pino } from 'pino';
 import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
+import { MemberRole } from '../db/models.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -114,7 +115,7 @@ export function createTestContext(
   organizationId = randomUUID(),
   isAdmin = true,
   hasWriteAccess = true,
-  roles: ('admin' | 'developer' | 'viewer')[] = ['admin'],
+  roles: MemberRole[] = ['admin'],
 ): UserTestData & AuthContext {
   const userId = randomUUID();
 

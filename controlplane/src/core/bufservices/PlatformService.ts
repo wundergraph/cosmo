@@ -4109,6 +4109,30 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         if (rbac) {
+          if (req.allowAllResources && !authContext.isAdmin) {
+            return {
+              response: {
+                code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+                details: `You are not authorized to perform the current action. Only admins can create an API key that has access to all resources.`,
+              },
+              apiKey: '',
+            };
+          }
+
+          if (
+            req.federatedGraphTargetIds.length === 0 &&
+            req.subgraphTargetIds.length === 0 &&
+            !req.allowAllResources
+          ) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Can not create an api key without associating it with any resources.`,
+              },
+              apiKey: '',
+            };
+          }
+
           // check if the user is authorized to perform the action
           for (const targetId of req.federatedGraphTargetIds) {
             await opts.authorizer.authorize({
@@ -4132,30 +4156,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               headers: ctx.requestHeader,
               authContext,
             });
-          }
-
-          if (req.allowAllResources && !authContext.isAdmin) {
-            return {
-              response: {
-                code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
-                details: `You are not authorized to perform the current action. User needs to be an Admin to create an API key with all resources.`,
-              },
-              apiKey: '',
-            };
-          }
-
-          if (
-            req.federatedGraphTargetIds.length === 0 &&
-            req.subgraphTargetIds.length === 0 &&
-            !req.allowAllResources
-          ) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Can not create an api key without associating it with any resources.`,
-              },
-              apiKey: '',
-            };
           }
         }
 

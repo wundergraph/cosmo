@@ -499,6 +499,7 @@ const CreateAPIKeyDialog = ({
             className="mt-2"
             type="submit"
             disabled={
+              // should be disabled if the form is invalid or if either the resources or the all resources option is not selected
               !isValid ||
               !!errorMsg ||
               (rbac &&
