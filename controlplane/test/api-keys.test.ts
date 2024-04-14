@@ -240,7 +240,7 @@ describe('Create API Keys as developers with RBAC enabled', (ctx) => {
     await server.close();
   });
 
-  test('Should not be able to create an api key with selected all resources', async (testContext) => {
+  test('Should not be able to create an api key with all resources option selected', async (testContext) => {
     const { client, users, server, authenticator } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
 
     authenticator.changeUser(TestUser.devJoeCompanyA);
