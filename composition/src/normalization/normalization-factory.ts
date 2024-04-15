@@ -269,7 +269,7 @@ export function normalizeSubgraph(
   return normalizationFactory.normalize(document);
 }
 
-export function validateEventSubscribetionSubject(value: ConstValueNode, errorMessages: string[]): boolean {
+export function validateEventSubscribetionSubject(fieldDefinition: FieldDefinitionNode, value: ConstValueNode, errorMessages: string[]): boolean {
   const val = value.value;
 
   if (value.kind !== Kind.STRING || val.length < 1) {
@@ -280,19 +280,19 @@ export function validateEventSubscribetionSubject(value: ConstValueNode, errorMe
 
   const regex = /^[a-zA-Z0-9.*>\{\}\s]+$/;
   if (!regex.test(value.value)) {
-      errorMessages.push(invalidEventSubjectCharactersErrorMessage);
-     
-      return false;
+    errorMessages.push(invalidEventSubjectCharactersErrorMessage);
+
+    return false;
   }
 
   if (val.includes('{{')) {
-    return validateSubjectTemplate(val, errorMessages)
+    return validateSubjectTemplate(fieldDefinition, val, errorMessages)
   }
 
   return validateSubjectStatic(val, errorMessages);
 }
 
-function validateSubjectTemplate(value: string, errorMessages: string[]): boolean {
+function validateSubjectTemplate(fieldDefinition: FieldDefinitionNode, value: string, errorMessages: string[]): boolean {
   if (value.match(/{{(\s+)?args\./g)?.length === undefined) {
     errorMessages.push(invalidEventSubjectTemplatePrefixErrorMessage);
 
@@ -301,11 +301,44 @@ function validateSubjectTemplate(value: string, errorMessages: string[]): boolea
 
   if (value.match(/{{(\s+)?args\.\w+\./g)?.length !== undefined) {
     errorMessages.push(invalidEventSubjectTemplateArgsLevelErrorMessage);
-    
+
+    return false;
+  }
+
+  if (fieldDefinition.arguments === undefined) {
+    errorMessages.push('Field definition arguments are undefined');
+
+    return false;
+  }
+
+  const subjectArgsFieldName = getSubjectArgsFieldName(value);
+  let fieldDefinitionMatchArgsField = false
+
+  for (const argument of fieldDefinition.arguments) {
+    if (argument.type.kind !== Kind.NON_NULL_TYPE) {
+      errorMessages.push('field definition can\'t be null');
+
+      return false;
+    }
+
+    if (argument.name.value === subjectArgsFieldName) {
+      fieldDefinitionMatchArgsField = true;
+
+      break;
+    }
+  }
+
+  if (!fieldDefinitionMatchArgsField) {
+    errorMessages.push('Field definition does not match args field');
+
     return false;
   }
 
   return true
+}
+
+export function getSubjectArgsFieldName(value: string): string {
+  return value.match(/{{(\s+)?args\.\w+(\s+)?}}/g)[0].replace(/{{(\s+)?args\./g, '').replace(/(\s+)?}}/g, '');
 }
 
 function validateSubjectStatic(value: string, errorMessages: string[]): boolean {
@@ -849,7 +882,7 @@ export class NormalizationFactory {
   }
 
   getEventSubscribeConfiguration(
-    node: FieldDefinitionNode,
+    fieldDefinition: FieldDefinitionNode,
     directive: ConstDirectiveNode,
     errorMessages: string[],
   ): EventConfiguration | undefined {
@@ -866,7 +899,8 @@ export class NormalizationFactory {
           }
 
           for (const value of argumentNode.value.values) {
-            if (validateEventSubscribetionSubject(value, errorMessages) === false) {
+
+            if (validateEventSubscribetionSubject(fieldDefinition, value, errorMessages) === false) {
               break;
             }
 

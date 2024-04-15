@@ -29,12 +29,14 @@ import {
   undefinedStreamConfigurationInputErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
   validateEventSubscribetionSubject,
+  getSubjectArgsFieldName,
 } from '../src';
 import {
   parse,
-  ConstValueNode,
   StringValueNode,
   Kind,
+  FieldDefinitionNode,
+  NonNullTypeNode,
 } from 'graphql';
 import {
   DEFAULT,
@@ -392,7 +394,19 @@ describe('events Configuration tests', () => {
   });
 
   describe('EDFS subject validation tests', () => {
+    test('successfully getSubjectArgsFieldName', () => {
+      const values = new Map<string, string>([
+        ["entities.{{ args.id }}", "id"],
+        ["entities.{{ args.employeeID }}", "employeeID"],
+      ]);
+
+      for (const value of values) {
+        expect(getSubjectArgsFieldName(value[0])).toEqual(value[1]);
+      }
+    });
+
     test('valid subject names', () => {
+      const errors: string[] | undefined = [];
       const values: StringValueNode[] = [
         {
           kind: Kind.STRING,
@@ -416,9 +430,42 @@ describe('events Configuration tests', () => {
         },
       ];
 
+      const fieldDefinitionNode: FieldDefinitionNode = {
+        name: {
+          value: 'edfs__subscribe',
+          kind: Kind.NAME,
+        },
+        type: {}  as NonNullTypeNode,
+        kind: Kind.FIELD_DEFINITION,
+        arguments: [
+          {
+            name: {
+              value: "id",
+              kind: Kind.NAME,
+            },
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {} as any, // Replace with the actual type definition
+            },
+          },
+          {
+            name: {
+              value: "employeeID",
+              kind: Kind.NAME,
+            },
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {} as any, // Replace with the actual type definition
+            },
+          },
+        ],
+      };
+
       for (const value of values) {
         const errors: string[] | undefined = [];
-        const res = validateEventSubscribetionSubject(value, errors)
+        const res = validateEventSubscribetionSubject(fieldDefinitionNode, value, errors)
 
         expect(res).toBeDefined();
         expect(res).toBeTruthy();
@@ -444,9 +491,11 @@ describe('events Configuration tests', () => {
         }
       ];
 
+      const fieldDefinitionNode  = {} as FieldDefinitionNode;
+
       for (const value of values) {
         const errors: string[] | undefined = [];
-        const res = validateEventSubscribetionSubject(value, errors)
+        const res = validateEventSubscribetionSubject(fieldDefinitionNode, value, errors)
 
         expect(res).toBeDefined();
         expect(res).toBeFalsy();
@@ -490,9 +539,11 @@ describe('events Configuration tests', () => {
         }
       ];
 
+      const fieldDefinitionNode  = {} as FieldDefinitionNode;
+
       for (const value of values) {
         const errors: string[] | undefined = [];
-        const res = validateEventSubscribetionSubject(value, errors)
+        const res = validateEventSubscribetionSubject(fieldDefinitionNode, value, errors)
 
         expect(res).toBeDefined();
         expect(res).toBeFalsy();
