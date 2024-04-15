@@ -1161,7 +1161,7 @@ export const invalidEventSubjectsErrorMessage = `The "subjects" argument must be
 
 export const invalidEventSubjectTemplateErrorMessage = `The "subject" argument must be a string or a list of strings.`;
 
-export const invalidEventSubjectCharactersErrorMessage = `The "subject" argument contains invalide characters for subject names.`;
+export const invalidEventSubjectCharactersErrorMessage = `The "subject" contains invalide characters for subject names.`;
 
 export const invalidEventSubjectsItemErrorMessage =
   `Each item in the "subjects" argument list must be a string with a minimum length of one.` +

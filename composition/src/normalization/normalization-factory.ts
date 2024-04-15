@@ -269,6 +269,49 @@ export function normalizeSubgraph(
   return normalizationFactory.normalize(document);
 }
 
+export function validateEventSubscribetionSubject(value: ConstValueNode, errorMessages: string[]): boolean {
+  const val = value.value;
+
+  if (value.kind !== Kind.STRING || val.length < 1) {
+    errorMessages.push(invalidEventSubjectsItemErrorMessage);
+
+    return false;
+  }
+
+  const regex = /^[a-zA-Z0-9.*>\{\}\s]+$/;
+  if (!regex.test(value.value)) {
+      errorMessages.push(invalidEventSubjectCharactersErrorMessage);
+     
+      return false;
+  }
+
+  if (val.includes('{{')) {
+    return validateSubjectTemplate(val, errorMessages)
+  }
+
+  return validateSubjectStatic(val, errorMessages);
+}
+
+function validateSubjectTemplate(value: string, errorMessages: string[]): boolean {
+  if (value.match(/{{(\s+)?args\./g)?.length === undefined) {
+    errorMessages.push(invalidEventSubjectTemplatePrefixErrorMessage);
+
+    return false;
+  }
+
+  if (value.match(/{{(\s+)?args\.\w+\./g)?.length !== undefined) {
+    errorMessages.push(invalidEventSubjectTemplateArgsLevelErrorMessage);
+    
+    return false;
+  }
+
+  return true
+}
+
+function validateSubjectStatic(value: string, errorMessages: string[]): boolean {
+  return true;
+}
+
 export class NormalizationFactory {
   argumentName = '';
   authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
@@ -823,7 +866,7 @@ export class NormalizationFactory {
           }
 
           for (const value of argumentNode.value.values) {
-            if (this.validateEventSubscribetionSubjects(value, errorMessages) === false) {
+            if (validateEventSubscribetionSubject(value, errorMessages) === false) {
               break;
             }
 
@@ -901,49 +944,6 @@ export class NormalizationFactory {
       type: SUBSCRIBE,
       ...(consumerName && streamName ? { streamConfiguration: { consumerName: consumerName, streamName } } : {}),
     };
-  }
-
-  validateEventSubscribetionSubjects(value: ConstValueNode, errorMessages: string[]): boolean {
-    const val = value.value;
-
-    if (value.kind !== Kind.STRING || value.value.length < 1) {
-      errorMessages.push(invalidEventSubjectsItemErrorMessage);
-
-      return false;
-    }
-
-    const regex = /^[a-zA-Z0-9.*>\{{2}\}{2}\s]+$/;
-    if (!regex.test(value.value)) {
-        errorMessages.push(invalidEventSubjectCharactersErrorMessage);
-       
-        return false;
-    }
-
-    if (val.includes('{{')) {
-      return this.validateSubjectTemplate(val, errorMessages)
-    }
-
-    return this.validateSubjectStatic(val, errorMessages);
-  }
-
-  validateSubjectTemplate(value: string, errorMessages: string[]): boolean {
-    if (value.match(/{{(\s+)?args\./g)?.length === undefined) {
-      errorMessages.push(invalidEventSubjectTemplatePrefixErrorMessage);
-
-      return false;
-    }
-
-    if (value.match(/{{(\s+)?args\.\w+\./g)?.length !== undefined) {
-      errorMessages.push(invalidEventSubjectTemplateArgsLevelErrorMessage);
-      
-      return false;
-    }
-
-    return true
-  }
-
-  validateSubjectStatic(value: string, errorMessages: string[]): boolean {
-    return true;
   }
 
   extractEventDirectivesToConfiguration(node: FieldDefinitionNode) {

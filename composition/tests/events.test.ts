@@ -28,8 +28,14 @@ import {
   undefinedRequiredArgumentsErrorMessage,
   undefinedStreamConfigurationInputErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
+  validateEventSubscribetionSubject,
 } from '../src';
-import { parse } from 'graphql';
+import {
+  parse,
+  ConstValueNode,
+  StringValueNode,
+  Kind,
+} from 'graphql';
 import {
   DEFAULT,
   EDFS_PUBLISH,
@@ -386,7 +392,119 @@ describe('events Configuration tests', () => {
   });
 
   describe('EDFS subject validation tests', () => {
+    test('valid subject names', () => {
+      const values: StringValueNode[] = [
+        {
+          kind: Kind.STRING,
+          value: "entities.{{ args.id }}",
+        },
+        {
+          kind: Kind.STRING,
+          value: "entities.{{ args.employeeID }}",
+        },
+        {
+          kind: Kind.STRING,
+          value: "entities.me",
+        },
+        {
+          kind: Kind.STRING,
+          value: "entities.*",
+        },
+        {
+          kind: Kind.STRING,
+          value: "entities.>",
+        },
+      ];
+
+      for (const value of values) {
+        const errors: string[] | undefined = [];
+        const res = validateEventSubscribetionSubject(value, errors)
+
+        expect(res).toBeDefined();
+        expect(res).toBeTruthy();
+
+        expect(errors).toBeDefined();
+        expect(errors).toHaveLength(0);
+      }
+    });
+
     test('should return error subject argument contains invalid characters for subject names', () => {
+      const values: StringValueNode[] = [
+        {
+          kind: Kind.STRING,
+          value: "entities.{{ args.idл }}",
+        },
+        {
+          kind: Kind.STRING,
+          value: "entities.{{ args.id^ }}",
+        },
+        {
+          kind: Kind.STRING,
+          value: "entities_test.{{ args.id }}",
+        }
+      ];
+
+      for (const value of values) {
+        const errors: string[] | undefined = [];
+        const res = validateEventSubscribetionSubject(value, errors)
+
+        expect(res).toBeDefined();
+        expect(res).toBeFalsy();
+
+        expect(errors).toBeDefined();
+        expect(errors).toHaveLength(1);
+
+        expect(errors![0]).toStrictEqual(
+          invalidEventSubjectCharactersErrorMessage,
+        );
+      }
+
+      const { errors } = normalizeSubgraph(invalidSubgraphSubjectCharacters.definitions, invalidSubgraphSubjectCharacters.name);
+
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+
+      const directiveName = 'edfs__subscribe';
+      const rootFieldPath = 'Subscription.employeeUpdated';
+
+      expect(errors![0]).toStrictEqual(
+        invalidEventDirectiveError(directiveName, rootFieldPath, [
+          invalidEventSubjectCharactersErrorMessage,
+        ]),
+      );
+    });
+
+    test('should return error subject argument contains invalid characters for subject names', () => {
+      const values: StringValueNode[] = [
+        {
+          kind: Kind.STRING,
+          value: "entities.{{ args.idл }}",
+        },
+        {
+          kind: Kind.STRING,
+          value: "entities.{{ args.id^ }}",
+        },
+        {
+          kind: Kind.STRING,
+          value: "entities_test.{{ args.id }}",
+        }
+      ];
+
+      for (const value of values) {
+        const errors: string[] | undefined = [];
+        const res = validateEventSubscribetionSubject(value, errors)
+
+        expect(res).toBeDefined();
+        expect(res).toBeFalsy();
+
+        expect(errors).toBeDefined();
+        expect(errors).toHaveLength(1);
+
+        expect(errors![0]).toStrictEqual(
+          invalidEventSubjectCharactersErrorMessage,
+        );
+      }
+
       const { errors } = normalizeSubgraph(invalidSubgraphSubjectCharacters.definitions, invalidSubgraphSubjectCharacters.name);
 
       expect(errors).toBeDefined();
@@ -1197,7 +1315,7 @@ const invalidSubgraphSubjectCharacters: Subgraph = {
   url: '',
   definitions: parse(`
       type Subscription {
-        employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["entities.{ args2.employeeID }", "entitiesл.{{args.employeeID}}"],
+        employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["entitiesо.{{ args.employeeID }}"],
         streamConfiguration: { consumerName: "consumer", streamName: "streamName", }
         )
       }
