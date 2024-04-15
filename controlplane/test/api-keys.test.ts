@@ -255,7 +255,7 @@ describe('Create API Keys as developers with RBAC enabled', (ctx) => {
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(response.response?.details).toBe(
-      'You are not authorized to perform the current action. User needs to be an Admin to create an API key with all resources.',
+      'You are not authorized to perform the current action. Only admins can create an API key that has access to all resources.',
     );
 
     await server.close();
