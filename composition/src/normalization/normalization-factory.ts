@@ -115,7 +115,6 @@ import {
   invalidFieldDefinitionIsEmptyErrorMessage,
   invalidFieldDefinitionIsNullErrorMessage,
   invalidFieldDefinitionNoArgumentTemplateErrorMessage,
-  invalidFieldDefinitionsNumberErrorMessage,
   noBaseTypeExtensionError,
   noFieldDefinitionsError,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
@@ -310,7 +309,7 @@ export function validateEventSubscribetionSubjects(fieldDefinition: FieldDefinit
   if (fieldDefinition.arguments?.length !== undefined && argsNames.length > 0) {
     for(const argument of fieldDefinition.arguments) {
       if (argsNames.indexOf(argument.name.value) === -1) {
-        errorMessages.push(invalidFieldDefinitionsNumberErrorMessage);
+        errorMessages.push(invalidFieldDefinitionNoArgumentTemplateErrorMessage);
 
         return false;
       };

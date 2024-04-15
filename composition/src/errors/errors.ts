@@ -1169,8 +1169,6 @@ export const invalidEventSubjectTemplateErrorMessage = `The "subject" argument m
 
 export const invalidEventSubjectCharactersErrorMessage = `The "subject" contains invalide characters for subject names.`;
 
-export const invalidFieldDefinitionsNumberErrorMessage = `The "Field definitions" argument must be used with "subject" arguments.`;
-
 export const invalidFieldDefinitionNoArgumentTemplateErrorMessage = `The "Field definition" is defined and should be used in an argument template.`;
 
 export const invalidEventSubjectsItemErrorMessage =

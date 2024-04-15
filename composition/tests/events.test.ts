@@ -549,6 +549,75 @@ describe('events Configuration tests', () => {
       }
     });
 
+    test(`should error field argument can't be defined without argument templetes`, () => {
+      const errors: string[] | undefined = [];
+      const values: ConstListValueNode[] = [{
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.STRING,
+            value: "entities.me",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.*",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.>",
+          },
+        ],
+      }];
+
+      const fieldDefinitionNode: FieldDefinitionNode = {
+        name: {
+          value: 'edfs__subscribe',
+          kind: Kind.NAME,
+        },
+        type: {} as NonNullTypeNode,
+        kind: Kind.FIELD_DEFINITION,
+        arguments: [
+          {
+            name: {
+              value: "id",
+              kind: Kind.NAME,
+            },
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {} as any, // Replace with the actual type definition
+            },
+          },
+          {
+            name: {
+              value: "employeeID",
+              kind: Kind.NAME,
+            },
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {} as any, // Replace with the actual type definition
+            },
+          },
+        ],
+      };
+
+      for (const value of values) {
+        const errors: string[] | undefined = [];
+        const res = validateEventSubscribetionSubjects(fieldDefinitionNode, value, errors)
+
+        expect(res).toBeDefined();
+        expect(res).toBeFalsy();
+
+        expect(errors).toBeDefined();
+        expect(errors).toHaveLength(1);
+
+        expect(errors![0]).toStrictEqual(
+          invalidFieldDefinitionNoArgumentTemplateErrorMessage,
+        );
+      }
+    });
+
     test(`should error argument template doesn't have field argument`, () => {
       const errors: string[] | undefined = [];
       const values: ConstListValueNode[] = [{
@@ -617,7 +686,7 @@ describe('events Configuration tests', () => {
         expect(errors).toHaveLength(1);
 
         expect(errors![0]).toStrictEqual(
-          invalidFieldDefinitionsNumberErrorMessage,
+          invalidFieldDefinitionNoArgumentTemplateErrorMessage,
         );
       }
     });
