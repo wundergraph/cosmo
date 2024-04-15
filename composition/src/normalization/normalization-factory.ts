@@ -114,6 +114,7 @@ import {
   invalidEventSubjectTemplateArgsNameNotMatchToFieldArgumentErrorMessage,
   invalidFieldDefinitionIsEmptyErrorMessage,
   invalidFieldDefinitionIsNullErrorMessage,
+  invalidFieldDefinitionNoArgumentTemplateErrorMessage,
   invalidFieldDefinitionsNumberErrorMessage,
   noBaseTypeExtensionError,
   noFieldDefinitionsError,

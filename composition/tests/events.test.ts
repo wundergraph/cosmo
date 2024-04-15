@@ -18,6 +18,7 @@ import {
   invalidEventSubjectTemplatePrefixErrorMessage,
   invalidEventSubjectTemplateArgsLevelErrorMessage,
   invalidEventSubjectCharactersErrorMessage,
+  invalidFieldDefinitionNoArgumentTemplateErrorMessage,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
@@ -28,7 +29,7 @@ import {
   undefinedRequiredArgumentsErrorMessage,
   undefinedStreamConfigurationInputErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
-  validateEventSubscribetionSubject,
+  validateEventSubscribetionSubjects,
   getSubjectArgsFieldName,
 } from '../src';
 import {
@@ -293,6 +294,7 @@ describe('events Configuration tests', () => {
       expect(errors![0]).toStrictEqual(
         invalidEventDirectiveError(directiveName, rootFieldPath, [
           invalidEventSubjectsItemErrorMessage,
+          invalidFieldDefinitionNoArgumentTemplateErrorMessage,
           invalidEventSourceNameErrorMessage,
         ]),
       );
@@ -465,7 +467,7 @@ describe('events Configuration tests', () => {
 
       for (const value of values) {
         const errors: string[] | undefined = [];
-        const res = validateEventSubscribetionSubject(fieldDefinitionNode, value, errors)
+        const res = validateEventSubscribetionSubjects(fieldDefinitionNode, value, errors)
 
         expect(res).toBeDefined();
         expect(res).toBeTruthy();
@@ -495,7 +497,7 @@ describe('events Configuration tests', () => {
 
       for (const value of values) {
         const errors: string[] | undefined = [];
-        const res = validateEventSubscribetionSubject(fieldDefinitionNode, value, errors)
+        const res = validateEventSubscribetionSubjects(fieldDefinitionNode, value, errors)
 
         expect(res).toBeDefined();
         expect(res).toBeFalsy();
@@ -543,7 +545,7 @@ describe('events Configuration tests', () => {
 
       for (const value of values) {
         const errors: string[] | undefined = [];
-        const res = validateEventSubscribetionSubject(fieldDefinitionNode, value, errors)
+        const res = validateEventSubscribetionSubjects(fieldDefinitionNode, value, errors)
 
         expect(res).toBeDefined();
         expect(res).toBeFalsy();
