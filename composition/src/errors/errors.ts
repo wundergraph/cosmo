@@ -1157,11 +1157,21 @@ export const invalidEventSubjectTemplatePrefixErrorMessage = `The "subject" argu
 
 export const invalidEventSubjectTemplateArgsLevelErrorMessage = `The "subject" argument must have single level.`;
 
+export const invalidEventSubjectTemplateArgsNameNotMatchToFieldArgumentErrorMessage = `The "subject" argument names, e.g., the employeeID of args.employeeID should exist as a field argument; i.e., employeeUpdated(employeeID: ID!).`;
+
+export const invalidFieldDefinitionIsEmptyErrorMessage = 'The "Field definition" arguments are empty.';
+
+export const invalidFieldDefinitionIsNullErrorMessage = `The "Field definition" can't be null.`;
+
 export const invalidEventSubjectsErrorMessage = `The "subjects" argument must be a list of strings.`;
 
 export const invalidEventSubjectTemplateErrorMessage = `The "subject" argument must be a string or a list of strings.`;
 
 export const invalidEventSubjectCharactersErrorMessage = `The "subject" contains invalide characters for subject names.`;
+
+export const invalidFieldDefinitionsNumberErrorMessage = `The "Field definitions" argument must be used with "subject" arguments.`;
+
+export const invalidFieldDefinitionNoArgumentTemplateErrorMessage = `The "Field definition" is defined and should be used in an argument template.`;
 
 export const invalidEventSubjectsItemErrorMessage =
   `Each item in the "subjects" argument list must be a string with a minimum length of one.` +

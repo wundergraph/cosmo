@@ -111,6 +111,10 @@ import {
   invalidEventSubjectTemplatePrefixErrorMessage,
   invalidEventSubjectTemplateArgsLevelErrorMessage,
   invalidEventSubjectCharactersErrorMessage,
+  invalidEventSubjectTemplateArgsNameNotMatchToFieldArgumentErrorMessage,
+  invalidFieldDefinitionIsEmptyErrorMessage,
+  invalidFieldDefinitionIsNullErrorMessage,
+  invalidFieldDefinitionsNumberErrorMessage,
   noBaseTypeExtensionError,
   noFieldDefinitionsError,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
@@ -129,6 +133,7 @@ import {
   undefinedTypeError,
   unexpectedKindFatalError,
   unimplementedInterfaceFieldsError,
+  fieldTypeMergeFatalError,
 } from '../errors/errors';
 import {
   AUTHENTICATED,
@@ -269,30 +274,58 @@ export function normalizeSubgraph(
   return normalizationFactory.normalize(document);
 }
 
-export function validateEventSubscribetionSubject(fieldDefinition: FieldDefinitionNode, value: ConstValueNode, errorMessages: string[]): boolean {
-  const val = value.value;
-
-  if (value.kind !== Kind.STRING || val.length < 1) {
-    errorMessages.push(invalidEventSubjectsItemErrorMessage);
+export function validateEventSubscribetionSubjects(fieldDefinition: FieldDefinitionNode, argumentNodeValue: ConstValueNode, errorMessages: string[]): boolean {
+  if (argumentNodeValue.kind !== Kind.LIST) {
+    errorMessages.push(invalidEventSubjectsErrorMessage);
 
     return false;
   }
 
-  const regex = /^[a-zA-Z0-9.*>\{\}\s]+$/;
-  if (!regex.test(value.value)) {
-    errorMessages.push(invalidEventSubjectCharactersErrorMessage);
+  const argsNames: Array<string> = [];
+
+  for (const value of argumentNodeValue.values) {
+    const val = value.value;
+
+    if (value.kind !== Kind.STRING || val.length < 1) {
+      errorMessages.push(invalidEventSubjectsItemErrorMessage);
+
+      return false;
+    }
+
+    const regex = /^[a-zA-Z0-9.*>\{\}\s]+$/;
+    if (!regex.test(value.value)) {
+      errorMessages.push(invalidEventSubjectCharactersErrorMessage);
+
+      return false;
+    }
+
+    if (val.includes('{{')) {
+      if (!validateSubjectTemplate(fieldDefinition, val, argsNames, errorMessages)) {
+        return false;
+      }
+    }
+  }
+
+  if (fieldDefinition.arguments?.length !== undefined && argsNames.length > 0) {
+    for(const argument of fieldDefinition.arguments) {
+      if (argsNames.indexOf(argument.name.value) === -1) {
+        errorMessages.push(invalidFieldDefinitionsNumberErrorMessage);
+
+        return false;
+      };
+    }
+  }
+
+  if (argsNames.length === 0 && fieldDefinition.arguments?.length !== undefined) {
+    errorMessages.push(invalidFieldDefinitionNoArgumentTemplateErrorMessage);
 
     return false;
   }
 
-  if (val.includes('{{')) {
-    return validateSubjectTemplate(fieldDefinition, val, errorMessages)
-  }
-
-  return validateSubjectStatic(val, errorMessages);
+  return true
 }
 
-function validateSubjectTemplate(fieldDefinition: FieldDefinitionNode, value: string, errorMessages: string[]): boolean {
+function validateSubjectTemplate(fieldDefinition: FieldDefinitionNode, value: string, argsSet: Array<string>, errorMessages: string[]): boolean {
   if (value.match(/{{(\s+)?args\./g)?.length === undefined) {
     errorMessages.push(invalidEventSubjectTemplatePrefixErrorMessage);
 
@@ -306,7 +339,7 @@ function validateSubjectTemplate(fieldDefinition: FieldDefinitionNode, value: st
   }
 
   if (fieldDefinition.arguments === undefined) {
-    errorMessages.push('Field definition arguments are undefined');
+    errorMessages.push(invalidFieldDefinitionIsEmptyErrorMessage);
 
     return false;
   }
@@ -314,9 +347,11 @@ function validateSubjectTemplate(fieldDefinition: FieldDefinitionNode, value: st
   const subjectArgsFieldName = getSubjectArgsFieldName(value);
   let fieldDefinitionMatchArgsField = false
 
+  argsSet.push(subjectArgsFieldName);
+
   for (const argument of fieldDefinition.arguments) {
     if (argument.type.kind !== Kind.NON_NULL_TYPE) {
-      errorMessages.push('field definition can\'t be null');
+      errorMessages.push(invalidFieldDefinitionIsNullErrorMessage);
 
       return false;
     }
@@ -329,7 +364,7 @@ function validateSubjectTemplate(fieldDefinition: FieldDefinitionNode, value: st
   }
 
   if (!fieldDefinitionMatchArgsField) {
-    errorMessages.push('Field definition does not match args field');
+    errorMessages.push(invalidEventSubjectTemplateArgsNameNotMatchToFieldArgumentErrorMessage);
 
     return false;
   }
@@ -338,10 +373,16 @@ function validateSubjectTemplate(fieldDefinition: FieldDefinitionNode, value: st
 }
 
 export function getSubjectArgsFieldName(value: string): string {
-  return value.match(/{{(\s+)?args\.\w+(\s+)?}}/g)[0].replace(/{{(\s+)?args\./g, '').replace(/(\s+)?}}/g, '');
+  const res = value.match(/{{(\s+)?args\.\w+(\s+)?}}/g);
+
+  if (res?.length === undefined) {
+    return '';
+  }
+
+  return res[0].replace(/{{(\s+)?args\./g, '').replace(/(\s+)?}}/g, '');
 }
 
-function validateSubjectStatic(value: string, errorMessages: string[]): boolean {
+function validateSubjectStatic(fieldDefinition: FieldDefinitionNode, value: string, errorMessages: string[]): boolean {
   return true;
 }
 
@@ -893,17 +934,11 @@ export class NormalizationFactory {
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case SUBJECTS: {
-          if (argumentNode.value.kind !== Kind.LIST) {
-            errorMessages.push(invalidEventSubjectsErrorMessage);
+          if (validateEventSubscribetionSubjects(fieldDefinition, argumentNode.value, errorMessages) === false) {
             continue;
           }
 
           for (const value of argumentNode.value.values) {
-
-            if (validateEventSubscribetionSubject(fieldDefinition, value, errorMessages) === false) {
-              break;
-            }
-
             subjects.push(value.value);
           }
 
