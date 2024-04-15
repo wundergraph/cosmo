@@ -1,6 +1,5 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFeature } from "@/hooks/use-feature";
-import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -363,7 +362,7 @@ export const SubgraphsTable = ({
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
 }) => {
-  const rbac = useHasFeature("rbac");
+  const rbac = useFeature("rbac");
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug;
 
@@ -378,7 +377,7 @@ export const SubgraphsTable = ({
             <TableHead className="w-4/12 px-4">Url</TableHead>
             <TableHead className="w-4/12 px-4">Labels</TableHead>
             <TableHead className="w-2/12 px-4">Last Published</TableHead>
-            {rbac && <TableHead className="w-1/12"></TableHead>}
+            {rbac?.enabled && <TableHead className="w-1/12"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -448,7 +447,7 @@ export const SubgraphsTable = ({
                       : "Never"}
                   </TableCell>
                   <TableCell className="flex justify-end gap-2">
-                    {rbac && (
+                    {rbac?.enabled && (
                       <AddSubgraphUsers
                         subgraphName={name}
                         namespace={namespace}
