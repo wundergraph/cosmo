@@ -38,8 +38,8 @@ import {
   TableWrapper,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
+import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
@@ -84,7 +84,7 @@ const CreateAPIKeyDialog = ({
   refresh: () => void;
 }) => {
   const user = useUser();
-  const rbac = useHasFeature("rbac");
+  const rbac = useFeature("rbac");
   const { toast } = useToast();
 
   const { mutate, isPending } = useMutation(createAPIKey.useMutation());
@@ -139,7 +139,7 @@ const CreateAPIKeyDialog = ({
 
   const onSubmit: SubmitHandler<CreateAPIKeyInput> = (data) => {
     if (
-      rbac &&
+      rbac?.enabled &&
       !selectedAllResources &&
       selectedFedGraphs.length === 0 &&
       selectedSubgraphs.length === 0
@@ -201,7 +201,7 @@ const CreateAPIKeyDialog = ({
   // When rbac is enabled and this is the case for enterprise users
   // you can only create an API key if you are an admin or have access to at least one federated graph or subgraph
   if (
-    rbac &&
+    rbac?.enabled &&
     !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
   ) {
     return (
@@ -324,7 +324,7 @@ const CreateAPIKeyDialog = ({
                 })}
               </div>
             )}
-          {rbac && (
+          {rbac?.enabled && (
             <div className="mt-3 flex flex-col gap-y-3">
               <div className="flex flex-col gap-y-1">
                 <span className="text-base font-semibold">
