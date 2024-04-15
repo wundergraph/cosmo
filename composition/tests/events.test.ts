@@ -19,6 +19,8 @@ import {
   invalidEventSubjectTemplateArgsLevelErrorMessage,
   invalidEventSubjectCharactersErrorMessage,
   invalidFieldDefinitionNoArgumentTemplateErrorMessage,
+  invalidEventSubjectTemplateArgsNameNotMatchToFieldArgumentErrorMessage,
+  invalidFieldDefinitionsNumberErrorMessage,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
@@ -37,6 +39,7 @@ import {
   StringValueNode,
   Kind,
   FieldDefinitionNode,
+  ConstListValueNode,
   NonNullTypeNode,
 } from 'graphql';
 import {
@@ -409,35 +412,38 @@ describe('events Configuration tests', () => {
 
     test('valid subject names', () => {
       const errors: string[] | undefined = [];
-      const values: StringValueNode[] = [
-        {
-          kind: Kind.STRING,
-          value: "entities.{{ args.id }}",
-        },
-        {
-          kind: Kind.STRING,
-          value: "entities.{{ args.employeeID }}",
-        },
-        {
-          kind: Kind.STRING,
-          value: "entities.me",
-        },
-        {
-          kind: Kind.STRING,
-          value: "entities.*",
-        },
-        {
-          kind: Kind.STRING,
-          value: "entities.>",
-        },
-      ];
+      const values: ConstListValueNode[] = [{
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.STRING,
+            value: "entities.{{ args.id }}",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.{{ args.employeeID }}",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.me",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.*",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.>",
+          },
+        ],
+      }];
 
       const fieldDefinitionNode: FieldDefinitionNode = {
         name: {
           value: 'edfs__subscribe',
           kind: Kind.NAME,
         },
-        type: {}  as NonNullTypeNode,
+        type: {} as NonNullTypeNode,
         kind: Kind.FIELD_DEFINITION,
         arguments: [
           {
@@ -477,23 +483,55 @@ describe('events Configuration tests', () => {
       }
     });
 
-    test('should return error subject argument contains invalid characters for subject names', () => {
-      const values: StringValueNode[] = [
-        {
-          kind: Kind.STRING,
-          value: "entities.{{ args.idл }}",
-        },
-        {
-          kind: Kind.STRING,
-          value: "entities.{{ args.id^ }}",
-        },
-        {
-          kind: Kind.STRING,
-          value: "entities_test.{{ args.id }}",
-        }
-      ];
+    test(`should error argument template doesn't have field argument`, () => {
+      const errors: string[] | undefined = [];
+      const values: ConstListValueNode[] = [{
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.STRING,
+            value: "entities.{{ args.id }}",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.{{ args.employeeID }}",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.me",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.*",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.>",
+          },
+        ],
+      }];
 
-      const fieldDefinitionNode  = {} as FieldDefinitionNode;
+      const fieldDefinitionNode: FieldDefinitionNode = {
+        name: {
+          value: 'edfs__subscribe',
+          kind: Kind.NAME,
+        },
+        type: {} as NonNullTypeNode,
+        kind: Kind.FIELD_DEFINITION,
+        arguments: [
+          {
+            name: {
+              value: "id",
+              kind: Kind.NAME,
+            },
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {} as any, // Replace with the actual type definition
+            },
+          },
+        ],
+      };
 
       for (const value of values) {
         const errors: string[] | undefined = [];
@@ -506,42 +544,104 @@ describe('events Configuration tests', () => {
         expect(errors).toHaveLength(1);
 
         expect(errors![0]).toStrictEqual(
-          invalidEventSubjectCharactersErrorMessage,
+          invalidEventSubjectTemplateArgsNameNotMatchToFieldArgumentErrorMessage,
         );
       }
+    });
 
-      const { errors } = normalizeSubgraph(invalidSubgraphSubjectCharacters.definitions, invalidSubgraphSubjectCharacters.name);
+    test(`should error argument template doesn't have field argument`, () => {
+      const errors: string[] | undefined = [];
+      const values: ConstListValueNode[] = [{
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.STRING,
+            value: "entities.{{ args.id }}",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.me",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.*",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.>",
+          },
+        ],
+      }];
 
-      expect(errors).toBeDefined();
-      expect(errors).toHaveLength(1);
+      const fieldDefinitionNode: FieldDefinitionNode = {
+        name: {
+          value: 'edfs__subscribe',
+          kind: Kind.NAME,
+        },
+        type: {} as NonNullTypeNode,
+        kind: Kind.FIELD_DEFINITION,
+        arguments: [
+          {
+            name: {
+              value: "id",
+              kind: Kind.NAME,
+            },
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {} as any, // Replace with the actual type definition
+            },
+          },
+          {
+            name: {
+              value: "employeeID",
+              kind: Kind.NAME,
+            },
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: {} as any, // Replace with the actual type definition
+            },
+          },
+        ],
+      };
 
-      const directiveName = 'edfs__subscribe';
-      const rootFieldPath = 'Subscription.employeeUpdated';
+      for (const value of values) {
+        const errors: string[] | undefined = [];
+        const res = validateEventSubscribetionSubjects(fieldDefinitionNode, value, errors)
 
-      expect(errors![0]).toStrictEqual(
-        invalidEventDirectiveError(directiveName, rootFieldPath, [
-          invalidEventSubjectCharactersErrorMessage,
-        ]),
-      );
+        expect(res).toBeDefined();
+        expect(res).toBeFalsy();
+
+        expect(errors).toBeDefined();
+        expect(errors).toHaveLength(1);
+
+        expect(errors![0]).toStrictEqual(
+          invalidFieldDefinitionsNumberErrorMessage,
+        );
+      }
     });
 
     test('should return error subject argument contains invalid characters for subject names', () => {
-      const values: StringValueNode[] = [
-        {
-          kind: Kind.STRING,
-          value: "entities.{{ args.idл }}",
-        },
-        {
-          kind: Kind.STRING,
-          value: "entities.{{ args.id^ }}",
-        },
-        {
-          kind: Kind.STRING,
-          value: "entities_test.{{ args.id }}",
-        }
-      ];
+      const values: ConstListValueNode[] = [{
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.STRING,
+            value: "entities.{{ args.idл }}",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities.{{ args.id^ }}",
+          },
+          {
+            kind: Kind.STRING,
+            value: "entities_test.{{ args.id }}",
+          },
+        ],
+      }];
 
-      const fieldDefinitionNode  = {} as FieldDefinitionNode;
+      const fieldDefinitionNode = {} as FieldDefinitionNode;
 
       for (const value of values) {
         const errors: string[] | undefined = [];
