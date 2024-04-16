@@ -60,7 +60,7 @@ func TestRetryOnHTTP5xx(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	assert.Equal(t, 4, retries)
+	assert.Equal(t, len(defaultRetryableStatusCodes), retries)
 
 }
 
