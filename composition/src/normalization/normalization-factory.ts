@@ -284,13 +284,13 @@ export function validateEventSubscribetionSubjects(fieldDefinition: FieldDefinit
   const argsNames: Array<string> = [];
 
   for (const value of argumentNodeValue.values) {
-    const val = value.value;
-
-    if (value.kind !== Kind.STRING || val.length < 1) {
+    if (value.kind !== Kind.STRING || value.value.length < 1) {
       errorMessages.push(invalidEventSubjectsItemErrorMessage);
 
       return false;
     }
+
+    const val = value.value;
 
     const regex = /^[a-zA-Z0-9.*>\{\}\s]+$/;
     if (!regex.test(value.value)) {
@@ -307,7 +307,7 @@ export function validateEventSubscribetionSubjects(fieldDefinition: FieldDefinit
   }
 
   if (fieldDefinition.arguments?.length !== undefined && argsNames.length > 0) {
-    for(const argument of fieldDefinition.arguments) {
+    for (const argument of fieldDefinition.arguments) {
       if (argsNames.indexOf(argument.name.value) === -1) {
         errorMessages.push(invalidFieldDefinitionNoArgumentTemplateErrorMessage);
 
@@ -380,10 +380,6 @@ export function getSubjectArgsFieldName(value: string): string {
   }
 
   return res[0].replace(/{{(\s+)?args\./g, '').replace(/(\s+)?}}/g, '');
-}
-
-function validateSubjectStatic(fieldDefinition: FieldDefinitionNode, value: string, errorMessages: string[]): boolean {
-  return true;
 }
 
 export class NormalizationFactory {
