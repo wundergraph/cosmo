@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,9 +12,11 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/ravilushqa/otelgqlgen"
 	"github.com/rs/cors"
+	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/otel"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const (
@@ -40,10 +43,9 @@ func main() {
 	})
 
 	http.Handle("/", c.Handler(playground.Handler("GraphQL playground", "/graphql")))
-	http.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
-
-		w.WriteHeader(http.StatusInternalServerError)
-	})
+	http.Handle("/graphql", injector.HTTP(c.Handler(otelhttp.NewHandler(srv, "", otelhttp.WithSpanNameFormatter(func(_operation string, r *http.Request) string {
+		return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+	})))))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
