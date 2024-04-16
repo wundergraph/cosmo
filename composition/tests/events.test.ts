@@ -705,7 +705,7 @@ describe('events Configuration tests', () => {
           },
           {
             kind: Kind.STRING,
-            value: "entities_test.{{ args.id }}",
+            value: "entities.{{ args.id& }}",
           },
         ],
       }];
@@ -1537,7 +1537,7 @@ const invalidSubgraphSubjectCharacters: Subgraph = {
   url: '',
   definitions: parse(`
       type Subscription {
-        employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["entitiesо.{{ args.employeeID }}"],
+        employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["entitiesо.{{ args.employee$ID }}"],
         streamConfiguration: { consumerName: "consumer", streamName: "streamName", }
         )
       }

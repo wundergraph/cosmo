@@ -291,14 +291,6 @@ export function validateEventSubscribetionSubjects(fieldDefinition: FieldDefinit
     }
 
     const val = value.value;
-
-    const regex = /^[a-zA-Z0-9.*>\{\}\s]+$/;
-    if (!regex.test(value.value)) {
-      errorMessages.push(invalidEventSubjectCharactersErrorMessage);
-
-      return false;
-    }
-
     if (val.includes('{{')) {
       if (!validateSubjectTemplate(fieldDefinition, val, argsNames, errorMessages)) {
         return false;
@@ -326,14 +318,20 @@ export function validateEventSubscribetionSubjects(fieldDefinition: FieldDefinit
 }
 
 function validateSubjectTemplate(fieldDefinition: FieldDefinitionNode, value: string, argsSet: Array<string>, errorMessages: string[]): boolean {
-  if (value.match(/{{(\s+)?args\./g)?.length === undefined) {
+  if (value.match(/{{(\s+)?args\./)?.length === undefined) {
     errorMessages.push(invalidEventSubjectTemplatePrefixErrorMessage);
 
     return false;
   }
 
-  if (value.match(/{{(\s+)?args\.\w+\./g)?.length !== undefined) {
+  if (value.match(/{{(\s+)?args\.\w+\./)?.length !== undefined) {
     errorMessages.push(invalidEventSubjectTemplateArgsLevelErrorMessage);
+
+    return false;
+  }
+
+  if (value.match(/{{(\s+)?args.([a-zA-Z0-9_]+)(\s+)?}}/)?.length === undefined) {
+    errorMessages.push(invalidEventSubjectCharactersErrorMessage);
 
     return false;
   }
