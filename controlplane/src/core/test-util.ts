@@ -6,6 +6,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { pino } from 'pino';
 import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
+import { MemberRole } from '../db/models.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -22,6 +23,7 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
+  roles: ('admin' | 'developer' | 'viewer')[];
 };
 
 export async function beforeAllSetup(): Promise<string> {
@@ -82,7 +84,7 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
 
   await orgRepo.addOrganizationMemberRoles({
     memberID: orgMember.id,
-    roles: ['admin'],
+    roles: userTestData.roles,
   });
 
   await apiKeyRepo.addAPIKey({
@@ -111,6 +113,9 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
 export function createTestContext(
   organizationName = 'wundergraph',
   organizationId = randomUUID(),
+  isAdmin = true,
+  hasWriteAccess = true,
+  roles: MemberRole[] = ['admin'],
 ): UserTestData & AuthContext {
   const userId = randomUUID();
 
@@ -122,9 +127,10 @@ export function createTestContext(
     email: userId + '@wg.com',
     apiKey: nuid.next(),
     organizationSlug: `slug-${organizationId}`,
-    hasWriteAccess: true,
-    isAdmin: true,
+    hasWriteAccess,
+    isAdmin,
     userDisplayName: userId,
+    roles,
   };
 }
 
@@ -135,6 +141,7 @@ export interface TestAuthenticator extends Authenticator {
 export enum TestUser {
   adminAliceCompanyA = 'adminAliceCompanyA',
   adminBobCompanyA = 'adminBobCompanyA',
+  devJoeCompanyA = 'devJoeCompanyA',
   adminJimCompanyB = 'adminJimCompanyB',
 }
 

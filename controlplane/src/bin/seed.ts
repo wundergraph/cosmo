@@ -138,6 +138,7 @@ try {
     organizationSlug: user.organization.slug,
     userId: keycloakUserID,
     organizationId,
+    roles: ['admin'],
   });
 
   await queryConnection.end({
