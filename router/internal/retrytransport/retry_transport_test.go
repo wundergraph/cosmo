@@ -105,6 +105,6 @@ func TestRetryOnNetErrors(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	assert.Equal(t, 10, retries)
+	assert.Equal(t, len(defaultRetryableErrors), retries)
 
 }
