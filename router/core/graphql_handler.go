@@ -165,6 +165,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, executionBuf)
 		if err != nil {
+			requestLogger.Error("unable to resolve response", zap.Error(err))
+			trackResponseError(ctx.Context(), err)
 			h.WriteError(ctx, err, p.Response, w, executionBuf)
 			return
 		}
@@ -243,10 +245,12 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 	return WithRateLimiterStats(ctx)
 }
 
+// WriteError writes the error to the response writer. This function must be concurrency-safe.
+// @TODO This function should be refactored to be a helper function for websocket and http error writing
+// In the websocket case, we call this function concurrently as part of the polling loop. This is error-prone.
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, buf *bytes.Buffer) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(ctx.Context())))
 	httpWriter, isHttpResponseWriter := w.(http.ResponseWriter)
-	trackResponseError(ctx.Context(), err)
 	buf.Reset()
 	response := GraphQLErrorResponse{
 		Errors: make([]graphqlError, 1),
