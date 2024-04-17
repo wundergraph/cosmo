@@ -24,6 +24,7 @@ var defaultRetryableErrors = []error{
 }
 
 var defaultRetryableStatusCodes = []int{
+	http.StatusInternalServerError,
 	http.StatusBadGateway,
 	http.StatusServiceUnavailable,
 	http.StatusGatewayTimeout,
