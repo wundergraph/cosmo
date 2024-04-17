@@ -140,7 +140,32 @@ In this example, the `updateEntity` mutation will invalidate the following cache
 
 ## Cache Invalidation through EDFS Events
 
+## Finding Caching Opportunities
 
+One concern regarding caching is that you might believe that there's no caching opportunity,
+the data might not be a good fit for caching,
+or you might think that your API is so dynamic that caching wouldn't improve anything.
+
+To address this, we can build analytics around resolving entities to be able to "suggest" cache directives.
+Here's how this can work:
+
+1. When we resolve a Query, we generate a hash for each entity after resolving it
+   We can store this information in a table in Clickhouse in the following format
+
+   __typename + key map (key name -> key value) + hash
+
+   In addition, we need to be able to store information in another? table on the dependencies of fetches and entities.
+   This would allow us to correlate fetches and resolved entities.
+
+2. Once we have all of this information stored, we can calculate the change rate of an entity and how it's changing
+   E.g. we could be able to understand when an entity changes, e.g. after a mutation or an EDFS event.
+
+3. As we understand the change rate, we can identify entities that get requested frequently but have a low change rate: A caching opportunity
+4. We can now correlate the caching opportunity with the fetches (and their latency) and quantify the impact
+
+As a result of this process, we can make specific suggestions like:
+- Add a caching rule to the User entity to speed up the main landing page load time by 20%
+- Reduce load on the User Service by 80% by caching the User entity
 
 
 
