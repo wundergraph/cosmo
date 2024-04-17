@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.82.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.5...controlplane@0.82.6) (2024-04-17)
+
+### Bug Fixes
+
+* make sure an api key with no resources can not be created ([#728](https://github.com/wundergraph/cosmo/issues/728)) ([7717ff6](https://github.com/wundergraph/cosmo/commit/7717ff6a147c485683a3d26c9e8f3b98173e67ee)) (@JivusAyrus)
+
 ## [0.82.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.4...controlplane@0.82.5) (2024-04-12)
 
 ### Bug Fixes
