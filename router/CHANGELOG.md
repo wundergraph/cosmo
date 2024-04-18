@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.82.3](https://github.com/wundergraph/cosmo/compare/router@0.82.2...router@0.82.3) (2024-04-18)
+
+**Note:** Version bump only for package router
+
+## [0.82.2](https://github.com/wundergraph/cosmo/compare/router@0.82.1...router@0.82.2) (2024-04-17)
+
+### Bug Fixes
+
+* retry on 500 origin errors ([#736](https://github.com/wundergraph/cosmo/issues/736)) ([202b331](https://github.com/wundergraph/cosmo/commit/202b3310ebcd96569055f1fc7431bb981ef78452)) (@StarpTech)
+* subscriptions resolver race ([#739](https://github.com/wundergraph/cosmo/issues/739)) ([fa0f808](https://github.com/wundergraph/cosmo/commit/fa0f80842c7916e80a0af1c02034711b3948b92f)) (@jensneuse)
+* **trace:** improve error tracking ([#734](https://github.com/wundergraph/cosmo/issues/734)) ([a5d7b5e](https://github.com/wundergraph/cosmo/commit/a5d7b5ecb8d892bb432480e1f0e268f27b1d1cf4)) (@StarpTech)
+
 ## [0.82.1](https://github.com/wundergraph/cosmo/compare/router@0.82.0...router@0.82.1) (2024-04-12)
 
 **Note:** Version bump only for package router

@@ -4063,6 +4063,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const apiKeyRepo = new ApiKeyRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -4102,29 +4103,60 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const generatedAPIKey = ApiKeyGenerator.generate();
 
-        // check if the user is authorized to perform the action
-        for (const targetId of req.federatedGraphTargetIds) {
-          await opts.authorizer.authorize({
-            db: opts.db,
-            graph: {
-              targetId,
-              targetType: 'federatedGraph',
-            },
-            headers: ctx.requestHeader,
-            authContext,
-          });
-        }
+        const rbac = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'rbac',
+        });
 
-        for (const targetId of req.subgraphTargetIds) {
-          await opts.authorizer.authorize({
-            db: opts.db,
-            graph: {
-              targetId,
-              targetType: 'subgraph',
-            },
-            headers: ctx.requestHeader,
-            authContext,
-          });
+        if (rbac) {
+          if (req.allowAllResources && !authContext.isAdmin) {
+            return {
+              response: {
+                code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+                details: `You are not authorized to perform the current action. Only admins can create an API key that has access to all resources.`,
+              },
+              apiKey: '',
+            };
+          }
+
+          if (
+            req.federatedGraphTargetIds.length === 0 &&
+            req.subgraphTargetIds.length === 0 &&
+            !req.allowAllResources
+          ) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Can not create an api key without associating it with any resources.`,
+              },
+              apiKey: '',
+            };
+          }
+
+          // check if the user is authorized to perform the action
+          for (const targetId of req.federatedGraphTargetIds) {
+            await opts.authorizer.authorize({
+              db: opts.db,
+              graph: {
+                targetId,
+                targetType: 'federatedGraph',
+              },
+              headers: ctx.requestHeader,
+              authContext,
+            });
+          }
+
+          for (const targetId of req.subgraphTargetIds) {
+            await opts.authorizer.authorize({
+              db: opts.db,
+              graph: {
+                targetId,
+                targetType: 'subgraph',
+              },
+              headers: ctx.requestHeader,
+              authContext,
+            });
+          }
         }
 
         await apiKeyRepo.addAPIKey({
