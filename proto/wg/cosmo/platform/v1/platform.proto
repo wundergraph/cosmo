@@ -302,6 +302,7 @@ message Subgraph {
   string subscriptionUrl = 8;
   string target_id = 9;
   string namespace = 10;
+  string subscriptionProtocol = 11;
 }
 
 message GetSubgraphsResponse {

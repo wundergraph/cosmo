@@ -3739,6 +3739,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           lastUpdatedAt: s.lastUpdatedAt,
           targetId: s.targetId,
           subscriptionUrl: s.subscriptionUrl,
+          subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
         }));
 
@@ -6493,6 +6494,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             createdUserId: g.creatorUserId,
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
+            subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
           })),
           response: {
@@ -6533,6 +6535,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: subgraph.targetId,
             readme: subgraph.readme,
             subscriptionUrl: subgraph.subscriptionUrl,
+            subscriptionProtocol: subgraph.subscriptionProtocol,
             namespace: subgraph.namespace,
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
@@ -6848,6 +6851,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
             namespace: g.namespace,
+            subscriptionProtocol: g.subscriptionProtocol,
           })),
           graphRequestToken: routerRequestToken,
           response: {

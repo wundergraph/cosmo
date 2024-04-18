@@ -2416,6 +2416,11 @@ export class Subgraph extends Message<Subgraph> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: string subscriptionProtocol = 11;
+   */
+  subscriptionProtocol = "";
+
   constructor(data?: PartialMessage<Subgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2434,6 +2439,7 @@ export class Subgraph extends Message<Subgraph> {
     { no: 8, name: "subscriptionUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 10, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "subscriptionProtocol", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {
