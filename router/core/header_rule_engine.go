@@ -2,9 +2,10 @@ package core
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"regexp"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
@@ -76,6 +77,19 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 	for _, rule := range requestRules {
 		// Forwards the matching client request header to the upstream
 		if rule.Operation == config.HeaderRuleOperationPropagate {
+			// Rename the header when name is provided
+			if rule.Rename != "" && rule.Named != "" {
+				value := ctx.Request().Header.Get(rule.Named)
+				if value != "" {
+					request.Header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
+					request.Header.Del(rule.Named)
+					continue
+				} else if rule.Default != "" {
+					request.Header.Set(rule.Rename, rule.Default)
+					request.Header.Del(rule.Named)
+					continue
+				}
+			}
 
 			// Exact match
 			if rule.Named != "" {
@@ -90,7 +104,6 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 
 			// Regex match
 			if regex, ok := h.regex[rule.Matching]; ok {
-
 				for name := range ctx.Request().Header {
 					// Skip hop-by-hop headers and connection headers
 					if contains(hopHeaders, name) {
@@ -99,7 +112,19 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 					// Headers are case-insensitive, but Go canonicalize them
 					// Issue: https://github.com/golang/go/issues/37834
 					if regex.MatchString(name) {
-						request.Header.Set(name, ctx.Request().Header.Get(name))
+						// Rename the header when matiching is provided
+						if rule.Rename != "" && rule.Named == "" {
+							value := ctx.Request().Header.Get(name)
+							if value != "" {
+								request.Header.Set(rule.Rename, ctx.Request().Header.Get(name))
+								request.Header.Del(name)
+							} else if rule.Default != "" {
+								request.Header.Set(rule.Rename, rule.Default)
+								request.Header.Del(name)
+							}
+						} else {
+							request.Header.Set(name, ctx.Request().Header.Get(name))
+						}
 					}
 				}
 				continue
