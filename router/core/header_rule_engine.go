@@ -104,7 +104,6 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 
 			// Regex match
 			if regex, ok := h.regex[rule.Matching]; ok {
-
 				for name := range ctx.Request().Header {
 					// Skip hop-by-hop headers and connection headers
 					if contains(hopHeaders, name) {
@@ -123,9 +122,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 								request.Header.Set(rule.Rename, rule.Default)
 								request.Header.Del(name)
 							}
-
 						} else {
-
 							request.Header.Set(name, ctx.Request().Header.Get(name))
 						}
 					}
