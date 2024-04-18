@@ -906,7 +906,10 @@
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["provider", "url"],
+                "required": [
+                  "provider",
+                  "url"
+                ],
                 "properties": {
                   "provider": {
                     "description": "The events provider. Supported providers include: \"NATS\"",
@@ -923,13 +926,14 @@
                     "type": "object",
                     "description": "Authentication configuration for the NATS provider.",
                     "unevaluatedProperties": false,
-                    "properties": {
-                    },
+                    "properties": {},
                     "oneOf": [
                       {
                         "type": "object",
                         "additionalProperties": false,
-                        "required": ["token"],
+                        "required": [
+                          "token"
+                        ],
                         "properties": {
                           "token": {
                             "type": "string",
@@ -940,7 +944,10 @@
                       {
                         "type": "object",
                         "additionalProperties": false,
-                        "required": ["username", "password"],
+                        "required": [
+                          "username",
+                          "password"
+                        ],
                         "properties": {
                           "username": {
                             "type": "string",
@@ -1128,9 +1135,9 @@
           "description": "Enable error propagation. If the value is true, Subgraph errors will be propagated to the client."
         },
         "status_codes": {
-            "type": "boolean",
-            "default": false,
-            "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."
+          "type": "boolean",
+          "default": false,
+          "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."
         }
       }
     }
@@ -1164,6 +1171,13 @@
             "X-Test-Header"
           ],
           "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
+        },
+        "rename": {
+          "type": "string",
+          "examples": [
+            "X-Rename-Test-Header"
+          ],
+          "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
         },
         "default": {
           "type": "string",
