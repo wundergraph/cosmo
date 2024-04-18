@@ -1,10 +1,11 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { program } from 'commander';
+import { BREAK, parse, visit } from 'graphql';
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
+import { Client } from '../../../core/client/client.js';
 import { config, getBaseHeaders } from '../../../core/config.js';
 import { GraphToken } from '../../auth/utils.js';
-import { Client } from '../../../core/client/client.js';
 
 export const fetchRouterConfig = async ({
   client,
@@ -102,6 +103,7 @@ export const getSubgraphsOfFedGraph = async ({
       routingURL: s.routingURL,
       subscriptionURL: s.subscriptionUrl,
       subscriptionProtocol: s.subscriptionProtocol,
+      isV2Graph: s.isV2Graph,
     };
   });
 };
@@ -172,4 +174,67 @@ export const getSubgraphSDL = async ({
   const sdl = await resp.sdl;
 
   return sdl;
+};
+
+export const injectRequiredDirectives = (schema: string, isV2Graph?: boolean) => {
+  const linkDirective = `extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: [
+      "@authenticated"
+      "@composeDirective"
+      "@extends"
+      "@external"
+      "@inaccessible"
+      "@interfaceObject"
+      "@override"
+      "@provides"
+      "@key"
+      "@requires"
+      "@requiresScopes"
+      "@shareable"
+      "@tag"
+    ]
+  )
+
+`;
+  let hasDefinedLink = false;
+  if (!isV2Graph) {
+    return schema;
+  }
+  visit(parse(schema), {
+    SchemaDefinition: {
+      enter(node) {
+        if (!node.directives) {
+          return false;
+        }
+        for (const directive of node.directives) {
+          if (directive.name.value === 'link') {
+            hasDefinedLink = true;
+            return BREAK;
+          }
+        }
+        return false;
+      },
+    },
+    SchemaExtension: {
+      enter(node) {
+        if (!node.directives) {
+          return false;
+        }
+        for (const directive of node.directives) {
+          if (directive.name.value === 'link') {
+            hasDefinedLink = true;
+            return BREAK;
+          }
+        }
+        return false;
+      },
+    },
+  });
+
+  if (!hasDefinedLink) {
+    return linkDirective + schema;
+  }
+  return schema;
 };

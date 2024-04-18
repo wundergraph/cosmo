@@ -2421,6 +2421,11 @@ export class Subgraph extends Message<Subgraph> {
    */
   subscriptionProtocol = "";
 
+  /**
+   * @generated from field: optional bool isV2Graph = 12;
+   */
+  isV2Graph?: boolean;
+
   constructor(data?: PartialMessage<Subgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2440,6 +2445,7 @@ export class Subgraph extends Message<Subgraph> {
     { no: 9, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 10, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 11, name: "subscriptionProtocol", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "isV2Graph", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {

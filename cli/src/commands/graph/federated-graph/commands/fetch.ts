@@ -3,7 +3,13 @@ import { Command } from 'commander';
 import { join } from 'pathe';
 import yaml from 'js-yaml';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import { fetchRouterConfig, getFederatedGraphSDL, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
+import {
+  fetchRouterConfig,
+  getFederatedGraphSDL,
+  getSubgraphSDL,
+  getSubgraphsOfFedGraph,
+  injectRequiredDirectives,
+} from '../utils.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('fetch');
@@ -81,7 +87,7 @@ export default (opts: BaseCommandOptions) => {
         continue;
       }
       const filePath = join(subgraphPath, `${subgraph.name}.graphql`);
-      writeFileSync(filePath, subgraphSDL);
+      let finalSDL = subgraphSDL;
       if (options.apolloCompatibility) {
         cosmoSubgraphsConfig.push({
           name: subgraph.name,
@@ -106,7 +112,9 @@ export default (opts: BaseCommandOptions) => {
             protocol: 'graphql_ws',
           };
         }
+        finalSDL = injectRequiredDirectives(subgraphSDL, subgraph.isV2Graph);
       }
+      writeFileSync(filePath, finalSDL);
     }
 
     if (options.apolloCompatibility) {
