@@ -27,11 +27,11 @@ export const fetchRouterConfig = async ({
   );
 
   if (resp.response?.code !== EnumStatusCode.OK) {
-    console.log(`${pc.red(`Could not fetch the router config for the graph ${pc.bold(name)}`)}`);
-    if (resp.response?.details) {
-      console.log(pc.red(pc.bold(resp.response?.details)));
-    }
-    process.exit(1);
+    throw new Error(
+      `${pc.red(`Could not fetch the router config for the graph ${pc.bold(name)}`)} \n${pc.red(
+        pc.bold(resp.response?.details || ''),
+      )}`,
+    );
   }
 
   let decoded: GraphToken;
@@ -67,6 +67,14 @@ export const fetchRouterConfig = async ({
   return routerConfig;
 };
 
+export interface Subgraph {
+  name: string;
+  routingURL: string;
+  subscriptionURL: string;
+  subscriptionProtocol: string;
+  isV2Graph?: boolean;
+}
+
 export const getSubgraphsOfFedGraph = async ({
   client,
   name,
@@ -75,7 +83,7 @@ export const getSubgraphsOfFedGraph = async ({
   client: Client;
   name: string;
   namespace: string;
-}) => {
+}): Promise<Subgraph[]> => {
   const resp = await client.platform.getFederatedGraphByName(
     {
       name,
@@ -88,11 +96,11 @@ export const getSubgraphsOfFedGraph = async ({
   );
 
   if (resp.response?.code !== EnumStatusCode.OK) {
-    console.log(`${pc.red(`Could not fetch the federated graph ${pc.bold(name)}`)}`);
-    if (resp.response?.details) {
-      console.log(pc.red(pc.bold(resp.response?.details)));
-    }
-    process.exit(1);
+    throw new Error(
+      `${pc.red(`Could not fetch the federated graph ${pc.bold(name)}`)} \n${pc.red(
+        pc.bold(resp.response?.details || ''),
+      )}`,
+    );
   }
 
   const subgraphs = await resp.subgraphs;
@@ -128,11 +136,11 @@ export const getFederatedGraphSDL = async ({
   );
 
   if (resp.response?.code !== EnumStatusCode.OK || !resp?.sdl) {
-    console.log(`${pc.red(`Could not fetch the SDL of the federated graph ${pc.bold(name)}`)}`);
-    if (resp.response?.details) {
-      console.log(pc.red(pc.bold(resp.response?.details)));
-    }
-    process.exit(1);
+    throw new Error(
+      `${pc.red(`Could not fetch the SDL of the federated graph ${pc.bold(name)}`)} \n${pc.red(
+        pc.bold(resp.response?.details || ''),
+      )}`,
+    );
   }
 
   const sdl = await resp.sdl;
@@ -164,11 +172,7 @@ export const getSubgraphSDL = async ({
   );
 
   if (resp.response?.code !== EnumStatusCode.OK) {
-    console.log(`${pc.red(`Could not fetch the SDL of the subgraph ${pc.bold(subgraphName)}`)}`);
-    if (resp.response?.details) {
-      console.log(pc.red(pc.bold(resp.response?.details)));
-    }
-    process.exit(1);
+    return undefined;
   }
 
   const sdl = await resp.sdl;
