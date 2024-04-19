@@ -21,7 +21,7 @@ export default (opts: BaseCommandOptions) => {
   cmd.option('-o, --out [string]', 'Destination folder for storing all the required files.');
   cmd.option(
     '-a, --apollo-compatibility',
-    'Enable apollo compatibilty to generate the composition configs and script to generate schema using rover',
+    'Enable apollo compatibility to generate the composition configs and script to generate schema using rover',
   );
 
   cmd.action(async (name, options) => {
