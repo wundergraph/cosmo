@@ -14,7 +14,7 @@ export const fetchRouterConfig = async ({
 }: {
   client: Client;
   name: string;
-  namespace: string;
+  namespace?: string;
 }) => {
   const resp = await client.platform.generateRouterToken(
     {
@@ -82,7 +82,7 @@ export const getSubgraphsOfFedGraph = async ({
 }: {
   client: Client;
   name: string;
-  namespace: string;
+  namespace?: string;
 }): Promise<Subgraph[]> => {
   const resp = await client.platform.getFederatedGraphByName(
     {
@@ -123,7 +123,7 @@ export const getFederatedGraphSDL = async ({
 }: {
   client: Client;
   name: string;
-  namespace: string;
+  namespace?: string;
 }) => {
   const resp = await client.platform.getFederatedGraphSDLByName(
     {
@@ -158,7 +158,7 @@ export const getSubgraphSDL = async ({
   client: Client;
   fedGraphName: string;
   subgraphName: string;
-  namespace: string;
+  namespace?: string;
 }) => {
   const resp = await client.platform.getSubgraphSDLFromLatestComposition(
     {
