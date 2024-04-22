@@ -9,14 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/prometheus/client_golang/prometheus"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/trace"
 	"io"
 	"log"
 	"math/rand"
@@ -29,6 +21,15 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/hashicorp/go-cleanhttp"
 
@@ -454,6 +455,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		SubgraphErrorPropagation: config.SubgraphErrorPropagationConfiguration{
 			Enabled:     true,
 			StatusCodes: true,
+			Mode:        config.SubgraphErrorPropagationModeWrapped,
 		},
 	}
 
