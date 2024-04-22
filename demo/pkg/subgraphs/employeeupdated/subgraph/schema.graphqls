@@ -13,12 +13,13 @@ input UpdateEmployeeInput {
 }
 
 type Mutation {
-    updateEmployee(id: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__publish(subject: "updateEmployee.{{ args.id }}")
+    updateEmployee(id: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__publish(subject: "employeeUpdated.{{ args.id }}", sourceName: "my-kafka")
     updateEmployeeMyNats(employeeID: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__publish(subject: "updateEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
 }
 
 type Subscription {
-    employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"])
+    employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"], streamConfiguration: { consumerName: "consumerName1", streamName: "streamName"})
+    employeeUpdatedMyKafka(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"], streamConfiguration: { consumerName: "consumerName1", streamName: "streamName"}, sourceName: "my-kafka")
     employeeUpdatedMyNats(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], sourceName: "my-nats")
     employeeUpdatedStream(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName"})
 }

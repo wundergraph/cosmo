@@ -4,3 +4,17 @@
 # This file is used to debugging purposes only.
 
 version: "1"
+
+instance_id: test
+
+events:
+  sources:
+    default:
+      provider: NATS
+      url: "nats://localhost:4222"
+    my-nats:
+      provider: NATS
+      url: "nats://localhost:4222"
+    my-kafka:
+      provider: KAFKA
+      url: localhost:22181

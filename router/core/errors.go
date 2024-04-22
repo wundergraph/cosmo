@@ -6,7 +6,7 @@ import (
 	"errors"
 	"github.com/hashicorp/go-multierror"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
@@ -64,7 +64,7 @@ func getErrorType(err error) errorType {
 			return errorTypeContextTimeout
 		}
 	}
-	var edfsErr *pubsub.EDFSNatsError
+	var edfsErr *pubsubNats.Error
 	if errors.As(err, &edfsErr) {
 		return errorTypeEDFSNats
 	}

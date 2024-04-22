@@ -8,7 +8,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	natsPubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"golang.org/x/sync/errgroup"
 	"log"
@@ -177,8 +177,8 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 
 	pubSubBySourceName := map[string]pubsub_datasource.PubSub{
-		"default": pubsub.NewNATSConnector(defaultConnection).New(ctx),
-		"my-nats": pubsub.NewNATSConnector(myNatsConnection).New(ctx),
+		"default": natsPubsub.NewConnector(defaultConnection).New(ctx),
+		"my-nats": natsPubsub.NewConnector(myNatsConnection).New(ctx),
 	}
 
 	js, err := jetstream.New(defaultConnection)

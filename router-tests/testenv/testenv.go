@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	natsPubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -1082,7 +1082,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.S
 	for _, sourceName := range demoNatsSourceNames {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		require.NoError(t, err)
-		pubsubBySourceName[sourceName] = pubsub.NewNATSConnector(natsConnection).New(ctx)
+		pubsubBySourceName[sourceName] = natsPubsub.NewConnector(natsConnection).New(ctx)
 	}
 	return &subgraphs.SubgraphOptions{
 		PubSubBySourceName: pubsubBySourceName,

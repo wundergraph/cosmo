@@ -1,4 +1,4 @@
-package pubsub
+package nats
 
 import (
 	"context"
@@ -13,33 +13,33 @@ import (
 )
 
 var (
-	_ pubsub_datasource.Connector = (*natsConnector)(nil)
+	_ pubsub_datasource.Connector = (*connector)(nil)
 	_ pubsub_datasource.PubSub    = (*natsPubSub)(nil)
 )
 
-type EDFSNatsError struct {
+type Error struct {
 	Err error
 }
 
-func (e *EDFSNatsError) Error() string { return e.Err.Error() }
+func (e *Error) Error() string { return e.Err.Error() }
 
-func (e *EDFSNatsError) Unwrap() error { return e.Err }
+func (e *Error) Unwrap() error { return e.Err }
 
-func newEDFSNatsError(err error) *EDFSNatsError {
-	return &EDFSNatsError{
+func newError(err error) *Error {
+	return &Error{
 		Err: err,
 	}
 }
 
-type natsConnector struct {
+type connector struct {
 	conn *nats.Conn
 }
 
-func NewNATSConnector(conn *nats.Conn) pubsub_datasource.Connector {
-	return &natsConnector{conn: conn}
+func NewConnector(conn *nats.Conn) pubsub_datasource.Connector {
+	return &connector{conn: conn}
 }
 
-func (c *natsConnector) New(ctx context.Context) pubsub_datasource.PubSub {
+func (c *connector) New(ctx context.Context) pubsub_datasource.PubSub {
 	return &natsPubSub{
 		ctx:  ctx,
 		conn: c.conn,
@@ -57,19 +57,20 @@ func (p *natsPubSub) ID() string {
 
 func (p *natsPubSub) ensureConn() error {
 	if p.conn == nil {
-		return newEDFSNatsError(errors.New("NATS is not configured"))
+		return newError(errors.New("NATS is not configured"))
 	}
 	return nil
 }
 
 func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater resolve.SubscriptionUpdater, streamConfiguration *pubsub_datasource.StreamConfiguration) error {
 	if err := p.ensureConn(); err != nil {
-		return newEDFSNatsError(fmt.Errorf(`failed to ensure nats connection: %w`, err))
+		return newError(fmt.Errorf(`failed to ensure nats connection: %w`, err))
 	}
+
 	if streamConfiguration != nil {
 		js, err := jetstream.New(p.conn)
 		if err != nil {
-			return newEDFSNatsError(fmt.Errorf(`failed to create jetstream: %w`, err))
+			return newError(fmt.Errorf(`failed to create jetstream: %w`, err))
 		}
 
 		consumer, err := js.CreateOrUpdateConsumer(ctx, streamConfiguration.StreamName, jetstream.ConsumerConfig{
@@ -77,31 +78,37 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 			FilterSubjects: subjects,
 		})
 		if err != nil {
-			return newEDFSNatsError(fmt.Errorf(`failed to create or update consumer "%s": %w`, streamConfiguration.Consumer, err))
+			return newError(fmt.Errorf(`failed to create or update consumer "%s": %w`, streamConfiguration.Consumer, err))
 		}
 		if consumer == nil {
-			return newEDFSNatsError(fmt.Errorf(`consumer "%s" is nil; it is likely the nats stream "%s" does not exist`, streamConfiguration.Consumer, streamConfiguration.StreamName))
+			return newError(fmt.Errorf(`consumer "%s" is nil; it is likely the nats stream "%s" does not exist`, streamConfiguration.Consumer, streamConfiguration.StreamName))
 		}
+
 		go func() {
 			for {
 				select {
 				case <-ctx.Done():
 					return
 				default:
-				}
-				msgBatch, consumerFetchErr := consumer.FetchNoWait(1)
-				if consumerFetchErr != nil {
-					return
-				}
-				for msg := range msgBatch.Messages() {
-					ackErr := msg.Ack()
-					if ackErr != nil {
+					msgBatch, consumerFetchErr := consumer.FetchNoWait(25)
+					if consumerFetchErr != nil {
 						return
 					}
-					updater.Update(msg.Data())
+
+					for msg := range msgBatch.Messages() {
+						updater.Update(msg.Data())
+
+						// Acknowledge the message after it has been processed
+						ackErr := msg.Ack()
+						if ackErr != nil {
+							return
+						}
+					}
 				}
+
 			}
 		}()
+
 		return nil
 	}
 
@@ -110,7 +117,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 	for i, subject := range subjects {
 		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
-			return newEDFSNatsError(fmt.Errorf(`error subscribing to NATS subject "%s": %w`, subject, err))
+			return newError(fmt.Errorf(`error subscribing to NATS subject "%s": %w`, subject, err))
 		}
 		subscriptions[i] = subscription
 	}
@@ -143,7 +150,7 @@ func (p *natsPubSub) Request(ctx context.Context, subject string, data []byte, w
 	}
 	msg, err := p.conn.RequestWithContext(ctx, subject, data)
 	if err != nil {
-		return newEDFSNatsError(fmt.Errorf("error requesting NATS subject %s: %w", subject, err))
+		return newError(fmt.Errorf("error requesting NATS subject %s: %w", subject, err))
 	}
 	_, err = w.Write(msg.Data)
 	return err

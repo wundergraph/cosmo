@@ -911,7 +911,8 @@
                   "provider": {
                     "description": "The events provider. Supported providers include: \"NATS\"",
                     "enum": [
-                      "NATS"
+                      "NATS",
+                      "KAFKA"
                     ]
                   },
                   "url": {

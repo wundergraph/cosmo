@@ -2,13 +2,17 @@ package core
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/scram"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"net/http"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-
 	"go.uber.org/zap"
 
 	"github.com/nats-io/nats.go"
@@ -119,6 +123,28 @@ func natsAuthenticationOptions(authentication *config.Authentication) ([]nats.Op
 	return []nats.Option{nats.UserInfo(*authentication.Username, *authentication.Password)}, nil
 }
 
+func kafkaAuthenticationOptions(authentication *config.Authentication) ([]kgo.Opt, error) {
+	seeds := []string{"cogm2ddgpd2scl6kp54g.any.eu-central-1.mpx.prd.cloud.redpanda.com:9092"}
+
+	return []kgo.Opt{
+		kgo.SeedBrokers(seeds...),
+		// We want to re-balance on before every poll to ensure
+		// we always have the latest metadata. This is recommended with the poll, process, commit loop.
+		kgo.BlockRebalanceOnPoll(),
+		// For observability, we set the client ID to the router
+		kgo.ClientID("router"),
+		// Ensure proper timeouts are set
+		kgo.ProduceRequestTimeout(10 * time.Second),
+		kgo.ConnIdleTimeout(60 * time.Second),
+		// Enable default public TLS configuration
+		kgo.DialTLSConfig(new(tls.Config)),
+		kgo.SASL(scram.Auth{
+			User: "test",
+			Pass: "bmwOII3tceHcp5YHTSulOcAoWsaIqd",
+		}.AsSha256Mechanism()),
+	}, nil
+}
+
 func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
@@ -150,7 +176,18 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 				if err != nil {
 					return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 				}
-				pubSubBySourceName[eventConfiguration.SourceName] = pubsub.NewNATSConnector(natsConnection).New(ctx)
+				pubSubBySourceName[eventConfiguration.SourceName] = pubsubNats.NewConnector(natsConnection).New(ctx)
+			case "KAFKA":
+				options, err := kafkaAuthenticationOptions(eventSource.Authentication)
+				if err != nil {
+					return nil, fmt.Errorf("failed to add authentication for KAFKA provider with sourceName \"%s\": %w", eventConfiguration.SourceName, err)
+				}
+				client, err := kgo.NewClient(options...)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create kafka client: %w", err)
+				}
+
+				pubSubBySourceName[eventConfiguration.SourceName] = kafka.NewConnector(b.logger, client).New(ctx)
 			default:
 				return nil, fmt.Errorf("unknown event source provider %s for sourceName \"%s\"", eventConfiguration.SourceName, eventSource.Provider)
 			}
