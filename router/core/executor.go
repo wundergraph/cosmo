@@ -60,7 +60,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	case config.SubgraphErrorPropagationModeWrapped:
 		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModeWrapped
 	default:
-		return nil, fmt.Errorf("unknown subgraph error propagation mode %s", routerEngineConfig.SubgraphErrorPropagation.Mode)
+		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModeWrapped
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
