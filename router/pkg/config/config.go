@@ -327,9 +327,17 @@ type TLSConfiguration struct {
 	Server TLSServerConfiguration `yaml:"server"`
 }
 
+type SubgraphErrorPropagationMode string
+
+const (
+	SubgraphErrorPropagationModeWrapped     SubgraphErrorPropagationMode = "wrapped"
+	SubgraphErrorPropagationModePassthrough SubgraphErrorPropagationMode = "pass-through"
+)
+
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled     bool `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	StatusCodes bool `yaml:"status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+	Enabled     bool                         `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
+	StatusCodes bool                         `yaml:"status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+	Mode        SubgraphErrorPropagationMode `yaml:"mode" default:"wrapped" envconfig:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
 }
 
 type Config struct {

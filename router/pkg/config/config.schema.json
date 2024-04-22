@@ -1138,10 +1138,10 @@
             "type": "string",
             "enum": [
                 "wrapped",
-                "as_is"
+                "pass-through"
             ],
             "default": "wrapped",
-            "description": "The mode of error propagation. The supported modes are 'wrapped' and 'as_is'. The 'wrapped' mode wraps the error in a custom error object. The 'as_is' mode returns the error as is from the Subgraph."
+            "description": "The mode of error propagation. The supported modes are 'wrapped' and 'pass-through'. The 'wrapped' mode wraps the error in a custom error object to hide internals. The 'pass-through' mode returns the error as is from the Subgraph."
         },
         "status_codes": {
           "type": "boolean",
