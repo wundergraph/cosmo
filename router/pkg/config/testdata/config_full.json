@@ -278,6 +278,7 @@
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
-    "StatusCodes": false
+    "StatusCodes": false,
+    "Mode": "wrapped"
   }
 }

@@ -973,3 +973,72 @@ func TestWithOriginErrors500(t *testing.T) {
 		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query', Reason: empty response.","extensions":{"statusCode":500}}],"data":null}`, res.Body)
 	})
 }
+
+func TestWithOriginGraphQLErrorPropagated(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":null}`, res.Body)
+	})
+}
+
+func TestWithOriginGraphQLErrorUnpropagated(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+			cfg.Enabled = false
+		},
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'."}],"data":null}`, res.Body)
+	})
+}
+
+func TestWithOriginGraphQLErrorPropagatedPassthrough(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+		},
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"data":null}`, res.Body)
+	})
+}
