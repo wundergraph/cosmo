@@ -48,14 +48,14 @@
     "@graphql-inspector/core": "^5.0.2",
     "@graphql-tools/utils": "^10.1.2",
     "@keycloak/keycloak-admin-client": "^22.0.4",
-    "@octokit/webhooks-types": "^7.3.1",
+    "@octokit/webhooks-types": "^7.5.0",
     "@tiptap/core": "^2.1.13",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
     "axios": "^1.6.7",
     "axios-retry": "^4.0.0",
-    "bullmq": "^5.4.1",
+    "bullmq": "^5.7.4",
     "cookie": "^0.6.0",
     "date-fns": "^2.30.0",
     "dotenv": "^16.4.5",
@@ -73,7 +73,7 @@
     "lodash": "^4.17.21",
     "nodemailer": "^6.9.11",
     "nuid": "^1.1.6",
-    "octokit": "^3.1.2",
+    "octokit": "^3.2.0",
     "openai": "^4.28.4",
     "pino": "^8.19.0",
     "postgres": "^3.4.3",
@@ -108,6 +108,6 @@
     "tsc-watch": "^6.0.4",
     "tsx": "^4.7.1",
     "typescript": "^5.2.2",
-    "vitest": "^1.4.0"
+    "vitest": "^1.5.0"
   }
 }
