@@ -54,6 +54,7 @@ import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 import { UserRepository } from './UserRepository.js';
+import { ContractRepository } from './ContractRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -178,6 +179,7 @@ export class FederatedGraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
+      const contractRepo = new ContractRepository(tx, this.organizationId);
 
       const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
       if (!federatedGraph) {
@@ -283,6 +285,36 @@ export class FederatedGraphRepository {
             })),
         );
 
+        // Update label matchers for all downstream contract graphs
+        const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
+        for (const contract of contracts) {
+          const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+          if (!contractGraph) {
+            throw new Error(`Contract graph ${contract.downstreamFederatedGraphId} not found`);
+          }
+
+          await tx
+            .delete(schema.targetLabelMatchers)
+            .where(eq(schema.targetLabelMatchers.targetId, contractGraph.targetId));
+
+          if (labelMatchers.length > 0) {
+            await tx
+              .insert(schema.targetLabelMatchers)
+              .values(
+                labelMatchers.map((labelMatcher) => ({
+                  targetId: contractGraph.targetId,
+                  labelMatcher: labelMatcher.split(','),
+                })),
+              )
+              .execute();
+          }
+
+          // TODO
+          // If above composition is successful
+          // Perform tag filter operations and store router config and filtered schema
+          // Or else stick to previous valid schema and skip ops
+        }
+
         return {
           compositionErrors: composedGraph.errors,
           deploymentErrors,
@@ -334,6 +366,17 @@ export class FederatedGraphRepository {
           )
           .onConflictDoNothing()
           .execute();
+      }
+
+      if (data.federatedGraph.contract?.id) {
+        // TODO
+        // Get latest valid composition
+        // If not found, do not create any new entries, return error telling no valid schema
+        // Perform tag filter operations and store router config and filtered schema
+        return {
+          compositionErrors: [],
+          deploymentErrors: [],
+        };
       }
 
       const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
@@ -420,11 +463,19 @@ export class FederatedGraphRepository {
         namespaceName: schema.namespaces.name,
         admissionWebhookURL: schema.federatedGraphs.admissionWebhookURL,
         supportsFederation: schema.federatedGraphs.supportsFederation,
+        contract: {
+          id: schema.contracts.id,
+          sourceFederatedGraphId: schema.contracts.sourceFederatedGraphId,
+          downstreamFederatedGraphId: schema.contracts.downstreamFederatedGraphId,
+          includeTags: schema.contracts.includeTags,
+          excludeTags: schema.contracts.excludeTags,
+        },
       })
       .from(targets)
       .where(and(...conditions))
       .innerJoin(schema.federatedGraphs, eq(targets.id, schema.federatedGraphs.targetId))
-      .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.targets.namespaceId));
+      .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.targets.namespaceId))
+      .innerJoin(schema.contracts, eq(schema.federatedGraphs.id, schema.contracts.downstreamFederatedGraphId));
 
     if (resp.length === 0) {
       return undefined;
@@ -473,6 +524,7 @@ export class FederatedGraphRepository {
       namespaceId: resp[0].namespaceId,
       admissionWebhookURL: resp[0].admissionWebhookURL ?? '',
       supportsFederation: resp[0].supportsFederation,
+      contract: resp[0].contract,
     };
   }
 

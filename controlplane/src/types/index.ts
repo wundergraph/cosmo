@@ -45,6 +45,14 @@ export interface Label {
   value: string;
 }
 
+export interface ContractDTO {
+  id: string;
+  sourceFederatedGraphId: string;
+  downstreamFederatedGraphId: string;
+  includeTags: string[];
+  excludeTags: string[];
+}
+
 export interface FederatedGraphDTO {
   id: string;
   targetId: string;
@@ -64,6 +72,7 @@ export interface FederatedGraphDTO {
   namespace: string;
   namespaceId: string;
   supportsFederation: boolean;
+  contract?: ContractDTO;
 }
 
 export interface FederatedGraphChangelogDTO {

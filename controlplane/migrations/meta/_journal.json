@@ -603,6 +603,13 @@
       "when": 1712150441547,
       "tag": "0085_slimy_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "5",
+      "when": 1713859179385,
+      "tag": "0086_huge_vargas",
+      "breakpoints": true
     }
   ]
 }

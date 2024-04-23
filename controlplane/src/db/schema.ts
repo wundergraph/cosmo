@@ -65,6 +65,62 @@ export const federatedGraphs = pgTable('federated_graphs', {
   supportsFederation: boolean('supports_federation').default(true).notNull(),
 });
 
+export const contracts = pgTable(
+  'contracts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceFederatedGraphId: uuid('source_federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    downstreamFederatedGraphId: uuid('downstream_federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    includeTags: text('include_tags').array().notNull(),
+    excludeTags: text('exclude_tags').array().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => ({
+    uniqueFederatedGraphSourceDownstreamGraphId: unique('federated_graph_source_downstream_id').on(
+      t.sourceFederatedGraphId,
+      t.downstreamFederatedGraphId,
+    ),
+  }),
+);
+
+export const contractsRelations = relations(contracts, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [contracts.createdById],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [contracts.updatedById],
+    references: [users.id],
+  }),
+  sourceFederatedGraph: one(federatedGraphs, {
+    fields: [contracts.sourceFederatedGraphId],
+    references: [federatedGraphs.id],
+    relationName: 'source',
+  }),
+  downstreamFederatedGraph: one(federatedGraphs, {
+    fields: [contracts.downstreamFederatedGraphId],
+    references: [federatedGraphs.id],
+    relationName: 'downstream',
+  }),
+}));
+
 export const federatedGraphClients = pgTable(
   'federated_graph_clients',
   {
@@ -186,6 +242,12 @@ export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }
     references: [schemaVersion.id],
   }),
   subgraphs: many(subgraphsToFederatedGraph),
+  contract: one(contracts, {
+    fields: [federatedGraphs.id],
+    references: [contracts.downstreamFederatedGraphId],
+    relationName: 'downstream',
+  }),
+  contracts: many(contracts, { relationName: 'source' }),
 }));
 
 export const subgraphRelations = relations(subgraphs, ({ many, one }) => ({

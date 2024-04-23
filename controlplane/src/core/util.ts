@@ -14,6 +14,7 @@ import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
+const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -102,6 +103,28 @@ export function normalizeLabels(labels: Label[]): Label[] {
   const uniqueLabels = new Set(concatenatedLabels);
 
   return [...uniqueLabels].map((label) => splitLabel(label));
+}
+
+export function isValidSchemaTag(tag: string) {
+  if (!tag) {
+    return false;
+  }
+
+  if (tag.length > 128) {
+    return false;
+  }
+
+  if (!schemaTagRegex.test(tag)) {
+    return false;
+  }
+}
+
+export function isValidSchemaTags(tags: string[]) {
+  for (const tag of tags) {
+    if (!isValidSchemaTag(tag)) {
+      return false;
+    }
+  }
 }
 
 /**

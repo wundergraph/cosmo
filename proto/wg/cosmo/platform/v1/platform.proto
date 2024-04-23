@@ -1917,12 +1917,42 @@ message GetUserAccessiblePermissionsResponse {
   repeated Permission permissions = 2;
 }
 
+message CreateContractRequest {
+  string name = 1;
+  string namespace = 2;
+  string source_graph_name = 3;
+  string routing_url = 4;
+  string admission_webhook_url = 5;
+  repeated string include_tags = 6;
+  repeated string exclude_tags = 7;
+  optional string readme = 8;
+}
+
+message CreateContractResponse {
+  Response response = 1;
+}
+
+message UpdateContractRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated string include_tags = 3;
+  repeated string exclude_tags = 4;
+}
+
+message UpdateContractResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
   rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse) {}
   rpc RenameNamespace(RenameNamespaceRequest) returns (RenameNamespaceResponse) {}
   rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
+
+  // Contracts
+  rpc CreateContract(CreateContractRequest) returns (CreateContractResponse) {}
+  rpc UpdateContract(UpdateContractRequest) returns (UpdateContractResponse) {}
 
   rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
   rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}

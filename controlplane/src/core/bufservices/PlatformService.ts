@@ -5,6 +5,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import _ from 'lodash';
 import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
@@ -17,6 +18,7 @@ import {
   CreateAPIKeyResponse,
   CreateBillingPortalSessionResponse,
   CreateCheckoutSessionResponse,
+  CreateContractResponse,
   CreateDiscussionResponse,
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
@@ -206,10 +208,12 @@ import {
   isValidNamespaceName,
   isValidOrganizationName,
   isValidOrganizationSlug,
+  isValidSchemaTags,
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { apiKeyPermissions } from '../constants.js';
+import { ContractRepository } from '../repositories/ContractRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -660,151 +664,191 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookService(
-          opts.db,
-          authContext.organizationId,
-          opts.logger,
-          opts.billingDefaultPlanId,
-        );
-        const auditLogRepo = new AuditLogRepository(opts.db);
-        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        return opts.db.transaction(async (tx) => {
+          const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+          const contractRepo = new ContractRepository(tx, authContext.organizationId);
+          const orgWebhooks = new OrganizationWebhookService(
+            tx,
+            authContext.organizationId,
+            opts.logger,
+            opts.billingDefaultPlanId,
+          );
+          const auditLogRepo = new AuditLogRepository(tx);
+          const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
 
-        const graph = await fedGraphRepo.byName(req.name, req.namespace, {
-          supportsFederation: true,
-        });
-        if (!graph) {
+          const graph = await fedGraphRepo.byName(req.name, req.namespace, {
+            supportsFederation: true,
+          });
+          if (!graph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Federated graph '${req.name}' not found`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          if (graph.contract?.id) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Contract graphs cannot be moved individually. They will automatically be moved with the source graph.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          const exists = await fedGraphRepo.exists(req.name, req.newNamespace);
+          if (exists) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `A federated graph '${req.name}' already exists in the namespace ${req.newNamespace}`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId: graph.targetId,
+              targetType: 'federatedGraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+
+          const newNamespace = await namespaceRepo.byName(req.newNamespace);
+          if (!newNamespace) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Could not find namespace ${req.newNamespace}`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          const { compositionErrors, deploymentErrors } = await fedGraphRepo.move(
+            {
+              targetId: graph.targetId,
+              newNamespaceId: newNamespace.id,
+              updatedBy: authContext.userId,
+              federatedGraph: graph,
+            },
+            opts.blobStorage,
+            {
+              cdnBaseUrl: opts.cdnBaseUrl,
+              jwtSecret: opts.admissionWebhookJWTSecret,
+            },
+          );
+
+          const movedGraphs = [graph];
+
+          const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
+          for (const contract of contracts) {
+            const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+            if (!contractGraph) {
+              continue;
+            }
+            await fedGraphRepo.move(
+              {
+                targetId: contractGraph.targetId,
+                newNamespaceId: newNamespace.id,
+                updatedBy: authContext.userId,
+                federatedGraph: contractGraph,
+              },
+              opts.blobStorage,
+              {
+                cdnBaseUrl: opts.cdnBaseUrl,
+                jwtSecret: opts.admissionWebhookJWTSecret,
+              },
+            );
+            movedGraphs.push(contractGraph);
+          }
+
+          for (const movedGraph of movedGraphs) {
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'federated_graph.moved',
+              action: 'moved',
+              actorId: authContext.userId,
+              auditableType: 'federated_graph',
+              auditableDisplayName: movedGraph.name,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: newNamespace.id,
+              targetNamespaceDisplayName: newNamespace.name,
+            });
+
+            orgWebhooks.send({
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              payload: {
+                federated_graph: {
+                  id: movedGraph.id,
+                  name: movedGraph.name,
+                  namespace: movedGraph.namespace,
+                },
+                organization: {
+                  id: authContext.organizationId,
+                  slug: authContext.organizationSlug,
+                },
+                errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+                actor_id: authContext.userId,
+              },
+            });
+          }
+
+          const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+          allDeploymentErrors.push(
+            ...deploymentErrors
+              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+              .map((e) => ({
+                federatedGraphName: req.name,
+                namespace: graph.namespace,
+                message: e.message ?? '',
+              })),
+          );
+
+          if (compositionErrors.length > 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
+              },
+              deploymentErrors: [],
+              compositionErrors: compositionErrors.map((e) => ({
+                federatedGraphName: req.name,
+                message: e.message,
+                namespace: graph.namespace,
+              })),
+            };
+          }
+
+          if (deploymentErrors?.length > 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
+              },
+              deploymentErrors: allDeploymentErrors,
+              compositionErrors: [],
+            };
+          }
+
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph '${req.name}' not found`,
+              code: EnumStatusCode.OK,
             },
             compositionErrors: [],
             deploymentErrors: [],
           };
-        }
-
-        const exists = await fedGraphRepo.exists(req.name, req.newNamespace);
-        if (exists) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `A federated graph '${req.name}' already exists in the namespace ${req.newNamespace}`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-          };
-        }
-
-        await opts.authorizer.authorize({
-          db: opts.db,
-          graph: {
-            targetId: graph.targetId,
-            targetType: 'federatedGraph',
-          },
-          headers: ctx.requestHeader,
-          authContext,
         });
-
-        const newNamespace = await namespaceRepo.byName(req.newNamespace);
-        if (!newNamespace) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Could not find namespace ${req.newNamespace}`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-          };
-        }
-
-        const { compositionErrors, deploymentErrors } = await fedGraphRepo.move(
-          {
-            targetId: graph.targetId,
-            newNamespaceId: newNamespace.id,
-            updatedBy: authContext.userId,
-            federatedGraph: graph,
-          },
-          opts.blobStorage,
-          {
-            cdnBaseUrl: opts.cdnBaseUrl,
-            jwtSecret: opts.admissionWebhookJWTSecret,
-          },
-        );
-
-        await auditLogRepo.addAuditLog({
-          organizationId: authContext.organizationId,
-          auditAction: 'federated_graph.moved',
-          action: 'moved',
-          actorId: authContext.userId,
-          auditableType: 'federated_graph',
-          auditableDisplayName: graph.name,
-          actorDisplayName: authContext.userDisplayName,
-          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-          targetNamespaceId: newNamespace.id,
-          targetNamespaceDisplayName: newNamespace.name,
-        });
-
-        orgWebhooks.send({
-          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-          payload: {
-            federated_graph: {
-              id: graph.id,
-              name: graph.name,
-              namespace: graph.namespace,
-            },
-            organization: {
-              id: authContext.organizationId,
-              slug: authContext.organizationSlug,
-            },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-            actor_id: authContext.userId,
-          },
-        });
-
-        const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
-
-        allDeploymentErrors.push(
-          ...deploymentErrors
-            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-            .map((e) => ({
-              federatedGraphName: req.name,
-              namespace: graph.namespace,
-              message: e.message ?? '',
-            })),
-        );
-
-        if (compositionErrors.length > 0) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-            },
-            deploymentErrors: [],
-            compositionErrors: compositionErrors.map((e) => ({
-              federatedGraphName: req.name,
-              message: e.message,
-              namespace: graph.namespace,
-            })),
-          };
-        }
-
-        if (deploymentErrors?.length > 0) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-            },
-            deploymentErrors: allDeploymentErrors,
-            compositionErrors: [],
-          };
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-        };
       });
     },
 
@@ -1370,6 +1414,297 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           compositionErrors: [],
           deploymentErrors: [],
+        };
+      });
+    },
+
+    createContract: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<CreateContractResponse>>(ctx, logger, async () => {
+        req.namespace = req.namespace || DefaultNamespace;
+
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        return opts.db.transaction(async (tx) => {
+          const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
+          const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+          const auditLogRepo = new AuditLogRepository(tx);
+          const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
+          const contractRepo = new ContractRepository(tx, authContext.organizationId);
+
+          if (!authContext.hasWriteAccess) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `The user doesn't have the permissions to perform this operation`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          const namespace = await namespaceRepo.byName(req.namespace);
+          if (!namespace) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Could not find namespace ${req.namespace}`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          if (await fedGraphRepo.exists(req.name, req.namespace)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `A graph '${req.name}' already exists in the namespace`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          if (!isValidUrl(req.routingUrl)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Routing URL is not a valid URL`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          if (req.admissionWebhookUrl && !isValidUrl(req.admissionWebhookUrl)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Admission Webhook URL is not a valid URL`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          if (!isValidSchemaTags(req.includeTags) || !isValidSchemaTags(req.excludeTags)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Provided tags are invalid`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          const count = await fedGraphRepo.count();
+
+          const feature = await orgRepo.getFeature({
+            organizationId: authContext.organizationId,
+            featureId: 'federated-graphs',
+          });
+
+          const limit = feature?.limit === -1 ? undefined : feature?.limit;
+
+          if (limit && count >= limit) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_LIMIT_REACHED,
+                details: `The organization reached the limit of federated graphs and monographs`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          const commonTags = _.intersection(req.includeTags, req.excludeTags);
+          if (commonTags.length > 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `You cannot include and exclude the same tags: ${commonTags.join(', ')}`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          const sourceGraph = await fedGraphRepo.byName(req.sourceGraphName, req.namespace);
+          if (!sourceGraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Could not find source graph ${req.sourceGraphName} in namespace ${req.namespace}`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          const contractFederatedGraph = await fedGraphRepo.create({
+            name: req.name,
+            createdBy: authContext.userId,
+            labelMatchers: sourceGraph.labelMatchers,
+            routingUrl: req.routingUrl,
+            readme: req.readme,
+            namespace: req.namespace,
+            namespaceId: namespace.id,
+            admissionWebhookURL: req.admissionWebhookUrl,
+          });
+
+          if (!contractFederatedGraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Could not create contract graph`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+            };
+          }
+
+          await contractRepo.create({
+            sourceFederatedGraphId: sourceGraph.id,
+            downstreamFederatedGraphId: contractFederatedGraph.id,
+            includeTags: req.includeTags,
+            excludeTags: req.excludeTags,
+            actorId: authContext.userId,
+          });
+
+          await fedGraphRepo.createGraphCryptoKeyPairs({
+            federatedGraphId: contractFederatedGraph.id,
+            organizationId: authContext.organizationId,
+          });
+
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'federated_graph.created',
+            action: 'created',
+            actorId: authContext.userId,
+            auditableType: 'federated_graph',
+            auditableDisplayName: contractFederatedGraph.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+            targetNamespaceId: contractFederatedGraph.namespaceId,
+            targetNamespaceDisplayName: contractFederatedGraph.namespace,
+          });
+
+          // TODO
+          // Get latest valid composition
+          // If not found, do not create any new entries, return error telling no valid schema
+          // Perform tag filter operations and store router config and filtered schema
+
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        });
+      });
+    },
+
+    updateContract: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<CreateContractResponse>>(ctx, logger, async () => {
+        req.namespace = req.namespace || DefaultNamespace;
+
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const contractRepo = new ContractRepository(opts.db, authContext.organizationId);
+
+        if (!isValidSchemaTags(req.includeTags) || !isValidSchemaTags(req.excludeTags)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Provided tags are invalid`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesn't have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        const namespace = await namespaceRepo.byName(req.namespace);
+        if (!namespace) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find namespace ${req.namespace}`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        const graph = await fedGraphRepo.byName(req.name, req.namespace);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Could not find contract graph ${req.name} in namespace ${req.namespace}`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        if (!graph.contract?.id) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `The graph is not a contract`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        const commonTags = _.intersection(req.includeTags, req.excludeTags);
+        if (commonTags.length > 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `You cannot include and exclude the same tags: ${commonTags.join(', ')}`,
+            },
+          };
+        }
+
+        await contractRepo.update({
+          id: graph.contract.id,
+          includeTags: req.includeTags,
+          excludeTags: req.excludeTags,
+          actorId: authContext.userId,
+        });
+
+        // TODO
+        // Get latest valid composition
+        // If not found, do not create any new entries, return error telling no valid schema
+        // Perform tag filter operations and store router config and filtered schema
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },
@@ -2912,68 +3247,86 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
-        const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const auditLogRepo = new AuditLogRepository(opts.db);
+        return opts.db.transaction(async (tx) => {
+          const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+          const auditLogRepo = new AuditLogRepository(tx);
+          const contractRepo = new ContractRepository(tx, authContext.organizationId);
 
-        req.namespace = req.namespace || DefaultNamespace;
+          req.namespace = req.namespace || DefaultNamespace;
 
-        if (!authContext.hasWriteAccess) {
+          if (!authContext.hasWriteAccess) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `The user does not have the permissions to perform this operation`,
+              },
+            };
+          }
+
+          const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
+            supportsFederation: true,
+          });
+          if (!federatedGraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_NOT_FOUND,
+                details: `Federated graph '${req.name}' not found`,
+              },
+            };
+          }
+
+          // check if the user is authorized to perform the action
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId: federatedGraph.targetId,
+              targetType: 'federatedGraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+
+          const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
+          await opts.blobStorage.removeDirectory({
+            key: blobStorageDirectory,
+          });
+
+          const deletedGraphs = [federatedGraph];
+
+          // Delete downstream contracts
+          const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
+          for (const contract of contracts) {
+            const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+            if (!contractGraph) {
+              continue;
+            }
+            await fedGraphRepo.delete(contractGraph.targetId);
+            deletedGraphs.push(contractGraph);
+          }
+
+          await fedGraphRepo.delete(federatedGraph.targetId);
+
+          for (const deletedGraph of deletedGraphs) {
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'federated_graph.deleted',
+              action: 'deleted',
+              actorId: authContext.userId,
+              auditableType: 'federated_graph',
+              auditableDisplayName: deletedGraph.name,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: deletedGraph.namespaceId,
+              targetNamespaceDisplayName: deletedGraph.namespace,
+            });
+          }
+
           return {
             response: {
-              code: EnumStatusCode.ERR,
-              details: `The user doesnt have the permissions to perform this operation`,
+              code: EnumStatusCode.OK,
             },
           };
-        }
-
-        const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
-          supportsFederation: true,
         });
-        if (!federatedGraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph '${req.name}' not found`,
-            },
-          };
-        }
-
-        // check if the user is authorized to perform the action
-        await opts.authorizer.authorize({
-          db: opts.db,
-          graph: {
-            targetId: federatedGraph.targetId,
-            targetType: 'federatedGraph',
-          },
-          headers: ctx.requestHeader,
-          authContext,
-        });
-
-        const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
-        await opts.blobStorage.removeDirectory({
-          key: blobStorageDirectory,
-        });
-
-        await fedGraphRepo.delete(federatedGraph.targetId);
-
-        await auditLogRepo.addAuditLog({
-          organizationId: authContext.organizationId,
-          auditAction: 'federated_graph.deleted',
-          action: 'deleted',
-          actorId: authContext.userId,
-          auditableType: 'federated_graph',
-          auditableDisplayName: federatedGraph.name,
-          actorDisplayName: authContext.userDisplayName,
-          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-          targetNamespaceId: federatedGraph.namespaceId,
-          targetNamespaceDisplayName: federatedGraph.namespace,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
       });
     },
 
@@ -3406,6 +3759,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           headers: ctx.requestHeader,
           authContext,
         });
+
+        // Do not allow changing label matchers for a contract
+        if (federatedGraph.contract?.id && (req.labelMatchers.length > 0 || req.unsetLabelMatchers)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `You cannot change the label matchers for a contract graph`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
 
         if (!isValidLabelMatchers(req.labelMatchers)) {
           return {
