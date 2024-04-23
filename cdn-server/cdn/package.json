@@ -27,7 +27,7 @@
   ],
   "dependencies": {
     "hono": "4.2.6",
-    "jose": "^5.2.3"
+    "jose": "^5.2.4"
   },
   "devDependencies": {
     "eslint": "^8.53.0",
