@@ -18,7 +18,7 @@
   "dependencies": {
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
-    "graphql": "^16.7.1"
+    "graphql": "^16.8.1"
   },
   "devDependencies": {
     "@types/node": "^20.8.10",
