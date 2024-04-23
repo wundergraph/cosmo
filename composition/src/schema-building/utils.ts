@@ -1403,6 +1403,10 @@ function extractPersistedDirectives(
       persistedDirectivesData.directives.set(directiveName, directiveNodes);
       continue;
     }
+    // Only add one instance of the @inaccessible directive
+    if (directiveName === INACCESSIBLE) {
+      continue;
+    }
     existingDirectives.push(...directiveNodes);
   }
   return persistedDirectivesData;

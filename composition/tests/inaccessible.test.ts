@@ -19,7 +19,7 @@ import {
 } from './utils/utils';
 
 describe('@inaccessible tests', () => {
-  test('that inaccessible fields are not included in the federated graph', () => {
+  test('that inaccessible fields are persisted in the federated graph', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
@@ -29,6 +29,7 @@ describe('@inaccessible tests', () => {
       type Entity {
         age: Int!
         id: ID!
+        name: String! @inaccessible
       }
       
       type Query {
@@ -74,10 +75,12 @@ describe('@inaccessible tests', () => {
           `
       type Entity implements Interface {
         id: ID!
+        name: String! @inaccessible
       }
       
       interface Interface {
         id: ID!
+        name: String! @inaccessible
       }
       
       type Query {
@@ -105,6 +108,7 @@ describe('@inaccessible tests', () => {
       
       interface Interface {
         id: ID!
+        name: String @inaccessible
       }
       
       type Query {
@@ -175,7 +179,7 @@ describe('@inaccessible tests', () => {
     expect(errors![0]).toStrictEqual(allFieldDefinitionsAreInaccessibleError('interface', 'Interface'));
   });
 
-  test('that an error is returned if all fields defined on an extended interface are declared', () => {
+  test('that an error is returned if all fields defined on an extended interface are declared @inaccessible', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphL]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(allFieldDefinitionsAreInaccessibleError('interface', 'Interface'));

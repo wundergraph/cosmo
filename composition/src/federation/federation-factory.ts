@@ -894,51 +894,6 @@ export class FederationFactory {
         this.authorizationDataByParentTypeName.get(parentTypeName),
       );
     }
-    // for (const [typeName, extension] of this.extensions) {
-    //   this.parentTypeName = typeName;
-    //   if (extension.isRootType && !this.parents.has(typeName)) {
-    //     this.upsertParentNode(objectTypeExtensionNodeToMutableDefinitionNode(extension.node));
-    //   }
-    //   const baseObject = this.parents.get(typeName);
-    //   if (!baseObject) {
-    //     this.errors.push(noBaseTypeExtensionError(typeName));
-    //     continue;
-    //   }
-    //
-    //   if (baseObject.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-    //     throw incompatibleParentKindFatalError(typeName, Kind.OBJECT_TYPE_DEFINITION, baseObject.kind);
-    //   }
-    //   this.upsertExtensionPersistedDirectives(extension.directives, baseObject.directives);
-    //   for (const [extensionFieldName, extensionFieldContainer] of extension.fields) {
-    //     const baseFieldContainer = baseObject.fields.get(extensionFieldName);
-    //     if (!baseFieldContainer) {
-    //       baseObject.fields.set(extensionFieldName, extensionFieldContainer);
-    //       continue;
-    //     }
-    //     if (baseFieldContainer.isShareable && extensionFieldContainer.isShareable) {
-    //       this.childName = extensionFieldName;
-    //       this.upsertExtensionFieldArguments(extensionFieldContainer.arguments, baseFieldContainer.arguments);
-    //       addIterableValuesToSet(extensionFieldContainer.subgraphNames, baseFieldContainer.subgraphNames);
-    //       continue;
-    //     }
-    //     const parent = this.shareableErrorTypeNames.get(typeName);
-    //     if (parent) {
-    //       parent.add(extensionFieldName);
-    //       continue;
-    //     }
-    //     this.shareableErrorTypeNames.set(typeName, new Set<string>([extensionFieldName]));
-    //   }
-    //   for (const interfaceName of extension.interfaces) {
-    //     baseObject.interfaces.add(interfaceName);
-    //   }
-    // }
-    // for (const [parentTypeName, children] of this.shareableErrorTypeNames) {
-    //   const parent = getOrThrowError(this.parents, parentTypeName, PARENTS);
-    //   if (parent.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-    //     throw incompatibleParentKindFatalError(parentTypeName, Kind.OBJECT_TYPE_DEFINITION, parent.kind);
-    //   }
-    //   this.errors.push(shareableFieldDefinitionsError(parent, children));
-    // }
     const definitionsWithInterfaces: DefinitionWithFieldsData[] = [];
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
       switch (parentDefinitionData.kind) {
@@ -1021,6 +976,7 @@ export class FederationFactory {
           const fieldNodes: MutableFieldNode[] = [];
           const invalidFieldNames = new Set<string>();
           const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
+          let inaccessibleFields = 0;
           for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByFieldName) {
             pushAuthorizationDirectives(fieldData, this.authorizationDataByParentTypeName.get(parentTypeName));
             const argumentNodes = getValidFieldArgumentNodes(
@@ -1032,9 +988,8 @@ export class FederationFactory {
             if (isObject && !isShareabilityOfAllFieldInstancesValid(fieldData)) {
               invalidFieldNames.add(fieldName);
             }
-
             if (fieldData.isInaccessible) {
-              continue;
+              inaccessibleFields += 1;
             }
             fieldNodes.push(
               getNodeWithPersistedDirectivesByFieldData(
@@ -1061,7 +1016,7 @@ export class FederationFactory {
               ),
             );
           }
-          if (fieldNodes.length < 1) {
+          if ((fieldNodes.length - inaccessibleFields) < 1) {
             if (isNodeQuery(parentTypeName)) {
               this.errors.push(noQueryRootTypeError);
             } else {
