@@ -6,6 +6,9 @@
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
   },
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo"
+  },
   "main": "dist/index.js",
   "files": [
     "dist"
