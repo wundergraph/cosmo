@@ -429,7 +429,7 @@ export class FederatedGraphRepository {
     for (const target of targets) {
       const fg = await this.byTargetId(target.id);
       if (fg === undefined) {
-        throw new Error(`FederatedGraph ${target.name} not found`);
+        throw new Error(`Federated Graph ${target.name} not found`);
       }
       federatedGraphs.push(fg);
     }
@@ -463,19 +463,11 @@ export class FederatedGraphRepository {
         namespaceName: schema.namespaces.name,
         admissionWebhookURL: schema.federatedGraphs.admissionWebhookURL,
         supportsFederation: schema.federatedGraphs.supportsFederation,
-        contract: {
-          id: schema.contracts.id,
-          sourceFederatedGraphId: schema.contracts.sourceFederatedGraphId,
-          downstreamFederatedGraphId: schema.contracts.downstreamFederatedGraphId,
-          includeTags: schema.contracts.includeTags,
-          excludeTags: schema.contracts.excludeTags,
-        },
       })
       .from(targets)
       .where(and(...conditions))
       .innerJoin(schema.federatedGraphs, eq(targets.id, schema.federatedGraphs.targetId))
-      .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.targets.namespaceId))
-      .innerJoin(schema.contracts, eq(schema.federatedGraphs.id, schema.contracts.downstreamFederatedGraphId));
+      .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.targets.namespaceId));
 
     if (resp.length === 0) {
       return undefined;
@@ -504,6 +496,10 @@ export class FederatedGraphRepository {
       where: eq(schema.subgraphsToFederatedGraph.federatedGraphId, resp[0].id),
     });
 
+    const contract = await this.db.query.contracts.findFirst({
+      where: eq(schema.contracts.downstreamFederatedGraphId, resp[0].id),
+    });
+
     // Composed schema version is not set when the federated graph was not composed.
     return {
       id: resp[0].id,
@@ -524,7 +520,7 @@ export class FederatedGraphRepository {
       namespaceId: resp[0].namespaceId,
       admissionWebhookURL: resp[0].admissionWebhookURL ?? '',
       supportsFederation: resp[0].supportsFederation,
-      contract: resp[0].contract,
+      contract,
     };
   }
 

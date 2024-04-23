@@ -105,7 +105,7 @@ export function normalizeLabels(labels: Label[]): Label[] {
   return [...uniqueLabels].map((label) => splitLabel(label));
 }
 
-export function isValidSchemaTag(tag: string) {
+export function isValidSchemaTag(tag: string): boolean {
   if (!tag) {
     return false;
   }
@@ -117,14 +117,18 @@ export function isValidSchemaTag(tag: string) {
   if (!schemaTagRegex.test(tag)) {
     return false;
   }
+
+  return true;
 }
 
-export function isValidSchemaTags(tags: string[]) {
+export function isValidSchemaTags(tags: string[]): boolean {
   for (const tag of tags) {
     if (!isValidSchemaTag(tag)) {
       return false;
     }
   }
+
+  return true;
 }
 
 /**
