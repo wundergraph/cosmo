@@ -815,7 +815,9 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 			}
 			header[k] = v
 		}
-		h.upgradeRequestHeaders, err = json.Marshal(header)
+		if len(header) > 0 {
+			h.upgradeRequestHeaders, err = json.Marshal(header)
+		}
 		if err != nil {
 			return err
 		}
@@ -835,6 +837,7 @@ func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
 		"Origin",
 		"Pragma",
 		"Cache-Control",
+		"User-Agent",
 		"Accept-Encoding":
 		return true
 	}
