@@ -89,8 +89,8 @@ importers:
         specifier: ^3.529.1
         version: 3.529.1
       '@hono/node-server':
-        specifier: 1.8.2
-        version: 1.8.2
+        specifier: 1.11.0
+        version: 1.11.0
       '@wundergraph/cosmo-cdn':
         specifier: workspace:*
         version: link:cdn
@@ -5092,6 +5092,11 @@ packages:
       react: 18.2.0
     dependencies:
       react: 18.2.0
+    dev: false
+
+  /@hono/node-server@1.11.0:
+    resolution: {integrity: sha512-TLIJq9TMtD1NEG1mVoqNUn1Ita0qSaB5XboZErjFBcO/GJYXwWY4dVdTi9G0lbxtu0x+hJXDItcLaFHb7rlFTw==}
+    engines: {node: '>=18.14.1'}
     dev: false
 
   /@hono/node-server@1.8.2:
