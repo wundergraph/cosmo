@@ -138,14 +138,44 @@
           }
         },
         "forward_upgrade_headers": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request Headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Forward upgrade request headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "header_names": {
+              "type": "array",
+              "description": "The names of the headers to forward. The default value is 'Authorization'.",
+              "default": [
+                "Authorization"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_upgrade_query_params": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "param_names": {
+              "type": "array",
+              "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_initial_payload": {
           "type": "boolean",
@@ -1135,13 +1165,13 @@
           "description": "Enable error propagation. If the value is true, Subgraph errors will be propagated to the client."
         },
         "mode": {
-            "type": "string",
-            "enum": [
-                "wrapped",
-                "pass-through"
-            ],
-            "default": "wrapped",
-            "description": "The mode of error propagation. The supported modes are 'wrapped' and 'pass-through'. The 'wrapped' mode wraps the error in a custom error object to hide internals. The 'pass-through' mode returns the error as is from the Subgraph."
+          "type": "string",
+          "enum": [
+            "wrapped",
+            "pass-through"
+          ],
+          "default": "wrapped",
+          "description": "The mode of error propagation. The supported modes are 'wrapped' and 'pass-through'. The 'wrapped' mode wraps the error in a custom error object to hide internals. The 'pass-through' mode returns the error as is from the Subgraph."
         },
         "status_codes": {
           "type": "boolean",
