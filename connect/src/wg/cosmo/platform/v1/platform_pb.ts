@@ -2070,6 +2070,61 @@ export class GetFederatedGraphsRequest extends Message<GetFederatedGraphsRequest
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.Contract
+ */
+export class Contract extends Message<Contract> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string source_federated_graph_id = 2;
+   */
+  sourceFederatedGraphId = "";
+
+  /**
+   * @generated from field: repeated string include_tags = 3;
+   */
+  includeTags: string[] = [];
+
+  /**
+   * @generated from field: repeated string exclude_tags = 4;
+   */
+  excludeTags: string[] = [];
+
+  constructor(data?: PartialMessage<Contract>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Contract";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "source_federated_graph_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Contract {
+    return new Contract().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Contract {
+    return new Contract().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Contract {
+    return new Contract().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Contract | PlainMessage<Contract> | undefined, b: Contract | PlainMessage<Contract> | undefined): boolean {
+    return proto3.util.equals(Contract, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.FederatedGraph
  */
 export class FederatedGraph extends Message<FederatedGraph> {
@@ -2143,6 +2198,11 @@ export class FederatedGraph extends Message<FederatedGraph> {
    */
   supportsFederation = false;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.Contract contract = 15;
+   */
+  contract?: Contract;
+
   constructor(data?: PartialMessage<FederatedGraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2165,6 +2225,7 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 12, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 13, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 15, name: "contract", kind: "message", T: Contract, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {

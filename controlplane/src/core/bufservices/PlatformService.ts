@@ -6965,6 +6965,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionId: g.compositionId,
             requestSeries: requestSeriesList[g.id] ?? [],
             supportsFederation: g.supportsFederation,
+            contract: g.contract,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -7017,6 +7018,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             requestSeries: [],
             targetId: g.targetId,
             supportsFederation: g.supportsFederation,
+            contract: g.contract,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -7203,6 +7205,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             requestSeries,
             readme: federatedGraph.readme,
             supportsFederation: federatedGraph.supportsFederation,
+            contract: federatedGraph.contract,
           },
           subgraphs: list.map((g) => ({
             id: g.id,
