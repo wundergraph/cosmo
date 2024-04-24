@@ -20,9 +20,10 @@ import {
 import {
   FederatedGraph,
   GetFederatedGraphByNameResponse,
+  GetFederatedGraphsResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import { Fragment, createContext, useMemo } from "react";
+import { Fragment, createContext, useContext, useMemo } from "react";
 import {
   PiChat,
   PiCubeFocus,
@@ -52,6 +53,7 @@ import { Link } from "../ui/link";
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
   subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
+  graphs: GetFederatedGraphsResponse["graphs"];
   graphRequestToken: string;
 }
 
@@ -72,16 +74,19 @@ export const GraphLayout = ({ children }: LayoutProps) => {
     }),
   );
 
+  const { data: graphsData } = useQuery(getFederatedGraphs.useQuery());
+
   const graphContextData = useMemo(() => {
-    if (!data) {
+    if (!data || !graphsData) {
       return undefined;
     }
     return {
       graph: data.graph,
       subgraphs: data.subgraphs,
       graphRequestToken: data.graphRequestToken,
+      graphs: graphsData.graphs,
     };
-  }, [data]);
+  }, [data, graphsData]);
 
   const links: NavLink[] = useMemo(() => {
     const basePath = `/${organizationSlug}/${namespace}/graph/${slug}`;
@@ -194,7 +199,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
 };
 
 export const GraphSelect = () => {
-  const { data } = useQuery(getFederatedGraphs.useQuery());
+  const data = useContext(GraphContext);
 
   const router = useRouter();
   const slug = router.query.slug as string;

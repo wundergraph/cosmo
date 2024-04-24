@@ -1,7 +1,6 @@
 import { RefreshInterval } from "@/components/analytics/refresh-interval";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import {
   ComposeStatus,
   ComposeStatusMessage,
@@ -40,13 +39,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
-  InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { RocketIcon, UpdateIcon } from "@radix-ui/react-icons";
 import {
@@ -56,16 +55,15 @@ import {
 } from "@tanstack/react-query";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
-import React, { useContext, useState } from "react";
-import { ReactFlowProvider } from "reactflow";
 import Link from "next/link";
-import { PiCubeFocus } from "react-icons/pi";
 import { useRouter } from "next/router";
-import { docsBaseURL } from "@/lib/constants";
+import { useContext, useState } from "react";
+import { PiCubeFocus } from "react-icons/pi";
+import { ReactFlowProvider } from "reactflow";
 
 const GraphOverviewPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const graphData = useContext(GraphContext);
+  const graphContext = useContext(GraphContext);
   const [open, setOpen] = useState(false);
   const [showMonographInfo, setShowMonoGraphInfo] = useLocalStorage(
     "showMonographInfo",
@@ -77,8 +75,8 @@ const GraphOverviewPage: NextPageWithLayout = () => {
   const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
   const getView = getDashboardAnalyticsView.useQuery({
-    namespace: graphData?.graph?.namespace,
-    federatedGraphName: graphData?.graph?.name,
+    namespace: graphContext?.graph?.namespace,
+    federatedGraphName: graphContext?.graph?.name,
     range,
     startDate: range ? undefined : formatISO(dateRange.start),
     endDate: range ? undefined : formatISO(dateRange.end),
@@ -89,13 +87,13 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     isFetching,
   } = useQuery({
     ...getView,
-    enabled: !!graphData?.graph?.name,
+    enabled: !!graphContext?.graph?.name,
     placeholderData: keepPreviousData,
     refetchInterval: refreshInterval,
     refetchOnWindowFocus: false,
   });
 
-  if (!graphData?.graph) return null;
+  if (!graphContext?.graph) return null;
 
   const {
     lastUpdatedAt,
@@ -107,7 +105,8 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     name,
     namespace,
     compositionId,
-  } = graphData.graph;
+    contract,
+  } = graphContext.graph;
 
   const validGraph = isComposable && !!lastUpdatedAt;
   const emptyGraph = !lastUpdatedAt && !isComposable;
@@ -140,7 +139,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     });
   };
 
-  const isMonograph = !graphData.graph.supportsFederation;
+  const isMonograph = !graphContext.graph.supportsFederation;
 
   return (
     <GraphPageLayout
@@ -213,7 +212,12 @@ const GraphOverviewPage: NextPageWithLayout = () => {
           <Card className="flex grow flex-col justify-between">
             <CardHeader>
               <CardTitle>
-                {isMonograph ? "Monograph" : "Federated Graph"} Details
+                {contract
+                  ? "Contract Graph"
+                  : isMonograph
+                  ? "Monograph"
+                  : "Federated Graph"}{" "}
+                Details
               </CardTitle>
               <CardDescription className="text-xs">
                 Last updated:{" "}
@@ -225,16 +229,16 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                     ID:
                   </span>
                   <span className="w-auto flex-shrink-0">
-                    {graphData.graph.id}
+                    {graphContext.graph.id}
                   </span>
-                  <CopyButton tooltip="Copy ID" value={graphData.graph.id} />
+                  <CopyButton tooltip="Copy ID" value={graphContext.graph.id} />
                 </div>
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-y-3 text-sm">
               <div className="flex gap-x-4">
                 <span className="w-28 text-muted-foreground">Name</span>
-                <span className="truncate">{graphData.graph.name}</span>
+                <span className="truncate">{graphContext.graph.name}</span>
               </div>
               {!isMonograph && (
                 <>
@@ -303,6 +307,76 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   emptyGraph={emptyGraph}
                 />
               </div>
+              {contract && (
+                <>
+                  <div className="flex gap-x-4">
+                    <span className="w-28 text-muted-foreground">
+                      Source Graph
+                    </span>
+                    <Link
+                      href={{
+                        pathname:
+                          "/[organizationSlug]/[namespace]/graph/[slug]",
+                        query: {
+                          ...router.query,
+                          slug: graphContext.graphs.find(
+                            (g) => g.id === contract.sourceFederatedGraphId,
+                          )?.name,
+                        },
+                      }}
+                      className="flex items-center space-x-1 text-primary"
+                    >
+                      <span className="truncate">
+                        {
+                          graphContext.graphs.find(
+                            (g) => g.id === contract.sourceFederatedGraphId,
+                          )?.name
+                        }
+                      </span>
+                    </Link>
+                  </div>
+                  {contract.includeTags.length > 0 && (
+                    <div className="flex items-start gap-x-3">
+                      <span className="w-28 flex-shrink-0 text-muted-foreground">
+                        Include Tags
+                      </span>
+                      <div className="flex flex-wrap gap-2 overflow-hidden">
+                        {contract.includeTags.map((tag) => {
+                          return (
+                            <Badge
+                              variant="secondary"
+                              key={tag}
+                              className="truncate"
+                            >
+                              <span className="truncate">{tag}</span>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {contract.excludeTags.length > 0 && (
+                    <div className="flex items-start gap-x-3">
+                      <span className="w-28 flex-shrink-0 text-muted-foreground">
+                        Exclude Tags
+                      </span>
+                      <div className="flex flex-wrap gap-2 overflow-hidden">
+                        {contract.excludeTags.map((tag) => {
+                          return (
+                            <Badge
+                              variant="secondary"
+                              key={tag}
+                              className="truncate"
+                            >
+                              <span className="truncate">{tag}</span>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
             <CardFooter className="flex-col items-start text-sm">
               {isMonograph && (
@@ -312,7 +386,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   </span>
                   <CLI
                     className="mt-1 md:w-full"
-                    command={graphData.subgraphs[0].routingURL}
+                    command={graphContext.subgraphs[0].routingURL}
                   />
                 </div>
               )}
@@ -329,6 +403,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               />
             </CardFooter>
           </Card>
+
           <Alert
             variant={
               emptyGraph
@@ -372,7 +447,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 subgraphMetrics={dashboardView?.subgraphMetrics}
                 federatedGraphMetrics={dashboardView?.federatedGraphMetrics}
                 supportsFederation={
-                  graphData?.graph?.supportsFederation ?? true
+                  graphContext?.graph?.supportsFederation ?? true
                 }
               />
             </ReactFlowProvider>
