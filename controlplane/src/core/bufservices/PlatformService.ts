@@ -4108,7 +4108,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureId: 'rbac',
         });
 
-        if (rbac) {
+        if (rbac?.enabled) {
           if (req.allowAllResources && !authContext.isAdmin) {
             return {
               response: {
