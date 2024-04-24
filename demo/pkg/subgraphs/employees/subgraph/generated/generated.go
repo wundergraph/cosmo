@@ -40,8 +40,10 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Employee() EmployeeResolver
 	Engineer() EngineerResolver
 	Entity() EntityResolver
+	ErrorWrapper() ErrorWrapperResolver
 	Marketer() MarketerResolver
 	Mutation() MutationResolver
 	Operator() OperatorResolver
@@ -86,13 +88,15 @@ type ComplexityRoot struct {
 	}
 
 	Employee struct {
-		Details   func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Notes     func(childComplexity int) int
-		Role      func(childComplexity int) int
-		StartDate func(childComplexity int) int
-		Tag       func(childComplexity int) int
-		UpdatedAt func(childComplexity int) int
+		Details               func(childComplexity int) int
+		ID                    func(childComplexity int) int
+		Notes                 func(childComplexity int) int
+		Role                  func(childComplexity int) int
+		RootFieldErrorWrapper func(childComplexity int) int
+		RootFieldThrowsError  func(childComplexity int) int
+		StartDate             func(childComplexity int) int
+		Tag                   func(childComplexity int) int
+		UpdatedAt             func(childComplexity int) int
 	}
 
 	Engineer struct {
@@ -107,6 +111,11 @@ type ComplexityRoot struct {
 		FindCosmoByUpc       func(childComplexity int, upc string) int
 		FindEmployeeByID     func(childComplexity int, id int) int
 		FindSDKByUpc         func(childComplexity int, upc string) int
+	}
+
+	ErrorWrapper struct {
+		ErrorField func(childComplexity int) int
+		OkField    func(childComplexity int) int
 	}
 
 	Marketer struct {
@@ -128,6 +137,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Employee           func(childComplexity int, id int) int
+		EmployeeAsList     func(childComplexity int, id int) int
 		Employees          func(childComplexity int) int
 		Products           func(childComplexity int) int
 		Teammates          func(childComplexity int, team model.Department) int
@@ -157,6 +167,10 @@ type ComplexityRoot struct {
 	}
 }
 
+type EmployeeResolver interface {
+	RootFieldThrowsError(ctx context.Context, obj *model.Employee) (*string, error)
+	RootFieldErrorWrapper(ctx context.Context, obj *model.Employee) (*model.ErrorWrapper, error)
+}
 type EngineerResolver interface {
 	Employees(ctx context.Context, obj *model.Engineer) ([]*model.Employee, error)
 }
@@ -165,6 +179,9 @@ type EntityResolver interface {
 	FindCosmoByUpc(ctx context.Context, upc string) (*model.Cosmo, error)
 	FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error)
 	FindSDKByUpc(ctx context.Context, upc string) (*model.Sdk, error)
+}
+type ErrorWrapperResolver interface {
+	ErrorField(ctx context.Context, obj *model.ErrorWrapper) (*string, error)
 }
 type MarketerResolver interface {
 	Employees(ctx context.Context, obj *model.Marketer) ([]*model.Employee, error)
@@ -177,6 +194,7 @@ type OperatorResolver interface {
 }
 type QueryResolver interface {
 	Employee(ctx context.Context, id int) (*model.Employee, error)
+	EmployeeAsList(ctx context.Context, id int) ([]*model.Employee, error)
 	Employees(ctx context.Context) ([]*model.Employee, error)
 	Products(ctx context.Context) ([]model.Products, error)
 	Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error)
@@ -332,6 +350,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Employee.Role(childComplexity), true
 
+	case "Employee.rootFieldErrorWrapper":
+		if e.complexity.Employee.RootFieldErrorWrapper == nil {
+			break
+		}
+
+		return e.complexity.Employee.RootFieldErrorWrapper(childComplexity), true
+
+	case "Employee.rootFieldThrowsError":
+		if e.complexity.Employee.RootFieldThrowsError == nil {
+			break
+		}
+
+		return e.complexity.Employee.RootFieldThrowsError(childComplexity), true
+
 	case "Employee.startDate":
 		if e.complexity.Employee.StartDate == nil {
 			break
@@ -429,6 +461,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Entity.FindSDKByUpc(childComplexity, args["upc"].(string)), true
 
+	case "ErrorWrapper.errorField":
+		if e.complexity.ErrorWrapper.ErrorField == nil {
+			break
+		}
+
+		return e.complexity.ErrorWrapper.ErrorField(childComplexity), true
+
+	case "ErrorWrapper.okField":
+		if e.complexity.ErrorWrapper.OkField == nil {
+			break
+		}
+
+		return e.complexity.ErrorWrapper.OkField(childComplexity), true
+
 	case "Marketer.departments":
 		if e.complexity.Marketer.Departments == nil {
 			break
@@ -501,6 +547,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Employee(childComplexity, args["id"].(int)), true
+
+	case "Query.employeeAsList":
+		if e.complexity.Query.EmployeeAsList == nil {
+			break
+		}
+
+		args, err := ec.field_Query_employeeAsList_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.EmployeeAsList(childComplexity, args["id"].(int)), true
 
 	case "Query.employees":
 		if e.complexity.Query.Employees == nil {
@@ -742,138 +800,146 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `directive @goField(
-  forceResolver: Boolean
-  name: String
-  omittable: Boolean
+    forceResolver: Boolean
+    name: String
+    omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
 type Query {
-  employee(id: Int!): Employee
-  employees: [Employee]
-  products: [Products!]!
-  teammates(team: Department!): [Employee!]!
+    employee(id: Int!): Employee
+    employeeAsList(id: Int!): [Employee]
+    employees: [Employee]
+    products: [Products!]!
+    teammates(team: Department!): [Employee!]!
 }
 
 type Mutation {
-  updateEmployeeTag(id: Int!, tag: String!): Employee
+    updateEmployeeTag(id: Int!, tag: String!): Employee
 }
 
 type Subscription {
-  """
-  ` + "`" + `currentTime` + "`" + ` will return a stream of ` + "`" + `Time` + "`" + ` objects.
-  """
-  currentTime: Time!
-  countEmp(max: Int!, intervalMilliseconds: Int!): Int!
-  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
+    """
+    ` + "`" + `currentTime` + "`" + ` will return a stream of ` + "`" + `Time` + "`" + ` objects.
+    """
+    currentTime: Time!
+    countEmp(max: Int!, intervalMilliseconds: Int!): Int!
+    countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
 }
 
 enum Department {
-  ENGINEERING
-  MARKETING
-  OPERATIONS
+    ENGINEERING
+    MARKETING
+    OPERATIONS
 }
 
 interface RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+    departments: [Department!]!
+    title: [String!]!
+    employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum EngineerType {
-  BACKEND
-  FRONTEND
-  FULLSTACK
+    BACKEND
+    FRONTEND
+    FULLSTACK
 }
 
 interface Identifiable {
-  id: Int!
+    id: Int!
 }
 
 type Engineer implements RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
-  engineerType: EngineerType!
+    departments: [Department!]!
+    title: [String!]!
+    employees: [Employee!]! @goField(forceResolver: true)
+    engineerType: EngineerType!
 }
 
 type Marketer implements RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+    departments: [Department!]!
+    title: [String!]!
+    employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum OperationType {
-  FINANCE
-  HUMAN_RESOURCES
+    FINANCE
+    HUMAN_RESOURCES
 }
 
 type Operator implements RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
-  operatorType: [OperationType!]!
+    departments: [Department!]!
+    title: [String!]!
+    employees: [Employee!]! @goField(forceResolver: true)
+    operatorType: [OperationType!]!
 }
 
 type Details {
-  forename: String! @shareable
-  location: Country!
-  surname: String! @shareable
-  pastLocations: [City!]!
+    forename: String! @shareable
+    location: Country!
+    surname: String! @shareable
+    pastLocations: [City!]!
 }
 
 type City {
-  type: String!
-  name: String!
-  country: Country
+    type: String!
+    name: String!
+    country: Country
 }
 
 # Using a nested key field simply because it can showcase potential bug
 # vectors / Federation capabilities.
 type Country @key(fields: "key { name }", resolvable: false) {
-  key: CountryKey!
+    key: CountryKey!
 }
 
 type CountryKey {
-  name: String!
+    name: String!
 }
 
 type Employee implements Identifiable @key(fields: "id") {
-  details: Details! @shareable
-  id: Int!
-  tag: String!
-  role: RoleType!
-  notes: String @shareable
-  updatedAt: String!
-  startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+    details: Details! @shareable
+    id: Int!
+    tag: String!
+    role: RoleType!
+    notes: String @shareable
+    updatedAt: String!
+    startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+    rootFieldThrowsError: String @goField(forceResolver: true)
+    rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
+}
+
+type ErrorWrapper {
+    okField: String
+    errorField: String @goField(forceResolver: true)
 }
 
 type Time {
-  unixTime: Int!
-  timeStamp: String!
+    unixTime: Int!
+    timeStamp: String!
 }
 
 union Products = Consultancy | Cosmo | SDK
 
 interface IProduct {
-  upc: ID!
-  engineers: [Employee!]!
+    upc: ID!
+    engineers: [Employee!]!
 }
 
 type Consultancy @key(fields: "upc") {
-  upc: ID!
-  lead: Employee!
+    upc: ID!
+    lead: Employee!
 }
 
 type Cosmo implements IProduct @key(fields: "upc") {
-  upc: ID!
-  engineers: [Employee!]!
-  lead: Employee!
+    upc: ID!
+    engineers: [Employee!]!
+    lead: Employee!
 }
 
 type SDK implements IProduct @key(fields: "upc") {
-  upc: ID!
-  engineers: [Employee!]!
-  owner: Employee!
+    upc: ID!
+    engineers: [Employee!]!
+    owner: Employee!
 }
 `, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
@@ -1067,6 +1133,21 @@ func (ec *executionContext) field_Query__entities_args(ctx context.Context, rawA
 		}
 	}
 	args["representations"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_employeeAsList_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -1416,6 +1497,10 @@ func (ec *executionContext) fieldContext_Consultancy_lead(ctx context.Context, f
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -1520,6 +1605,10 @@ func (ec *executionContext) fieldContext_Cosmo_engineers(ctx context.Context, fi
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -1580,6 +1669,10 @@ func (ec *executionContext) fieldContext_Cosmo_lead(ctx context.Context, field g
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2182,6 +2275,94 @@ func (ec *executionContext) fieldContext_Employee_startDate(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Employee_rootFieldThrowsError(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Employee().RootFieldThrowsError(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_rootFieldThrowsError(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Employee_rootFieldErrorWrapper(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Employee().RootFieldErrorWrapper(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.ErrorWrapper)
+	fc.Result = res
+	return ec.marshalOErrorWrapper2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐErrorWrapper(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_rootFieldErrorWrapper(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "okField":
+				return ec.fieldContext_ErrorWrapper_okField(ctx, field)
+			case "errorField":
+				return ec.fieldContext_ErrorWrapper_errorField(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ErrorWrapper", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Engineer_departments(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Engineer_departments(ctx, field)
 	if err != nil {
@@ -2323,6 +2504,10 @@ func (ec *executionContext) fieldContext_Engineer_employees(ctx context.Context,
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2551,6 +2736,10 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2628,6 +2817,88 @@ func (ec *executionContext) fieldContext_Entity_findSDKByUpc(ctx context.Context
 	if fc.Args, err = ec.field_Entity_findSDKByUpc_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ErrorWrapper_okField(ctx context.Context, field graphql.CollectedField, obj *model.ErrorWrapper) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ErrorWrapper_okField(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OkField, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ErrorWrapper_okField(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ErrorWrapper",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ErrorWrapper_errorField(ctx context.Context, field graphql.CollectedField, obj *model.ErrorWrapper) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ErrorWrapper_errorField(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.ErrorWrapper().ErrorField(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ErrorWrapper_errorField(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ErrorWrapper",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -2773,6 +3044,10 @@ func (ec *executionContext) fieldContext_Marketer_employees(ctx context.Context,
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2830,6 +3105,10 @@ func (ec *executionContext) fieldContext_Mutation_updateEmployeeTag(ctx context.
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2989,6 +3268,10 @@ func (ec *executionContext) fieldContext_Operator_employees(ctx context.Context,
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -3090,6 +3373,10 @@ func (ec *executionContext) fieldContext_Query_employee(ctx context.Context, fie
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -3102,6 +3389,78 @@ func (ec *executionContext) fieldContext_Query_employee(ctx context.Context, fie
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_employee_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_employeeAsList(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_employeeAsList(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().EmployeeAsList(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Employee)
+	fc.Result = res
+	return ec.marshalOEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_employeeAsList(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "details":
+				return ec.fieldContext_Employee_details(ctx, field)
+			case "id":
+				return ec.fieldContext_Employee_id(ctx, field)
+			case "tag":
+				return ec.fieldContext_Employee_tag(ctx, field)
+			case "role":
+				return ec.fieldContext_Employee_role(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_employeeAsList_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3158,6 +3517,10 @@ func (ec *executionContext) fieldContext_Query_employees(ctx context.Context, fi
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -3262,6 +3625,10 @@ func (ec *executionContext) fieldContext_Query_teammates(ctx context.Context, fi
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -3609,6 +3976,10 @@ func (ec *executionContext) fieldContext_SDK_engineers(ctx context.Context, fiel
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -3669,6 +4040,10 @@ func (ec *executionContext) fieldContext_SDK_owner(ctx context.Context, field gr
 				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			case "startDate":
 				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -6216,35 +6591,101 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 		case "details":
 			out.Values[i] = ec._Employee_details(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "id":
 			out.Values[i] = ec._Employee_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "tag":
 			out.Values[i] = ec._Employee_tag(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "role":
 			out.Values[i] = ec._Employee_role(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "notes":
 			out.Values[i] = ec._Employee_notes(ctx, field, obj)
 		case "updatedAt":
 			out.Values[i] = ec._Employee_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "startDate":
 			out.Values[i] = ec._Employee_startDate(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "rootFieldThrowsError":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Employee_rootFieldThrowsError(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "rootFieldErrorWrapper":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Employee_rootFieldErrorWrapper(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6460,6 +6901,75 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var errorWrapperImplementors = []string{"ErrorWrapper"}
+
+func (ec *executionContext) _ErrorWrapper(ctx context.Context, sel ast.SelectionSet, obj *model.ErrorWrapper) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, errorWrapperImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ErrorWrapper")
+		case "okField":
+			out.Values[i] = ec._ErrorWrapper_okField(ctx, field, obj)
+		case "errorField":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._ErrorWrapper_errorField(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6723,6 +7233,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_employee(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "employeeAsList":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_employeeAsList(ctx, field)
 				return res
 			}
 
@@ -8455,6 +8984,13 @@ func (ec *executionContext) marshalOEmployee2ᚖgithubᚗcomᚋwundergraphᚋcos
 		return graphql.Null
 	}
 	return ec._Employee(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOErrorWrapper2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐErrorWrapper(ctx context.Context, sel ast.SelectionSet, v *model.ErrorWrapper) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ErrorWrapper(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
