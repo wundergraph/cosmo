@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.82.8](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.7...controlplane@0.82.8) (2024-04-23)
+
+### Bug Fixes
+
+* upgrade deps to cover CVEs ([#750](https://github.com/wundergraph/cosmo/issues/750)) ([e261beb](https://github.com/wundergraph/cosmo/commit/e261beb8375ca41eb8a2fa4b3223d202c3bb7460)) (@StarpTech)
+
+## [0.82.7](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.6...controlplane@0.82.7) (2024-04-23)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@StarpTech)
+
 ## [0.82.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.82.5...controlplane@0.82.6) (2024-04-17)
 
 ### Bug Fixes

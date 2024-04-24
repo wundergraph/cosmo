@@ -3,8 +3,9 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"net/http"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
@@ -45,14 +46,25 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
-	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx, resolve.ResolverOptions{
+	options := resolve.ResolverOptions{
 		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
 		Reporter:                     reporter,
 		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
 		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.StatusCodes,
 		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
-	})
+	}
+
+	switch routerEngineConfig.SubgraphErrorPropagation.Mode {
+	case config.SubgraphErrorPropagationModePassthrough:
+		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModePassThrough
+	case config.SubgraphErrorPropagationModeWrapped:
+		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModeWrapped
+	default:
+		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModeWrapped
+	}
+
+	// this is the resolver, it's stateful and manages all the client connections, etc...
+	resolver := resolve.New(ctx, options)
 
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)

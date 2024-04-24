@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/cdn@0.8.1...cdn@0.8.2) (2024-04-23)
+
+### Bug Fixes
+
+* upgrade deps to cover CVEs ([#750](https://github.com/wundergraph/cosmo/issues/750)) ([e261beb](https://github.com/wundergraph/cosmo/commit/e261beb8375ca41eb8a2fa4b3223d202c3bb7460)) (@StarpTech)
+
+## [0.8.1](https://github.com/wundergraph/cosmo/compare/cdn@0.8.0...cdn@0.8.1) (2024-04-23)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@StarpTech)
+
 # [0.8.0](https://github.com/wundergraph/cosmo/compare/cdn@0.7.2...cdn@0.8.0) (2024-03-24)
 
 ### Features
