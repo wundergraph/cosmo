@@ -1512,6 +1512,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             );
           }
 
+          if (sourceGraph.contract) {
+            throw new PublicError(
+              EnumStatusCode.ERR,
+              `The source graph ${sourceGraph.name} is already a contract. You cannot create a contract from another contract.`,
+            );
+          }
+
           const contractGraph = await fedGraphRepo.create({
             name: req.name,
             createdBy: authContext.userId,
