@@ -155,7 +155,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = h.configureRateLimiting(ctx)
 
-	defer propagateSubgraphErrors(ctx)
+	defer propagateSubgraphErrors(ctx, requestLogger)
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
