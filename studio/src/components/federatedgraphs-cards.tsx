@@ -682,6 +682,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                   isComposable={graph.isComposable}
                   lastUpdatedAt={graph.lastUpdatedAt}
                   subgraphsCount={graph.connectedSubgraphs}
+                  isContract={!!graph.contract}
                 />
               </TooltipContent>
             </Tooltip>

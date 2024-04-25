@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/card";
 import { CLI } from "@/components/ui/cli";
 import { CopyButton } from "@/components/ui/copy-button";
+import { Separator } from "@/components/ui/separator";
 import { Spacer } from "@/components/ui/spacer";
 import {
   Tooltip,
@@ -307,8 +308,10 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   emptyGraph={emptyGraph}
                 />
               </div>
+
               {contract && (
                 <>
+                  <Separator className="my-2" />
                   <div className="flex gap-x-4">
                     <span className="w-28 text-muted-foreground">
                       Source Graph
@@ -433,6 +436,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 lastUpdatedAt={lastUpdatedAt}
                 isComposable={isComposable}
                 subgraphsCount={connectedSubgraphs}
+                isContract={!!contract}
               />
               {compositionErrors && (
                 <CompositionErrorsDialog errors={compositionErrors} />
