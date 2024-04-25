@@ -1132,21 +1132,36 @@
         "enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable error propagation. If the value is true, Subgraph errors will be propagated to the client."
+          "description": "Enable error propagation. If the value is true (default: false), Subgraph errors will be propagated to the client."
         },
         "mode": {
-            "type": "string",
-            "enum": [
-                "wrapped",
-                "pass-through"
-            ],
-            "default": "wrapped",
-            "description": "The mode of error propagation. The supported modes are 'wrapped' and 'pass-through'. The 'wrapped' mode wraps the error in a custom error object to hide internals. The 'pass-through' mode returns the error as is from the Subgraph."
+          "type": "string",
+          "enum": [
+            "wrapped",
+            "pass-through"
+          ],
+          "default": "wrapped",
+          "description": "The mode of error propagation. The supported modes are 'wrapped' (default) and 'pass-through'. The 'wrapped' mode wraps the error in a custom error object to hide internals. The 'pass-through' mode returns the error as is from the Subgraph."
         },
-        "status_codes": {
+        "rewrite_paths": {
+          "type": "boolean",
+          "default": true,
+          "description": "Rewrite the paths of the Subgraph errors. If the value is true (default), the paths of the Subgraph errors will be rewritten to match the Schema of the Federated Graph."
+        },
+        "omit_locations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Omit the location field of Subgraph errors. If the value is true (default), the location field of Subgraph errors will be omitted. This is useful because the locations of a Subgraph error is internal to the Subgraph and not relevant to the client."
+        },
+        "omit_extensions": {
           "type": "boolean",
           "default": false,
-          "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."
+          "description": "Omit the extensions field of Subgraph errors. If the value is true (default: false), the extensions field of Subgraph errors will be omitted. This is useful in case you want to avoid leaking internal information to the client. Some users of GraphQL leverage the errors.extensions.code field to implement error handling logic in the client, in which case you might want to set this to false."
+        },
+        "propagate_status_codes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Propagate Subgraph status codes. If the value is true (default: false), Subgraph Response status codes will be propagated to the client in the errors.extensions.code field."
         }
       }
     }

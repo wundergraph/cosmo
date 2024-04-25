@@ -86,13 +86,15 @@ type Details struct {
 }
 
 type Employee struct {
-	Details   *Details `json:"details"`
-	ID        int      `json:"id"`
-	Tag       string   `json:"tag"`
-	Role      RoleType `json:"role"`
-	Notes     *string  `json:"notes,omitempty"`
-	UpdatedAt string   `json:"updatedAt"`
-	StartDate string   `json:"startDate"`
+	Details               *Details      `json:"details"`
+	ID                    int           `json:"id"`
+	Tag                   string        `json:"tag"`
+	Role                  RoleType      `json:"role"`
+	Notes                 *string       `json:"notes,omitempty"`
+	UpdatedAt             string        `json:"updatedAt"`
+	StartDate             string        `json:"startDate"`
+	RootFieldThrowsError  *string       `json:"rootFieldThrowsError,omitempty"`
+	RootFieldErrorWrapper *ErrorWrapper `json:"rootFieldErrorWrapper,omitempty"`
 }
 
 func (Employee) IsIdentifiable() {}
@@ -137,6 +139,11 @@ func (this Engineer) GetEmployees() []*Employee {
 		interfaceSlice = append(interfaceSlice, concrete)
 	}
 	return interfaceSlice
+}
+
+type ErrorWrapper struct {
+	OkField    *string `json:"okField,omitempty"`
+	ErrorField *string `json:"errorField,omitempty"`
 }
 
 type Marketer struct {

@@ -790,7 +790,7 @@ func TestPartialOriginErrorsWithNoStatusCodePropagation(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.StatusCodes = false
+			cfg.PropagateStatusCodes = false
 		},
 		Subgraphs: testenv.SubgraphsConfig{
 			Products: testenv.SubgraphConfig{
@@ -995,6 +995,102 @@ func TestWithOriginGraphQLErrorPropagated(t *testing.T) {
 	})
 }
 
+func TestWithOriginGraphQLErrorPropagatedRemovingLocations(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":null}`, res.Body)
+	})
+}
+
+func TestWithOriginGraphQLErrorPropagatedKeepLocations(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+			cfg.OmitLocations = false
+		},
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":null}`, res.Body)
+	})
+}
+
+func TestWithOriginGraphQLErrorPropagatedOmitExtensions(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+			cfg.OmitExtensions = true
+			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+		},
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null}`, res.Body)
+	})
+}
+
+func TestWithOriginGraphQLErrorPassThroughKeepLocations(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+			cfg.OmitLocations = false
+			cfg.OmitExtensions = true
+			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+		},
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employees { id details { forename surname } notes } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}]}],"data":null}`, res.Body)
+	})
+}
+
 func TestWithOriginGraphQLErrorUnpropagated(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
@@ -1019,7 +1115,7 @@ func TestWithOriginGraphQLErrorUnpropagated(t *testing.T) {
 	})
 }
 
-func TestWithOriginGraphQLErrorPropagatedPassthrough(t *testing.T) {
+func TestWithOriginGraphQLErrorPropagatedPassThrough(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
 		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
@@ -1040,5 +1136,43 @@ func TestWithOriginGraphQLErrorPropagatedPassthrough(t *testing.T) {
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
 		require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"data":null}`, res.Body)
+	})
+}
+
+func TestWithNestedSubgraphError(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"]},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
+	})
+}
+
+func TestWithNestedSubgraphErrorInWrappedMode(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"]},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]}],"statusCode":200}},{"message":"Failed to fetch from Subgraph '4' at Path 'query.employee'.","extensions":{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"statusCode":200}}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
+	})
+}
+
+func TestWithNestedSubgraphErrorInList(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `{ employeeAsList(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
+		})
+		require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employeeAsList",0,"rootFieldThrowsError"]},{"message":"error resolving ErrorField","path":["employeeAsList",0,"rootFieldErrorWrapper","errorField"]},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employeeAsList"]}],"data":{"employeeAsList":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}]}}`, res.Body)
 	})
 }

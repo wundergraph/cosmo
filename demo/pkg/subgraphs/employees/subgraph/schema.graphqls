@@ -1,134 +1,142 @@
 directive @goField(
-  forceResolver: Boolean
-  name: String
-  omittable: Boolean
+    forceResolver: Boolean
+    name: String
+    omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
 type Query {
-  employee(id: Int!): Employee
-  employees: [Employee]
-  products: [Products!]!
-  teammates(team: Department!): [Employee!]!
+    employee(id: Int!): Employee
+    employeeAsList(id: Int!): [Employee]
+    employees: [Employee]
+    products: [Products!]!
+    teammates(team: Department!): [Employee!]!
 }
 
 type Mutation {
-  updateEmployeeTag(id: Int!, tag: String!): Employee
+    updateEmployeeTag(id: Int!, tag: String!): Employee
 }
 
 type Subscription {
-  """
-  `currentTime` will return a stream of `Time` objects.
-  """
-  currentTime: Time!
-  countEmp(max: Int!, intervalMilliseconds: Int!): Int!
-  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
+    """
+    `currentTime` will return a stream of `Time` objects.
+    """
+    currentTime: Time!
+    countEmp(max: Int!, intervalMilliseconds: Int!): Int!
+    countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
 }
 
 enum Department {
-  ENGINEERING
-  MARKETING
-  OPERATIONS
+    ENGINEERING
+    MARKETING
+    OPERATIONS
 }
 
 interface RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+    departments: [Department!]!
+    title: [String!]!
+    employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum EngineerType {
-  BACKEND
-  FRONTEND
-  FULLSTACK
+    BACKEND
+    FRONTEND
+    FULLSTACK
 }
 
 interface Identifiable {
-  id: Int!
+    id: Int!
 }
 
 type Engineer implements RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
-  engineerType: EngineerType!
+    departments: [Department!]!
+    title: [String!]!
+    employees: [Employee!]! @goField(forceResolver: true)
+    engineerType: EngineerType!
 }
 
 type Marketer implements RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+    departments: [Department!]!
+    title: [String!]!
+    employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum OperationType {
-  FINANCE
-  HUMAN_RESOURCES
+    FINANCE
+    HUMAN_RESOURCES
 }
 
 type Operator implements RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
-  operatorType: [OperationType!]!
+    departments: [Department!]!
+    title: [String!]!
+    employees: [Employee!]! @goField(forceResolver: true)
+    operatorType: [OperationType!]!
 }
 
 type Details {
-  forename: String! @shareable
-  location: Country!
-  surname: String! @shareable
-  pastLocations: [City!]!
+    forename: String! @shareable
+    location: Country!
+    surname: String! @shareable
+    pastLocations: [City!]!
 }
 
 type City {
-  type: String!
-  name: String!
-  country: Country
+    type: String!
+    name: String!
+    country: Country
 }
 
 # Using a nested key field simply because it can showcase potential bug
 # vectors / Federation capabilities.
 type Country @key(fields: "key { name }", resolvable: false) {
-  key: CountryKey!
+    key: CountryKey!
 }
 
 type CountryKey {
-  name: String!
+    name: String!
 }
 
 type Employee implements Identifiable @key(fields: "id") {
-  details: Details! @shareable
-  id: Int!
-  tag: String!
-  role: RoleType!
-  notes: String @shareable
-  updatedAt: String!
-  startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+    details: Details! @shareable
+    id: Int!
+    tag: String!
+    role: RoleType!
+    notes: String @shareable
+    updatedAt: String!
+    startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+    rootFieldThrowsError: String @goField(forceResolver: true)
+    rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
+}
+
+type ErrorWrapper {
+    okField: String
+    errorField: String @goField(forceResolver: true)
 }
 
 type Time {
-  unixTime: Int!
-  timeStamp: String!
+    unixTime: Int!
+    timeStamp: String!
 }
 
 union Products = Consultancy | Cosmo | SDK
 
 interface IProduct {
-  upc: ID!
-  engineers: [Employee!]!
+    upc: ID!
+    engineers: [Employee!]!
 }
 
 type Consultancy @key(fields: "upc") {
-  upc: ID!
-  lead: Employee!
+    upc: ID!
+    lead: Employee!
 }
 
 type Cosmo implements IProduct @key(fields: "upc") {
-  upc: ID!
-  engineers: [Employee!]!
-  lead: Employee!
+    upc: ID!
+    engineers: [Employee!]!
+    lead: Employee!
 }
 
 type SDK implements IProduct @key(fields: "upc") {
-  upc: ID!
-  engineers: [Employee!]!
-  owner: Employee!
+    upc: ID!
+    engineers: [Employee!]!
+    owner: Employee!
 }
