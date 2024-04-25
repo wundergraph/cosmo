@@ -92,9 +92,13 @@ export class ContractRepository {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(this.logger, tx);
 
-      const sourceGraph = await fedGraphRepo.byId(contractGraph.contract!.sourceFederatedGraphId);
+      if (!contractGraph.contract?.sourceFederatedGraphId) {
+        return;
+      }
+
+      const sourceGraph = await fedGraphRepo.byId(contractGraph.contract.sourceFederatedGraphId);
       if (!sourceGraph) {
-        throw new Error(`Could not find source graph ${contractGraph.contract?.sourceFederatedGraphId}`);
+        throw new Error(`Could not find source graph ${contractGraph.contract.sourceFederatedGraphId}`);
       }
 
       const sourceGraphLatestValidRouterConfig = await fedGraphRepo.getLatestValidRouterConfig(sourceGraph.targetId);
