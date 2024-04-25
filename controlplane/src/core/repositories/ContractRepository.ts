@@ -98,14 +98,15 @@ export class ContractRepository {
       }
 
       const sourceGraphLatestValidRouterConfig = await fedGraphRepo.getLatestValidRouterConfig(sourceGraph.targetId);
+      if (!sourceGraphLatestValidRouterConfig) {
+        return;
+      }
 
       const sourceGraphLatestValidSDL = fedGraphRepo.getSdlBasedOnSchemaVersion({
         targetId: sourceGraph.targetId,
-        schemaVersionId: sourceGraphLatestValidRouterConfig?.schemaVersionId ?? '',
+        schemaVersionId: sourceGraphLatestValidRouterConfig.schemaVersionId,
       });
-
-      // Return if valid sdl or router config is not found for source graph
-      if (!sourceGraphLatestValidSDL || !sourceGraphLatestValidRouterConfig) {
+      if (!sourceGraphLatestValidSDL) {
         return;
       }
 
