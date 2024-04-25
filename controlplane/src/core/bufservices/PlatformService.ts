@@ -666,7 +666,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         return opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
-          const contractRepo = new ContractRepository(tx, authContext.organizationId);
+          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
           const orgWebhooks = new OrganizationWebhookService(
             tx,
             authContext.organizationId,
@@ -1430,78 +1430,44 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return opts.db.transaction(async (tx) => {
           const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+          const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
           const auditLogRepo = new AuditLogRepository(tx);
           const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
-          const contractRepo = new ContractRepository(tx, authContext.organizationId);
+          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
+          const compositionRepo = new GraphCompositionRepository(logger, tx);
 
           if (!authContext.hasWriteAccess) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `The user doesn't have the permissions to perform this operation`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(
+              EnumStatusCode.ERR,
+              `The user doesn't have the permissions to perform this operation`,
+            );
           }
 
           const namespace = await namespaceRepo.byName(req.namespace);
           if (!namespace) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_NOT_FOUND,
-                details: `Could not find namespace ${req.namespace}`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.namespace}`);
           }
 
           if (await fedGraphRepo.exists(req.name, req.namespace)) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_ALREADY_EXISTS,
-                details: `A graph '${req.name}' already exists in the namespace`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(
+              EnumStatusCode.ERR_ALREADY_EXISTS,
+              `A graph '${req.name}' already exists in the namespace`,
+            );
           }
 
           if (!isValidUrl(req.routingUrl)) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Routing URL is not a valid URL`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(EnumStatusCode.ERR, `Routing URL is not a valid URL`);
           }
 
           if (req.admissionWebhookUrl && !isValidUrl(req.admissionWebhookUrl)) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Admission Webhook URL is not a valid URL`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(EnumStatusCode.ERR, `Admission Webhook URL is not a valid URL`);
           }
 
           req.includeTags = [...new Set(req.includeTags)];
           req.excludeTags = [...new Set(req.excludeTags)];
 
           if (!isValidSchemaTags(req.includeTags) || !isValidSchemaTags(req.excludeTags)) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Provided tags are invalid`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(EnumStatusCode.ERR, `Provided tags are invalid`);
           }
 
           const count = await fedGraphRepo.count();
@@ -1514,41 +1480,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const limit = feature?.limit === -1 ? undefined : feature?.limit;
 
           if (limit && count >= limit) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_LIMIT_REACHED,
-                details: `The organization reached the limit of federated graphs and monographs`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(
+              EnumStatusCode.ERR_LIMIT_REACHED,
+              `The organization reached the limit of federated graphs and monographs`,
+            );
           }
 
           const commonTags = _.intersection(req.includeTags, req.excludeTags);
           if (commonTags.length > 0) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `You cannot include and exclude the same tags: ${commonTags.join(', ')}`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(
+              EnumStatusCode.ERR,
+              `You cannot include and exclude the same tags: ${commonTags.join(', ')}`,
+            );
           }
 
           const sourceGraph = await fedGraphRepo.byName(req.sourceGraphName, req.namespace);
           if (!sourceGraph) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_NOT_FOUND,
-                details: `Could not find source graph ${req.sourceGraphName} in namespace ${req.namespace}`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
+            throw new PublicError(
+              EnumStatusCode.ERR_NOT_FOUND,
+              `Could not find source graph ${req.sourceGraphName} in namespace ${req.namespace}`,
+            );
           }
 
-          const contractFederatedGraph = await fedGraphRepo.create({
+          const contractGraph = await fedGraphRepo.create({
             name: req.name,
             createdBy: authContext.userId,
             labelMatchers: sourceGraph.labelMatchers,
@@ -1559,27 +1513,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             admissionWebhookURL: req.admissionWebhookUrl,
           });
 
-          if (!contractFederatedGraph) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Could not create contract graph`,
-              },
-              compositionErrors: [],
-              deploymentErrors: [],
-            };
-          }
-
           await contractRepo.create({
             sourceFederatedGraphId: sourceGraph.id,
-            downstreamFederatedGraphId: contractFederatedGraph.id,
+            downstreamFederatedGraphId: contractGraph.id,
             includeTags: req.includeTags,
             excludeTags: req.excludeTags,
             actorId: authContext.userId,
           });
 
           await fedGraphRepo.createGraphCryptoKeyPairs({
-            federatedGraphId: contractFederatedGraph.id,
+            federatedGraphId: contractGraph.id,
             organizationId: authContext.organizationId,
           });
 
@@ -1589,24 +1532,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             action: 'created',
             actorId: authContext.userId,
             auditableType: 'federated_graph',
-            auditableDisplayName: contractFederatedGraph.name,
+            auditableDisplayName: contractGraph.name,
             actorDisplayName: authContext.userDisplayName,
             actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-            targetNamespaceId: contractFederatedGraph.namespaceId,
-            targetNamespaceDisplayName: contractFederatedGraph.namespace,
+            targetNamespaceId: contractGraph.namespaceId,
+            targetNamespaceDisplayName: contractGraph.namespace,
           });
 
-          // TODO
-          // Get latest valid composition
-          // If not found, do not create any new entries, return error telling no valid schema
-          // Perform tag filter operations and store router config and filtered schema
+          const deploymentErrors = await contractRepo.deployContract({
+            contractGraph,
+            actorId: authContext.userId,
+            blobStorage: opts.blobStorage,
+            admissionConfig: {
+              cdnBaseUrl: opts.cdnBaseUrl,
+              jwtSecret: opts.admissionWebhookJWTSecret,
+            },
+          });
 
           return {
             response: {
               code: EnumStatusCode.OK,
             },
             compositionErrors: [],
-            deploymentErrors: [],
+            deploymentErrors,
           };
         });
       });
@@ -1623,7 +1571,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-        const contractRepo = new ContractRepository(opts.db, authContext.organizationId);
+        const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
 
         req.includeTags = [...new Set(req.includeTags)];
         req.excludeTags = [...new Set(req.excludeTags)];
@@ -3244,7 +3192,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
           const auditLogRepo = new AuditLogRepository(tx);
-          const contractRepo = new ContractRepository(tx, authContext.organizationId);
+          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
 
           req.namespace = req.namespace || DefaultNamespace;
 

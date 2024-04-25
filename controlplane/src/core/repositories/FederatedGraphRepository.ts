@@ -77,7 +77,7 @@ export class FederatedGraphRepository {
     readme?: string;
     supportsFederation?: boolean;
     admissionWebhookURL?: string;
-  }): Promise<FederatedGraphDTO | undefined> {
+  }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
 
@@ -179,7 +179,7 @@ export class FederatedGraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const contractRepo = new ContractRepository(tx, this.organizationId);
+      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
 
       const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
       if (!federatedGraph) {

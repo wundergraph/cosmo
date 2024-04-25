@@ -4,6 +4,7 @@ import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FieldConfiguration, FederationResult } from '@wundergraph/composition';
+import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { FastifyBaseLogger } from 'fastify';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
@@ -100,6 +101,7 @@ export class Composer {
     organizationId,
     admissionConfig,
     admissionWebhookURL,
+    contractRouterConfig,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
@@ -110,6 +112,7 @@ export class Composer {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
+    contractRouterConfig?: RouterConfig;
   }): Promise<CompositionDeployResult> {
     const hasCompositionErrors = composedGraph.errors.length > 0;
     const federatedSchemaVersionId = randomUUID();
@@ -128,13 +131,15 @@ export class Composer {
     let admissionError: AdmissionError | undefined;
 
     // Build and deploy the router config when composed schema is valid
-    if (!hasCompositionErrors && composedGraph.composedSchema) {
-      const routerConfig = buildRouterConfig({
-        fieldConfigurations: composedGraph.fieldConfigurations,
-        subgraphs: composedGraph.subgraphs,
-        federatedSDL: composedGraph.composedSchema,
-        schemaVersionId: federatedSchemaVersionId,
-      });
+    if (!hasCompositionErrors && composedGraph.composedSchema && !routerConfigJson) {
+      const routerConfig =
+        contractRouterConfig ??
+        buildRouterConfig({
+          fieldConfigurations: composedGraph.fieldConfigurations,
+          subgraphs: composedGraph.subgraphs,
+          federatedSDL: composedGraph.composedSchema,
+          schemaVersionId: federatedSchemaVersionId,
+        });
       routerConfigJson = routerConfig.toJson();
       const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
 

@@ -164,19 +164,30 @@ export class GraphCompositionRepository {
   }
 
   public async getCompositionSubgraphs(input: { compositionId: string }) {
-    return await this.db
+    const res = await this.db
       .select({
         id: graphCompositionSubgraphs.id,
         schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
         name: targets.name,
         targetId: targets.id,
+        routingUrl: schema.subgraphs.routingUrl,
+        subscriptionUrl: schema.subgraphs.subscriptionUrl,
+        subscriptionProtocol: schema.subgraphs.subscriptionProtocol,
+        schemaSDL: schemaVersion.schemaSDL,
       })
       .from(graphCompositionSubgraphs)
       .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositionSubgraphs.schemaVersionId))
       .innerJoin(targets, eq(targets.id, schemaVersion.targetId))
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, targets.id))
       .where(eq(graphCompositions.id, input.compositionId))
       .execute();
+
+    return res.map((r) => ({
+      ...r,
+      schemaSDL: r.schemaSDL || '',
+      subscriptionUrl: r.subscriptionUrl || '',
+    }));
   }
 
   public async getGraphCompositions({
