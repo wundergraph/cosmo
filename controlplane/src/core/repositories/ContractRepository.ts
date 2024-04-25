@@ -28,7 +28,8 @@ export class ContractRepository {
     return this.db
       .update(schema.contracts)
       .set({
-        ...data,
+        includeTags: data.includeTags,
+        excludeTags: data.excludeTags,
         updatedById: data.actorId,
         updatedAt: new Date(),
       })

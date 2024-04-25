@@ -1650,18 +1650,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const namespace = await namespaceRepo.byName(req.namespace);
-        if (!namespace) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Could not find namespace ${req.namespace}`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-          };
-        }
-
         const graph = await fedGraphRepo.byName(req.name, req.namespace);
         if (!graph) {
           return {
