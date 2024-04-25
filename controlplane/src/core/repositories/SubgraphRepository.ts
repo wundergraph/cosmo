@@ -32,6 +32,7 @@ import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
+import { ContractRepository } from './ContractRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -192,6 +193,7 @@ export class SubgraphRepository {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
       const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
+      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
@@ -316,6 +318,11 @@ export class SubgraphRepository {
       }
       // Validate all federated graphs that use this subgraph.
       for (const federatedGraph of updatedFederatedGraphs) {
+        // only execute for  graphs. Contracts for each are handled further down.
+        if (federatedGraph.contract) {
+          continue;
+        }
+
         const composition = await composer.composeFederatedGraph(federatedGraph);
 
         // Collect all composition errors
@@ -338,6 +345,50 @@ export class SubgraphRepository {
             jwtSecret: admissionConfig.webhookJWTSecret,
           },
         });
+
+        // Update label matchers for all downstream contract graphs
+        const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
+        for (const contract of contracts) {
+          const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+          if (!contractGraph) {
+            throw new Error(`Contract graph ${contract.downstreamFederatedGraphId} not found`);
+          }
+
+          // If above composition is not successful skip deploying contract
+          if (composition.errors.length > 0) {
+            continue;
+          }
+
+          const updatedContractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+
+          if (!updatedContractGraph) {
+            throw new Error('Contract graph could not be found after update');
+          }
+
+          const contractDeployment = await contractRepo.deployContract({
+            contractGraph: updatedContractGraph,
+            actorId: data.updatedBy,
+            blobStorage,
+            admissionConfig: {
+              cdnBaseUrl: admissionConfig.cdnBaseUrl,
+              jwtSecret: admissionConfig.webhookJWTSecret,
+            },
+          });
+
+          if (!contractDeployment) {
+            continue;
+          }
+
+          deploymentErrors.push(
+            ...contractDeployment.errors
+              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+              .map((e) => ({
+                federatedGraphName: federatedGraph.name,
+                namespace: federatedGraph.namespace,
+                message: e.message ?? '',
+              })),
+          );
+        }
 
         deploymentErrors.push(
           ...deployment.errors
