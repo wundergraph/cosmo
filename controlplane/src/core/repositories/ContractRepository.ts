@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { ContractDTO } from 'src/types/index.js';
 import * as schema from '../../db/schema.js';
 
 export class ContractRepository {

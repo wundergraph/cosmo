@@ -1490,6 +1490,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
+          req.includeTags = [...new Set(req.includeTags)];
+          req.excludeTags = [...new Set(req.excludeTags)];
+
           if (!isValidSchemaTags(req.includeTags) || !isValidSchemaTags(req.excludeTags)) {
             return {
               response: {
@@ -1621,6 +1624,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const contractRepo = new ContractRepository(opts.db, authContext.organizationId);
+
+        req.includeTags = [...new Set(req.includeTags)];
+        req.excludeTags = [...new Set(req.excludeTags)];
 
         if (!isValidSchemaTags(req.includeTags) || !isValidSchemaTags(req.excludeTags)) {
           return {
