@@ -346,7 +346,17 @@ export class SubgraphRepository {
           },
         });
 
-        // Update label matchers for all downstream contract graphs
+        deploymentErrors.push(
+          ...deployment.errors
+            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+            .map((e) => ({
+              federatedGraphName: federatedGraph.name,
+              namespace: federatedGraph.namespace,
+              message: e.message ?? '',
+            })),
+        );
+
+        // Deploy downstream contract graphs
         const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
         for (const contract of contracts) {
           const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
@@ -389,16 +399,6 @@ export class SubgraphRepository {
               })),
           );
         }
-
-        deploymentErrors.push(
-          ...deployment.errors
-            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-            .map((e) => ({
-              federatedGraphName: federatedGraph.name,
-              namespace: federatedGraph.namespace,
-              message: e.message ?? '',
-            })),
-        );
       }
 
       // update the readme of the subgraph
