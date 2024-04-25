@@ -31,3 +31,8 @@ type Subscription {
   initialPayload(repeat: Int): Map
   returnsError: String
 }
+
+type Employee @key(fields: "id") {
+  id: Int!
+  fieldThrowsError: String
+}
