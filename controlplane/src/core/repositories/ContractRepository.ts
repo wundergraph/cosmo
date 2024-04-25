@@ -1,13 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { PlainMessage } from '@bufbuild/protobuf';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphDTO } from 'src/types/index.js';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import { Composer, RouterConfigUploadError } from '../composition/composer.js';
-import { AdmissionError } from '../services/AdmissionWebhookController.js';
+import { Composer, CompositionDeployResult } from '../composition/composer.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
@@ -36,8 +32,8 @@ export class ContractRepository {
       .returning();
   }
 
-  public update(data: { id: string; includeTags: string[]; excludeTags: string[]; actorId: string }) {
-    return this.db
+  public async update(data: { id: string; includeTags: string[]; excludeTags: string[]; actorId: string }) {
+    const res = await this.db
       .update(schema.contracts)
       .set({
         includeTags: data.includeTags,
@@ -47,6 +43,8 @@ export class ContractRepository {
       })
       .where(eq(schema.contracts.id, data.id))
       .returning();
+
+    return res[0];
   }
 
   public delete(id: string) {
@@ -88,7 +86,7 @@ export class ContractRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
-  }): Promise<PlainMessage<DeploymentError>[]> {
+  }): Promise<CompositionDeployResult | undefined> {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -108,13 +106,13 @@ export class ContractRepository {
 
       // Return if valid sdl or router config is not found for source graph
       if (!sourceGraphLatestValidSDL || !sourceGraphLatestValidRouterConfig) {
-        return [];
+        return;
       }
 
       const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
 
       // TODO
-      // Perform tag filter operations and store router config and filtered schema
+      // Perform tag filter operations
       // const filteredSchema = filter(sourceGraphLatestValidSDL)
       const filteredSchema = `type Query {}`;
 
@@ -124,7 +122,7 @@ export class ContractRepository {
       });
 
       if (!composition) {
-        return [];
+        return;
       }
 
       const subgraphs = await compositionRepo.getCompositionSubgraphs({
@@ -161,19 +159,7 @@ export class ContractRepository {
         contractRouterConfig: sourceGraphLatestValidRouterConfig.config,
       });
 
-      const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-
-      deploymentErrors.push(
-        ...deployment.errors
-          .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-          .map((e) => ({
-            federatedGraphName: contractGraph.name,
-            namespace: contractGraph.namespace,
-            message: e.message ?? '',
-          })),
-      );
-
-      return deploymentErrors;
+      return deployment;
     });
   }
 }

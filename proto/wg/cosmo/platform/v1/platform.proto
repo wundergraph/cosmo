@@ -1938,6 +1938,8 @@ message CreateContractRequest {
 
 message CreateContractResponse {
   Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message UpdateContractRequest {
@@ -1949,6 +1951,8 @@ message UpdateContractRequest {
 
 message UpdateContractResponse {
   Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 service PlatformService {

@@ -309,10 +309,37 @@ export class FederatedGraphRepository {
               .execute();
           }
 
-          // TODO
-          // If above composition is successful
-          // Perform tag filter operations and store router config and filtered schema
-          // Or else stick to previous valid schema and skip ops
+          // If above composition is not successful skip deploying contract
+          if (composedGraph.errors.length > 0) {
+            continue;
+          }
+
+          const updatedContractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+
+          if (!updatedContractGraph) {
+            throw new Error('Contract graph could not be found after update');
+          }
+
+          const contractDeployment = await contractRepo.deployContract({
+            contractGraph: updatedContractGraph,
+            actorId: data.updatedBy,
+            blobStorage: data.blobStorage,
+            admissionConfig: data.admissionConfig,
+          });
+
+          if (!contractDeployment) {
+            continue;
+          }
+
+          deploymentErrors.push(
+            ...contractDeployment.errors
+              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+              .map((e) => ({
+                federatedGraphName: federatedGraph.name,
+                namespace: federatedGraph.namespace,
+                message: e.message ?? '',
+              })),
+          );
         }
 
         return {
@@ -331,7 +358,13 @@ export class FederatedGraphRepository {
   }
 
   public move(
-    data: { targetId: string; newNamespaceId: string; updatedBy: string; federatedGraph: FederatedGraphDTO },
+    data: {
+      targetId: string;
+      newNamespaceId: string;
+      updatedBy: string;
+      federatedGraph: FederatedGraphDTO;
+      skipDeployment?: boolean;
+    },
     blobStorage: BlobStorage,
     admissionConfig: {
       jwtSecret: string;
@@ -341,6 +374,7 @@ export class FederatedGraphRepository {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
+      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
 
       await tx.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
 
@@ -368,14 +402,22 @@ export class FederatedGraphRepository {
           .execute();
       }
 
-      if (data.federatedGraph.contract?.id) {
-        // TODO
-        // Get latest valid composition
-        // If not found, do not create any new entries, return error telling no valid schema
-        // Perform tag filter operations and store router config and filtered schema
+      if (data.federatedGraph.contract && !data.skipDeployment) {
+        const movedContractGraph = await fedGraphRepo.byId(data.federatedGraph.id);
+        if (!movedContractGraph) {
+          throw new Error('Could not find contract after moving');
+        }
+
+        const contractDeployment = await contractRepo.deployContract({
+          contractGraph: movedContractGraph,
+          actorId: data.updatedBy,
+          blobStorage,
+          admissionConfig,
+        });
+
         return {
           compositionErrors: [],
-          deploymentErrors: [],
+          deploymentErrors: contractDeployment?.errors ?? [],
         };
       }
 

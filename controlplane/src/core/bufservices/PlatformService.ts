@@ -149,7 +149,7 @@ import {
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
-import { Composer, RouterConfigUploadError } from '../composition/composer.js';
+import { ComposeDeploymentError, Composer, RouterConfigUploadError } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { schemaLintCheck } from '../composition/schemaLint.js';
@@ -752,17 +752,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const movedGraphs = [graph];
 
           const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
+          const contractDeploymentErrors: ComposeDeploymentError[] = [];
           for (const contract of contracts) {
             const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
             if (!contractGraph) {
               continue;
             }
-            await fedGraphRepo.move(
+
+            const { deploymentErrors } = await fedGraphRepo.move(
               {
                 targetId: contractGraph.targetId,
                 newNamespaceId: newNamespace.id,
                 updatedBy: authContext.userId,
                 federatedGraph: contractGraph,
+                skipDeployment: compositionErrors.length > 0,
               },
               opts.blobStorage,
               {
@@ -770,6 +773,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 jwtSecret: opts.admissionWebhookJWTSecret,
               },
             );
+
+            contractDeploymentErrors.push(...deploymentErrors);
             movedGraphs.push(contractGraph);
           }
 
@@ -786,6 +791,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               targetNamespaceId: newNamespace.id,
               targetNamespaceDisplayName: newNamespace.name,
             });
+
+            // Skip webhook since we do not deploy contracts on composition errors
+            if (movedGraph.contract && compositionErrors.length > 0) {
+              continue;
+            }
 
             orgWebhooks.send({
               eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
@@ -808,7 +818,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
 
           allDeploymentErrors.push(
-            ...deploymentErrors
+            ...[...deploymentErrors, ...contractDeploymentErrors]
               .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
               .map((e) => ({
                 federatedGraphName: req.name,
@@ -1539,7 +1549,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetNamespaceDisplayName: contractGraph.namespace,
           });
 
-          const deploymentErrors = await contractRepo.deployContract({
+          const deployment = await contractRepo.deployContract({
             contractGraph,
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
@@ -1548,6 +1558,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               jwtSecret: opts.admissionWebhookJWTSecret,
             },
           });
+
+          const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+          if (deployment) {
+            deploymentErrors.push(
+              ...deployment.errors
+                .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+                .map((e) => ({
+                  federatedGraphName: contractGraph.name,
+                  namespace: contractGraph.namespace,
+                  message: e.message ?? '',
+                })),
+            );
+          }
 
           return {
             response: {
@@ -1628,25 +1652,54 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR,
               details: `You cannot include and exclude the same tags: ${commonTags.join(', ')}`,
             },
+            deploymentErrors: [],
+            compositionErrors: [],
           };
         }
 
-        await contractRepo.update({
+        const updatedContractDetails = await contractRepo.update({
           id: graph.contract.id,
           includeTags: req.includeTags,
           excludeTags: req.excludeTags,
           actorId: authContext.userId,
         });
 
-        // TODO
-        // Get latest valid composition
-        // If not found, do not create any new entries, return error telling no valid schema
-        // Perform tag filter operations and store router config and filtered schema
+        const deployment = await contractRepo.deployContract({
+          contractGraph: {
+            ...graph,
+            contract: {
+              ...graph.contract,
+              ...updatedContractDetails,
+            },
+          },
+          actorId: authContext.userId,
+          blobStorage: opts.blobStorage,
+          admissionConfig: {
+            cdnBaseUrl: opts.cdnBaseUrl,
+            jwtSecret: opts.admissionWebhookJWTSecret,
+          },
+        });
+
+        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+        if (deployment) {
+          deploymentErrors.push(
+            ...deployment.errors
+              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+              .map((e) => ({
+                federatedGraphName: graph.name,
+                namespace: graph.namespace,
+                message: e.message ?? '',
+              })),
+          );
+        }
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
+          deploymentErrors,
+          compositionErrors: [],
         };
       });
     },

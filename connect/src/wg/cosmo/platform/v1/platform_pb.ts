@@ -15348,6 +15348,16 @@ export class CreateContractResponse extends Message<CreateContractResponse> {
    */
   response?: Response;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<CreateContractResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15357,6 +15367,8 @@ export class CreateContractResponse extends Message<CreateContractResponse> {
   static readonly typeName = "wg.cosmo.platform.v1.CreateContractResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateContractResponse {
@@ -15440,6 +15452,16 @@ export class UpdateContractResponse extends Message<UpdateContractResponse> {
    */
   response?: Response;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<UpdateContractResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15449,6 +15471,8 @@ export class UpdateContractResponse extends Message<UpdateContractResponse> {
   static readonly typeName = "wg.cosmo.platform.v1.UpdateContractResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateContractResponse {
