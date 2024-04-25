@@ -48,10 +48,13 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 
 	options := resolve.ResolverOptions{
 		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
+		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
 		Reporter:                     reporter,
 		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
-		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.StatusCodes,
-		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
+		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
+		RewriteSubgraphErrorPaths:    routerEngineConfig.SubgraphErrorPropagation.RewritePaths,
+		OmitSubgraphErrorLocations:   routerEngineConfig.SubgraphErrorPropagation.OmitLocations,
+		OmitSubgraphErrorExtensions:  routerEngineConfig.SubgraphErrorPropagation.OmitExtensions,
 	}
 
 	switch routerEngineConfig.SubgraphErrorPropagation.Mode {

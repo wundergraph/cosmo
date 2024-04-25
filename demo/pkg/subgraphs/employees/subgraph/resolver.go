@@ -2,10 +2,11 @@ package subgraph
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"reflect"
 	"sync"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 // This file will not be regenerated automatically.
