@@ -20,6 +20,7 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -377,7 +378,7 @@ func TestWebSockets(t *testing.T) {
 								CheckOrigin: func(r *http.Request) bool {
 									return true
 								},
-								Subprotocols: []string{"graphql-ws"},
+								Subprotocols: []string{"graphql-transport-ws"},
 							}
 							require.Equal(t, "Bearer test", r.Header.Get("Authorization"))
 							conn, err := upgrader.Upgrade(w, r, nil)
@@ -393,16 +394,16 @@ func TestWebSockets(t *testing.T) {
 
 							_, message, err = conn.ReadMessage()
 							require.NoError(t, err)
-							require.Equal(t, `{"type":"start","id":"1","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
-							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"data","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
 							require.NoError(t, err)
 
 							_, message, err = conn.ReadMessage()
 							if errors.Is(err, websocket.ErrCloseSent) {
 								return
 							}
-							require.Equal(t, `{"type":"stop","id":"1"}`, string(message))
+							require.Equal(t, `{"id":"1","type":"complete"}`, string(message))
 
 							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
 							require.NoError(t, err)
