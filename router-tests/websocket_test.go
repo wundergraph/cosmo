@@ -152,7 +152,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]}]`, string(res.Payload))
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",9,"startDate"]}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
@@ -386,14 +386,14 @@ func TestWebSockets(t *testing.T) {
 
 							_, message, err := conn.ReadMessage()
 							require.NoError(t, err)
-							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"User-Agent":["Go-http-client/1.1"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
 							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
 							require.NoError(t, err)
 
 							_, message, err = conn.ReadMessage()
 							require.NoError(t, err)
-							require.Equal(t, `{"type":"start","id":"1","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"User-Agent":["Go-http-client/1.1"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+							require.Equal(t, `{"type":"start","id":"1","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
 							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"data","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
 							require.NoError(t, err)
@@ -507,7 +507,7 @@ func TestWebSockets(t *testing.T) {
 							data, err := io.ReadAll(r.Body)
 							require.NoError(t, err)
 							defer r.Body.Close()
-							require.Equal(t, `{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"User-Agent":["Go-http-client/1.1"]},"initialPayload":{"Custom-Auth":"test"}}}`, string(data))
+							require.Equal(t, `{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}`, string(data))
 
 							w.Header().Set("Content-Type", "text/event-stream")
 							w.Header().Set("Cache-Control", "no-cache")
@@ -622,7 +622,7 @@ func TestWebSockets(t *testing.T) {
 							require.Equal(t, http.MethodGet, r.Method)
 							query := r.URL.Query()
 							require.Equal(t, "subscription{currentTime {unixTime timeStamp}}", query.Get("query"))
-							require.Equal(t, `{"upgradeHeaders":{"Authorization":["Bearer test"],"User-Agent":["Go-http-client/1.1"]},"initialPayload":{"Custom-Auth":"test"}}`, query.Get("extensions"))
+							require.Equal(t, `{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}`, query.Get("extensions"))
 
 							w.Header().Set("Content-Type", "text/event-stream")
 							w.Header().Set("Cache-Control", "no-cache")
@@ -741,7 +741,7 @@ func TestWebSockets(t *testing.T) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-				cfg.StatusCodes = false
+				cfg.PropagateStatusCodes = false
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -1137,7 +1137,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, `{"extensions":{"token":"456","upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]},"upgradeQueryParams":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
+			require.Equal(t, `{"extensions":{"token":"456","upgradeQueryParams":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
 		})
 	})
 	t.Run("forward query params via initial payload alongside existing", func(t *testing.T) {
@@ -1169,7 +1169,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, `{"extensions":{"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]},"upgradeQueryParams":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
+			require.Equal(t, `{"extensions":{"upgradeQueryParams":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
 		})
 	})
 	t.Run("same graphql path as playground", func(t *testing.T) {
@@ -1188,7 +1188,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("different path", func(t *testing.T) {
@@ -1207,7 +1207,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
 	})
 
@@ -1286,7 +1286,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("single connection with initial payload and extensions in the request", func(t *testing.T) {
@@ -1307,7 +1307,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2","initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2","initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("single connection multiple differing subscriptions", func(t *testing.T) {
@@ -1447,11 +1447,11 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn1.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":1},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}},"id":1}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":1}},"id":1}}}`, string(msg.Payload))
 
 			err = conn2.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":2},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}},"id":2}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":2}},"id":2}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("absinthe subscription", func(t *testing.T) {

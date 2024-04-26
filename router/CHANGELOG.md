@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.84.0](https://github.com/wundergraph/cosmo/compare/router@0.83.0...router@0.84.0) (2024-04-26)
+
+### Features
+
+* improve Subgraph error propagation ([#752](https://github.com/wundergraph/cosmo/issues/752)) ([0592378](https://github.com/wundergraph/cosmo/commit/0592378a86c23712f7d42ef5ee491bea4e3635ec)) (@jensneuse)
+* log subgraph errors ([#753](https://github.com/wundergraph/cosmo/issues/753)) ([cf456d2](https://github.com/wundergraph/cosmo/commit/cf456d257879a541ff4ff1261fdc88a104b581ba)) (@StarpTech)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@)
+
+# [0.83.0](https://github.com/wundergraph/cosmo/compare/router@0.82.3...router@0.83.0) (2024-04-23)
+
+### Bug Fixes
+
+* graphql error serialization ([#747](https://github.com/wundergraph/cosmo/issues/747)) ([119f179](https://github.com/wundergraph/cosmo/commit/119f179a0e169761bc207cff31976afca1832430)) (@jensneuse)
+* ignore user agent for subscription deduplication ([#745](https://github.com/wundergraph/cosmo/issues/745)) ([3c1bfc0](https://github.com/wundergraph/cosmo/commit/3c1bfc0e6820deb0607e8847d118ab597e67d5b4)) (@StarpTech)
+
+### Features
+
+* allow to rename client headers on propagate to subgraphs ([#674](https://github.com/wundergraph/cosmo/issues/674)) ([b1dc228](https://github.com/wundergraph/cosmo/commit/b1dc2282b3e480a113925e688bffdc8aefd264a2)) (@Rutik7066)
+
 ## [0.82.3](https://github.com/wundergraph/cosmo/compare/router@0.82.2...router@0.82.3) (2024-04-18)
 
 **Note:** Version bump only for package router

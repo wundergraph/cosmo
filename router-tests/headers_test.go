@@ -162,7 +162,7 @@ func TestForwardHeaders(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123","upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123"}}}}}`, string(msg.Payload))
 		})
 	})
 
@@ -388,7 +388,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123","upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123"}}}}}`, string(msg.Payload))
 		})
 	})
 

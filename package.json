@@ -30,10 +30,6 @@
   "files": [
     "dist"
   ],
-  "resolutions": {
-    "react": "18.2.0",
-    "graphql": "16.7.1"
-  },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": "8"
@@ -58,7 +54,13 @@
     "husky": "^8.0.3",
     "lint-staged": "^12.5.0",
     "prettier": "^3.0.3",
-    "vitest": "1.4.0"
+    "vitest": "^1.5.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "18.2.0",
+      "graphql": "16.7.1"
+    }
   },
   "packageManager": "pnpm@8.7.0"
 }
