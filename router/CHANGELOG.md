@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.84.0](https://github.com/wundergraph/cosmo/compare/router@0.83.0...router@0.84.0) (2024-04-26)
+
+### Features
+
+* improve Subgraph error propagation ([#752](https://github.com/wundergraph/cosmo/issues/752)) ([0592378](https://github.com/wundergraph/cosmo/commit/0592378a86c23712f7d42ef5ee491bea4e3635ec)) (@jensneuse)
+* log subgraph errors ([#753](https://github.com/wundergraph/cosmo/issues/753)) ([cf456d2](https://github.com/wundergraph/cosmo/commit/cf456d257879a541ff4ff1261fdc88a104b581ba)) (@StarpTech)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@)
+
 # [0.83.0](https://github.com/wundergraph/cosmo/compare/router@0.82.3...router@0.83.0) (2024-04-23)
 
 ### Bug Fixes
