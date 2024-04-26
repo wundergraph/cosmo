@@ -93,6 +93,7 @@ export interface SubgraphDTO {
   readme?: string;
   namespace: string;
   namespaceId: string;
+  isV2Graph?: boolean;
 }
 
 export interface MigrationSubgraph {
