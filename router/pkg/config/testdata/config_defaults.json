@@ -195,6 +195,10 @@
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
-    "StatusCodes": false
+    "PropagateStatusCodes": false,
+    "Mode": "wrapped",
+    "RewritePaths": true,
+    "OmitLocations": true,
+    "OmitExtensions": false
   }
 }

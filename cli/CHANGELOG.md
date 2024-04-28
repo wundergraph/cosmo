@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.52.0](https://github.com/wundergraph/cosmo/compare/wgc@0.51.5...wgc@0.52.0) (2024-04-26)
+
+### Features
+
+* add apollo compatibility mode in wgc federated-graph fetch command ([#742](https://github.com/wundergraph/cosmo/issues/742)) ([ecd73ab](https://github.com/wundergraph/cosmo/commit/ecd73ab91e1c8289008cae1062220826884d26e8)) (@JivusAyrus)
+
+## [0.51.5](https://github.com/wundergraph/cosmo/compare/wgc@0.51.4...wgc@0.51.5) (2024-04-23)
+
+### Bug Fixes
+
+* upgrade deps to cover CVEs ([#750](https://github.com/wundergraph/cosmo/issues/750)) ([e261beb](https://github.com/wundergraph/cosmo/commit/e261beb8375ca41eb8a2fa4b3223d202c3bb7460)) (@StarpTech)
+
+## [0.51.4](https://github.com/wundergraph/cosmo/compare/wgc@0.51.3...wgc@0.51.4) (2024-04-23)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@StarpTech)
+
 ## [0.51.3](https://github.com/wundergraph/cosmo/compare/wgc@0.51.2...wgc@0.51.3) (2024-04-17)
 
 **Note:** Version bump only for package wgc

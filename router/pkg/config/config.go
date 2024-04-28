@@ -159,6 +159,8 @@ type RequestHeaderRule struct {
 	Matching string `yaml:"matching"`
 	// Named is the exact header name to match
 	Named string `yaml:"named"`
+	// Rename renames the header's key to the provided value
+	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
 }
@@ -325,9 +327,20 @@ type TLSConfiguration struct {
 	Server TLSServerConfiguration `yaml:"server"`
 }
 
+type SubgraphErrorPropagationMode string
+
+const (
+	SubgraphErrorPropagationModeWrapped     SubgraphErrorPropagationMode = "wrapped"
+	SubgraphErrorPropagationModePassthrough SubgraphErrorPropagationMode = "pass-through"
+)
+
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled     bool `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	StatusCodes bool `yaml:"status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+	Enabled              bool                         `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
+	PropagateStatusCodes bool                         `yaml:"propagate_status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+	Mode                 SubgraphErrorPropagationMode `yaml:"mode" default:"wrapped" envconfig:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
+	RewritePaths         bool                         `yaml:"rewrite_paths" default:"true" envconfig:"SUBGRAPH_ERROR_PROPAGATION_REWRITE_PATHS"`
+	OmitLocations        bool                         `yaml:"omit_locations" default:"true" envconfig:"SUBGRAPH_ERROR_PROPAGATION_OMIT_LOCATIONS"`
+	OmitExtensions       bool                         `yaml:"omit_extensions" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
 }
 
 type Config struct {
@@ -469,7 +482,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
-		cfg.Config.SubgraphErrorPropagation.StatusCodes = true
+		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 	}
 
 	return cfg, nil
