@@ -278,7 +278,10 @@
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
-    "StatusCodes": false,
-    "Mode": "wrapped"
+    "PropagateStatusCodes": false,
+    "Mode": "wrapped",
+    "RewritePaths": true,
+    "OmitLocations": true,
+    "OmitExtensions": false
   }
 }

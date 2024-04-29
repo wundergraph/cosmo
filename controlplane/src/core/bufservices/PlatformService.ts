@@ -1970,9 +1970,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const subgraphSchemaSDL = req.schema;
 
+        let isV2Graph: boolean | undefined;
+
         try {
           // Here we check if the schema is valid as a subgraph SDL
-          const { errors } = buildSchema(subgraphSchemaSDL);
+          const { errors, normalizationResult } = buildSchema(subgraphSchemaSDL);
           if (errors && errors.length > 0) {
             return {
               response: {
@@ -1983,6 +1985,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               deploymentErrors: [],
             };
           }
+          isV2Graph = normalizationResult?.isVersionTwo;
         } catch (e: any) {
           return {
             response: {
@@ -2039,6 +2042,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             schemaSDL: subgraphSchemaSDL,
             updatedBy: authContext.userId,
             namespaceId: namespace.id,
+            isV2Graph,
           },
           opts.blobStorage,
           {
@@ -2164,10 +2168,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const subgraphSchemaSDL = req.schema;
+        let isV2Graph: boolean | undefined;
 
         try {
           // Here we check if the schema is valid as a subgraph SDL
-          const { errors } = buildSchema(subgraphSchemaSDL);
+          const { errors, normalizationResult } = buildSchema(subgraphSchemaSDL);
           if (errors && errors.length > 0) {
             return {
               response: {
@@ -2178,6 +2183,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               deploymentErrors: [],
             };
           }
+          isV2Graph = normalizationResult?.isVersionTwo;
         } catch (e: any) {
           return {
             response: {
@@ -2297,6 +2303,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   : formatSubscriptionProtocol(req.subscriptionProtocol),
               updatedBy: authContext.userId,
               namespaceId: namespace.id,
+              isV2Graph,
             },
             opts.blobStorage,
             {
@@ -3739,6 +3746,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           lastUpdatedAt: s.lastUpdatedAt,
           targetId: s.targetId,
           subscriptionUrl: s.subscriptionUrl,
+          subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
         }));
 
@@ -6493,6 +6501,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             createdUserId: g.creatorUserId,
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
+            subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
           })),
           response: {
@@ -6533,6 +6542,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: subgraph.targetId,
             readme: subgraph.readme,
             subscriptionUrl: subgraph.subscriptionUrl,
+            subscriptionProtocol: subgraph.subscriptionProtocol,
             namespace: subgraph.namespace,
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
@@ -6782,6 +6792,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const federatedGraph = await fedRepo.byName(req.name, req.namespace);
 
         if (!federatedGraph) {
@@ -6848,6 +6860,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
             namespace: g.namespace,
+            subscriptionProtocol: g.subscriptionProtocol,
+            isV2Graph: g.isV2Graph,
           })),
           graphRequestToken: routerRequestToken,
           response: {

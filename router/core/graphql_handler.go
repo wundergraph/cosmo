@@ -155,7 +155,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = h.configureRateLimiting(ctx)
 
-	defer propagateSubgraphErrors(ctx)
+	defer propagateSubgraphErrors(ctx, requestLogger)
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
@@ -309,7 +309,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 	case errorTypeUpgradeFailed:
 		response.Errors[0].Message = "Upgrade failed"
 		var upgradeErr *ErrUpgradeFailed
-		if h.subgraphErrorPropagation.StatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
+		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
 			response.Errors[0].Extensions = &Extensions{
 				StatusCode: upgradeErr.StatusCode,
 			}
