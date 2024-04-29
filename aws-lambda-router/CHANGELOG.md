@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.3](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.7.2...aws-lambda-router@0.7.3) (2024-04-29)
+
+### Bug Fixes
+
+* field selection validation ([#758](https://github.com/wundergraph/cosmo/issues/758)) ([d29fbc6](https://github.com/wundergraph/cosmo/commit/d29fbc60df212eb6191a3fb4bbbd47d45de439cd)) (@devsergiy)
+
 ## [0.7.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.7.1...aws-lambda-router@0.7.2) (2024-04-18)
 
 **Note:** Version bump only for package aws-lambda-router
