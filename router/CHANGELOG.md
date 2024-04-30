@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.84.4](https://github.com/wundergraph/cosmo/compare/router@0.84.3...router@0.84.4) (2024-04-30)
+
+### Bug Fixes
+
+* normalization of non-compatible nested fragment types ([#761](https://github.com/wundergraph/cosmo/issues/761)) ([3f42a17](https://github.com/wundergraph/cosmo/commit/3f42a171d2d7a32b24ba695aadfa8bfba85c8e39)) (@devsergiy)
+
 ## [0.84.3](https://github.com/wundergraph/cosmo/compare/router@0.84.2...router@0.84.3) (2024-04-30)
 
 ### Bug Fixes
