@@ -9,7 +9,7 @@ import { CommonGraphCommandOptions } from '../../../core/types/types.js';
 export default (opts: CommonGraphCommandOptions) => {
   const graphType = opts.isMonograph ? 'monograph' : 'federated graph';
 
-  const command = new Command('fetch');
+  const command = new Command('fetch-schema');
   command.description(`Fetches the latest valid SDL of a ${graphType}. The output can be piped to a file.`);
   command.argument('<name>', `The name of the ${graphType} to fetch.`);
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
