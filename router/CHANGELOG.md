@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.84.3](https://github.com/wundergraph/cosmo/compare/router@0.84.2...router@0.84.3) (2024-04-30)
+
+### Bug Fixes
+
+* don't transmit persistedQuery extension to subgraphs ([#759](https://github.com/wundergraph/cosmo/issues/759)) ([07f0e4f](https://github.com/wundergraph/cosmo/commit/07f0e4fa309d859a5e5bc6511af2df03aedd3cdd)) (@StarpTech)
+
 ## [0.84.2](https://github.com/wundergraph/cosmo/compare/router@0.84.1...router@0.84.2) (2024-04-29)
 
 ### Bug Fixes
