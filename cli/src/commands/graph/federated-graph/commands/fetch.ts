@@ -158,9 +158,9 @@ rover supergraph compose --config '${join(basePath, `rover-composition.yaml`)}' 
 
       console.log(
         pc.green(
-          `Fetched the schemas of the federated graph, all its subgraphs and the router config of the federated graph ${pc.bold(
+          `Successfully fetched the schemas of the federated graph, all its subgraphs and the router config of the federated graph ${pc.bold(
             name,
-          )}`,
+          )}.`,
         ),
       );
     } catch (e: any) {
