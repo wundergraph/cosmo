@@ -15,7 +15,7 @@ import {
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('fetch');
-  cmd.description('Provides commands for fetching the schemas of the federated graph, subgraph and the router config.');
+  cmd.description('Fetches the schemas of the federated graph, all of its subgraphs and the router config.');
   cmd.argument('<name>', 'The name of the federated graph to fetch.');
   cmd.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
   cmd.option('-o, --out [string]', 'Destination folder for storing all the required files.');
