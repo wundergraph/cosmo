@@ -32,7 +32,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	brotli "go.withmatt.com/connect-brotli"
-	brotli_enc "gopkg.in/kothar/brotli-go.v0/enc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
@@ -43,6 +42,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 
+	br "github.com/andybalholm/brotli"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -930,9 +930,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	// Adds Brotli compressor
 	brCompressor := middleware.NewCompressor(5)
 	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
-		params := brotli_enc.NewBrotliParams()
-		params.SetQuality(level)
-		return brotli_enc.NewBrotliWriter(params, w)
+		return br.NewWriterLevel(w, level)
 	})
 	httpRouter.Use(brCompressor.Handler)
 
