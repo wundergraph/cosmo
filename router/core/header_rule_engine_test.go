@@ -95,12 +95,12 @@ func TestReNamedMatchingPropagateHeaderRule(t *testing.T) {
 					Operation: "propagate",
 					Matching:  "(?i)X-Test-.*",
 					Rename:    "X-Test-Renamed-1",
-					Default:   "default",
 				},
 				{
 					Operation: "propagate",
-					Matching:  "(?i)X-Test-.*",
-					Rename:    "X-Test-Renamed-2",
+					Matching:  "(?i)X-Test-Default-.*",
+					Rename:    "X-Test-Renamed-Default-2",
+					Default:   "default",
 				},
 			},
 		},
@@ -112,7 +112,7 @@ func TestReNamedMatchingPropagateHeaderRule(t *testing.T) {
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
 	require.NoError(t, err)
 	clientReq.Header.Set("X-Test-1", "test1")
-	clientReq.Header.Set("X-Test-2", "test2")
+	clientReq.Header.Set("X-Test-Default-2", "")
 
 	originReq, err := http.NewRequest("POST", "http://localhost", nil)
 	assert.Nil(t, err)
@@ -124,10 +124,10 @@ func TestReNamedMatchingPropagateHeaderRule(t *testing.T) {
 		operation:      &operationContext{},
 	})
 
-	assert.Equal(t, "default", updatedClientReq.Header.Get("X-Test-Renamed-1"))
-	assert.Empty(t, updatedClientReq.Header.Get("X-Test-Renamed-2"))
-	assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-1"))
-	assert.Equal(t, "test2", updatedClientReq.Header.Get("X-Test-2"))
+	assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-Renamed-1"))
+	assert.Equal(t, "default", updatedClientReq.Header.Get("X-Test-Renamed-Default-2"))
+	assert.Empty(t, updatedClientReq.Header.Get("X-Test-1"))
+	assert.Empty(t, updatedClientReq.Header.Get("X-Test-2"))
 }
 
 func TestRegexPropagateHeaderRule(t *testing.T) {
@@ -379,7 +379,14 @@ func TestSubgraphRenameWithDefaultHeaderRule(t *testing.T) {
 					{
 						Operation: "propagate",
 						Rename:    "X-Test-Subgraph-Renamed",
+						Named:     "X-Test-Subgraph",
 						Default:   "Test-Value-Default",
+					},
+					{
+						Operation: "propagate",
+						Rename:    "X-Test-Subgraph-Renamed-2",
+						Named:     "X-Test-Subgraph-2",
+						Default:   "Test-Value-Default-2",
 					},
 				},
 			},
@@ -392,6 +399,7 @@ func TestSubgraphRenameWithDefaultHeaderRule(t *testing.T) {
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
 	require.NoError(t, err)
 	clientReq.Header.Set("X-Test-Subgraph", "Test-Value")
+	clientReq.Header.Set("X-Test-Subgraph-2", "")
 
 	sg1Url, _ := url.Parse("http://subgraph-1.local")
 
@@ -413,7 +421,8 @@ func TestSubgraphRenameWithDefaultHeaderRule(t *testing.T) {
 	assert.Nil(t, err)
 	updatedClientReq1, _ := ht.OnOriginRequest(originReq1, ctx)
 
-	assert.Equal(t, "Test-Value-Default", updatedClientReq1.Header.Get("X-Test-Subgraph-Renamed"))
+	assert.Equal(t, "Test-Value", updatedClientReq1.Header.Get("X-Test-Subgraph-Renamed"))
+	assert.Equal(t, "Test-Value-Default-2", updatedClientReq1.Header.Get("X-Test-Subgraph-Renamed-2"))
 	assert.Empty(t, updatedClientReq1.Header.Get("X-Test-Subgraph"))
 
 }
@@ -428,6 +437,12 @@ func TestSubgraphRenameMatchedHeaderRule(t *testing.T) {
 						Rename:    "X-Test-Subgraph-Renamed",
 						Matching:  "(?i)X-Test-.*",
 					},
+					{
+						Operation: "propagate",
+						Rename:    "X-Test-Subgraph-Default-Renamed",
+						Matching:  "(?i)X-Test-Default.*",
+						Default:   "Default",
+					},
 				},
 			},
 		},
@@ -439,6 +454,7 @@ func TestSubgraphRenameMatchedHeaderRule(t *testing.T) {
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
 	require.NoError(t, err)
 	clientReq.Header.Set("X-Test-Subgraph", "Test-Value")
+	clientReq.Header.Set("X-Test-Default-Subgraph", "")
 
 	sg1Url, _ := url.Parse("http://subgraph-1.local")
 
@@ -460,7 +476,9 @@ func TestSubgraphRenameMatchedHeaderRule(t *testing.T) {
 	assert.Nil(t, err)
 	updatedClientReq1, _ := ht.OnOriginRequest(originReq1, ctx)
 
-	assert.Equal(t, "Test-Value", updatedClientReq1.Header.Get("X-Test-Subgraph"))
-	assert.Empty(t, updatedClientReq1.Header.Get("X-Test-Subgraph-Renamed"))
+	assert.Equal(t, "Test-Value", updatedClientReq1.Header.Get("X-Test-Subgraph-Renamed"))
+	assert.Equal(t, "Default", updatedClientReq1.Header.Get("X-Test-Subgraph-Default-Renamed"))
+	assert.Empty(t, updatedClientReq1.Header.Get("X-Test-Subgraph"))
+	assert.Empty(t, updatedClientReq1.Header.Get("X-Test-Default-Subgraph"))
 
 }
