@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.84.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.84.1...controlplane@0.84.2) (2024-05-01)
+
+### Bug Fixes
+
+* verify the user from keycloak and sanitize emails ([#762](https://github.com/wundergraph/cosmo/issues/762)) ([4f5d4a0](https://github.com/wundergraph/cosmo/commit/4f5d4a057c53177e9b6c6cff69762fc6c0859ab8)) (@JivusAyrus)
+
 ## [0.84.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.84.0...controlplane@0.84.1) (2024-04-30)
 
 ### Bug Fixes
