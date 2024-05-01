@@ -1970,9 +1970,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const subgraphSchemaSDL = req.schema;
 
+        let isV2Graph: boolean | undefined;
+
         try {
           // Here we check if the schema is valid as a subgraph SDL
-          const { errors } = buildSchema(subgraphSchemaSDL);
+          const { errors, normalizationResult } = buildSchema(subgraphSchemaSDL);
           if (errors && errors.length > 0) {
             return {
               response: {
@@ -1983,6 +1985,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               deploymentErrors: [],
             };
           }
+          isV2Graph = normalizationResult?.isVersionTwo;
         } catch (e: any) {
           return {
             response: {
@@ -2039,6 +2042,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             schemaSDL: subgraphSchemaSDL,
             updatedBy: authContext.userId,
             namespaceId: namespace.id,
+            isV2Graph,
           },
           opts.blobStorage,
           {
@@ -2164,10 +2168,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const subgraphSchemaSDL = req.schema;
+        let isV2Graph: boolean | undefined;
 
         try {
           // Here we check if the schema is valid as a subgraph SDL
-          const { errors } = buildSchema(subgraphSchemaSDL);
+          const { errors, normalizationResult } = buildSchema(subgraphSchemaSDL);
           if (errors && errors.length > 0) {
             return {
               response: {
@@ -2178,6 +2183,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               deploymentErrors: [],
             };
           }
+          isV2Graph = normalizationResult?.isVersionTwo;
         } catch (e: any) {
           return {
             response: {
@@ -2297,6 +2303,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   : formatSubscriptionProtocol(req.subscriptionProtocol),
               updatedBy: authContext.userId,
               namespaceId: namespace.id,
+              isV2Graph,
             },
             opts.blobStorage,
             {
@@ -3739,6 +3746,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           lastUpdatedAt: s.lastUpdatedAt,
           targetId: s.targetId,
           subscriptionUrl: s.subscriptionUrl,
+          subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
         }));
 
@@ -4063,6 +4071,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const apiKeyRepo = new ApiKeyRepository(opts.db);
         const auditLogRepo = new AuditLogRepository(opts.db);
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -4102,29 +4111,60 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const generatedAPIKey = ApiKeyGenerator.generate();
 
-        // check if the user is authorized to perform the action
-        for (const targetId of req.federatedGraphTargetIds) {
-          await opts.authorizer.authorize({
-            db: opts.db,
-            graph: {
-              targetId,
-              targetType: 'federatedGraph',
-            },
-            headers: ctx.requestHeader,
-            authContext,
-          });
-        }
+        const rbac = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'rbac',
+        });
 
-        for (const targetId of req.subgraphTargetIds) {
-          await opts.authorizer.authorize({
-            db: opts.db,
-            graph: {
-              targetId,
-              targetType: 'subgraph',
-            },
-            headers: ctx.requestHeader,
-            authContext,
-          });
+        if (rbac?.enabled) {
+          if (req.allowAllResources && !authContext.isAdmin) {
+            return {
+              response: {
+                code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+                details: `You are not authorized to perform the current action. Only admins can create an API key that has access to all resources.`,
+              },
+              apiKey: '',
+            };
+          }
+
+          if (
+            req.federatedGraphTargetIds.length === 0 &&
+            req.subgraphTargetIds.length === 0 &&
+            !req.allowAllResources
+          ) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Can not create an api key without associating it with any resources.`,
+              },
+              apiKey: '',
+            };
+          }
+
+          // check if the user is authorized to perform the action
+          for (const targetId of req.federatedGraphTargetIds) {
+            await opts.authorizer.authorize({
+              db: opts.db,
+              graph: {
+                targetId,
+                targetType: 'federatedGraph',
+              },
+              headers: ctx.requestHeader,
+              authContext,
+            });
+          }
+
+          for (const targetId of req.subgraphTargetIds) {
+            await opts.authorizer.authorize({
+              db: opts.db,
+              graph: {
+                targetId,
+                targetType: 'subgraph',
+              },
+              headers: ctx.requestHeader,
+              authContext,
+            });
+          }
         }
 
         await apiKeyRepo.addAPIKey({
@@ -6461,6 +6501,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             createdUserId: g.creatorUserId,
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
+            subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
           })),
           response: {
@@ -6501,6 +6542,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: subgraph.targetId,
             readme: subgraph.readme,
             subscriptionUrl: subgraph.subscriptionUrl,
+            subscriptionProtocol: subgraph.subscriptionProtocol,
             namespace: subgraph.namespace,
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
@@ -6750,6 +6792,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const federatedGraph = await fedRepo.byName(req.name, req.namespace);
 
         if (!federatedGraph) {
@@ -6816,6 +6860,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
             namespace: g.namespace,
+            subscriptionProtocol: g.subscriptionProtocol,
+            isV2Graph: g.isV2Graph,
           })),
           graphRequestToken: routerRequestToken,
           response: {

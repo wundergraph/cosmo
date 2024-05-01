@@ -302,6 +302,8 @@ message Subgraph {
   string subscriptionUrl = 8;
   string target_id = 9;
   string namespace = 10;
+  string subscriptionProtocol = 11;
+  optional bool isV2Graph = 12;
 }
 
 message GetSubgraphsResponse {
@@ -801,6 +803,7 @@ message CreateAPIKeyRequest {
   repeated string federatedGraphTargetIds = 4;
   repeated string subgraphTargetIds = 5;
   repeated string permissions = 6;
+  bool allowAllResources = 7;
 }
 
 message CreateAPIKeyResponse {

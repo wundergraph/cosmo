@@ -4,6 +4,35 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.76.12](https://github.com/wundergraph/cosmo/compare/studio@0.76.11...studio@0.76.12) (2024-04-30)
+
+### Bug Fixes
+
+* scim server issues ([#754](https://github.com/wundergraph/cosmo/issues/754)) ([3fdf328](https://github.com/wundergraph/cosmo/commit/3fdf32816fde4ffdb3c16e6eb8b2fc9d63ee7e92)) (@JivusAyrus)
+
+## [0.76.11](https://github.com/wundergraph/cosmo/compare/studio@0.76.10...studio@0.76.11) (2024-04-26)
+
+**Note:** Version bump only for package studio
+
+## [0.76.10](https://github.com/wundergraph/cosmo/compare/studio@0.76.9...studio@0.76.10) (2024-04-23)
+
+### Bug Fixes
+
+* upgrade deps to cover CVEs ([#750](https://github.com/wundergraph/cosmo/issues/750)) ([e261beb](https://github.com/wundergraph/cosmo/commit/e261beb8375ca41eb8a2fa4b3223d202c3bb7460)) (@StarpTech)
+
+## [0.76.9](https://github.com/wundergraph/cosmo/compare/studio@0.76.8...studio@0.76.9) (2024-04-23)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@StarpTech)
+
+## [0.76.8](https://github.com/wundergraph/cosmo/compare/studio@0.76.7...studio@0.76.8) (2024-04-17)
+
+### Bug Fixes
+
+* make sure an api key with no resources can not be created ([#728](https://github.com/wundergraph/cosmo/issues/728)) ([7717ff6](https://github.com/wundergraph/cosmo/commit/7717ff6a147c485683a3d26c9e8f3b98173e67ee)) (@JivusAyrus)
+* organization with access to features should be able to enable them on their own ([#730](https://github.com/wundergraph/cosmo/issues/730)) ([8609adc](https://github.com/wundergraph/cosmo/commit/8609adc5a41660f7a88ffd13462f94842bc49ac2)) (@JivusAyrus)
+
 ## [0.76.7](https://github.com/wundergraph/cosmo/compare/studio@0.76.6...studio@0.76.7) (2024-04-12)
 
 ### Bug Fixes

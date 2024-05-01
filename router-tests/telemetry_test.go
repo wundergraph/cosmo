@@ -430,6 +430,13 @@ func TestTelemetry(t *testing.T) {
 			events := sn[7].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
 			require.Equal(t, "exception", events[0].Name)
+
+			// Validate if the root span has the correct status and error
+			require.Equal(t, "query unnamed", sn[9].Name())
+			require.Equal(t, trace.SpanKindServer, sn[9].SpanKind())
+			require.Equal(t, codes.Error, sn[9].Status().Code)
+			require.Contains(t, sn[9].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'query.employees.@'.")
+
 		})
 	})
 
@@ -522,6 +529,92 @@ Downstream errors:
 				otel.WgSubgraphErrorMessage.String("MyErrorMessage"),
 			}, events[2].Attributes)
 
+			// Validate if the root span has the correct status and error
+			require.Equal(t, "query myQuery", sn[9].Name())
+			require.Equal(t, trace.SpanKindServer, sn[9].SpanKind())
+			require.Equal(t, codes.Error, sn[9].Status().Code)
+			require.Contains(t, sn[9].Status().Description, `Failed to fetch from Subgraph '3' at Path: 'query.employees.@'.
+Downstream errors:
+1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
+2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
+`)
+		})
+	})
+
+	t.Run("Operation parsing errors are traced", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `invalid query`,
+			})
+			require.Equal(t, `{"errors":[{"message":"unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]","locations":[{"line":1,"column":1}]}],"data":null}`, res.Body)
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Len(t, sn, 2, "expected 2 spans, got %d", len(sn))
+
+			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, codes.Error, sn[0].Status().Code)
+			require.Contains(t, sn[0].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
+
+			events := sn[0].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL parsing failed")
+			require.Equal(t, "exception", events[0].Name)
+
+			require.Equal(t, "POST /graphql", sn[1].Name())
+			require.Equal(t, trace.SpanKindServer, sn[1].SpanKind())
+			require.Equal(t, codes.Error, sn[1].Status().Code)
+			require.Contains(t, sn[1].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
+
+			events = sn[1].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
+			require.Equal(t, "exception", events[0].Name)
+		})
+	})
+
+	t.Run("Operation normalization errors are traced", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query foo { employeesTypeNotExist { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"field: employeesTypeNotExist not defined on type: Query","path":["query","employeesTypeNotExist"]}],"data":null}`, res.Body)
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Len(t, sn, 3, "expected 3 spans, got %d", len(sn))
+
+			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, codes.Unset, sn[0].Status().Code)
+			require.Empty(t, sn[0].Status().Description)
+
+			require.Empty(t, sn[0].Events())
+
+			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, codes.Error, sn[1].Status().Code)
+			require.Equal(t, sn[1].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+
+			events := sn[1].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL normalization failed")
+			require.Equal(t, "exception", events[0].Name)
+
+			require.Equal(t, "query foo", sn[2].Name())
+			require.Equal(t, trace.SpanKindServer, sn[2].SpanKind())
+			require.Equal(t, codes.Error, sn[2].Status().Code)
+			require.Contains(t, sn[2].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+
+			events = sn[2].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
+			require.Equal(t, "exception", events[0].Name)
 		})
 	})
 }
