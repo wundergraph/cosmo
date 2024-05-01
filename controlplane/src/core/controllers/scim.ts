@@ -279,8 +279,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
 
       const email = emails.find((e) => e.primary === true)?.value || userName;
 
-      const user = await opts.userRepository.byEmail(email);
-      if (user) {
+      const keycloakUsers = await opts.keycloakClient.client.users.find({
+        realm: opts.keycloakRealm,
+        email,
+      });
+
+      if (keycloakUsers.length > 0) {
         return res.code(409).send(
           ScimError({
             detail: 'User already exists in the database.',
@@ -289,12 +293,8 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         );
       }
 
-      const keycloakUsers = await opts.keycloakClient.client.users.find({
-        realm: opts.keycloakRealm,
-        email,
-      });
-
-      if (keycloakUsers.length > 0) {
+      const user = await opts.userRepository.byEmail(email);
+      if (user) {
         return res.code(409).send(
           ScimError({
             detail: 'User already exists in the database.',
