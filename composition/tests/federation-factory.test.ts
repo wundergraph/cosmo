@@ -693,7 +693,7 @@ describe('FederationFactory tests', () => {
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
-        `
+          `
       type Entity {
         enum: Enum!
         enumTwo: EnumTwo! @inaccessible
@@ -746,7 +746,7 @@ describe('FederationFactory tests', () => {
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
       normalizeString(
         versionTwoClientDefinitions +
-        `
+          `
       type Entity {
         enum: Enum!
         field(input: Input!): Int!
