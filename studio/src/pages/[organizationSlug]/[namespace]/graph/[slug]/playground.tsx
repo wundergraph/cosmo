@@ -56,6 +56,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
+import { GraphQLSchema, parse, validate } from "graphql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useMemo, useState } from "react";
@@ -68,6 +69,7 @@ import { z } from "zod";
 const graphiQLFetch = async (
   onFetch: any,
   graphRequestToken: string,
+  schema: GraphQLSchema | null,
   url: URL,
   init: RequestInit,
 ) => {
@@ -87,6 +89,24 @@ const graphiQLFetch = async (
     // add token if trace header is present
     if (hasTraceHeader) {
       headers["X-WG-Token"] = graphRequestToken;
+    }
+
+    if (schema) {
+      const query = JSON.parse(init.body as string)?.query;
+      const errors = validate(schema, parse(query));
+
+      if (errors.length > 0) {
+        const response = Response.json({
+          errors: errors.map((e) => ({
+            message: e.message,
+            path: e.path,
+            locations: e.locations,
+          })),
+          data: null,
+        });
+        onFetch(await response.clone().json());
+        return response;
+      }
     }
 
     const response = await fetch(url, {
@@ -525,11 +545,16 @@ const PlaygroundPage: NextPageWithLayout = () => {
         graphiQLFetch(
           onFetch,
           graphContext?.graphRequestToken!,
+          schema,
           args[0] as URL,
           args[1] as RequestInit,
         ),
     });
-  }, [graphContext?.graph?.routingURL, graphContext?.graphRequestToken]);
+  }, [
+    graphContext?.graph?.routingURL,
+    graphContext?.graphRequestToken,
+    schema,
+  ]);
 
   const { theme } = useTheme();
 

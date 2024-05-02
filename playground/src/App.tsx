@@ -1,15 +1,35 @@
-import { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
+import { GraphQLSchema, buildClientSchema, getIntrospectionQuery, parse, validate } from 'graphql';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
-import { TraceContext, TraceView } from '@/components/playground/trace-view';
 
-const graphiQLFetch = async (onFetch: any, ...args: any) => {
+const graphiQLFetch = async (schema: GraphQLSchema | null, onFetch: any, ...args: any) => {
   try {
+    if (schema) {
+      const query = JSON.parse(args[1].body as string)?.query as string;
+
+      const errors = validate(schema, parse(query));
+
+      if (errors.length > 0) {
+        const response = Response.json({
+          errors: errors.map((e) => ({
+            message: e.message,
+            path: e.path,
+            locations: e.locations,
+          })),
+          data: null,
+        });
+        onFetch(await response.clone().json());
+        return response;
+      }
+    }
+
     // @ts-expect-error
     const response = await fetch(...args);
     onFetch(await response.clone().json());
@@ -100,7 +120,12 @@ const PlaygroundPortal = () => {
 };
 
 export default function App() {
+  const url = '{{graphqlURL}}';
+  // const url = 'http://localhost:3002/graphql';
+
   const [isMounted, setIsMounted] = useState(false);
+
+  const [schema, setSchema] = useState<GraphQLSchema | null>(null);
 
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
@@ -145,19 +170,36 @@ export default function App() {
     setIsMounted(true);
   }, [isMounted]);
 
+  useEffect(() => {
+    const getSchema = async () => {
+      const res = await fetch(url, {
+        body: JSON.stringify({
+          operationName: 'IntrospectionQuery',
+          query: getIntrospectionQuery(),
+        }),
+        method: 'POST',
+      });
+      setSchema(buildClientSchema((await res.json()).data));
+    };
+
+    if (schema) {
+      return;
+    }
+
+    getSchema();
+  }, []);
+
   const fetcher = useMemo(() => {
     const onFetch = (response: any) => {
       setResponse(JSON.stringify(response));
     };
 
-    const url = '{{graphqlURL}}';
-    // const url = "http://localhost:3002/graphql";
     return createGraphiQLFetcher({
       url: url,
       subscriptionUrl: window.location.protocol.replace('http', 'ws') + '//' + window.location.host + url,
-      fetch: (...args) => graphiQLFetch(onFetch, ...args),
+      fetch: (...args) => graphiQLFetch(schema, onFetch, ...args),
     });
-  }, []);
+  }, [schema]);
 
   return (
     <TraceContext.Provider
