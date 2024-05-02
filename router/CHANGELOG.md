@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.84.5](https://github.com/wundergraph/cosmo/compare/router@0.84.4...router@0.84.5) (2024-05-02)
+
+### Bug Fixes
+
+* validate graphql operation in playground ([#763](https://github.com/wundergraph/cosmo/issues/763)) ([41bde5f](https://github.com/wundergraph/cosmo/commit/41bde5f06583242bbc9471e05179c1c16bb2f769)) (@thisisnithin)
+
 ## [0.84.4](https://github.com/wundergraph/cosmo/compare/router@0.84.3...router@0.84.4) (2024-04-30)
 
 ### Bug Fixes
