@@ -4,27 +4,43 @@ import { explorerPlugin } from '@graphiql/plugin-explorer';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
 import { GraphQLSchema, buildClientSchema, getIntrospectionQuery, parse, validate } from 'graphql';
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
+import { TbDevicesCheck } from 'react-icons/tb';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './components/ui/tooltip';
+import { Button } from './components/ui/button';
+import { cn } from './lib/utils';
 
-const graphiQLFetch = async (schema: GraphQLSchema | null, onFetch: any, ...args: any) => {
+const graphiQLFetch = async (
+  schema: GraphQLSchema | null,
+  clientValidationEnabled: boolean,
+  onFetch: any,
+  ...args: any
+) => {
   try {
-    if (schema) {
+    if (schema && clientValidationEnabled) {
       const query = JSON.parse(args[1].body as string)?.query as string;
 
       const errors = validate(schema, parse(query));
 
       if (errors.length > 0) {
-        const response = Response.json({
+        const responseData = {
+          message: 'Client-side validation failed for operation. Request not made to the router.',
           errors: errors.map((e) => ({
             message: e.message,
             path: e.path,
             locations: e.locations,
           })),
-          data: null,
+        };
+
+        const response = new Response(JSON.stringify(responseData), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
+
         onFetch(await response.clone().json());
         return response;
       }
@@ -84,12 +100,39 @@ const ResponseTabs = () => {
   );
 };
 
+const ToggleClientValidation = () => {
+  const { clientValidationEnabled, setClientValidationEnabled } = useContext(TraceContext);
+
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={() => setClientValidationEnabled(!clientValidationEnabled)}
+          variant="ghost"
+          size="icon"
+          className="graphiql-toolbar-button"
+        >
+          <TbDevicesCheck
+            className={cn('graphiql-toolbar-icon', {
+              'text-success': clientValidationEnabled,
+            })}
+          />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1 !text-foreground text-base">
+        {clientValidationEnabled ? 'Client-side validation enabled' : 'Client-side validation disabled'}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById('response-tabs');
   const visDiv = document.getElementById('response-visualization');
   const logo = document.getElementById('graphiql-wg-logo');
+  const toggleClientValidation = document.getElementById('toggle-client-validation');
 
-  if (!tabDiv || !visDiv || !logo) return null;
+  if (!tabDiv || !visDiv || !logo || !toggleClientValidation) return null;
 
   return (
     <>
@@ -115,13 +158,14 @@ const PlaygroundPortal = () => {
         </a>,
         logo,
       )}
+      {createPortal(<ToggleClientValidation />, toggleClientValidation)}
     </>
   );
 };
 
 export default function App() {
-  const url = '{{graphqlURL}}';
-  // const url = 'http://localhost:3002/graphql';
+  // const url = '{{graphqlURL}}';
+  const url = 'http://localhost:3002/graphql';
 
   const [isMounted, setIsMounted] = useState(false);
 
@@ -132,6 +176,8 @@ export default function App() {
 }`);
 
   const [response, setResponse] = useState<string>('');
+
+  const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   useEffect(() => {
     if (isMounted) return;
@@ -167,6 +213,14 @@ export default function App() {
       responseSectionParent.append(div);
     }
 
+    const toolbar = document.getElementsByClassName('graphiql-toolbar')[0] as any as HTMLDivElement;
+
+    if (toolbar) {
+      const toggleClientValidation = document.createElement('div');
+      toggleClientValidation.id = 'toggle-client-validation';
+      toolbar.append(toggleClientValidation);
+    }
+
     setIsMounted(true);
   }, [isMounted]);
 
@@ -197,33 +251,37 @@ export default function App() {
     return createGraphiQLFetcher({
       url: url,
       subscriptionUrl: window.location.protocol.replace('http', 'ws') + '//' + window.location.host + url,
-      fetch: (...args) => graphiQLFetch(schema, onFetch, ...args),
+      fetch: (...args) => graphiQLFetch(schema, clientValidationEnabled, onFetch, ...args),
     });
-  }, [schema]);
+  }, [schema, clientValidationEnabled]);
 
   return (
-    <TraceContext.Provider
-      value={{
-        headers,
-        response,
-        subgraphs: [],
-      }}
-    >
-      <div className="h-screen w-screen">
-        <GraphiQL
-          shouldPersistHeaders
-          showPersistHeadersSettings={false}
-          fetcher={fetcher}
-          headers={headers}
-          onEditHeaders={setHeaders}
-          plugins={[
-            explorerPlugin({
-              showAttribution: false,
-            }),
-          ]}
-        />
-        {isMounted && <PlaygroundPortal />}
-      </div>
-    </TraceContext.Provider>
+    <TooltipProvider>
+      <TraceContext.Provider
+        value={{
+          headers,
+          response,
+          subgraphs: [],
+          clientValidationEnabled,
+          setClientValidationEnabled,
+        }}
+      >
+        <div className="h-screen w-screen">
+          <GraphiQL
+            shouldPersistHeaders
+            showPersistHeadersSettings={false}
+            fetcher={fetcher}
+            headers={headers}
+            onEditHeaders={setHeaders}
+            plugins={[
+              explorerPlugin({
+                showAttribution: false,
+              }),
+            ]}
+          />
+          {isMounted && <PlaygroundPortal />}
+        </div>
+      </TraceContext.Provider>
+    </TooltipProvider>
   );
 }
