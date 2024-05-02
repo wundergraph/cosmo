@@ -101,7 +101,7 @@ const graphiQLFetch = async (
       if (errors.length > 0) {
         const responseData = {
           message:
-            "Client-side validation failed for operation. Request not made to the router.",
+            "Client-side validation failed. The request was not sent to the Router.",
           errors: errors.map((e) => ({
             message: e.message,
             path: e.path,

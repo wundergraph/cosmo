@@ -17,17 +17,18 @@ const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
   onFetch: any,
-  ...args: any
+  url: URL,
+  init: RequestInit,
 ) => {
   try {
     if (schema && clientValidationEnabled) {
-      const query = JSON.parse(args[1].body as string)?.query as string;
+      const query = JSON.parse(init.body as string)?.query as string;
 
       const errors = validate(schema, parse(query));
 
       if (errors.length > 0) {
         const responseData = {
-          message: 'Client-side validation failed for operation. Request not made to the router.',
+          message: 'Client-side validation failed. The request was not sent to the Router.',
           errors: errors.map((e) => ({
             message: e.message,
             path: e.path,
@@ -46,8 +47,7 @@ const graphiQLFetch = async (
       }
     }
 
-    // @ts-expect-error
-    const response = await fetch(...args);
+    const response = await fetch(url, init);
     onFetch(await response.clone().json());
     return response;
   } catch (e) {
@@ -251,7 +251,8 @@ export default function App() {
     return createGraphiQLFetcher({
       url: url,
       subscriptionUrl: window.location.protocol.replace('http', 'ws') + '//' + window.location.host + url,
-      fetch: (...args) => graphiQLFetch(schema, clientValidationEnabled, onFetch, ...args),
+      fetch: (...args) =>
+        graphiQLFetch(schema, clientValidationEnabled, onFetch, args[0] as URL, args[1] as RequestInit),
     });
   }, [schema, clientValidationEnabled]);
 
