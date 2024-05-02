@@ -108,6 +108,7 @@ import {
   invalidStreamConfigurationInputErrorMessage,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
+  invalidUnionMemberTypeError,
   noBaseTypeExtensionError,
   noFieldDefinitionsError,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
@@ -184,6 +185,7 @@ import {
   ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
   SchemaData,
+  UnionDefinitionData,
 } from '../schema-building/type-definition-data';
 import {
   EnumExtensionData,
@@ -323,18 +325,18 @@ export class NormalizationFactory {
     if (BASE_SCALARS.has(namedType)) {
       return { hasUnhandledError: false, typeString: '' };
     }
-    const parentContainer = this.parentDefinitionDataByTypeName.get(namedType);
-    if (!parentContainer) {
+    const parentData = this.parentDefinitionDataByTypeName.get(namedType);
+    if (!parentData) {
       this.errors.push(undefinedTypeError(namedType));
       return { hasUnhandledError: false, typeString: '' };
     }
-    switch (parentContainer.kind) {
+    switch (parentData.kind) {
       case Kind.ENUM_TYPE_DEFINITION:
       case Kind.INPUT_OBJECT_TYPE_DEFINITION:
       case Kind.SCALAR_TYPE_DEFINITION:
         return { hasUnhandledError: false, typeString: '' };
       default:
-        return { hasUnhandledError: true, typeString: kindToTypeString(parentContainer.kind) };
+        return { hasUnhandledError: true, typeString: kindToTypeString(parentData.kind) };
     }
   }
 
@@ -1216,6 +1218,24 @@ export class NormalizationFactory {
     }
   }
 
+  validateUnionMembers(data: UnionDefinitionData) {
+    const invalidMembers: string[] = [];
+    for (const memberName of data.memberByMemberTypeName.keys()) {
+      const memberData =
+        this.parentDefinitionDataByTypeName.get(memberName) || this.parentExtensionDataByTypeName.get(memberName);
+      // Invalid references are propagated as an error elsewhere
+      if (!memberData) {
+        continue;
+      }
+      if (memberData.kind !== Kind.OBJECT_TYPE_DEFINITION && memberData.kind !== Kind.OBJECT_TYPE_EXTENSION) {
+        invalidMembers.push(`"${memberName}", which is type "${kindToTypeString(memberData.kind)}"`);
+      }
+    }
+    if (invalidMembers.length > 0) {
+      this.errors.push(invalidUnionMemberTypeError(data.name, invalidMembers));
+    }
+  }
+
   normalize(document: DocumentNode): NormalizationResultContainer {
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
     after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
@@ -1446,6 +1466,7 @@ export class NormalizationFactory {
               parentExtensionData as UnionExtensionData,
             ),
           );
+          this.validateUnionMembers(parentDefinitionData);
           break;
         default:
           throw unexpectedKindFatalError(extensionTypeName);
@@ -1544,6 +1565,7 @@ export class NormalizationFactory {
           definitions.push(
             getUnionNodeByData(parentDefinitionData, this.errors, this.directiveDefinitionByDirectiveName),
           );
+          this.validateUnionMembers(parentDefinitionData);
           break;
         default:
           throw unexpectedKindFatalError(parentTypeName);

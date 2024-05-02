@@ -249,14 +249,8 @@ export function unresolvableFieldError(
 }
 
 export function undefinedTypeError(typeName: string): Error {
-  return new Error(`The type "${typeName}" was referenced in the schema, but it was never defined.`);
+  return new Error(` The type "${typeName}" was referenced in the schema, but it was never defined.`);
 }
-
-export const federationRequiredInputFieldError = (parentName: string, fieldName: string) =>
-  new Error(
-    `Input object field "${parentName}.${fieldName}" is required in at least one subgraph; ` +
-      `consequently, "${fieldName}" must be defined in all subgraphs that also define "${parentName}".`,
-  );
 
 export function invalidRepeatedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
   return (
@@ -1163,7 +1157,7 @@ export function invalidImplementedTypeError(
 ): Error {
   let message =
     ` Only interfaces can be implemented. However, the type "${typeName}" attempts to implement` +
-    `the following invalid type` +
+    ` the following invalid type` +
     (invalidImplementationTypeStringByTypeName.size > 1 ? `s` : ``) +
     `:\n`;
   for (const [typeName, typeString] of invalidImplementationTypeStringByTypeName) {
@@ -1217,5 +1211,14 @@ export function inaccessibleRequiredArgumentError(
   return new Error(
     `The argument "${argumentName}" on path "${argumentPath}" is declared @inaccessible;` +
       ` however, it is a required argument for field "${fieldName}".`,
+  );
+}
+
+export function invalidUnionMemberTypeError(typeName: string, invalidMembers: string[]): Error {
+  return new Error(
+    ` The union "${typeName}" defines the following member` +
+      (invalidMembers.length > 1 ? `s that are not object types` : ` that is not an object type`) +
+      `:\n  ` +
+      invalidMembers.join(`\n  `),
   );
 }

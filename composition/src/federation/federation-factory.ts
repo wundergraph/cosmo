@@ -1085,9 +1085,6 @@ export class FederationFactory {
     const isParentInaccessible = isNodeDataInaccessible(baseData);
     if (isParentInaccessible) {
       this.inaccessiblePaths.add(incomingData.name);
-      // if (this.graph.hasNode(incomingData.name)) {
-      //   this.graph.dropNode(incomingData.name);
-      // }
     }
     if (incomingData.persistedDirectivesData.tags.size > 0) {
       const tagNames = getValueOrDefault(this.tagNamesByPath, incomingData.name, () => new Set<string>());
