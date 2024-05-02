@@ -75,8 +75,8 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	var definition ast.Document
 	var report operationreport.Report
 	// The client schema may not be present in old configs
-	if routerConfig.EngineConfig.GraphqlClientSchema != nil {
-		definition, report = astparser.ParseGraphqlDocumentString(*routerConfig.EngineConfig.GraphqlClientSchema)
+	if routerConfig.EngineConfig.GetGraphqlClientSchema() != "" {
+		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GetGraphqlClientSchema())
 	} else {
 		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
 	}
