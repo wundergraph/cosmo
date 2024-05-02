@@ -1,17 +1,53 @@
-import { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
+import { GraphQLSchema, buildClientSchema, getIntrospectionQuery, parse, validate } from 'graphql';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
-import { TraceContext, TraceView } from '@/components/playground/trace-view';
+import { TbDevicesCheck } from 'react-icons/tb';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './components/ui/tooltip';
+import { Button } from './components/ui/button';
+import { cn } from './lib/utils';
 
-const graphiQLFetch = async (onFetch: any, ...args: any) => {
+const graphiQLFetch = async (
+  schema: GraphQLSchema | null,
+  clientValidationEnabled: boolean,
+  onFetch: any,
+  url: URL,
+  init: RequestInit,
+) => {
   try {
-    // @ts-expect-error
-    const response = await fetch(...args);
+    if (schema && clientValidationEnabled) {
+      const query = JSON.parse(init.body as string)?.query as string;
+
+      const errors = validate(schema, parse(query));
+
+      if (errors.length > 0) {
+        const responseData = {
+          message: 'Client-side validation failed. The request was not sent to the Router.',
+          errors: errors.map((e) => ({
+            message: e.message,
+            path: e.path,
+            locations: e.locations,
+          })),
+        };
+
+        const response = new Response(JSON.stringify(responseData), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        onFetch(await response.clone().json());
+        return response;
+      }
+    }
+
+    const response = await fetch(url, init);
     onFetch(await response.clone().json());
     return response;
   } catch (e) {
@@ -64,12 +100,39 @@ const ResponseTabs = () => {
   );
 };
 
+const ToggleClientValidation = () => {
+  const { clientValidationEnabled, setClientValidationEnabled } = useContext(TraceContext);
+
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={() => setClientValidationEnabled(!clientValidationEnabled)}
+          variant="ghost"
+          size="icon"
+          className="graphiql-toolbar-button"
+        >
+          <TbDevicesCheck
+            className={cn('graphiql-toolbar-icon', {
+              'text-success': clientValidationEnabled,
+            })}
+          />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1 !text-foreground text-base">
+        {clientValidationEnabled ? 'Client-side validation enabled' : 'Client-side validation disabled'}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById('response-tabs');
   const visDiv = document.getElementById('response-visualization');
   const logo = document.getElementById('graphiql-wg-logo');
+  const toggleClientValidation = document.getElementById('toggle-client-validation');
 
-  if (!tabDiv || !visDiv || !logo) return null;
+  if (!tabDiv || !visDiv || !logo || !toggleClientValidation) return null;
 
   return (
     <>
@@ -95,18 +158,26 @@ const PlaygroundPortal = () => {
         </a>,
         logo,
       )}
+      {createPortal(<ToggleClientValidation />, toggleClientValidation)}
     </>
   );
 };
 
 export default function App() {
+  const url = '{{graphqlURL}}';
+  // const url = 'http://localhost:3002/graphql';
+
   const [isMounted, setIsMounted] = useState(false);
+
+  const [schema, setSchema] = useState<GraphQLSchema | null>(null);
 
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
 }`);
 
   const [response, setResponse] = useState<string>('');
+
+  const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   useEffect(() => {
     if (isMounted) return;
@@ -142,46 +213,76 @@ export default function App() {
       responseSectionParent.append(div);
     }
 
+    const toolbar = document.getElementsByClassName('graphiql-toolbar')[0] as any as HTMLDivElement;
+
+    if (toolbar) {
+      const toggleClientValidation = document.createElement('div');
+      toggleClientValidation.id = 'toggle-client-validation';
+      toolbar.append(toggleClientValidation);
+    }
+
     setIsMounted(true);
   }, [isMounted]);
+
+  useEffect(() => {
+    const getSchema = async () => {
+      const res = await fetch(url, {
+        body: JSON.stringify({
+          operationName: 'IntrospectionQuery',
+          query: getIntrospectionQuery(),
+        }),
+        method: 'POST',
+      });
+      setSchema(buildClientSchema((await res.json()).data));
+    };
+
+    if (schema) {
+      return;
+    }
+
+    getSchema();
+  }, []);
 
   const fetcher = useMemo(() => {
     const onFetch = (response: any) => {
       setResponse(JSON.stringify(response));
     };
 
-    const url = '{{graphqlURL}}';
-    // const url = "http://localhost:3002/graphql";
     return createGraphiQLFetcher({
       url: url,
       subscriptionUrl: window.location.protocol.replace('http', 'ws') + '//' + window.location.host + url,
-      fetch: (...args) => graphiQLFetch(onFetch, ...args),
+      fetch: (...args) =>
+        graphiQLFetch(schema, clientValidationEnabled, onFetch, args[0] as URL, args[1] as RequestInit),
     });
-  }, []);
+  }, [schema, clientValidationEnabled]);
 
   return (
-    <TraceContext.Provider
-      value={{
-        headers,
-        response,
-        subgraphs: [],
-      }}
-    >
-      <div className="h-screen w-screen">
-        <GraphiQL
-          shouldPersistHeaders
-          showPersistHeadersSettings={false}
-          fetcher={fetcher}
-          headers={headers}
-          onEditHeaders={setHeaders}
-          plugins={[
-            explorerPlugin({
-              showAttribution: false,
-            }),
-          ]}
-        />
-        {isMounted && <PlaygroundPortal />}
-      </div>
-    </TraceContext.Provider>
+    <TooltipProvider>
+      <TraceContext.Provider
+        value={{
+          headers,
+          response,
+          subgraphs: [],
+          clientValidationEnabled,
+          setClientValidationEnabled,
+        }}
+      >
+        <div className="h-screen w-screen">
+          <GraphiQL
+            shouldPersistHeaders
+            showPersistHeadersSettings={false}
+            fetcher={fetcher}
+            headers={headers}
+            onEditHeaders={setHeaders}
+            plugins={[
+              explorerPlugin({
+                showAttribution: false,
+              }),
+            ]}
+          />
+          {isMounted && <PlaygroundPortal />}
+        </div>
+      </TraceContext.Provider>
+    </TooltipProvider>
   );
 }

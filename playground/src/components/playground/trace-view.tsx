@@ -18,10 +18,14 @@ export const TraceContext = createContext<{
   subgraphs: { id: string; name: string }[];
   headers: string;
   response: string;
+  clientValidationEnabled: boolean;
+  setClientValidationEnabled: (val: boolean) => void;
 }>({
   subgraphs: [],
   headers: '',
   response: '',
+  clientValidationEnabled: true,
+  setClientValidationEnabled: () => {},
 });
 
 const Trace = ({

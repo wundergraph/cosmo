@@ -440,14 +440,18 @@ export const getRootDescription = (name: string) => {
 export const parseSchema = (schema?: string) => {
   if (!schema) return null;
 
-  const doc = parse(schema);
+  try {
+    const doc = parse(schema);
 
-  const ast = buildASTSchema(doc, {
-    assumeValid: true,
-    assumeValidSDL: true,
-  });
+    const ast = buildASTSchema(doc, {
+      assumeValid: true,
+      assumeValidSDL: true,
+    });
 
-  return ast;
+    return ast;
+  } catch {
+    return null;
+  }
 };
 
 export const formatAndParseSchema = async (schema?: string) => {

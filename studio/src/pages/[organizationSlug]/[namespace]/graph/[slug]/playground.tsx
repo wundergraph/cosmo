@@ -38,6 +38,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
+import { cn } from "@/lib/utils";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
@@ -56,6 +57,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
+import { GraphQLSchema, parse, validate } from "graphql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useMemo, useState } from "react";
@@ -63,11 +65,14 @@ import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
 import { FiSave } from "react-icons/fi";
 import { PiBracketsCurly, PiDevices } from "react-icons/pi";
+import { TbDevicesCheck } from "react-icons/tb";
 import { z } from "zod";
 
 const graphiQLFetch = async (
   onFetch: any,
   graphRequestToken: string,
+  schema: GraphQLSchema | null,
+  clientValidationEnabled: boolean,
   url: URL,
   init: RequestInit,
 ) => {
@@ -87,6 +92,32 @@ const graphiQLFetch = async (
     // add token if trace header is present
     if (hasTraceHeader) {
       headers["X-WG-Token"] = graphRequestToken;
+    }
+
+    if (schema && clientValidationEnabled) {
+      const query = JSON.parse(init.body as string)?.query;
+      const errors = validate(schema, parse(query));
+
+      if (errors.length > 0) {
+        const responseData = {
+          message:
+            "Client-side validation failed. The request was not sent to the Router.",
+          errors: errors.map((e) => ({
+            message: e.message,
+            path: e.path,
+            locations: e.locations,
+          })),
+        };
+
+        const response = new Response(JSON.stringify(responseData), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        onFetch(await response.clone().json());
+        return response;
+      }
     }
 
     const response = await fetch(url, {
@@ -385,18 +416,51 @@ const ResponseTabs = () => {
   );
 };
 
+const ToggleClientValidation = () => {
+  const { clientValidationEnabled, setClientValidationEnabled } =
+    useContext(TraceContext);
+
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={() => setClientValidationEnabled(!clientValidationEnabled)}
+          variant="ghost"
+          size="icon"
+          className="graphiql-toolbar-button"
+        >
+          <TbDevicesCheck
+            className={cn("graphiql-toolbar-icon", {
+              "text-success": clientValidationEnabled,
+            })}
+          />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1">
+        {clientValidationEnabled
+          ? "Client-side validation enabled"
+          : "Client-side validation disabled"}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById("response-tabs");
   const visDiv = document.getElementById("response-visualization");
   const saveDiv = document.getElementById("save-button");
+  const toggleClientValidation = document.getElementById(
+    "toggle-client-validation",
+  );
 
-  if (!tabDiv || !visDiv || !saveDiv) return null;
+  if (!tabDiv || !visDiv || !saveDiv || !toggleClientValidation) return null;
 
   return (
     <>
       {createPortal(<ResponseTabs />, tabDiv)}
       {createPortal(<TraceView />, visDiv)}
       {createPortal(<PersistOperation />, saveDiv)}
+      {createPortal(<ToggleClientValidation />, toggleClientValidation)}
     </>
   );
 };
@@ -426,6 +490,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
   "X-WG-TRACE" : "true"
 }`);
   const [response, setResponse] = useState<string>("");
+
+  const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
 
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -465,9 +531,13 @@ const PlaygroundPage: NextPageWithLayout = () => {
     )[0] as any as HTMLDivElement;
 
     if (toolbar) {
-      const div = document.createElement("div");
-      div.id = "save-button";
-      toolbar.append(div);
+      const saveButton = document.createElement("div");
+      saveButton.id = "save-button";
+      toolbar.append(saveButton);
+
+      const toggleClientValidation = document.createElement("div");
+      toggleClientValidation.id = "toggle-client-validation";
+      toolbar.append(toggleClientValidation);
     }
 
     setIsMounted(true);
@@ -525,11 +595,18 @@ const PlaygroundPage: NextPageWithLayout = () => {
         graphiQLFetch(
           onFetch,
           graphContext?.graphRequestToken!,
+          schema,
+          clientValidationEnabled,
           args[0] as URL,
           args[1] as RequestInit,
         ),
     });
-  }, [graphContext?.graph?.routingURL, graphContext?.graphRequestToken]);
+  }, [
+    graphContext?.graph?.routingURL,
+    graphContext?.graphRequestToken,
+    schema,
+    clientValidationEnabled,
+  ]);
 
   const { theme } = useTheme();
 
@@ -557,6 +634,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         headers,
         response,
         subgraphs: graphContext.subgraphs,
+        clientValidationEnabled,
+        setClientValidationEnabled,
       }}
     >
       <div className="hidden h-full flex-1 pl-2.5 md:flex">
