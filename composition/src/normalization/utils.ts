@@ -784,7 +784,3 @@ export function validateAndAddDirectivesWithFieldSetToConfigurationData(
 export function isNodeQuery(typeName: string, operationTypeNode?: OperationTypeNode): boolean {
   return typeName === QUERY || operationTypeNode === OperationTypeNode.QUERY;
 }
-
-export function isNodeRootType(typeName: string): boolean {
-  return ROOT_TYPES.has(typeName);
-}

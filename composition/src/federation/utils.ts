@@ -32,17 +32,8 @@ export type RootTypeFieldData = {
   subgraphs: Set<string>;
 };
 
-export type ParentTagDataKind =
-  | Kind.ENUM_TYPE_DEFINITION
-  | Kind.INPUT_OBJECT_TYPE_DEFINITION
-  | Kind.INTERFACE_TYPE_DEFINITION
-  | Kind.OBJECT_TYPE_DEFINITION
-  | Kind.SCALAR_TYPE_DEFINITION
-  | Kind.UNION_TYPE_DEFINITION;
-
 export type ParentTagData = {
   childTagDataByChildName: Map<string, ChildTagData>;
-  // kind: ParentTagDataKind;
   tagNames: Set<string>;
   typeName: string;
 };
@@ -55,11 +46,8 @@ export function newParentTagData(typeName: string): ParentTagData {
   };
 }
 
-export type ChildTagDataKind = Kind.ENUM_VALUE_DEFINITION | Kind.FIELD_DEFINITION | Kind.INPUT_VALUE_DEFINITION;
-
 export type ChildTagData = {
   name: string;
-  // kind: ChildTagDataKind;
   tagNames: Set<string>;
   tagNamesByArgumentName: Map<string, Set<string>>;
 };
