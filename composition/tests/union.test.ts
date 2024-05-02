@@ -20,21 +20,13 @@ describe('Union tests', () => {
     test('that an error is returned if non-objects are defined as union members through an extension', () => {
       const { errors } = normalizeSubgraph(subgraphB.definitions);
       expect(errors).toBeDefined();
-      expect(errors![0]).toStrictEqual(
-        invalidUnionMemberTypeError('Union', [
-          '"Scalar", which is type "scalar"',
-        ]),
-      );
+      expect(errors![0]).toStrictEqual(invalidUnionMemberTypeError('Union', ['"Scalar", which is type "scalar"']));
     });
 
     test('that an error is returned if non-objects are defined as union members and the union is extended', () => {
       const { errors } = normalizeSubgraph(subgraphC.definitions);
       expect(errors).toBeDefined();
-      expect(errors![0]).toStrictEqual(
-        invalidUnionMemberTypeError('Union', [
-          '"Scalar", which is type "scalar"',
-        ]),
-      );
+      expect(errors![0]).toStrictEqual(invalidUnionMemberTypeError('Union', ['"Scalar", which is type "scalar"']));
     });
   });
 });
