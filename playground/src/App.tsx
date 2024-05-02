@@ -164,8 +164,8 @@ const PlaygroundPortal = () => {
 };
 
 export default function App() {
-  // const url = '{{graphqlURL}}';
-  const url = 'http://localhost:3002/graphql';
+  const url = '{{graphqlURL}}';
+  // const url = 'http://localhost:3002/graphql';
 
   const [isMounted, setIsMounted] = useState(false);
 
