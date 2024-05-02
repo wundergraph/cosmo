@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import FetchMonographCommand from '../common/fetch.js';
+import FetchMonographCommand from '../common/fetch-schema.js';
 import GetMonographChangelog from '../common/changelog.js';
 import { checkAuth } from '../../auth/utils.js';
 import CreateMonographCommand from './commands/create.js';

@@ -89,7 +89,13 @@ func NewDefaultFactoryResolver(
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.httpClient, d.streamingClient, d.engineCtx, graphql_datasource.WithLogger(d.factoryLogger))
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+		d.httpClient,
+		d.streamingClient,
+		d.engineCtx,
+		graphql_datasource.WithLogger(d.factoryLogger),
+		graphql_datasource.WithWSSubProtocol(graphql_datasource.ProtocolGraphQLTWS),
+	)
 
 	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, subscriptionClient)
 	return factory, err

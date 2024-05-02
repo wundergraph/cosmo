@@ -1970,9 +1970,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const subgraphSchemaSDL = req.schema;
 
+        let isV2Graph: boolean | undefined;
+
         try {
           // Here we check if the schema is valid as a subgraph SDL
-          const { errors } = buildSchema(subgraphSchemaSDL);
+          const { errors, normalizationResult } = buildSchema(subgraphSchemaSDL);
           if (errors && errors.length > 0) {
             return {
               response: {
@@ -1983,6 +1985,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               deploymentErrors: [],
             };
           }
+          isV2Graph = normalizationResult?.isVersionTwo;
         } catch (e: any) {
           return {
             response: {
@@ -2039,6 +2042,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             schemaSDL: subgraphSchemaSDL,
             updatedBy: authContext.userId,
             namespaceId: namespace.id,
+            isV2Graph,
           },
           opts.blobStorage,
           {
@@ -2164,10 +2168,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const subgraphSchemaSDL = req.schema;
+        let isV2Graph: boolean | undefined;
 
         try {
           // Here we check if the schema is valid as a subgraph SDL
-          const { errors } = buildSchema(subgraphSchemaSDL);
+          const { errors, normalizationResult } = buildSchema(subgraphSchemaSDL);
           if (errors && errors.length > 0) {
             return {
               response: {
@@ -2178,6 +2183,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               deploymentErrors: [],
             };
           }
+          isV2Graph = normalizationResult?.isVersionTwo;
         } catch (e: any) {
           return {
             response: {
@@ -2297,6 +2303,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   : formatSubscriptionProtocol(req.subscriptionProtocol),
               updatedBy: authContext.userId,
               namespaceId: namespace.id,
+              isV2Graph,
             },
             opts.blobStorage,
             {
@@ -3739,6 +3746,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           lastUpdatedAt: s.lastUpdatedAt,
           targetId: s.targetId,
           subscriptionUrl: s.subscriptionUrl,
+          subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
         }));
 
@@ -3924,7 +3932,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.keycloakClient.authenticateClient();
 
-        const user = await userRepo.byEmail(req.email);
+        const keycloakUser = await opts.keycloakClient.client.users.find({
+          max: 1,
+          email: req.email,
+          realm: opts.keycloakRealm,
+          exact: true,
+        });
+
+        let keycloakUserID;
+
+        if (keycloakUser.length === 0) {
+          keycloakUserID = await opts.keycloakClient.addKeycloakUser({
+            email: req.email,
+            isPasswordTemp: true,
+            realm: opts.keycloakRealm,
+          });
+        } else {
+          keycloakUserID = keycloakUser[0].id;
+        }
+
+        const user = await userRepo.byId(keycloakUserID!);
+
         if (user) {
           const orgMember = await orgRepo.getOrganizationMember({
             organizationID: authContext.organizationId,
@@ -3984,25 +4012,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               },
             };
           }
-        }
-
-        const keycloakUser = await opts.keycloakClient.client.users.find({
-          max: 1,
-          email: req.email,
-          realm: opts.keycloakRealm,
-          exact: true,
-        });
-
-        let keycloakUserID;
-
-        if (keycloakUser.length === 0) {
-          keycloakUserID = await opts.keycloakClient.addKeycloakUser({
-            email: req.email,
-            isPasswordTemp: true,
-            realm: opts.keycloakRealm,
-          });
-        } else {
-          keycloakUserID = keycloakUser[0].id;
         }
 
         const userMemberships = await orgRepo.memberships({ userId: keycloakUserID! });
@@ -4108,7 +4117,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureId: 'rbac',
         });
 
-        if (rbac) {
+        if (rbac?.enabled) {
           if (req.allowAllResources && !authContext.isAdmin) {
             return {
               response: {
@@ -4277,7 +4286,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const user = await userRepo.byEmail(req.email);
+        await opts.keycloakClient.authenticateClient();
+
+        const keycloakUser = await opts.keycloakClient.client.users.find({
+          max: 1,
+          email: req.email,
+          realm: opts.keycloakRealm,
+          exact: true,
+        });
+        if (keycloakUser.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${req.email} not found`,
+            },
+          };
+        }
+        const keycloakUserID = keycloakUser[0].id;
+        const user = await userRepo.byId(keycloakUserID!);
         if (!user) {
           return {
             response: {
@@ -4385,7 +4411,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const user = await userRepo.byEmail(req.email);
+        const keycloakUser = await opts.keycloakClient.client.users.find({
+          max: 1,
+          email: req.email,
+          realm: opts.keycloakRealm,
+          exact: true,
+        });
+        if (keycloakUser.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${req.email} not found`,
+            },
+          };
+        }
+
+        const keycloakUserID = keycloakUser[0].id;
+        const user = await userRepo.byId(keycloakUserID!);
         if (!user) {
           return {
             response: {
@@ -6229,9 +6271,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         req.namespace = req.namespace || DefaultNamespace;
 
-        // check if the user to be added exists and if the user is the member of the org
-        const user = await userRepo.byEmail(req.userEmail);
-        if (!user) {
+        await opts.keycloakClient.authenticateClient();
+
+        // check if the user to be added exists
+        const keycloakUser = await opts.keycloakClient.client.users.find({
+          max: 1,
+          email: req.userEmail,
+          realm: opts.keycloakRealm,
+          exact: true,
+        });
+        if (keycloakUser.length === 0) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -6239,6 +6288,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           };
         }
+
+        const keycloakUserID = keycloakUser[0].id;
+        const user = await userRepo.byId(keycloakUserID!);
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${req.userEmail} not found`,
+            },
+          };
+        }
+
+        // check if the user is the member of the org
         const isMember = await orgRepo.isMemberOf({ organizationId: authContext.organizationId, userId: user.id });
         if (!isMember) {
           return {
@@ -6493,6 +6555,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             createdUserId: g.creatorUserId,
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
+            subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
           })),
           response: {
@@ -6533,6 +6596,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: subgraph.targetId,
             readme: subgraph.readme,
             subscriptionUrl: subgraph.subscriptionUrl,
+            subscriptionProtocol: subgraph.subscriptionProtocol,
             namespace: subgraph.namespace,
           },
           members: await subgraphRepo.getSubgraphMembers(subgraph.id),
@@ -6782,6 +6846,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
+        req.namespace = req.namespace || DefaultNamespace;
+
         const federatedGraph = await fedRepo.byName(req.name, req.namespace);
 
         if (!federatedGraph) {
@@ -6848,6 +6914,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: g.targetId,
             subscriptionUrl: g.subscriptionUrl,
             namespace: g.namespace,
+            subscriptionProtocol: g.subscriptionProtocol,
+            isV2Graph: g.isV2Graph,
           })),
           graphRequestToken: routerRequestToken,
           response: {
