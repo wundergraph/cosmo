@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.76.13](https://github.com/wundergraph/cosmo/compare/studio@0.76.12...studio@0.76.13) (2024-05-02)
+
+### Bug Fixes
+
+* validate graphql operation in playground ([#763](https://github.com/wundergraph/cosmo/issues/763)) ([41bde5f](https://github.com/wundergraph/cosmo/commit/41bde5f06583242bbc9471e05179c1c16bb2f769)) (@thisisnithin)
+
 ## [0.76.12](https://github.com/wundergraph/cosmo/compare/studio@0.76.11...studio@0.76.12) (2024-04-30)
 
 ### Bug Fixes
