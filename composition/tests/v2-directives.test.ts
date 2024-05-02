@@ -5,7 +5,7 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 import { parse } from 'graphql';
 
@@ -15,7 +15,7 @@ describe('V2 Directives Tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
         type Entity {
           age: Int!

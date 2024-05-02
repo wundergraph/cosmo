@@ -7,7 +7,7 @@ import {
   schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
   versionOneSchemaQueryAndPersistedDirectiveDefinitions,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 
 describe('Field resolvability tests', () => {
@@ -16,7 +16,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Nested {
         nest: Nested2
@@ -161,7 +161,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Friend {
         age: Int!
@@ -316,7 +316,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
         type Friend {
           name: String!

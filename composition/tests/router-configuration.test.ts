@@ -608,6 +608,41 @@ describe('Router Configuration tests', () => {
         ]),
       );
     });
+
+    test('that nested external fields that are part of a key FieldSet are added to configuration', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+      type Entity @key(fields: "id object { id }") {
+        id: ID @external
+        object: Object! @external
+      }
+      type Object {
+        id: ID! @external
+      }
+    `);
+      expect(errors).toBeUndefined();
+      const configurationData = normalizationResult!.configurationDataByParentTypeName;
+      expect(configurationData).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              typeName: 'Entity',
+              fieldNames: new Set<string>(['id', 'object']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id object { id }' }],
+            },
+          ],
+          [
+            'Object',
+            {
+              typeName: 'Object',
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+            },
+          ],
+        ]),
+      );
+    });
   });
 
   describe('Federation tests', () => {

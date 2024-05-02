@@ -14,6 +14,7 @@ export type ObjectExtensionData = {
   fieldDataByFieldName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
   isEntity: boolean;
+  isInaccessible: boolean;
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_EXTENSION;
   name: string;
