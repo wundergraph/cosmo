@@ -1530,7 +1530,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             admissionWebhookURL: req.admissionWebhookUrl,
           });
 
-          await contractRepo.create({
+          const contract = await contractRepo.create({
             sourceFederatedGraphId: sourceGraph.id,
             downstreamFederatedGraphId: contractGraph.id,
             includeTags: req.includeTags,
@@ -1557,7 +1557,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
 
           const deployment = await contractRepo.deployContract({
-            contractGraph,
+            contractGraph: {
+              ...contractGraph,
+              contract,
+            },
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
             admissionConfig: {
@@ -1837,6 +1840,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const schemaLintRepo = new SchemaLintRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -1963,6 +1967,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
         const inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
+        const contractErrors: PlainMessage<CompositionError>[] = [];
 
         let inspectorChanges: InspectorSchemaChange[] = [];
         try {
@@ -1983,10 +1988,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const limit = changeRetention?.limit ?? 7;
 
+        const checkedCompositions: { id: string; hasErrors: boolean }[] = [];
+
         for (const composition of result.compositions) {
           await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
 
-          // We collect composition errors for all federated graphs
+          // Skip contracts if composition for the federated graph has errors
           if (composition.errors.length > 0) {
             for (const error of composition.errors) {
               compositionErrors.push({
@@ -1995,41 +2002,77 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 namespace: composition.namespace,
               });
             }
+            continue;
           }
 
-          // We don't collect operation usage when we have composition errors or
-          // when we don't have any inspectable changes. That means any breaking change is really breaking
-          if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
-            if (limit <= 0) {
-              continue;
-            }
+          checkedCompositions.push({
+            id: composition.id,
+            hasErrors: composition.errors.length > 0,
+          });
 
-            const result = await trafficInspector.inspect(inspectorChanges, {
-              daysToConsider: limit,
-              federatedGraphId: composition.id,
-              organizationId: authContext.organizationId,
-            });
+          const contracts = await contractRepo.bySourceFederatedGraphId(composition.id);
 
-            if (result.size > 0) {
-              const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
-                changes: storedBreakingChanges,
-                inspectorResultsByChangeId: result,
-                namespaceId: composition.namespaceId,
+          for (const contract of contracts) {
+            /* 
+            const {filteredSchema, errors } = filter()
+
+            await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, contract.id, limit);
+
+            for (const error of errors) {
+              contractErrors.push({
+                message: error.message,
+                federatedGraphName: contract.name,
+                namespace: contract.namespace,
               });
-
-              hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
-
-              // Store operation usage
-              await schemaCheckRepo.createOperationUsage(overrideCheck.result, composition.id);
-
-              // Collect all inspected operations for later aggregation
-              for (const resultElement of overrideCheck.result.values()) {
-                inspectedOperations.push(...resultElement);
-              }
             }
+
+            checkedCompositions.push({
+              id: contract.id,
+              hasErrors: errors.length > 0,
+            });
+            */
           }
         }
 
+        for (const composition of checkedCompositions) {
+          // We don't collect operation usage when we have composition errors or
+          // when we don't have any inspectable changes. That means any breaking change is really breaking
+          if (composition.hasErrors || !isInspectable || inspectorChanges.length === 0) {
+            continue;
+          }
+
+          if (limit <= 0) {
+            continue;
+          }
+
+          const result = await trafficInspector.inspect(inspectorChanges, {
+            daysToConsider: limit,
+            federatedGraphId: composition.id,
+            organizationId: authContext.organizationId,
+          });
+
+          if (result.size === 0) {
+            continue;
+          }
+
+          const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
+            changes: storedBreakingChanges,
+            inspectorResultsByChangeId: result,
+            namespaceId: namespace.id,
+          });
+
+          hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
+
+          // Store operation usage
+          await schemaCheckRepo.createOperationUsage(overrideCheck.result, composition.id);
+
+          // Collect all inspected operations for later aggregation
+          for (const resultElement of overrideCheck.result.values()) {
+            inspectedOperations.push(...resultElement);
+          }
+        }
+
+        // TODO: Lint contract schemas
         let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
         if (namespace.enableLinting && newSchemaSDL !== '') {
           const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);

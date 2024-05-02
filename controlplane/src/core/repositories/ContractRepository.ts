@@ -16,20 +16,22 @@ export class ContractRepository {
     private organizationId: string,
   ) {}
 
-  public create(data: {
+  public async create(data: {
     sourceFederatedGraphId: string;
     downstreamFederatedGraphId: string;
     includeTags: string[];
     excludeTags: string[];
     actorId: string;
   }) {
-    return this.db
+    const res = await this.db
       .insert(schema.contracts)
       .values({
         ...data,
         createdById: data.actorId,
       })
       .returning();
+
+    return res[0];
   }
 
   public async update(data: { id: string; includeTags: string[]; excludeTags: string[]; actorId: string }) {
