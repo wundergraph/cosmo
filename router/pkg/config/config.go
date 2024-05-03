@@ -250,28 +250,53 @@ type CDNConfiguration struct {
 	CacheSize BytesString `yaml:"cache_size,omitempty" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
 }
 
-type TokenBasedAuthentication struct {
+type NatTokenBasedAuthentication struct {
 	Token *string `yaml:"token,omitempty"`
 }
 
-type UsernamePasswordBasedAuthentication struct {
+type NatsCredentialsAuthentication struct {
 	Password *string `yaml:"password,omitempty"`
 	Username *string `yaml:"username,omitempty"`
 }
 
-type Authentication struct {
-	UsernamePasswordBasedAuthentication `yaml:",inline"`
-	TokenBasedAuthentication            `yaml:",inline"`
+type NatsAuthentication struct {
+	NatsCredentialsAuthentication `yaml:",inline"`
+	NatTokenBasedAuthentication   `yaml:",inline"`
 }
 
-type EventSource struct {
-	Provider       string          `yaml:"provider,omitempty"`
-	URL            string          `yaml:"url,omitempty"`
-	Authentication *Authentication `yaml:"authentication,omitempty"`
+type NatsEventSource struct {
+	ID             string              `yaml:"id,omitempty"`
+	URL            string              `yaml:"url,omitempty"`
+	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
+}
+
+type KafkaSASLAuthentication struct {
+	Password *string `yaml:"password,omitempty"`
+	Username *string `yaml:"username,omitempty"`
+}
+
+type KafkaAuthentication struct {
+	KafkaSASLAuthentication `yaml:",inline"`
+}
+
+type KafkaTLSConfiguration struct {
+	Enabled bool `yaml:"enabled" default:"false"`
+}
+
+type KafkaEventSource struct {
+	ID             string                 `yaml:"id,omitempty"`
+	Brokers        []string               `yaml:"brokers,omitempty"`
+	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
+	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+}
+
+type EventProviders struct {
+	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
+	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
 }
 
 type EventsConfiguration struct {
-	Sources map[string]EventSource `yaml:"sources,omitempty"`
+	Providers EventProviders `yaml:"providers,omitempty"`
 }
 
 type Cluster struct {

@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/twmb/franz-go/pkg/kadm"
+	"github.com/twmb/franz-go/pkg/kgo"
 	"io"
 	"log"
 	"math/rand"
@@ -25,7 +27,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	natspubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -55,12 +57,14 @@ import (
 const (
 	defaultSourceName = "default"
 	myNatsSourceName  = "my-nats"
+	myKafkaSourceName = "my-kafka"
 )
 
 var (
 	//go:embed testdata/config.json
-	configJSONTemplate  string
-	demoNatsSourceNames = []string{defaultSourceName, myNatsSourceName}
+	configJSONTemplate   string
+	demoNatsSourceNames  = []string{defaultSourceName, myNatsSourceName}
+	demoKafkaSourceNames = []string{myKafkaSourceName}
 )
 
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
@@ -186,6 +190,20 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	defer envCreateMux.Unlock()
 
 	ctx, cancel := context.WithCancelCause(context.Background())
+
+	seeds := []string{"localhost:9092"}
+
+	var kafkaAdminClient *kadm.Client
+	{
+		client, err := kgo.NewClient(
+			kgo.SeedBrokers(seeds...),
+		)
+		if err != nil {
+			t.Fatalf("could not create kafka client: %s", err)
+		}
+
+		kafkaAdminClient = kadm.NewClient(client)
+	}
 
 	natsData, err := setupNatsServers(t)
 	if err != nil {
@@ -428,6 +446,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		NatsConnectionDefault: natsData.Connections[0],
 		NatsConnectionMyNats:  natsData.Connections[1],
 		SubgraphRequestCount:  counters,
+		KafkaAdminClient:      kafkaAdminClient,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -512,13 +531,22 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
-	eventSourceBySourceName := make(map[string]config.EventSource, len(demoNatsSourceNames))
+	natsEventSources := make([]config.NatsEventSource, len(demoNatsSourceNames))
+	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaSourceNames))
+
 	for _, sourceName := range demoNatsSourceNames {
-		eventSourceBySourceName[sourceName] = config.EventSource{
-			Provider: "NATS",
-			URL:      natsServer.ClientURL(),
-		}
+		natsEventSources = append(natsEventSources, config.NatsEventSource{
+			ID:  sourceName,
+			URL: natsServer.ClientURL(),
+		})
 	}
+	for _, sourceName := range demoKafkaSourceNames {
+		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
+			ID:      sourceName,
+			Brokers: []string{"localhost:9092"},
+		})
+	}
+
 	routerOpts := []core.Option{
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
@@ -533,7 +561,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithEvents(config.EventsConfiguration{
-			Sources: eventSourceBySourceName,
+			Providers: config.EventProviders{
+				Nats:  natsEventSources,
+				Kafka: kafkaEventSources,
+			},
 		}),
 	}
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
@@ -657,6 +688,7 @@ type Environment struct {
 	NatsConnectionDefault *nats.Conn
 	NatsConnectionMyNats  *nats.Conn
 	SubgraphRequestCount  *SubgraphRequestCount
+	KafkaAdminClient      *kadm.Client
 
 	extraURLQueryValues url.Values
 }
@@ -957,6 +989,9 @@ func (e *Environment) close() {
 	e.NatsConnectionDefault.Close()
 	e.NatsConnectionMyNats.Close()
 	e.NatsServer.Shutdown()
+
+	// Close Kafka
+	e.KafkaAdminClient.Close()
 }
 
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
@@ -1087,7 +1122,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.S
 	for _, sourceName := range demoNatsSourceNames {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		require.NoError(t, err)
-		pubsubBySourceName[sourceName] = natspubsub.NewConnector(natsConnection).New(ctx)
+		pubsubBySourceName[sourceName] = pubsubNats.NewConnector(natsConnection).New(ctx)
 	}
 	return &subgraphs.SubgraphOptions{
 		PubSubBySourceName: pubsubBySourceName,

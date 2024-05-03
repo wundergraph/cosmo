@@ -8,14 +8,13 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-	"io"
 	"slices"
 	"sync"
 )
 
 var (
-	_ pubsub_datasource.Connector = (*connector)(nil)
-	_ pubsub_datasource.PubSub    = (*pubsub)(nil)
+	_ pubsub_datasource.KafkaConnector = (*connector)(nil)
+	_ pubsub_datasource.KafkaPubSub    = (*pubsub)(nil)
 
 	errClientClosed = errors.New("client closed")
 )
@@ -50,14 +49,14 @@ type connector struct {
 	logger *zap.Logger
 }
 
-func NewConnector(logger *zap.Logger, client *kgo.Client) pubsub_datasource.Connector {
+func NewConnector(logger *zap.Logger, client *kgo.Client) pubsub_datasource.KafkaConnector {
 	return &connector{
 		client: client,
 		logger: logger,
 	}
 }
 
-func (c *connector) New(ctx context.Context) pubsub_datasource.PubSub {
+func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
 	ps := &pubsub{
 		ctx:           ctx,
 		logger:        c.logger.With(zap.String("pubsub", "kafka")),
@@ -126,11 +125,13 @@ func (p *pubsub) worker(ctx context.Context) error {
 		case sub := <-p.sub:
 
 			for _, subject := range sub.subjects {
+
+				p.mu.Lock()
 				if _, ok := p.subscriptions[subject]; !ok {
 					p.subscriptions[subject] = make([]*subscription, 0, 10)
 				}
-
 				p.subscriptions[subject] = append(p.subscriptions[subject], sub)
+				p.mu.Unlock()
 
 				context.AfterFunc(sub.context, func() {
 					p.mu.Lock()
@@ -156,56 +157,61 @@ func (p *pubsub) worker(ctx context.Context) error {
 
 func (p *pubsub) poll(ctx context.Context) error {
 	for {
-		// Try to fetch max records from any subscribed topics
-		// In the future, we can consume topics individually to increase parallelism
-		fetches := p.client.PollRecords(ctx, 500)
-		if fetches.IsClientClosed() {
-			return errClientClosed
-		}
+		select {
+		case <-ctx.Done():
+			p.client.Close()
+			return nil
 
-		if errs := fetches.Errors(); len(errs) > 0 {
+		default:
+			// Try to fetch max records from any subscribed topics
+			// In the future, we can consume topics individually to increase parallelism
+			fetches := p.client.PollRecords(ctx, 500)
+			if fetches.IsClientClosed() {
+				return errClientClosed
+			}
 
-			for _, fetchError := range errs {
+			if errs := fetches.Errors(); len(errs) > 0 {
 
-				// If the context was canceled, the error is wrapped in a fetch error
-				if errors.Is(fetchError.Err, context.Canceled) {
-					return nil
-				}
+				for _, fetchError := range errs {
 
-				var kErr *kerr.Error
-				if errors.As(fetchError.Err, &kErr) {
-					if !kErr.Retriable {
-						p.logger.Error("fetch error and non retriable",
-							zap.Error(fetchError.Err),
-							zap.String("topic", fetchError.Topic),
-						)
-						return fetchError.Err
+					// If the context was canceled, the error is wrapped in a fetch error
+					if errors.Is(fetchError.Err, context.Canceled) {
+						return nil
 					}
-				} else {
-					p.logger.Error("fetch error", zap.Error(fetchError.Err), zap.String("topic", fetchError.Topic))
+
+					var kErr *kerr.Error
+					if errors.As(fetchError.Err, &kErr) {
+						if !kErr.Retriable {
+							p.logger.Error("fetch error and non retriable",
+								zap.Error(fetchError.Err),
+								zap.String("topic", fetchError.Topic),
+							)
+							return fetchError.Err
+						}
+					} else {
+						p.logger.Error("fetch error", zap.Error(fetchError.Err), zap.String("topic", fetchError.Topic))
+					}
+				}
+			}
+
+			iter := fetches.RecordIter()
+			for !iter.Done() {
+				r := iter.Next()
+
+				// Send the record to the worker
+				// This is blocking with built-in backpressure
+				p.work <- &record{
+					topic: r.Topic,
+					data:  r.Value,
 				}
 			}
 		}
-
-		iter := fetches.RecordIter()
-		for !iter.Done() {
-			r := iter.Next()
-
-			// Send the record to the worker
-			// This is blocking with built-in backpressure
-			p.work <- &record{
-				topic: r.Topic,
-				data:  r.Value,
-			}
-		}
-
-		p.client.AllowRebalance()
 	}
 }
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same subjects, stream configuration, extensions, headers, etc.
-func (p *pubsub) Subscribe(ctx context.Context, subjects []string, updater resolve.SubscriptionUpdater, streamConfiguration *pubsub_datasource.StreamConfiguration) error {
+func (p *pubsub) Subscribe(ctx context.Context, subjects []string, updater resolve.SubscriptionUpdater) error {
 
 	// Add the topics to the consumer. Internally, it will update the metadata to poll
 	// the new topics / partitions. This is a non-blocking call. As long as we don't deal
@@ -244,8 +250,4 @@ func (p *pubsub) Publish(ctx context.Context, subject string, data []byte) error
 	wg.Wait()
 
 	return pErr
-}
-
-func (p *pubsub) Request(ctx context.Context, subject string, data []byte, w io.Writer) error {
-	return newError(errors.New("request/reply semantics are not supported for kafka"))
 }

@@ -199,18 +199,32 @@ enum EventType {
   SUBSCRIBE = 2;
 }
 
-message StreamConfiguration {
+message NatsStreamConfiguration {
   string consumer_name = 1;
   string stream_name = 2;
 }
 
+message NatsEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string subjects = 2;
+  NatsStreamConfiguration stream_configuration = 3;
+}
+
+message KafkaEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string topics = 2;
+}
+
+message EngineEventConfiguration {
+  string provider_id = 1;
+  EventType type = 2;
+  string type_name = 3;
+  string field_name = 4;
+}
+
 message EventConfiguration {
-  EventType type = 1;
-  string type_name = 2;
-  string field_name = 3;
-  repeated string subjects = 4;
-  string source_name = 5;
-  StreamConfiguration stream_configuration = 6;
+  repeated NatsEventConfiguration nats = 1;
+  repeated KafkaEventConfiguration kafka = 2;
 }
 
 message DataSourceCustom_Events {

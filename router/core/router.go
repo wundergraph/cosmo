@@ -460,8 +460,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
 	}
 
-	for _, source := range r.eventsConfig.Sources {
-		r.logger.Info("Event source enabled", zap.String("provider", source.Provider), zap.String("url", source.URL))
+	for _, source := range r.eventsConfig.Providers.Nats {
+		r.logger.Info("Nats Event source enabled", zap.String("ID", source.ID), zap.String("url", source.URL))
+	}
+	for _, source := range r.eventsConfig.Providers.Kafka {
+		r.logger.Info("Kafka Event source enabled", zap.String("ID", source.ID), zap.Strings("brokers", source.Brokers))
 	}
 
 	return r, nil
@@ -1040,7 +1043,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, r.WebsocketStats)
+	executor, err := ecb.Build(rootContext, routerConfig, routerEngineConfig, r.WebsocketStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -1096,7 +1099,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 		client := redis.NewClient(options)
 
-		err = client.FlushDB(ctx).Err()
+		err = client.FlushDB(rootContext).Err()
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to redis: %w", err)
 		}

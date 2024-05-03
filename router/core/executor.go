@@ -2,14 +2,17 @@ package core
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/plain"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"net/http"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
+	"net/http"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -120,39 +123,47 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}, nil
 }
 
-func natsAuthenticationOptions(authentication *config.Authentication) ([]nats.Option, error) {
-	if authentication == nil {
-		return nil, nil
+func buildNatsOptions(eventSource config.NatsEventSource) ([]nats.Option, error) {
+
+	var opts []nats.Option
+
+	if eventSource.Authentication != nil {
+		if eventSource.Authentication.Token != nil {
+			opts = append(opts, nats.Token(*eventSource.Authentication.Token))
+		} else if eventSource.Authentication.Username != nil || eventSource.Authentication.Password != nil {
+			opts = append(opts, nats.UserInfo(*eventSource.Authentication.Username, *eventSource.Authentication.Password))
+		}
 	}
-	if authentication.Token != nil {
-		return []nats.Option{nats.Token(*authentication.Token)}, nil
-	}
-	if authentication.Username == nil || authentication.Password == nil {
-		return nil, fmt.Errorf("must provide username and password if token is not provided")
-	}
-	return []nats.Option{nats.UserInfo(*authentication.Username, *authentication.Password)}, nil
+
+	return opts, nil
 }
 
-func kafkaAuthenticationOptions(authentication *config.Authentication) ([]kgo.Opt, error) {
-	seeds := []string{"cogm2ddgpd2scl6kp54g.any.eu-central-1.mpx.prd.cloud.redpanda.com:9092"}
+func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 
-	return []kgo.Opt{
-		kgo.SeedBrokers(seeds...),
-		// We want to re-balance on before every poll to ensure
-		// we always have the latest metadata. This is recommended with the poll, process, commit loop.
-		kgo.BlockRebalanceOnPoll(),
+	opts := []kgo.Opt{
+		kgo.SeedBrokers(eventSource.Brokers...),
 		// For observability, we set the client ID to the router
-		kgo.ClientID("router"),
+		kgo.ClientID("router-kafka-client"),
 		// Ensure proper timeouts are set
 		kgo.ProduceRequestTimeout(10 * time.Second),
 		kgo.ConnIdleTimeout(60 * time.Second),
-		// Enable default public TLS configuration
-		kgo.DialTLSConfig(new(tls.Config)),
-		kgo.SASL(scram.Auth{
-			User: "test",
-			Pass: "bmwOII3tceHcp5YHTSulOcAoWsaIqd",
-		}.AsSha256Mechanism()),
-	}, nil
+	}
+
+	if eventSource.TLS != nil && eventSource.TLS.Enabled {
+		opts = append(opts,
+			// Configure TLS. Uses SystemCertPool for RootCAs by default.
+			kgo.DialTLSConfig(new(tls.Config)),
+		)
+	}
+
+	if eventSource.Authentication != nil && eventSource.Authentication.Username != nil && eventSource.Authentication.Password != nil {
+		opts = append(opts, kgo.SASL(plain.Auth{
+			User: *eventSource.Authentication.Username,
+			Pass: *eventSource.Authentication.Password,
+		}.AsMechanism()))
+	}
+
+	return opts, nil
 }
 
 func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
@@ -160,46 +171,69 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
-	pubSubBySourceName := make(map[string]pubsub_datasource.PubSub)
+	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub)
+	kafkaPubSubByProviderID := make(map[string]pubsub_datasource.KafkaPubSub)
+
 	datasourceConfigurations := routerCfg.EngineConfig.GetDatasourceConfigurations()
 	for _, datasourceConfiguration := range datasourceConfigurations {
 		if datasourceConfiguration.CustomEvents == nil {
 			continue
 		}
+
 		for _, eventConfiguration := range datasourceConfiguration.CustomEvents.Events {
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := pubSubBySourceName[eventConfiguration.SourceName]
-			if ok {
-				continue
-			}
-			eventSource, ok := routerEngineCfg.Events.Sources[eventConfiguration.SourceName]
-			if !ok {
-				return nil, fmt.Errorf("unknown event source name %s", eventConfiguration.SourceName)
-			}
-			switch eventSource.Provider {
-			case "NATS":
-				options, err := natsAuthenticationOptions(eventSource.Authentication)
-				if err != nil {
-					return nil, fmt.Errorf("failed to add authentication for NATS provider with sourceName \"%s\": %w", eventConfiguration.SourceName, err)
-				}
-				natsConnection, err := nats.Connect(eventSource.URL, options...)
-				if err != nil {
-					return nil, fmt.Errorf("failed to connect to NATS: %w", err)
-				}
-				pubSubBySourceName[eventConfiguration.SourceName] = pubsubNats.NewConnector(natsConnection).New(ctx)
-			case "KAFKA":
-				options, err := kafkaAuthenticationOptions(eventSource.Authentication)
-				if err != nil {
-					return nil, fmt.Errorf("failed to add authentication for KAFKA provider with sourceName \"%s\": %w", eventConfiguration.SourceName, err)
-				}
-				client, err := kgo.NewClient(options...)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create kafka client: %w", err)
+
+			for _, eventConfiguration := range eventConfiguration.GetNats() {
+
+				providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+				// if this source name's provider has already been initiated, do not try to initiate again
+				_, ok := natsPubSubByProviderID[providerID]
+				if ok {
+					continue
 				}
 
-				pubSubBySourceName[eventConfiguration.SourceName] = kafka.NewConnector(b.logger, client).New(ctx)
-			default:
-				return nil, fmt.Errorf("unknown event source provider %s for sourceName \"%s\"", eventConfiguration.SourceName, eventSource.Provider)
+				for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
+					if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
+						options, err := buildNatsOptions(eventSource)
+						if err != nil {
+							return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
+						}
+						natsConnection, err := nats.Connect(eventSource.URL, options...)
+						if err != nil {
+							return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
+						}
+						natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(natsConnection).New(ctx)
+
+						break
+					}
+				}
+			}
+
+			for _, eventConfiguration := range eventConfiguration.GetKafka() {
+
+				providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+				// if this source name's provider has already been initiated, do not try to initiate again
+				_, ok := kafkaPubSubByProviderID[providerID]
+				if ok {
+					continue
+				}
+
+				for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
+
+					if eventSource.ID == providerID {
+						options, err := buildKafkaOptions(eventSource)
+						if err != nil {
+							return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
+						}
+						client, err := kgo.NewClient(options...)
+						if err != nil {
+							return nil, fmt.Errorf("failed to create client for Kafka provider with ID \"%s\": %w", providerID, err)
+						}
+
+						kafkaPubSubByProviderID[providerID] = kafka.NewConnector(b.logger, client).New(ctx)
+
+						break
+					}
+				}
 			}
 		}
 	}
@@ -210,7 +244,8 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
-		pubSubBySourceName,
+		natsPubSubByProviderID,
+		kafkaPubSubByProviderID,
 	))
 
 	// this generates the plan config using the data source factories from the config package

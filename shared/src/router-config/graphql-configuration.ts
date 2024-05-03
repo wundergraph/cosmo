@@ -9,7 +9,7 @@ import {
   FieldConfiguration,
   RequiredField,
   Scopes,
-  StreamConfiguration,
+  NatsStreamConfiguration,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
@@ -109,7 +109,7 @@ export function configurationDataMapToDataSourceConfiguration(
           typeName,
           ...(event.streamConfiguration
             ? {
-                streamConfiguration: new StreamConfiguration({
+                streamConfiguration: new NatsStreamConfiguration({
                   consumerName: event.streamConfiguration.consumerName,
                   streamName: event.streamConfiguration.streamName,
                 }),

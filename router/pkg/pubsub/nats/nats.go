@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	_ pubsub_datasource.Connector = (*connector)(nil)
-	_ pubsub_datasource.PubSub    = (*natsPubSub)(nil)
+	_ pubsub_datasource.NatsConnector = (*connector)(nil)
+	_ pubsub_datasource.NatsPubSub    = (*natsPubSub)(nil)
 )
 
 type Error struct {
@@ -35,11 +35,11 @@ type connector struct {
 	conn *nats.Conn
 }
 
-func NewConnector(conn *nats.Conn) pubsub_datasource.Connector {
+func NewConnector(conn *nats.Conn) pubsub_datasource.NatsConnector {
 	return &connector{conn: conn}
 }
 
-func (c *connector) New(ctx context.Context) pubsub_datasource.PubSub {
+func (c *connector) New(ctx context.Context) pubsub_datasource.NatsPubSub {
 	return &natsPubSub{
 		ctx:  ctx,
 		conn: c.conn,
@@ -62,7 +62,7 @@ func (p *natsPubSub) ensureConn() error {
 	return nil
 }
 
-func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater resolve.SubscriptionUpdater, streamConfiguration *pubsub_datasource.StreamConfiguration) error {
+func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater resolve.SubscriptionUpdater, streamConfiguration *pubsub_datasource.NatsStreamConfiguration) error {
 	if err := p.ensureConn(); err != nil {
 		return newError(fmt.Errorf(`failed to ensure nats connection: %w`, err))
 	}
@@ -79,9 +79,6 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 		})
 		if err != nil {
 			return newError(fmt.Errorf(`failed to create or update consumer "%s": %w`, streamConfiguration.Consumer, err))
-		}
-		if consumer == nil {
-			return newError(fmt.Errorf(`consumer "%s" is nil; it is likely the nats stream "%s" does not exist`, streamConfiguration.Consumer, streamConfiguration.StreamName))
 		}
 
 		go func() {

@@ -17,7 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
-func TestEventsNew(t *testing.T) {
+func TestNatsEvents(t *testing.T) {
 	t.Parallel()
 
 	t.Run("subscribe async", func(t *testing.T) {

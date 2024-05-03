@@ -1370,9 +1370,9 @@ export class DataSourceCustom_GraphQL extends Message<DataSourceCustom_GraphQL> 
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.StreamConfiguration
+ * @generated from message wg.cosmo.node.v1.NatsStreamConfiguration
  */
-export class StreamConfiguration extends Message<StreamConfiguration> {
+export class NatsStreamConfiguration extends Message<NatsStreamConfiguration> {
   /**
    * @generated from field: string consumer_name = 1;
    */
@@ -1383,32 +1383,179 @@ export class StreamConfiguration extends Message<StreamConfiguration> {
    */
   streamName = "";
 
-  constructor(data?: PartialMessage<StreamConfiguration>) {
+  constructor(data?: PartialMessage<NatsStreamConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.StreamConfiguration";
+  static readonly typeName = "wg.cosmo.node.v1.NatsStreamConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "consumer_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "stream_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamConfiguration {
-    return new StreamConfiguration().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NatsStreamConfiguration {
+    return new NatsStreamConfiguration().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamConfiguration {
-    return new StreamConfiguration().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NatsStreamConfiguration {
+    return new NatsStreamConfiguration().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamConfiguration {
-    return new StreamConfiguration().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NatsStreamConfiguration {
+    return new NatsStreamConfiguration().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StreamConfiguration | PlainMessage<StreamConfiguration> | undefined, b: StreamConfiguration | PlainMessage<StreamConfiguration> | undefined): boolean {
-    return proto3.util.equals(StreamConfiguration, a, b);
+  static equals(a: NatsStreamConfiguration | PlainMessage<NatsStreamConfiguration> | undefined, b: NatsStreamConfiguration | PlainMessage<NatsStreamConfiguration> | undefined): boolean {
+    return proto3.util.equals(NatsStreamConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.NatsEventConfiguration
+ */
+export class NatsEventConfiguration extends Message<NatsEventConfiguration> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.EngineEventConfiguration engine_event_configuration = 1;
+   */
+  engineEventConfiguration?: EngineEventConfiguration;
+
+  /**
+   * @generated from field: repeated string subjects = 2;
+   */
+  subjects: string[] = [];
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.NatsStreamConfiguration stream_configuration = 3;
+   */
+  streamConfiguration?: NatsStreamConfiguration;
+
+  constructor(data?: PartialMessage<NatsEventConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.NatsEventConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "engine_event_configuration", kind: "message", T: EngineEventConfiguration },
+    { no: 2, name: "subjects", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "stream_configuration", kind: "message", T: NatsStreamConfiguration },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NatsEventConfiguration {
+    return new NatsEventConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NatsEventConfiguration {
+    return new NatsEventConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NatsEventConfiguration {
+    return new NatsEventConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NatsEventConfiguration | PlainMessage<NatsEventConfiguration> | undefined, b: NatsEventConfiguration | PlainMessage<NatsEventConfiguration> | undefined): boolean {
+    return proto3.util.equals(NatsEventConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.KafkaEventConfiguration
+ */
+export class KafkaEventConfiguration extends Message<KafkaEventConfiguration> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.EngineEventConfiguration engine_event_configuration = 1;
+   */
+  engineEventConfiguration?: EngineEventConfiguration;
+
+  /**
+   * @generated from field: repeated string topics = 2;
+   */
+  topics: string[] = [];
+
+  constructor(data?: PartialMessage<KafkaEventConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.KafkaEventConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "engine_event_configuration", kind: "message", T: EngineEventConfiguration },
+    { no: 2, name: "topics", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KafkaEventConfiguration {
+    return new KafkaEventConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KafkaEventConfiguration {
+    return new KafkaEventConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KafkaEventConfiguration {
+    return new KafkaEventConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: KafkaEventConfiguration | PlainMessage<KafkaEventConfiguration> | undefined, b: KafkaEventConfiguration | PlainMessage<KafkaEventConfiguration> | undefined): boolean {
+    return proto3.util.equals(KafkaEventConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.EngineEventConfiguration
+ */
+export class EngineEventConfiguration extends Message<EngineEventConfiguration> {
+  /**
+   * @generated from field: string provider_id = 1;
+   */
+  providerId = "";
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.EventType type = 2;
+   */
+  type = EventType.PUBLISH;
+
+  /**
+   * @generated from field: string type_name = 3;
+   */
+  typeName = "";
+
+  /**
+   * @generated from field: string field_name = 4;
+   */
+  fieldName = "";
+
+  constructor(data?: PartialMessage<EngineEventConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.EngineEventConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "provider_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type", kind: "enum", T: proto3.getEnumType(EventType) },
+    { no: 3, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EngineEventConfiguration {
+    return new EngineEventConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EngineEventConfiguration {
+    return new EngineEventConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EngineEventConfiguration {
+    return new EngineEventConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EngineEventConfiguration | PlainMessage<EngineEventConfiguration> | undefined, b: EngineEventConfiguration | PlainMessage<EngineEventConfiguration> | undefined): boolean {
+    return proto3.util.equals(EngineEventConfiguration, a, b);
   }
 }
 
@@ -1417,34 +1564,14 @@ export class StreamConfiguration extends Message<StreamConfiguration> {
  */
 export class EventConfiguration extends Message<EventConfiguration> {
   /**
-   * @generated from field: wg.cosmo.node.v1.EventType type = 1;
+   * @generated from field: repeated wg.cosmo.node.v1.NatsEventConfiguration nats = 1;
    */
-  type = EventType.PUBLISH;
+  nats: NatsEventConfiguration[] = [];
 
   /**
-   * @generated from field: string type_name = 2;
+   * @generated from field: repeated wg.cosmo.node.v1.KafkaEventConfiguration kafka = 2;
    */
-  typeName = "";
-
-  /**
-   * @generated from field: string field_name = 3;
-   */
-  fieldName = "";
-
-  /**
-   * @generated from field: repeated string subjects = 4;
-   */
-  subjects: string[] = [];
-
-  /**
-   * @generated from field: string source_name = 5;
-   */
-  sourceName = "";
-
-  /**
-   * @generated from field: wg.cosmo.node.v1.StreamConfiguration stream_configuration = 6;
-   */
-  streamConfiguration?: StreamConfiguration;
+  kafka: KafkaEventConfiguration[] = [];
 
   constructor(data?: PartialMessage<EventConfiguration>) {
     super();
@@ -1454,12 +1581,8 @@ export class EventConfiguration extends Message<EventConfiguration> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.node.v1.EventConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(EventType) },
-    { no: 2, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "subjects", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "source_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "stream_configuration", kind: "message", T: StreamConfiguration },
+    { no: 1, name: "nats", kind: "message", T: NatsEventConfiguration, repeated: true },
+    { no: 2, name: "kafka", kind: "message", T: KafkaEventConfiguration, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventConfiguration {
