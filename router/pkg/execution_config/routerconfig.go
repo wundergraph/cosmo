@@ -1,4 +1,4 @@
-package core
+package execution_config
 
 import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"

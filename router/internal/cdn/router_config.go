@@ -11,9 +11,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -145,7 +145,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 	* Serialize the response body to a RouterConfig object
 	 */
 
-	routerConfig, err := core.SerializeConfigBytes(body)
+	routerConfig, err := execution_config.SerializeConfigBytes(body)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal router external router config from CDN: %w", err)
 	}
@@ -192,7 +192,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 		)
 	}
 
-	return &routerConfig, nil
+	return routerConfig, nil
 }
 
 // NewRouterConfigClient creates a new CDN client. URL is the URL of the CDN.

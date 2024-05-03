@@ -3,16 +3,16 @@ package integration
 import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/core"
 )
 
 func TestRouterConfigParsing(t *testing.T) {
 	t.Parallel()
-	routerConfig, err := core.SerializeConfigFromFile("./testdata/routerConfig.json")
+	routerConfig, err := execution_config.SerializeConfigFromFile("./testdata/routerConfig.json")
 	require.NoError(t, err)
 
 	assert.Equal(t, routerConfig.Version, "96f0fab1-d0a4-4fc1-801d-59f684f8315d")
@@ -81,7 +81,7 @@ func TestRouterConfigParsing(t *testing.T) {
 
 func TestRouterConfigParsingOfUnknownProperties(t *testing.T) {
 	t.Parallel()
-	routerConfig, err := core.SerializeConfigFromFile("./testdata/routerConfigWithUnknownProperties.json")
+	routerConfig, err := execution_config.SerializeConfigFromFile("./testdata/routerConfigWithUnknownProperties.json")
 	require.NoError(t, err)
 
 	assert.Equal(t, routerConfig.Version, "96f0fab1-d0a4-4fc1-801d-59f684f8315d")
