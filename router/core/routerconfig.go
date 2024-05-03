@@ -13,8 +13,13 @@ func SerializeConfigFromFile(path string) (*nodev1.RouterConfig, error) {
 		return nil, err
 	}
 
+	// Ignore fields that are not in the proto definition
+	ms := protojson.UnmarshalOptions{
+		DiscardUnknown: true,
+	}
+
 	var cfg nodev1.RouterConfig
-	if err := protojson.Unmarshal(data, &cfg); err != nil {
+	if err := ms.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 

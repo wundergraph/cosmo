@@ -146,7 +146,13 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 	 */
 
 	var routerConfig nodev1.RouterConfig
-	err = protojson.Unmarshal(body, &routerConfig)
+
+	ms := protojson.UnmarshalOptions{
+		// Ignore fields that are not in the proto definition
+		DiscardUnknown: true,
+	}
+
+	err = ms.Unmarshal(body, &routerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal router external router config from CDN: %w", err)
 	}
