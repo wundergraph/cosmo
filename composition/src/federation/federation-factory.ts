@@ -1,5 +1,14 @@
 import { MultiGraph } from 'graphology';
-import { BREAK, buildASTSchema, DirectiveDefinitionNode, DocumentNode, Kind, NamedTypeNode, visit } from 'graphql';
+import {
+  BREAK,
+  buildASTSchema,
+  DirectiveDefinitionNode,
+  DocumentNode,
+  GraphQLSchema,
+  Kind,
+  NamedTypeNode,
+  visit,
+} from 'graphql';
 import {
   getTypeNodeNamedTypeName,
   MutableEnumValueNode,
@@ -145,6 +154,7 @@ import { ObjectExtensionData } from '../schema-building/type-extension-data';
 import { createMultiGraphAndRenameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import { getLeastRestrictiveMergedTypeNode, getMostRestrictiveMergedTypeNode } from '../schema-building/type-merging';
+import { printSchemaWithDirectives } from '@graphql-tools/utils';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -1980,10 +1990,6 @@ export class FederationFactory {
       kind: Kind.DOCUMENT,
       definitions: this.routerDefinitions,
     };
-    const newClientAST: DocumentNode = {
-      kind: Kind.DOCUMENT,
-      definitions: this.clientDefinitions,
-    };
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
@@ -2000,10 +2006,23 @@ export class FederationFactory {
         subgraphConfigBySubgraphName,
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST),
-        federatedGraphClientSchema: buildASTSchema(newClientAST),
+        federatedGraphClientSchema: this.getFederatedClientSchema(),
       },
       ...warnings,
     };
+  }
+
+  getFederatedClientSchema(): GraphQLSchema {
+    if (this.inaccessiblePaths.size < 1 && this.tagNamesByPath.size < 1) {
+      return buildASTSchema({
+        kind: Kind.DOCUMENT,
+        definitions: [],
+      });
+    }
+    return buildASTSchema({
+      kind: Kind.DOCUMENT,
+      definitions: this.clientDefinitions,
+    });
   }
 
   buildFederationContractResult(tagExclusions: Set<string>): FederationResultContainer {
@@ -2095,10 +2114,6 @@ export class FederationFactory {
       kind: Kind.DOCUMENT,
       definitions: this.routerDefinitions,
     };
-    const newClientAST: DocumentNode = {
-      kind: Kind.DOCUMENT,
-      definitions: this.clientDefinitions,
-    };
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
@@ -2115,7 +2130,7 @@ export class FederationFactory {
         subgraphConfigBySubgraphName,
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST),
-        federatedGraphClientSchema: buildASTSchema(newClientAST),
+        federatedGraphClientSchema: this.getFederatedClientSchema(),
       },
       warnings,
     };
