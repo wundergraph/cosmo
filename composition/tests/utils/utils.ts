@@ -112,18 +112,29 @@ export const eventDirectiveDefinitions = `
 export const versionOneSchemaQueryAndPersistedDirectiveDefinitions =
   schemaQueryDefinition + versionOnePersistedDirectiveDefinitions;
 
+export const versionOneRouterContractDefinitions =
+  schemaQueryDefinition +
+  `directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION` +
+  versionOnePersistedDirectiveDefinitions;
+
 export const versionOneFullEventDefinitions =
   fullDefaultSchemaDefinition + eventDirectiveDefinitions + baseDirectiveDefinitions;
 
-export const versionTwoPersistedDirectiveDefinitions = `
+export const versionTwoRouterDirectiveDefinitions = `
     directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
     directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
     directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
     directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
 
-export const versionTwoSchemaQueryAndPersistedDirectiveDefinitions =
-  schemaQueryDefinition + versionTwoPersistedDirectiveDefinitions;
+export const versionTwoRouterDefinitions = schemaQueryDefinition + versionTwoRouterDirectiveDefinitions;
+
+export const versionTwoClientDirectiveDefinitions = `
+    directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+    directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+`;
+
+export const versionTwoClientDefinitions = schemaQueryDefinition + versionTwoClientDirectiveDefinitions;
 
 export function createSubgraph(name: string, schemaString: string): Subgraph {
   return {

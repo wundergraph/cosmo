@@ -72,6 +72,7 @@ describe('Router Config Builder', () => {
       configurationDataMap: inventorySubgraphConfig!.configurationDataMap,
     };
     const routerConfig = buildRouterConfig({
+      federatedClientSDL: `type Query {}`,
       fieldConfigurations: [],
       subgraphs: [accounts, products, reviews, inventory],
       // Passed as it is to the router config
@@ -99,6 +100,7 @@ describe('Router Config Builder', () => {
     let error;
     try {
       buildRouterConfig({
+        federatedClientSDL: '',
         fieldConfigurations: [],
         subgraphs: [subgraph],
         federatedSDL: '',

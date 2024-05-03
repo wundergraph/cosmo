@@ -162,6 +162,7 @@ export type InvalidFieldImplementation = {
   implementedResponseType?: string;
   invalidAdditionalArguments: Set<string>;
   invalidImplementedArguments: InvalidArgumentImplementation[];
+  isInaccessible: boolean;
   originalResponseType: string;
   unimplementedArguments: Set<string>;
 };

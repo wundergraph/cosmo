@@ -17,7 +17,7 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
   versionOneSchemaQueryAndPersistedDirectiveDefinitions,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 import { FIELD } from '../src/utils/string-constants';
 
@@ -34,7 +34,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
         type Object {
           field(input: String): String
@@ -57,7 +57,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Float!): String
@@ -81,7 +81,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Int): String
@@ -105,7 +105,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Boolean = false): String
@@ -173,7 +173,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       interface Interface {
         field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
