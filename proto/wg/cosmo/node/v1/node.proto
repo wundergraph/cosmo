@@ -78,6 +78,7 @@ message EngineConfiguration {
   string graphqlSchema = 4;
   repeated TypeConfiguration type_configurations = 5;
   map<string, string> string_storage = 6;
+  optional string graphql_client_schema = 7;
 }
 
 message DataSourceConfiguration {

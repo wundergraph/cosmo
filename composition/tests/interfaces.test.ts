@@ -8,15 +8,11 @@ import {
   normalizeSubgraphFromString,
   selfImplementationError,
   Subgraph,
-  unimplementedInterfaceFieldsError,
+  invalidInterfaceImplementationError,
 } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
-} from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
 
 describe('Interface tests', () => {
   describe('Normalization tests', () => {
@@ -47,11 +43,13 @@ describe('Interface tests', () => {
           
         interface Pet implements Animal {
           age: Int!
+          isDog: Boolean!
           name: String!
           sounds(species: String): [String]!
         }
         
         type Cat implements Pet & Animal {
+          isDog: Boolean! @inaccessible
           isPurring: Boolean!
           sounds: [String!]!
         }
@@ -59,7 +57,7 @@ describe('Interface tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
       expect(errors![0]).toStrictEqual(
-        unimplementedInterfaceFieldsError(
+        invalidInterfaceImplementationError(
           'Pet',
           'interface',
           new Map<string, ImplementationErrors>([
@@ -75,6 +73,7 @@ describe('Interface tests', () => {
                       invalidImplementedArguments: [
                         { actualType: 'String', argumentName: 'species', expectedType: 'String!' },
                       ],
+                      isInaccessible: false,
                       originalResponseType: '[String!]',
                       unimplementedArguments: new Set<string>(),
                     },
@@ -87,7 +86,7 @@ describe('Interface tests', () => {
         ),
       );
       expect(errors![1]).toStrictEqual(
-        unimplementedInterfaceFieldsError(
+        invalidInterfaceImplementationError(
           'Cat',
           'object',
           new Map<string, ImplementationErrors>([
@@ -96,10 +95,21 @@ describe('Interface tests', () => {
               {
                 invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
                   [
+                    'isDog',
+                    {
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidImplementedArguments: [],
+                      isInaccessible: true,
+                      originalResponseType: 'Boolean!',
+                      unimplementedArguments: new Set<string>(),
+                    },
+                  ],
+                  [
                     'sounds',
                     {
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [],
+                      isInaccessible: false,
                       originalResponseType: '[String]!',
                       unimplementedArguments: new Set<string>(['species']),
                     },
@@ -117,6 +127,7 @@ describe('Interface tests', () => {
                     {
                       invalidAdditionalArguments: new Set<string>(),
                       invalidImplementedArguments: [],
+                      isInaccessible: false,
                       originalResponseType: '[String!]',
                       unimplementedArguments: new Set<string>(['species']),
                     },
@@ -159,7 +170,7 @@ describe('Interface tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
       expect(errors![0]).toStrictEqual(
-        unimplementedInterfaceFieldsError(
+        invalidInterfaceImplementationError(
           'Pet',
           'interface',
           new Map<string, ImplementationErrors>([
@@ -175,6 +186,7 @@ describe('Interface tests', () => {
                         { actualType: 'Int', argumentName: 'a', expectedType: 'String!' },
                         { actualType: 'String!', argumentName: 'b', expectedType: 'Int' },
                       ],
+                      isInaccessible: false,
                       originalResponseType: 'String!',
                       unimplementedArguments: new Set<string>(['c', 'd']),
                     },
@@ -187,7 +199,7 @@ describe('Interface tests', () => {
         ),
       );
       expect(errors![1]).toStrictEqual(
-        unimplementedInterfaceFieldsError(
+        invalidInterfaceImplementationError(
           'Cat',
           'object',
           new Map<string, ImplementationErrors>([
@@ -200,6 +212,7 @@ describe('Interface tests', () => {
                     {
                       invalidAdditionalArguments: new Set<string>(['e']),
                       invalidImplementedArguments: [],
+                      isInaccessible: false,
                       originalResponseType: 'String!',
                       unimplementedArguments: new Set<string>(['a', 'b']),
                     },
@@ -217,6 +230,7 @@ describe('Interface tests', () => {
                     {
                       invalidAdditionalArguments: new Set<string>(['e']),
                       invalidImplementedArguments: [],
+                      isInaccessible: false,
                       originalResponseType: 'String',
                       unimplementedArguments: new Set<string>(['a', 'b', 'c', 'd']),
                     },
@@ -259,7 +273,7 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       interface Character {
         age: Int!
@@ -295,7 +309,7 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       interface Character {
         age: Int!
@@ -329,7 +343,7 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       interface Character {
         isFriend: Boolean!
@@ -360,7 +374,7 @@ describe('Interface tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
       expect(errors![0]).toStrictEqual(
-        unimplementedInterfaceFieldsError(
+        invalidInterfaceImplementationError(
           'Cat',
           'object',
           new Map<string, ImplementationErrors>([
@@ -382,7 +396,7 @@ describe('Interface tests', () => {
         ),
       );
       expect(errors![1]).toStrictEqual(
-        unimplementedInterfaceFieldsError(
+        invalidInterfaceImplementationError(
           'Dog',
           'object',
           new Map<string, ImplementationErrors>([
@@ -398,6 +412,7 @@ describe('Interface tests', () => {
                         { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
                         { actualType: 'Int', argumentName: 'b', expectedType: 'Int!' },
                       ],
+                      isInaccessible: false,
                       originalResponseType: 'String',
                       unimplementedArguments: new Set<string>(),
                     },
@@ -418,6 +433,7 @@ describe('Interface tests', () => {
                         { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
                         { actualType: 'Int', argumentName: 'b', expectedType: 'Int!' },
                       ],
+                      isInaccessible: false,
                       originalResponseType: 'String',
                       unimplementedArguments: new Set<string>(),
                     },

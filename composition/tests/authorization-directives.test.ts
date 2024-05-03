@@ -12,8 +12,8 @@ import { parse } from 'graphql';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
-  versionTwoPersistedDirectiveDefinitions,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoRouterDefinitions,
+  versionTwoRouterDirectiveDefinitions,
 } from './utils/utils';
 
 describe('Authorization directives tests', () => {
@@ -160,7 +160,7 @@ describe('Authorization directives tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
           type Object {
             age: Int!
@@ -183,7 +183,7 @@ describe('Authorization directives tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
           type Object {
             age: Int!
@@ -268,7 +268,7 @@ describe('Authorization directives tests', () => {
         schema {
           query: Query
         }` +
-            versionTwoPersistedDirectiveDefinitions +
+            versionTwoRouterDirectiveDefinitions +
             `
         type Entity {
           age: Int!
@@ -397,7 +397,7 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity implements Interface {
           age: Int! @authenticated @requiresScopes(scopes: [["read:object", "read:sensitive", "read:field"], ["read:object", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]])
@@ -532,7 +532,7 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity implements Interface {
           age: Int! @authenticated @requiresScopes(scopes: [["read:object", "read:sensitive", "read:field"], ["read:object", "read:private", "read:field"], ["read:all", "read:sensitive", "read:field"], ["read:all", "read:private", "read:field"]])
@@ -608,7 +608,7 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
           type Entity {
             age: Int! @authenticated
@@ -677,7 +677,7 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity {
           age: Int! @authenticated
@@ -823,7 +823,7 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type EntityOne implements Interface {
           id: ID! @requiresScopes(scopes: [["read:entity", "read:interface", "read:private"]])
@@ -989,7 +989,7 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type EntityOne implements Interface {
           id: ID! @requiresScopes(scopes: [["read:entity", "read:interface", "read:private"]])
@@ -1036,7 +1036,7 @@ describe('Authorization directives tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         enum Enum {
           VALUE

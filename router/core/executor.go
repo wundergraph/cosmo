@@ -4,6 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -11,7 +15,6 @@ import (
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.uber.org/zap"
-	"net/http"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -72,7 +75,14 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	resolver := resolve.New(ctx, options)
 
 	// this is the GraphQL Schema that we will expose from our API
-	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
+	var definition ast.Document
+	var report operationreport.Report
+	// The client schema may not be present in old configs
+	if routerConfig.EngineConfig.GetGraphqlClientSchema() != "" {
+		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GetGraphqlClientSchema())
+	} else {
+		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
+	}
 	if report.HasErrors() {
 		return nil, fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
 	}

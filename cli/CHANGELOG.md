@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.53.0](https://github.com/wundergraph/cosmo/compare/wgc@0.52.1...wgc@0.53.0) (2024-05-03)
+
+### Features
+
+* support inaccessible and add foundation for contracts ([#764](https://github.com/wundergraph/cosmo/issues/764)) ([08a7db2](https://github.com/wundergraph/cosmo/commit/08a7db222ce1763ffe8062d3792c41e0c54b4224)) (@Aenimus)
+
+## [0.52.1](https://github.com/wundergraph/cosmo/compare/wgc@0.52.0...wgc@0.52.1) (2024-04-30)
+
+### Bug Fixes
+
+* add fetch-schema command to replace the old functionality of the fetch cmd ([#760](https://github.com/wundergraph/cosmo/issues/760)) ([fc3f5c6](https://github.com/wundergraph/cosmo/commit/fc3f5c65b9322c0573a9c8f72dee5ae096debe9a)) (@JivusAyrus)
+
 # [0.52.0](https://github.com/wundergraph/cosmo/compare/wgc@0.51.5...wgc@0.52.0) (2024-04-26)
 
 ### Features

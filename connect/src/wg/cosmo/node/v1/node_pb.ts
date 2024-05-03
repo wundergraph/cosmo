@@ -642,6 +642,11 @@ export class EngineConfiguration extends Message<EngineConfiguration> {
    */
   stringStorage: { [key: string]: string } = {};
 
+  /**
+   * @generated from field: optional string graphql_client_schema = 7;
+   */
+  graphqlClientSchema?: string;
+
   constructor(data?: PartialMessage<EngineConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -656,6 +661,7 @@ export class EngineConfiguration extends Message<EngineConfiguration> {
     { no: 4, name: "graphqlSchema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "type_configurations", kind: "message", T: TypeConfiguration, repeated: true },
     { no: 6, name: "string_storage", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 7, name: "graphql_client_schema", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EngineConfiguration {
