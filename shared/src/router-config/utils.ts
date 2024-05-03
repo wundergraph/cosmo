@@ -4,7 +4,7 @@ import type { JsonReadOptions, JsonValue } from '@bufbuild/protobuf';
 export function routerConfigFromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RouterConfig {
   options = {
     ...options,
-    ignoreUnknownFields: true
+    ignoreUnknownFields: true,
   };
   return RouterConfig.fromJson(jsonValue, options);
 }
@@ -12,7 +12,7 @@ export function routerConfigFromJson(jsonValue: JsonValue, options?: Partial<Jso
 export function routerConfigFromJsonString(configAsText: string, options?: Partial<JsonReadOptions>): RouterConfig {
   options = {
     ...options,
-    ignoreUnknownFields: true
+    ignoreUnknownFields: true,
   };
   return RouterConfig.fromJsonString(configAsText, options);
 }
