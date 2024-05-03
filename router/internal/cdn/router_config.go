@@ -11,10 +11,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"net/http"
 	"net/url"
@@ -145,14 +145,7 @@ func (cdn *RouterConfigClient) RouterConfig(ctx context.Context, version string)
 	* Serialize the response body to a RouterConfig object
 	 */
 
-	var routerConfig nodev1.RouterConfig
-
-	ms := protojson.UnmarshalOptions{
-		// Ignore fields that are not in the proto definition
-		DiscardUnknown: true,
-	}
-
-	err = ms.Unmarshal(body, &routerConfig)
+	routerConfig, err := core.SerializeConfigBytes(body)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal router external router config from CDN: %w", err)
 	}

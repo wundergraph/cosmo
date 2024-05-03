@@ -13,13 +13,21 @@ func SerializeConfigFromFile(path string) (*nodev1.RouterConfig, error) {
 		return nil, err
 	}
 
+	return SerializeConfigBytes(data)
+}
+
+// SerializeConfigBytes returns the router config from the bytes.
+func SerializeConfigBytes(config []byte) (*nodev1.RouterConfig, error) {
+
 	// Ignore fields that are not in the proto definition
+	// This allows to add new fields to the proto without breaking the router
+	// This is a recommendation according to the proto documentation
 	ms := protojson.UnmarshalOptions{
 		DiscardUnknown: true,
 	}
 
 	var cfg nodev1.RouterConfig
-	if err := ms.Unmarshal(data, &cfg); err != nil {
+	if err := ms.Unmarshal(config, &cfg); err != nil {
 		return nil, err
 	}
 
