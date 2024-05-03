@@ -7,11 +7,7 @@ import {
   undefinedEntityInterfaceImplementationsError,
 } from '../src';
 import { describe, expect, test } from 'vitest';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
-} from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
 
 import { parse } from 'graphql';
 
@@ -21,7 +17,7 @@ describe('Entity Interface Tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Entity implements Interface {
         age: Int!
@@ -50,7 +46,7 @@ describe('Entity Interface Tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Entity implements Interface {
         age: Int!

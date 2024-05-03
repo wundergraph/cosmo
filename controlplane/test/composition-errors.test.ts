@@ -2,16 +2,16 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { Kind, parse } from 'graphql';
+import { parse } from 'graphql';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
   ImplementationErrors,
   incompatibleArgumentTypesError,
-  incompatibleParentKindFatalError, incompatibleParentKindMergeError,
+  incompatibleParentKindMergeError,
   InvalidFieldImplementation,
+  invalidInterfaceImplementationError,
   invalidRequiredInputValueError,
   noQueryRootTypeError,
-  unimplementedInterfaceFieldsError,
 } from '@wundergraph/composition';
 import { composeSubgraphs } from '../src/core/composition/composition.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
@@ -19,7 +19,7 @@ import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
-describe('CompositionErrors', (ctx) => {
+describe('Composition error tests', (ctx) => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -342,7 +342,7 @@ describe('CompositionErrors', (ctx) => {
 
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      unimplementedInterfaceFieldsError(
+      invalidInterfaceImplementationError(
         'TypeB',
         'object',
         new Map<string, ImplementationErrors>([

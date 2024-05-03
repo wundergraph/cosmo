@@ -249,14 +249,8 @@ export function unresolvableFieldError(
 }
 
 export function undefinedTypeError(typeName: string): Error {
-  return new Error(`The type "${typeName}" was referenced in the schema, but it was never defined.`);
+  return new Error(` The type "${typeName}" was referenced in the schema, but it was never defined.`);
 }
-
-export const federationRequiredInputFieldError = (parentName: string, fieldName: string) =>
-  new Error(
-    `Input object field "${parentName}.${fieldName}" is required in at least one subgraph; ` +
-      `consequently, "${fieldName}" must be defined in all subgraphs that also define "${parentName}".`,
-  );
 
 export function invalidRepeatedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
   return (
@@ -443,6 +437,14 @@ export function invalidConfigurationResultFatalError(fieldPath: string): Error {
   return new Error(`Fatal: Expected either errors or configurations for the path ${fieldPath}" but received neither".`);
 }
 
+export const subgraphValidationFailureError: Error = new Error(
+  ` Fatal: Subgraph validation did not return a valid AST.`,
+);
+
+export const federationFactoryInitializationFatalError = new Error(
+  'Fatal: FederationFactory was unsuccessfully initialized.',
+);
+
 export function unexpectedParentKindErrorMessage(
   parentTypeName: string,
   expectedTypeString: string,
@@ -472,10 +474,6 @@ export function subgraphValidationError(subgraphName: string, errors: Error[]): 
       errors.map((error) => error.message).join('\n'),
   );
 }
-
-export const subgraphValidationFailureError: Error = new Error(
-  ` Fatal: Subgraph validation did not return a valid AST.`,
-);
 
 export function invalidSubgraphNameErrorMessage(index: number, newName: string): string {
   return (
@@ -518,7 +516,7 @@ export function subgraphInvalidSyntaxError(error?: Error): Error {
   return new Error(message);
 }
 
-export function unimplementedInterfaceFieldsError(
+export function invalidInterfaceImplementationError(
   parentTypeName: string,
   parentTypeString: string,
   implementationErrorsByInterfaceTypeName: Map<string, ImplementationErrors>,
@@ -570,7 +568,12 @@ export function unimplementedInterfaceFieldsError(
           `   The implemented response type "${invalidFieldImplementation.implementedResponseType}" is not` +
           ` a valid subset (equally or more restrictive) of the response type "` +
           invalidFieldImplementation.originalResponseType +
-          `" for "${interfaceName}.${fieldName}".`;
+          `" for "${interfaceName}.${fieldName}".\n`;
+      }
+      if (invalidFieldImplementation.isInaccessible) {
+        message +=
+          `   The field has been declared @inaccessible; however, the same field has not been declared @inaccessible` +
+          ` on the interface definition.\n   Consequently, the interface implementation cannot be satisfied.\n`;
       }
     }
     messages.push(message);
@@ -634,11 +637,16 @@ export function invalidArgumentsError(fieldPath: string, invalidArguments: Inval
 }
 
 export const noQueryRootTypeError = new Error(
-  `A valid federated graph must have at least one populated query root type.\n` +
+  `A valid federated graph must have at least one accessible query root type field.\n` +
     ` For example:\n` +
     `  type Query {\n` +
     `    dummy: String\n` +
     `  }`,
+);
+
+export const inaccessibleQueryRootTypeError = new Error(
+  `The root query type "Query" must be present in the client schema;` +
+    ` consequently, it must not be declared @inaccessible.`,
 );
 
 export function unexpectedObjectResponseType(fieldPath: string, actualTypeString: string): Error {
@@ -775,6 +783,13 @@ export function duplicateFieldInFieldSetErrorMessage(fieldSet: string, fieldPath
   );
 }
 
+export function invalidConfigurationDataErrorMessage(typeName: string, fieldName: string, fieldSet: string): string {
+  return (
+    ` Expected ConfigurationData to exist for type "${typeName}" when adding field "${fieldName}"` +
+    `  while validating FieldSet "${fieldSet}".`
+  );
+}
+
 export function unknownProvidesEntityErrorMessage(fieldPath: string, responseType: string): string {
   return (
     ` A @provides directive is declared on "${fieldPath}".\n` +
@@ -880,9 +895,13 @@ export function noFieldDefinitionsError(typeString: string, typeName: string): E
   return new Error(`The ${typeString} "${typeName}" is invalid because it does not define any fields.`);
 }
 
-export function allFieldDefinitionsAreInaccessibleError(typeString: string, typeName: string): Error {
+export function allChildDefinitionsAreInaccessibleError(
+  typeString: string,
+  typeName: string,
+  childType: string,
+): Error {
   return new Error(
-    `The ${typeString} "${typeName}" is invalid because all its field definitions are declared "@inaccessible".`,
+    `The ${typeString} "${typeName}" is invalid because all its ${childType} definitions are declared "@inaccessible".`,
   );
 }
 
@@ -1138,7 +1157,7 @@ export function invalidImplementedTypeError(
 ): Error {
   let message =
     ` Only interfaces can be implemented. However, the type "${typeName}" attempts to implement` +
-    `the following invalid type` +
+    ` the following invalid type` +
     (invalidImplementationTypeStringByTypeName.size > 1 ? `s` : ``) +
     `:\n`;
   for (const [typeName, typeString] of invalidImplementationTypeStringByTypeName) {
@@ -1168,5 +1187,38 @@ export function invalidEventDirectiveError(directiveName: string, fieldPath: str
       (errorMessages.length > 1 ? `s` : ``) +
       `:\n ` +
       errorMessages.join(`\n `),
+  );
+}
+
+export function invalidReferencesOfInaccessibleTypeError(
+  typeString: string,
+  typeName: string,
+  invalidPaths: string[],
+): Error {
+  return new Error(
+    `The ${typeString} "${typeName}" is declared @inaccessible; however, the ${typeString} is still referenced at` +
+      ` the following paths:\n "` +
+      invalidPaths.join(QUOTATION_JOIN) +
+      `"\n`,
+  );
+}
+
+export function inaccessibleRequiredArgumentError(
+  argumentName: string,
+  argumentPath: string,
+  fieldName: string,
+): Error {
+  return new Error(
+    `The argument "${argumentName}" on path "${argumentPath}" is declared @inaccessible;` +
+      ` however, it is a required argument for field "${fieldName}".`,
+  );
+}
+
+export function invalidUnionMemberTypeError(typeName: string, invalidMembers: string[]): Error {
+  return new Error(
+    ` The union "${typeName}" defines the following member` +
+      (invalidMembers.length > 1 ? `s that are not object types` : ` that is not an object type`) +
+      `:\n  ` +
+      invalidMembers.join(`\n  `),
   );
 }

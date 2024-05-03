@@ -4,7 +4,7 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
   versionTwoDirectiveDefinitions,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 import { parse } from 'graphql';
 
@@ -114,7 +114,7 @@ describe('@shareable directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity implements Interface {
           field: String!
@@ -139,7 +139,7 @@ describe('@shareable directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity implements Interface {
           field: String!
@@ -164,7 +164,7 @@ describe('@shareable directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity implements Interface {
           field: String!
@@ -189,7 +189,7 @@ describe('@shareable directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity implements Interface {
           field: String!
@@ -214,7 +214,7 @@ describe('@shareable directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity implements Interface {
           field: String!
@@ -239,7 +239,7 @@ describe('@shareable directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity implements Interface {
           field: String!

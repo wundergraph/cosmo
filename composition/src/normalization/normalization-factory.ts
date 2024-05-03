@@ -87,6 +87,7 @@ import {
   invalidArgumentsError,
   invalidDirectiveArgumentTypeErrorMessage,
   invalidDirectiveError,
+  invalidEdfsPublishResultObjectErrorMessage,
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
   invalidEventDrivenMutationResponseTypeErrorMessage,
@@ -97,16 +98,17 @@ import {
   invalidEventSubjectsErrorMessage,
   invalidEventSubjectsItemErrorMessage,
   invalidImplementedTypeError,
+  invalidInterfaceImplementationError,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
-  invalidEdfsPublishResultObjectErrorMessage,
   invalidRootTypeDefinitionError,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
   invalidStreamConfigurationInputErrorMessage,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
+  invalidUnionMemberTypeError,
   noBaseTypeExtensionError,
   noFieldDefinitionsError,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
@@ -124,23 +126,23 @@ import {
   undefinedStreamConfigurationInputErrorMessage,
   undefinedTypeError,
   unexpectedKindFatalError,
-  unimplementedInterfaceFieldsError,
 } from '../errors/errors';
 import {
   AUTHENTICATED,
   CONSUMER_NAME,
   DEFAULT,
   EDFS_PUBLISH,
-  EDFS_REQUEST,
-  EDFS_SUBSCRIBE,
   EDFS_PUBLISH_RESULT,
+  EDFS_REQUEST,
   EDFS_STREAM_CONFIGURATION,
+  EDFS_SUBSCRIBE,
   ENTITIES_FIELD,
   EVENT_DIRECTIVE_NAMES,
   EXTENDS,
   EXTERNAL,
   FIELDS,
   FROM,
+  INACCESSIBLE,
   KEY,
   MUTATION,
   N_A,
@@ -183,6 +185,7 @@ import {
   ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
   SchemaData,
+  UnionDefinitionData,
 } from '../schema-building/type-definition-data';
 import {
   EnumExtensionData,
@@ -322,18 +325,18 @@ export class NormalizationFactory {
     if (BASE_SCALARS.has(namedType)) {
       return { hasUnhandledError: false, typeString: '' };
     }
-    const parentContainer = this.parentDefinitionDataByTypeName.get(namedType);
-    if (!parentContainer) {
+    const parentData = this.parentDefinitionDataByTypeName.get(namedType);
+    if (!parentData) {
       this.errors.push(undefinedTypeError(namedType));
       return { hasUnhandledError: false, typeString: '' };
     }
-    switch (parentContainer.kind) {
+    switch (parentData.kind) {
       case Kind.ENUM_TYPE_DEFINITION:
       case Kind.INPUT_OBJECT_TYPE_DEFINITION:
       case Kind.SCALAR_TYPE_DEFINITION:
         return { hasUnhandledError: false, typeString: '' };
       default:
-        return { hasUnhandledError: true, typeString: kindToTypeString(parentContainer.kind) };
+        return { hasUnhandledError: true, typeString: kindToTypeString(parentData.kind) };
     }
   }
 
@@ -477,6 +480,7 @@ export class NormalizationFactory {
       const existingDirectives = directivesByDirectiveName.get(directiveName);
       if (existingDirectives) {
         existingDirectives.push(directiveNode);
+        continue;
       }
       directivesByDirectiveName.set(directiveName, [directiveNode]);
     }
@@ -640,6 +644,7 @@ export class NormalizationFactory {
     if (data.implementedInterfaceTypeNames.size < 1) {
       return;
     }
+    const isParentInaccessible = data.directivesByDirectiveName.has(INACCESSIBLE);
     const implementationErrorsMap = new Map<string, ImplementationErrors>();
     const invalidImplementationTypeStringByTypeName = new Map<string, string>();
     let doesInterfaceImplementItself = false;
@@ -667,8 +672,8 @@ export class NormalizationFactory {
       let hasErrors = false;
       for (const [fieldName, interfaceField] of implementationData.fieldDataByFieldName) {
         let hasNestedErrors = false;
-        const containerField = data.fieldDataByFieldName.get(fieldName);
-        if (!containerField) {
+        const fieldData = data.fieldDataByFieldName.get(fieldName);
+        if (!fieldData) {
           hasErrors = true;
           implementationErrors.unimplementedFields.push(fieldName);
           continue;
@@ -676,6 +681,7 @@ export class NormalizationFactory {
         const invalidFieldImplementation: InvalidFieldImplementation = {
           invalidAdditionalArguments: new Set<string>(),
           invalidImplementedArguments: [],
+          isInaccessible: false,
           originalResponseType: printTypeNode(interfaceField.node.type),
           unimplementedArguments: new Set<string>(),
         };
@@ -683,18 +689,18 @@ export class NormalizationFactory {
         if (
           !isTypeValidImplementation(
             interfaceField.node.type,
-            containerField.node.type,
+            fieldData.node.type,
             this.concreteTypeNamesByAbstractTypeName,
           )
         ) {
           hasErrors = true;
           hasNestedErrors = true;
-          invalidFieldImplementation.implementedResponseType = printTypeNode(containerField.node.type);
+          invalidFieldImplementation.implementedResponseType = printTypeNode(fieldData.node.type);
         }
         const handledArguments = new Set<string>();
         for (const [argumentName, interfaceArgument] of interfaceField.argumentDataByArgumentName) {
           handledArguments.add(argumentName);
-          const containerArgument = containerField.argumentDataByArgumentName.get(argumentName);
+          const containerArgument = fieldData.argumentDataByArgumentName.get(argumentName);
           // The type implementing the interface must include all arguments with no variation for that argument
           if (!containerArgument) {
             hasErrors = true;
@@ -712,7 +718,7 @@ export class NormalizationFactory {
           }
         }
         // Additional arguments must be optional (nullable)
-        for (const [argumentName, argumentData] of containerField.argumentDataByArgumentName) {
+        for (const [argumentName, argumentData] of fieldData.argumentDataByArgumentName) {
           if (handledArguments.has(argumentName)) {
             continue;
           }
@@ -722,6 +728,11 @@ export class NormalizationFactory {
           hasErrors = true;
           hasNestedErrors = true;
           invalidFieldImplementation.invalidAdditionalArguments.add(argumentName);
+        }
+        if (!isParentInaccessible && fieldData.isInaccessible && !interfaceField.isInaccessible) {
+          hasErrors = true;
+          hasNestedErrors = true;
+          invalidFieldImplementation.isInaccessible = true;
         }
         if (hasNestedErrors) {
           implementationErrors.invalidFieldImplementations.set(fieldName, invalidFieldImplementation);
@@ -739,7 +750,7 @@ export class NormalizationFactory {
     }
     if (implementationErrorsMap.size > 0) {
       this.errors.push(
-        unimplementedInterfaceFieldsError(data.name, kindToTypeString(data.kind), implementationErrorsMap),
+        invalidInterfaceImplementationError(data.name, kindToTypeString(data.kind), implementationErrorsMap),
       );
     }
   }
@@ -1207,6 +1218,24 @@ export class NormalizationFactory {
     }
   }
 
+  validateUnionMembers(data: UnionDefinitionData) {
+    const invalidMembers: string[] = [];
+    for (const memberName of data.memberByMemberTypeName.keys()) {
+      const memberData =
+        this.parentDefinitionDataByTypeName.get(memberName) || this.parentExtensionDataByTypeName.get(memberName);
+      // Invalid references are propagated as an error elsewhere
+      if (!memberData) {
+        continue;
+      }
+      if (memberData.kind !== Kind.OBJECT_TYPE_DEFINITION && memberData.kind !== Kind.OBJECT_TYPE_EXTENSION) {
+        invalidMembers.push(`"${memberName}", which is type "${kindToTypeString(memberData.kind)}"`);
+      }
+    }
+    if (invalidMembers.length > 0) {
+      this.errors.push(invalidUnionMemberTypeError(data.name, invalidMembers));
+    }
+  }
+
   normalize(document: DocumentNode): NormalizationResultContainer {
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
     after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
@@ -1437,6 +1466,7 @@ export class NormalizationFactory {
               parentExtensionData as UnionExtensionData,
             ),
           );
+          this.validateUnionMembers(parentDefinitionData);
           break;
         default:
           throw unexpectedKindFatalError(extensionTypeName);
@@ -1535,6 +1565,7 @@ export class NormalizationFactory {
           definitions.push(
             getUnionNodeByData(parentDefinitionData, this.errors, this.directiveDefinitionByDirectiveName),
           );
+          this.validateUnionMembers(parentDefinitionData);
           break;
         default:
           throw unexpectedKindFatalError(parentTypeName);

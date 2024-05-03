@@ -18,7 +18,7 @@ import {
   schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
   versionOneSchemaQueryAndPersistedDirectiveDefinitions,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 import { parse } from 'graphql';
 import { FIELDS, KEY } from '../src/utils/string-constants';
@@ -773,7 +773,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity {
           a: Int!
@@ -911,7 +911,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity {
           a: Int!
@@ -1049,7 +1049,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity {
           a: Int!
@@ -1187,7 +1187,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity {
           a: Int!
@@ -1325,7 +1325,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity {
           a: Int!
@@ -1463,7 +1463,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
         type Entity {
           a: Int!

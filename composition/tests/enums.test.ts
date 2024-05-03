@@ -1,11 +1,7 @@
 import { federateSubgraphs, incompatibleSharedEnumError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
-} from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
 
 describe('Enum federation tests', () => {
   const parentName = 'Instruction';
@@ -15,7 +11,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       enum Instruction {
         FIGHT
@@ -39,7 +35,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       enum Instruction {
         FIGHT
@@ -65,7 +61,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type BattleAction {
         baseAction(input: Instruction): Boolean!
@@ -90,7 +86,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type BattleAction {
         baseAction: Instruction!

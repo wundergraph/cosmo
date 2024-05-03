@@ -30,6 +30,7 @@ import {
   OBJECT_UPPER,
   QUERY,
   QUERY_UPPER,
+  ROOT_TYPES,
   SCALAR_UPPER,
   SCHEMA_UPPER,
   SUBSCRIPTION_UPPER,
@@ -43,6 +44,7 @@ import {
   duplicateFieldInFieldSetErrorMessage,
   inlineFragmentInFieldSetErrorMessage,
   inlineFragmentWithoutTypeConditionErrorMessage,
+  invalidConfigurationDataErrorMessage,
   invalidConfigurationResultFatalError,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeConditionTypeErrorMessage,
@@ -522,11 +524,19 @@ function validateKeyFieldSets(
           // Fields that form part of an entity key are intrinsically shareable
           fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
           definedFields[currentDepth].add(fieldName);
-          // Depth 0 is the original parent type
-          // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
+          /* Depth 0 is the original parent type
+           * If a field is external, but it's part of a key FieldSet, it should be included in its respective
+           * root or child node */
           if (currentDepth === 0) {
             keyFieldNames.add(fieldName);
             fieldNames.add(fieldName);
+          } else {
+            const nestedConfigurationData = nf.configurationDataByParentTypeName.get(parentTypeName);
+            if (!nestedConfigurationData) {
+              errorMessages.push(invalidConfigurationDataErrorMessage(parentTypeName, fieldName, fieldSet));
+              return BREAK;
+            }
+            nestedConfigurationData.fieldNames.add(fieldName);
           }
           getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
