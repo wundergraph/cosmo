@@ -39,9 +39,9 @@ type record struct {
 }
 
 type subscription struct {
-	subjects []string
-	updater  resolve.SubscriptionUpdater
-	context  context.Context
+	topics  []string
+	updater resolve.SubscriptionUpdater
+	context context.Context
 }
 
 type connector struct {
@@ -124,7 +124,7 @@ func (p *pubsub) worker(ctx context.Context) error {
 			}
 		case sub := <-p.sub:
 
-			for _, subject := range sub.subjects {
+			for _, subject := range sub.topics {
 
 				p.mu.Lock()
 				if _, ok := p.subscriptions[subject]; !ok {
@@ -150,7 +150,7 @@ func (p *pubsub) worker(ctx context.Context) error {
 				})
 			}
 
-			p.logger.Debug("subscribe", zap.Strings("topics", sub.subjects))
+			p.logger.Debug("subscribe", zap.Strings("topics", sub.topics))
 		}
 	}
 }
@@ -210,27 +210,27 @@ func (p *pubsub) poll(ctx context.Context) error {
 }
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
-// The engine already deduplicates subscriptions with the same subjects, stream configuration, extensions, headers, etc.
-func (p *pubsub) Subscribe(ctx context.Context, subjects []string, updater resolve.SubscriptionUpdater) error {
+// The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
+func (p *pubsub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
 	// Add the topics to the consumer. Internally, it will update the metadata to poll
 	// the new topics / partitions. This is a non-blocking call. As long as we don't deal
 	// with partitions manually, the library will clean up the old topics / partitions.
-	p.client.AddConsumeTopics(subjects...)
+	p.client.AddConsumeTopics(event.Topics...)
 
 	s := &subscription{
-		subjects: subjects,
-		updater:  updater,
-		context:  ctx,
+		topics:  event.Topics,
+		updater: updater,
+		context: ctx,
 	}
 	p.sub <- s
 
 	return nil
 }
 
-func (p *pubsub) Publish(ctx context.Context, subject string, data []byte) error {
+func (p *pubsub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
 
-	p.logger.Debug("publish", zap.String("topic", subject), zap.ByteString("data", data))
+	p.logger.Debug("publish", zap.String("topic", event.Topic), zap.ByteString("data", event.Data))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -238,8 +238,8 @@ func (p *pubsub) Publish(ctx context.Context, subject string, data []byte) error
 	var pErr error
 
 	p.client.Produce(ctx, &kgo.Record{
-		Topic: subject,
-		Value: data,
+		Topic: event.Topic,
+		Value: event.Data,
 	}, func(record *kgo.Record, err error) {
 		defer wg.Done()
 		if err != nil {

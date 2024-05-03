@@ -62,23 +62,23 @@ func (p *natsPubSub) ensureConn() error {
 	return nil
 }
 
-func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater resolve.SubscriptionUpdater, streamConfiguration *pubsub_datasource.NatsStreamConfiguration) error {
+func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.NatsSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	if err := p.ensureConn(); err != nil {
 		return newError(fmt.Errorf(`failed to ensure nats connection: %w`, err))
 	}
 
-	if streamConfiguration != nil {
+	if event.StreamConfiguration != nil {
 		js, err := jetstream.New(p.conn)
 		if err != nil {
 			return newError(fmt.Errorf(`failed to create jetstream: %w`, err))
 		}
 
-		consumer, err := js.CreateOrUpdateConsumer(ctx, streamConfiguration.StreamName, jetstream.ConsumerConfig{
-			Durable:        streamConfiguration.Consumer, // Durable consumers are not removed automatically regardless of the InactiveThreshold
-			FilterSubjects: subjects,
+		consumer, err := js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, jetstream.ConsumerConfig{
+			Durable:        event.StreamConfiguration.Consumer, // Durable consumers are not removed automatically regardless of the InactiveThreshold
+			FilterSubjects: event.Subjects,
 		})
 		if err != nil {
-			return newError(fmt.Errorf(`failed to create or update consumer "%s": %w`, streamConfiguration.Consumer, err))
+			return newError(fmt.Errorf(`failed to create or update consumer "%s": %w`, event.StreamConfiguration.Consumer, err))
 		}
 
 		go func() {
@@ -110,8 +110,8 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 	}
 
 	msgChan := make(chan *nats.Msg)
-	subscriptions := make([]*nats.Subscription, len(subjects))
-	for i, subject := range subjects {
+	subscriptions := make([]*nats.Subscription, len(event.Subjects))
+	for i, subject := range event.Subjects {
 		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
 			return newError(fmt.Errorf(`error subscribing to NATS subject "%s": %w`, subject, err))
@@ -134,20 +134,20 @@ func (p *natsPubSub) Subscribe(ctx context.Context, subjects []string, updater r
 	return nil
 }
 
-func (p *natsPubSub) Publish(_ context.Context, subject string, data []byte) error {
+func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration) error {
 	if err := p.ensureConn(); err != nil {
 		return err
 	}
-	return p.conn.Publish(subject, data)
+	return p.conn.Publish(event.Subject, event.Data)
 }
 
-func (p *natsPubSub) Request(ctx context.Context, subject string, data []byte, w io.Writer) error {
+func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration, w io.Writer) error {
 	if err := p.ensureConn(); err != nil {
 		return err
 	}
-	msg, err := p.conn.RequestWithContext(ctx, subject, data)
+	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
-		return newError(fmt.Errorf("error requesting NATS subject %s: %w", subject, err))
+		return newError(fmt.Errorf("error requesting NATS subject %s: %w", event.Subject, err))
 	}
 	_, err = w.Write(msg.Data)
 	return err
