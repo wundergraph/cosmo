@@ -154,7 +154,6 @@ import { ObjectExtensionData } from '../schema-building/type-extension-data';
 import { createMultiGraphAndRenameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import { getLeastRestrictiveMergedTypeNode, getMostRestrictiveMergedTypeNode } from '../schema-building/type-merging';
-import { printSchemaWithDirectives } from '@graphql-tools/utils';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;

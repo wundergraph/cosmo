@@ -1,6 +1,6 @@
 directive @edfs__request(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
 directive @edfs__publish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
-directive @egidfs__subscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
+directive @edfs__subscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
 
 type Query {
     employeeFromEvent(id: ID!): Employee! @edfs__request(subject: "getEmployee.{{ args.id }}")
