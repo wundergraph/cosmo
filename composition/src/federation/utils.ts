@@ -12,9 +12,9 @@ export type FederationResultContainer = {
 export type FederationResult = {
   fieldConfigurations: FieldConfiguration[];
   federatedGraphAST: DocumentNode;
+  federatedGraphClientSchema: GraphQLSchema;
   federatedGraphSchema: GraphQLSchema;
   subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
-  federatedGraphClientSchema: GraphQLSchema;
 };
 
 export type FederationResultContainerWithContracts = {
