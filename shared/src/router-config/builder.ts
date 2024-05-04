@@ -182,7 +182,9 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   }
   engineConfig.fieldConfigurations = generateFieldConfigurations(input.fieldConfigurations);
   engineConfig.graphqlSchema = input.federatedSDL;
-  engineConfig.graphqlClientSchema = input.federatedClientSDL;
+  if (input.federatedClientSDL !== '') {
+    engineConfig.graphqlClientSchema = input.federatedClientSDL;
+  }
   return new RouterConfig({
     engineConfig,
     version: input.schemaVersionId,

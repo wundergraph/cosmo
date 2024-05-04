@@ -29,3 +29,27 @@ export function federateTestSubgraphs(): FederationResultContainer {
 
   return federateSubgraphs([accounts, inventory, products, reviews]);
 }
+
+export const simpleAccounts: Subgraph = {
+  definitions: parse(fs.readFileSync('test/testdata/simple-accounts.graphql').toString()),
+  name: 'accounts',
+  url: 'https://wg-federation-demo-accounts.fly.dev/graphql',
+};
+
+export const simpleProducts: Subgraph = {
+  definitions: parse(fs.readFileSync('test/testdata/simple-products.graphql').toString()),
+  name: 'products',
+  url: 'https://wg-federation-demo-products.fly.dev/graphql',
+};
+
+export const simpleProductsWithTags: Subgraph = {
+  definitions: parse(fs.readFileSync('test/testdata/simple-products-with-tags.graphql').toString()),
+  name: 'products',
+  url: 'https://wg-federation-demo-products.fly.dev/graphql',
+};
+
+export const simpleProductsWithInaccessible: Subgraph = {
+  definitions: parse(fs.readFileSync('test/testdata/simple-products-with-inaccessible.graphql').toString()),
+  name: 'products',
+  url: 'https://wg-federation-demo-products.fly.dev/graphql',
+};
