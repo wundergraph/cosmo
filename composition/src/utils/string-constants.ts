@@ -12,11 +12,13 @@ export const DEFAULT_SUBSCRIPTION = 'Subscription';
 export const DEPRECATED = 'deprecated';
 export const DEPRECATED_DEFAULT_ARGUMENT_VALUE = 'No longer supported';
 export const DIRECTIVE_DEFINITION = 'directive definition';
-export const EDFS_PUBLISH = 'edfs__publish';
-export const EDFS_REQUEST = 'edfs__request';
-export const EDFS_SUBSCRIBE = 'edfs__subscribe';
+export const EDFS_KAFKA_PUBLISH = 'edfs__kafkaPublish';
+export const EDFS_KAFKA_SUBSCRIBE = 'edfs__kafkaSubscribe';
+export const EDFS_NATS_PUBLISH = 'edfs__natsPublish';
+export const EDFS_NATS_REQUEST = 'edfs__natsRequest';
+export const EDFS_NATS_SUBSCRIBE = 'edfs__natsSubscribe';
 export const EDFS_PUBLISH_RESULT = 'edfs__PublishResult';
-export const EDFS_STREAM_CONFIGURATION = 'edfs__StreamConfiguration';
+export const EDFS_NATS_STREAM_CONFIGURATION = 'edfs__NatsStreamConfiguration';
 export const ENTITIES = 'entities';
 export const ENTITIES_FIELD = '_entities';
 export const ENTITY_UNION = '_Entity';
@@ -45,9 +47,11 @@ export const INT_SCALAR = 'Int';
 export const INTERFACE_UPPER = 'INTERFACE';
 export const INTERFACE_OBJECT = 'interfaceObject';
 export const LINK = 'link';
+export const KAFKA = 'kafka';
 export const KEY = 'key';
 export const MUTATION = 'Mutation';
 export const MUTATION_UPPER = 'MUTATION';
+export const NATS = 'nats';
 export const N_A = 'N/A';
 export const NAME = 'name';
 export const NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT = 'edfs__PublishResult!';
@@ -59,6 +63,7 @@ export const OVERRIDE = 'override';
 export const PARENT_DEFINITION_DATA = 'parentDefinitionDataByTypeName';
 export const PARENT_DEFINITION_DATA_MAP = 'parentDefinitionDataByParentTypeName';
 export const PARENT_EXTENSION_DATA_MAP = 'parentExtensionDataByParentTypeName';
+export const PROVIDER_ID = 'providerId';
 export const PROVIDES = 'provides';
 export const PUBLISH = 'publish';
 export const QUERY = 'Query';
@@ -78,7 +83,6 @@ export const SELECTION_REPRESENTATION = ' { ... }';
 export const SERVICE_OBJECT = '_Service';
 export const SERVICE_FIELD = '_service';
 export const SHAREABLE = 'shareable';
-export const SOURCE_NAME = 'sourceName';
 export const SPECIFIED_BY = 'specifiedBy';
 export const STREAM_CONFIGURATION = 'streamConfiguration';
 export const STREAM_NAME = 'streamName';
@@ -90,6 +94,8 @@ export const SUBSCRIBE = 'subscribe';
 export const SUBSCRIPTION_UPPER = 'SUBSCRIPTION';
 export const SUCCESS = 'success';
 export const TAG = 'tag';
+export const TOPIC = 'topic';
+export const TOPICS = 'topics';
 export const UNION = 'union';
 export const UNION_UPPER = 'UNION';
 export const URL_LOWER = 'url';
@@ -106,6 +112,12 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
 ]);
 export const IGNORED_PARENT_DIRECTIVES = new Set<string>([AUTHENTICATED, EXTENDS, REQUIRES_SCOPES]);
 export const ROOT_TYPES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
-export const EVENT_DIRECTIVE_NAMES = new Set<string>([EDFS_PUBLISH, EDFS_REQUEST, EDFS_SUBSCRIBE]);
+export const EVENT_DIRECTIVE_NAMES = new Set<string>([
+  EDFS_KAFKA_PUBLISH,
+  EDFS_KAFKA_SUBSCRIBE,
+  EDFS_NATS_PUBLISH,
+  EDFS_NATS_REQUEST,
+  EDFS_NATS_SUBSCRIBE,
+]);
 export const STREAM_CONFIGURATION_FIELD_NAMES = new Set<string>([CONSUMER_NAME, STREAM_NAME]);
 export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([AUTHENTICATED, DEPRECATED, REQUIRES_SCOPES]);

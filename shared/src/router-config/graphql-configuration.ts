@@ -3,19 +3,22 @@ import {
   ArgumentConfiguration,
   ArgumentSource,
   AuthorizationConfiguration,
+  EngineEventConfiguration,
   EntityInterfaceConfiguration,
   EventConfiguration,
   EventType,
   FieldConfiguration,
+  KafkaEventConfiguration,
+  NatsEventConfiguration,
+  NatsStreamConfiguration,
   RequiredField,
   Scopes,
-  NatsStreamConfiguration,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   ConfigurationData,
-  EventType as CompositionEventType,
   FieldConfiguration as CompositionFieldConfiguration,
+  NatsEventType as CompositionEventType,
   RequiredFieldConfiguration,
 } from '@wundergraph/composition';
 
@@ -99,22 +102,57 @@ export function configurationDataMapToDataSourceConfiguration(
     addRequiredFields(data.keys, output.keys, typeName);
     addRequiredFields(data.provides, output.provides, typeName);
     addRequiredFields(data.requires, output.requires, typeName);
+    const natsEventConfigurations: NatsEventConfiguration[] = [];
+    const kafkaEventConfigurations: KafkaEventConfiguration[] = [];
     for (const event of data.events ?? []) {
+      switch (event.providerType) {
+        case 'kafka': {
+          kafkaEventConfigurations.push(
+            new KafkaEventConfiguration({
+              engineEventConfiguration: new EngineEventConfiguration({
+                fieldName: event.fieldName,
+                providerId: event.providerId,
+                type: eventType(event.type),
+                typeName,
+              }),
+              topics: event.topics,
+            }),
+          );
+          break;
+        }
+        case 'nats': {
+          natsEventConfigurations.push(
+            new NatsEventConfiguration({
+              engineEventConfiguration: new EngineEventConfiguration({
+                fieldName: event.fieldName,
+                providerId: event.providerId,
+                type: eventType(event.type),
+                typeName,
+              }),
+              subjects: event.subjects,
+              ...(event.streamConfiguration
+                ? {
+                    streamConfiguration: new NatsStreamConfiguration({
+                      consumerName: event.streamConfiguration.consumerName,
+                      streamName: event.streamConfiguration.streamName,
+                    }),
+                  }
+                : {}),
+            }),
+          );
+          break;
+        }
+        default: {
+          // TODO propagate this properly
+          throw new Error(`Unknown event provider.`);
+        }
+      }
+    }
+    if (natsEventConfigurations.length > 0 || kafkaEventConfigurations.length > 0) {
       output.events.push(
         new EventConfiguration({
-          fieldName: event.fieldName,
-          sourceName: event.sourceName,
-          subjects: event.subjects,
-          type: eventType(event.type),
-          typeName,
-          ...(event.streamConfiguration
-            ? {
-                streamConfiguration: new NatsStreamConfiguration({
-                  consumerName: event.streamConfiguration.consumerName,
-                  streamName: event.streamConfiguration.streamName,
-                }),
-              }
-            : {}),
+          nats: natsEventConfigurations,
+          kafka: kafkaEventConfigurations,
         }),
       );
     }

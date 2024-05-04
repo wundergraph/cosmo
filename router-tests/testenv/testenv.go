@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/twmb/franz-go/pkg/kadm"
-	"github.com/twmb/franz-go/pkg/kgo"
 	"io"
 	"log"
 	"math/rand"
@@ -23,6 +21,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/twmb/franz-go/pkg/kadm"
+	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
@@ -55,7 +56,7 @@ import (
 )
 
 const (
-	defaultSourceName = "default"
+	defaultSourceName = "nats"
 	myNatsSourceName  = "my-nats"
 	myKafkaSourceName = "my-kafka"
 )

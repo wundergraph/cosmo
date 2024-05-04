@@ -3,6 +3,11 @@ package subgraphs
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -11,10 +16,6 @@ import (
 	natsPubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"golang.org/x/sync/errgroup"
-	"log"
-	"net/http"
-	"os"
-	"strconv"
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability"
@@ -169,7 +170,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 	defaultConnection, err := nats.Connect(url)
 	if err != nil {
-		log.Printf("failed to connect to nats source \"default\": %v", err)
+		log.Printf("failed to connect to nats source \"nats\": %v", err)
 	}
 	myNatsConnection, err := nats.Connect(url)
 	if err != nil {
@@ -177,7 +178,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 
 	pubSubBySourceName := map[string]pubsub_datasource.PubSub{
-		"default": natsPubsub.NewConnector(defaultConnection).New(ctx),
+		"nats":    natsPubsub.NewConnector(defaultConnection).New(ctx),
 		"my-nats": natsPubsub.NewConnector(myNatsConnection).New(ctx),
 	}
 
