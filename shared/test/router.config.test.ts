@@ -270,19 +270,3 @@ describe('Router Config Builder', () => {
     expect(error).toStrictEqual(normalizationFailureError('ConfigurationDataMap'));
   });
 });
-
-// describe('RouterConfig json tests', () => {
-//   test('that routerConfigFromJsonString ignores unknown fields', () => {
-//     const routerConfig = routerConfigFromJsonString(
-//       readFileSync(path.join(__dirname, './testdata/routerConfigWithUnknownProperties.json')).toString(),
-//     );
-//     expect(routerConfig).toBeDefined();
-//   });
-//
-//   test('that routerConfigFromJson ignores unknown fields', () => {
-//     const routerConfig = routerConfigFromJson(
-//       JSON.parse(readFileSync(path.join(__dirname, './testdata/routerConfigWithUnknownProperties.json')).toString()),
-//     );
-//     expect(routerConfig).toBeDefined();
-//   });
-// });
