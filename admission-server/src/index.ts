@@ -4,7 +4,7 @@ import { logger } from 'hono/logger';
 import { serve } from '@hono/node-server';
 import { compress } from 'hono/compress';
 import { Hono } from 'hono';
-import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
 import { makeSignature } from './signature.js';
 
 dotenv.config();
@@ -38,7 +38,7 @@ app.post('/validate-config', async (c) => {
 
   const configAsText = await resp.text();
 
-  const config = RouterConfig.fromJsonString(configAsText);
+  const config = routerConfigFromJsonString(configAsText);
 
   console.log('Validate config with version', config.version);
 
