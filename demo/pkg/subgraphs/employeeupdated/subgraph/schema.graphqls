@@ -1,6 +1,13 @@
 directive @edfs__natsRequest(subject: String!, providerId: String! = "nats") on FIELD_DEFINITION
 directive @edfs__natsPublish(subject: String!, providerId: String! = "nats") on FIELD_DEFINITION
 directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "nats", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+directive @edfs__kafkaPublish(topic: String!, providerId: String! = "nats") on FIELD_DEFINITION
+directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "kafka") on FIELD_DEFINITION
+
+input edfs__NatsStreamConfiguration {
+    consumerName: String!
+    streamName: String!
+}
 
 type Query {
     employeeFromEvent(id: ID!): Employee! @edfs__natsRequest(subject: "getEmployee.{{ args.id }}")
@@ -13,13 +20,13 @@ input UpdateEmployeeInput {
 }
 
 type Mutation {
-    updateEmployee(id: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdated.{{ args.id }}", providerId: "my-kafka")
+    updateEmployeeMyKafka(id: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__kafkaPublish(topic: "employeeUpdated", providerId: "my-kafka")
     updateEmployeeMyNats(employeeID: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEmployeeMyNats.{{ args.employeeID }}", providerId: "my-nats")
 }
 
 type Subscription {
     employeeUpdated(employeeID: ID!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"], streamConfiguration: { consumerName: "consumerName1", streamName: "streamName"})
-    employeeUpdatedMyKafka(employeeID: ID!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"], streamConfiguration: { consumerName: "consumerName1", streamName: "streamName"}, providerId: "my-kafka")
+    employeeUpdatedMyKafka(employeeID: ID!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated"], providerId: "my-kafka")
     employeeUpdatedMyNats(id: ID!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], providerId: "my-nats")
     employeeUpdatedStream(id: ID!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName"})
 }

@@ -1119,14 +1119,15 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 }
 
 func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.Server) *subgraphs.SubgraphOptions {
-	pubsubBySourceName := make(map[string]pubsub_datasource.PubSub, len(demoNatsSourceNames))
+	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsSourceNames))
 	for _, sourceName := range demoNatsSourceNames {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		require.NoError(t, err)
-		pubsubBySourceName[sourceName] = pubsubNats.NewConnector(natsConnection).New(ctx)
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(natsConnection).New(ctx)
 	}
+
 	return &subgraphs.SubgraphOptions{
-		PubSubBySourceName: pubsubBySourceName,
+		NatsPubSubByProviderID: natsPubSubByProviderID,
 	}
 }
 

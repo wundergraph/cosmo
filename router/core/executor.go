@@ -190,62 +190,60 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 			continue
 		}
 
-		for _, eventConfiguration := range datasourceConfiguration.CustomEvents.Events {
+		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
 
-			for _, eventConfiguration := range eventConfiguration.GetNats() {
-
-				providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-				// if this source name's provider has already been initiated, do not try to initiate again
-				_, ok := natsPubSubByProviderID[providerID]
-				if ok {
-					continue
-				}
-
-				for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
-					if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
-						options, err := buildNatsOptions(eventSource)
-						if err != nil {
-							return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
-						}
-						natsConnection, err := nats.Connect(eventSource.URL, options...)
-						if err != nil {
-							return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
-						}
-						natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(natsConnection).New(ctx)
-
-						break
-					}
-				}
+			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+			// if this source name's provider has already been initiated, do not try to initiate again
+			_, ok := natsPubSubByProviderID[providerID]
+			if ok {
+				continue
 			}
 
-			for _, eventConfiguration := range eventConfiguration.GetKafka() {
-
-				providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-				// if this source name's provider has already been initiated, do not try to initiate again
-				_, ok := kafkaPubSubByProviderID[providerID]
-				if ok {
-					continue
-				}
-
-				for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
-
-					if eventSource.ID == providerID {
-						options, err := buildKafkaOptions(eventSource)
-						if err != nil {
-							return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
-						}
-						client, err := kgo.NewClient(options...)
-						if err != nil {
-							return nil, fmt.Errorf("failed to create client for Kafka provider with ID \"%s\": %w", providerID, err)
-						}
-
-						kafkaPubSubByProviderID[providerID] = kafka.NewConnector(b.logger, client).New(ctx)
-
-						break
+			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
+				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
+					options, err := buildNatsOptions(eventSource)
+					if err != nil {
+						return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
 					}
+					natsConnection, err := nats.Connect(eventSource.URL, options...)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
+					}
+					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(natsConnection).New(ctx)
+
+					break
 				}
 			}
 		}
+
+		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
+
+			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+			// if this source name's provider has already been initiated, do not try to initiate again
+			_, ok := kafkaPubSubByProviderID[providerID]
+			if ok {
+				continue
+			}
+
+			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
+
+				if eventSource.ID == providerID {
+					options, err := buildKafkaOptions(eventSource)
+					if err != nil {
+						return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
+					}
+					client, err := kgo.NewClient(options...)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create client for Kafka provider with ID \"%s\": %w", providerID, err)
+					}
+
+					kafkaPubSubByProviderID[providerID] = kafka.NewConnector(b.logger, client).New(ctx)
+
+					break
+				}
+			}
+		}
+
 	}
 
 	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(

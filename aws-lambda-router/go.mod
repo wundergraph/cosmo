@@ -80,7 +80,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31.0.20240503110317-c65f3ee4cb6a // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect

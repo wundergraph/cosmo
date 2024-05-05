@@ -191,7 +191,7 @@ type (
 	// server is the main router instance.
 	server struct {
 		Config
-		server      *http.Server
+		httpServer  *http.Server
 		metricStore rmetric.Store
 		// rootContext that all services depending on the router should
 		// use as a parent context
@@ -461,10 +461,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	for _, source := range r.eventsConfig.Providers.Nats {
-		r.logger.Info("Nats Event source enabled", zap.String("ID", source.ID), zap.String("url", source.URL))
+		r.logger.Info("Nats Event source enabled", zap.String("providerID", source.ID), zap.String("url", source.URL))
 	}
 	for _, source := range r.eventsConfig.Providers.Kafka {
-		r.logger.Info("Kafka Event source enabled", zap.String("ID", source.ID), zap.Strings("brokers", source.Brokers))
+		r.logger.Info("Kafka Event source enabled", zap.String("providerID", source.ID), zap.Strings("brokers", source.Brokers))
 	}
 
 	return r, nil
@@ -1210,7 +1210,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		zap.String("url", graphqlEndpointURL),
 	)
 
-	ro.server = &http.Server{
+	ro.httpServer = &http.Server{
 		Addr: r.listenAddr,
 		// https://ieftimov.com/posts/make-resilient-golang-net-http-servers-using-timeouts-deadlines-context-cancellation/
 		ReadTimeout:       1 * time.Minute,
@@ -1228,11 +1228,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 func (r *server) listenAndServe() error {
 	if r.tlsConfig != nil && r.tlsConfig.Enabled {
 		// Leave the cert and key empty to use the default ones
-		if err := r.server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := r.httpServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 	} else {
-		if err := r.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := r.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 	}
@@ -1361,9 +1361,9 @@ func (r *server) Shutdown(ctx context.Context) error {
 
 	r.healthChecks.SetReady(false)
 
-	if r.server != nil {
+	if r.httpServer != nil {
 		// HTTP server shutdown
-		if err := r.server.Shutdown(ctx); err != nil {
+		if err := r.httpServer.Shutdown(ctx); err != nil {
 			return err
 		}
 	}
@@ -1376,7 +1376,7 @@ func (r *server) HealthChecks() health.Checker {
 }
 
 func (r *server) HttpServer() *http.Server {
-	return r.server
+	return r.httpServer
 }
 
 func WithListenerAddr(addr string) Option {

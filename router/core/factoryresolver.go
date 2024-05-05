@@ -300,58 +300,53 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			}
 
 		case nodev1.DataSourceKind_PUBSUB:
-			events := in.GetCustomEvents().GetEvents()
 			var eventConfigurations []pubsub_datasource.EventConfiguration
 
-			for _, ev := range events {
-
-				for _, eventConfiguration := range ev.GetNats() {
-					eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
-					if err != nil {
-						return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
-					}
-
-					var streamConfiguration *pubsub_datasource.NatsStreamConfiguration
-					if eventConfiguration.StreamConfiguration != nil {
-						streamConfiguration = &pubsub_datasource.NatsStreamConfiguration{
-							Consumer:   eventConfiguration.StreamConfiguration.GetConsumerName(),
-							StreamName: eventConfiguration.StreamConfiguration.GetStreamName(),
-						}
-					}
-
-					eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
-						Metadata: &pubsub_datasource.EventMetadata{
-							ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
-							Type:       eventType,
-							TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
-							FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
-						},
-						Configuration: pubsub_datasource.NatsEventConfiguration{
-							StreamConfiguration: streamConfiguration,
-							Subjects:            eventConfiguration.GetSubjects(),
-						},
-					})
+			for _, eventConfiguration := range in.GetCustomEvents().GetNats() {
+				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
+				if err != nil {
+					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
 				}
 
-				for _, eventConfiguration := range ev.GetKafka() {
-					eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
-					if err != nil {
-						return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
+				var streamConfiguration *pubsub_datasource.NatsStreamConfiguration
+				if eventConfiguration.StreamConfiguration != nil {
+					streamConfiguration = &pubsub_datasource.NatsStreamConfiguration{
+						Consumer:   eventConfiguration.StreamConfiguration.GetConsumerName(),
+						StreamName: eventConfiguration.StreamConfiguration.GetStreamName(),
 					}
-
-					eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
-						Metadata: &pubsub_datasource.EventMetadata{
-							ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
-							Type:       eventType,
-							TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
-							FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
-						},
-						Configuration: pubsub_datasource.KafkaEventConfiguration{
-							Topics: eventConfiguration.GetTopics(),
-						},
-					})
 				}
 
+				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
+					Metadata: &pubsub_datasource.EventMetadata{
+						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
+						Type:       eventType,
+						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
+						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
+					},
+					Configuration: pubsub_datasource.NatsEventConfiguration{
+						StreamConfiguration: streamConfiguration,
+						Subjects:            eventConfiguration.GetSubjects(),
+					},
+				})
+			}
+
+			for _, eventConfiguration := range in.GetCustomEvents().GetKafka() {
+				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
+				if err != nil {
+					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
+				}
+
+				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
+					Metadata: &pubsub_datasource.EventMetadata{
+						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
+						Type:       eventType,
+						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
+						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
+					},
+					Configuration: pubsub_datasource.KafkaEventConfiguration{
+						Topics: eventConfiguration.GetTopics(),
+					},
+				})
 			}
 
 			factory, err := l.resolver.ResolvePubsubFactory()

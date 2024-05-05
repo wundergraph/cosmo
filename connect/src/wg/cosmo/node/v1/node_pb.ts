@@ -746,9 +746,9 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
   requires: RequiredField[] = [];
 
   /**
-   * @generated from field: wg.cosmo.node.v1.DataSourceCustom_Events custom_events = 13;
+   * @generated from field: wg.cosmo.node.v1.DataSourceCustomEvents custom_events = 13;
    */
-  customEvents?: DataSourceCustom_Events;
+  customEvents?: DataSourceCustomEvents;
 
   /**
    * @generated from field: repeated wg.cosmo.node.v1.EntityInterfaceConfiguration entity_interfaces = 14;
@@ -780,7 +780,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 10, name: "keys", kind: "message", T: RequiredField, repeated: true },
     { no: 11, name: "provides", kind: "message", T: RequiredField, repeated: true },
     { no: 12, name: "requires", kind: "message", T: RequiredField, repeated: true },
-    { no: 13, name: "custom_events", kind: "message", T: DataSourceCustom_Events },
+    { no: 13, name: "custom_events", kind: "message", T: DataSourceCustomEvents },
     { no: 14, name: "entity_interfaces", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 15, name: "interface_objects", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
   ]);
@@ -1566,9 +1566,9 @@ export class EngineEventConfiguration extends Message<EngineEventConfiguration> 
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.EventConfiguration
+ * @generated from message wg.cosmo.node.v1.DataSourceCustomEvents
  */
-export class EventConfiguration extends Message<EventConfiguration> {
+export class DataSourceCustomEvents extends Message<DataSourceCustomEvents> {
   /**
    * @generated from field: repeated wg.cosmo.node.v1.NatsEventConfiguration nats = 1;
    */
@@ -1579,69 +1579,32 @@ export class EventConfiguration extends Message<EventConfiguration> {
    */
   kafka: KafkaEventConfiguration[] = [];
 
-  constructor(data?: PartialMessage<EventConfiguration>) {
+  constructor(data?: PartialMessage<DataSourceCustomEvents>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.EventConfiguration";
+  static readonly typeName = "wg.cosmo.node.v1.DataSourceCustomEvents";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "nats", kind: "message", T: NatsEventConfiguration, repeated: true },
     { no: 2, name: "kafka", kind: "message", T: KafkaEventConfiguration, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventConfiguration {
-    return new EventConfiguration().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceCustomEvents {
+    return new DataSourceCustomEvents().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventConfiguration {
-    return new EventConfiguration().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DataSourceCustomEvents {
+    return new DataSourceCustomEvents().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventConfiguration {
-    return new EventConfiguration().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DataSourceCustomEvents {
+    return new DataSourceCustomEvents().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventConfiguration | PlainMessage<EventConfiguration> | undefined, b: EventConfiguration | PlainMessage<EventConfiguration> | undefined): boolean {
-    return proto3.util.equals(EventConfiguration, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.DataSourceCustom_Events
- */
-export class DataSourceCustom_Events extends Message<DataSourceCustom_Events> {
-  /**
-   * @generated from field: repeated wg.cosmo.node.v1.EventConfiguration events = 1;
-   */
-  events: EventConfiguration[] = [];
-
-  constructor(data?: PartialMessage<DataSourceCustom_Events>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.DataSourceCustom_Events";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "events", kind: "message", T: EventConfiguration, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceCustom_Events {
-    return new DataSourceCustom_Events().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DataSourceCustom_Events {
-    return new DataSourceCustom_Events().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DataSourceCustom_Events {
-    return new DataSourceCustom_Events().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: DataSourceCustom_Events | PlainMessage<DataSourceCustom_Events> | undefined, b: DataSourceCustom_Events | PlainMessage<DataSourceCustom_Events> | undefined): boolean {
-    return proto3.util.equals(DataSourceCustom_Events, a, b);
+  static equals(a: DataSourceCustomEvents | PlainMessage<DataSourceCustomEvents> | undefined, b: DataSourceCustomEvents | PlainMessage<DataSourceCustomEvents> | undefined): boolean {
+    return proto3.util.equals(DataSourceCustomEvents, a, b);
   }
 }
 

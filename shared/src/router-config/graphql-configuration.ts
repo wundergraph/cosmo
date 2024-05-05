@@ -2,10 +2,9 @@ import { Kind, TypeNode } from 'graphql';
 import {
   ArgumentConfiguration,
   ArgumentSource,
-  AuthorizationConfiguration,
+  AuthorizationConfiguration, DataSourceCustomEvents,
   EngineEventConfiguration,
   EntityInterfaceConfiguration,
-  EventConfiguration,
   EventType,
   FieldConfiguration,
   KafkaEventConfiguration,
@@ -26,7 +25,7 @@ export type DataSourceConfiguration = {
   rootNodes: TypeField[];
   childNodes: TypeField[];
   provides: RequiredField[];
-  events: EventConfiguration[];
+  events: DataSourceCustomEvents;
   keys: RequiredField[];
   requires: RequiredField[];
   entityInterfaces: EntityInterfaceConfiguration[];
@@ -65,7 +64,6 @@ function eventType(type: CompositionEventType) {
       return EventType.SUBSCRIBE;
     }
   }
-  throw new Error(`Unknown event type ${type}`);
 }
 
 export function configurationDataMapToDataSourceConfiguration(
@@ -76,7 +74,7 @@ export function configurationDataMapToDataSourceConfiguration(
     childNodes: [],
     keys: [],
     provides: [],
-    events: [],
+    events: new DataSourceCustomEvents({ nats: [], kafka: [] }),
     requires: [],
     entityInterfaces: [],
     interfaceObjects: [],
@@ -148,14 +146,8 @@ export function configurationDataMapToDataSourceConfiguration(
         }
       }
     }
-    if (natsEventConfigurations.length > 0 || kafkaEventConfigurations.length > 0) {
-      output.events.push(
-        new EventConfiguration({
-          nats: natsEventConfigurations,
-          kafka: kafkaEventConfigurations,
-        }),
-      );
-    }
+    output.events.nats.push(...natsEventConfigurations);
+    output.events.kafka.push(...kafkaEventConfigurations);
   }
   return output;
 }

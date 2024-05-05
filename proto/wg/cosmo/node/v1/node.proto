@@ -94,7 +94,7 @@ message DataSourceConfiguration {
   repeated RequiredField keys = 10;
   repeated RequiredField provides = 11;
   repeated RequiredField requires = 12;
-  DataSourceCustom_Events custom_events = 13;
+  DataSourceCustomEvents custom_events = 13;
   repeated EntityInterfaceConfiguration entity_interfaces = 14;
   repeated EntityInterfaceConfiguration interface_objects = 15;
 }
@@ -223,13 +223,9 @@ message EngineEventConfiguration {
   string field_name = 4;
 }
 
-message EventConfiguration {
+message DataSourceCustomEvents {
   repeated NatsEventConfiguration nats = 1;
   repeated KafkaEventConfiguration kafka = 2;
-}
-
-message DataSourceCustom_Events {
-  repeated EventConfiguration events = 1;
 }
 
 message DataSourceCustom_Static {
