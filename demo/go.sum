@@ -157,6 +157,8 @@ github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnA
 github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h1:NEUrhuqOaTO1dpW8pz2tu6dKbQAqFvgiF/m4NXdzZm0=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
+github.com/wundergraph/cosmo/router v0.0.0-20240505093111-74f8104a719e h1:7/HdS/c0kHhgBOYiilKTjWi0SWqpAxW2HKXDfPmuJ1Q=
+github.com/wundergraph/cosmo/router v0.0.0-20240505093111-74f8104a719e/go.mod h1:M/7nLXsxHb/3noeVgIhY5UPSBstuwgVFzVc/jzU9P4U=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31.0.20240503110317-c65f3ee4cb6a h1:kuVDof/8THAe1FFMgry4gfIs7airdBUK4Gb51LEwPl8=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31.0.20240503110317-c65f3ee4cb6a/go.mod h1:hNR2C7S1M+c9Ap24tHCEMe9gFY9K3smX46x5E1U1NQw=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=

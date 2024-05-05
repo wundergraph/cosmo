@@ -61,7 +61,7 @@ func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
 		ctx:           ctx,
 		logger:        c.logger.With(zap.String("pubsub", "kafka")),
 		client:        c.client,
-		work:          make(chan *record),
+		work:          make(chan *record, 1000),
 		sub:           make(chan *subscription),
 		subscriptions: make(map[string][]*subscription),
 		mu:            sync.Mutex{},
@@ -165,7 +165,7 @@ func (p *pubsub) poll(ctx context.Context) error {
 		default:
 			// Try to fetch max records from any subscribed topics
 			// In the future, we can consume topics individually to increase parallelism
-			fetches := p.client.PollRecords(ctx, 500)
+			fetches := p.client.PollRecords(ctx, 1000)
 			if fetches.IsClientClosed() {
 				return errClientClosed
 			}
@@ -182,7 +182,7 @@ func (p *pubsub) poll(ctx context.Context) error {
 					var kErr *kerr.Error
 					if errors.As(fetchError.Err, &kErr) {
 						if !kErr.Retriable {
-							p.logger.Error("fetch error and non retriable",
+							p.logger.Error("unrecoverable fetch error",
 								zap.Error(fetchError.Err),
 								zap.String("topic", fetchError.Topic),
 							)

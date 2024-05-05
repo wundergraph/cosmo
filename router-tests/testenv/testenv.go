@@ -195,6 +195,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	seeds := []string{"localhost:9092"}
 
 	var kafkaAdminClient *kadm.Client
+	var kafkaClient *kgo.Client
 	{
 		client, err := kgo.NewClient(
 			kgo.SeedBrokers(seeds...),
@@ -202,6 +203,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		if err != nil {
 			t.Fatalf("could not create kafka client: %s", err)
 		}
+
+		kafkaClient = client
 
 		kafkaAdminClient = kadm.NewClient(client)
 	}
@@ -448,6 +451,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		NatsConnectionMyNats:  natsData.Connections[1],
 		SubgraphRequestCount:  counters,
 		KafkaAdminClient:      kafkaAdminClient,
+		KafkaClient:           kafkaClient,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -690,6 +694,7 @@ type Environment struct {
 	NatsConnectionMyNats  *nats.Conn
 	SubgraphRequestCount  *SubgraphRequestCount
 	KafkaAdminClient      *kadm.Client
+	KafkaClient           *kgo.Client
 
 	extraURLQueryValues url.Values
 }

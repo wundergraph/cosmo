@@ -323,7 +323,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
 						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
 					},
-					Configuration: pubsub_datasource.NatsEventConfiguration{
+					Configuration: &pubsub_datasource.NatsEventConfiguration{
 						StreamConfiguration: streamConfiguration,
 						Subjects:            eventConfiguration.GetSubjects(),
 					},
@@ -343,7 +343,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
 						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
 					},
-					Configuration: pubsub_datasource.KafkaEventConfiguration{
+					Configuration: &pubsub_datasource.KafkaEventConfiguration{
 						Topics: eventConfiguration.GetTopics(),
 					},
 				})

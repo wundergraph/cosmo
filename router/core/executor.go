@@ -152,8 +152,11 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(eventSource.Brokers...),
+		// We want to consume the events produced after the router starts
+		// This replicates a simple and stateless event sourcing pattern
+		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
 		// For observability, we set the client ID to the router
-		kgo.ClientID("router-kafka-client"),
+		kgo.ClientID("router"),
 		// Ensure proper timeouts are set
 		kgo.ProduceRequestTimeout(10 * time.Second),
 		kgo.ConnIdleTimeout(60 * time.Second),
