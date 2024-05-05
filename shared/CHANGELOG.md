@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.24.6...@wundergraph/cosmo-shared@0.25.0) (2024-05-03)
+
+### Features
+
+* support inaccessible and add foundation for contracts ([#764](https://github.com/wundergraph/cosmo/issues/764)) ([08a7db2](https://github.com/wundergraph/cosmo/commit/08a7db222ce1763ffe8062d3792c41e0c54b4224)) (@Aenimus)
+
+## [0.24.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.24.5...@wundergraph/cosmo-shared@0.24.6) (2024-04-26)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.24.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.24.4...@wundergraph/cosmo-shared@0.24.5) (2024-04-23)
 
 ### Reverts

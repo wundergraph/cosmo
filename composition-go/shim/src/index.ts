@@ -50,8 +50,9 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
     throw new Error(`could not federate subgraphs`);
   }
   const config = buildRouterConfig({
-    fieldConfigurations: result.federationResult.fieldConfigurations,
+    federatedClientSDL: printSchema(result.federationResult.federatedGraphClientSchema),
     federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
+    fieldConfigurations: result.federationResult.fieldConfigurations,
     schemaVersionId: '',
     subgraphs: subgraphs.map((s, index) => {
       const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);

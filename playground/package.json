@@ -31,6 +31,7 @@
     "copy-to-clipboard": "^3.3.3",
     "dagre": "^0.8.5",
     "graphiql": "^3.0.10",
+    "graphql": "^15.8.0",
     "graphql-ws": "^5.14.2",
     "prettier": "^3.1.0",
     "prism-react-renderer": "^2.3.0",

@@ -63,9 +63,9 @@ importers:
       '@hono/node-server':
         specifier: 1.11.0
         version: 1.11.0
-      '@wundergraph/cosmo-connect':
-        specifier: ^0.66.3
-        version: link:../connect
+      '@wundergraph/cosmo-shared':
+        specifier: workspace:^
+        version: link:../shared
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -277,6 +277,9 @@ importers:
       graphql:
         specifier: 16.7.1
         version: 16.7.1
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
       pathe:
         specifier: ^1.1.1
         version: 1.1.2
@@ -284,6 +287,9 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0(@types/node@20.11.26)
     devDependencies:
+      '@types/lodash':
+        specifier: ^4.17.0
+        version: 4.17.0
       del-cli:
         specifier: ^5.0.0
         version: 5.0.0
@@ -548,6 +554,9 @@ importers:
 
   shared:
     dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^1.4.1
+        version: 1.4.1
       '@graphql-tools/schema':
         specifier: ^8.5.1
         version: 8.5.1(graphql@16.7.1)
@@ -9308,6 +9317,10 @@ packages:
 
   /@types/lodash@4.14.202:
     resolution: {integrity: sha512-OvlIYQK9tNneDlS0VN54LLd5uiPCBOp7gS5Z0f1mjoJYBrtStzgmJBxONW3U6OZqdtNzZPmn9BS/7WI7BFFcFQ==}
+
+  /@types/lodash@4.17.0:
+    resolution: {integrity: sha512-t7dhREVv6dbNj0q17X12j7yDG4bD/DHYX7o5/DbDxobP0HnGPgpRz2Ej77aL7TZT3DSw13fqUTj8J4mMnqa7WA==}
+    dev: true
 
   /@types/markdown-it@12.2.3:
     resolution: {integrity: sha512-GKMHFfv3458yYy+v/N8gjufHO6MSZKCOXpZc5GXIWWy8uldwfmPn98vp81gZ5f9SVw8YYBctgfJ22a2d7AOMeQ==}
@@ -19252,7 +19265,7 @@ packages:
   /rxjs@7.8.1:
     resolution: {integrity: sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==}
     dependencies:
-      tslib: 2.6.1
+      tslib: 2.6.2
 
   /safe-array-concat@1.0.0:
     resolution: {integrity: sha512-9dVEFruWIsnie89yym+xWTAYASdpw3CJV7Li/6zBewGf9z2i1j31rP6jnY0pHEO4QZh6N0K11bFjWmdR8UGdPQ==}
@@ -20240,6 +20253,7 @@ packages:
 
   /tslib@2.6.1:
     resolution: {integrity: sha512-t0hLfiEKfMUoqhG+U1oid7Pva4bbDPHYfJNiB7BiIjRkj1pyC++4N3huJfqY6aRH6VTB0rvtzQwjM4K6qpfOig==}
+    dev: false
 
   /tslib@2.6.2:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}

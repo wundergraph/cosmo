@@ -4,6 +4,53 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.85.0](https://github.com/wundergraph/cosmo/compare/router@0.84.5...router@0.85.0) (2024-05-03)
+
+### Features
+
+* support inaccessible and add foundation for contracts ([#764](https://github.com/wundergraph/cosmo/issues/764)) ([08a7db2](https://github.com/wundergraph/cosmo/commit/08a7db222ce1763ffe8062d3792c41e0c54b4224)) (@Aenimus)
+
+## [0.84.5](https://github.com/wundergraph/cosmo/compare/router@0.84.4...router@0.84.5) (2024-05-02)
+
+### Bug Fixes
+
+* validate graphql operation in playground ([#763](https://github.com/wundergraph/cosmo/issues/763)) ([41bde5f](https://github.com/wundergraph/cosmo/commit/41bde5f06583242bbc9471e05179c1c16bb2f769)) (@thisisnithin)
+
+## [0.84.4](https://github.com/wundergraph/cosmo/compare/router@0.84.3...router@0.84.4) (2024-04-30)
+
+### Bug Fixes
+
+* normalization of non-compatible nested fragment types ([#761](https://github.com/wundergraph/cosmo/issues/761)) ([3f42a17](https://github.com/wundergraph/cosmo/commit/3f42a171d2d7a32b24ba695aadfa8bfba85c8e39)) (@devsergiy)
+
+## [0.84.3](https://github.com/wundergraph/cosmo/compare/router@0.84.2...router@0.84.3) (2024-04-30)
+
+### Bug Fixes
+
+* don't transmit persistedQuery extension to subgraphs ([#759](https://github.com/wundergraph/cosmo/issues/759)) ([07f0e4f](https://github.com/wundergraph/cosmo/commit/07f0e4fa309d859a5e5bc6511af2df03aedd3cdd)) (@StarpTech)
+
+## [0.84.2](https://github.com/wundergraph/cosmo/compare/router@0.84.1...router@0.84.2) (2024-04-29)
+
+### Bug Fixes
+
+* field selection validation ([#758](https://github.com/wundergraph/cosmo/issues/758)) ([d29fbc6](https://github.com/wundergraph/cosmo/commit/d29fbc60df212eb6191a3fb4bbbd47d45de439cd)) (@devsergiy)
+
+## [0.84.1](https://github.com/wundergraph/cosmo/compare/router@0.84.0...router@0.84.1) (2024-04-26)
+
+### Bug Fixes
+
+* set default ws subscription subprotocol ([#757](https://github.com/wundergraph/cosmo/issues/757)) ([94d1a5b](https://github.com/wundergraph/cosmo/commit/94d1a5bb29f41c56fd0e9753d8f6cd026b48497c)) (@devsergiy)
+
+# [0.84.0](https://github.com/wundergraph/cosmo/compare/router@0.83.0...router@0.84.0) (2024-04-26)
+
+### Features
+
+* improve Subgraph error propagation ([#752](https://github.com/wundergraph/cosmo/issues/752)) ([0592378](https://github.com/wundergraph/cosmo/commit/0592378a86c23712f7d42ef5ee491bea4e3635ec)) (@jensneuse)
+* log subgraph errors ([#753](https://github.com/wundergraph/cosmo/issues/753)) ([cf456d2](https://github.com/wundergraph/cosmo/commit/cf456d257879a541ff4ff1261fdc88a104b581ba)) (@StarpTech)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@)
+
 # [0.83.0](https://github.com/wundergraph/cosmo/compare/router@0.82.3...router@0.83.0) (2024-04-23)
 
 ### Bug Fixes

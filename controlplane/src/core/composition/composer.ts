@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { DocumentNode, parse } from 'graphql';
+import { DocumentNode, parse, printSchema } from 'graphql';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
@@ -68,6 +68,7 @@ export interface ComposedFederatedGraph {
   errors: Error[];
   subgraphs: ComposedSubgraph[];
   fieldConfigurations: FieldConfiguration[];
+  federatedClientSchema?: string;
 }
 
 export interface CompositionDeployResult {
@@ -131,15 +132,14 @@ export class Composer {
     let admissionError: AdmissionError | undefined;
 
     // Build and deploy the router config when composed schema is valid
-    if (!hasCompositionErrors && composedGraph.composedSchema && !routerConfigJson) {
-      const routerConfig =
-        contractRouterConfig ??
-        buildRouterConfig({
-          fieldConfigurations: composedGraph.fieldConfigurations,
-          subgraphs: composedGraph.subgraphs,
-          federatedSDL: composedGraph.composedSchema,
-          schemaVersionId: federatedSchemaVersionId,
-        });
+    if (!hasCompositionErrors && composedGraph.composedSchema) {
+      const routerConfig = buildRouterConfig({
+        federatedClientSDL: composedGraph.federatedClientSchema || '',
+        federatedSDL: composedGraph.composedSchema,
+        fieldConfigurations: composedGraph.fieldConfigurations,
+        subgraphs: composedGraph.subgraphs,
+        schemaVersionId: federatedSchemaVersionId,
+      });
       routerConfigJson = routerConfig.toJson();
       const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
 
@@ -309,6 +309,7 @@ export class Composer {
         errors: errors || [],
         fieldConfigurations: result?.fieldConfigurations || [],
         subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
+        federatedClientSchema: result ? printSchema(result.federatedGraphClientSchema) : undefined,
       };
     } catch (e: any) {
       return {

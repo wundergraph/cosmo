@@ -266,6 +266,9 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 			return errors.WithStack(err)
 		}
 		requestDocumentBytes = persistedOperationData
+
+		// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
+		requestExtensions = jsonparser.Delete(requestExtensions, "persistedQuery")
 	}
 
 	requestHasOperationName := requestOperationNameBytes != nil && !bytes.Equal(requestOperationNameBytes, literal.NULL)

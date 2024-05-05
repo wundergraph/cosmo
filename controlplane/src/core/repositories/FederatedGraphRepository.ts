@@ -1,7 +1,7 @@
 import { KeyObject } from 'node:crypto';
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
+import { joinLabel, normalizeURL, routerConfigFromJson } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
 import {
   SQL,
@@ -840,7 +840,7 @@ export class FederatedGraphRepository {
     }
 
     return {
-      config: RouterConfig.fromJson(latestValidVersion[0].routerConfig as JsonValue),
+      config: routerConfigFromJson(latestValidVersion[0].routerConfig as JsonValue),
       schemaVersionId: latestValidVersion[0].id,
     };
   }

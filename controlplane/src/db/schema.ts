@@ -417,6 +417,7 @@ export const schemaVersion = pgTable('schema_versions', {
   // For a federated Graph, this is the composition result.
   schemaSDL: text('schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  isV2Graph: boolean('is_v2_graph'),
 });
 
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts

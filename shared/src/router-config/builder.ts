@@ -22,6 +22,7 @@ import { configurationDataMapToDataSourceConfiguration, generateFieldConfigurati
 import { normalizationFailureError } from './errors.js';
 
 export interface Input {
+  federatedClientSDL: string;
   federatedSDL: string;
   fieldConfigurations: FieldConfiguration[];
   schemaVersionId: string;
@@ -181,6 +182,9 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   }
   engineConfig.fieldConfigurations = generateFieldConfigurations(input.fieldConfigurations);
   engineConfig.graphqlSchema = input.federatedSDL;
+  if (input.federatedClientSDL !== '') {
+    engineConfig.graphqlClientSchema = input.federatedClientSDL;
+  }
   return new RouterConfig({
     engineConfig,
     version: input.schemaVersionId,
