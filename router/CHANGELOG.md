@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.85.1](https://github.com/wundergraph/cosmo/compare/router@0.85.0...router@0.85.1) (2024-05-06)
+
+### Bug Fixes
+
+* ignore unknown router execution config fields ([#767](https://github.com/wundergraph/cosmo/issues/767)) ([649a0e1](https://github.com/wundergraph/cosmo/commit/649a0e1349820642491469890f9eaa7b1134e430)) (@Aenimus)
+
 # [0.85.0](https://github.com/wundergraph/cosmo/compare/router@0.84.5...router@0.85.0) (2024-05-03)
 
 ### Features
