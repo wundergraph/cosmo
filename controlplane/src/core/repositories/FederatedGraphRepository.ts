@@ -279,12 +279,17 @@ export class FederatedGraphRepository {
 
         const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo);
 
+        const publishedSubgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: federatedGraph.targetId,
+          published: true,
+        });
+
         const {
           errors,
           federationResult: result,
           federationResultContainerByContractName,
         } = composeSubgraphsWithContracts(
-          subgraphs.map((s) => ({
+          publishedSubgraphs.map((s) => ({
             name: s.name,
             url: s.routingUrl,
             definitions: parse(s.schemaSDL),
@@ -293,7 +298,7 @@ export class FederatedGraphRepository {
         );
 
         const deployment = await composer.deployComposition({
-          composedGraph: mapResultToComposedGraph(federatedGraph, subgraphs, errors, result),
+          composedGraph: mapResultToComposedGraph(federatedGraph, publishedSubgraphs, errors, result),
           composedBy: data.updatedBy,
           blobStorage: data.blobStorage,
           organizationId: this.organizationId,
@@ -335,7 +340,7 @@ export class FederatedGraphRepository {
           }
 
           const contractDeployment = await composer.deployComposition({
-            composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, contractErrors, contractResult),
+            composedGraph: mapResultToComposedGraph(contractGraph, publishedSubgraphs, contractErrors, contractResult),
             composedBy: data.updatedBy,
             blobStorage: data.blobStorage,
             organizationId: this.organizationId,

@@ -332,9 +332,9 @@ export class SubgraphRepository {
           continue;
         }
 
-        const subgraphs = await subgraphRepo.byGraphLabelMatchers({
-          labelMatchers: federatedGraph.labelMatchers,
-          namespaceId: data.namespaceId,
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: federatedGraph.targetId,
+          published: true,
         });
 
         const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
@@ -511,9 +511,9 @@ export class SubgraphRepository {
           continue;
         }
 
-        const subgraphs = await subgraphRepo.byGraphLabelMatchers({
-          labelMatchers: federatedGraph.labelMatchers,
-          namespaceId: data.newNamespaceId,
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: federatedGraph.targetId,
+          published: true,
         });
 
         const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
