@@ -277,13 +277,17 @@ export class Composer {
     ) {
       let schemaChanges: GetDiffBetweenGraphsResult;
 
-      // Prioritize diff against client schemas if available. Fallback to full schema for backwards compatibility
-      if (composedGraph.federatedClientSchema && prevValidFederatedSDL?.clientSchema) {
+      // Prioritize diff against client schemas if no previous valid schema available or if both prev and current client schema is available.
+      if (
+        (composedGraph.federatedClientSchema && !prevValidFederatedSDL) ||
+        (composedGraph.federatedClientSchema && prevValidFederatedSDL?.clientSchema)
+      ) {
         schemaChanges = await getDiffBetweenGraphs(
           prevValidFederatedSDL?.clientSchema || '',
           composedGraph.federatedClientSchema,
         );
       } else {
+        // Fallback to full schema for backwards compatibility
         schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL?.schema || '', composedGraph.composedSchema);
       }
 
