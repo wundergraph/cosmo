@@ -7360,6 +7360,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           sdl: schemaVersion.schema,
+          clientSchema: schemaVersion.clientSchema || undefined,
           versionId: schemaVersion.schemaVersionId,
         };
       });
@@ -8971,7 +8972,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
-        const sdl = await fedRepo.getSdlBasedOnSchemaVersion({
+        const schema = await fedRepo.getSdlBasedOnSchemaVersion({
           targetId: req.targetId,
           schemaVersionId: req.schemaVersionId,
         });
@@ -8980,7 +8981,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          sdl: sdl || '',
+          sdl: schema?.sdl || '',
+          clientSchema: schema?.clientSchema || '',
         };
       });
     },

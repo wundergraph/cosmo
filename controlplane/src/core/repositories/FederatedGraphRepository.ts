@@ -726,6 +726,7 @@ export class FederatedGraphRepository {
   public addSchemaVersion({
     targetId,
     composedSDL,
+    clientSchema,
     compositionErrors,
     routerConfig,
     routerConfigSignature,
@@ -739,6 +740,7 @@ export class FederatedGraphRepository {
     targetId: string;
     schemaVersionId: string;
     composedSDL?: string;
+    clientSchema?: string;
     compositionErrors?: Error[];
     admissionError?: AdmissionError;
     deploymentError?: RouterConfigUploadError;
@@ -768,6 +770,7 @@ export class FederatedGraphRepository {
           id: schemaVersionId,
           targetId: fedGraph.targetId,
           schemaSDL: composedSDL,
+          clientSchema,
         })
         .returning({
           insertedId: schemaVersion.id,
@@ -882,6 +885,7 @@ export class FederatedGraphRepository {
       .select({
         name: targets.name,
         schemaSDL: schemaVersion.schemaSDL,
+        clientSchema: schemaVersion.clientSchema,
         schemaVersionId: schemaVersion.id,
       })
       .from(targets)
@@ -910,6 +914,7 @@ export class FederatedGraphRepository {
 
     return {
       schema: latestValidVersion[0].schemaSDL,
+      clientSchema: latestValidVersion[0].clientSchema,
       schemaVersionId: latestValidVersion[0].schemaVersionId,
     };
   }
@@ -925,6 +930,7 @@ export class FederatedGraphRepository {
       .select({
         name: targets.name,
         schemaSDL: schemaVersion.schemaSDL,
+        clientSchema: schemaVersion.clientSchema,
         schemaVersionId: schemaVersion.id,
       })
       .from(targets)
@@ -942,7 +948,7 @@ export class FederatedGraphRepository {
       return undefined;
     }
 
-    return version[0].schemaSDL;
+    return { sdl: version[0].schemaSDL, clientSchema: version[0].clientSchema };
   }
 
   public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {

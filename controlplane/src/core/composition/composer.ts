@@ -17,7 +17,7 @@ import {
   AdmissionWebhookJwtPayload,
 } from '../services/AdmissionWebhookController.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
-import { getDiffBetweenGraphs } from './schemaCheck.js';
+import { GetDiffBetweenGraphsResult, getDiffBetweenGraphs } from './schemaCheck.js';
 
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
@@ -63,7 +63,7 @@ export function mapResultToComposedGraph(
   subgraphs: SubgraphDTO[],
   errors?: Error[],
   result?: FederationResult,
-) {
+): ComposedFederatedGraph {
   return {
     id: federatedGraph.id,
     targetID: federatedGraph.targetId,
@@ -71,10 +71,12 @@ export function mapResultToComposedGraph(
     namespace: federatedGraph.namespace,
     namespaceId: federatedGraph.namespaceId,
     composedSchema: result?.federatedGraphSchema ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
+    federatedClientSchema: result?.federatedGraphClientSchema
+      ? printSchema(result.federatedGraphClientSchema)
+      : undefined,
     errors: errors || [],
     subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
     fieldConfigurations: result?.fieldConfigurations || [],
-    federatedClientSchema: result ? printSchema(result.federatedGraphClientSchema) : undefined,
   };
 }
 
@@ -253,6 +255,7 @@ export class Composer {
     const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
       targetId: composedGraph.targetID,
       composedSDL: composedGraph.composedSchema,
+      clientSchema: composedGraph.federatedClientSchema,
       subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
       routerConfig: routerConfigJson,
@@ -267,11 +270,22 @@ export class Composer {
     });
 
     // Only create changelog when the composed schema is valid
-    if (!hasCompositionErrors && composedGraph.composedSchema && updatedFederatedGraph?.composedSchemaVersionId) {
-      const schemaChanges = await getDiffBetweenGraphs(
-        prevValidFederatedSDL?.schema || '',
-        composedGraph.composedSchema,
-      );
+    if (
+      !hasCompositionErrors &&
+      (composedGraph.composedSchema || composedGraph.federatedClientSchema) &&
+      updatedFederatedGraph?.composedSchemaVersionId
+    ) {
+      let schemaChanges: GetDiffBetweenGraphsResult;
+
+      // Prioritize diff against client schemas if available. Fallback to full schema for backwards compatibility
+      if (composedGraph.federatedClientSchema && prevValidFederatedSDL?.clientSchema) {
+        schemaChanges = await getDiffBetweenGraphs(
+          prevValidFederatedSDL?.clientSchema || '',
+          composedGraph.federatedClientSchema,
+        );
+      } else {
+        schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL?.schema || '', composedGraph.composedSchema);
+      }
 
       if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
         await this.federatedGraphRepo.createFederatedGraphChangelog({
@@ -316,20 +330,7 @@ export class Composer {
         })),
       );
 
-      return {
-        id: federatedGraph.id,
-        name: federatedGraph.name,
-        namespace: federatedGraph.namespace,
-        namespaceId: federatedGraph.namespaceId,
-        targetID: federatedGraph.targetId,
-        composedSchema: result?.federatedGraphSchema
-          ? printSchemaWithDirectives(result.federatedGraphSchema)
-          : undefined,
-        errors: errors || [],
-        fieldConfigurations: result?.fieldConfigurations || [],
-        subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
-        federatedClientSchema: result ? printSchema(result.federatedGraphClientSchema) : undefined,
-      };
+      return mapResultToComposedGraph(federatedGraph, subgraphs, errors, result);
     } catch (e: any) {
       return {
         id: federatedGraph.id,

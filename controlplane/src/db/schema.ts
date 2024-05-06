@@ -415,6 +415,7 @@ export const schemaVersion = pgTable('schema_versions', {
   // For a monolithic GraphQL, it is the SDL.
   // For a federated Graph, this is the composition result.
   schemaSDL: text('schema_sdl'),
+  clientSchema: text('client_schema'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   isV2Graph: boolean('is_v2_graph'),
 });
@@ -653,6 +654,7 @@ export const schemaCheckComposition = pgTable('schema_check_composition', {
     }),
   compositionErrors: text('composition_errors'),
   composedSchemaSDL: text('composed_schema_sdl'),
+  clientSchema: text('client_schema'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

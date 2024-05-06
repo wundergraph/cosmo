@@ -271,6 +271,7 @@ export class SchemaCheckRepository {
             federatedTargetId: composition.targetID,
             schemaCheckId: data.schemaCheckID,
             composedSchemaSDL: composition.composedSchema,
+            clientSchema: composition.federatedClientSchema,
             compositionErrors: composition.errors?.map((e) => e.toString()).join('\n'),
           })),
         )

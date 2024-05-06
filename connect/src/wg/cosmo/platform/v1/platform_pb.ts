@@ -2729,6 +2729,11 @@ export class GetFederatedGraphSDLByNameResponse extends Message<GetFederatedGrap
    */
   versionId?: string;
 
+  /**
+   * @generated from field: optional string client_schema = 4;
+   */
+  clientSchema?: string;
+
   constructor(data?: PartialMessage<GetFederatedGraphSDLByNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2740,6 +2745,7 @@ export class GetFederatedGraphSDLByNameResponse extends Message<GetFederatedGrap
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "sdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "version_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "client_schema", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphSDLByNameResponse {
@@ -12089,6 +12095,11 @@ export class GetSdlBySchemaVersionResponse extends Message<GetSdlBySchemaVersion
    */
   sdl = "";
 
+  /**
+   * @generated from field: string client_schema = 3;
+   */
+  clientSchema = "";
+
   constructor(data?: PartialMessage<GetSdlBySchemaVersionResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12099,6 +12110,7 @@ export class GetSdlBySchemaVersionResponse extends Message<GetSdlBySchemaVersion
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "sdl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "client_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSdlBySchemaVersionResponse {

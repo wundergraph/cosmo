@@ -1,5 +1,5 @@
 {
-  "id": "ca9e3a52-5da7-4027-a6da-aae4ba7ecd66",
+  "id": "f8e2076e-9f77-427a-a278-d1bba4a3cc5e",
   "prevId": "0a05d2dd-08a7-4a28-9acf-2db15ca34e10",
   "version": "5",
   "dialect": "pg",
@@ -2662,6 +2662,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "client_schema": {
+          "name": "client_schema",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2943,6 +2949,12 @@
         },
         "schema_sdl": {
           "name": "schema_sdl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "client_schema": {
+          "name": "client_schema",
           "type": "text",
           "primaryKey": false,
           "notNull": false
