@@ -256,8 +256,7 @@ message GetFederatedGraphsRequest {
 message Contract {
   string id = 1;
   string source_federated_graph_id = 2;
-  repeated string include_tags = 3;
-  repeated string exclude_tags = 4;
+  repeated string exclude_tags = 3;
 }
 
 message FederatedGraph {
@@ -1933,9 +1932,8 @@ message CreateContractRequest {
   string source_graph_name = 3;
   string routing_url = 4;
   string admission_webhook_url = 5;
-  repeated string include_tags = 6;
-  repeated string exclude_tags = 7;
-  optional string readme = 8;
+  repeated string exclude_tags = 6;
+  optional string readme = 7;
 }
 
 message CreateContractResponse {
@@ -1947,8 +1945,7 @@ message CreateContractResponse {
 message UpdateContractRequest {
   string name = 1;
   string namespace = 2;
-  repeated string include_tags = 3;
-  repeated string exclude_tags = 4;
+  repeated string exclude_tags = 3;
 }
 
 message UpdateContractResponse {
@@ -1978,7 +1975,7 @@ service PlatformService {
   rpc PublishMonograph(PublishMonographRequest) returns (PublishMonographResponse) {}
   // DeleteMonograph deletes a monograph from the control plane.
   rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
-  // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+  // UpdateMonograph updates a monograph with new urls, subscription config and readme
   rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
   // MigrateMonograph converts a monograph into a federated graph.
   rpc MigrateMonograph(MigrateMonographRequest) returns (MigrateMonographResponse) {}

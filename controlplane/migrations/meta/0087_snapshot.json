@@ -1,5 +1,5 @@
 {
-  "id": "06b25626-bd7b-4d20-bc5a-a8390dec0d30",
+  "id": "ca9e3a52-5da7-4027-a6da-aae4ba7ecd66",
   "prevId": "0a05d2dd-08a7-4a28-9acf-2db15ca34e10",
   "version": "5",
   "dialect": "pg",
@@ -512,12 +512,6 @@
         "downstream_federated_graph_id": {
           "name": "downstream_federated_graph_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "include_tags": {
-          "name": "include_tags",
-          "type": "text[]",
           "primaryKey": false,
           "notNull": true
         },

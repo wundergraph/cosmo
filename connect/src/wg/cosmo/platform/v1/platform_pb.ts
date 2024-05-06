@@ -2084,12 +2084,7 @@ export class Contract extends Message<Contract> {
   sourceFederatedGraphId = "";
 
   /**
-   * @generated from field: repeated string include_tags = 3;
-   */
-  includeTags: string[] = [];
-
-  /**
-   * @generated from field: repeated string exclude_tags = 4;
+   * @generated from field: repeated string exclude_tags = 3;
    */
   excludeTags: string[] = [];
 
@@ -2103,8 +2098,7 @@ export class Contract extends Message<Contract> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "source_federated_graph_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Contract {
@@ -15302,17 +15296,12 @@ export class CreateContractRequest extends Message<CreateContractRequest> {
   admissionWebhookUrl = "";
 
   /**
-   * @generated from field: repeated string include_tags = 6;
-   */
-  includeTags: string[] = [];
-
-  /**
-   * @generated from field: repeated string exclude_tags = 7;
+   * @generated from field: repeated string exclude_tags = 6;
    */
   excludeTags: string[] = [];
 
   /**
-   * @generated from field: optional string readme = 8;
+   * @generated from field: optional string readme = 7;
    */
   readme?: string;
 
@@ -15329,9 +15318,8 @@ export class CreateContractRequest extends Message<CreateContractRequest> {
     { no: 3, name: "source_graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "admission_webhook_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 7, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 8, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateContractRequest {
@@ -15415,12 +15403,7 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
   namespace = "";
 
   /**
-   * @generated from field: repeated string include_tags = 3;
-   */
-  includeTags: string[] = [];
-
-  /**
-   * @generated from field: repeated string exclude_tags = 4;
+   * @generated from field: repeated string exclude_tags = 3;
    */
   excludeTags: string[] = [];
 
@@ -15434,8 +15417,7 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateContractRequest {

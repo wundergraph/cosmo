@@ -79,7 +79,6 @@ export const contracts = pgTable(
       .references(() => federatedGraphs.id, {
         onDelete: 'cascade',
       }),
-    includeTags: text('include_tags').array().notNull(),
     excludeTags: text('exclude_tags').array().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),

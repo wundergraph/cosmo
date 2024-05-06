@@ -137,7 +137,7 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     * UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+     * UpdateMonograph updates a monograph with new urls, subscription config and readme
      *
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateMonograph
      */
@@ -1368,7 +1368,7 @@ export const publishMonograph: UnaryFunctionsWithHooks<PublishMonographRequest, 
 export const deleteMonograph: UnaryFunctionsWithHooks<DeleteMonographRequest, DeleteMonographResponse> = {   ...$queryService.deleteMonograph,  ...createUnaryHooks($queryService.deleteMonograph)};
 
 /**
- * UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+ * UpdateMonograph updates a monograph with new urls, subscription config and readme
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateMonograph
  */

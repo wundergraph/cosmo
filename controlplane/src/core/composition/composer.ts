@@ -1,22 +1,22 @@
 import { randomUUID } from 'node:crypto';
-import { DocumentNode, parse, printSchema } from 'graphql';
-import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { JsonValue } from '@bufbuild/protobuf';
-import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
-import { FieldConfiguration, FederationResult } from '@wundergraph/composition';
-import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { printSchemaWithDirectives } from '@graphql-tools/utils';
+import { FederationResult, FederationResultContainerWithContracts, FieldConfiguration } from '@wundergraph/composition';
+import { ComposedSubgraph, buildRouterConfig } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
-import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
-import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { DocumentNode, parse, printSchema } from 'graphql';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
+import { ContractRepository } from '../repositories/ContractRepository.js';
+import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import {
-  AdmissionWebhookController,
   AdmissionError,
+  AdmissionWebhookController,
   AdmissionWebhookJwtPayload,
 } from '../services/AdmissionWebhookController.js';
-import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
-import { composeSubgraphs } from './composition.js';
+import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
 
 export type CompositionResult = {
@@ -58,6 +58,26 @@ export function subgraphDTOsToComposedSubgraphs(
   });
 }
 
+export function mapResultToComposedGraph(
+  federatedGraph: FederatedGraphDTO,
+  subgraphs: SubgraphDTO[],
+  errors?: Error[],
+  result?: FederationResult,
+) {
+  return {
+    id: federatedGraph.id,
+    targetID: federatedGraph.targetId,
+    name: federatedGraph.name,
+    namespace: federatedGraph.namespace,
+    namespaceId: federatedGraph.namespaceId,
+    composedSchema: result?.federatedGraphSchema ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
+    errors: errors || [],
+    subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
+    fieldConfigurations: result?.fieldConfigurations || [],
+    federatedClientSchema: result ? printSchema(result.federatedGraphClientSchema) : undefined,
+  };
+}
+
 export interface ComposedFederatedGraph {
   id: string;
   targetID: string;
@@ -89,6 +109,7 @@ export class Composer {
     private logger: FastifyBaseLogger,
     private federatedGraphRepo: FederatedGraphRepository,
     private subgraphRepo: SubgraphRepository,
+    private contractRepo: ContractRepository,
   ) {}
 
   /**
@@ -102,7 +123,6 @@ export class Composer {
     organizationId,
     admissionConfig,
     admissionWebhookURL,
-    contractRouterConfig,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
@@ -113,7 +133,6 @@ export class Composer {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
-    contractRouterConfig?: RouterConfig;
   }): Promise<CompositionDeployResult> {
     const hasCompositionErrors = composedGraph.errors.length > 0;
     const federatedSchemaVersionId = randomUUID();
@@ -343,9 +362,10 @@ export class Composer {
     ) => [SubgraphDTO[], { name: string; url: string; definitions: DocumentNode }[]],
   ): Promise<CompositionResult> {
     const composedGraphs: ComposedFederatedGraph[] = [];
+    let federationResultContainer: FederationResultContainerWithContracts;
 
     for await (const graph of await this.federatedGraphRepo.bySubgraphLabels({ labels: subgraphLabels, namespaceId })) {
-      // Contracts will be handled later once composition is done for all source graphs
+      // Contracts will be handled for each source graph below
       if (graph.contract) {
         continue;
       }
@@ -355,7 +375,29 @@ export class Composer {
           await this.subgraphRepo.listByFederatedGraph({ federatedGraphTargetId: graph.targetId }),
         );
 
-        const { errors, federationResult: result } = composeSubgraphs(subgraphsToBeComposed);
+        const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
+
+        if (contracts.length > 0) {
+          const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
+
+          for (const contract of contracts) {
+            tagExclusionsByContractName.set(
+              contract.downstreamFederatedGraph.target.name,
+              new Set(contract.excludeTags),
+            );
+          }
+
+          federationResultContainer = composeSubgraphsWithContracts(subgraphsToBeComposed, tagExclusionsByContractName);
+        } else {
+          federationResultContainer = composeSubgraphs(subgraphsToBeComposed);
+        }
+
+        if (!federationResultContainer) {
+          throw new Error('Could not federate subgraphs');
+        }
+
+        const { federationResult: result, errors, federationResultContainerByContractName } = federationResultContainer;
+
         composedGraphs.push({
           id: graph.id,
           name: graph.name,
@@ -369,6 +411,31 @@ export class Composer {
           errors: errors || [],
           subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
         });
+
+        if (federationResultContainerByContractName) {
+          for (const [contractName, contractResultContainer] of federationResultContainerByContractName.entries()) {
+            const { errors: contractErrors, federationResult: contractResult } = contractResultContainer;
+
+            const contractGraph = await this.federatedGraphRepo.byName(contractName, graph.namespace);
+            if (!contractGraph) {
+              throw new Error(`Contract graph ${contractName} not found`);
+            }
+
+            composedGraphs.push({
+              id: contractGraph.id,
+              name: contractGraph.name,
+              namespace: contractGraph.namespace,
+              namespaceId: contractGraph.namespaceId,
+              targetID: contractGraph.targetId,
+              fieldConfigurations: contractResult?.fieldConfigurations || [],
+              composedSchema: contractResult?.federatedGraphSchema
+                ? printSchemaWithDirectives(contractResult.federatedGraphSchema)
+                : undefined,
+              errors: contractErrors || [],
+              subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, contractResult),
+            });
+          }
+        }
       } catch (e: any) {
         composedGraphs.push({
           id: graph.id,
@@ -382,6 +449,7 @@ export class Composer {
         });
       }
     }
+
     return {
       compositions: composedGraphs,
     };

@@ -5,7 +5,6 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import _ from 'lodash';
 import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
@@ -48,16 +47,16 @@ import {
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GenerateRouterTokenResponse,
+  GetAPIKeysResponse,
   GetAllDiscussionsResponse,
   GetAllOverridesResponse,
   GetAnalyticsViewResponse,
-  GetAPIKeysResponse,
   GetAuditLogsResponse,
   GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckOperationsResponse,
-  GetChecksByFederatedGraphNameResponse,
   GetCheckSummaryResponse,
+  GetChecksByFederatedGraphNameResponse,
   GetClientsResponse,
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
@@ -66,8 +65,8 @@ import {
   GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
-  GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphSDLByNameResponse,
+  GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
@@ -85,8 +84,8 @@ import {
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
   GetPersistedOperationsResponse,
-  GetRoutersResponse,
   GetRouterTokensResponse,
+  GetRoutersResponse,
   GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
   GetSubgraphMembersResponse,
@@ -106,11 +105,11 @@ import {
   MigrateMonographResponse,
   MoveGraphResponse,
   Permission,
-  PublishedOperation,
-  PublishedOperationStatus,
   PublishFederatedSubgraphResponse,
   PublishMonographResponse,
   PublishPersistedOperationsResponse,
+  PublishedOperation,
+  PublishedOperationStatus,
   RemoveInvitationResponse,
   RemoveOperationIgnoreAllOverrideResponse,
   RemoveOperationOverridesResponse,
@@ -125,9 +124,9 @@ import {
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateMonographResponse,
+  UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
-  UpdateOrgMemberRoleResponse,
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
@@ -135,7 +134,7 @@ import {
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
-import { buildASTSchema, DocumentNode, parse } from 'graphql';
+import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
 import {
@@ -149,16 +148,18 @@ import {
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
-import { ComposeDeploymentError, Composer, RouterConfigUploadError } from '../composition/composer.js';
-import { buildSchema, composeSubgraphs } from '../composition/composition.js';
+import { Composer, RouterConfigUploadError, mapResultToComposedGraph } from '../composition/composer.js';
+import { buildSchema, composeSubgraphs, composeSubgraphsWithContracts } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { schemaLintCheck } from '../composition/schemaLint.js';
+import { apiKeyPermissions } from '../constants.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { AuthenticationError, PublicError } from '../errors/errors.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
+import { ContractRepository } from '../repositories/ContractRepository.js';
 import { DiscussionRepository } from '../repositories/DiscussionRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
@@ -189,10 +190,10 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { BillingService } from '../services/BillingService.js';
 import OidcProvider from '../services/OidcProvider.js';
 import {
-  collectOperationUsageStats,
   InspectorOperationResult,
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
+  collectOperationUsageStats,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -212,8 +213,6 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { apiKeyPermissions } from '../constants.js';
-import { ContractRepository } from '../repositories/ContractRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -496,6 +495,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(opts.db);
         const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+        const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.name, req.namespace, {
           supportsFederation: false,
@@ -506,6 +506,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Monograph '${req.name}' not found`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+          };
+        }
+
+        if (graph.contract?.id) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Contract graphs cannot be moved individually. They will automatically be moved with the source graph.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -534,7 +545,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           authContext,
         });
 
+        const movedGraphs = [graph];
         const targetIds = [graph.targetId];
+
+        const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
+        for (const contract of contracts) {
+          const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+          if (!contractGraph) {
+            continue;
+          }
+
+          movedGraphs.push(contractGraph);
+          targetIds.push(contractGraph.targetId);
+        }
 
         const subgraphs = await subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: graph.targetId,
@@ -570,18 +593,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           newNamespaceId: newNamespace.id,
         });
 
-        await auditLogRepo.addAuditLog({
-          organizationId: authContext.organizationId,
-          auditAction: 'monograph.moved',
-          action: 'moved',
-          actorId: authContext.userId,
-          auditableType: 'monograph',
-          auditableDisplayName: graph.name,
-          actorDisplayName: authContext.userDisplayName,
-          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-          targetNamespaceId: newNamespace.id,
-          targetNamespaceDisplayName: newNamespace.name,
-        });
+        for (const movedGraph of movedGraphs) {
+          await auditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            auditAction: 'monograph.moved',
+            action: 'moved',
+            actorId: authContext.userId,
+            auditableType: 'monograph',
+            auditableDisplayName: movedGraph.name,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+            targetNamespaceId: newNamespace.id,
+            targetNamespaceDisplayName: newNamespace.name,
+          });
+        }
 
         return {
           response: {
@@ -749,32 +774,71 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           );
 
+          const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
+          const allCompositionErrors: PlainMessage<CompositionError>[] = [];
+
+          for (const error of compositionErrors) {
+            allCompositionErrors.push({
+              message: error.message,
+              federatedGraphName: req.name,
+              namespace: graph.namespace,
+            });
+          }
+
+          allDeploymentErrors.push(
+            ...deploymentErrors
+              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+              .map((e) => ({
+                federatedGraphName: req.name,
+                namespace: graph.namespace,
+                message: e.message ?? '',
+              })),
+          );
+
           const movedGraphs = [graph];
 
           const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
-          const contractDeploymentErrors: ComposeDeploymentError[] = [];
+
           for (const contract of contracts) {
             const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
             if (!contractGraph) {
               continue;
             }
 
-            const { deploymentErrors } = await fedGraphRepo.move(
-              {
-                targetId: contractGraph.targetId,
-                newNamespaceId: newNamespace.id,
-                updatedBy: authContext.userId,
-                federatedGraph: contractGraph,
-                skipDeployment: compositionErrors.length > 0,
-              },
-              opts.blobStorage,
-              {
-                cdnBaseUrl: opts.cdnBaseUrl,
-                jwtSecret: opts.admissionWebhookJWTSecret,
-              },
+            const { deploymentErrors: contractDeploymentErrors, compositionErrors: contractErrors } =
+              await fedGraphRepo.move(
+                {
+                  targetId: contractGraph.targetId,
+                  newNamespaceId: newNamespace.id,
+                  updatedBy: authContext.userId,
+                  federatedGraph: contractGraph,
+                  skipDeployment: compositionErrors.length > 0,
+                },
+                opts.blobStorage,
+                {
+                  cdnBaseUrl: opts.cdnBaseUrl,
+                  jwtSecret: opts.admissionWebhookJWTSecret,
+                },
+              );
+
+            for (const error of contractErrors) {
+              allCompositionErrors.push({
+                message: error.message,
+                federatedGraphName: contractGraph.name,
+                namespace: contractGraph.namespace,
+              });
+            }
+
+            allDeploymentErrors.push(
+              ...contractDeploymentErrors
+                .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+                .map((e) => ({
+                  federatedGraphName: contractGraph.name,
+                  namespace: contractGraph.namespace,
+                  message: e.message ?? '',
+                })),
             );
 
-            contractDeploymentErrors.push(...deploymentErrors);
             movedGraphs.push(contractGraph);
           }
 
@@ -815,29 +879,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             });
           }
 
-          const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
-
-          allDeploymentErrors.push(
-            ...[...deploymentErrors, ...contractDeploymentErrors]
-              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-              .map((e) => ({
-                federatedGraphName: req.name,
-                namespace: graph.namespace,
-                message: e.message ?? '',
-              })),
-          );
-
           if (compositionErrors.length > 0) {
             return {
               response: {
                 code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
               },
               deploymentErrors: [],
-              compositionErrors: compositionErrors.map((e) => ({
-                federatedGraphName: req.name,
-                message: e.message,
-                namespace: graph.namespace,
-              })),
+              compositionErrors: allCompositionErrors,
             };
           }
 
@@ -1347,7 +1395,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-          const composer = new Composer(logger, fedGraphRepo, subgraphRepo);
+          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
+
+          const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo);
           const composition = await composer.composeFederatedGraph(federatedGraph);
 
           compositionErrors.push(
@@ -1440,11 +1490,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return opts.db.transaction(async (tx) => {
           const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
-          const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
           const auditLogRepo = new AuditLogRepository(tx);
           const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
           const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
-          const compositionRepo = new GraphCompositionRepository(logger, tx);
 
           if (!authContext.hasWriteAccess) {
             throw new PublicError(
@@ -1473,10 +1521,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             throw new PublicError(EnumStatusCode.ERR, `Admission Webhook URL is not a valid URL`);
           }
 
-          req.includeTags = [...new Set(req.includeTags)];
           req.excludeTags = [...new Set(req.excludeTags)];
 
-          if (!isValidSchemaTags(req.includeTags) || !isValidSchemaTags(req.excludeTags)) {
+          if (!isValidSchemaTags(req.excludeTags)) {
             throw new PublicError(EnumStatusCode.ERR, `Provided tags are invalid`);
           }
 
@@ -1493,14 +1540,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             throw new PublicError(
               EnumStatusCode.ERR_LIMIT_REACHED,
               `The organization reached the limit of federated graphs and monographs`,
-            );
-          }
-
-          const commonTags = _.intersection(req.includeTags, req.excludeTags);
-          if (commonTags.length > 0) {
-            throw new PublicError(
-              EnumStatusCode.ERR,
-              `You cannot include and exclude the same tags: ${commonTags.join(', ')}`,
             );
           }
 
@@ -1528,12 +1567,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespace: req.namespace,
             namespaceId: namespace.id,
             admissionWebhookURL: req.admissionWebhookUrl,
+            supportsFederation: sourceGraph.supportsFederation,
           });
 
           const contract = await contractRepo.create({
             sourceFederatedGraphId: sourceGraph.id,
             downstreamFederatedGraphId: contractGraph.id,
-            includeTags: req.includeTags,
             excludeTags: req.excludeTags,
             actorId: authContext.userId,
           });
@@ -1556,7 +1595,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetNamespaceDisplayName: contractGraph.namespace,
           });
 
-          const deployment = await contractRepo.deployContract({
+          const { deployment, contractErrors } = await contractRepo.deployContract({
             contractGraph: {
               ...contractGraph,
               contract,
@@ -1569,7 +1608,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           });
 
+          const compositionErrors: PlainMessage<CompositionError>[] = [];
           const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+          compositionErrors.push(
+            ...contractErrors.map((e) => ({
+              federatedGraphName: contractGraph.name,
+              namespace: contractGraph.namespace,
+              message: e.message,
+            })),
+          );
 
           if (deployment) {
             deploymentErrors.push(
@@ -1581,6 +1629,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   message: e.message ?? '',
                 })),
             );
+          }
+
+          if (compositionErrors.length > 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
+              },
+              compositionErrors,
+              deploymentErrors: [],
+            };
+          }
+
+          if (deploymentErrors.length > 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
+              },
+              compositionErrors: [],
+              deploymentErrors,
+            };
           }
 
           return {
@@ -1604,13 +1672,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
         const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
+        const auditLogRepo = new AuditLogRepository(opts.db);
+        const orgWebhooks = new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        );
 
-        req.includeTags = [...new Set(req.includeTags)];
         req.excludeTags = [...new Set(req.excludeTags)];
 
-        if (!isValidSchemaTags(req.includeTags) || !isValidSchemaTags(req.excludeTags)) {
+        if (!isValidSchemaTags(req.excludeTags)) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -1655,26 +1728,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const commonTags = _.intersection(req.includeTags, req.excludeTags);
-        if (commonTags.length > 0) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `You cannot include and exclude the same tags: ${commonTags.join(', ')}`,
-            },
-            deploymentErrors: [],
-            compositionErrors: [],
-          };
-        }
-
         const updatedContractDetails = await contractRepo.update({
           id: graph.contract.id,
-          includeTags: req.includeTags,
           excludeTags: req.excludeTags,
           actorId: authContext.userId,
         });
 
-        const deployment = await contractRepo.deployContract({
+        const { deployment, contractErrors } = await contractRepo.deployContract({
           contractGraph: {
             ...graph,
             contract: {
@@ -1690,7 +1750,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
         });
 
+        const compositionErrors: PlainMessage<CompositionError>[] = [];
         const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+        compositionErrors.push(
+          ...contractErrors.map((e) => ({
+            federatedGraphName: graph.name,
+            namespace: graph.namespace,
+            message: e.message,
+          })),
+        );
 
         if (deployment) {
           deploymentErrors.push(
@@ -1702,6 +1771,56 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 message: e.message ?? '',
               })),
           );
+        }
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          auditAction: 'federated_graph.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'federated_graph',
+          auditableDisplayName: graph.name,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: graph.namespaceId,
+          targetNamespaceDisplayName: graph.namespace,
+        });
+
+        orgWebhooks.send({
+          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+          payload: {
+            federated_graph: {
+              id: graph.id,
+              name: graph.name,
+              namespace: graph.namespace,
+            },
+            organization: {
+              id: authContext.organizationId,
+              slug: authContext.organizationSlug,
+            },
+            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+            actor_id: authContext.userId,
+          },
+        });
+
+        if (compositionErrors.length > 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
+            },
+            compositionErrors,
+            deploymentErrors: [],
+          };
+        }
+
+        if (deploymentErrors.length > 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
+            },
+            compositionErrors: [],
+            deploymentErrors,
+          };
         }
 
         return {
@@ -1951,7 +2070,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           schemaCheckID,
         });
 
-        const composer = new Composer(logger, fedGraphRepo, subgraphRepo);
+        const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo);
 
         const result = req.delete
           ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
@@ -1967,7 +2086,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
         const inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
-        const contractErrors: PlainMessage<CompositionError>[] = [];
 
         let inspectorChanges: InspectorSchemaChange[] = [];
         try {
@@ -1988,56 +2106,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const limit = changeRetention?.limit ?? 7;
 
-        const checkedCompositions: { id: string; hasErrors: boolean }[] = [];
-
         for (const composition of result.compositions) {
           await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
 
-          // Skip contracts if composition for the federated graph has errors
-          if (composition.errors.length > 0) {
-            for (const error of composition.errors) {
-              compositionErrors.push({
-                message: error.message,
-                federatedGraphName: composition.name,
-                namespace: composition.namespace,
-              });
-            }
-            continue;
-          }
-
-          checkedCompositions.push({
-            id: composition.id,
-            hasErrors: composition.errors.length > 0,
-          });
-
-          const contracts = await contractRepo.bySourceFederatedGraphId(composition.id);
-
-          for (const contract of contracts) {
-            /* 
-            const {filteredSchema, errors } = filter()
-
-            await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, contract.id, limit);
-
-            for (const error of errors) {
-              contractErrors.push({
-                message: error.message,
-                federatedGraphName: contract.name,
-                namespace: contract.namespace,
-              });
-            }
-
-            checkedCompositions.push({
-              id: contract.id,
-              hasErrors: errors.length > 0,
+          for (const error of composition.errors) {
+            compositionErrors.push({
+              message: error.message,
+              federatedGraphName: composition.name,
+              namespace: composition.namespace,
             });
-            */
           }
-        }
 
-        for (const composition of checkedCompositions) {
           // We don't collect operation usage when we have composition errors or
           // when we don't have any inspectable changes. That means any breaking change is really breaking
-          if (composition.hasErrors || !isInspectable || inspectorChanges.length === 0) {
+          if (composition.errors.length > 0 || !isInspectable || inspectorChanges.length === 0) {
             continue;
           }
 
@@ -2072,7 +2154,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        // TODO: Lint contract schemas
         let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
         if (namespace.enableLinting && newSchemaSDL !== '') {
           const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
@@ -2146,7 +2227,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-        const composer = new Composer(logger, fedGraphRepo, subgraphRepo);
+        const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
+
+        const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo);
 
         req.namespace = req.namespace || DefaultNamespace;
 
@@ -2448,19 +2531,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           });
         }
-
-        await auditLogRepo.addAuditLog({
-          organizationId: authContext.organizationId,
-          auditAction: 'monograph.updated',
-          action: 'updated',
-          actorId: authContext.userId,
-          auditableType: 'monograph',
-          auditableDisplayName: graph.name,
-          actorDisplayName: authContext.userDisplayName,
-          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-          targetNamespaceId: graph.namespaceId,
-          targetNamespaceDisplayName: graph.namespace,
-        });
 
         if (
           opts.openaiApiKey &&
@@ -3222,6 +3292,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
           const auditLogRepo = new AuditLogRepository(tx);
 
           if (!authContext.hasWriteAccess) {
@@ -3266,22 +3337,43 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           await fedGraphRepo.delete(graph.targetId);
 
+          const deletedGraphs = [graph];
+
+          // Delete downstream contracts
+          const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
+          for (const contract of contracts) {
+            const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+            if (!contractGraph) {
+              continue;
+            }
+
+            const blobStorageDirectory = `${authContext.organizationId}/${contractGraph.id}`;
+            await opts.blobStorage.removeDirectory({
+              key: blobStorageDirectory,
+            });
+
+            await fedGraphRepo.delete(contractGraph.targetId);
+            deletedGraphs.push(contractGraph);
+          }
+
           if (subgraphs.length === 1) {
             await subgraphRepo.delete(subgraphs[0].targetId);
           }
 
-          await auditLogRepo.addAuditLog({
-            organizationId: authContext.organizationId,
-            auditAction: 'monograph.deleted',
-            action: 'deleted',
-            actorId: authContext.userId,
-            auditableType: 'monograph',
-            auditableDisplayName: graph.name,
-            actorDisplayName: authContext.userDisplayName,
-            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-            targetNamespaceId: graph.namespaceId,
-            targetNamespaceDisplayName: graph.namespace,
-          });
+          for (const deletedGraph of deletedGraphs) {
+            await auditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              auditAction: 'monograph.deleted',
+              action: 'deleted',
+              actorId: authContext.userId,
+              auditableType: 'monograph',
+              auditableDisplayName: deletedGraph.name,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: deletedGraph.namespaceId,
+              targetNamespaceDisplayName: deletedGraph.namespace,
+            });
+          }
 
           return {
             response: {
@@ -3343,6 +3435,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             key: blobStorageDirectory,
           });
 
+          await fedGraphRepo.delete(federatedGraph.targetId);
+
           const deletedGraphs = [federatedGraph];
 
           // Delete downstream contracts
@@ -3352,11 +3446,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             if (!contractGraph) {
               continue;
             }
+
+            const blobStorageDirectory = `${authContext.organizationId}/${contractGraph.id}`;
+            await opts.blobStorage.removeDirectory({
+              key: blobStorageDirectory,
+            });
+
             await fedGraphRepo.delete(contractGraph.targetId);
             deletedGraphs.push(contractGraph);
           }
-
-          await fedGraphRepo.delete(federatedGraph.targetId);
 
           for (const deletedGraph of deletedGraphs) {
             await auditLogRepo.addAuditLog({
@@ -3441,7 +3539,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
           const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
-          const composer = new Composer(logger, fedGraphRepo, subgraphRepo);
+          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
+          const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo);
           const auditLogRepo = new AuditLogRepository(tx);
 
           // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
@@ -3482,24 +3581,54 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           // Validate all federated graphs that use this subgraph.
           for (const federatedGraph of affectedFederatedGraphs) {
-            const composition = await composer.composeFederatedGraph(federatedGraph);
+            // only execute for base graphs. Contracts for each are handled automatically.
+            if (federatedGraph.contract) {
+              continue;
+            }
 
-            const namespace = await namespaceRepo.byTargetId(composition.targetID);
+            const namespace = await namespaceRepo.byTargetId(federatedGraph.targetId);
             if (!namespace) {
               throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, 'Could not find namespace');
             }
 
+            const subgraphs = await subgraphRepo.byGraphLabelMatchers({
+              labelMatchers: federatedGraph.labelMatchers,
+              namespaceId: namespace.id,
+            });
+
+            const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
+            const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
+            for (const contract of contracts) {
+              tagExclusionsByContractName.set(
+                contract.downstreamFederatedGraph.target.name,
+                new Set(contract.excludeTags),
+              );
+            }
+
+            const {
+              errors,
+              federationResult: result,
+              federationResultContainerByContractName,
+            } = composeSubgraphsWithContracts(
+              subgraphs.map((s) => ({
+                name: s.name,
+                url: s.routingUrl,
+                definitions: parse(s.schemaSDL),
+              })),
+              tagExclusionsByContractName,
+            );
+
             // Collect all composition errors
             compositionErrors.push(
-              ...composition.errors.map((e) => ({
-                federatedGraphName: composition.name,
-                namespace: composition.namespace,
+              ...(errors || []).map((e) => ({
+                federatedGraphName: federatedGraph.name,
+                namespace: federatedGraph.namespace,
                 message: e.message,
               })),
             );
 
             const deployment = await composer.deployComposition({
-              composedGraph: composition,
+              composedGraph: mapResultToComposedGraph(federatedGraph, subgraphs, errors, result),
               composedBy: authContext.userId,
               blobStorage: opts.blobStorage,
               organizationId: authContext.organizationId,
@@ -3514,8 +3643,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               ...deployment.errors
                 .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
                 .map((e) => ({
-                  federatedGraphName: composition.name,
-                  namespace: composition.namespace,
+                  federatedGraphName: federatedGraph.name,
+                  namespace: federatedGraph.namespace,
                   message: e.message ?? '',
                 })),
             );
@@ -3524,18 +3653,78 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
               payload: {
                 federated_graph: {
-                  id: composition.targetID,
-                  name: composition.name,
+                  id: federatedGraph.targetId,
+                  name: federatedGraph.name,
                   namespace: namespace.name,
                 },
                 organization: {
                   id: authContext.organizationId,
                   slug: authContext.organizationSlug,
                 },
-                errors: composition.errors.length > 0 || deploymentErrors.length > 0,
+                errors: (errors || []).length > 0 || deploymentErrors.length > 0,
                 actor_id: authContext.userId,
               },
             });
+
+            if (!federationResultContainerByContractName) {
+              continue;
+            }
+
+            for (const [contractName, resultContainer] of federationResultContainerByContractName.entries()) {
+              const { errors: contractErrors, federationResult: result } = resultContainer;
+
+              const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
+              if (!contractGraph) {
+                throw new Error(`Contract graph ${contractName} not found`);
+              }
+
+              const contractDeployment = await composer.deployComposition({
+                composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, contractErrors, result),
+                composedBy: authContext.userId,
+                blobStorage: opts.blobStorage,
+                organizationId: authContext.organizationId,
+                admissionWebhookURL: contractGraph.admissionWebhookURL,
+                admissionConfig: {
+                  cdnBaseUrl: opts.cdnBaseUrl,
+                  jwtSecret: opts.admissionWebhookJWTSecret,
+                },
+              });
+
+              compositionErrors.push(
+                ...(contractErrors || []).map((e) => ({
+                  federatedGraphName: contractGraph.name,
+                  namespace: contractGraph.namespace,
+                  message: e.message,
+                })),
+              );
+
+              deploymentErrors.push(
+                ...contractDeployment.errors
+                  .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+                  .map((e) => ({
+                    federatedGraphName: contractGraph.name,
+                    namespace: contractGraph.namespace,
+                    message: e.message ?? '',
+                  })),
+              );
+
+              federatedGraphSchemaUpdates.push({
+                eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+                payload: {
+                  federated_graph: {
+                    id: contractGraph.targetId,
+                    name: contractGraph.name,
+                    namespace: namespace.name,
+                  },
+                  organization: {
+                    id: authContext.organizationId,
+                    slug: authContext.organizationSlug,
+                  },
+                  errors: (contractErrors || []).length > 0 || deploymentErrors.length > 0,
+                  actor_id: authContext.userId,
+                },
+              });
+            }
           }
         });
 
@@ -5029,7 +5218,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-          const composer = new Composer(logger, fedGraphRepo, subgraphRepo);
+          const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
+          const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo);
 
           const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
             fedGraph: {

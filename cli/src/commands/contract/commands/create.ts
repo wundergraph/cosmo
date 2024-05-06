@@ -19,10 +19,6 @@ export default (opts: BaseCommandOptions) => {
     '-r, --routing-url <url>',
     'The routing url of your router. This is the url that the router will be accessible at.',
   );
-  command.option(
-    '--include [tags...]',
-    'Only schema elements with these tags will be included in the contract schema.',
-  );
   command.option('--exclude [tags...]', 'Schema elements with these tags will be excluded from the contract schema.');
   command.option(
     '--admission-webhook-url <url>',
@@ -50,7 +46,6 @@ export default (opts: BaseCommandOptions) => {
         name,
         namespace: options.namespace,
         sourceGraphName: options.source,
-        includeTags: options.include,
         excludeTags: options.exclude,
         routingUrl: options.routingUrl,
         admissionWebhookUrl: options.admissionWebhookUrl,
@@ -64,6 +59,54 @@ export default (opts: BaseCommandOptions) => {
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
         spinner.succeed('Contract graph was created successfully.');
+        break;
+      }
+      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
+        spinner.fail('Contract created but with composition errors.');
+
+        const compositionErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        for (const compositionError of resp.compositionErrors) {
+          compositionErrorsTable.push([
+            compositionError.federatedGraphName,
+            compositionError.namespace,
+            compositionError.message,
+          ]);
+        }
+        console.log(compositionErrorsTable.toString());
+        break;
+      }
+      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
+        spinner.warn(
+          "The contract was created, but the composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+        );
+
+        const deploymentErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        for (const deploymentError of resp.deploymentErrors) {
+          deploymentErrorsTable.push([
+            deploymentError.federatedGraphName,
+            deploymentError.namespace,
+            deploymentError.message,
+          ]);
+        }
+        console.log(deploymentErrorsTable.toString());
         break;
       }
       default: {

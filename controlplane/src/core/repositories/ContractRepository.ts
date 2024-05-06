@@ -1,13 +1,16 @@
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { FederatedGraphDTO } from 'src/types/index.js';
 import { FastifyBaseLogger } from 'fastify';
+import { federateSubgraphsContract } from '@wundergraph/composition';
+import { parse } from 'graphql';
 import * as schema from '../../db/schema.js';
-import { Composer, CompositionDeployResult } from '../composition/composer.js';
+import { Composer, CompositionDeployResult, mapResultToComposedGraph } from '../composition/composer.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { composeSubgraphsForContract } from '../composition/composition.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
+import { FederatedGraphDTO } from 'src/types/index.js';
 
 export class ContractRepository {
   constructor(
@@ -19,7 +22,6 @@ export class ContractRepository {
   public async create(data: {
     sourceFederatedGraphId: string;
     downstreamFederatedGraphId: string;
-    includeTags: string[];
     excludeTags: string[];
     actorId: string;
   }) {
@@ -34,11 +36,10 @@ export class ContractRepository {
     return res[0];
   }
 
-  public async update(data: { id: string; includeTags: string[]; excludeTags: string[]; actorId: string }) {
+  public async update(data: { id: string; excludeTags: string[]; actorId: string }) {
     const res = await this.db
       .update(schema.contracts)
       .set({
-        includeTags: data.includeTags,
         excludeTags: data.excludeTags,
         updatedById: data.actorId,
         updatedAt: new Date(),
@@ -65,8 +66,14 @@ export class ContractRepository {
             id: true,
             sourceFederatedGraphId: true,
             downstreamFederatedGraphId: true,
-            includeTags: true,
             excludeTags: true,
+          },
+          with: {
+            downstreamFederatedGraph: {
+              with: {
+                target: true,
+              },
+            },
           },
         },
       },
@@ -88,14 +95,17 @@ export class ContractRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
-  }): Promise<CompositionDeployResult | undefined> {
+  }): Promise<{ contractErrors: Error[]; deployment?: CompositionDeployResult }> {
     return this.db.transaction(async (tx) => {
+      const contractErrors: Error[] = [];
+
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(this.logger, tx);
+      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
 
       if (!contractGraph.contract?.sourceFederatedGraphId) {
-        return;
+        return { contractErrors };
       }
 
       const sourceGraph = await fedGraphRepo.byId(contractGraph.contract.sourceFederatedGraphId);
@@ -105,23 +115,8 @@ export class ContractRepository {
 
       const sourceGraphLatestValidRouterConfig = await fedGraphRepo.getLatestValidRouterConfig(sourceGraph.targetId);
       if (!sourceGraphLatestValidRouterConfig) {
-        return;
+        return { contractErrors };
       }
-
-      const sourceGraphLatestValidSDL = fedGraphRepo.getSdlBasedOnSchemaVersion({
-        targetId: sourceGraph.targetId,
-        schemaVersionId: sourceGraphLatestValidRouterConfig.schemaVersionId,
-      });
-      if (!sourceGraphLatestValidSDL) {
-        return;
-      }
-
-      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
-
-      // TODO
-      // Perform tag filter operations
-      // const filteredSchema = filter(sourceGraphLatestValidSDL)
-      const filteredSchema = `type Query {}`;
 
       const composition = await compositionRepo.getGraphCompositionBySchemaVersion({
         schemaVersionId: sourceGraphLatestValidRouterConfig.schemaVersionId,
@@ -129,44 +124,35 @@ export class ContractRepository {
       });
 
       if (!composition) {
-        return;
+        return { contractErrors };
       }
 
       const subgraphs = await compositionRepo.getCompositionSubgraphs({
         compositionId: composition.id,
       });
 
+      const { errors, federationResult: result } = composeSubgraphsForContract(
+        subgraphs.map((s) => ({
+          name: s.name,
+          url: s.routingUrl,
+          definitions: parse(s.schemaSDL),
+        })),
+        new Set(contractGraph.contract.excludeTags),
+      );
+
+      contractErrors.push(...(errors || []));
+
+      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo);
       const deployment = await composer.deployComposition({
-        composedGraph: {
-          id: contractGraph.id,
-          targetID: contractGraph.targetId,
-          name: contractGraph.name,
-          namespace: contractGraph.namespace,
-          namespaceId: contractGraph.namespaceId,
-          composedSchema: filteredSchema,
-          errors: [],
-          subgraphs: subgraphs.map((s) => ({
-            id: s.id,
-            name: s.name,
-            schemaVersionId: s.schemaVersionId,
-            sdl: s.schemaSDL,
-            url: s.routingUrl,
-            subscriptionUrl: s.subscriptionUrl,
-            subscriptionProtocol: s.subscriptionProtocol,
-          })),
-          // Not required since we do not rebuild router config
-          fieldConfigurations: [],
-        },
+        composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, errors, result),
         composedBy: actorId,
         blobStorage,
         organizationId: this.organizationId,
         admissionWebhookURL: contractGraph.admissionWebhookURL,
         admissionConfig,
-        // Pass this so that router config is not rebuilt.
-        contractRouterConfig: sourceGraphLatestValidRouterConfig.config,
       });
 
-      return deployment;
+      return { deployment, contractErrors };
     });
   }
 }
