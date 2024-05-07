@@ -2123,7 +2123,7 @@ export class FederationFactory {
     };
     const newClientSchema: GraphQLSchema = buildASTSchema({
       kind: Kind.DOCUMENT,
-      definitions: [],
+      definitions: this.clientDefinitions,
     });
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {

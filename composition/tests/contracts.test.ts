@@ -68,11 +68,11 @@ describe('Contract tests', () => {
       type Object @tag(name: "excludeMe") {
         name: String!
       }
-      
+
       type ObjectTwo @tag(name: "excludeMeTwo") @inaccessible {
         name: String!
       }
-      
+
       type Query {
         dummy: String!
       }
