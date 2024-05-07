@@ -122,6 +122,7 @@ import {
   InputObjectDefinitionData,
   InputValueData,
   InterfaceDefinitionData,
+  NodeData,
   ObjectDefinitionData,
   ParentDefinitionData,
   ParentWithFieldsData,
@@ -895,13 +896,20 @@ export class FederationFactory {
     setLongestDescription(existingData, incomingData);
   }
 
-  upsertInputValueData(inputValueDataByValueName: Map<string, InputValueData>, incomingData: InputValueData) {
+  // To facilitate the splitting of tag paths, field arguments do not use the renamedPath property for tagNamesByPath
+  upsertInputValueData(
+    inputValueDataByValueName: Map<string, InputValueData>,
+    incomingData: InputValueData,
+    path?: string,
+  ) {
     const existingData = inputValueDataByValueName.get(incomingData.name);
+    const baseData = existingData || incomingData;
     extractPersistedDirectives(
-      existingData?.persistedDirectivesData || incomingData.persistedDirectivesData,
+      baseData.persistedDirectivesData,
       incomingData.directivesByDirectiveName,
       this.persistedDirectiveDefinitionByDirectiveName,
     );
+    this.recordTagNamesByPath(baseData, path || baseData.renamedPath);
     if (!existingData) {
       incomingData.node = {
         directives: [],
@@ -969,8 +977,9 @@ export class FederationFactory {
     getValueOrDefault(this.pathsByNamedTypeName, incomingData.namedTypeName, () => new Set<string>()).add(fieldPath);
     this.namedOutputTypeNames.add(incomingData.namedTypeName);
     const existingData = fieldDataByFieldName.get(incomingData.name);
+    const baseData = existingData || incomingData;
     extractPersistedDirectives(
-      existingData?.persistedDirectivesData || incomingData.persistedDirectivesData,
+      baseData.persistedDirectivesData,
       incomingData.directivesByDirectiveName,
       this.persistedDirectiveDefinitionByDirectiveName,
     );
@@ -978,12 +987,7 @@ export class FederationFactory {
     if (isParentInaccessible || isFieldInaccessible) {
       this.inaccessiblePaths.add(fieldPath);
     }
-    if (incomingData.persistedDirectivesData.tags.size > 0) {
-      const tagNames = getValueOrDefault(this.tagNamesByPath, fieldPath, () => new Set<string>());
-      for (const tagName of incomingData.persistedDirectivesData.tags.keys()) {
-        tagNames.add(tagName);
-      }
-    }
+    this.recordTagNamesByPath(baseData, fieldPath);
     if (!existingData) {
       fieldDataByFieldName.set(incomingData.name, incomingData);
       incomingData.node = {
@@ -1000,9 +1004,10 @@ export class FederationFactory {
           name: stringToNameNode(inputValueData.name),
           type: inputValueData.type,
         };
-        const argumentPath = `${fieldPath}(${argumentName}: ... )`;
         const namedArgumentTypeName = getTypeNodeNamedTypeName(inputValueData.type);
-        getValueOrDefault(this.pathsByNamedTypeName, namedArgumentTypeName, () => new Set<string>()).add(argumentPath);
+        getValueOrDefault(this.pathsByNamedTypeName, namedArgumentTypeName, () => new Set<string>()).add(
+          inputValueData.renamedPath,
+        );
         this.namedInputValueTypeNames.add(namedArgumentTypeName);
         extractPersistedDirectives(
           inputValueData.persistedDirectivesData,
@@ -1015,16 +1020,10 @@ export class FederationFactory {
         this.handleArgumentInaccessibility(
           isParentInaccessible || isFieldInaccessible,
           inputValueData,
-          argumentPath,
+          inputValueData.renamedPath,
           fieldPath,
         );
-        if (inputValueData.persistedDirectivesData.tags.size > 0) {
-          const tagArgumentPath = `${fieldPath}.${argumentName}`;
-          const tagNames = getValueOrDefault(this.tagNamesByPath, tagArgumentPath, () => new Set<string>());
-          for (const tagName of inputValueData.persistedDirectivesData.tags.keys()) {
-            tagNames.add(tagName);
-          }
-        }
+        this.recordTagNamesByPath(inputValueData, `${fieldPath}.${argumentName}`);
       }
       return;
     }
@@ -1043,9 +1042,10 @@ export class FederationFactory {
       this.errors.push(incompatibleChildTypesError(fieldPath, typeErrors[0], typeErrors[1]));
     }
     for (const [argumentName, inputValueData] of incomingData.argumentDataByArgumentName) {
-      const argumentPath = `${fieldPath}(${argumentName}: ... )`;
       const namedArgumentTypeName = getTypeNodeNamedTypeName(inputValueData.type);
-      getValueOrDefault(this.pathsByNamedTypeName, namedArgumentTypeName, () => new Set<string>()).add(argumentPath);
+      getValueOrDefault(this.pathsByNamedTypeName, namedArgumentTypeName, () => new Set<string>()).add(
+        inputValueData.renamedPath,
+      );
       this.namedInputValueTypeNames.add(namedArgumentTypeName);
       /* If either the parent or the field to which the field belongs are declared inaccessible, the nullability
        ** of the argument is not considered. However, if only the argument is declared inaccessible, it is an
@@ -1053,17 +1053,14 @@ export class FederationFactory {
       this.handleArgumentInaccessibility(
         isParentInaccessible || isFieldInaccessible,
         inputValueData,
-        argumentPath,
+        inputValueData.renamedPath,
         fieldPath,
       );
-      if (inputValueData.persistedDirectivesData.tags.size > 0) {
-        const tagArgumentPath = `${fieldPath}.${argumentName}`;
-        const tagNames = getValueOrDefault(this.tagNamesByPath, tagArgumentPath, () => new Set<string>());
-        for (const tagName of inputValueData.persistedDirectivesData.tags.keys()) {
-          tagNames.add(tagName);
-        }
-      }
-      this.upsertInputValueData(existingData.argumentDataByArgumentName, inputValueData);
+      this.upsertInputValueData(
+        existingData.argumentDataByArgumentName,
+        inputValueData,
+        `${fieldPath}.${argumentName}`,
+      );
     }
     setLongestDescription(existingData, incomingData);
     existingData.isInaccessible ||= incomingData.isInaccessible;
@@ -1082,6 +1079,16 @@ export class FederationFactory {
     return members;
   }
 
+  recordTagNamesByPath(data: NodeData | ObjectExtensionData, nodePath?: string) {
+    const path = nodePath || data.name;
+    if (data.persistedDirectivesData.tags.size > 0) {
+      const tagNames = getValueOrDefault(this.tagNamesByPath, path, () => new Set<string>());
+      for (const tagName of data.persistedDirectivesData.tags.keys()) {
+        tagNames.add(tagName);
+      }
+    }
+  }
+
   upsertParentDefinitionData(incomingData: ParentDefinitionData, subgraphName: string) {
     const entityInterfaceData = this.entityInterfaceFederationDataByTypeName.get(incomingData.name);
     const existingData = this.parentDefinitionDataByTypeName.get(incomingData.name);
@@ -1091,15 +1098,10 @@ export class FederationFactory {
       incomingData.directivesByDirectiveName,
       this.persistedDirectiveDefinitionByDirectiveName,
     );
+    this.recordTagNamesByPath(baseData);
     const isParentInaccessible = isNodeDataInaccessible(baseData);
     if (isParentInaccessible) {
       this.inaccessiblePaths.add(incomingData.name);
-    }
-    if (incomingData.persistedDirectivesData.tags.size > 0) {
-      const tagNames = getValueOrDefault(this.tagNamesByPath, incomingData.name, () => new Set<string>());
-      for (const tagName of incomingData.persistedDirectivesData.tags.keys()) {
-        tagNames.add(tagName);
-      }
     }
     if (!existingData) {
       if (entityInterfaceData && entityInterfaceData.interfaceObjectSubgraphs.has(subgraphName)) {
@@ -1123,6 +1125,7 @@ export class FederationFactory {
               enumValueData.directivesByDirectiveName,
               this.persistedDirectiveDefinitionByDirectiveName,
             );
+            this.recordTagNamesByPath(enumValueData, `${incomingData.name}.${enumValueData.name}`);
             if (isNodeDataInaccessible(enumValueData)) {
               this.inaccessiblePaths.add(`${incomingData.name}.${enumValueName}`);
             }
@@ -1147,6 +1150,7 @@ export class FederationFactory {
               inputValueData.directivesByDirectiveName,
               this.persistedDirectiveDefinitionByDirectiveName,
             );
+            this.recordTagNamesByPath(inputValueData, `${incomingData.name}.${inputValueData.name}`);
             if (isParentInaccessible || isNodeDataInaccessible(inputValueData)) {
               this.inaccessiblePaths.add(inputFieldPath);
             }
@@ -1173,6 +1177,7 @@ export class FederationFactory {
               fieldData.directivesByDirectiveName,
               this.persistedDirectiveDefinitionByDirectiveName,
             );
+            this.recordTagNamesByPath(fieldData, fieldPath);
             const isFieldInaccessible = isNodeDataInaccessible(fieldData);
             if (isParentInaccessible || isFieldInaccessible) {
               this.inaccessiblePaths.add(fieldPath);
@@ -1195,6 +1200,7 @@ export class FederationFactory {
                 inputValueData.directivesByDirectiveName,
                 this.persistedDirectiveDefinitionByDirectiveName,
               );
+              this.recordTagNamesByPath(inputValueData, argumentPath);
               /* If either the parent or the field to which the field belongs are declared inaccessible, the nullability
                ** of the argument is not considered. However, if only the argument is declared inaccessible, it is an
                ** error. */
@@ -1251,6 +1257,7 @@ export class FederationFactory {
           );
           this.namedInputValueTypeNames.add(namedInputFieldTypeName);
           this.upsertInputValueData(existingData.inputValueDataByValueName, inputValueData);
+          this.recordTagNamesByPath(inputValueData, inputFieldPath);
           if (isParentInaccessible || isNodeDataInaccessible(inputValueData)) {
             this.inaccessiblePaths.add(inputFieldPath);
           }
@@ -1262,16 +1269,13 @@ export class FederationFactory {
         if (isParentInaccessible && !existingData.isInaccessible) {
           this.propagateInaccessibilityToExistingChildren(existingData);
         }
-        const objectData = incomingData as DefinitionWithFieldsData;
-        if (objectData.persistedDirectivesData.tags.size > 0) {
-          const tagNames = getValueOrDefault(this.tagNamesByPath, incomingData.name, () => new Set<string>());
-          for (const tagName of objectData.persistedDirectivesData.tags.keys()) {
-            tagNames.add(tagName);
-          }
-        }
-        addIterableValuesToSet(objectData.implementedInterfaceTypeNames, existingData.implementedInterfaceTypeNames);
-        addIterableValuesToSet(objectData.subgraphNames, existingData.subgraphNames);
-        for (const fieldData of objectData.fieldDataByFieldName.values()) {
+        const definitionWithFieldsData = incomingData as DefinitionWithFieldsData;
+        addIterableValuesToSet(
+          definitionWithFieldsData.implementedInterfaceTypeNames,
+          existingData.implementedInterfaceTypeNames,
+        );
+        addIterableValuesToSet(definitionWithFieldsData.subgraphNames, existingData.subgraphNames);
+        for (const fieldData of definitionWithFieldsData.fieldDataByFieldName.values()) {
           this.upsertFieldData(
             existingData.fieldDataByFieldName,
             fieldData,
@@ -1299,6 +1303,7 @@ export class FederationFactory {
       incomingData.directivesByDirectiveName,
       this.persistedDirectiveDefinitionByDirectiveName,
     );
+    this.recordTagNamesByPath(baseData);
     const isParentInaccessible = isNodeDataInaccessible(baseData);
     if (isParentInaccessible) {
       this.inaccessiblePaths.add(incomingData.name);
@@ -1324,6 +1329,7 @@ export class FederationFactory {
           fieldData.directivesByDirectiveName,
           this.persistedDirectiveDefinitionByDirectiveName,
         );
+        this.recordTagNamesByPath(fieldData, fieldPath);
         const isFieldInaccessible = isNodeDataInaccessible(fieldData);
         if (isParentInaccessible || isFieldInaccessible) {
           this.inaccessiblePaths.add(fieldPath);
@@ -1346,6 +1352,7 @@ export class FederationFactory {
             inputValueData.directivesByDirectiveName,
             this.persistedDirectiveDefinitionByDirectiveName,
           );
+          this.recordTagNamesByPath(inputValueData, argumentPath);
           this.handleArgumentInaccessibility(
             isParentInaccessible || isFieldInaccessible,
             inputValueData,
@@ -1989,6 +1996,10 @@ export class FederationFactory {
       kind: Kind.DOCUMENT,
       definitions: this.routerDefinitions,
     };
+    const newClientSchema: GraphQLSchema = buildASTSchema({
+      kind: Kind.DOCUMENT,
+      definitions: this.clientDefinitions,
+    });
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
@@ -2005,23 +2016,20 @@ export class FederationFactory {
         subgraphConfigBySubgraphName,
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST),
-        federatedGraphClientSchema: this.getFederatedClientSchema(),
+        federatedGraphClientSchema: newClientSchema,
+        ...this.getClientSchemaObjectBoolean(),
       },
       ...warnings,
     };
   }
 
-  getFederatedClientSchema(): GraphQLSchema {
+  getClientSchemaObjectBoolean() {
+    // If the schema does not implement @tag nor @inaccessible, an empty object will be spread
     if (this.inaccessiblePaths.size < 1 && this.tagNamesByPath.size < 1) {
-      return buildASTSchema({
-        kind: Kind.DOCUMENT,
-        definitions: [],
-      });
+      return {};
     }
-    return buildASTSchema({
-      kind: Kind.DOCUMENT,
-      definitions: this.clientDefinitions,
-    });
+    // otherwise, the object is spread in as true
+    return { shouldIncludeClientSchema: true };
   }
 
   buildFederationContractResult(tagExclusions: Set<string>): FederationResultContainer {
@@ -2113,6 +2121,10 @@ export class FederationFactory {
       kind: Kind.DOCUMENT,
       definitions: this.routerDefinitions,
     };
+    const newClientSchema: GraphQLSchema = buildASTSchema({
+      kind: Kind.DOCUMENT,
+      definitions: [],
+    });
     const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
@@ -2129,7 +2141,8 @@ export class FederationFactory {
         subgraphConfigBySubgraphName,
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST),
-        federatedGraphClientSchema: this.getFederatedClientSchema(),
+        federatedGraphClientSchema: newClientSchema,
+        ...this.getClientSchemaObjectBoolean(),
       },
       warnings,
     };

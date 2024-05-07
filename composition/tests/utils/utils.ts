@@ -109,8 +109,7 @@ export const eventDirectiveDefinitions = `
   directive @edfs__subscribe(sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
 `;
 
-export const versionOneSchemaQueryAndPersistedDirectiveDefinitions =
-  schemaQueryDefinition + versionOnePersistedDirectiveDefinitions;
+export const versionOneRouterDefinitions = schemaQueryDefinition + versionOnePersistedDirectiveDefinitions;
 
 export const versionOneRouterContractDefinitions =
   schemaQueryDefinition +

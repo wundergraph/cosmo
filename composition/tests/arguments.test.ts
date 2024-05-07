@@ -16,7 +16,7 @@ import { describe, expect, test } from 'vitest';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
 import { FIELD } from '../src/utils/string-constants';
@@ -269,7 +269,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       type Entity implements Interface @tag(name: "subgraph-f") {
         field(
@@ -320,7 +320,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
         type Entity implements Identifiable {
           field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
@@ -345,7 +345,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
         type Entity implements Identifiable {
           field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String

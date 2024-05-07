@@ -7,11 +7,7 @@ import {
 } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
-} from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString, versionOneRouterDefinitions } from './utils/utils';
 import { INPUT_OBJECT } from '../src/utils/string-constants';
 
 describe('Input federation tests', () => {
@@ -20,7 +16,7 @@ describe('Input federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       type Query {
         dummy: String!
@@ -57,7 +53,7 @@ describe('Input federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       input Input {
         id: ID
@@ -77,7 +73,7 @@ describe('Input federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       input Input {
         field: Float = 1
