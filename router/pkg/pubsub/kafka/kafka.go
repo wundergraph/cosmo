@@ -8,8 +8,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-	"slices"
 	"sync"
+	"time"
 )
 
 var (
@@ -19,19 +19,10 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
-type Error struct {
-	Err error
-}
-
-func (e *Error) Error() string { return e.Err.Error() }
-
-func (e *Error) Unwrap() error { return e.Err }
-
-func newError(err error) *Error {
-	return &Error{
-		Err: err,
-	}
-}
+const (
+	workers    = 10
+	gcInterval = 1000 * time.Millisecond
+)
 
 type record struct {
 	topic string
@@ -39,9 +30,10 @@ type record struct {
 }
 
 type subscription struct {
-	topics  []string
-	updater resolve.SubscriptionUpdater
-	context context.Context
+	triggerID uint64
+	topics    []string
+	updater   resolve.SubscriptionUpdater
+	context   context.Context
 }
 
 type connector struct {
@@ -61,19 +53,17 @@ func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
 		ctx:           ctx,
 		logger:        c.logger.With(zap.String("pubsub", "kafka")),
 		client:        c.client,
-		work:          make(chan *record, 500),
+		work:          make(chan *record),
 		sub:           make(chan *subscription),
 		subscriptions: make(map[string][]*subscription),
 		mu:            sync.Mutex{},
 	}
 
-	go func() {
-		err := ps.worker(ctx)
-		if err != nil {
-			ps.logger.Error("worker error", zap.Error(err))
-			return
-		}
-	}()
+	go ps.gc(ctx)
+
+	for i := 0; i < workers; i++ {
+		go ps.worker(ctx)
+	}
 
 	go func() {
 		err := ps.poll(ctx)
@@ -99,58 +89,85 @@ type pubsub struct {
 	mu            sync.Mutex
 }
 
-func (p *pubsub) ID() string {
-	return "kafka"
-}
+// gc is responsible for cleaning up the subscriptions that are no longer active.
+func (p *pubsub) gc(ctx context.Context) {
 
-// worker is responsible for handling the subscriptions management and the record
-// processing. It is intentionally to be run in a separate goroutine. Don't run it
-// across multiple goroutines as it is not safe for concurrent use.
-func (p *pubsub) worker(ctx context.Context) error {
+	ticker := time.NewTicker(gcInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			p.mu.Lock()
+			p.subscriptions = make(map[string][]*subscription)
+			p.mu.Unlock()
+			return
+		case <-ticker.C:
+			p.garbageCollectSubscriptions()
+		}
+	}
+}
+
+// worker is responsible for handling the subscriptions management and the record
+// processing. It is intentionally to be run in a separate goroutine.
+func (p *pubsub) worker(ctx context.Context) {
+
+	for {
+		select {
+		case <-ctx.Done():
+			p.logger.Debug("context canceled, closing worker")
+			return
 		case rec := <-p.work:
 
+			// Notify all subscriptions that are interested in the topic
 			if sub, ok := p.subscriptions[rec.topic]; ok {
 				for _, s := range sub {
+					// If the subscription is still active, update it
 					if s.context.Err() == nil {
 						p.logger.Debug("subscription update", zap.String("topic", rec.topic), zap.ByteString("data", rec.data))
-
 						s.updater.Update(rec.data)
 					}
 				}
 			}
 		case sub := <-p.sub:
 
-			for _, subject := range sub.topics {
-
-				p.mu.Lock()
-				if _, ok := p.subscriptions[subject]; !ok {
-					p.subscriptions[subject] = make([]*subscription, 0, 10)
-				}
-				p.subscriptions[subject] = append(p.subscriptions[subject], sub)
-				p.mu.Unlock()
-
-				context.AfterFunc(sub.context, func() {
-					p.mu.Lock()
-					defer p.mu.Unlock()
-
-					for i, s := range p.subscriptions[subject] {
-						if sub == s {
-							p.subscriptions[subject] = slices.Delete(p.subscriptions[subject], i, i+1)
-							break
-						}
-					}
-
-					if len(p.subscriptions[subject]) == 0 {
-						delete(p.subscriptions, subject)
-					}
-				})
-			}
+			// Add the subscription to the list of subscriptions
+			p.addSubscription(sub)
 
 			p.logger.Debug("subscribe", zap.Strings("topics", sub.topics))
+		}
+	}
+}
+
+func (p *pubsub) addSubscription(sub *subscription) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for _, subject := range sub.topics {
+		if _, ok := p.subscriptions[subject]; !ok {
+			p.subscriptions[subject] = make([]*subscription, 0, 10)
+		}
+		p.subscriptions[subject] = append(p.subscriptions[subject], sub)
+	}
+}
+
+func (p *pubsub) garbageCollectSubscriptions() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for topic, subs := range p.subscriptions {
+		// zero allocations
+		tmp := subs[:0]
+		for _, sub := range subs {
+			if sub.context.Err() == nil {
+				tmp = append(tmp, sub)
+			}
+		}
+
+		if len(tmp) == 0 {
+			delete(p.subscriptions, topic)
+		} else {
+			p.subscriptions[topic] = tmp
 		}
 	}
 }
@@ -159,13 +176,15 @@ func (p *pubsub) poll(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			p.logger.Debug("context canceled, closing client")
 			p.client.Close()
+			p.logger.Debug("client closed")
 			return nil
 
 		default:
 			// Try to fetch max records from any subscribed topics
-			// In the future, we can consume topics individually to increase parallelism
-			fetches := p.client.PollRecords(ctx, 10_000)
+			// In the future, we can consume topics individually to increase concurrency
+			fetches := p.client.PollRecords(ctx, 5_000)
 			if fetches.IsClientClosed() {
 				return errClientClosed
 			}
@@ -213,6 +232,11 @@ func (p *pubsub) poll(ctx context.Context) error {
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
 func (p *pubsub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
+	p.logger.Debug("subscribe",
+		zap.Strings("topics", event.Topics),
+		zap.String("providerID", event.ProviderID),
+	)
+
 	// Add the topics to the consumer. Internally, it will update the metadata to poll
 	// the new topics / partitions. This is a non-blocking call. As long as we don't deal
 	// with partitions manually, the library will clean up the old topics / partitions.
@@ -230,7 +254,11 @@ func (p *pubsub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSub
 
 func (p *pubsub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
 
-	p.logger.Debug("publish", zap.String("topic", event.Topic), zap.ByteString("data", event.Data))
+	p.logger.Debug("publish",
+		zap.String("topic", event.Topic),
+		zap.String("providerID", event.ProviderID),
+		zap.ByteString("data", event.Data),
+	)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

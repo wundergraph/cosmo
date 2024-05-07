@@ -7,6 +7,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 	"io"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
@@ -32,27 +33,29 @@ func newError(err error) *Error {
 }
 
 type connector struct {
-	conn *nats.Conn
+	conn   *nats.Conn
+	logger *zap.Logger
 }
 
-func NewConnector(conn *nats.Conn) pubsub_datasource.NatsConnector {
-	return &connector{conn: conn}
+func NewConnector(logger *zap.Logger, conn *nats.Conn) pubsub_datasource.NatsConnector {
+	return &connector{
+		conn:   conn,
+		logger: logger,
+	}
 }
 
 func (c *connector) New(ctx context.Context) pubsub_datasource.NatsPubSub {
 	return &natsPubSub{
-		ctx:  ctx,
-		conn: c.conn,
+		ctx:    ctx,
+		conn:   c.conn,
+		logger: c.logger.With(zap.String("pubsub", "nats")),
 	}
 }
 
 type natsPubSub struct {
-	ctx  context.Context
-	conn *nats.Conn
-}
-
-func (p *natsPubSub) ID() string {
-	return "nats"
+	ctx    context.Context
+	conn   *nats.Conn
+	logger *zap.Logger
 }
 
 func (p *natsPubSub) ensureConn() error {
@@ -63,6 +66,11 @@ func (p *natsPubSub) ensureConn() error {
 }
 
 func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.NatsSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+	p.logger.Debug("subscribe",
+		zap.Strings("subjects", event.Subjects),
+		zap.String("providerID", event.ProviderID),
+	)
+
 	if err := p.ensureConn(); err != nil {
 		return newError(fmt.Errorf(`failed to ensure nats connection: %w`, err))
 	}
@@ -87,17 +95,21 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 				case <-ctx.Done():
 					return
 				default:
-					msgBatch, consumerFetchErr := consumer.FetchNoWait(25)
+					msgBatch, consumerFetchErr := consumer.FetchNoWait(100)
 					if consumerFetchErr != nil {
+						p.logger.Error("error fetching messages", zap.Error(consumerFetchErr))
 						return
 					}
 
 					for msg := range msgBatch.Messages() {
+						p.logger.Debug("subscription update", zap.String("subject", msg.Subject()), zap.ByteString("data", msg.Data()))
+
 						updater.Update(msg.Data())
 
 						// Acknowledge the message after it has been processed
 						ackErr := msg.Ack()
 						if ackErr != nil {
+							p.logger.Error("error acknowledging message", zap.Error(ackErr))
 							return
 						}
 					}
@@ -118,37 +130,61 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 		}
 		subscriptions[i] = subscription
 	}
+
 	go func() {
 		for {
 			select {
 			case msg := <-msgChan:
+				p.logger.Debug("subscription update", zap.String("subject", msg.Subject), zap.ByteString("data", msg.Data))
+
 				updater.Update(msg.Data)
 			case <-ctx.Done():
 				for _, subscription := range subscriptions {
-					_ = subscription.Unsubscribe()
+					if err := subscription.Unsubscribe(); err != nil {
+						p.logger.Error("error unsubscribing from NATS subject", zap.Error(err))
+					}
 				}
 				return
 			}
 		}
 	}()
+
 	return nil
 }
 
 func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration) error {
+	p.logger.Debug("publish",
+		zap.String("subject", event.Subject),
+		zap.String("providerID", event.ProviderID),
+		zap.ByteString("data", event.Data),
+	)
+
 	if err := p.ensureConn(); err != nil {
+		p.logger.Error("error ensuring connection", zap.Error(err))
 		return err
 	}
+
 	return p.conn.Publish(event.Subject, event.Data)
 }
 
 func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration, w io.Writer) error {
+	p.logger.Debug("request",
+		zap.String("subject", event.Subject),
+		zap.String("providerID", event.ProviderID),
+		zap.ByteString("data", event.Data),
+	)
+
 	if err := p.ensureConn(); err != nil {
+		p.logger.Error("error ensuring connection", zap.Error(err))
 		return err
 	}
+
 	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		return newError(fmt.Errorf("error requesting NATS subject %s: %w", event.Subject, err))
 	}
+
 	_, err = w.Write(msg.Data)
+
 	return err
 }

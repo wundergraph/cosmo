@@ -17,6 +17,14 @@ import (
 
 func TestKafkaEvents(t *testing.T) {
 
+	//t.Run("subscribe async", func(t *testing.T) {
+	//	topicName := "employeeUpdated"
+	//	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+	//		// ensureTopicExists(t, xEnv, topicName)
+	//		produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+	//	})
+	//})
+
 	t.Run("subscribe async", func(t *testing.T) {
 
 		topicName := "employeeUpdated"

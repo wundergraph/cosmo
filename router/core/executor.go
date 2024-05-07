@@ -212,7 +212,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 					if err != nil {
 						return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
 					}
-					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(natsConnection).New(ctx)
+					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(b.logger, natsConnection).New(ctx)
 
 					break
 				}

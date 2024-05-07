@@ -1132,7 +1132,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.S
 	for _, sourceName := range demoNatsSourceNames {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		require.NoError(t, err)
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(natsConnection).New(ctx)
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection).New(ctx)
 	}
 
 	return &subgraphs.SubgraphOptions{

@@ -3,6 +3,7 @@ package subgraphs
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"os"
@@ -178,8 +179,8 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 
 	natsPubSubByProviderID := map[string]pubsub_datasource.NatsPubSub{
-		"nats":    natsPubsub.NewConnector(defaultConnection).New(ctx),
-		"my-nats": natsPubsub.NewConnector(myNatsConnection).New(ctx),
+		"nats":    natsPubsub.NewConnector(zap.NewNop(), defaultConnection).New(ctx),
+		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection).New(ctx),
 	}
 
 	js, err := jetstream.New(defaultConnection)
