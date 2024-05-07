@@ -109,8 +109,7 @@ export const eventDirectiveDefinitions = `
   directive @edfs__natsSubscribe(providerId: String! = "nats", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
 `;
 
-export const versionOneSchemaQueryAndPersistedDirectiveDefinitions =
-  schemaQueryDefinition + versionOnePersistedDirectiveDefinitions;
+export const versionOneRouterDefinitions = schemaQueryDefinition + versionOnePersistedDirectiveDefinitions;
 
 export const versionOneRouterContractDefinitions =
   schemaQueryDefinition +
