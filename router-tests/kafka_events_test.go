@@ -16,7 +16,9 @@ import (
 )
 
 func TestKafkaEvents(t *testing.T) {
+	// All tests are running in sequence because they are using the same kafka topic
 
+	// For testing it manually
 	//t.Run("subscribe async", func(t *testing.T) {
 	//	topicName := "employeeUpdated"
 	//	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
