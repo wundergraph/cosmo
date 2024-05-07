@@ -6,7 +6,7 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
 
@@ -183,7 +183,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       type Friend implements Human {
         age: Int!
@@ -246,7 +246,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       type Enemy {
         name: String!
@@ -346,7 +346,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
         interface Interface {
           field: String!

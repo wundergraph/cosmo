@@ -1,11 +1,7 @@
 import { federateSubgraphs, noDefinedUnionMembersError, Subgraph, subgraphValidationError } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
-} from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString, versionOneRouterDefinitions } from './utils/utils';
 
 describe('Union federation tests', () => {
   test('that unions merge by union #1.1', () => {
@@ -14,7 +10,7 @@ describe('Union federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       type Bulbasaur {
         name: String!
@@ -56,7 +52,7 @@ describe('Union federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       type Bulbasaur {
         name: String!
@@ -109,7 +105,7 @@ describe('Union federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
         """
           001 Kanto
@@ -189,7 +185,7 @@ describe('Union federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
         """
           001 Kanto

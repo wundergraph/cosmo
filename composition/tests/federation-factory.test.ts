@@ -15,7 +15,7 @@ import {
   schemaQueryDefinition,
   schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
   versionTwoClientDefinitions,
   versionTwoRouterDefinitions,
   versionTwoRouterDirectiveDefinitions,
@@ -893,7 +893,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -920,7 +920,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -947,7 +947,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -975,7 +975,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!

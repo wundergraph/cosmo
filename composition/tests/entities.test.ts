@@ -17,7 +17,7 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
 import { parse } from 'graphql';
@@ -219,7 +219,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          versionOneRouterDefinitions +
             `
       interface Interface {
         age: Int!
@@ -647,7 +647,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          versionOneRouterDefinitions +
             `
         type Entity {
           a: Int!
@@ -710,7 +710,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          versionOneRouterDefinitions +
             `
         type Entity {
           a: Int!
