@@ -1018,11 +1018,12 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
 			return
-		case report, ok := <-sub:
+		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
+				e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", r.Subscriptions, desiredCount)
 				return
 			}
+			report = r
 			if report.Subscriptions == desiredCount {
 				time.Sleep(100 * time.Millisecond) // Give NATS some time to have the subscription set up
 				return
@@ -1050,11 +1051,12 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
 			return
-		case report, ok := <-sub:
+		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
+				e.t.Fatalf("timed out waiting for connection count, got %d, want %d", r.Connections, desiredCount)
 				return
 			}
+			report = r
 			if report.Connections == desiredCount {
 				return
 			}
@@ -1080,11 +1082,12 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
 			return
-		case report, ok := <-sub:
+		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
+				e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", r.MessagesSent, desiredCount)
 				return
 			}
+			report = r
 			if report.MessagesSent == desiredCount {
 				return
 			}
@@ -1110,11 +1113,12 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
 			return
-		case report, ok := <-sub:
+		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", r.Triggers, desiredCount)
 				return
 			}
+			report = r
 			if report.Triggers == desiredCount {
 				return
 			}

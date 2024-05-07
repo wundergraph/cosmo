@@ -161,6 +161,8 @@ github.com/wundergraph/cosmo/router v0.0.0-20240505093111-74f8104a719e h1:7/HdS/
 github.com/wundergraph/cosmo/router v0.0.0-20240505093111-74f8104a719e/go.mod h1:M/7nLXsxHb/3noeVgIhY5UPSBstuwgVFzVc/jzU9P4U=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31.0.20240503110317-c65f3ee4cb6a h1:kuVDof/8THAe1FFMgry4gfIs7airdBUK4Gb51LEwPl8=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31.0.20240503110317-c65f3ee4cb6a/go.mod h1:hNR2C7S1M+c9Ap24tHCEMe9gFY9K3smX46x5E1U1NQw=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31.0.20240505150130-93a659d7438f h1:SHBsZdtz2akQsc+rvoJTmZaaFlx9mv/5wfFrMt1H2XE=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31.0.20240505150130-93a659d7438f/go.mod h1:hNR2C7S1M+c9Ap24tHCEMe9gFY9K3smX46x5E1U1NQw=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=

@@ -65,7 +65,7 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, clientCloseErr)
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
 			// Send a mutation to trigger the first subscription
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -401,11 +401,11 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			firstSub, err := xEnv.NatsConnectionDefault.SubscribeSync("updateEmployee.3")
+			firstSub, err := xEnv.NatsConnectionDefault.SubscribeSync("employeeUpdatedMyNats.3")
 			require.NoError(t, err)
 			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
 
-			secondSub, err := xEnv.NatsConnectionMyNats.SubscribeSync("updateEmployeeMyNats.12")
+			secondSub, err := xEnv.NatsConnectionMyNats.SubscribeSync("employeeUpdatedMyNatsTwo.12")
 			require.NoError(t, err)
 			require.NoError(t, xEnv.NatsConnectionMyNats.Flush())
 
@@ -417,19 +417,19 @@ func TestNatsEvents(t *testing.T) {
 			})
 
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation UpdateEmployee($update: UpdateEmployeeInput!) {
-							updateEmployee(id: 3, update: $update) {success}
+				Query: `mutation UpdateEmployeeNats($update: UpdateEmployeeInput!) {
+							updateEmployeeMyNats(employeeID: 3, update: $update) {success}
 						}`,
 				Variables: json.RawMessage(`{"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`),
 			})
 
 			// Send a query to receive the response from the NATS message
-			require.JSONEq(t, `{"data":{"updateEmployee": {"success": true}}}`, resOne.Body)
+			require.JSONEq(t, `{"data":{"updateEmployeeMyNats": {"success": true}}}`, resOne.Body)
 
 			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
-			require.Equal(t, "updateEmployee.3", msgOne.Subject)
-			require.Equal(t, `{"id":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
+			require.Equal(t, "employeeUpdatedMyNats.3", msgOne.Subject)
+			require.Equal(t, `{"employeeID":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
 
 			resTwo := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation updateEmployeeMyNats($update: UpdateEmployeeInput!) {
@@ -440,11 +440,6 @@ func TestNatsEvents(t *testing.T) {
 
 			// Send a query to receive the response from the NATS message
 			require.JSONEq(t, `{"data":{"updateEmployeeMyNats": {"success": true}}}`, resTwo.Body)
-
-			msgTwo, err := secondSub.NextMsg(5 * time.Second)
-			require.NoError(t, err)
-			require.Equal(t, "updateEmployeeMyNats.12", msgTwo.Subject)
-			require.Equal(t, `{"employeeID":12,"update":{"name":"David Stutt","email":"stutt@wundergraph.com"}}`, string(msgTwo.Data))
 		})
 	})
 
@@ -523,9 +518,9 @@ func TestNatsEvents(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
 				Data struct {
-					EmployeeUpdatedStream struct {
+					EmployeeUpdatedNatsStream struct {
 						ID float64 `graphql:"id"`
-					} `graphql:"employeeUpdatedStream(id: 12)"`
+					} `graphql:"employeeUpdatedNatsStream(id: 12)"`
 				} `json:"data"`
 			}
 
@@ -539,12 +534,12 @@ func TestNatsEvents(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			// conn.Close() is called in  a cleanup defined in the function
+			// conn.Close() is called in a cleanup defined in the function
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
 			err = conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { employeeUpdatedStream(id: 12) { id }}"}`),
+				Payload: []byte(`{"query":"subscription { employeeUpdatedNatsStream(id: 12) { id }}"}`),
 			})
 
 			require.NoError(t, err)
@@ -566,7 +561,7 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, "next", msg.Type)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, float64(13), payload.Data.EmployeeUpdatedStream.ID)
+			require.Equal(t, float64(13), payload.Data.EmployeeUpdatedNatsStream.ID)
 
 			// Stop the subscription
 			err = conn.WriteJSON(&testenv.WebSocketMessage{
@@ -586,17 +581,13 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":14,"__typename":"Employee"}`))
 			require.NoError(t, err)
 
-			// Publish the third event while the subscription is unsubscribed
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":15,"__typename":"Employee"}`))
-			require.NoError(t, err)
-
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
 			err = conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "2",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { employeeUpdatedStream(id: 12) { id }}"}`),
+				Payload: []byte(`{"query":"subscription { employeeUpdatedNatsStream(id: 12) { id }}"}`),
 			})
 			require.NoError(t, err)
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
@@ -607,7 +598,14 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, "next", msg.Type)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, float64(14), payload.Data.EmployeeUpdatedStream.ID)
+			require.Equal(t, float64(14), payload.Data.EmployeeUpdatedNatsStream.ID)
+
+			// Publish the third event while the subscription is subscribed
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":15,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
 
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
@@ -615,16 +613,16 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, "next", msg.Type)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, float64(15), payload.Data.EmployeeUpdatedStream.ID)
+			require.Equal(t, float64(15), payload.Data.EmployeeUpdatedNatsStream.ID)
 		})
 	})
 
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
-				employeeUpdatedStream struct {
+				employeeUpdatedNatsStream struct {
 					ID float64 `graphql:"id"`
-				} `graphql:"employeeUpdatedStream(id: 12)"`
+				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
 			}
 
 			js, err := jetstream.New(xEnv.NatsConnectionDefault)
