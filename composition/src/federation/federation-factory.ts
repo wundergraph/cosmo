@@ -2006,18 +2006,13 @@ export class FederationFactory {
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST),
         federatedGraphClientSchema: this.getFederatedClientSchema(),
+        ...(this.inaccessiblePaths.size < 1 && this.tagNamesByPath.size < 1 ? {} : { requiresClientSchema: true }),
       },
       ...warnings,
     };
   }
 
   getFederatedClientSchema(): GraphQLSchema {
-    if (this.inaccessiblePaths.size < 1 && this.tagNamesByPath.size < 1) {
-      return buildASTSchema({
-        kind: Kind.DOCUMENT,
-        definitions: [],
-      });
-    }
     return buildASTSchema({
       kind: Kind.DOCUMENT,
       definitions: this.clientDefinitions,
@@ -2130,6 +2125,7 @@ export class FederationFactory {
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST),
         federatedGraphClientSchema: this.getFederatedClientSchema(),
+        ...(this.inaccessiblePaths.size < 1 && this.tagNamesByPath.size < 1 ? {} : { requiresClientSchema: true }),
       },
       warnings,
     };

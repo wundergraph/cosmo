@@ -74,6 +74,7 @@ export function mapResultToComposedGraph(
     federatedClientSchema: result?.federatedGraphClientSchema
       ? printSchema(result.federatedGraphClientSchema)
       : undefined,
+    requiresClientSchema: result?.requiresClientSchema || false,
     errors: errors || [],
     subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
     fieldConfigurations: result?.fieldConfigurations || [],
@@ -91,6 +92,7 @@ export interface ComposedFederatedGraph {
   subgraphs: ComposedSubgraph[];
   fieldConfigurations: FieldConfiguration[];
   federatedClientSchema?: string;
+  requiresClientSchema?: boolean;
 }
 
 export interface CompositionDeployResult {
@@ -155,7 +157,7 @@ export class Composer {
     // Build and deploy the router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
       const routerConfig = buildRouterConfig({
-        federatedClientSDL: composedGraph.federatedClientSchema || '',
+        federatedClientSDL: composedGraph.requiresClientSchema ? composedGraph.federatedClientSchema || '' : '',
         federatedSDL: composedGraph.composedSchema,
         fieldConfigurations: composedGraph.fieldConfigurations,
         subgraphs: composedGraph.subgraphs,
@@ -403,19 +405,7 @@ export class Composer {
 
         const { federationResult: result, errors, federationResultContainerByContractName } = federationResultContainer;
 
-        composedGraphs.push({
-          id: graph.id,
-          name: graph.name,
-          namespace: graph.namespace,
-          namespaceId: graph.namespaceId,
-          targetID: graph.targetId,
-          fieldConfigurations: result?.fieldConfigurations || [],
-          composedSchema: result?.federatedGraphSchema
-            ? printSchemaWithDirectives(result.federatedGraphSchema)
-            : undefined,
-          errors: errors || [],
-          subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
-        });
+        composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, errors, result));
 
         if (federationResultContainerByContractName) {
           for (const [contractName, contractResultContainer] of federationResultContainerByContractName.entries()) {
@@ -426,19 +416,7 @@ export class Composer {
               throw new Error(`Contract graph ${contractName} not found`);
             }
 
-            composedGraphs.push({
-              id: contractGraph.id,
-              name: contractGraph.name,
-              namespace: contractGraph.namespace,
-              namespaceId: contractGraph.namespaceId,
-              targetID: contractGraph.targetId,
-              fieldConfigurations: contractResult?.fieldConfigurations || [],
-              composedSchema: contractResult?.federatedGraphSchema
-                ? printSchemaWithDirectives(contractResult.federatedGraphSchema)
-                : undefined,
-              errors: contractErrors || [],
-              subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, contractResult),
-            });
+            composedGraphs.push(mapResultToComposedGraph(contractGraph, subgraphs, contractErrors, contractResult));
           }
         }
       } catch (e: any) {

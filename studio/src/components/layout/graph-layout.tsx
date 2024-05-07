@@ -1,14 +1,30 @@
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandSeparator,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
   ChartBarIcon,
-  ServerStackIcon,
   ExclamationTriangleIcon,
+  ServerStackIcon,
 } from "@heroicons/react/24/outline";
 import {
+  CaretSortIcon,
   CheckCircledIcon,
+  CheckIcon,
   Component2Icon,
   FileTextIcon,
   HomeIcon,
+  MagnifyingGlassIcon,
   PlayIcon,
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -23,7 +39,7 @@ import {
   GetFederatedGraphsResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import { Fragment, createContext, useContext, useMemo } from "react";
+import { Fragment, createContext, useContext, useMemo, useState } from "react";
 import {
   PiChat,
   PiCubeFocus,
@@ -34,6 +50,8 @@ import {
 import { EmptyState } from "../empty-state";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Link } from "../ui/link";
 import { Loader } from "../ui/loader";
 import {
   Select,
@@ -48,7 +66,6 @@ import {
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
-import { Link } from "../ui/link";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -198,6 +215,38 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   );
 };
 
+function sortFederatedGraphs(graphs: FederatedGraph[]): FederatedGraph[] {
+  const result: FederatedGraph[] = [];
+  const contractedGraphs: FederatedGraph[] = [];
+
+  for (const graph of graphs) {
+    if (graph.contract) {
+      contractedGraphs.push(graph);
+    } else {
+      result.push(graph);
+    }
+  }
+
+  // sort source graph followed by contract graphs
+  for (let i = 0; i < result.length; i++) {
+    const sourceId = result[i].id;
+    result.splice(
+      i + 1,
+      0,
+      ...contractedGraphs.filter(
+        (graph) =>
+          graph.contract && graph.contract.sourceFederatedGraphId === sourceId,
+      ),
+    );
+    i += contractedGraphs.filter(
+      (graph) =>
+        graph.contract && graph.contract.sourceFederatedGraphId === sourceId,
+    ).length;
+  }
+
+  return result;
+}
+
 export const GraphSelect = () => {
   const data = useContext(GraphContext);
 
@@ -205,11 +254,15 @@ export const GraphSelect = () => {
   const slug = router.query.slug as string;
   const namespace = router.query.namespace as string;
 
+  const [open, setOpen] = useState(false);
+
   const selected = data?.graphs.find(
     (g) => g.name === slug && g.namespace === namespace,
   );
 
-  const groupedGraphs = data?.graphs.reduce<Record<string, FederatedGraph[]>>(
+  const sortedGraphs = sortFederatedGraphs(data?.graphs ?? []);
+
+  const groupedGraphs = sortedGraphs.reduce<Record<string, FederatedGraph[]>>(
     (result, graph) => {
       const { namespace, name } = graph;
 
@@ -229,52 +282,72 @@ export const GraphSelect = () => {
   }
 
   return (
-    <Select
-      value={selected?.id}
-      onValueChange={(gID) => {
-        const graph = data?.graphs.find((g) => g.id === gID);
-
-        router.push({
-          pathname: router.pathname,
-          query: {
-            ...router.query,
-            namespace: graph?.namespace,
-            slug: graph?.name,
-          },
-        });
-      }}
-    >
-      <SelectTrigger
-        value={selected?.id}
-        className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
-      >
-        <SelectValue aria-label={selected?.name}>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          role="combobox"
+          aria-expanded={open}
+          className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
+        >
           {selected?.name}{" "}
           <Badge variant="secondary">{selected?.namespace}</Badge>
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent className="min-w-[200px]">
-        {Object.entries(groupedGraphs ?? {}).map(
-          ([namespace, graphs], index) => {
-            return (
-              <SelectGroup key={namespace}>
-                <SelectLabel>{namespace}</SelectLabel>
-                {graphs.map(({ id, name }) => {
-                  return (
-                    <SelectItem className="pl-4" key={id} value={id}>
-                      {name}
-                    </SelectItem>
-                  );
-                })}
-                {index !== Object.entries(groupedGraphs ?? {}).length - 1 && (
-                  <SelectSeparator />
-                )}
-              </SelectGroup>
-            );
-          },
-        )}
-      </SelectContent>
-    </Select>
+          <CaretSortIcon className="h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="min-w-[200px] p-0">
+        <Command className="max-h-[calc(var(--radix-popover-content-available-height)_-24px)]">
+          <CommandInput placeholder="Search graph..." className="h-9" />
+          <CommandEmpty>No graph found.</CommandEmpty>
+          <div className="scrollbar-custom h-full overflow-y-auto">
+            {Object.entries(groupedGraphs ?? {}).map(
+              ([namespace, graphs], index) => {
+                return (
+                  <CommandGroup key={namespace} heading={namespace}>
+                    {graphs.map(({ id, name, contract }) => {
+                      return (
+                        <CommandItem
+                          onSelect={() => {
+                            router.push({
+                              pathname: router.pathname,
+                              query: {
+                                ...router.query,
+                                namespace,
+                                slug: name,
+                              },
+                            });
+                            setOpen(false);
+                          }}
+                          className="pl-4"
+                          key={id}
+                          value={name}
+                        >
+                          {name}
+                          {contract && (
+                            <Badge variant="muted" className="ml-2">
+                              contract
+                            </Badge>
+                          )}
+                          <CheckIcon
+                            className={cn(
+                              "ml-auto h-4 w-4",
+                              id === selected?.id ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                        </CommandItem>
+                      );
+                    })}
+                    {index !==
+                      Object.entries(groupedGraphs ?? {}).length - 1 && (
+                      <CommandSeparator />
+                    )}
+                  </CommandGroup>
+                );
+              },
+            )}
+          </div>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
 
