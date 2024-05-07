@@ -30,10 +30,9 @@ type record struct {
 }
 
 type subscription struct {
-	triggerID uint64
-	topics    []string
-	updater   resolve.SubscriptionUpdater
-	context   context.Context
+	topics  []string
+	updater resolve.SubscriptionUpdater
+	context context.Context
 }
 
 type connector struct {
@@ -80,7 +79,6 @@ func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
 
 type pubsub struct {
 	ctx           context.Context
-	options       []kgo.Opt
 	client        *kgo.Client
 	logger        *zap.Logger
 	subscriptions map[string][]*subscription
