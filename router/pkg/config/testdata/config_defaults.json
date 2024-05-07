@@ -147,7 +147,10 @@
   },
   "DevelopmentMode": false,
   "Events": {
-    "Sources": null
+    "Providers": {
+      "Nats": null,
+      "Kafka": null
+    }
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
