@@ -2,7 +2,8 @@ import { Kind, TypeNode } from 'graphql';
 import {
   ArgumentConfiguration,
   ArgumentSource,
-  AuthorizationConfiguration, DataSourceCustomEvents,
+  AuthorizationConfiguration,
+  DataSourceCustomEvents,
   EngineEventConfiguration,
   EntityInterfaceConfiguration,
   EventType,
