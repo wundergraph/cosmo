@@ -130,7 +130,7 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: federationResult.shouldIncludeClientSchema
+      federatedClientSDL: federationResult!.shouldIncludeClientSchema
         ? printSchema(federationResult!.federatedGraphClientSchema)
         : '',
       fieldConfigurations: [],
