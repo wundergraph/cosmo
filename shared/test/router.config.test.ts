@@ -129,7 +129,8 @@ describe('Router Config Builder', () => {
       configurationDataMap: productsSubgraphConfig!.configurationDataMap,
     };
     const routerConfig = buildRouterConfig({
-      federatedClientSDL: federationResult!.requiresClientSchema
+      // if the federatedClientSDL is empty, it is not added to the config
+      federatedClientSDL: federationResult.shouldIncludeClientSchema
         ? printSchema(federationResult!.federatedGraphClientSchema)
         : '',
       fieldConfigurations: [],
@@ -180,7 +181,9 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: printSchema(federationResult!.federatedGraphClientSchema),
+      federatedClientSDL: federationResult!.shouldIncludeClientSchema
+        ? printSchema(federationResult!.federatedGraphClientSchema)
+        : '',
       fieldConfigurations: [],
       subgraphs: [accounts, products],
       // Passed as it is to the router config
@@ -229,7 +232,9 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: printSchema(federationResult!.federatedGraphClientSchema),
+      federatedClientSDL: federationResult!.shouldIncludeClientSchema
+        ? printSchema(federationResult!.federatedGraphClientSchema)
+        : '',
       fieldConfigurations: [],
       subgraphs: [accounts, products],
       // Passed as it is to the router config

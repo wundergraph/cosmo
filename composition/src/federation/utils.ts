@@ -15,7 +15,7 @@ export type FederationResult = {
   federatedGraphClientSchema: GraphQLSchema;
   federatedGraphSchema: GraphQLSchema;
   subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
-  requiresClientSchema?: boolean,
+  shouldIncludeClientSchema?: boolean;
 };
 
 export type FederationResultContainerWithContracts = {

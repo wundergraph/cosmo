@@ -74,7 +74,7 @@ export function mapResultToComposedGraph(
     federatedClientSchema: result?.federatedGraphClientSchema
       ? printSchema(result.federatedGraphClientSchema)
       : undefined,
-    requiresClientSchema: result?.requiresClientSchema || false,
+    shouldIncludeClientSchema: result?.shouldIncludeClientSchema || false,
     errors: errors || [],
     subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
     fieldConfigurations: result?.fieldConfigurations || [],
@@ -92,7 +92,7 @@ export interface ComposedFederatedGraph {
   subgraphs: ComposedSubgraph[];
   fieldConfigurations: FieldConfiguration[];
   federatedClientSchema?: string;
-  requiresClientSchema?: boolean;
+  shouldIncludeClientSchema?: boolean;
 }
 
 export interface CompositionDeployResult {
@@ -156,8 +156,11 @@ export class Composer {
 
     // Build and deploy the router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
+      const federatedClientSDL = composedGraph.shouldIncludeClientSchema
+        ? composedGraph.federatedClientSchema || ''
+        : '';
       const routerConfig = buildRouterConfig({
-        federatedClientSDL: composedGraph.requiresClientSchema ? composedGraph.federatedClientSchema || '' : '',
+        federatedClientSDL,
         federatedSDL: composedGraph.composedSchema,
         fieldConfigurations: composedGraph.fieldConfigurations,
         subgraphs: composedGraph.subgraphs,
