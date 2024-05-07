@@ -40,7 +40,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { PiGitBranch } from "react-icons/pi";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
 
@@ -53,6 +53,10 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   const id = router.query.compositionId as string;
   const tab = router.query.tab as string;
   const subgraph = router.query.subgraph as string;
+
+  const [schemaType, setSchemaType] = useState<"composed" | "client">(
+    "composed",
+  );
 
   const graphData = useContext(GraphContext);
 
@@ -339,7 +343,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                 <TabsList>
                   <TabsTrigger value="output" asChild>
                     <Link href={{ query: { ...router.query, tab: "output" } }}>
-                      Composed Schema
+                      Output Schema
                     </Link>
                   </TabsTrigger>
                   <TabsTrigger value="input" asChild>
@@ -366,16 +370,44 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                     </div>
                   ) : (
                     sdlData &&
-                    sdlData.sdl !== "" && (
+                    sdlData.sdl !== "full" && (
                       <div className="relative flex h-full min-h-[60vh] flex-col">
-                        <div className="-top-[60px] right-8 w-max px-5 md:absolute md:w-auto md:px-0">
+                        <div className="-top-[60px] right-8 flex w-max items-center gap-x-4 px-5 md:absolute md:w-auto md:px-0">
+                          <Select
+                            onValueChange={(v: typeof schemaType) =>
+                              setSchemaType(v)
+                            }
+                            value={schemaType}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="composed">
+                                Composed Schema
+                              </SelectItem>
+                              <SelectItem value="client">
+                                Client Schema
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
                           <SDLViewerActions
-                            sdl={sdlData.sdl}
+                            sdl={
+                              schemaType === "composed"
+                                ? sdlData.sdl
+                                : sdlData.clientSchema
+                            }
                             size="icon"
                             targetName={graphData?.graph?.name}
                           />
                         </div>
-                        <SDLViewerMonaco schema={sdlData.sdl} />
+                        <SDLViewerMonaco
+                          schema={
+                            schemaType === "composed"
+                              ? sdlData.sdl
+                              : sdlData.clientSchema
+                          }
+                        />
                       </div>
                     )
                   )}

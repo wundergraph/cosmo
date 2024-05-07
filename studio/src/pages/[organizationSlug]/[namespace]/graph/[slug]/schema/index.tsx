@@ -677,13 +677,24 @@ const Type = (props: {
         <>
           <ResizableHandle withHandle />
           <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
-            <TypeDiscussions
-              name={props.name}
-              schemaVersionId={props.schemaVersionId}
-              startLineNo={props.startLineNo!}
-              endLineNo={props.endLineNo!}
-            />
-            <ThreadSheet schemaVersionId={props.schemaVersionId} />
+            {router.query.schemaType === "client" ? (
+              <EmptyState
+                icon={<PiChat />}
+                title="Cannot start discussions here"
+                className="my-24 h-auto"
+                description={`Discussions can only be started on the composed schema`}
+              />
+            ) : (
+              <>
+                <TypeDiscussions
+                  name={props.name}
+                  schemaVersionId={props.schemaVersionId}
+                  startLineNo={props.startLineNo!}
+                  endLineNo={props.endLineNo!}
+                />
+                <ThreadSheet schemaVersionId={props.schemaVersionId} />
+              </>
+            )}
           </ResizablePanel>
         </>
       )}
@@ -968,6 +979,22 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
   return (
     <SchemaToolbar tab="explorer">
       <div className="hidden md:ml-auto md:block" />
+      <Select
+        onValueChange={(v) => {
+          applyParams({
+            schemaType: v,
+          });
+        }}
+        value={(router.query.schemaType as string) || "composed"}
+      >
+        <SelectTrigger className="w-max">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="composed">Composed Schema</SelectItem>
+          <SelectItem value="client">Client Schema</SelectItem>
+        </SelectContent>
+      </Select>
       {ast && (
         <>
           <SearchType ast={ast} open={open} setOpen={setOpen} />
@@ -1108,7 +1135,12 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     }),
   );
 
-  const { ast, isParsing } = useParseSchema(data?.sdl);
+  const schema =
+    (router.query.schemaType as string) === "client"
+      ? data?.clientSchema
+      : data?.sdl;
+
+  const { ast, isParsing } = useParseSchema(schema);
 
   const isLoadingAST = isLoading || isParsing;
 
@@ -1240,7 +1272,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           {isLoadingAST && <Loader fullscreen />}
           {!isLoadingAST &&
             data?.response?.code === EnumStatusCode.ERR_NOT_FOUND &&
-            !data.sdl && <EmptySchema />}
+            !schema && <EmptySchema />}
           {!isLoadingAST && error && (
             <EmptyState
               icon={<ExclamationTriangleIcon />}
