@@ -45,6 +45,7 @@ import {
   unresolvableFieldError,
 } from '../errors/errors';
 import {
+  ChildTagData,
   FederationResultContainer,
   FederationResultContainerWithContracts,
   InterfaceImplementationData,
@@ -73,7 +74,7 @@ import {
   addIterableValuesToSet,
   addMapEntries,
   AuthorizationData,
-  doSetsHaveAnyOverlap,
+  doSetsIntersect,
   EntityData,
   EntityDataByTypeName,
   EntityInterfaceFederationData,
@@ -115,6 +116,7 @@ import {
 import { batchNormalize } from '../normalization/normalization-factory';
 import { getNormalizedFieldSet, isNodeQuery } from '../normalization/utils';
 import {
+  ChildData,
   DefinitionWithFieldsData,
   EnumDefinitionData,
   EnumValueData,
@@ -337,7 +339,7 @@ export class FederationFactory {
         return true;
       }
       if (entityAncestorName === parentTypeName) {
-        const hasOverlap = doSetsHaveAnyOverlap(
+        const hasOverlap = doSetsIntersect(
           fieldSubgraphs,
           getOrThrowError(this.entityDataByTypeName, entityAncestorName, ENTITIES).subgraphNames,
         );
@@ -447,7 +449,7 @@ export class FederationFactory {
       );
       evaluatedObjectLikes.add(parentTypeName);
       const isFieldResolvable =
-        doSetsHaveAnyOverlap(rootTypeFieldData.subgraphs, fieldData.subgraphNames) ||
+        doSetsIntersect(rootTypeFieldData.subgraphs, fieldData.subgraphNames) ||
         this.isFieldResolvableByEntityAncestor(entityAncestors, fieldData.subgraphNames, parentTypeName);
       const newCurrentFieldPath = currentFieldPath + (isParentAbstract ? ' ' : '.') + fieldName;
       const entity = this.entityDataByTypeName.get(namedFieldTypeName);
@@ -575,7 +577,7 @@ export class FederationFactory {
       }
 
       // If the concrete type is unreachable through an inline fragment, it is not an error
-      if (!doSetsHaveAnyOverlap(concreteTypeData.subgraphNames, rootTypeFieldData.subgraphs)) {
+      if (!doSetsIntersect(concreteTypeData.subgraphNames, rootTypeFieldData.subgraphs)) {
         continue;
       }
       const entity = this.entityDataByTypeName.get(concreteTypeName);
@@ -876,13 +878,24 @@ export class FederationFactory {
     }
   }
 
-  upsertEnumValueData(enumValueDataByValueName: Map<string, EnumValueData>, incomingData: EnumValueData) {
+  upsertEnumValueData(
+    enumValueDataByValueName: Map<string, EnumValueData>,
+    incomingData: EnumValueData,
+    isParentInaccessible: boolean,
+  ) {
     const existingData = enumValueDataByValueName.get(incomingData.name);
+    const baseData = existingData || incomingData;
+    const enumValuePath = `${incomingData.parentTypeName}.${incomingData.name}`;
     extractPersistedDirectives(
-      existingData?.persistedDirectivesData || incomingData.persistedDirectivesData,
+      baseData.persistedDirectivesData,
       incomingData.directivesByDirectiveName,
       this.persistedDirectiveDefinitionByDirectiveName,
     );
+    const isFieldInaccessible = isNodeDataInaccessible(incomingData);
+    if (isParentInaccessible || isFieldInaccessible) {
+      this.inaccessiblePaths.add(enumValuePath);
+    }
+    this.recordTagNamesByPath(baseData, enumValuePath);
     if (!existingData) {
       incomingData.node = {
         directives: [],
@@ -1115,6 +1128,7 @@ export class FederationFactory {
       switch (incomingData.kind) {
         case Kind.ENUM_TYPE_DEFINITION:
           for (const [enumValueName, enumValueData] of incomingData.enumValueDataByValueName) {
+            const enumValuePath = `${incomingData.name}.${enumValueName}`;
             enumValueData.node = {
               directives: [],
               kind: enumValueData.node.kind,
@@ -1125,9 +1139,9 @@ export class FederationFactory {
               enumValueData.directivesByDirectiveName,
               this.persistedDirectiveDefinitionByDirectiveName,
             );
-            this.recordTagNamesByPath(enumValueData, `${incomingData.name}.${enumValueData.name}`);
+            this.recordTagNamesByPath(enumValueData, enumValuePath);
             if (isNodeDataInaccessible(enumValueData)) {
-              this.inaccessiblePaths.add(`${incomingData.name}.${enumValueName}`);
+              this.inaccessiblePaths.add(enumValuePath);
             }
           }
           return;
@@ -1140,9 +1154,8 @@ export class FederationFactory {
               type: inputValueData.type,
             };
             const namedInputFieldTypeName = getTypeNodeNamedTypeName(inputValueData.type);
-            const inputFieldPath = `${incomingData.name}.${inputFieldName}`;
             getValueOrDefault(this.pathsByNamedTypeName, namedInputFieldTypeName, () => new Set<string>()).add(
-              inputFieldPath,
+              inputValueData.renamedPath,
             );
             this.namedInputValueTypeNames.add(namedInputFieldTypeName);
             extractPersistedDirectives(
@@ -1150,9 +1163,9 @@ export class FederationFactory {
               inputValueData.directivesByDirectiveName,
               this.persistedDirectiveDefinitionByDirectiveName,
             );
-            this.recordTagNamesByPath(inputValueData, `${incomingData.name}.${inputValueData.name}`);
+            this.recordTagNamesByPath(inputValueData, `${incomingData.name}.${inputFieldName}`);
             if (isParentInaccessible || isNodeDataInaccessible(inputValueData)) {
-              this.inaccessiblePaths.add(inputFieldPath);
+              this.inaccessiblePaths.add(inputValueData.renamedPath);
             }
           }
           return;
@@ -1190,9 +1203,8 @@ export class FederationFactory {
                 type: inputValueData.type,
               };
               const namedArgumentTypeName = getTypeNodeNamedTypeName(inputValueData.type);
-              const argumentPath = `${fieldPath}(${argumentName}: ... )`;
               getValueOrDefault(this.pathsByNamedTypeName, namedArgumentTypeName, () => new Set<string>()).add(
-                argumentPath,
+                inputValueData.renamedPath,
               );
               this.namedInputValueTypeNames.add(namedArgumentTypeName);
               extractPersistedDirectives(
@@ -1200,14 +1212,14 @@ export class FederationFactory {
                 inputValueData.directivesByDirectiveName,
                 this.persistedDirectiveDefinitionByDirectiveName,
               );
-              this.recordTagNamesByPath(inputValueData, argumentPath);
+              this.recordTagNamesByPath(inputValueData, `${fieldPath}.${argumentName}`);
               /* If either the parent or the field to which the field belongs are declared inaccessible, the nullability
                ** of the argument is not considered. However, if only the argument is declared inaccessible, it is an
                ** error. */
               this.handleArgumentInaccessibility(
                 isParentInaccessible || isFieldInaccessible,
                 inputValueData,
-                argumentPath,
+                inputValueData.renamedPath,
                 fieldPath,
               );
             }
@@ -1240,7 +1252,7 @@ export class FederationFactory {
       case Kind.ENUM_TYPE_DEFINITION:
         existingData.appearances += 1;
         for (const data of (incomingData as EnumDefinitionData).enumValueDataByValueName.values()) {
-          this.upsertEnumValueData(existingData.enumValueDataByValueName, data);
+          this.upsertEnumValueData(existingData.enumValueDataByValueName, data, isParentInaccessible);
         }
         return;
       case Kind.INPUT_OBJECT_TYPE_DEFINITION:
@@ -1342,9 +1354,8 @@ export class FederationFactory {
             type: inputValueData.type,
           };
           const namedArgumentTypeName = getTypeNodeNamedTypeName(inputValueData.type);
-          const argumentPath = `${fieldPath}(${argumentName}: ... )`;
           getValueOrDefault(this.pathsByNamedTypeName, namedArgumentTypeName, () => new Set<string>()).add(
-            argumentPath,
+            inputValueData.renamedPath,
           );
           this.namedInputValueTypeNames.add(namedArgumentTypeName);
           extractPersistedDirectives(
@@ -1352,11 +1363,11 @@ export class FederationFactory {
             inputValueData.directivesByDirectiveName,
             this.persistedDirectiveDefinitionByDirectiveName,
           );
-          this.recordTagNamesByPath(inputValueData, argumentPath);
+          this.recordTagNamesByPath(inputValueData, `${incomingData.name}.${argumentName}`);
           this.handleArgumentInaccessibility(
             isParentInaccessible || isFieldInaccessible,
             inputValueData,
-            argumentPath,
+            inputValueData.renamedPath,
             fieldPath,
           );
         }
@@ -1389,8 +1400,7 @@ export class FederationFactory {
           const fieldPath = `${fieldData.renamedParentTypeName}.${fieldName}`;
           this.inaccessiblePaths.add(fieldPath);
           for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
-            const argumentPath = `${fieldPath}(${argumentName}: ... )`;
-            this.inaccessiblePaths.add(argumentPath);
+            this.inaccessiblePaths.add(inputValueData.renamedPath);
           }
         }
     }
@@ -1781,7 +1791,7 @@ export class FederationFactory {
                 this.errors,
               ),
             );
-            if (fieldData.isInaccessible) {
+            if (isNodeDataInaccessible(fieldData)) {
               continue;
             }
             clientSchemaFieldNodes.push(getClientSchemaFieldNodeByFieldData(fieldData));
@@ -2032,23 +2042,57 @@ export class FederationFactory {
     return { shouldIncludeClientSchema: true };
   }
 
-  buildFederationContractResult(tagExclusions: Set<string>): FederationResultContainer {
+  handleChildRemovalByTag(
+    parentDefinitionData: ParentDefinitionData,
+    children: Map<string, ChildData>,
+    childTagDataByChildName: Map<string, ChildTagData>,
+    tagsToExclude: Set<string>,
+  ) {
+    let accessibleChildren = children.size;
+    for (const [childName, childTagData] of childTagDataByChildName) {
+      const childData = getOrThrowError(children, childName, `${parentDefinitionData.name}.childDataByChildName`);
+      if (isNodeDataInaccessible(childData)) {
+        accessibleChildren -= 1;
+        continue;
+      }
+      if (doSetsIntersect(tagsToExclude, childTagData.tagNames)) {
+        getValueOrDefault(childData.persistedDirectivesData.directives, INACCESSIBLE, () => [
+          generateSimpleDirective(INACCESSIBLE),
+        ]);
+        this.inaccessiblePaths.add(`${parentDefinitionData.name}.${childName}`);
+        accessibleChildren -= 1;
+      }
+    }
+    if (accessibleChildren < 1) {
+      parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
+        generateSimpleDirective(INACCESSIBLE),
+      ]);
+      this.inaccessiblePaths.add(parentDefinitionData.name);
+    }
+  }
+
+  buildFederationContractResult(tagsToExclude: Set<string>): FederationResultContainer {
     if (!this.isVersionTwo) {
       /* If all the subgraphs are version one, the @inaccessible directive won't be present.
        ** However, contracts require @inaccessible to exclude applicable tagged types. */
       this.routerDefinitions.push(INACCESSIBLE_DEFINITION);
     }
-    for (const [typeName, parentTagData] of this.parentTagDataByTypeName) {
-      // TODO assess children
+    for (const [parentTypeName, parentTagData] of this.parentTagDataByTypeName) {
       const parentDefinitionData = getOrThrowError(
         this.parentDefinitionDataByTypeName,
-        typeName,
+        parentTypeName,
         PARENT_DEFINITION_DATA,
       );
-      if (doSetsHaveAnyOverlap(tagExclusions, parentTagData.tagNames)) {
-        getValueOrDefault(parentDefinitionData.persistedDirectivesData.directives, INACCESSIBLE, () => [
+      if (isNodeDataInaccessible(parentDefinitionData)) {
+        continue;
+      }
+      if (doSetsIntersect(tagsToExclude, parentTagData.tagNames)) {
+        parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
           generateSimpleDirective(INACCESSIBLE),
         ]);
+        this.inaccessiblePaths.add(parentTypeName);
+        // If the parent is inaccessible, there is no need to assess further
+        continue;
       }
       if (parentTagData.childTagDataByChildName.size < 1) {
         continue;
@@ -2056,48 +2100,66 @@ export class FederationFactory {
       switch (parentDefinitionData.kind) {
         case Kind.SCALAR_TYPE_DEFINITION:
         // intentional fallthrough
-        case Kind.ENUM_TYPE_DEFINITION:
-        // intentional fallthrough
         case Kind.UNION_TYPE_DEFINITION:
           continue;
+        case Kind.ENUM_TYPE_DEFINITION:
+          this.handleChildRemovalByTag(
+            parentDefinitionData,
+            parentDefinitionData.enumValueDataByValueName,
+            parentTagData.childTagDataByChildName,
+            tagsToExclude,
+          );
+          break;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          for (const [inputFieldName, childTagData] of parentTagData.childTagDataByChildName) {
-            const inputValueData = getOrThrowError(
-              parentDefinitionData.inputValueDataByValueName,
-              inputFieldName,
-              'parentDefinitionData.inputValueDataByValueName',
-            );
-            if (doSetsHaveAnyOverlap(tagExclusions, childTagData.tagNames)) {
-              getValueOrDefault(inputValueData.persistedDirectivesData.directives, INACCESSIBLE, () => [
-                generateSimpleDirective(INACCESSIBLE),
-              ]);
-            }
-          }
+          this.handleChildRemovalByTag(
+            parentDefinitionData,
+            parentDefinitionData.inputValueDataByValueName,
+            parentTagData.childTagDataByChildName,
+            tagsToExclude,
+          );
           break;
         default:
+          let accessibleFields = parentDefinitionData.fieldDataByFieldName.size;
           for (const [fieldName, childTagData] of parentTagData.childTagDataByChildName) {
             const fieldData = getOrThrowError(
               parentDefinitionData.fieldDataByFieldName,
               fieldName,
-              'parentDefinitionData.fieldDataByFieldName',
+              `${parentTypeName}.fieldDataByFieldName`,
             );
-            if (doSetsHaveAnyOverlap(tagExclusions, childTagData.tagNames)) {
+            if (isNodeDataInaccessible(fieldData)) {
+              accessibleFields -= 1;
+              continue;
+            }
+            if (doSetsIntersect(tagsToExclude, childTagData.tagNames)) {
               getValueOrDefault(fieldData.persistedDirectivesData.directives, INACCESSIBLE, () => [
                 generateSimpleDirective(INACCESSIBLE),
               ]);
+              this.inaccessiblePaths.add(`${parentTypeName}.${fieldName}`);
+              accessibleFields -= 1;
+              continue;
             }
             for (const [argumentName, tagNames] of childTagData.tagNamesByArgumentName) {
               const inputValueData = getOrThrowError(
                 fieldData.argumentDataByArgumentName,
                 argumentName,
-                'fieldData.argumentDataByArgumentName',
+                `${fieldName}.argumentDataByArgumentName`,
               );
-              if (doSetsHaveAnyOverlap(tagExclusions, tagNames)) {
+              if (isNodeDataInaccessible(inputValueData)) {
+                continue;
+              }
+              if (doSetsIntersect(tagsToExclude, tagNames)) {
                 getValueOrDefault(inputValueData.persistedDirectivesData.directives, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
+                this.inaccessiblePaths.add(inputValueData.renamedPath);
               }
             }
+          }
+          if (accessibleFields < 1) {
+            parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
+              generateSimpleDirective(INACCESSIBLE),
+            ]);
+            this.inaccessiblePaths.add(parentTypeName);
           }
       }
     }

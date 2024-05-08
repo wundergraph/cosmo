@@ -1,4 +1,4 @@
-import { federateSubgraphs, federateSubgraphsWithContracts, Subgraph } from '../src';
+import { federateSubgraphs, federateSubgraphsContract, federateSubgraphsWithContracts, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
@@ -91,6 +91,258 @@ describe('Contract tests', () => {
         dummy: String!
       }
     `,
+      ),
+    );
+  });
+
+  test('that object fields are removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphB, subgraphD], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Object {
+        age: Int!
+      }
+      
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that an object is removed if its only field is removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphD], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that interfaces are removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphJ, subgraphK], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that interface fields are removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphJ, subgraphL], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      interface Interface {
+        age: Int!
+      }
+      
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that an interface is removed if its only field is removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphL], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that if an interface is removed by tag, it is removed from its implementations', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAE], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Object {
+        name: String!
+      }
+      
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that input objects are removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphN, subgraphO], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that nullable input object fields are removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphN, subgraphAA], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      input Input {
+        name: String
+      }
+      
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that an input object is removed if its only field is removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphP], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that a scalar is removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphQ, subgraphR], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that a union is removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphS, subgraphT], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Entity {
+        age: Int!
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  // TODO
+  test.skip('that a union is removed if all its members are removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphS, subgraphG], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that an enum is removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphAB, subgraphAC], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that an enum value is removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphAB, subgraphAD], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      enum Enum {
+        ONE
+      }
+      
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+  });
+
+  test('that an enum is removed if its only value is removed by tag', () => {
+    const { errors, federationResult } = federateSubgraphsContract([subgraphA, subgraphAD], new Set<string>(['one']));
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      type Query {
+        dummy: String!
+      }
+      `,
       ),
     );
   });
@@ -1119,7 +1371,7 @@ describe('Contract tests', () => {
         versionOneRouterDefinitions +
           `
       input Input @tag(name: "one") {
-        name: String!
+        name: String
       }
       
       type Query {
@@ -1132,7 +1384,7 @@ describe('Contract tests', () => {
         schemaQueryDefinition +
           `
       input Input {
-        name: String!
+        name: String
       }
       
       type Query {
@@ -1151,7 +1403,7 @@ describe('Contract tests', () => {
         versionOneRouterDefinitions +
           `
       input Input @tag(name: "one") {
-        name: String!
+        name: String
       }
       
       type Query {
@@ -1164,7 +1416,7 @@ describe('Contract tests', () => {
         schemaQueryDefinition +
           `
       input Input {
-        name: String!
+        name: String
       }
       
       type Query {
@@ -1183,7 +1435,7 @@ describe('Contract tests', () => {
         versionOneRouterDefinitions +
           `
       input Input {
-        name: String! @tag(name: "one")
+        name: String @tag(name: "one")
       }
       
       type Query {
@@ -1196,7 +1448,7 @@ describe('Contract tests', () => {
         schemaQueryDefinition +
           `
       input Input {
-        name: String!
+        name: String
       }
       
       type Query {
@@ -1215,7 +1467,7 @@ describe('Contract tests', () => {
         versionOneRouterDefinitions +
           `
       input Input {
-        name: String! @tag(name: "one")
+        name: String @tag(name: "one")
       }
       
       type Query {
@@ -1228,7 +1480,147 @@ describe('Contract tests', () => {
         schemaQueryDefinition +
           `
       input Input {
-        name: String!
+        name: String
+      }
+      
+      type Query {
+        dummy: String!
+      }
+    `,
+      ),
+    );
+  });
+
+  test('that a client schema is produced if a @tag directive is defined on an enum #1.1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphAB, subgraphAC]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+      enum Enum @tag(name: "one") {
+        ONE
+        TWO
+      }
+
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      enum Enum {
+        ONE
+        TWO
+      }
+      
+      type Query {
+        dummy: String!
+      }
+    `,
+      ),
+    );
+  });
+
+  test('that a client schema is produced if a @tag directive is defined on an enum #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphAC, subgraphAB]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+      enum Enum @tag(name: "one") {
+        ONE
+        TWO
+      }
+
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      enum Enum {
+        ONE
+        TWO
+      }
+      
+      type Query {
+        dummy: String!
+      }
+    `,
+      ),
+    );
+  });
+
+  test('that a client schema is produced if a @tag directive is defined on an enum value #1.1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphAB, subgraphAD]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+      enum Enum {
+        ONE
+        TWO @tag(name: "one")
+      }
+
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      enum Enum {
+        ONE
+        TWO
+      }
+      
+      type Query {
+        dummy: String!
+      }
+    `,
+      ),
+    );
+  });
+
+  test('that a client schema is produced if a @tag directive is defined on an enum value #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphAD, subgraphAB]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+      enum Enum {
+        ONE
+        TWO @tag(name: "one")
+      }
+
+      type Query {
+        dummy: String!
+      }
+      `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        schemaQueryDefinition +
+          `
+      enum Enum {
+        ONE
+        TWO
       }
       
       type Query {
@@ -1545,7 +1937,7 @@ const subgraphN: Subgraph = {
   url: '',
   definitions: parse(`
     input Input {
-      name: String!
+      name: String
     }
 
     type Query {
@@ -1559,7 +1951,7 @@ const subgraphO: Subgraph = {
   url: '',
   definitions: parse(`
     input Input @tag(name: "one") {
-      name: String!
+      name: String
     }
   `),
 };
@@ -1569,7 +1961,7 @@ const subgraphP: Subgraph = {
   url: '',
   definitions: parse(`
     input Input {
-      name: String! @tag(name: "one")
+      name: String @tag(name: "one")
     }
   `),
 };
@@ -1706,6 +2098,65 @@ const subgraphZ: Subgraph = {
     
     type Query {
       dummy: String!
+    }
+  `),
+};
+
+const subgraphAA: Subgraph = {
+  name: 'subgraph-aa',
+  url: '',
+  definitions: parse(`
+    input Input {
+      age: Int @tag(name: "one")
+      name: String
+    }
+  `),
+};
+
+const subgraphAB: Subgraph = {
+  name: 'subgraph-ab',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      ONE
+    }
+    
+    type Query {
+      dummy: String!
+    }
+  `),
+};
+
+const subgraphAC: Subgraph = {
+  name: 'subgraph-ac',
+  url: '',
+  definitions: parse(`
+    enum Enum @tag(name: "one") {
+      TWO
+    }
+  `),
+};
+
+const subgraphAD: Subgraph = {
+  name: 'subgraph-ad',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      TWO @tag(name: "one")
+    }
+  `),
+};
+
+const subgraphAE: Subgraph = {
+  name: 'subgraph-ae',
+  url: '',
+  definitions: parse(`
+    interface Interface @tag(name: "one") {
+      name: String!
+    }
+    
+    type Object implements Interface {
+      name: String!
     }
   `),
 };
