@@ -18,7 +18,7 @@ import (
 func TestKafkaEvents(t *testing.T) {
 	// All tests are running in sequence because they are using the same kafka topic
 
-	// For testing it manually
+	// For testing, it manually
 
 	//t.Run("subscribe async", func(t *testing.T) {
 	//	topicName := "employeeUpdated"
@@ -237,7 +237,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(1, time.Second*10)
+			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
 		})
