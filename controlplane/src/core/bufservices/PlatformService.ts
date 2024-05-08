@@ -718,7 +718,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           if (graph.contract?.id) {
             return {
               response: {
-                code: EnumStatusCode.ERR_NOT_FOUND,
+                code: EnumStatusCode.ERR,
                 details: `Contract graphs cannot be moved individually. They will automatically be moved with the source graph.`,
               },
               compositionErrors: [],
@@ -3332,12 +3332,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             federatedGraphTargetId: graph.targetId,
           });
 
-          const blobStorageDirectory = `${authContext.organizationId}/${graph.id}`;
-          await opts.blobStorage.removeDirectory({ key: blobStorageDirectory });
 
-          await fedGraphRepo.delete(graph.targetId);
 
-          const deletedGraphs = [graph];
+          const deletedGraphs: FederatedGraphDTO[] = [];
 
           // Delete downstream contracts
           const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
@@ -3355,6 +3352,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             await fedGraphRepo.delete(contractGraph.targetId);
             deletedGraphs.push(contractGraph);
           }
+
+          const blobStorageDirectory = `${authContext.organizationId}/${graph.id}`;
+          await opts.blobStorage.removeDirectory({ key: blobStorageDirectory });
+
+          await fedGraphRepo.delete(graph.targetId);
+
+          deletedGraphs.unshift(graph)
 
           if (subgraphs.length === 1) {
             await subgraphRepo.delete(subgraphs[0].targetId);
@@ -3430,14 +3434,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             authContext,
           });
 
-          const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
-          await opts.blobStorage.removeDirectory({
-            key: blobStorageDirectory,
-          });
-
-          await fedGraphRepo.delete(federatedGraph.targetId);
-
-          const deletedGraphs = [federatedGraph];
+          const deletedGraphs: FederatedGraphDTO[] = []
 
           // Delete downstream contracts
           const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
@@ -3455,6 +3452,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             await fedGraphRepo.delete(contractGraph.targetId);
             deletedGraphs.push(contractGraph);
           }
+
+          await fedGraphRepo.delete(federatedGraph.targetId);
+
+          deletedGraphs.unshift(federatedGraph);
+
+          const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
+          await opts.blobStorage.removeDirectory({
+            key: blobStorageDirectory,
+          });
 
           for (const deletedGraph of deletedGraphs) {
             await auditLogRepo.addAuditLog({
