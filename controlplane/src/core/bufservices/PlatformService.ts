@@ -3332,8 +3332,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             federatedGraphTargetId: graph.targetId,
           });
 
-
-
           const deletedGraphs: FederatedGraphDTO[] = [];
 
           // Delete downstream contracts
@@ -3358,7 +3356,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           await fedGraphRepo.delete(graph.targetId);
 
-          deletedGraphs.unshift(graph)
+          deletedGraphs.unshift(graph);
 
           if (subgraphs.length === 1) {
             await subgraphRepo.delete(subgraphs[0].targetId);
@@ -3434,7 +3432,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             authContext,
           });
 
-          const deletedGraphs: FederatedGraphDTO[] = []
+          const deletedGraphs: FederatedGraphDTO[] = [];
 
           // Delete downstream contracts
           const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
