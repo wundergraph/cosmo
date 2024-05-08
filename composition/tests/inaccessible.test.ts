@@ -555,7 +555,7 @@ describe('@inaccessible tests', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphV, subgraphP]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      inaccessibleRequiredArgumentError('scalar', 'Object.scalar(scalar: ... )', 'Object.scalar'),
+      inaccessibleRequiredArgumentError('scalar', 'Object.scalar(scalar: ...)', 'Object.scalar'),
     );
   });
 

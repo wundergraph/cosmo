@@ -59,7 +59,7 @@ export function getEntriesNotInHashSet<T>(iterable: Iterable<T>, comparison: Set
   return disparities;
 }
 
-export function doSetsHaveAnyOverlap<T>(set: Set<T>, other: Set<T>): boolean {
+export function doSetsIntersect<T>(set: Set<T>, other: Set<T>): boolean {
   for (const entry of set) {
     if (other.has(entry)) {
       return true;
