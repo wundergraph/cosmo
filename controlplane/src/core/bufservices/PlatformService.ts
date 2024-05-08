@@ -3595,9 +3595,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, 'Could not find namespace');
             }
 
-            const subgraphs = await subgraphRepo.byGraphLabelMatchers({
-              labelMatchers: federatedGraph.labelMatchers,
-              namespaceId: namespace.id,
+            const subgraphs = await subgraphRepo.listByFederatedGraph({
+              federatedGraphTargetId: federatedGraph.targetId,
+              published: true,
             });
 
             const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
