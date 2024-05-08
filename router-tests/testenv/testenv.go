@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nats-io/nats.go/jetstream"
 	"io"
 	"log"
 	"math/rand"
@@ -1132,7 +1133,11 @@ func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.S
 	for _, sourceName := range demoNatsSourceNames {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		require.NoError(t, err)
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection).New(ctx)
+
+		js, err := jetstream.New(natsConnection)
+		require.NoError(t, err)
+
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection, js).New(ctx)
 	}
 
 	return &subgraphs.SubgraphOptions{

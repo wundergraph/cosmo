@@ -173,22 +173,28 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	if err != nil {
 		log.Printf("failed to connect to nats source \"nats\": %v", err)
 	}
+
 	myNatsConnection, err := nats.Connect(url)
 	if err != nil {
 		log.Printf("failed to connect to nats source \"my-nats\": %v", err)
 	}
 
-	natsPubSubByProviderID := map[string]pubsub_datasource.NatsPubSub{
-		"nats":    natsPubsub.NewConnector(zap.NewNop(), defaultConnection).New(ctx),
-		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection).New(ctx),
-	}
-
-	js, err := jetstream.New(defaultConnection)
+	defaultJetStream, err := jetstream.New(defaultConnection)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+	myNatsJetStream, err := jetstream.New(myNatsConnection)
+	if err != nil {
+		return nil, err
+	}
+
+	natsPubSubByProviderID := map[string]pubsub_datasource.NatsPubSub{
+		"nats":    natsPubsub.NewConnector(zap.NewNop(), defaultConnection, defaultJetStream).New(ctx),
+		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection, myNatsJetStream).New(ctx),
+	}
+
+	_, err = defaultJetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:     "streamName",
 		Subjects: []string{"employeeUpdated.>"},
 	})

@@ -35,12 +35,14 @@ func newError(err error) *Error {
 type connector struct {
 	conn   *nats.Conn
 	logger *zap.Logger
+	js     jetstream.JetStream
 }
 
-func NewConnector(logger *zap.Logger, conn *nats.Conn) pubsub_datasource.NatsConnector {
+func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream) pubsub_datasource.NatsConnector {
 	return &connector{
 		conn:   conn,
 		logger: logger,
+		js:     js,
 	}
 }
 
@@ -48,6 +50,7 @@ func (c *connector) New(ctx context.Context) pubsub_datasource.NatsPubSub {
 	return &natsPubSub{
 		ctx:    ctx,
 		conn:   c.conn,
+		js:     c.js,
 		logger: c.logger.With(zap.String("pubsub", "nats")),
 	}
 }
@@ -56,6 +59,7 @@ type natsPubSub struct {
 	ctx    context.Context
 	conn   *nats.Conn
 	logger *zap.Logger
+	js     jetstream.JetStream
 }
 
 func (p *natsPubSub) ensureConn() error {
@@ -76,12 +80,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	}
 
 	if event.StreamConfiguration != nil {
-		js, err := jetstream.New(p.conn)
-		if err != nil {
-			return newError(fmt.Errorf(`failed to create jetstream: %w`, err))
-		}
-
-		consumer, err := js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, jetstream.ConsumerConfig{
+		consumer, err := p.js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, jetstream.ConsumerConfig{
 			Durable:        event.StreamConfiguration.Consumer, // Durable consumers are not removed automatically regardless of the InactiveThreshold
 			FilterSubjects: event.Subjects,
 		})
@@ -159,11 +158,6 @@ func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPubl
 		zap.ByteString("data", event.Data),
 	)
 
-	if err := p.ensureConn(); err != nil {
-		p.logger.Error("error ensuring connection", zap.Error(err))
-		return err
-	}
-
 	return p.conn.Publish(event.Subject, event.Data)
 }
 
@@ -173,11 +167,6 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 		zap.String("providerID", event.ProviderID),
 		zap.ByteString("data", event.Data),
 	)
-
-	if err := p.ensureConn(); err != nil {
-		p.logger.Error("error ensuring connection", zap.Error(err))
-		return err
-	}
 
 	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {

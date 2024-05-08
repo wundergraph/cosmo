@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/nats-io/nats.go/jetstream"
 	"net/http"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -212,7 +213,12 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 					if err != nil {
 						return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
 					}
-					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(b.logger, natsConnection).New(ctx)
+					js, err := jetstream.New(natsConnection)
+					if err != nil {
+						return nil, err
+					}
+
+					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(b.logger, natsConnection, js).New(ctx)
 
 					break
 				}
