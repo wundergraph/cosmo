@@ -101,6 +101,7 @@ type Config struct {
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
+	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
@@ -193,17 +194,19 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
-	seeds := []string{"localhost:9092"}
-
-	if os.Getenv("KGO_SEEDS") != "" {
-		seeds = strings.Split(os.Getenv("KGO_SEEDS"), ",")
+	if len(cfg.KafkaSeeds) == 0 {
+		if os.Getenv("KGO_SEEDS") != "" {
+			cfg.KafkaSeeds = strings.Split(os.Getenv("KGO_SEEDS"), ",")
+		} else {
+			cfg.KafkaSeeds = []string{"localhost:9092"}
+		}
 	}
 
 	var kafkaAdminClient *kadm.Client
 	var kafkaClient *kgo.Client
 	{
 		client, err := kgo.NewClient(
-			kgo.SeedBrokers(seeds...),
+			kgo.SeedBrokers(cfg.KafkaSeeds...),
 		)
 		if err != nil {
 			t.Fatalf("could not create kafka client: %s", err)
@@ -553,7 +556,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	for _, sourceName := range demoKafkaSourceNames {
 		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
 			ID:      sourceName,
-			Brokers: []string{"localhost:9092"},
+			Brokers: testConfig.KafkaSeeds,
 		})
 	}
 
