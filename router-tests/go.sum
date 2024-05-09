@@ -318,8 +318,12 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/testcontainers/testcontainers-go v0.29.1 h1:z8kxdFlovA2y97RWx98v/TQ+tR+SXZm6p35M+xB92zk=
+github.com/testcontainers/testcontainers-go v0.29.1/go.mod h1:SnKnKQav8UcgtKqjp/AD8bE1MqZm+3TDb/B8crE3XnI=
 github.com/testcontainers/testcontainers-go v0.30.0 h1:jmn/XS22q4YRrcMwWg0pAwlClzs/abopbsBzrepyc4E=
 github.com/testcontainers/testcontainers-go v0.30.0/go.mod h1:K+kHNGiM5zjklKjgTtcrEetF3uhWbMUyqAQoyoh8Pf0=
+github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1 h1:idNT5Pw9NI6cR7ZEtw+w4tPyadi/pqqYvkAWmlfWAG0=
+github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1/go.mod h1:5FZ9KvcEPtfF2w9RQhj5N/YEkY6qoQm3vM0gJ0vHzyo=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.30.0 h1:lQx20102vAHRDbz/glmY7BjaydopeFgf6mIZjAl8J4Q=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.30.0/go.mod h1:n3m3SH0ivwFZbehY8fgTLADfwSPK2ZC5za4r9nYYm4Q=
 github.com/tidwall/gjson v1.14.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
@@ -367,8 +371,6 @@ github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1/go.mod h1:sEGXWArGqc3tVa+ekntsN65DmVbVeW+7lTKTjZF3/Fo=
-go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 h1:jq9TW8u3so/bN+JPT166wjOI6/vQPF6Xe7nMNIltagk=
-go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0/go.mod h1:p8pYQP+m5XfbZm9fxtSKAbM6oIllS7s2AfxrChvc7iw=
 go.opentelemetry.io/contrib/propagators/b3 v1.23.0 h1:aaIGWc5JdfRGpCafLRxMJbD65MfTa206AwSKkvGS0Hg=
 go.opentelemetry.io/contrib/propagators/b3 v1.23.0/go.mod h1:Gyz7V7XghvwTq+mIhLFlTgcc03UDroOg8vezs4NLhwU=
 go.opentelemetry.io/contrib/propagators/jaeger v1.23.0 h1:KFxfTCTkH1usVFzDaWzbmNdFX7ybUTCtkLsUTww0nG4=

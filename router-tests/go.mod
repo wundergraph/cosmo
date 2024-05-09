@@ -117,8 +117,8 @@ require (
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sosodev/duration v1.2.0 // indirect
-	github.com/testcontainers/testcontainers-go v0.30.0 // indirect
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.30.0 // indirect
+	github.com/testcontainers/testcontainers-go v0.29.1 // indirect
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1 // indirect
 	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
@@ -130,7 +130,7 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.11 // indirect
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect
 	go.opentelemetry.io/contrib/propagators/jaeger v1.23.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0 // indirect
