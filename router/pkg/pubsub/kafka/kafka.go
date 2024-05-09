@@ -193,7 +193,7 @@ func (p *pubsub) poll(ctx context.Context) error {
 
 		default:
 			// Try to fetch max records from any subscribed topics
-			// In the future, we can consume topics individually to increase concurrency
+			// In the future, we could create a client per topic to fetch in parallel
 			fetches := p.client.PollRecords(ctx, 5_000)
 			if fetches.IsClientClosed() {
 				return errClientClosed

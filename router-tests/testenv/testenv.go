@@ -195,6 +195,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	seeds := []string{"localhost:9092"}
 
+	if os.Getenv("KGO_SEEDS") != "" {
+		seeds = strings.Split(os.Getenv("KGO_SEEDS"), ",")
+	}
+
 	var kafkaAdminClient *kadm.Client
 	var kafkaClient *kgo.Client
 	{
