@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -27,6 +28,10 @@ func TestKafkaEvents(t *testing.T) {
 	//		produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 	//	})
 	//})
+
+	if os.Getenv("TEST_KAFKA") == "" {
+		t.Skip("Skipping kafka tests")
+	}
 
 	t.Run("subscribe async", func(t *testing.T) {
 

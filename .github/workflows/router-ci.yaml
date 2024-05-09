@@ -25,22 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
-      kafka:
-        image: bitnami/kafka:latest
-        ports:
-          - 9092:9092
-        env:
-          KAFKA_ENABLE_KRAFT: yes
-          KAFKA_CFG_PROCESS_ROLES: controller,broker
-          KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@127.0.0.1:9093
-          KAFKA_CFG_TRANSACTION_PARTITION_VERIFICATION_ENABLE: false
-          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-          KAFKA_CFG_NODE_ID: 1
-          ALLOW_PLAINTEXT_LISTENER: yes
-          KAFKA_KRAFT_CLUSTER_ID: XkpGZQ27R3eTl3OdTm2LYA # 16 byte base64-encoded UUID
       redis:
         # Docker Hub image
         image: redis:7
@@ -113,22 +97,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
-      kafka:
-        image: bitnami/kafka:latest
-        ports:
-          - 9092:9092
-        env:
-          KAFKA_ENABLE_KRAFT: yes
-          KAFKA_CFG_PROCESS_ROLES: controller,broker
-          KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@127.0.0.1:9093
-          KAFKA_CFG_TRANSACTION_PARTITION_VERIFICATION_ENABLE: false
-          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-          KAFKA_CFG_NODE_ID: 1
-          ALLOW_PLAINTEXT_LISTENER: yes
-          KAFKA_KRAFT_CLUSTER_ID: XkpGZQ27R3eTl3OdTm2LYA # 16 byte base64-encoded UUID
       redis:
         # Docker Hub image
         image: redis:7
@@ -217,3 +185,52 @@ jobs:
           image_name: router
           image_description: "Cosmo Router"
 
+  test_kafka:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          # The go install / version instructions are inside the Makefile, so we need to cache the Makefile.
+          key: ${{ runner.os }}-go-${{ hashFiles('router/go.sum') }}-makefile-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - uses: ./.github/actions/go
+        with:
+          cache-dependency-path: router/go.sum
+
+      - name: Install tools
+        run: make setup-build-tools
+
+      - name: Generate code
+        run: make generate-go
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
+
+      - name: Install dependencies
+        working-directory: ./router
+        run: go mod download
+
+      - name: Run Kafka KRaft Broker
+        uses: spicyparrot/kafka-kraft-action@v1.1.0
+        with:
+          kafka-version: "3.7.0"
+
+      - name: Run Integration tests
+        working-directory: ./router-tests
+        run: make test
+        env:
+          TEST_KAFKA: true
+
+      - name: Build
+        working-directory: ./router
+        run: make build
