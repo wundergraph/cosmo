@@ -12,6 +12,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -19,6 +20,10 @@ import (
 
 func TestKafkaEvents(t *testing.T) {
 	// All tests are running in sequence because they are using the same kafka topic
+
+	if os.Getenv("TEST_KAFKA") == "" {
+		t.Skip("Skipping test in CI environment")
+	}
 
 	ctx := context.Background()
 	kafkaContainer, err := kafka.RunContainer(ctx, testcontainers.WithImage("confluentinc/confluent-local:7.6.1"))

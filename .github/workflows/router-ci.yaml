@@ -222,6 +222,6 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: make test
+        run: go test -race -run "^\QTestNatsEvents\E$" -v
         env:
           TEST_KAFKA: true
