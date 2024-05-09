@@ -2,7 +2,10 @@ import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { ConfigurationData, FieldConfiguration } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
-import { GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import {
+  GraphQLSubscriptionProtocol,
+  GraphQLWebsocketSubprotocol,
+} from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,

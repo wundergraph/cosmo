@@ -4,7 +4,12 @@ import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { resolve } from 'pathe';
-import { isValidSubscriptionProtocol, isValidWebsocketSubprotocol, parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
+import {
+  isValidSubscriptionProtocol,
+  isValidWebsocketSubprotocol,
+  parseGraphQLSubscriptionProtocol,
+  parseGraphQLWebsocketSubprotocol,
+} from '@wundergraph/cosmo-shared';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';

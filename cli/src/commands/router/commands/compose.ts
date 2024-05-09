@@ -112,7 +112,8 @@ export default (opts: BaseCommandOptions) => {
           sdl: sdls[index],
           subscriptionUrl: s.subscription?.url || s.routing_url,
           subscriptionProtocol: s.subscription?.protocol || 'ws',
-          websocketSubprotocol: s.subscription?.protocol === 'ws' ? s.subscription?.websocketSubprotocol || 'auto' : undefined,
+          websocketSubprotocol:
+            s.subscription?.protocol === 'ws' ? s.subscription?.websocketSubprotocol || 'auto' : undefined,
           schema,
           configurationDataMap,
         };
