@@ -7,4 +7,3 @@ module "cosmo" {
   secret_name      = ""
   project          = var.google-cloud-project
 }
-

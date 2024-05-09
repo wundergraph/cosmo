@@ -62,5 +62,4 @@ variable "secret_name" {
 
 variable "project" {
   description = "Project id of the google cloud project you want to setup this for"
-
 }
