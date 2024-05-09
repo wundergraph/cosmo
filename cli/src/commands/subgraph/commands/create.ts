@@ -1,7 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
+import {
+  isValidSubscriptionProtocol,
+  isValidWebsocketSubprotocol,
+  parseGraphQLSubscriptionProtocol,
+  parseGraphQLWebsocketSubprotocol,
+  splitLabel,
+} from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
@@ -33,6 +39,10 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
   );
+  command.option(
+    '--websocket-subprotocol <protocol>',
+    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto, graphql-ws, and graphql-transport-ws.',
+  );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
     let readmeFile;
@@ -47,6 +57,30 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    if (options.subscriptionProtocol && !isValidSubscriptionProtocol(options.subscriptionProtocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The subscription protocol '${pc.bold(
+              options.subscriptionProtocol,
+            )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
+          ),
+        ),
+      );
+    }
+
+    if (options.websocketSubprotocol && !isValidWebsocketSubprotocol(options.websocketSubprotocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The websocket subprotocol '${pc.bold(
+              options.websocketSubprotocol,
+            )}' is not valid. Please use one of the following: auto, graphql-ws, graphql-transport-ws.`,
+          ),
+        ),
+      );
+    }
+
     const spinner = ora('Subgraph is being created...').start();
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
@@ -58,6 +92,9 @@ export default (opts: BaseCommandOptions) => {
         subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+          : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },

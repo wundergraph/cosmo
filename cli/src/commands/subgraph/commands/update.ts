@@ -4,7 +4,13 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { splitLabel, parseGraphQLSubscriptionProtocol, isValidSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import {
+  splitLabel,
+  parseGraphQLSubscriptionProtocol,
+  isValidSubscriptionProtocol,
+  parseGraphQLWebsocketSubprotocol,
+  isValidWebsocketSubprotocol,
+} from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -35,6 +41,10 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
   );
+  command.option(
+    '--websocket-subprotocol <protocol>',
+    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto, graphql-ws, and graphql-transport-ws.',
+  );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
 
   command.action(async (name, options) => {
@@ -62,6 +72,18 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    if (options.websocketSubprotocol && !isValidWebsocketSubprotocol(options.websocketSubprotocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The websocket subprotocol '${pc.bold(
+              options.websocketSubprotocol,
+            )}' is not valid. Please use one of the following: auto, graphql-ws, graphql-transport-ws.`,
+          ),
+        ),
+      );
+    }
+
     const spinner = ora('Subgraph is being updated...').start();
     const resp = await opts.client.platform.updateSubgraph(
       {
@@ -80,6 +102,9 @@ export default (opts: BaseCommandOptions) => {
         routingUrl: options.routingUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+          : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },

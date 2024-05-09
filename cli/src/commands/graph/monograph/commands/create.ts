@@ -4,7 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import { isValidSubscriptionProtocol, isValidWebsocketSubprotocol, parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 import ora from 'ora';
 import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
@@ -25,6 +25,10 @@ export default (opts: BaseCommandOptions) => {
     'The protocol to use when subscribing to the graph. The supported protocols are ws, sse, and sse_post.',
   );
   command.option(
+    '--websocket-subprotocol <protocol>',
+    'The subprotocolto use when subscribing to the subgraph. The supported protocols are auto, graphql-ws, and graphql-transport-ws.',
+  );
+  command.option(
     '--admission-webhook-url <url>',
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the monograph. This is optional.',
     [],
@@ -43,7 +47,31 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    const spinner = ora('Federated Graph is being created...').start();
+    if (options.subscriptionProtocol && !isValidSubscriptionProtocol(options.subscriptionProtocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The subscription protocol '${pc.bold(
+              options.subscriptionProtocol,
+            )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
+          ),
+        ),
+      );
+    }
+
+    if (options.websocketSubprotocol && !isValidWebsocketSubprotocol(options.websocketSubprotocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The websocket subprotocol '${pc.bold(
+              options.websocketSubprotocol,
+            )}' is not valid. Please use one of the following: auto, graphql-ws, graphql-transport-ws.`,
+          ),
+        ),
+      );
+    }
+
+    const spinner = ora('Monograph is being created...').start();
 
     const resp = await opts.client.platform.createMonograph(
       {
@@ -55,6 +83,9 @@ export default (opts: BaseCommandOptions) => {
         subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+          : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         admissionWebhookURL: options.admissionWebhookUrl,
       },

@@ -32,6 +32,7 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-accounts.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      websocketSubprotocol: 'auto',
       schema: accountsSubgraphConfig!.schema,
       configurationDataMap: accountsSubgraphConfig!.configurationDataMap,
     };
@@ -44,6 +45,7 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-products.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      websocketSubprotocol: 'auto',
       schema: productsSubgraphConfig!.schema,
       configurationDataMap: productsSubgraphConfig!.configurationDataMap,
     };
@@ -56,6 +58,7 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-reviews.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      websocketSubprotocol: 'auto',
       schema: reviewsSubgraphConfig!.schema,
       configurationDataMap: reviewsSubgraphConfig!.configurationDataMap,
     };
@@ -68,6 +71,7 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-inventory.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      websocketSubprotocol: 'auto',
       schema: inventorySubgraphConfig!.schema,
       configurationDataMap: inventorySubgraphConfig!.configurationDataMap,
     };
@@ -95,6 +99,7 @@ describe('Router Config Builder', () => {
       url: '',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      websocketSubprotocol: 'auto',
     };
     let error;
     try {

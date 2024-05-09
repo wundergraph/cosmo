@@ -6,7 +6,13 @@ import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
+import {
+  isValidSubscriptionProtocol,
+  isValidWebsocketSubprotocol,
+  parseGraphQLSubscriptionProtocol,
+  parseGraphQLWebsocketSubprotocol,
+  splitLabel,
+} from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 
@@ -43,6 +49,10 @@ export default (opts: BaseCommandOptions) => {
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
   );
   command.option(
+    '--websocket-subprotocol <protocol>',
+    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto, graphql-ws, and graphql-transport-ws.',
+  );
+  command.option(
     '--fail-on-composition-error',
     'If set, the command will fail if the composition of the federated graph fails.',
     false,
@@ -71,6 +81,30 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    if (options.subscriptionProtocol && !isValidSubscriptionProtocol(options.subscriptionProtocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The subscription protocol '${pc.bold(
+              options.subscriptionProtocol,
+            )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
+          ),
+        ),
+      );
+    }
+
+    if (options.websocketSubprotocol && !isValidWebsocketSubprotocol(options.websocketSubprotocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The websocket subprotocol '${pc.bold(
+              options.websocketSubprotocol,
+            )}' is not valid. Please use one of the following: auto, graphql-ws, graphql-transport-ws.`,
+          ),
+        ),
+      );
+    }
+
     const spinner = ora('Subgraph is being published...').start();
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
@@ -84,6 +118,9 @@ export default (opts: BaseCommandOptions) => {
         subscriptionUrl: options.subscriptionUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+          : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
         unsetLabels: !!options.unsetLabels,

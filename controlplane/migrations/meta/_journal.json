@@ -610,6 +610,13 @@
       "when": 1713466210639,
       "tag": "0086_shiny_dreaming_celestial",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "5",
+      "when": 1714663680100,
+      "tag": "0087_deep_lake",
+      "breakpoints": true
     }
   ]
 }

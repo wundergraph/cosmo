@@ -198,6 +198,7 @@ import {
   enrichLogger,
   extractOperationNames,
   formatSubscriptionProtocol,
+  formatWebsocketSubprotocol,
   getHighestPriorityRole,
   getLogger,
   handleError,
@@ -1060,9 +1061,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             routingUrl: req.graphUrl,
             readme: req.readme,
             subscriptionUrl: req.subscriptionUrl,
-            subscriptionProtocol: req.subscriptionProtocol
-              ? formatSubscriptionProtocol(req.subscriptionProtocol)
-              : undefined,
+            subscriptionProtocol:
+              req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+            websocketSubprotocol:
+              req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
           });
 
           if (!subgraph) {
@@ -1452,9 +1454,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
           readme: req.readme,
           subscriptionUrl: req.subscriptionUrl,
-          subscriptionProtocol: req.subscriptionProtocol
-            ? formatSubscriptionProtocol(req.subscriptionProtocol)
-            : undefined,
+          subscriptionProtocol:
+            req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+          websocketSubprotocol:
+            req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
         });
 
         if (!subgraph) {
@@ -2265,9 +2268,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             labels: req.labels,
             routingUrl: req.routingUrl!,
             subscriptionUrl: req.subscriptionUrl,
-            subscriptionProtocol: req.subscriptionProtocol
-              ? formatSubscriptionProtocol(req.subscriptionProtocol)
-              : undefined,
+            subscriptionProtocol:
+              req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+            websocketSubprotocol:
+              req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
           });
 
           if (!subgraph) {
@@ -2301,6 +2305,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 req.subscriptionProtocol === undefined
                   ? undefined
                   : formatSubscriptionProtocol(req.subscriptionProtocol),
+              websocketSubprotocol:
+                req.websocketSubprotocol === undefined
+                  ? undefined
+                  : formatWebsocketSubprotocol(req.websocketSubprotocol),
               updatedBy: authContext.userId,
               namespaceId: namespace.id,
               isV2Graph,
@@ -3307,9 +3315,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               unsetLabels: false,
               subscriptionUrl: req.subscriptionUrl,
               routingUrl: req.graphUrl,
-              subscriptionProtocol: req.subscriptionProtocol
-                ? formatSubscriptionProtocol(req.subscriptionProtocol)
-                : undefined,
+              subscriptionProtocol:
+                req.subscriptionProtocol === undefined
+                  ? undefined
+                  : formatSubscriptionProtocol(req.subscriptionProtocol),
+              websocketSubprotocol:
+                req.websocketSubprotocol === undefined
+                  ? undefined
+                  : formatWebsocketSubprotocol(req.websocketSubprotocol),
               updatedBy: authContext.userId,
               readme: req.readme,
               namespaceId: subgraph.namespaceId,
@@ -3609,9 +3622,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             unsetLabels: req.unsetLabels ?? false,
             subscriptionUrl: req.subscriptionUrl,
             routingUrl: req.routingUrl,
-            subscriptionProtocol: req.subscriptionProtocol
-              ? formatSubscriptionProtocol(req.subscriptionProtocol)
-              : undefined,
+            subscriptionProtocol:
+              req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+            websocketSubprotocol:
+              req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
             updatedBy: authContext.userId,
             readme: req.readme,
             namespaceId: subgraph.namespaceId,

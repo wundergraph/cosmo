@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { ConfigurationData, FieldConfiguration } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
-import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
@@ -36,6 +36,7 @@ export interface Input {
  * sse_post: Uses the Server-Sent Events protocol with a POST request
  */
 export type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
+export type WebsocketSubprotocol = 'auto' | 'graphql-ws' | 'graphql-transport-ws';
 
 export interface ComposedSubgraph {
   id: string;
@@ -45,6 +46,7 @@ export interface ComposedSubgraph {
   url: string;
   subscriptionUrl: string;
   subscriptionProtocol: SubscriptionProtocol;
+  websocketSubprotocol?: WebsocketSubprotocol;
   // The intermediate representation of the engine configuration for the subgraph
   configurationDataMap?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
@@ -74,6 +76,21 @@ export const parseGraphQLSubscriptionProtocol = (protocolName: SubscriptionProto
   throw new Error(`Unsupported subscription protocol '${protocolName}'`);
 };
 
+export const parseGraphQLWebsocketSubprotocol = (protocolName: WebsocketSubprotocol): GraphQLWebsocketSubprotocol => {
+  switch (protocolName) {
+    case 'auto': {
+      return GraphQLWebsocketSubprotocol.GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO;
+    }
+    case 'graphql-ws': {
+      return GraphQLWebsocketSubprotocol.GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS;
+    }
+    case 'graphql-transport-ws': {
+      return GraphQLWebsocketSubprotocol.GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS;
+    }
+  }
+  throw new Error(`Unsupported  websocket subprotocol '${protocolName}'`);
+};
+
 export const buildRouterConfig = function (input: Input): RouterConfig {
   const engineConfig = new EngineConfiguration({
     defaultFlushInterval: BigInt(500),
@@ -100,6 +117,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     const { childNodes, entityInterfaces, events, interfaceObjects, keys, provides, requires, rootNodes } =
       configurationDataMapToDataSourceConfiguration(subgraph.configurationDataMap);
     const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
+    const websocketSubprotocol = parseGraphQLWebsocketSubprotocol(subgraph.websocketSubprotocol || 'auto');
     let kind: DataSourceKind;
     // eslint-disable-next-line camelcase
     let customGraphql: DataSourceCustom_GraphQL | undefined;
@@ -156,6 +174,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
             staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
           }),
           protocol: subscriptionProtocol,
+          websocketSubprotocol,
         },
       });
     }
