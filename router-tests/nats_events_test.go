@@ -736,7 +736,7 @@ func TestNatsEvents(t *testing.T) {
 
 			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
 				defer wg.Done()
-				require.Contains(t, errValue.Error(), `EDFS NATS error: failed to create or update consumer "consumerName": nats: API error: code=404 err_code=10059 description=stream not found`)
+				require.Contains(t, errValue.Error(), `EDFS error: failed to create or update consumer for stream "streamName"`)
 				return nil
 			})
 			require.NoError(t, err)

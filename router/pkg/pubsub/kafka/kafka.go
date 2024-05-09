@@ -3,8 +3,10 @@ package kafka
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -14,7 +16,7 @@ import (
 
 var (
 	_ pubsub_datasource.KafkaConnector = (*connector)(nil)
-	_ pubsub_datasource.KafkaPubSub    = (*pubsub)(nil)
+	_ pubsub_datasource.KafkaPubSub    = (*kafkaPubsub)(nil)
 
 	errClientClosed = errors.New("client closed")
 )
@@ -48,7 +50,7 @@ func NewConnector(logger *zap.Logger, client *kgo.Client) pubsub_datasource.Kafk
 }
 
 func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
-	ps := &pubsub{
+	ps := &kafkaPubsub{
 		ctx:           ctx,
 		logger:        c.logger.With(zap.String("pubsub", "kafka")),
 		client:        c.client,
@@ -77,7 +79,7 @@ func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
 	return ps
 }
 
-type pubsub struct {
+type kafkaPubsub struct {
 	ctx           context.Context
 	client        *kgo.Client
 	logger        *zap.Logger
@@ -88,7 +90,7 @@ type pubsub struct {
 }
 
 // gc is responsible for cleaning up the subscriptions that are no longer active.
-func (p *pubsub) gc(ctx context.Context) {
+func (p *kafkaPubsub) gc(ctx context.Context) {
 
 	ticker := time.NewTicker(gcInterval)
 	defer ticker.Stop()
@@ -108,7 +110,7 @@ func (p *pubsub) gc(ctx context.Context) {
 
 // worker is responsible for handling the subscriptions management and the record
 // processing. It is intentionally to be run in a separate goroutine.
-func (p *pubsub) worker(ctx context.Context) {
+func (p *kafkaPubsub) worker(ctx context.Context) {
 
 	for {
 		select {
@@ -140,7 +142,7 @@ func (p *pubsub) worker(ctx context.Context) {
 	}
 }
 
-func (p *pubsub) addSubscription(sub *subscription) {
+func (p *kafkaPubsub) addSubscription(sub *subscription) {
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -153,7 +155,7 @@ func (p *pubsub) addSubscription(sub *subscription) {
 	}
 }
 
-func (p *pubsub) garbageCollectSubscriptions() {
+func (p *kafkaPubsub) garbageCollectSubscriptions() {
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -175,7 +177,7 @@ func (p *pubsub) garbageCollectSubscriptions() {
 	}
 }
 
-func (p *pubsub) poll(ctx context.Context) error {
+func (p *kafkaPubsub) poll(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -233,7 +235,7 @@ func (p *pubsub) poll(ctx context.Context) error {
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *pubsub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *kafkaPubsub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
 	p.logger.Debug("subscribe",
 		zap.Strings("topics", event.Topics),
@@ -255,7 +257,7 @@ func (p *pubsub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSub
 	return nil
 }
 
-func (p *pubsub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
+func (p *kafkaPubsub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
 
 	p.logger.Debug("publish",
 		zap.String("topic", event.Topic),
@@ -280,5 +282,13 @@ func (p *pubsub) Publish(ctx context.Context, event pubsub_datasource.KafkaPubli
 
 	wg.Wait()
 
-	return pErr
+	if pErr != nil {
+		p.logger.Error("publish error",
+			zap.String("topic", event.Topic),
+			zap.String("providerID", event.ProviderID),
+		)
+		return pubsub.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
+	}
+
+	return nil
 }

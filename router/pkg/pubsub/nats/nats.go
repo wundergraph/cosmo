@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"io"
@@ -17,20 +18,6 @@ var (
 	_ pubsub_datasource.NatsConnector = (*connector)(nil)
 	_ pubsub_datasource.NatsPubSub    = (*natsPubSub)(nil)
 )
-
-type Error struct {
-	Err error
-}
-
-func (e *Error) Error() string { return e.Err.Error() }
-
-func (e *Error) Unwrap() error { return e.Err }
-
-func newError(err error) *Error {
-	return &Error{
-		Err: err,
-	}
-}
 
 type connector struct {
 	conn   *nats.Conn
@@ -64,7 +51,7 @@ type natsPubSub struct {
 
 func (p *natsPubSub) ensureConn() error {
 	if p.conn == nil {
-		return newError(errors.New("NATS is not configured"))
+		return pubsub.NewError("NATS is not configured", errors.New("NATS is not configured"))
 	}
 	return nil
 }
@@ -76,7 +63,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	)
 
 	if err := p.ensureConn(); err != nil {
-		return newError(fmt.Errorf(`failed to ensure nats connection: %w`, err))
+		return pubsub.NewError(fmt.Sprintf("failed to ensure NATS connection"), err)
 	}
 
 	if event.StreamConfiguration != nil {
@@ -85,7 +72,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 			FilterSubjects: event.Subjects,
 		})
 		if err != nil {
-			return newError(fmt.Errorf(`failed to create or update consumer "%s": %w`, event.StreamConfiguration.Consumer, err))
+			return pubsub.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
 		}
 
 		go func() {
@@ -125,7 +112,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	for i, subject := range event.Subjects {
 		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
-			return newError(fmt.Errorf(`error subscribing to NATS subject "%s": %w`, subject, err))
+			return pubsub.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
 		}
 		subscriptions[i] = subscription
 	}
@@ -158,7 +145,13 @@ func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPubl
 		zap.ByteString("data", event.Data),
 	)
 
-	return p.conn.Publish(event.Subject, event.Data)
+	err := p.conn.Publish(event.Subject, event.Data)
+	if err != nil {
+		p.logger.Error("publish error", zap.Error(err))
+		return pubsub.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
+	}
+
+	return nil
 }
 
 func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration, w io.Writer) error {
@@ -170,7 +163,8 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 
 	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
-		return newError(fmt.Errorf("error requesting NATS subject %s: %w", event.Subject, err))
+		p.logger.Error("request error", zap.Error(err))
+		return pubsub.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
 	_, err = w.Write(msg.Data)

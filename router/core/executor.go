@@ -156,7 +156,7 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 		// We want to consume the events produced after the router starts
 		// This replicates a stateless publish-subscribe model
 		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
-		// For observability, we set the client ID to the router
+		// For observability, we set the client ID to "router"
 		kgo.ClientID("router"),
 		// Ensure proper timeouts are set
 		kgo.ProduceRequestTimeout(10 * time.Second),

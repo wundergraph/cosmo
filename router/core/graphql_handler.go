@@ -320,8 +320,8 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK)
 		}
-	case errorTypeEDFSNats:
-		response.Errors[0].Message = fmt.Sprintf("EDFS NATS error: %s", err.Error())
+	case errorTypeEDFS:
+		response.Errors[0].Message = fmt.Sprintf("EDFS error: %s", err.Error())
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
