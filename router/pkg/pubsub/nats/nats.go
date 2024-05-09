@@ -63,7 +63,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	)
 
 	if err := p.ensureConn(); err != nil {
-		return pubsub.NewError(fmt.Sprintf("failed to ensure NATS connection"), err)
+		return pubsub.NewError("failed to ensure NATS connection", err)
 	}
 
 	if event.StreamConfiguration != nil {
