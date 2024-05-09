@@ -220,17 +220,8 @@ jobs:
         working-directory: ./router
         run: go mod download
 
-      - name: Run Kafka KRaft Broker
-        uses: spicyparrot/kafka-kraft-action@v1.1.0
-        with:
-          kafka-version: "3.7.0"
-
       - name: Run Integration tests
         working-directory: ./router-tests
         run: make test
         env:
           TEST_KAFKA: true
-
-      - name: Build
-        working-directory: ./router
-        run: make build

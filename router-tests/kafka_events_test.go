@@ -6,11 +6,12 @@ import (
 	"context"
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -19,25 +20,26 @@ import (
 func TestKafkaEvents(t *testing.T) {
 	// All tests are running in sequence because they are using the same kafka topic
 
-	// For testing, it manually
+	ctx := context.Background()
+	kafkaContainer, err := kafka.RunContainer(ctx, testcontainers.WithImage("confluentinc/confluent-local:7.6.1"))
+	require.NoError(t, err)
 
-	//t.Run("subscribe async", func(t *testing.T) {
-	//	topicName := "employeeUpdated"
-	//	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-	//		// ensureTopicExists(t, xEnv, topicName)
-	//		produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-	//	})
-	//})
+	require.NoError(t, kafkaContainer.Start(ctx))
 
-	if os.Getenv("TEST_KAFKA") == "" {
-		t.Skip("Skipping kafka tests")
-	}
+	seeds, err := kafkaContainer.Brokers(ctx)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, kafkaContainer.Terminate(ctx))
+	})
 
 	t.Run("subscribe async", func(t *testing.T) {
 
 		topicName := "employeeUpdated"
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topicName)
 
@@ -96,7 +98,9 @@ func TestKafkaEvents(t *testing.T) {
 
 		topicName := "employeeUpdated"
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topicName)
 
@@ -180,7 +184,9 @@ func TestKafkaEvents(t *testing.T) {
 
 		topicName := "employeeUpdated"
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topicName)
 
@@ -253,6 +259,7 @@ func TestKafkaEvents(t *testing.T) {
 		topicName := "employeeUpdated"
 
 		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
@@ -316,7 +323,9 @@ func TestKafkaEvents(t *testing.T) {
 
 		topicName := "employeeUpdated"
 
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topicName)
 
@@ -374,6 +383,7 @@ func TestKafkaEvents(t *testing.T) {
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.BlockSubscriptions = true
 			},
