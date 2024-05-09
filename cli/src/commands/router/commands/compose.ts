@@ -93,9 +93,13 @@ export default (opts: BaseCommandOptions) => {
       program.error('Failed to compose given subgraphs');
     }
 
+    const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
+      ? printSchema(result.federationResult.federatedGraphSchema)
+      : '';
     const routerConfig = buildRouterConfig({
-      fieldConfigurations: result.federationResult.fieldConfigurations,
+      federatedClientSDL,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
+      fieldConfigurations: result.federationResult.fieldConfigurations,
       schemaVersionId: '',
       subgraphs: config.subgraphs.map((s, index) => {
         const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);

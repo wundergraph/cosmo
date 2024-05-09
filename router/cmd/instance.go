@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
@@ -42,7 +43,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	logger := params.Logger
 
 	if cfg.RouterConfigPath != "" {
-		routerConfig, err = core.SerializeConfigFromFile(cfg.RouterConfigPath)
+		routerConfig, err = execution_config.SerializeConfigFromFile(cfg.RouterConfigPath)
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}

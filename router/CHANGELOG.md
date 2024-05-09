@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.85.1](https://github.com/wundergraph/cosmo/compare/router@0.85.0...router@0.85.1) (2024-05-06)
+
+### Bug Fixes
+
+* ignore unknown router execution config fields ([#767](https://github.com/wundergraph/cosmo/issues/767)) ([649a0e1](https://github.com/wundergraph/cosmo/commit/649a0e1349820642491469890f9eaa7b1134e430)) (@Aenimus)
+
+# [0.85.0](https://github.com/wundergraph/cosmo/compare/router@0.84.5...router@0.85.0) (2024-05-03)
+
+### Features
+
+* support inaccessible and add foundation for contracts ([#764](https://github.com/wundergraph/cosmo/issues/764)) ([08a7db2](https://github.com/wundergraph/cosmo/commit/08a7db222ce1763ffe8062d3792c41e0c54b4224)) (@Aenimus)
+
+## [0.84.5](https://github.com/wundergraph/cosmo/compare/router@0.84.4...router@0.84.5) (2024-05-02)
+
+### Bug Fixes
+
+* validate graphql operation in playground ([#763](https://github.com/wundergraph/cosmo/issues/763)) ([41bde5f](https://github.com/wundergraph/cosmo/commit/41bde5f06583242bbc9471e05179c1c16bb2f769)) (@thisisnithin)
+
 ## [0.84.4](https://github.com/wundergraph/cosmo/compare/router@0.84.3...router@0.84.4) (2024-04-30)
 
 ### Bug Fixes
