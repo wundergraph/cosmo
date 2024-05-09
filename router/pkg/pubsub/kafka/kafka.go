@@ -55,7 +55,7 @@ func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
 		work:          make(chan *record),
 		sub:           make(chan *subscription),
 		subscriptions: make(map[string][]*subscription),
-		mu:            sync.RWMutex{},
+		mu:            sync.Mutex{},
 	}
 
 	go ps.gc(ctx)
@@ -84,7 +84,7 @@ type pubsub struct {
 	subscriptions map[string][]*subscription
 	work          chan *record
 	sub           chan *subscription
-	mu            sync.RWMutex
+	mu            sync.Mutex
 }
 
 // gc is responsible for cleaning up the subscriptions that are no longer active.
@@ -117,7 +117,7 @@ func (p *pubsub) worker(ctx context.Context) {
 			return
 		case rec := <-p.work:
 
-			p.mu.RLock()
+			p.mu.Lock()
 			// Notify all subscriptions that are interested in the topic
 			if sub, ok := p.subscriptions[rec.topic]; ok {
 				for _, s := range sub {
@@ -128,7 +128,7 @@ func (p *pubsub) worker(ctx context.Context) {
 					}
 				}
 			}
-			p.mu.RUnlock()
+			p.mu.Unlock()
 
 		case sub := <-p.sub:
 
@@ -142,26 +142,22 @@ func (p *pubsub) worker(ctx context.Context) {
 
 func (p *pubsub) addSubscription(sub *subscription) {
 
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	for _, subject := range sub.topics {
-
-		p.mu.RLock()
 		if _, ok := p.subscriptions[subject]; !ok {
-			p.mu.RUnlock()
-
-			p.mu.Lock()
 			p.subscriptions[subject] = make([]*subscription, 0, 10)
-			p.mu.Unlock()
 		}
-
-		p.mu.Lock()
 		p.subscriptions[subject] = append(p.subscriptions[subject], sub)
-		p.mu.Unlock()
 	}
 }
 
 func (p *pubsub) garbageCollectSubscriptions() {
 
-	p.mu.RLock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	for topic, subs := range p.subscriptions {
 		// zero allocations
 		tmp := subs[:0]
@@ -170,15 +166,12 @@ func (p *pubsub) garbageCollectSubscriptions() {
 				tmp = append(tmp, sub)
 			}
 		}
-		p.mu.RUnlock()
 
-		p.mu.Lock()
 		if len(tmp) == 0 {
 			delete(p.subscriptions, topic)
 		} else {
 			p.subscriptions[topic] = tmp
 		}
-		p.mu.Unlock()
 	}
 }
 
@@ -194,7 +187,7 @@ func (p *pubsub) poll(ctx context.Context) error {
 		default:
 			// Try to fetch max records from any subscribed topics
 			// In the future, we could create a client per topic to fetch in parallel
-			fetches := p.client.PollRecords(ctx, 5_000)
+			fetches := p.client.PollRecords(ctx, 10_000)
 			if fetches.IsClientClosed() {
 				return errClientClosed
 			}

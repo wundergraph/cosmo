@@ -195,11 +195,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	ctx, cancel := context.WithCancelCause(context.Background())
 
 	if len(cfg.KafkaSeeds) == 0 {
-		if os.Getenv("KGO_SEEDS") != "" {
-			cfg.KafkaSeeds = strings.Split(os.Getenv("KGO_SEEDS"), ",")
-		} else {
-			cfg.KafkaSeeds = []string{"localhost:9092"}
-		}
+		cfg.KafkaSeeds = []string{"localhost:9092"}
 	}
 
 	var kafkaAdminClient *kadm.Client

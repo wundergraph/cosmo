@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/tidwall/gjson"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -254,6 +255,103 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("subscribe to multiple topics through a single directive", func(t *testing.T) {
+
+		topicName1 := "employeeUpdated"
+		topicName2 := "employeeUpdatedTwo"
+
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			ensureTopicExists(t, xEnv, topicName1, topicName2)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(4)
+
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
+
+				require.NoError(t, errValue)
+
+				employeeID := gjson.GetBytes(dataValue, "employeeUpdatedMyKafka.id").Int()
+
+				if employeeID == 1 {
+					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				} else if employeeID == 2 {
+					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(dataValue))
+				} else {
+					t.Errorf("unexpected employeeID %d", employeeID)
+				}
+
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				defer wg.Done()
+
+				require.NoError(t, errValue)
+
+				employeeID := gjson.GetBytes(dataValue, "employeeUpdatedMyKafka.id").Int()
+
+				if employeeID == 1 {
+					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				} else if employeeID == 2 {
+					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(dataValue))
+				} else {
+					t.Errorf("unexpected employeeID %d", employeeID)
+				}
+
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionTwoID)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			produceKafkaMessage(t, xEnv, topicName1, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			produceKafkaMessage(t, xEnv, topicName2, `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
+
+			wg.Wait()
+
+			unsubscribeErr := client.Unsubscribe(subscriptionOneID)
+			require.NoError(t, unsubscribeErr)
+
+			unsubscribeErr = client.Unsubscribe(subscriptionTwoID)
+			require.NoError(t, unsubscribeErr)
+
+			clientCloseErr := client.Close()
+			require.NoError(t, clientCloseErr)
+
+			xEnv.WaitForMessagesSent(4, time.Second*10)
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+			xEnv.WaitForConnectionCount(0, time.Second*10)
+		})
+	})
+
 	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
 
 		topicName := "employeeUpdated"
@@ -419,19 +517,19 @@ func TestKafkaEvents(t *testing.T) {
 	})
 }
 
-func ensureTopicExists(t *testing.T, xEnv *testenv.Environment, topicName string) {
+func ensureTopicExists(t *testing.T, xEnv *testenv.Environment, topics ...string) {
 	// Delete topic for idempotency
 
 	deleteCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err := xEnv.KafkaAdminClient.DeleteTopics(deleteCtx, topicName)
+	_, err := xEnv.KafkaAdminClient.DeleteTopics(deleteCtx, topics...)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err = xEnv.KafkaAdminClient.CreateTopic(ctx, 1, 1, nil, topicName)
+	_, err = xEnv.KafkaAdminClient.CreateTopics(ctx, 1, 1, nil, topics...)
 	require.NoError(t, err)
 }
 
