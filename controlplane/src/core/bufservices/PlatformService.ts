@@ -2735,17 +2735,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
-        if (!authContext.hasWriteAccess) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `The user does not have permissions to perform this operation`,
-            },
-            changes: [],
-            ignoreAll: false,
-          };
-        }
-
         const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
         if (!graph) {
@@ -2792,16 +2781,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-
-        if (!authContext.hasWriteAccess) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `The user does not have permissions to perform this operation`,
-            },
-            overrides: [],
-          };
-        }
 
         const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
