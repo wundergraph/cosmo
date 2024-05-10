@@ -13,8 +13,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  selector:
-    app: {{ .Values.istioGateway.gatewayName }}
+  selector: {{ .Values.istioGateway.selector }}
   servers:
   {{- range .Values.istioGateway.hosts }}
   - hosts:
@@ -35,30 +34,5 @@ spec:
       credentialName: {{ .credentialName }}
       mode: SIMPLE
   {{- end}}
----
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
-metadata:
-  name: {{ $fullName }}
-  labels:
-    {{- include "router.labels" . | nindent 4 }}
-  {{- with .Values.istioGateway.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-spec:
-  gateways:
-  - {{ $fullName }}
-  hosts:
-  - '*'
-  http:
-  - match:
-    - uri:
-        prefix: /
-    route:
-    - destination:
-        host: {{ $fullName }}
-        port:
-          number: {{ $svcPort }}
 {{- end }}
 {{- end }}

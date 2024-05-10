@@ -40,6 +40,12 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
+| istioGateway | object | `{"annotations":{},"hosts":[],"selector":{}}` | Requires Istio v1.5 or greater |
+| istioGateway.annotations | object | `{}` | Annotations for the Gateway |
+| istioGateway.hosts | list | `[]` | List of hosts that the gateway can serve |
+| istioGateway.selector | object | `{}` | Selectors for the Gateway deployment |
+| istioVirtualService | object | `{"annotations":{}}` | Requires Istio v1.5 or greater |
+| istioVirtualService.annotations | object | `{}` | Annotations for the VirtualService |
 | nameOverride | string | `""` | String to partially override common.names.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |

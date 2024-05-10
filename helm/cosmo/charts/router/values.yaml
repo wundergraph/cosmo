@@ -84,12 +84,27 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
+# -- Sets the [istio gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) load balancer to expose the virtual service
+# -- Requires Istio v1.5 or greater
 istioGateway:
   # enabled: true
-  # gatewayName: istio-ingress
-  # hosts:
-  #   - host: router.wundergraph.local
-  #     credentialName: istio-ingressgateway-certs
+  # -- Selectors for the Gateway deployment
+  selector: {}
+  # -- Annotations for the Gateway
+  annotations: {}
+  # -- List of hosts that the gateway can serve
+  hosts: []
+    # -- Hostname the Gateway can serve
+    # - host: router.wundergraph.local
+    # -- The name of the secret that holds the TLS certs including the CA certificates
+    #   credentialName: istio-ingressgateway-certs
+
+# -- Sets the [virtual service](https://istio.io/latest/docs/reference/config/networking/virtual-service/) to route a Gateway to the router
+# -- Requires Istio v1.5 or greater
+istioVirtualService:
+  # enabled: true
+  # -- Annotations for the VirtualService
+  annotations: {}
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
