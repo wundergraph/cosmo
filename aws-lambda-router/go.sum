@@ -270,7 +270,7 @@ github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnA
 github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
 github.com/wundergraph/cosmo/router v0.0.0-20240506080018-92e5b30c2df6 h1:SeNEyM5zbBiC6Oq/q7AdCJAyZ75xvP62HX75BOhwTeI=
 github.com/wundergraph/cosmo/router v0.0.0-20240506080018-92e5b30c2df6/go.mod h1:0Os7PmwUcmINmOUcE5TfojzCJNspl+p4Hel2UL+/zgc=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.32.0.20240510134654-097222bdb6b0 h1:wUgardXG5TBVShZNWINloqhyTFm9oPXQLabfO1yyT74=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.33 h1:PpiZlryM7yC3OPVizHWSKPgYwKbyXsHb40hdHACOkRk=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=
