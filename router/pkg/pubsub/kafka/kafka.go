@@ -143,26 +143,6 @@ func (p *kafkaPubsub) topicPoller(ctx context.Context, client *kgo.Client) error
 	}
 }
 
-func (p *kafkaPubsub) createTopicClient(topic string) (*kgo.Client, error) {
-	client, err := kgo.NewClient(append(p.opts,
-		kgo.ConsumeTopics(topic),
-		// We want to consume the events produced after the first subscription was created
-		// Messages are shared among all subscriptions, therefore old events are not redelivered
-		// This replicates a stateless publish-subscribe model
-		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
-	)...)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to create client for Kafka for topic "%s": %w`, topic, err)
-	}
-
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.clients[topic] = client
-
-	return client, nil
-}
-
 func (p *kafkaPubsub) updateTriggers(rec *record) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -203,18 +183,29 @@ func (p *kafkaPubsub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 		topic := t
 
 		// If the topic client already exists, continue
-		p.mu.RLock()
+		p.mu.Lock()
+
 		if _, ok := p.clients[topic]; ok {
-			p.mu.RUnlock()
+			p.mu.Unlock()
 			continue
 		}
-		p.mu.RUnlock()
 
 		// Create a new client for the topic
-		client, err := p.createTopicClient(topic)
+		client, err := kgo.NewClient(append(p.opts,
+			kgo.ConsumeTopics(topic),
+			// We want to consume the events produced after the first subscription was created
+			// Messages are shared among all subscriptions, therefore old events are not redelivered
+			// This replicates a stateless publish-subscribe model
+			kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
+		)...)
 		if err != nil {
-			return err
+			p.mu.Unlock()
+			return fmt.Errorf(`failed to create client for Kafka for topic "%s": %w`, topic, err)
 		}
+
+		p.clients[topic] = client
+
+		p.mu.Unlock()
 
 		go func() {
 			err := p.topicPoller(p.ctx, client)
