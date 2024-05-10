@@ -13,6 +13,8 @@ import {
   NatsStreamConfiguration,
   RequiredField,
   Scopes,
+  SubscriptionFieldCondition,
+  SubscriptionFilterCondition,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
@@ -20,6 +22,7 @@ import {
   FieldConfiguration as CompositionFieldConfiguration,
   NatsEventType as CompositionEventType,
   RequiredFieldConfiguration,
+  SubscriptionCondition,
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
@@ -180,6 +183,14 @@ export function generateFieldConfigurations(
         requiredOrScopes,
       });
     }
+    if (compositionFieldConfiguration.subscriptionFilterCondition) {
+      const subscriptionFilterCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(
+        subscriptionFilterCondition,
+        compositionFieldConfiguration.subscriptionFilterCondition,
+      );
+      fieldConfiguration.subscriptionFilterCondition = subscriptionFilterCondition;
+    }
     output.push(fieldConfiguration);
   }
   return output;
@@ -198,3 +209,42 @@ const resolveNamedTypeName = (type: TypeNode): string => {
     }
   }
 };
+
+export function generateSubscriptionFilterCondition(
+  protoMessage: SubscriptionFilterCondition,
+  condition: SubscriptionCondition,
+) {
+  if (condition.and !== undefined) {
+    const protoAndConditions: SubscriptionFilterCondition[] = [];
+    for (const andCondition of condition.and) {
+      const protoAndCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(protoAndCondition, andCondition);
+      protoAndConditions.push(protoAndCondition);
+    }
+    protoMessage.and = protoAndConditions;
+    return;
+  }
+  if (condition.in !== undefined) {
+    protoMessage.in = new SubscriptionFieldCondition({
+      fieldPath: condition.in.fieldPath,
+      values: condition.in.values,
+    });
+    return;
+  }
+  if (condition.not !== undefined) {
+    protoMessage.not = new SubscriptionFilterCondition();
+    generateSubscriptionFilterCondition(protoMessage.not, condition.not);
+    return;
+  }
+  if (condition.or !== undefined) {
+    const protoOrConditions: SubscriptionFilterCondition[] = [];
+    for (const orCondition of condition.or) {
+      const protoOrCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(protoOrCondition, orCondition);
+      protoOrConditions.push(protoOrCondition);
+    }
+    protoMessage.or = protoOrConditions;
+    return;
+  }
+  throw new Error('Fatal: Incoming SubscriptionCondition object was malformed.');
+}

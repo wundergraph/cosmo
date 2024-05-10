@@ -955,8 +955,7 @@ export function orScopesLimitError(maxOrScopes: number, hostPaths: string[]): Er
 
 export function invalidEventDrivenGraphError(errorMessages: string[]): Error {
   return new Error(
-    `An "Event Driven" graph—a subgraph that defines event driven directives ("@edfs__publish", "@edfs__request", and` +
-      ` "@edfs__publish")—must not define any resolvers.\n` +
+    `An "Event Driven" graph—a subgraph that defines event driven directives—must not define any resolvers.\n` +
       `Consequently, any "@key" definitions must also include the "resolvable: false" argument.\n` +
       `Moreover, only fields that compose part of an entity's (composite) key and are` +
       ` declared "@external" are permitted.\n` +
@@ -1240,5 +1239,12 @@ export function invalidUnionMemberTypeError(typeName: string, invalidMembers: st
 export function invalidRootTypeError(typeName: string): Error {
   return new Error(
     `Expected type "${typeName}" to be a root type but could not find its respective OperationTypeNode.`,
+  );
+}
+
+export function invalidSubscriptionFilterLocationError(path: string): Error {
+  return new Error(
+    `The directive "@openfed__subscriptionFilter" must only be defined on a subscription root field, but it was` +
+      ` defined on the path "${path}".`,
   );
 }

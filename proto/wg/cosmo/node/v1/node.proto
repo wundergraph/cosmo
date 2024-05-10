@@ -118,6 +118,7 @@ message FieldConfiguration {
   string field_name = 2;
   repeated ArgumentConfiguration arguments_configuration = 3;
   AuthorizationConfiguration authorization_configuration = 4;
+  optional SubscriptionFilterCondition subscription_filter_condition = 5;
 }
 
 enum ArgumentRenderConfiguration {
@@ -295,4 +296,16 @@ message InternedString {
 message SingleTypeField {
   string type_name = 1;
   string field_name = 2;
+}
+
+message SubscriptionFieldCondition {
+  repeated string field_path = 1;
+  repeated string values = 2;
+}
+
+message SubscriptionFilterCondition {
+  repeated SubscriptionFilterCondition and = 1;
+  optional SubscriptionFieldCondition in = 2;
+  optional SubscriptionFilterCondition not = 3;
+  repeated SubscriptionFilterCondition or = 4;
 }

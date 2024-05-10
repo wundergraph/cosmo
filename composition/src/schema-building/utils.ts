@@ -92,6 +92,7 @@ import {
   unexpectedDirectiveArgumentsErrorMessage,
 } from '../errors/errors';
 import {
+  AND_UPPER,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   DEPRECATED,
@@ -105,6 +106,7 @@ import {
   INT_SCALAR,
   KEY,
   MUTATION,
+  OR_UPPER,
   PERSISTED_CLIENT_DIRECTIVES,
   QUERY,
   REASON,
@@ -1728,4 +1730,8 @@ export function isTypeValidImplementation(
 
 export function isNodeDataInaccessible(data: NodeData | ObjectExtensionData): boolean {
   return data.persistedDirectivesData.directives.has(INACCESSIBLE);
+}
+
+export function isLeafKind(kind: Kind): boolean {
+  return kind === Kind.SCALAR_TYPE_DEFINITION || kind === Kind.ENUM_TYPE_DEFINITION;
 }

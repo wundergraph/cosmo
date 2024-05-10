@@ -133,6 +133,40 @@ type RouterEngineConfiguration struct {
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 }
 
+func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
+	if input == nil {
+		return nil
+	}
+	if input.And != nil {
+		output.And = make([]plan.SubscriptionFilterCondition, 0, len(input.And))
+		for i := range input.And {
+			output.And[i] = plan.SubscriptionFilterCondition{}
+			mapProtoFilterToPlanFilter(input.And[i], &output.And[i])
+		}
+		return output
+	}
+	if input.In != nil {
+		output.In = &plan.SubscriptionFieldCondition{
+			FieldPath: input.In.FieldPath,
+			Values:    input.In.Values,
+		}
+		return output
+	}
+	if input.Not != nil {
+		output.Not = &plan.SubscriptionFilterCondition{}
+		return mapProtoFilterToPlanFilter(input.Not, output.Not)
+	}
+	if input.Or != nil {
+		output.Or = make([]plan.SubscriptionFilterCondition, 0, len(input.Or))
+		for i := range input.Or {
+			output.Or[i] = plan.SubscriptionFilterCondition{}
+			mapProtoFilterToPlanFilter(input.Or[i], &output.Or[i])
+		}
+		return output
+	}
+	return nil
+}
+
 func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
 	var (
 		outConfig plan.Configuration
@@ -156,10 +190,11 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			args = append(args, arg)
 		}
 		fieldConfig := plan.FieldConfiguration{
-			TypeName:             configuration.TypeName,
-			FieldName:            configuration.FieldName,
-			Arguments:            args,
-			HasAuthorizationRule: l.fieldHasAuthorizationRule(configuration),
+			TypeName:                    configuration.TypeName,
+			FieldName:                   configuration.FieldName,
+			Arguments:                   args,
+			HasAuthorizationRule:        l.fieldHasAuthorizationRule(configuration),
+			SubscriptionFilterCondition: mapProtoFilterToPlanFilter(configuration.SubscriptionFilterCondition, &plan.SubscriptionFilterCondition{}),
 		}
 		outConfig.Fields = append(outConfig.Fields, fieldConfig)
 	}

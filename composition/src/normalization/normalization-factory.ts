@@ -46,6 +46,9 @@ import {
   EVENT_DRIVEN_DIRECTIVE_DEFINITIONS_BY_DIRECTIVE_NAME,
   FIELD_SET_SCALAR_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
+  SUBSCRIPTION_FIELD_CONDITION_DEFINITION,
+  SUBSCRIPTION_FILTER_CONDITION_DEFINITION,
+  SUBSCRIPTION_FILTER_DEFINITION,
   VERSION_TWO_DIRECTIVE_DEFINITIONS,
 } from '../utils/constants';
 import {
@@ -101,15 +104,16 @@ import {
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidNatsStreamInputErrorMessage,
   invalidNatsStreamInputFieldsErrorMessage,
   invalidRootTypeDefinitionError,
   invalidRootTypeError,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
-  invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
+  invalidSubscriptionFilterLocationError,
   invalidUnionMemberTypeError,
   noBaseTypeExtensionError,
   noFieldDefinitionsError,
@@ -123,9 +127,9 @@ import {
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
+  undefinedNatsStreamConfigurationInputErrorMessage,
   undefinedObjectLikeParentError,
   undefinedRequiredArgumentsErrorMessage,
-  undefinedNatsStreamConfigurationInputErrorMessage,
   undefinedTypeError,
   unexpectedKindFatalError,
 } from '../errors/errors';
@@ -172,6 +176,7 @@ import {
   SUBJECTS,
   SUBSCRIBE,
   SUBSCRIPTION,
+  SUBSCRIPTION_FILTER,
   SUCCESS,
   TOPIC,
   TOPICS,
@@ -311,8 +316,8 @@ export class NormalizationFactory {
   referencedDirectiveNames = new Set<string>();
   referencedTypeNames = new Set<string>();
   renamedParentTypeName = '';
-  warnings: string[] = [];
   subgraphName: string;
+  warnings: string[] = [];
 
   constructor(graph: MultiGraph, subgraphName?: string) {
     for (const [baseDirectiveName, baseDirectiveDefinition] of BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME) {
@@ -988,8 +993,26 @@ export class NormalizationFactory {
     };
   }
 
+  validateSubscriptionFilterDirectiveLocation(node: FieldDefinitionNode) {
+    if (!node.directives) {
+      return;
+    }
+    const parentTypeName = this.renamedParentTypeName || this.originalParentTypeName;
+    const fieldPath = `${parentTypeName}.${node.name.value}`;
+    const isSubscription = this.getOperationTypeNodeForRootTypeName(parentTypeName) === OperationTypeNode.SUBSCRIPTION;
+    for (const directiveNode of node.directives) {
+      if (directiveNode.name.value !== SUBSCRIPTION_FILTER) {
+        continue;
+      }
+      if (!isSubscription) {
+        this.errors.push(invalidSubscriptionFilterLocationError(fieldPath));
+        return;
+      }
+    }
+  }
+
   extractEventDirectivesToConfiguration(node: FieldDefinitionNode) {
-    // Validation is handled elsewhere
+    // Validation for event directives is handled elsewhere
     if (!node.directives) {
       return;
     }
@@ -998,12 +1021,14 @@ export class NormalizationFactory {
       const errorMessages: string[] = [];
       let eventConfiguration: EventConfiguration | undefined;
       switch (directive.name.value) {
-        case EDFS_KAFKA_PUBLISH:
+        case EDFS_KAFKA_PUBLISH: {
           eventConfiguration = this.getKafkaPublishConfiguration(directive, errorMessages);
           break;
-        case EDFS_KAFKA_SUBSCRIBE:
+        }
+        case EDFS_KAFKA_SUBSCRIBE: {
           eventConfiguration = this.getKafkaSubscribeConfiguration(directive, errorMessages);
           break;
+        }
         case EDFS_NATS_PUBLISH: {
           eventConfiguration = this.getNatsPublishAndRequestConfiguration(PUBLISH, directive, errorMessages);
           break;
@@ -1399,6 +1424,13 @@ export class NormalizationFactory {
         continue;
       }
       definitions.push(directiveDefinition);
+    }
+    // subscriptionFilter is temporarily valid only in an EDG
+    if (this.edfsDirectiveReferences.size > 0 && this.referencedDirectiveNames.has(SUBSCRIPTION_FILTER)) {
+      this.directiveDefinitionByDirectiveName.set(SUBSCRIPTION_FILTER, SUBSCRIPTION_FILTER_DEFINITION);
+      definitions.push(SUBSCRIPTION_FILTER_DEFINITION);
+      definitions.push(SUBSCRIPTION_FILTER_CONDITION_DEFINITION);
+      definitions.push(SUBSCRIPTION_FIELD_CONDITION_DEFINITION);
     }
     for (const directiveDefinition of this.customDirectiveDefinitions.values()) {
       definitions.push(directiveDefinition);
