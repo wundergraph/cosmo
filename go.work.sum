@@ -198,6 +198,8 @@ github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.13.0.20240319131455-d4f2d0b
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.13.0.20240319131455-d4f2d0b32791/go.mod h1:e71oBiNorTfjTi6eDRCFoIoJiFWcwiQ0eObm75VzJh0=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.17 h1:xw4RZNahoZoWj5jJXi7XYvznTXiPjYkb8iGvFa4p+vc=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.17/go.mod h1:e71oBiNorTfjTi6eDRCFoIoJiFWcwiQ0eObm75VzJh0=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.32 h1:IgHLvbraxK2tKNn/XH4XR+oLQZ7kA71DfejLfmarCrM=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.32/go.mod h1:hNR2C7S1M+c9Ap24tHCEMe9gFY9K3smX46x5E1U1NQw=
 github.com/xdg-go/pbkdf2 v1.0.0 h1:Su7DPu48wXMwC3bs7MCNG+z4FhcyEuz5dlvchbq0B0c=
 github.com/xdg-go/scram v1.1.1 h1:VOMT+81stJgXW3CpHyqHN3AXDYIMsx56mEFrB37Mb/E=
 github.com/xdg-go/stringprep v1.0.3 h1:kdwGpVNwPFtjs98xCGkHjQtGKh86rDcRZN17QEMCOIs=
