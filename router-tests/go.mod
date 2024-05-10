@@ -18,11 +18,14 @@ require (
 	github.com/redis/go-redis/v9 v9.4.0
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/stretchr/testify v1.9.0
+	github.com/testcontainers/testcontainers-go v0.29.1
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1
+	github.com/tidwall/gjson v1.17.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20240504110528-649a0e134982
 	github.com/wundergraph/cosmo/router v0.0.0-20240504110528-649a0e134982
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31.0.20240509113633-c8d15bdf4ead
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.32.0.20240510134654-097222bdb6b0
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/sdk/metric v1.24.0
@@ -117,9 +120,6 @@ require (
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sosodev/duration v1.2.0 // indirect
-	github.com/testcontainers/testcontainers-go v0.29.1 // indirect
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1 // indirect
-	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect

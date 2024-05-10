@@ -20,17 +20,23 @@ prerequisites: setup-dev-tools
 
 infra-up: dc-dev
 
+edfs-infra-up:
+	docker compose -f docker-compose.yml --profile edfs up --remove-orphans --detach
+
+edfs-infra-down:
+	docker compose -f docker-compose.yml --profile edfs down --remove-orphans
+
 infra-down:
-	docker compose -f docker-compose.yml down --remove-orphans
+	docker compose -f docker-compose.yml --profile dev down --remove-orphans
 
 infra-build:
-	docker compose -f docker-compose.yml build
+	docker compose -f docker-compose.yml --profile dev build
 
 infra-restart:
-	docker compose -f docker-compose.yml down && make infra-up
+	docker compose -f docker-compose.yml --profile dev down && make infra-up
 
 infra-down-v:
-	docker compose -f docker-compose.yml down --remove-orphans -v
+	docker compose -f docker-compose.yml --profile dev down --remove-orphans -v
 
 seed:
 	pnpm -r run --filter './controlplane' seed
@@ -86,7 +92,7 @@ start-router:
 	(cd router && make dev)
 
 dc-dev:
-	docker compose --file docker-compose.yml up --remove-orphans --detach --build
+	docker compose --file docker-compose.yml --profile dev up --remove-orphans --detach --build
 
 dc-stack:
 	docker compose --file docker-compose.cosmo.yml up --remove-orphans --detach

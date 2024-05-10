@@ -153,9 +153,6 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(eventSource.Brokers...),
-		// We want to consume the events produced after the router starts
-		// This replicates a stateless publish-subscribe model
-		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
 		// For observability, we set the client ID to "router"
 		kgo.ClientID("router"),
 		// Ensure proper timeouts are set
@@ -241,12 +238,12 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 					if err != nil {
 						return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
 					}
-					client, err := kgo.NewClient(options...)
+					ps, err := kafka.NewConnector(b.logger, options)
 					if err != nil {
-						return nil, fmt.Errorf("failed to create client for Kafka provider with ID \"%s\": %w", providerID, err)
+						return nil, fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", providerID, err)
 					}
 
-					kafkaPubSubByProviderID[providerID] = kafka.NewConnector(b.logger, client).New(ctx)
+					kafkaPubSubByProviderID[providerID] = ps.New(ctx)
 
 					break
 				}

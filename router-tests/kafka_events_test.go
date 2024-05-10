@@ -18,6 +18,15 @@ import (
 	"time"
 )
 
+//func TestLocalKafka(t *testing.T) {
+//	t.Run("subscribe async", func(t *testing.T) {
+//		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+//			// ensureTopicExists(t, xEnv, "employeeUpdated", "employeeUpdatedTwo")
+//			produceKafkaMessage(t, xEnv, "employeeUpdated", `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+//		})
+//	})
+//}
+
 func TestKafkaEvents(t *testing.T) {
 	// All tests are running in sequence because they are using the same kafka topic
 
@@ -36,13 +45,13 @@ func TestKafkaEvents(t *testing.T) {
 
 	t.Run("subscribe async", func(t *testing.T) {
 
-		topicName := "employeeUpdated"
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
 			KafkaSeeds: seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			ensureTopicExists(t, xEnv, topicName)
+			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -87,7 +96,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
@@ -97,13 +106,13 @@ func TestKafkaEvents(t *testing.T) {
 
 	t.Run("message and resolve errors should not abort the subscription", func(t *testing.T) {
 
-		topicName := "employeeUpdated"
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
 			KafkaSeeds: seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			ensureTopicExists(t, xEnv, topicName)
+			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -156,16 +165,16 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			produceKafkaMessage(t, xEnv, topicName, ``) // Empty message
+			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 
-			produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 
-			produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
 			xEnv.WaitForMessagesSent(3, time.Second*10)
 
-			produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			xEnv.WaitForMessagesSent(4, time.Second*10)
 
 			wg.Wait()
@@ -183,13 +192,13 @@ func TestKafkaEvents(t *testing.T) {
 
 	t.Run("every subscriber gets the message", func(t *testing.T) {
 
-		topicName := "employeeUpdated"
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
 			KafkaSeeds: seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			ensureTopicExists(t, xEnv, topicName)
+			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -247,7 +256,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
@@ -257,14 +266,13 @@ func TestKafkaEvents(t *testing.T) {
 
 	t.Run("subscribe to multiple topics through a single directive", func(t *testing.T) {
 
-		topicName1 := "employeeUpdated"
-		topicName2 := "employeeUpdatedTwo"
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
 			KafkaSeeds: seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			ensureTopicExists(t, xEnv, topicName1, topicName2)
+			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -332,8 +340,8 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			produceKafkaMessage(t, xEnv, topicName1, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-			produceKafkaMessage(t, xEnv, topicName2, `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
 			wg.Wait()
 
@@ -354,7 +362,7 @@ func TestKafkaEvents(t *testing.T) {
 
 	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
 
-		topicName := "employeeUpdated"
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
 			KafkaSeeds: seeds,
@@ -364,7 +372,7 @@ func TestKafkaEvents(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			ensureTopicExists(t, xEnv, topicName)
+			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -409,7 +417,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
@@ -419,13 +427,13 @@ func TestKafkaEvents(t *testing.T) {
 
 	t.Run("subscribe sync sse", func(t *testing.T) {
 
-		topicName := "employeeUpdated"
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
 			KafkaSeeds: seeds,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			ensureTopicExists(t, xEnv, topicName)
+			ensureTopicExists(t, xEnv, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -466,7 +474,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			produceKafkaMessage(t, xEnv, topicName, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			wg.Wait()
 
