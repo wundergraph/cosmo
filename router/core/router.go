@@ -7,6 +7,12 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"net"
 	"net/http"
 	"net/url"
@@ -108,6 +114,11 @@ type (
 		ClientAuth *TlsClientAuthConfig
 	}
 
+	EnginePubSubProviders struct {
+		nats  map[string]pubsub_datasource.NatsPubSub
+		kafka map[string]pubsub_datasource.KafkaPubSub
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		clusterName              string
@@ -199,6 +210,7 @@ type (
 		rootContextCancel func()
 		routerConfig      *nodev1.RouterConfig
 		healthChecks      health.Checker
+		pubSubProviders   *EnginePubSubProviders
 	}
 
 	// Option defines the method to customize server.
@@ -835,6 +847,84 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
+func (r *Router) buildPubSubConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*EnginePubSubProviders, error) {
+
+	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub)
+	kafkaPubSubByProviderID := make(map[string]pubsub_datasource.KafkaPubSub)
+
+	datasourceConfigurations := routerCfg.EngineConfig.GetDatasourceConfigurations()
+	for _, datasourceConfiguration := range datasourceConfigurations {
+		if datasourceConfiguration.CustomEvents == nil {
+			continue
+		}
+
+		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
+
+			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+			// if this source name's provider has already been initiated, do not try to initiate again
+			_, ok := natsPubSubByProviderID[providerID]
+			if ok {
+				continue
+			}
+
+			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
+				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
+					options, err := buildNatsOptions(eventSource)
+					if err != nil {
+						return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
+					}
+					natsConnection, err := nats.Connect(eventSource.URL, options...)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
+					}
+					js, err := jetstream.New(natsConnection)
+					if err != nil {
+						return nil, err
+					}
+
+					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(r.logger, natsConnection, js).New(ctx)
+
+					break
+				}
+			}
+		}
+
+		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
+
+			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+			// if this source name's provider has already been initiated, do not try to initiate again
+			_, ok := kafkaPubSubByProviderID[providerID]
+			if ok {
+				continue
+			}
+
+			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
+
+				if eventSource.ID == providerID {
+					options, err := buildKafkaOptions(eventSource)
+					if err != nil {
+						return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
+					}
+					ps, err := kafka.NewConnector(r.logger, options)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", providerID, err)
+					}
+
+					kafkaPubSubByProviderID[providerID] = ps.New(ctx)
+
+					break
+				}
+			}
+		}
+
+	}
+
+	return &EnginePubSubProviders{
+		nats:  natsPubSubByProviderID,
+		kafka: kafkaPubSubByProviderID,
+	}, nil
+}
+
 // newServer creates a new server instance.
 // All stateful data is copied from the Router over to the new server instance. Not safe for concurrent use.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
@@ -1043,7 +1133,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
 	}
 
-	executor, err := ecb.Build(rootContext, routerConfig, routerEngineConfig, r.WebsocketStats)
+	pubSubProviders, err := r.buildPubSubConfiguration(ctx, routerConfig, routerEngineConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
+	}
+	ro.pubSubProviders = pubSubProviders
+
+	executor, err := ecb.Build(rootContext, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -1365,6 +1461,23 @@ func (r *server) Shutdown(ctx context.Context) error {
 		// HTTP server shutdown
 		if err := r.httpServer.Shutdown(ctx); err != nil {
 			return err
+		}
+	}
+
+	if r.pubSubProviders != nil {
+		for _, pubSub := range r.pubSubProviders.nats {
+			if p, ok := pubSub.(pubsub.Lifecycle); ok {
+				if err := p.Shutdown(ctx); err != nil {
+					return err
+				}
+			}
+		}
+		for _, pubSub := range r.pubSubProviders.kafka {
+			if p, ok := pubSub.(pubsub.Lifecycle); ok {
+				if err := p.Shutdown(ctx); err != nil {
+					return err
+				}
+			}
 		}
 	}
 

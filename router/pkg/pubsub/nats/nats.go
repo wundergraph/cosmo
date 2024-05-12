@@ -2,21 +2,21 @@ package nats
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"io"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"sync"
 )
 
 var (
 	_ pubsub_datasource.NatsConnector = (*connector)(nil)
 	_ pubsub_datasource.NatsPubSub    = (*natsPubSub)(nil)
+	_ pubsub.Lifecycle                = (*natsPubSub)(nil)
 )
 
 type connector struct {
@@ -35,25 +35,20 @@ func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream) p
 
 func (c *connector) New(ctx context.Context) pubsub_datasource.NatsPubSub {
 	return &natsPubSub{
-		ctx:    ctx,
-		conn:   c.conn,
-		js:     c.js,
-		logger: c.logger.With(zap.String("pubsub", "nats")),
+		ctx:     ctx,
+		conn:    c.conn,
+		js:      c.js,
+		logger:  c.logger.With(zap.String("pubsub", "nats")),
+		closeWg: sync.WaitGroup{},
 	}
 }
 
 type natsPubSub struct {
-	ctx    context.Context
-	conn   *nats.Conn
-	logger *zap.Logger
-	js     jetstream.JetStream
-}
-
-func (p *natsPubSub) ensureConn() error {
-	if p.conn == nil {
-		return pubsub.NewError("NATS is not configured", errors.New("NATS is not configured"))
-	}
-	return nil
+	ctx     context.Context
+	conn    *nats.Conn
+	logger  *zap.Logger
+	js      jetstream.JetStream
+	closeWg sync.WaitGroup
 }
 
 func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.NatsSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
@@ -61,10 +56,6 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 		zap.Strings("subjects", event.Subjects),
 		zap.String("providerID", event.ProviderID),
 	)
-
-	if err := p.ensureConn(); err != nil {
-		return pubsub.NewError("failed to ensure NATS connection", err)
-	}
 
 	if event.StreamConfiguration != nil {
 		consumer, err := p.js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, jetstream.ConsumerConfig{
@@ -75,13 +66,23 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 			return pubsub.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
 		}
 
+		p.closeWg.Add(1)
+
 		go func() {
+
+			defer p.closeWg.Done()
+
 			for {
 				select {
+				case <-p.ctx.Done():
+					// When the application context is done, we stop the subscription
+					return
+
 				case <-ctx.Done():
+					// When the subscription context is done, we stop the subscription
 					return
 				default:
-					msgBatch, consumerFetchErr := consumer.FetchNoWait(100)
+					msgBatch, consumerFetchErr := consumer.FetchNoWait(300)
 					if consumerFetchErr != nil {
 						p.logger.Error("error fetching messages", zap.Error(consumerFetchErr))
 						return
@@ -112,22 +113,40 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	for i, subject := range event.Subjects {
 		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
+			p.logger.Error("error subscribing to NATS subject", zap.Error(err), zap.String("subject", subject))
 			return pubsub.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
 		}
 		subscriptions[i] = subscription
 	}
 
+	p.closeWg.Add(1)
+
 	go func() {
+		defer p.closeWg.Done()
+
 		for {
 			select {
 			case msg := <-msgChan:
 				p.logger.Debug("subscription update", zap.String("subject", msg.Subject), zap.ByteString("data", msg.Data))
 
 				updater.Update(msg.Data)
-			case <-ctx.Done():
+			case <-p.ctx.Done():
+				// When the application context is done, we stop the subscriptions
 				for _, subscription := range subscriptions {
 					if err := subscription.Unsubscribe(); err != nil {
-						p.logger.Error("error unsubscribing from NATS subject", zap.Error(err))
+						p.logger.Error("error unsubscribing from NATS subject after application context cancellation",
+							zap.Error(err), zap.String("subject", subscription.Subject),
+						)
+					}
+				}
+				return
+			case <-ctx.Done():
+				// When the subscription context is done, we stop the subscription
+				for _, subscription := range subscriptions {
+					if err := subscription.Unsubscribe(); err != nil {
+						p.logger.Error("error unsubscribing from NATS subject after subscription context cancellation",
+							zap.Error(err), zap.String("subject", subscription.Subject),
+						)
 					}
 				}
 				return
@@ -170,4 +189,13 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 	_, err = w.Write(msg.Data)
 
 	return err
+}
+
+func (p *natsPubSub) Shutdown(_ context.Context) error {
+	// Wait for all subscriptions to be closed
+	p.closeWg.Wait()
+
+	p.conn.Close()
+
+	return nil
 }

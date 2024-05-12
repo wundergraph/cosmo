@@ -18,14 +18,16 @@ import (
 	"time"
 )
 
-//func TestLocalKafka(t *testing.T) {
-//	t.Run("subscribe async", func(t *testing.T) {
-//		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-//			// ensureTopicExists(t, xEnv, "employeeUpdated", "employeeUpdatedTwo")
-//			produceKafkaMessage(t, xEnv, "employeeUpdated", `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-//		})
-//	})
-//}
+func TestLocalKafka(t *testing.T) {
+	t.Skip("skip only for local testing")
+
+	t.Run("subscribe async", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			//ensureTopicExists(t, xEnv, "employeeUpdated", "employeeUpdatedTwo")
+			produceKafkaMessage(t, xEnv, "employeeUpdated", `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
+		})
+	})
+}
 
 func TestKafkaEvents(t *testing.T) {
 	// All tests are running in sequence because they are using the same kafka topic
