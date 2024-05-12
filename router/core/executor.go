@@ -137,7 +137,7 @@ func buildNatsOptions(eventSource config.NatsEventSource) ([]nats.Option, error)
 	if eventSource.Authentication != nil {
 		if eventSource.Authentication.Token != nil {
 			opts = append(opts, nats.Token(*eventSource.Authentication.Token))
-		} else if eventSource.Authentication.UserInfo.Username != nil && &eventSource.Authentication.UserInfo.Password != nil {
+		} else if eventSource.Authentication.UserInfo.Username != nil && eventSource.Authentication.UserInfo.Password != nil {
 			opts = append(opts, nats.UserInfo(*eventSource.Authentication.UserInfo.Username, *eventSource.Authentication.UserInfo.Password))
 		}
 	}
@@ -164,10 +164,10 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 		)
 	}
 
-	if eventSource.Authentication != nil && eventSource.Authentication.Username != nil && eventSource.Authentication.Password != nil {
+	if eventSource.Authentication != nil && eventSource.Authentication.Plain.Username != nil && eventSource.Authentication.Plain.Password != nil {
 		opts = append(opts, kgo.SASL(plain.Auth{
-			User: *eventSource.Authentication.Username,
-			Pass: *eventSource.Authentication.Password,
+			User: *eventSource.Authentication.Plain.Username,
+			Pass: *eventSource.Authentication.Plain.Password,
 		}.AsMechanism()))
 	}
 

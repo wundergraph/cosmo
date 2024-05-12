@@ -243,8 +243,10 @@
             "localhost:9092"
           ],
           "Authentication": {
-            "Password": "admin",
-            "Username": "admin"
+            "Plain": {
+              "Password": "admin",
+              "Username": "admin"
+            }
           },
           "TLS": {
             "Enabled": true

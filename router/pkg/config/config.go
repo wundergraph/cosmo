@@ -276,7 +276,7 @@ type KafkaSASLPlainAuthentication struct {
 }
 
 type KafkaAuthentication struct {
-	KafkaSASLPlainAuthentication `yaml:"plain,omitempty"`
+	Plain KafkaSASLPlainAuthentication `yaml:"plain,omitempty"`
 }
 
 type KafkaTLSConfiguration struct {
