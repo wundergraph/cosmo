@@ -203,12 +203,8 @@ type (
 	// server is the main router instance.
 	server struct {
 		Config
-		httpServer  *http.Server
-		metricStore rmetric.Store
-		// context that is used to cancel subcomponents that aren't directly controlled by the server
-		context context.Context
-		// contextCancel is the cancel function for the context. Should be called after graceful shutdown
-		contextCancel   func()
+		httpServer      *http.Server
+		metricStore     rmetric.Store
 		routerConfig    *nodev1.RouterConfig
 		healthChecks    health.Checker
 		pubSubProviders *EnginePubSubProviders
@@ -552,6 +548,14 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 
 		if err := r.activeServer.Shutdown(ctx); err != nil {
 			r.logger.Error("Could not shutdown router", zap.Error(err))
+
+			if errors.Is(err, context.DeadlineExceeded) {
+				r.logger.Warn(
+					"Shutdown deadline exceeded. Router took too long to shutdown. Consider increasing the grace period",
+					zap.Duration("grace_period", r.gracePeriod),
+				)
+			}
+
 			return nil, err
 		}
 	}
@@ -563,8 +567,10 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 }
 
 func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterConfig) error {
+	serverContext, serverContextCancel := context.WithCancel(ctx)
 
-	if _, err := r.UpdateServer(ctx, cfg); err != nil {
+	if _, err := r.UpdateServer(serverContext, cfg); err != nil {
+		serverContextCancel()
 		return err
 	}
 
@@ -573,7 +579,12 @@ func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterCon
 
 	// Start new server
 	go func() {
-		r.logger.Info("Server listening",
+
+		// Cancel server context when the server is stopped. This cancels e.g. websocket
+		// poller, engine, etc.
+		defer serverContextCancel()
+
+		r.logger.Info("Server listening and serving",
 			zap.String("listen_addr", r.listenAddr),
 			zap.Bool("playground", r.playground),
 			zap.Bool("introspection", r.introspection),
@@ -852,7 +863,7 @@ func (r *Router) Start(ctx context.Context) error {
 	r.logger.Info("Polling for router config updates in the background")
 
 	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
-		r.logger.Info("Router config has changed, upgrading server",
+		r.logger.Info("Router execution config has changed, upgrading server",
 			zap.String("old_version", oldVersion),
 			zap.String("new_version", newConfig.GetVersion()),
 		)
@@ -952,13 +963,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, err
 	}
 
-	serverContext, serverContextCancel := context.WithCancel(ctx)
 	ro := &server{
-		context:       serverContext,
-		contextCancel: serverContextCancel,
-		routerConfig:  routerConfig,
-		Config:        r.Config,
-		metricStore:   rmetric.NewNoopMetrics(),
+		routerConfig: routerConfig,
+		Config:       r.Config,
+		metricStore:  rmetric.NewNoopMetrics(),
 	}
 
 	baseAttributes := []attribute.KeyValue{
@@ -1158,7 +1166,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 	ro.pubSubProviders = pubSubProviders
 
-	executor, err := ecb.Build(serverContext, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats)
+	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -1258,7 +1266,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	graphqlChiRouter := chi.NewRouter()
 
 	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(serverContext, WebsocketMiddlewareOptions{
+		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
 			OperationProcessor:         operationParser,
 			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
@@ -1472,14 +1480,10 @@ func (s *server) Shutdown(ctx context.Context) error {
 		s.logger.Error("Failed to flush metric store", zap.Error(err))
 	}
 
-	// This will cancel all other components related to the server e.g. pools,
-	// engine, etc. It has to be called after the server is shutdown. In case of a
-	// grace period (30s by default), we will cancel everything after the grace
-	// period. Only in that way, we can ensure that the server has everything to
-	// finish all requests.
-	defer s.contextCancel()
-
 	if s.pubSubProviders != nil {
+
+		s.logger.Info("Shutting down pubsub providers")
+
 		for _, pubSub := range s.pubSubProviders.nats {
 			if p, ok := pubSub.(pubsub.Lifecycle); ok {
 				if err := p.Shutdown(ctx); err != nil {

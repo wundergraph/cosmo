@@ -198,6 +198,10 @@ func (p *natsPubSub) flush(ctx context.Context) error {
 
 func (p *natsPubSub) Shutdown(ctx context.Context) error {
 
+	if p.conn.IsClosed() {
+		return nil
+	}
+
 	var err error
 
 	fErr := p.flush(ctx)
