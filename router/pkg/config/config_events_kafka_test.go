@@ -21,7 +21,7 @@ events:
         tls:
           enabled: true
         authentication:
-          plain:
+          sasl_plain:
             username: "admin"
             password: "admin"
 
@@ -45,7 +45,7 @@ events:
         brokers:
           - "localhost:9092"
         authentication:
-          plain:
+          sasl_plain:
             username: "admin"
             password: "admin"
 
@@ -69,7 +69,7 @@ events:
         brokers:
           - "localhost:9092"
         authentication:
-          plain:
+          sasl_plain:
             username: "admin"
 
 `)
@@ -92,7 +92,7 @@ events:
         brokers:
           - "localhost:9092"
         authentication:
-          plain:
+          sasl_plain:
             password: "admin"
 
 `)

@@ -243,7 +243,7 @@
             "localhost:9092"
           ],
           "Authentication": {
-            "Plain": {
+            "SASLPlain": {
               "Password": "admin",
               "Username": "admin"
             }

@@ -935,7 +935,7 @@
                     "oneOf": [{
                       "type": "object",
                       "properties": {
-                        "plain": {
+                        "sasl_plain": {
                           "type": "object",
                           "description": "Plain SASL Authentication configuration for the Kafka provider.",
                           "additionalProperties": false,

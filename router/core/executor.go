@@ -164,10 +164,10 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 		)
 	}
 
-	if eventSource.Authentication != nil && eventSource.Authentication.Plain.Username != nil && eventSource.Authentication.Plain.Password != nil {
+	if eventSource.Authentication != nil && eventSource.Authentication.SASLPlain.Username != nil && eventSource.Authentication.SASLPlain.Password != nil {
 		opts = append(opts, kgo.SASL(plain.Auth{
-			User: *eventSource.Authentication.Plain.Username,
-			Pass: *eventSource.Authentication.Plain.Password,
+			User: *eventSource.Authentication.SASLPlain.Username,
+			Pass: *eventSource.Authentication.SASLPlain.Password,
 		}.AsMechanism()))
 	}
 
