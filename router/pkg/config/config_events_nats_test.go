@@ -18,7 +18,7 @@ events:
       - id: default
         url: "nats://localhost:4222"
         authentication:
-          userInfo:
+          user_info:
             password: "password"
 `)
 
@@ -40,7 +40,7 @@ events:
       - id: default
         url: "nats://localhost:4222"
         authentication:
-          userInfo:
+          user_info:
             username: "admin"
 `)
 	_, err := LoadConfig(f, "")
@@ -81,7 +81,7 @@ events:
       - id: default
         url: "nats://localhost:4222"
         authentication:
-          userInfo:
+          user_info:
             username: "username"
             password: "password"
 

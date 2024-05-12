@@ -260,7 +260,7 @@ type NatsCredentialsAuthentication struct {
 }
 
 type NatsAuthentication struct {
-	UserInfo                     NatsCredentialsAuthentication `yaml:"userInfo"`
+	UserInfo                     NatsCredentialsAuthentication `yaml:"user_info"`
 	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 

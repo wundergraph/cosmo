@@ -876,7 +876,7 @@
                     }, {
                       "type": "object",
                       "properties": {
-                        "userInfo": {
+                        "user_info": {
                           "type": "object",
                           "description": "Userinfo configuration for the NATS provider.",
                           "additionalProperties": false,
