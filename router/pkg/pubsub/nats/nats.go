@@ -2,6 +2,7 @@ package nats
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -197,9 +198,12 @@ func (p *natsPubSub) flush(ctx context.Context) error {
 
 func (p *natsPubSub) Shutdown(ctx context.Context) error {
 
-	err := p.flush(ctx)
-	if err != nil {
+	var err error
+
+	fErr := p.flush(ctx)
+	if fErr != nil {
 		p.logger.Error("error flushing NATS connection", zap.Error(err))
+		err = errors.Join(err, fErr)
 	}
 
 	p.conn.Close()
@@ -207,5 +211,5 @@ func (p *natsPubSub) Shutdown(ctx context.Context) error {
 	// Wait for all subscriptions to be closed
 	p.closeWg.Wait()
 
-	return nil
+	return err
 }
