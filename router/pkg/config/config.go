@@ -250,7 +250,7 @@ type CDNConfiguration struct {
 	CacheSize BytesString `yaml:"cache_size,omitempty" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
 }
 
-type NatTokenBasedAuthentication struct {
+type NatsTokenBasedAuthentication struct {
 	Token *string `yaml:"token,omitempty"`
 }
 
@@ -260,8 +260,8 @@ type NatsCredentialsAuthentication struct {
 }
 
 type NatsAuthentication struct {
-	NatsCredentialsAuthentication `yaml:",inline"`
-	NatTokenBasedAuthentication   `yaml:",inline"`
+	UserInfo                     NatsCredentialsAuthentication `yaml:"userInfo"`
+	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
 type NatsEventSource struct {
@@ -270,13 +270,13 @@ type NatsEventSource struct {
 	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
 }
 
-type KafkaSASLAuthentication struct {
+type KafkaSASLPlainAuthentication struct {
 	Password *string `yaml:"password,omitempty"`
 	Username *string `yaml:"username,omitempty"`
 }
 
 type KafkaAuthentication struct {
-	KafkaSASLAuthentication `yaml:",inline"`
+	KafkaSASLPlainAuthentication `yaml:"plain,omitempty"`
 }
 
 type KafkaTLSConfiguration struct {

@@ -1,4 +1,4 @@
-# config.yaml
+# yaml-language-server: $schema=./pkg/config/config.schema.json
 
 # See pkg/config/config.go for the full list of configuration options.
 # This file is used to debugging purposes only.
@@ -20,7 +20,18 @@ events:
         url: "nats://localhost:4222"
       - id: my-nats
         url: "nats://localhost:4222"
+        authentication:
+          # token: "token"
+          userInfo:
+            username: "admin"
+            password: "admin"
     kafka:
       - id: my-kafka
         brokers:
           - "localhost:9092"
+        tls:
+          enabled: true
+        authentication:
+          plain:
+            username: "admin"
+            password: "admin"

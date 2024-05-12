@@ -137,8 +137,8 @@ func buildNatsOptions(eventSource config.NatsEventSource) ([]nats.Option, error)
 	if eventSource.Authentication != nil {
 		if eventSource.Authentication.Token != nil {
 			opts = append(opts, nats.Token(*eventSource.Authentication.Token))
-		} else if eventSource.Authentication.Username != nil || eventSource.Authentication.Password != nil {
-			opts = append(opts, nats.UserInfo(*eventSource.Authentication.Username, *eventSource.Authentication.Password))
+		} else if eventSource.Authentication.UserInfo.Username != nil && &eventSource.Authentication.UserInfo.Password != nil {
+			opts = append(opts, nats.UserInfo(*eventSource.Authentication.UserInfo.Username, *eventSource.Authentication.UserInfo.Password))
 		}
 	}
 

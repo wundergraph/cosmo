@@ -850,8 +850,8 @@
               "description": "The NATS configuration. The NATS is used to configure the event-driven federated subscriptions.",
               "items": {
                 "type": "object",
-                "additionalProperties": false,
                 "required": ["id", "url"],
+                "additionalProperties": false,
                 "properties": {
                   "id": {
                     "type": "string",
@@ -863,36 +863,37 @@
                     "format": "url"
                   },
                   "authentication": {
-                    "type": "object",
                     "description": "Authentication configuration for the NATS provider.",
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": ["token"],
-                        "properties": {
-                          "token": {
-                            "type": "string",
-                            "description": "The token for token-based authentication."
-                          }
+                    "type": "object",
+                    "oneOf": [{
+                      "required": ["token"],
+                      "properties": {
+                        "token": {
+                          "type": "string",
+                          "description": "The token for token-based authentication."
                         }
-                      },
-                      {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": ["username", "password"],
-                        "properties": {
-                          "username": {
-                            "type": "string",
-                            "description": "The username for username/password-based authentication."
-                          },
-                          "password": {
-                            "type": "string",
-                            "description": "The password for username/password-based authentication."
+                      }
+                    }, {
+                      "type": "object",
+                      "properties": {
+                        "userInfo": {
+                          "type": "object",
+                          "description": "Userinfo configuration for the NATS provider.",
+                          "additionalProperties": false,
+                          "required": ["username", "password"],
+                          "properties": {
+                            "username": {
+                              "type": "string",
+                              "description": "The username for username/password-based authentication."
+                            },
+                            "password": {
+                              "type": "string",
+                              "description": "The password for username/password-based authentication."
+                            }
                           }
                         }
                       }
-                    ]
+                    }]
                   }
                 }
               }
@@ -930,25 +931,28 @@
                   },
                   "authentication": {
                     "type": "object",
-                    "description": "Authentication configuration for the Kafka provider.",
-                    "properties": {},
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": ["username", "password"],
-                        "properties": {
-                          "username": {
-                            "type": "string",
-                            "description": "The username for username/password-based authentication."
-                          },
-                          "password": {
-                            "type": "string",
-                            "description": "The password for username/password-based authentication."
+                    "description": "SASL Authentication configuration for the Kafka provider.",
+                    "oneOf": [{
+                      "type": "object",
+                      "properties": {
+                        "plain": {
+                          "type": "object",
+                          "description": "Plain SASL Authentication configuration for the Kafka provider.",
+                          "additionalProperties": false,
+                          "required": ["username", "password"],
+                          "properties": {
+                            "username": {
+                              "type": "string",
+                              "description": "The username for plain SASL authentication."
+                            },
+                            "password": {
+                              "type": "string",
+                              "description": "The password for plain SASL authentication."
+                            }
                           }
                         }
                       }
-                    ]
+                    }]
                   }
                 }
               }

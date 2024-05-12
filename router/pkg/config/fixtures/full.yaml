@@ -182,13 +182,27 @@ cdn:
   cache_size: 100MB
 
 events:
-  sources:
-    default:
-      provider: NATS
-      url: "nats://localhost:4222"
-    another-nats:
-      provider: NATS
-      url: "nats://localhost:4223"
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+      - id: my-nats
+        url: "nats://localhost:4222"
+        authentication:
+          # token: "token"
+          userInfo:
+            username: "admin"
+            password: "admin"
+    kafka:
+      - id: my-kafka
+        brokers:
+          - "localhost:9092"
+        tls:
+          enabled: true
+        authentication:
+          plain:
+            username: "admin"
+            password: "admin"
 
 engine:
   enable_single_flight: true
