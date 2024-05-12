@@ -164,6 +164,7 @@ type (
 		routerTrafficConfig      *config.RouterTrafficConfiguration
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
+		redisClient              *redis.Client
 		processStartTime         time.Time
 		developmentMode          bool
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
@@ -204,21 +205,21 @@ type (
 		Config
 		httpServer  *http.Server
 		metricStore rmetric.Store
-		// rootContext that all services depending on the router should
-		// use as a parent context
-		rootContext       context.Context
-		rootContextCancel func()
-		routerConfig      *nodev1.RouterConfig
-		healthChecks      health.Checker
-		pubSubProviders   *EnginePubSubProviders
+		// context that is used to cancel subcomponents that aren't directly controlled by the server
+		context context.Context
+		// contextCancel is the cancel function for the context. Should be called after graceful shutdown
+		contextCancel   func()
+		routerConfig    *nodev1.RouterConfig
+		healthChecks    health.Checker
+		pubSubProviders *EnginePubSubProviders
 	}
 
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
 
-func (r *server) BaseURL() string {
-	return r.baseURL
+func (s *server) BaseURL() string {
+	return s.baseURL
 }
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
@@ -540,6 +541,15 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 
 	// Shutdown old server
 	if r.activeServer != nil {
+
+		// Respect grace period
+		if r.gracePeriod > 0 {
+			ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
+			defer cancel()
+
+			ctx = ctxWithTimer
+		}
+
 		if err := r.activeServer.Shutdown(ctx); err != nil {
 			r.logger.Error("Could not shutdown router", zap.Error(err))
 			return nil, err
@@ -782,6 +792,15 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
 
+	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
+		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
+		if err != nil {
+			return fmt.Errorf("failed to parse the redis connection url: %w", err)
+		}
+
+		r.redisClient = redis.NewClient(options)
+	}
+
 	if r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
 		r.WebsocketStats = NewWebSocketStats(ctx, r.logger)
 	}
@@ -933,13 +952,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, err
 	}
 
-	rootContext, rootContextCancel := context.WithCancel(ctx)
+	serverContext, serverContextCancel := context.WithCancel(ctx)
 	ro := &server{
-		rootContext:       rootContext,
-		rootContextCancel: rootContextCancel,
-		routerConfig:      routerConfig,
-		Config:            r.Config,
-		metricStore:       rmetric.NewNoopMetrics(),
+		context:       serverContext,
+		contextCancel: serverContextCancel,
+		routerConfig:  routerConfig,
+		Config:        r.Config,
+		metricStore:   rmetric.NewNoopMetrics(),
 	}
 
 	baseAttributes := []attribute.KeyValue{
@@ -1139,7 +1158,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 	ro.pubSubProviders = pubSubProviders
 
-	executor, err := ecb.Build(rootContext, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats)
+	executor, err := ecb.Build(serverContext, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -1186,21 +1205,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		EngineLoaderHooks:                      NewEngineRequestHooks(ro.metricStore),
 	}
 
-	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
+	if r.Config.redisClient != nil {
 		handlerOpts.RateLimitConfig = r.Config.rateLimit
-		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
-		}
-
-		client := redis.NewClient(options)
-
-		err = client.FlushDB(rootContext).Err()
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to redis: %w", err)
-		}
 		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
-			RedisClient: client,
+			RedisClient: r.Config.redisClient,
 			Debug:       r.Config.rateLimit.Debug,
 		})
 		r.logger.Info("Rate limiting enabled",
@@ -1250,7 +1258,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	graphqlChiRouter := chi.NewRouter()
 
 	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
+		wsMiddleware := NewWebsocketMiddleware(serverContext, WebsocketMiddlewareOptions{
 			OperationProcessor:         operationParser,
 			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
@@ -1288,7 +1296,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	graphqlChiRouter.Post("/", graphqlHandler.ServeHTTP)
 
-	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
+	// Serve GraphQL. MetricStore are collected after the request is handled and classified as a GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
 
 	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
@@ -1321,14 +1329,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
-func (r *server) listenAndServe() error {
-	if r.tlsConfig != nil && r.tlsConfig.Enabled {
+func (s *server) listenAndServe() error {
+	if s.tlsConfig != nil && s.tlsConfig.Enabled {
 		// Leave the cert and key empty to use the default ones
-		if err := r.httpServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.httpServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 	} else {
-		if err := r.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 	}
@@ -1417,6 +1425,21 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		}()
 	}
 
+	if r.redisClient != nil {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			if subErr := r.redisClient.FlushAll(ctx); subErr.Err() != nil {
+				err = errors.Join(err, fmt.Errorf("failed to flush redis client: %w", subErr.Err()))
+			}
+			if closeErr := r.redisClient.Close(); closeErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to close redis client: %w", closeErr))
+			}
+		}()
+	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1436,60 +1459,59 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 }
 
 // Shutdown gracefully shutdown the server.
-func (r *server) Shutdown(ctx context.Context) error {
-	r.logger.Info("Gracefully shutting down the router ...",
-		zap.String("config_version", r.routerConfig.GetVersion()),
-		zap.String("grace_period", r.gracePeriod.String()),
+func (s *server) Shutdown(ctx context.Context) error {
+	s.healthChecks.SetReady(false)
+
+	s.logger.Info("Gracefully shutting down the router ...",
+		zap.String("config_version", s.routerConfig.GetVersion()),
+		zap.String("grace_period", s.gracePeriod.String()),
 	)
 
-	err := r.metricStore.Flush(ctx)
+	err := s.metricStore.Flush(ctx)
 	if err != nil {
-		r.logger.Error("Failed to flush metric store", zap.Error(err))
+		s.logger.Error("Failed to flush metric store", zap.Error(err))
 	}
 
-	r.rootContextCancel()
+	// This will cancel all other components related to the server e.g. pools,
+	// engine, etc. It has to be called after the server is shutdown. In case of a
+	// grace period (30s by default), we will cancel everything after the grace
+	// period. Only in that way, we can ensure that the server has everything to
+	// finish all requests.
+	defer s.contextCancel()
 
-	if r.gracePeriod > 0 {
-		ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
-		ctx = ctxWithTimer
-		defer cancel()
+	if s.pubSubProviders != nil {
+		for _, pubSub := range s.pubSubProviders.nats {
+			if p, ok := pubSub.(pubsub.Lifecycle); ok {
+				if err := p.Shutdown(ctx); err != nil {
+					s.logger.Error("Failed to shutdown Nats pubsub provider", zap.Error(err))
+				}
+			}
+		}
+		for _, pubSub := range s.pubSubProviders.kafka {
+			if p, ok := pubSub.(pubsub.Lifecycle); ok {
+				if err := p.Shutdown(ctx); err != nil {
+					s.logger.Error("Failed to shutdown Kafka pubsub provider", zap.Error(err))
+				}
+			}
+		}
 	}
 
-	r.healthChecks.SetReady(false)
-
-	if r.httpServer != nil {
-		// HTTP server shutdown
-		if err := r.httpServer.Shutdown(ctx); err != nil {
+	if s.httpServer != nil {
+		// HTTP server shutdown. Wait for the grace period to finish all requests.
+		if err := s.httpServer.Shutdown(ctx); err != nil {
 			return err
-		}
-	}
-
-	if r.pubSubProviders != nil {
-		for _, pubSub := range r.pubSubProviders.nats {
-			if p, ok := pubSub.(pubsub.Lifecycle); ok {
-				if err := p.Shutdown(ctx); err != nil {
-					return err
-				}
-			}
-		}
-		for _, pubSub := range r.pubSubProviders.kafka {
-			if p, ok := pubSub.(pubsub.Lifecycle); ok {
-				if err := p.Shutdown(ctx); err != nil {
-					return err
-				}
-			}
 		}
 	}
 
 	return err
 }
 
-func (r *server) HealthChecks() health.Checker {
-	return r.healthChecks
+func (s *server) HealthChecks() health.Checker {
+	return s.healthChecks
 }
 
-func (r *server) HttpServer() *http.Server {
-	return r.httpServer
+func (s *server) HttpServer() *http.Server {
+	return s.httpServer
 }
 
 func WithListenerAddr(addr string) Option {

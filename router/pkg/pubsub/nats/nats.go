@@ -191,11 +191,21 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 	return err
 }
 
-func (p *natsPubSub) Shutdown(_ context.Context) error {
-	// Wait for all subscriptions to be closed
-	p.closeWg.Wait()
+func (p *natsPubSub) flush(ctx context.Context) error {
+	return p.conn.FlushWithContext(ctx)
+}
+
+func (p *natsPubSub) Shutdown(ctx context.Context) error {
+
+	err := p.flush(ctx)
+	if err != nil {
+		p.logger.Error("error flushing NATS connection", zap.Error(err))
+	}
 
 	p.conn.Close()
+
+	// Wait for all subscriptions to be closed
+	p.closeWg.Wait()
 
 	return nil
 }

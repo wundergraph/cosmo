@@ -973,7 +973,7 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 
 func (e *Environment) close() {
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(e.Context, 10*time.Second)
 	defer cancel()
 
 	// Gracefully shutdown router

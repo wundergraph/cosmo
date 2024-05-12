@@ -340,19 +340,38 @@ func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.Kafka
 	return nil
 }
 
-func (p *kafkaPubSub) Shutdown(_ context.Context) error {
+func (p *kafkaPubSub) flush(ctx context.Context) error {
+	err := p.writeClient.Flush(ctx)
+	if err != nil {
+		p.logger.Error("error flushing write client", zap.Error(err))
+	}
 
-	// Wait until all pollers are closed
-	p.closeWg.Wait()
+	for _, client := range p.clients {
+		if err := client.Flush(ctx); err != nil {
+			p.logger.Error("error flushing client", zap.Error(err))
+		}
+	}
 
+	return nil
+}
+
+func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
+	err := p.flush(ctx)
+	if err != nil {
+		p.logger.Error("error flushing clients", zap.Error(err))
+	}
 
 	p.writeClient.Close()
 
 	for _, client := range p.clients {
 		client.Close()
 	}
+
+	// Wait until all pollers are closed
+	p.closeWg.Wait()
 
 	return nil
 }
