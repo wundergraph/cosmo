@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,12 +26,6 @@ var (
 type record struct {
 	topic string
 	data  []byte
-}
-
-type subscription struct {
-	topics  []string
-	updater resolve.SubscriptionUpdater
-	context context.Context
 }
 
 type connector struct {
@@ -57,15 +52,16 @@ func NewConnector(logger *zap.Logger, opts []kgo.Opt) (pubsub_datasource.KafkaCo
 }
 
 func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
+
+	ctx, cancel := context.WithCancel(ctx)
+
 	ps := &kafkaPubSub{
-		ctx:           ctx,
-		logger:        c.logger.With(zap.String("pubsub", "kafka")),
-		opts:          c.opts,
-		subscriptions: make(map[string][]*subscription),
-		clients:       make(map[string]*kgo.Client),
-		writeClient:   c.writeClient,
-		mu:            sync.RWMutex{},
-		closeWg:       sync.WaitGroup{},
+		ctx:         ctx,
+		logger:      c.logger.With(zap.String("pubsub", "kafka")),
+		opts:        c.opts,
+		writeClient: c.writeClient,
+		closeWg:     sync.WaitGroup{},
+		cancel:      cancel,
 	}
 
 	return ps
@@ -77,46 +73,28 @@ func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
 // It uses a single write client to produce messages and a client per topic to consume messages.
 // Each client polls the Kafka topic for new records and updates the subscriptions with the new data.
 type kafkaPubSub struct {
-	ctx           context.Context
-	opts          []kgo.Opt
-	logger        *zap.Logger
-	clients       map[string]*kgo.Client
-	subscriptions map[string][]*subscription
-	writeClient   *kgo.Client
-	mu            sync.RWMutex
-	closeWg       sync.WaitGroup
-}
-
-// addSubscription adds the subscription to the subscriptions map.
-func (p *kafkaPubSub) addSubscription(sub *subscription) {
-
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	for _, topic := range sub.topics {
-		if _, ok := p.subscriptions[topic]; !ok {
-			p.subscriptions[topic] = make([]*subscription, 0, 10)
-		}
-		p.subscriptions[topic] = append(p.subscriptions[topic], sub)
-	}
+	ctx         context.Context
+	opts        []kgo.Opt
+	logger      *zap.Logger
+	writeClient *kgo.Client
+	closeWg     sync.WaitGroup
+	cancel      context.CancelFunc
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *kafkaPubSub) topicPoller(client *kgo.Client) error {
-	p.closeWg.Add(1)
-	defer p.closeWg.Done()
+func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
 
 	for {
 		select {
-		// Close the client if the context was canceled
-		// This is not the context of the subscription, but the context of application shutdown
-		case <-p.ctx.Done():
-			client.Close()
-			return nil
+
+		case <-p.ctx.Done(): // Close the poller if the application context was canceled
+			return p.ctx.Err()
+
+		case <-ctx.Done(): // Close the poller if the subscription context was canceled
+			return ctx.Err()
 
 		default:
 			// Try to fetch max records from any subscribed topics
-			// In the future, we could create a client per topic to fetch in parallel
 			fetches := client.PollRecords(p.ctx, 10_000)
 			if fetches.IsClientClosed() {
 				return errClientClosed
@@ -128,7 +106,7 @@ func (p *kafkaPubSub) topicPoller(client *kgo.Client) error {
 
 					// If the context was canceled, the error is wrapped in a fetch error
 					if errors.Is(fetchError.Err, context.Canceled) {
-						return nil
+						return fetchError.Err
 					}
 
 					var kErr *kerr.Error
@@ -157,25 +135,8 @@ func (p *kafkaPubSub) topicPoller(client *kgo.Client) error {
 					data:  r.Value,
 				}
 
-				p.updateTriggers(rec)
-			}
-		}
-	}
-}
-
-// updateTriggers updates all subscriptions that are interested in the topic with the new data.
-func (p *kafkaPubSub) updateTriggers(rec *record) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	// Notify all subscriptions that are interested in the topic
-	if sub, ok := p.subscriptions[rec.topic]; ok {
-
-		for _, s := range sub {
-			// If the subscription is still active, update it
-			if s.context.Err() == nil {
 				p.logger.Debug("subscription update", zap.String("topic", rec.topic), zap.ByteString("data", rec.data))
-				s.updater.Update(rec.data)
+				updater.Update(rec.data)
 			}
 		}
 	}
@@ -190,114 +151,51 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 		zap.String("providerID", event.ProviderID),
 	)
 
-	sub := &subscription{
-		topics:  event.Topics,
-		updater: updater,
-		context: ctx,
-	}
-
-	// Every subscription needs to be tracked individually
-	p.addSubscription(sub)
-
-	for _, t := range event.Topics {
-
-		topic := t
-
-		client, created, err := p.createClient(topic)
-		if err != nil {
-			p.logger.Error("failed to create client", zap.Error(err), zap.String("topic", topic))
-			return err
-		}
-
-		// Only continue and start the poller if the client was created for the first time
-		if !created {
-			continue
-		}
-
-		go func() {
-			err := p.topicPoller(client)
-			if err != nil {
-				if !errors.Is(err, errClientClosed) {
-					p.logger.Error("poller error", zap.Error(err))
-				}
-				return
-			}
-		}()
-	}
-
-	go func() {
-
-		<-sub.context.Done()
-
-		p.logger.Debug("subscription canceled",
-			zap.String("providerID", event.ProviderID),
-		)
-
-		p.removeSubscription(sub, &event)
-	}()
-
-	return nil
-}
-
-// removeSubscription removes the subscription from the topics and closes the client if there are no more subscriptions for the topic.
-func (p *kafkaPubSub) removeSubscription(sub *subscription, event *pubsub_datasource.KafkaSubscriptionEventConfiguration) {
-
-	// Remove the subscription from the topics
-	for _, topic := range event.Topics {
-
-		p.mu.RLock()
-		// Zero alloc due to slice reuse
-		tmp := p.subscriptions[topic][:0]
-		for _, s := range p.subscriptions[topic] {
-			if s != sub {
-				tmp = append(tmp, s)
-			}
-		}
-		p.mu.RUnlock()
-
-		p.mu.Lock()
-		// If there are no more subscriptions for the topic, remove the client
-		// In the future, it might be better to keep the client alive for a certain amount of time
-		if len(tmp) == 0 {
-			delete(p.subscriptions, topic)
-			if client, ok := p.clients[topic]; ok {
-				client.Close()
-				delete(p.clients, topic)
-			}
-		} else {
-			p.subscriptions[topic] = tmp
-		}
-		p.mu.Unlock()
-	}
-}
-
-// createClient creates a new client for the given topic if it does not exist yet.
-// It returns true if the client was created, false otherwise.
-func (p *kafkaPubSub) createClient(topic string) (*kgo.Client, bool, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if _, ok := p.clients[topic]; ok {
-		return nil, false, nil
-	}
-
 	// Create a new client for the topic
 	client, err := kgo.NewClient(append(p.opts,
-		kgo.ConsumeTopics(topic),
+		kgo.ConsumeTopics(event.Topics...),
 		// We want to consume the events produced after the first subscription was created
 		// Messages are shared among all subscriptions, therefore old events are not redelivered
 		// This replicates a stateless publish-subscribe model
 		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
 		// For observability, we set the client ID to "router"
-		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", topic)),
+		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(event.Topics, "-"))),
 	)...)
 	if err != nil {
-		return nil, false, fmt.Errorf(`failed to create client for Kafka for topic "%s": %w`, topic, err)
+		p.logger.Error("failed to create client", zap.Error(err), zap.Strings("topics", event.Topics))
+		return err
 	}
 
-	p.clients[topic] = client
+	p.closeWg.Add(1)
 
-	return client, true, nil
+	go func() {
+
+		defer p.closeWg.Done()
+
+		err := p.topicPoller(ctx, client, updater)
+		if err != nil {
+			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
+				p.logger.Debug("poller canceled", zap.Error(err))
+			} else {
+				p.logger.Error("poller error", zap.Error(err))
+
+			}
+			return
+		}
+	}()
+
+	go func() {
+
+		<-ctx.Done()
+
+		p.logger.Debug("subscription canceled",
+			zap.String("providerID", event.ProviderID),
+			zap.Error(ctx.Err()),
+		)
+
+	}()
+
+	return nil
 }
 
 // Publish publishes the given event to the Kafka topic in a non-blocking way.
@@ -340,38 +238,17 @@ func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.Kafka
 	return nil
 }
 
-func (p *kafkaPubSub) flush(ctx context.Context) error {
+func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
+
 	err := p.writeClient.Flush(ctx)
 	if err != nil {
 		p.logger.Error("error flushing write client", zap.Error(err))
 	}
 
-	for _, client := range p.clients {
-		if err := client.Flush(ctx); err != nil {
-			p.logger.Error("error flushing client", zap.Error(err))
-		}
-	}
-
-	return nil
-}
-
-func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	var err error
-
-	fErr := p.flush(ctx)
-	if fErr != nil {
-		p.logger.Error("error flushing clients", zap.Error(err))
-		err = errors.Join(err, fErr)
-	}
-
 	p.writeClient.Close()
 
-	for _, client := range p.clients {
-		client.Close()
-	}
+	// Cancel the context to stop all pollers
+	p.cancel()
 
 	// Wait until all pollers are closed
 	p.closeWg.Wait()

@@ -23,8 +23,8 @@ func TestLocalKafka(t *testing.T) {
 
 	t.Run("subscribe async", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			//ensureTopicExists(t, xEnv, "employeeUpdated", "employeeUpdatedTwo")
-			produceKafkaMessage(t, xEnv, "employeeUpdated", `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
+			// ensureTopicExists(t, xEnv, "employeeUpdated", "employeeUpdatedTwo")
+			produceKafkaMessage(t, xEnv, "employeeUpdatedTwo", `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 		})
 	})
 }

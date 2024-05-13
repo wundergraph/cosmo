@@ -78,6 +78,8 @@ type (
 		Config
 		activeServer   *server
 		modules        []Module
+		context        context.Context
+		cancel         context.CancelCauseFunc
 		WebsocketStats WebSocketsStatistics
 	}
 
@@ -671,7 +673,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
 	}
 
-	if err := r.bootstrap(ctx); err != nil {
+	if err := r.bootstrap(); err != nil {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
@@ -701,12 +703,20 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance. Not safe for concurrent use.
-func (r *Router) bootstrap(ctx context.Context) error {
+func (r *Router) bootstrap() error {
 	if r.bootstrapped {
 		return fmt.Errorf("router is already bootstrapped")
 	}
 
 	r.bootstrapped = true
+
+	// This is the primary context for the router
+	// It is cancelled when the router is shutdown
+	// It should only be used for components that are started and stopped with the router
+	// Everything else is done with a separate context for the server that respects the grace period
+	ctx, cancel := context.WithCancelCause(context.Background())
+	r.context = ctx
+	r.cancel = cancel
 
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
@@ -830,19 +840,19 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 // Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
 // Not safe for concurrent use.
-func (r *Router) Start(ctx context.Context) error {
+func (r *Router) Start() error {
 	if r.shutdown {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
 	}
 
-	if err := r.bootstrap(ctx); err != nil {
+	if err := r.bootstrap(); err != nil {
 		return fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.updateServerAndStart(ctx, r.routerConfig)
+		return r.updateServerAndStart(r.context, r.routerConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -850,24 +860,24 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
+	routerConfig, err := r.configPoller.GetRouterConfig(r.context)
 	if err != nil {
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.updateServerAndStart(ctx, routerConfig); err != nil {
+	if err := r.updateServerAndStart(r.context, routerConfig); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return err
 	}
 
 	r.logger.Info("Polling for router config updates in the background")
 
-	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
+	r.configPoller.Subscribe(r.context, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
 		r.logger.Info("Router execution config has changed, upgrading server",
 			zap.String("old_version", oldVersion),
 			zap.String("new_version", newConfig.GetVersion()),
 		)
-		if err := r.updateServerAndStart(ctx, newConfig); err != nil {
+		if err := r.updateServerAndStart(r.context, newConfig); err != nil {
 			r.logger.Error("Failed to start server with new config. Trying again on the next update cycle.", zap.Error(err))
 			return err
 		}
@@ -1358,6 +1368,9 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	if r.shutdown {
 		return nil
 	}
+
+	// Cancel the router context once all cleanup is done
+	defer r.cancel(errors.New("router shutdown"))
 
 	r.shutdown = true
 

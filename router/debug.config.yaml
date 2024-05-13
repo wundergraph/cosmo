@@ -21,8 +21,7 @@ events:
       - id: my-nats
         url: "nats://localhost:4222"
         authentication:
-          # token: "token"
-          userInfo:
+          user_info:
             username: "admin"
             password: "admin"
     kafka:
@@ -32,6 +31,6 @@ events:
         tls:
           enabled: true
         authentication:
-          plain:
+          sasl_plain:
             username: "admin"
             password: "admin"

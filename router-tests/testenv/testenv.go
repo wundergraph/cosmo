@@ -75,7 +75,7 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	if err != nil {
 		t.Fatalf("could not create environment: %s", err)
 	}
-	t.Cleanup(env.close)
+	t.Cleanup(env.Shutdown)
 	f(t, env)
 }
 
@@ -86,7 +86,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	if err != nil {
 		b.Fatalf("could not create environment: %s", err)
 	}
-	b.Cleanup(env.close)
+	b.Cleanup(env.Shutdown)
 	b.StartTimer()
 	f(b, env)
 }
@@ -708,16 +708,36 @@ func (e *Environment) SetExtraURLQueryValues(values url.Values) {
 }
 
 func (e *Environment) Shutdown() {
-	// Terminate test server resources
-	e.cancel(errors.New("test environment closed"))
+	ctx, cancel := context.WithTimeout(e.Context, 10*time.Second)
+	defer cancel()
 
 	// Gracefully shutdown router
-	ctx, cancel := context.WithTimeout(e.Context, 5*time.Second)
-	defer cancel()
 	err := e.Router.Shutdown(ctx)
 	if err != nil {
 		e.t.Errorf("could not shutdown router: %s", err)
 	}
+
+	// Terminate test server resources
+	e.cancel(errors.New("test environment closed"))
+
+	// Close all test servers
+	for _, s := range e.Servers {
+		s.CloseClientConnections()
+		s.Close()
+	}
+
+	// Close the CDN
+	e.CDN.CloseClientConnections()
+	e.CDN.Close()
+
+	// Close NATS
+	e.NatsConnectionDefault.Close()
+	e.NatsConnectionMyNats.Close()
+	e.NatsServer.Shutdown()
+
+	// Close Kafka
+	e.KafkaAdminClient.Close()
+	e.KafkaClient.Close()
 }
 
 type SubgraphRequestCount struct {
@@ -969,39 +989,6 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 	require.NoError(e.t, err)
 	require.Equal(e.t, string(ack), `["1","1","__absinthe__:control","phx_reply",{"status":"ok","response":{}}]`)
 	return conn
-}
-
-func (e *Environment) close() {
-
-	ctx, cancel := context.WithTimeout(e.Context, 10*time.Second)
-	defer cancel()
-
-	// Gracefully shutdown router
-	err := e.Router.Shutdown(ctx)
-	if err != nil {
-		e.t.Errorf("could not shutdown router: %s", err)
-	}
-
-	// Terminate test server resources
-	e.cancel(errors.New("test environment closed"))
-
-	// Close all test servers
-	for _, s := range e.Servers {
-		s.CloseClientConnections()
-		s.Close()
-	}
-
-	// Close the CDN
-	e.CDN.CloseClientConnections()
-	e.CDN.Close()
-
-	// Close NATS
-	e.NatsConnectionDefault.Close()
-	e.NatsConnectionMyNats.Close()
-	e.NatsServer.Shutdown()
-
-	// Close Kafka
-	e.KafkaAdminClient.Close()
 }
 
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
