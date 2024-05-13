@@ -13,7 +13,8 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  selector: {{ .Values.istioGateway.selector }}
+  selector:
+    {{- toYaml .Values.istioGateway.selector | nindent 4 }}
   servers:
   {{- range .Values.istioGateway.hosts }}
   - hosts:
