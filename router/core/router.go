@@ -78,8 +78,6 @@ type (
 		Config
 		activeServer   *server
 		modules        []Module
-		context        context.Context
-		cancel         context.CancelCauseFunc
 		WebsocketStats WebSocketsStatistics
 	}
 
@@ -569,10 +567,8 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 }
 
 func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	serverContext, serverContextCancel := context.WithCancel(ctx)
 
-	if _, err := r.UpdateServer(serverContext, cfg); err != nil {
-		serverContextCancel()
+	if _, err := r.UpdateServer(ctx, cfg); err != nil {
 		return err
 	}
 
@@ -581,10 +577,6 @@ func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterCon
 
 	// Start new server
 	go func() {
-
-		// Cancel server context when the server is stopped. This cancels e.g. websocket
-		// poller, engine, etc.
-		defer serverContextCancel()
 
 		r.logger.Info("Server listening and serving",
 			zap.String("listen_addr", r.listenAddr),
@@ -673,7 +665,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
 	}
 
-	if err := r.bootstrap(); err != nil {
+	if err := r.bootstrap(ctx); err != nil {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
@@ -703,20 +695,12 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance. Not safe for concurrent use.
-func (r *Router) bootstrap() error {
+func (r *Router) bootstrap(ctx context.Context) error {
 	if r.bootstrapped {
 		return fmt.Errorf("router is already bootstrapped")
 	}
 
 	r.bootstrapped = true
-
-	// This is the primary context for the router
-	// It is cancelled when the router is shutdown
-	// It should only be used for components that are started and stopped with the router
-	// Everything else is done with a separate context for the server that respects the grace period
-	ctx, cancel := context.WithCancelCause(context.Background())
-	r.context = ctx
-	r.cancel = cancel
 
 	cosmoCloudTracingEnabled := r.traceConfig.Enabled && rtrace.DefaultExporter(r.traceConfig) != nil
 	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
@@ -840,19 +824,19 @@ func (r *Router) bootstrap() error {
 
 // Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
 // Not safe for concurrent use.
-func (r *Router) Start() error {
+func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
 	}
 
-	if err := r.bootstrap(); err != nil {
+	if err := r.bootstrap(ctx); err != nil {
 		return fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.updateServerAndStart(r.context, r.routerConfig)
+		return r.updateServerAndStart(ctx, r.routerConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -860,24 +844,24 @@ func (r *Router) Start() error {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	routerConfig, err := r.configPoller.GetRouterConfig(r.context)
+	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.updateServerAndStart(r.context, routerConfig); err != nil {
+	if err := r.updateServerAndStart(ctx, routerConfig); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return err
 	}
 
 	r.logger.Info("Polling for router config updates in the background")
 
-	r.configPoller.Subscribe(r.context, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
+	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
 		r.logger.Info("Router execution config has changed, upgrading server",
 			zap.String("old_version", oldVersion),
 			zap.String("new_version", newConfig.GetVersion()),
 		)
-		if err := r.updateServerAndStart(r.context, newConfig); err != nil {
+		if err := r.updateServerAndStart(ctx, newConfig); err != nil {
 			r.logger.Error("Failed to start server with new config. Trying again on the next update cycle.", zap.Error(err))
 			return err
 		}
@@ -1369,9 +1353,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		return nil
 	}
 
-	// Cancel the router context once all cleanup is done
-	defer r.cancel(errors.New("router shutdown"))
-
 	r.shutdown = true
 
 	if r.configPoller != nil {
@@ -1481,6 +1462,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 // Shutdown gracefully shutdown the server.
 func (s *server) Shutdown(ctx context.Context) error {
+
 	s.healthChecks.SetReady(false)
 
 	s.logger.Info("Gracefully shutting down the router ...",
@@ -1488,19 +1470,29 @@ func (s *server) Shutdown(ctx context.Context) error {
 		zap.String("grace_period", s.gracePeriod.String()),
 	)
 
-	err := s.metricStore.Flush(ctx)
-	if err != nil {
+	var finalErr error
+
+	if s.httpServer != nil {
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			s.logger.Error("Failed to shutdown HTTP server", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if err := s.metricStore.Flush(ctx); err != nil {
 		s.logger.Error("Failed to flush metric store", zap.Error(err))
+		finalErr = errors.Join(finalErr, err)
 	}
 
 	if s.pubSubProviders != nil {
 
-		s.logger.Info("Shutting down pubsub providers")
+		s.logger.Debug("Shutting down pubsub providers")
 
 		for _, pubSub := range s.pubSubProviders.nats {
 			if p, ok := pubSub.(pubsub.Lifecycle); ok {
 				if err := p.Shutdown(ctx); err != nil {
 					s.logger.Error("Failed to shutdown Nats pubsub provider", zap.Error(err))
+					finalErr = errors.Join(finalErr, err)
 				}
 			}
 		}
@@ -1508,19 +1500,13 @@ func (s *server) Shutdown(ctx context.Context) error {
 			if p, ok := pubSub.(pubsub.Lifecycle); ok {
 				if err := p.Shutdown(ctx); err != nil {
 					s.logger.Error("Failed to shutdown Kafka pubsub provider", zap.Error(err))
+					finalErr = errors.Join(finalErr, err)
 				}
 			}
 		}
 	}
 
-	if s.httpServer != nil {
-		// HTTP server shutdown. Wait for the grace period to finish all requests.
-		if err := s.httpServer.Shutdown(ctx); err != nil {
-			return err
-		}
-	}
-
-	return err
+	return finalErr
 }
 
 func (s *server) HealthChecks() health.Checker {
