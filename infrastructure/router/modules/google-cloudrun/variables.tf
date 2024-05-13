@@ -6,7 +6,7 @@ variable "cpu" {
 
 variable "region" {
   description = "The Region we want the cosmo router to run on    "
-
+  type = string
 }
 
 variable "memory" {
@@ -62,4 +62,5 @@ variable "secret_name" {
 
 variable "project" {
   description = "Project id of the google cloud project you want to setup this for"
+  type = string
 }
