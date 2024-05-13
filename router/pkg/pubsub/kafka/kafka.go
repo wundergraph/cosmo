@@ -177,14 +177,6 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 		}
 	}()
 
-	go func() {
-
-		<-ctx.Done()
-
-		log.Debug("subscription canceled", zap.Error(ctx.Err()))
-
-	}()
-
 	return nil
 }
 
