@@ -95,18 +95,18 @@ export default (opts: BaseCommandOptions) => {
         }
         const filePath = join(subgraphPath, `${subgraph.name}.graphql`);
         let finalSDL = subgraphSDL;
+        cosmoSubgraphsConfig.push({
+          name: subgraph.name,
+          routing_url: subgraph.routingURL,
+          schema: {
+            file: filePath,
+          },
+          subscription:
+            subgraph.subscriptionURL === ''
+              ? undefined
+              : { url: subgraph.subscriptionURL, protocol: subgraph.subscriptionProtocol },
+        });
         if (options.apolloCompatibility) {
-          cosmoSubgraphsConfig.push({
-            name: subgraph.name,
-            routing_url: subgraph.routingURL,
-            schema: {
-              file: filePath,
-            },
-            subscription:
-              subgraph.subscriptionURL === ''
-                ? undefined
-                : { url: subgraph.subscriptionURL, protocol: subgraph.subscriptionProtocol },
-          });
           roverSubgraphsConfig[subgraph.name] = {
             routing_url: subgraph.routingURL,
             schema: {
@@ -124,11 +124,13 @@ export default (opts: BaseCommandOptions) => {
         writeFileSync(filePath, finalSDL);
       }
 
+      const cosmoCompositionConfig = yaml.dump({
+        version: 1,
+        subgraphs: cosmoSubgraphsConfig,
+      });
+      writeFileSync(join(basePath, `cosmo-composition.yaml`), cosmoCompositionConfig);
+      
       if (options.apolloCompatibility) {
-        const cosmoCompositionConfig = yaml.dump({
-          version: 1,
-          subgraphs: cosmoSubgraphsConfig,
-        });
         const roverCompositionConfig = yaml.dump({
           federation_version: '=2.6.1',
           subgraphs: roverSubgraphsConfig,
@@ -144,7 +146,6 @@ export default (opts: BaseCommandOptions) => {
                   },
                 },
         });
-        writeFileSync(join(basePath, `cosmo-composition.yaml`), cosmoCompositionConfig);
         writeFileSync(join(basePath, `rover-composition.yaml`), roverCompositionConfig);
 
         const apolloScript = `npm install -g @apollo/rover
