@@ -41,7 +41,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--websocket-subprotocol <protocol>',
-    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto, graphql-ws, and graphql-transport-ws. Should be used only if the subscription protocol is ws.For more information see https://cosmo-docs.wundergraph.com/router/subscriptions/websocket-subprotocols',
+    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto(default), graphql-ws, and graphql-transport-ws. Should be used only if the subscription protocol is ws.For more information see https://cosmo-docs.wundergraph.com/router/subscriptions/websocket-subprotocols',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
