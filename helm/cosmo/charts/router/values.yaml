@@ -87,7 +87,8 @@ ingress:
 # -- Sets the [istio gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) load balancer to expose the virtual service
 # -- Requires Istio v1.5 or greater
 istioGateway:
-  # enabled: true
+  # -- enable the istioGateway - often used in conjunction with istioVirtualService to expose services via an istio gateway deployment
+  enabled: false
   # -- Selectors for the Gateway deployment
   selector: {}
   # -- Annotations for the Gateway
@@ -102,7 +103,8 @@ istioGateway:
 # -- Sets the [virtual service](https://istio.io/latest/docs/reference/config/networking/virtual-service/) to route a Gateway to the router
 # -- Requires Istio v1.5 or greater
 istioVirtualService:
-  # enabled: true
+  # -- enable an Istio VirtualService
+  enabled: false
   # -- Annotations for the VirtualService
   annotations: {}
 
