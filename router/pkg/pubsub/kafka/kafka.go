@@ -23,11 +23,6 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
-type record struct {
-	topic string
-	data  []byte
-}
-
 type connector struct {
 	writeClient *kgo.Client
 	opts        []kgo.Opt
@@ -130,13 +125,8 @@ func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updat
 			for !iter.Done() {
 				r := iter.Next()
 
-				rec := &record{
-					topic: r.Topic,
-					data:  r.Value,
-				}
-
-				p.logger.Debug("subscription update", zap.String("topic", rec.topic), zap.ByteString("data", rec.data))
-				updater.Update(rec.data)
+				p.logger.Debug("subscription update", zap.String("topic", r.Topic), zap.ByteString("data", r.Value))
+				updater.Update(r.Value)
 			}
 		}
 	}
