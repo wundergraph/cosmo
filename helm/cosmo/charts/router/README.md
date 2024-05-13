@@ -1,6 +1,6 @@
 # router
 
-![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0](https://img.shields.io/badge/AppVersion-0.1.0-informational?style=flat-square)
+![Version: 0.2.3](https://img.shields.io/badge/Version-0.2.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0](https://img.shields.io/badge/AppVersion-0.1.0-informational?style=flat-square)
 
 This is the official Helm Chart for the WunderGraph Cosmo Router.
 
@@ -40,6 +40,14 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
+| istioGateway | object | `{"annotations":{},"enabled":false,"hosts":[],"selector":{}}` | Requires Istio v1.5 or greater |
+| istioGateway.annotations | object | `{}` | Annotations for the Gateway |
+| istioGateway.enabled | bool | `false` | enable the istioGateway - often used in conjunction with istioVirtualService to expose services via an istio gateway deployment |
+| istioGateway.hosts | list | `[]` | List of hosts that the gateway can serve |
+| istioGateway.selector | object | `{}` | Selectors for the Gateway deployment |
+| istioVirtualService | object | `{"annotations":{},"enabled":false}` | Requires Istio v1.5 or greater |
+| istioVirtualService.annotations | object | `{}` | Annotations for the VirtualService |
+| istioVirtualService.enabled | bool | `false` | enable an Istio VirtualService |
 | nameOverride | string | `""` | String to partially override common.names.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |

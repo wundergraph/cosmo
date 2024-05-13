@@ -1,0 +1,39 @@
+{{- if .Values.istioGateway -}}
+{{- if .Values.istioGateway.enabled -}}
+{{- $fullName := include "router.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+  {{- with .Values.istioGateway.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- toYaml .Values.istioGateway.selector | nindent 4 }}
+  servers:
+  {{- range .Values.istioGateway.hosts }}
+  - hosts:
+    - {{ .host | quote }}
+    port:
+      name: http
+      number: 80
+      protocol: HTTP
+    tls:
+      httpsRedirect: true
+  - hosts:
+    - {{ .host | quote }}
+    port:
+      name: https
+      number: 443
+      protocol: HTTPS
+    tls:
+      credentialName: {{ .credentialName }}
+      mode: SIMPLE
+  {{- end}}
+{{- end }}
+{{- end }}
