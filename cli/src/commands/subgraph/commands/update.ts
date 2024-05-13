@@ -43,7 +43,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--websocket-subprotocol <protocol>',
-    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto, graphql-ws, and graphql-transport-ws.',
+    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto, graphql-ws, and graphql-transport-ws. Should be used only if the subscription protocol is ws.For more information see https://cosmo-docs.wundergraph.com/router/subscriptions/websocket-subprotocols',
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
 
@@ -72,16 +72,29 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    if (options.websocketSubprotocol && !isValidWebsocketSubprotocol(options.websocketSubprotocol)) {
-      program.error(
-        pc.red(
-          pc.bold(
-            `The websocket subprotocol '${pc.bold(
-              options.websocketSubprotocol,
-            )}' is not valid. Please use one of the following: auto, graphql-ws, graphql-transport-ws.`,
+    if (options.websocketSubprotocol) {
+      if (options.subscriptionProtocol !== 'ws') {
+        program.error(
+          pc.red(
+            pc.bold(
+              `The websocket subprotocol '${pc.bold(
+                options.websocketSubprotocol,
+              )}' can only be used if the subscription protocol is 'ws'.`,
+            ),
           ),
-        ),
-      );
+        );
+      }
+      if (!isValidWebsocketSubprotocol(options.websocketSubprotocol)) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `The websocket subprotocol '${pc.bold(
+                options.websocketSubprotocol,
+              )}' is not valid. Please use one of the following: auto, graphql-ws, graphql-transport-ws.`,
+            ),
+          ),
+        );
+      }
     }
 
     const spinner = ora('Subgraph is being updated...').start();
