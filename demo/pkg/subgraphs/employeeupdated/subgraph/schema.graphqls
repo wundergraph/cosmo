@@ -1,8 +1,8 @@
-directive @edfs__natsRequest(subject: String!, providerId: String! = "nats") on FIELD_DEFINITION
-directive @edfs__natsPublish(subject: String!, providerId: String! = "nats") on FIELD_DEFINITION
-directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "nats", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
-directive @edfs__kafkaPublish(topic: String!, providerId: String! = "kafka") on FIELD_DEFINITION
-directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "kafka") on FIELD_DEFINITION
+directive @edfs__natsRequest(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
 
 input edfs__NatsStreamConfiguration {
     consumerName: String!

@@ -26,11 +26,11 @@ import {
   INPUT_OBJECT_UPPER,
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
-  KAFKA,
+  PROVIDER_TYPE_KAFKA,
   KEY,
   LINK,
   NAME,
-  NATS,
+  PROVIDER_TYPE_NATS,
   OBJECT_UPPER,
   OVERRIDE,
   PROVIDER_ID,
@@ -132,7 +132,7 @@ const EDFS_KAFKA_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: KAFKA,
+        value: PROVIDER_TYPE_KAFKA,
       },
     },
   ],
@@ -168,7 +168,7 @@ const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: KAFKA,
+        value: PROVIDER_TYPE_KAFKA,
       },
     },
   ],
@@ -198,7 +198,7 @@ const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: NATS,
+        value: PROVIDER_TYPE_NATS,
       },
     },
   ],
@@ -228,7 +228,7 @@ const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: NATS,
+        value: PROVIDER_TYPE_NATS,
       },
     },
   ],
@@ -264,7 +264,7 @@ const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: NATS,
+        value: PROVIDER_TYPE_NATS,
       },
     },
     {

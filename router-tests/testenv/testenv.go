@@ -57,16 +57,16 @@ import (
 )
 
 const (
-	defaultSourceName = "nats"
-	myNatsSourceName  = "my-nats"
-	myKafkaSourceName = "my-kafka"
+	natsDefaultSourceName = "default"
+	myNatsProviderID      = "my-nats"
+	myKafkaProviderID     = "my-kafka"
 )
 
 var (
 	//go:embed testdata/config.json
-	configJSONTemplate   string
-	demoNatsSourceNames  = []string{defaultSourceName, myNatsSourceName}
-	demoKafkaSourceNames = []string{myKafkaSourceName}
+	configJSONTemplate string
+	demoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders = []string{myKafkaProviderID}
 )
 
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
@@ -138,7 +138,7 @@ type NatsData struct {
 }
 
 func setupNatsServers(t testing.TB) (*NatsData, error) {
-	length := len(demoNatsSourceNames)
+	length := len(demoNatsProviders)
 	natsData := &NatsData{
 		Connections: make([]*nats.Conn, 0, length),
 	}
@@ -175,7 +175,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		t.Fatalf("could not start NATS test server")
 	}
 	natsData.Server = natsServer
-	for range demoNatsSourceNames {
+	for range demoNatsProviders {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		if err != nil {
 			return nil, err
@@ -540,16 +540,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
-	natsEventSources := make([]config.NatsEventSource, len(demoNatsSourceNames))
-	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaSourceNames))
+	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
+	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
 
-	for _, sourceName := range demoNatsSourceNames {
+	for _, sourceName := range demoNatsProviders {
 		natsEventSources = append(natsEventSources, config.NatsEventSource{
 			ID:  sourceName,
 			URL: natsServer.ClientURL(),
 		})
 	}
-	for _, sourceName := range demoKafkaSourceNames {
+	for _, sourceName := range demoKafkaProviders {
 		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
 			ID:      sourceName,
 			Brokers: testConfig.KafkaSeeds,
@@ -1132,8 +1132,8 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 }
 
 func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.Server) *subgraphs.SubgraphOptions {
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsSourceNames))
-	for _, sourceName := range demoNatsSourceNames {
+	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
+	for _, sourceName := range demoNatsProviders {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		require.NoError(t, err)
 

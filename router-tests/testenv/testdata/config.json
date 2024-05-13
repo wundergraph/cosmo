@@ -886,7 +886,7 @@
           "nats": [
             {
               "engineEventConfiguration": {
-                "providerId": "nats",
+                "providerId": "default",
                 "type": "REQUEST",
                 "typeName": "Query",
                 "fieldName": "employeeFromEvent"
@@ -918,7 +918,7 @@
             },
             {
               "engineEventConfiguration": {
-                "providerId": "nats",
+                "providerId": "default",
                 "type": "SUBSCRIBE",
                 "typeName": "Subscription",
                 "fieldName": "employeeUpdated"
@@ -941,7 +941,7 @@
             },
             {
               "engineEventConfiguration": {
-                "providerId": "nats",
+                "providerId": "default",
                 "type": "SUBSCRIBE",
                 "typeName": "Subscription",
                 "fieldName": "employeeUpdatedNatsStream"

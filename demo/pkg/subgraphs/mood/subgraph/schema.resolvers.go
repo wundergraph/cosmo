@@ -18,7 +18,7 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 	storage.Set(employeeID, mood)
 	myNatsTopic := fmt.Sprintf("employeeUpdated.%d", employeeID)
 	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
-	err := r.NatsPubSubByProviderID["nats"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
+	err := r.NatsPubSubByProviderID["default"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
 		Subject: myNatsTopic,
 		Data:    []byte(payload),
 	})
