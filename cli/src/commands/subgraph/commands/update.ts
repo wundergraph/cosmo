@@ -73,7 +73,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.websocketSubprotocol) {
-      if (options.subscriptionProtocol !== 'ws') {
+      if (options.subscriptionProtocol && options.subscriptionProtocol !== 'ws') {
         program.error(
           pc.red(
             pc.bold(
