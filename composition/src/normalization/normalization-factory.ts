@@ -174,7 +174,8 @@ import {
   SUBSCRIPTION,
   SUCCESS,
   TOPIC,
-  TOPICS, DEFAULT_NATS_PROVIDER_ID, DEFAULT_KAFKA_PROVIDER_ID,
+  TOPICS,
+  DEFAULT_EDFS_PROVIDER_ID,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, EventConfiguration, NatsEventType } from '../router-configuration/router-configuration';
@@ -788,7 +789,7 @@ export class NormalizationFactory {
 
   getKafkaPublishConfiguration(directive: ConstDirectiveNode, errorMessages: string[]): EventConfiguration | undefined {
     const topics: string[] = [];
-    let providerId = DEFAULT_KAFKA_PROVIDER_ID;
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case TOPIC: {
@@ -820,7 +821,7 @@ export class NormalizationFactory {
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const topics: string[] = [];
-    let providerId = DEFAULT_KAFKA_PROVIDER_ID;
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case TOPICS: {
@@ -865,7 +866,7 @@ export class NormalizationFactory {
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const subjects: string[] = [];
-    let providerId = DEFAULT_NATS_PROVIDER_ID;
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case SUBJECT: {
@@ -897,7 +898,7 @@ export class NormalizationFactory {
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const subjects: string[] = [];
-    let providerId = DEFAULT_NATS_PROVIDER_ID;
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
     let consumerName = '';
     let streamName = '';
     for (const argumentNode of directive.arguments || []) {

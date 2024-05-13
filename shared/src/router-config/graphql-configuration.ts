@@ -21,6 +21,7 @@ import {
   NatsEventType as CompositionEventType,
   RequiredFieldConfiguration,
 } from '@wundergraph/composition';
+import { PROVIDER_TYPE_KAFKA, PROVIDER_TYPE_NATS } from '@wundergraph/composition/dist/utils/string-constants.js';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
@@ -105,7 +106,7 @@ export function configurationDataMapToDataSourceConfiguration(
     const kafkaEventConfigurations: KafkaEventConfiguration[] = [];
     for (const event of data.events ?? []) {
       switch (event.providerType) {
-        case 'kafka': {
+        case PROVIDER_TYPE_KAFKA: {
           kafkaEventConfigurations.push(
             new KafkaEventConfiguration({
               engineEventConfiguration: new EngineEventConfiguration({
@@ -119,7 +120,7 @@ export function configurationDataMapToDataSourceConfiguration(
           );
           break;
         }
-        case 'nats': {
+        case PROVIDER_TYPE_NATS: {
           natsEventConfigurations.push(
             new NatsEventConfiguration({
               engineEventConfiguration: new EngineEventConfiguration({

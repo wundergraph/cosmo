@@ -7,14 +7,14 @@ import {
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
   invalidEventDrivenMutationResponseTypeErrorMessage,
-  invalidNatsStreamInputFieldsErrorMessage,
   invalidEventProviderIdErrorMessage,
   invalidEventSubjectsItemErrorMessage,
   invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidNatsStreamConfigurationDefinitionErrorMessage,
+  invalidNatsStreamInputFieldsErrorMessage,
   InvalidRootTypeFieldEventsDirectiveData,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
-  invalidNatsStreamConfigurationDefinitionErrorMessage,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
@@ -22,19 +22,20 @@ import {
   normalizeSubgraphFromString,
   Subgraph,
   subgraphValidationError,
-  undefinedRequiredArgumentsErrorMessage,
   undefinedNatsStreamConfigurationInputErrorMessage,
+  undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
 import { parse } from 'graphql';
 import {
-  PROVIDER_TYPE_NATS,
+  DEFAULT_EDFS_PROVIDER_ID,
   EDFS_NATS_PUBLISH,
   EDFS_NATS_REQUEST,
   EDFS_NATS_SUBSCRIBE,
   PROVIDER_ID,
+  PROVIDER_TYPE_KAFKA,
+  PROVIDER_TYPE_NATS,
   SUBJECTS,
-  PROVIDER_TYPE_KAFKA, DEFAULT_NATS_PROVIDER_ID,
 } from '../src/utils/string-constants';
 import {
   normalizeString,
@@ -60,7 +61,7 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'findEntity',
-                  providerId: DEFAULT_NATS_PROVIDER_ID,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
                   providerType: PROVIDER_TYPE_NATS,
                   subjects: ['findEntity.{{ args.id }}'],
                   type: 'request',
@@ -85,7 +86,7 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'updateEntity',
-                  providerId: DEFAULT_NATS_PROVIDER_ID,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
                   providerType: PROVIDER_TYPE_NATS,
                   subjects: ['updateEntity.{{ args.id }}'],
                   type: 'publish',
@@ -183,7 +184,7 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'entitySubscription',
-                  providerId: DEFAULT_NATS_PROVIDER_ID,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
                   providerType: PROVIDER_TYPE_NATS,
                   subjects: ['entities.{{ args.id }}'],
                   type: 'subscribe',

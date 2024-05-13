@@ -6,6 +6,7 @@ import {
   BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
   CONSUMER_NAME,
+  DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
@@ -26,11 +27,9 @@ import {
   INPUT_OBJECT_UPPER,
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
-  PROVIDER_TYPE_KAFKA,
   KEY,
   LINK,
   NAME,
-  PROVIDER_TYPE_NATS,
   OBJECT_UPPER,
   OVERRIDE,
   PROVIDER_ID,
@@ -132,7 +131,7 @@ const EDFS_KAFKA_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: PROVIDER_TYPE_KAFKA,
+        value: DEFAULT_EDFS_PROVIDER_ID,
       },
     },
   ],
@@ -168,7 +167,7 @@ const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: PROVIDER_TYPE_KAFKA,
+        value: DEFAULT_EDFS_PROVIDER_ID,
       },
     },
   ],
@@ -178,7 +177,7 @@ const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__natsPublish(subject: String!, providerId: String! = "nats") on FIELD_DEFINITION
+// directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
 const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -198,7 +197,7 @@ const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: PROVIDER_TYPE_NATS,
+        value: DEFAULT_EDFS_PROVIDER_ID,
       },
     },
   ],
@@ -208,7 +207,7 @@ const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__natsRequest(subject: String!, id: String! = "nats") on FIELD_DEFINITION
+// directive @edfs__natsRequest(subject: String!, id: String! = "default") on FIELD_DEFINITION
 const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -228,7 +227,7 @@ const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: PROVIDER_TYPE_NATS,
+        value: DEFAULT_EDFS_PROVIDER_ID,
       },
     },
   ],
@@ -238,7 +237,7 @@ const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__natsSubscribe(subjects: [String!]!, id: String! = "nats", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+// directive @edfs__natsSubscribe(subjects: [String!]!, id: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
 const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -264,7 +263,7 @@ const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
       },
       defaultValue: {
         kind: Kind.STRING,
-        value: PROVIDER_TYPE_NATS,
+        value: DEFAULT_EDFS_PROVIDER_ID,
       },
     },
     {
@@ -660,11 +659,11 @@ export const baseDirectives = `
   directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
   directive @extends on INTERFACE | OBJECT
   directive @external on FIELD_DEFINITION | OBJECT
-  directive @edfs__kafkaPublish(topic: String!, providerId: String! = "kafka") on FIELD_DEFINITION
-  directive @edfs__kafkaSubscribe(topic: String!, providerId: String! = "kafka") on FIELD_DEFINITION
-  directive @edfs__natsPublish(subject: String!, providerId: String! = "nats") on FIELD_DEFINITION
-  directive @edfs__natsRequest(subject: String!, providerId: String! = "nats") on FIELD_DEFINITION
-  directive @edfs__natsSubscribe(subjects: [String!]!, id: String! = "nats", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+  directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
+  directive @edfs__kafkaSubscribe(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
+  directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+  directive @edfs__natsRequest(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+  directive @edfs__natsSubscribe(subjects: [String!]!, id: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
   directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
   directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
   directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
