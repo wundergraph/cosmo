@@ -53,9 +53,10 @@ type natsPubSub struct {
 }
 
 func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.NatsSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
-	p.logger.Debug("subscribe",
-		zap.Strings("subjects", event.Subjects),
+	log := p.logger.With(
 		zap.String("providerID", event.ProviderID),
+		zap.String("method", "subscribe"),
+		zap.Strings("subjects", event.Subjects),
 	)
 
 	if event.StreamConfiguration != nil {
@@ -64,6 +65,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 			FilterSubjects: event.Subjects,
 		})
 		if err != nil {
+			log.Error("error creating or updating consumer", zap.Error(err))
 			return pubsub.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
 		}
 
@@ -85,19 +87,19 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 				default:
 					msgBatch, consumerFetchErr := consumer.FetchNoWait(300)
 					if consumerFetchErr != nil {
-						p.logger.Error("error fetching messages", zap.Error(consumerFetchErr))
+						log.Error("error fetching messages", zap.Error(consumerFetchErr))
 						return
 					}
 
 					for msg := range msgBatch.Messages() {
-						p.logger.Debug("subscription update", zap.String("subject", msg.Subject()), zap.ByteString("data", msg.Data()))
+						log.Debug("subscription update", zap.String("messageSubject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
 						updater.Update(msg.Data())
 
 						// Acknowledge the message after it has been processed
 						ackErr := msg.Ack()
 						if ackErr != nil {
-							p.logger.Error("error acknowledging message", zap.Error(ackErr))
+							log.Error("error acknowledging message", zap.String("messageSubject", msg.Subject()), zap.Error(ackErr))
 							return
 						}
 					}
@@ -114,7 +116,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	for i, subject := range event.Subjects {
 		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
-			p.logger.Error("error subscribing to NATS subject", zap.Error(err), zap.String("subject", subject))
+			log.Error("error subscribing to NATS subject", zap.Error(err), zap.String("subscriptionSubject", subject))
 			return pubsub.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
 		}
 		subscriptions[i] = subscription
@@ -128,14 +130,14 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 		for {
 			select {
 			case msg := <-msgChan:
-				p.logger.Debug("subscription update", zap.String("subject", msg.Subject), zap.ByteString("data", msg.Data))
+				log.Debug("subscription update", zap.String("messageSubject", msg.Subject), zap.ByteString("data", msg.Data))
 
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
 				for _, subscription := range subscriptions {
 					if err := subscription.Unsubscribe(); err != nil {
-						p.logger.Error("error unsubscribing from NATS subject after application context cancellation",
+						log.Error("error unsubscribing from NATS subject after application context cancellation",
 							zap.Error(err), zap.String("subject", subscription.Subject),
 						)
 					}
@@ -145,8 +147,8 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 				// When the subscription context is done, we stop the subscription
 				for _, subscription := range subscriptions {
 					if err := subscription.Unsubscribe(); err != nil {
-						p.logger.Error("error unsubscribing from NATS subject after subscription context cancellation",
-							zap.Error(err), zap.String("subject", subscription.Subject),
+						log.Error("error unsubscribing from NATS subject after subscription context cancellation",
+							zap.Error(err), zap.String("subscriptionSubject", subscription.Subject),
 						)
 					}
 				}
@@ -159,15 +161,17 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 }
 
 func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration) error {
-	p.logger.Debug("publish",
-		zap.String("subject", event.Subject),
+	log := p.logger.With(
 		zap.String("providerID", event.ProviderID),
-		zap.ByteString("data", event.Data),
+		zap.String("method", "publish"),
+		zap.String("subject", event.Subject),
 	)
+
+	log.Debug("publish", zap.ByteString("data", event.Data))
 
 	err := p.conn.Publish(event.Subject, event.Data)
 	if err != nil {
-		p.logger.Error("publish error", zap.Error(err))
+		log.Error("publish error", zap.Error(err))
 		return pubsub.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	}
 
@@ -175,19 +179,25 @@ func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPubl
 }
 
 func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration, w io.Writer) error {
-	p.logger.Debug("request",
-		zap.String("subject", event.Subject),
+	log := p.logger.With(
 		zap.String("providerID", event.ProviderID),
-		zap.ByteString("data", event.Data),
+		zap.String("method", "request"),
+		zap.String("subject", event.Subject),
 	)
+
+	log.Debug("request", zap.ByteString("data", event.Data))
 
 	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
-		p.logger.Error("request error", zap.Error(err))
+		log.Error("request error", zap.Error(err))
 		return pubsub.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
 	_, err = w.Write(msg.Data)
+	if err != nil {
+		log.Error("error writing response to writer", zap.Error(err))
+		return err
+	}
 
 	return err
 }

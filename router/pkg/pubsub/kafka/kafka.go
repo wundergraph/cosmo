@@ -146,10 +146,13 @@ func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updat
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
 func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
-	p.logger.Debug("subscribe",
-		zap.Strings("topics", event.Topics),
+	log := p.logger.With(
 		zap.String("providerID", event.ProviderID),
+		zap.String("method", "subscribe"),
+		zap.Strings("topics", event.Topics),
 	)
+
+	log.Debug("subscribe")
 
 	// Create a new client for the topic
 	client, err := kgo.NewClient(append(p.opts,
@@ -162,7 +165,7 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(event.Topics, "-"))),
 	)...)
 	if err != nil {
-		p.logger.Error("failed to create client", zap.Error(err), zap.Strings("topics", event.Topics))
+		log.Error("failed to create client", zap.Error(err))
 		return err
 	}
 
@@ -175,9 +178,9 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 		err := p.topicPoller(ctx, client, updater)
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
-				p.logger.Debug("poller canceled", zap.Error(err))
+				log.Debug("poller canceled", zap.Error(err))
 			} else {
-				p.logger.Error("poller error", zap.Error(err))
+				log.Error("poller error", zap.Error(err))
 
 			}
 			return
@@ -188,10 +191,7 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 
 		<-ctx.Done()
 
-		p.logger.Debug("subscription canceled",
-			zap.String("providerID", event.ProviderID),
-			zap.Error(ctx.Err()),
-		)
+		log.Debug("subscription canceled", zap.Error(ctx.Err()))
 
 	}()
 
@@ -202,12 +202,13 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 // Publish errors are logged and returned as a pubsub error.
 // The event is written with a dedicated write client.
 func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
-
-	p.logger.Debug("publish",
-		zap.String("topic", event.Topic),
+	log := p.logger.With(
 		zap.String("providerID", event.ProviderID),
-		zap.ByteString("data", event.Data),
+		zap.String("method", "publish"),
+		zap.String("topic", event.Topic),
 	)
+
+	log.Debug("publish", zap.ByteString("data", event.Data))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -227,11 +228,7 @@ func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.Kafka
 	wg.Wait()
 
 	if pErr != nil {
-		p.logger.Error("publish error",
-			zap.String("topic", event.Topic),
-			zap.String("providerID", event.ProviderID),
-			zap.Error(pErr),
-		)
+		log.Error("publish error", zap.Error(pErr))
 		return pubsub.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
