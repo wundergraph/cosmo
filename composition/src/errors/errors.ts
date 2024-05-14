@@ -19,9 +19,24 @@ import {
   numberToOrdinal,
 } from '../utils/utils';
 import { RootTypeFieldData } from '../federation/utils';
-import { ARGUMENT, INPUT_FIELD, QUOTATION_JOIN, UNION } from '../utils/string-constants';
+import {
+  AND_UPPER,
+  ARGUMENT,
+  FIELD_PATH,
+  IN_UPPER,
+  INPUT_FIELD,
+  NOT_UPPER,
+  OR_UPPER,
+  QUOTATION_JOIN,
+  SUBSCRIPTION_FIELD_CONDITION,
+  SUBSCRIPTION_FILTER,
+  SUBSCRIPTION_FILTER_CONDITION,
+  UNION,
+  VALUES,
+} from '../utils/string-constants';
 import { ObjectDefinitionData } from '../schema-building/type-definition-data';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
+import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -372,10 +387,9 @@ export function invalidKeyDirectivesError(parentTypeName: string, errorMessages:
   );
 }
 
-// Cannot use the constant for maximum type nesting or there will be a cyclical import
-export function maximumTypeNestingExceededError(path: string, maximumTypeNesting: number): Error {
+export function maximumTypeNestingExceededError(path: string): Error {
   return new Error(
-    ` The type defined at path "${path}" has more than ${maximumTypeNesting} layers of nesting,` +
+    ` The type defined at path "${path}" has more than ${MAXIMUM_TYPE_NESTING} layers of nesting,` +
       ` or there is a cyclical error.`,
   );
 }
@@ -1244,7 +1258,87 @@ export function invalidRootTypeError(typeName: string): Error {
 
 export function invalidSubscriptionFilterLocationError(path: string): Error {
   return new Error(
-    `The directive "@openfed__subscriptionFilter" must only be defined on a subscription root field, but it was` +
+    `The "@${SUBSCRIPTION_FILTER}" directive must only be defined on a subscription root field, but it was` +
       ` defined on the path "${path}".`,
   );
+}
+
+export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errorMessages: string[]): Error {
+  return new Error(
+    `The "@${SUBSCRIPTION_FILTER}" directive defined on path "${fieldPath}" is invalid for the` +
+      ` following reason` +
+      (errorMessages.length > 1 ? 's' : '') +
+      `:\n` +
+      errorMessages.join(`\n`),
+  );
+}
+
+export function invalidSubscriptionFilterFieldPathError(fieldPath: string, errorMessages: string[]) {}
+
+export const subscriptionFilterConditionDepthExceededErrorMessage = ` The maximum depth for a filter condition (${MAX_SUBSCRIPTION_FILTER_DEPTH})  was exceeded.`;
+
+export function subscriptionFilterConditionInvalidInputFieldErrorMessage(invalidFieldName?: string): string {
+  let message =
+    ` Each "${SUBSCRIPTION_FILTER_CONDITION}" input object must define exactly one of the following` +
+    ` input value fields: "${AND_UPPER}", "${IN_UPPER}", "${NOT_UPPER}", or "${OR_UPPER}".`;
+  if (invalidFieldName) {
+    message += `\n However, the field "${invalidFieldName}" was defined.`;
+  }
+  return message;
+}
+
+export function subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+  fieldName: string,
+  expectedTypeString: string,
+  actualTypeString: string,
+): string {
+  return (
+    ` Expected input field "${fieldName}" to be type "${expectedTypeString}" but received type` +
+    ` "${actualTypeString}"`
+  );
+}
+
+export function subscriptionFilterArrayConditionInvalidLengthErrorMessage(
+  fieldName: string,
+  actualLength: number,
+): string {
+  return ` Expected "${fieldName}" condition array to have length of 1–5 but received ${actualLength}.`;
+}
+
+export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
+  missingFieldNames: string[],
+  duplicatedFieldNames: string[],
+  invalidFieldNames: string[],
+): string {
+  let message =
+    ` Each "${SUBSCRIPTION_FIELD_CONDITION}" input object must only define the following two` +
+    ` input value fields: "${FIELD_PATH}" and "${VALUES}".`;
+  if (missingFieldNames.length > 0 || duplicatedFieldNames.length > 0 || invalidFieldNames.length > 0) {
+    message += ` However:`;
+  }
+  if (missingFieldNames.length > 0) {
+    message +=
+      `\n The following field` +
+      (missingFieldNames.length > 1 ? `s were` : ` was`) +
+      ` not defined:\n  "` +
+      missingFieldNames.join(QUOTATION_JOIN) +
+      `"`;
+  }
+  if (duplicatedFieldNames.length > 0) {
+    message +=
+      `\n The following field` +
+      (duplicatedFieldNames.length > 1 ? `s were` : ` was`) +
+      ` defined more than once:\n  "` +
+      duplicatedFieldNames.join(QUOTATION_JOIN) +
+      `"`;
+  }
+  if (invalidFieldNames.length > 0) {
+    message +=
+      `\n The following invalid field` +
+      (invalidFieldNames.length > 1 ? `s were` : ` was`) +
+      ` defined:\n  "` +
+      invalidFieldNames.join(QUOTATION_JOIN) +
+      `"`;
+  }
+  return message;
 }

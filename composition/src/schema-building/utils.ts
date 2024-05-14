@@ -1572,11 +1572,12 @@ export function getValidFieldArgumentNodes(
   if (invalidRequiredArguments.length > 0) {
     errors.push(invalidRequiredInputValueError(FIELD, fieldPath, invalidRequiredArguments));
   } else if (argumentNames.length > 0) {
-    fieldConfigurationByFieldPath.set(fieldPath, {
+    // fieldConfiguration might already exist through subscriptionFilter
+    getValueOrDefault(fieldConfigurationByFieldPath, fieldPath, () => ({
       argumentNames,
       fieldName: fieldData.name,
       typeName: fieldData.renamedParentTypeName,
-    });
+    })).argumentNames = argumentNames;
   }
   return argumentNodes;
 }

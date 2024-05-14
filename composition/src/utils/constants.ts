@@ -766,8 +766,6 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode =
   ],
 };
 
-export const MAXIMUM_TYPE_NESTING = 30;
-
 export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
 
 export const baseDirectives = `
@@ -799,5 +797,3 @@ export const baseDirectives = `
     streamName: String!
   }
 `;
-
-export const MAX_SUBSCRIPTION_FILTER_DEPTH = 4;

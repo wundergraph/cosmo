@@ -34,11 +34,17 @@ import {
   invalidInterfaceImplementationError,
   invalidReferencesOfInaccessibleTypeError,
   invalidRequiredInputValueError,
+  invalidSubscriptionFilterDirectiveError,
   minimumSubgraphRequirementError,
   noBaseTypeExtensionError,
   noConcreteTypesForAbstractTypeError,
   noQueryRootTypeError,
   orScopesLimitError,
+  subscriptionFieldConditionInvalidInputFieldErrorMessage,
+  subscriptionFilterArrayConditionInvalidLengthErrorMessage,
+  subscriptionFilterConditionDepthExceededErrorMessage,
+  subscriptionFilterConditionInvalidInputFieldErrorMessage,
+  subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
   undefinedEntityInterfaceImplementationsError,
   unexpectedObjectResponseType,
   unexpectedParentKindErrorMessage,
@@ -66,7 +72,9 @@ import {
   IN_UPPER,
   INACCESSIBLE,
   INPUT_OBJECT,
+  LIST,
   NOT_UPPER,
+  OBJECT,
   OR_UPPER,
   PARENT_DEFINITION_DATA,
   PERIOD,
@@ -121,7 +129,6 @@ import {
   BASE_SCALARS,
   DEPRECATED_DEFINITION,
   INACCESSIBLE_DEFINITION,
-  MAX_SUBSCRIPTION_FILTER_DEPTH,
   REQUIRES_SCOPES_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
   TAG_DEFINITION,
@@ -173,6 +180,7 @@ import { createMultiGraphAndRenameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import { getLeastRestrictiveMergedTypeNode, getMostRestrictiveMergedTypeNode } from '../schema-building/type-merging';
 import { ConstDirectiveNode, ConstObjectValueNode } from 'graphql/index';
+import { MAX_SUBSCRIPTION_FILTER_DEPTH } from '../utils/integer-constants';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -2045,19 +2053,25 @@ export class FederationFactory {
     condition: SubscriptionFieldCondition,
     objectData: ObjectDefinitionData,
     depth: number,
+    errorMessages: string[],
   ): boolean {
     if (depth > MAX_SUBSCRIPTION_FILTER_DEPTH || this.isMaxDepth) {
+      errorMessages.push(subscriptionFilterConditionDepthExceededErrorMessage);
       this.isMaxDepth = true;
-      // TODO error
       return false;
     }
-    if (objectValueNode.fields.length != 2) {
-      // TODO error
-      return false;
-    }
+    const validFieldNames = new Set<string>([FIELD_PATH, VALUES]);
+    const duplicatedFieldNames = new Set<string>();
+    const invalidFieldNames = new Set<string>();
     for (const objectFieldNode of objectValueNode.fields) {
       switch (objectFieldNode.name.value) {
         case FIELD_PATH: {
+          if (validFieldNames.has(FIELD_PATH)) {
+            validFieldNames.delete(FIELD_PATH);
+          } else {
+            duplicatedFieldNames.add(FIELD_PATH);
+            break;
+          }
           if (objectFieldNode.value.kind !== Kind.STRING || objectFieldNode.value.value.length < 1) {
             // TODO error
             break;
@@ -2070,26 +2084,50 @@ export class FederationFactory {
           break;
         }
         case VALUES: {
-          // TODO handle coercion of single value into list
+          if (validFieldNames.has(VALUES)) {
+            validFieldNames.delete(VALUES);
+          } else {
+            duplicatedFieldNames.add(VALUES);
+            break;
+          }
+          // Coerce a string into a list
+          if (objectFieldNode.value.kind === Kind.STRING) {
+            condition.values = [objectFieldNode.value.value];
+            break;
+          }
           if (objectFieldNode.value.kind !== Kind.LIST) {
             break;
           }
-          const values: string[] = [];
+          // Prevent duplicate values
+          const values = new Set<string>();
           for (const valueNode of objectFieldNode.value.values) {
             if (valueNode.kind !== Kind.STRING) {
               // TODO error
               continue;
             }
-            values.push(valueNode.value);
+            values.add(valueNode.value);
           }
-          if (values.length < 1) {
+          if (values.size < 1) {
             // TODO error
             return false;
           }
-          condition.values = values;
+          condition.values = [...values];
           break;
         }
+        default: {
+          invalidFieldNames.add(objectFieldNode.name.value);
+        }
       }
+    }
+    if (objectValueNode.fields.length !== 2 || validFieldNames.size !== 0 || invalidFieldNames.size > 0) {
+      errorMessages.push(
+        subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          [...validFieldNames],
+          [...duplicatedFieldNames],
+          [...invalidFieldNames],
+        ),
+      );
+      return false;
     }
     return true;
   }
@@ -2099,38 +2137,56 @@ export class FederationFactory {
     configuration: SubscriptionCondition,
     objectData: ObjectDefinitionData,
     depth: number,
+    errorMessages: string[],
   ): boolean {
     if (depth > MAX_SUBSCRIPTION_FILTER_DEPTH || this.isMaxDepth) {
+      errorMessages.push(subscriptionFilterConditionDepthExceededErrorMessage);
       this.isMaxDepth = true;
-      // TODO error
       return false;
     }
     depth += 1;
     if (objectValueNode.fields.length !== 1) {
-      // TODO error
+      errorMessages.push(subscriptionFilterConditionInvalidInputFieldErrorMessage());
       return false;
     }
     const objectFieldNode = objectValueNode.fields[0];
-    if (!SUBSCRIPTION_FILTER_INPUT_NAMES.has(objectFieldNode.name.value)) {
-      // TODO error
+    const fieldName = objectFieldNode.name.value;
+    if (!SUBSCRIPTION_FILTER_INPUT_NAMES.has(fieldName)) {
+      errorMessages.push(subscriptionFilterConditionInvalidInputFieldErrorMessage(fieldName));
       return false;
     }
     switch (objectFieldNode.value.kind) {
       case Kind.OBJECT: {
-        if (objectFieldNode.name.value === IN_UPPER) {
-          configuration.in = { fieldPath: [], values: [] };
-          return this.validateSubscriptionFieldCondition(objectFieldNode.value, configuration.in, objectData, depth);
+        switch (fieldName) {
+          case IN_UPPER: {
+            configuration.in = { fieldPath: [], values: [] };
+            return this.validateSubscriptionFieldCondition(
+              objectFieldNode.value,
+              configuration.in,
+              objectData,
+              depth,
+              errorMessages,
+            );
+          }
+          case NOT_UPPER: {
+            configuration.not = {};
+            return this.validateSubscriptionFilterCondition(
+              objectFieldNode.value,
+              configuration.not,
+              objectData,
+              depth,
+              errorMessages,
+            );
+          }
+          default:
+            // The field is guaranteed to be an AND or an OR
+            errorMessages.push(subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(fieldName, LIST, OBJECT));
+            return false;
         }
-        if (objectFieldNode.name.value === NOT_UPPER) {
-          configuration.not = {};
-          return this.validateSubscriptionFilterCondition(objectFieldNode.value, configuration.not, objectData, depth);
-        }
-        // TODO ERROR
-        return false;
       }
       case Kind.LIST: {
         const listConfigurations: SubscriptionCondition[] = [];
-        switch (objectFieldNode.name.value) {
+        switch (fieldName) {
           case AND_UPPER: {
             configuration.and = listConfigurations;
             break;
@@ -2140,21 +2196,28 @@ export class FederationFactory {
             break;
           }
           default:
-            // TODO ERROR
+            // The field is guaranteed to be an IN or a NOT
+            errorMessages.push(subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(fieldName, OBJECT, LIST));
             return false;
         }
-        if (objectFieldNode.value.values.length < 1 || objectFieldNode.value.values.length > 5) {
-          // TODO ERROR
+        const listLength = objectFieldNode.value.values.length;
+        if (listLength < 1 || listLength > 5) {
+          errorMessages.push(subscriptionFilterArrayConditionInvalidLengthErrorMessage(fieldName, listLength));
           return false;
         }
         let isValid = true;
-
         for (const listValueNode of objectFieldNode.value.values) {
           if (listValueNode.kind !== Kind.OBJECT) {
             continue;
           }
           const listConfiguration: SubscriptionCondition = {};
-          isValid &&= this.validateSubscriptionFilterCondition(listValueNode, listConfiguration, objectData, depth);
+          isValid &&= this.validateSubscriptionFilterCondition(
+            listValueNode,
+            listConfiguration,
+            objectData,
+            depth,
+            errorMessages,
+          );
           if (isValid) {
             listConfigurations.push(listConfiguration);
           }
@@ -2162,7 +2225,14 @@ export class FederationFactory {
         return isValid;
       }
       default: {
-        // TODO ERROR
+        const expectedTypeString = fieldName === AND_UPPER || fieldName === OR_UPPER ? LIST : OBJECT;
+        errorMessages.push(
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+            fieldName,
+            expectedTypeString,
+            kindToTypeString(objectFieldNode.value.kind),
+          ),
+        );
         return false;
       }
     }
@@ -2185,10 +2255,9 @@ export class FederationFactory {
       return;
     }
     const condition = {} as SubscriptionCondition;
-    if (!this.validateSubscriptionFilterCondition(argumentNode.value, condition, objectData, 0)) {
-      if (this.isMaxDepth) {
-        // TODO error
-      }
+    const errorMessages: string[] = [];
+    if (!this.validateSubscriptionFilterCondition(argumentNode.value, condition, objectData, 0, errorMessages)) {
+      this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, errorMessages));
       this.isMaxDepth = false;
       return;
     }

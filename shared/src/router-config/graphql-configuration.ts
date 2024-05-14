@@ -24,6 +24,7 @@ import {
   RequiredFieldConfiguration,
   SubscriptionCondition,
 } from '@wundergraph/composition';
+import { KAFKA, NATS } from '@wundergraph/composition/dist/utils/string-constants.js';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
@@ -108,7 +109,7 @@ export function configurationDataMapToDataSourceConfiguration(
     const kafkaEventConfigurations: KafkaEventConfiguration[] = [];
     for (const event of data.events ?? []) {
       switch (event.providerType) {
-        case 'kafka': {
+        case KAFKA: {
           kafkaEventConfigurations.push(
             new KafkaEventConfiguration({
               engineEventConfiguration: new EngineEventConfiguration({
@@ -122,7 +123,7 @@ export function configurationDataMapToDataSourceConfiguration(
           );
           break;
         }
-        case 'nats': {
+        case NATS: {
           natsEventConfigurations.push(
             new NatsEventConfiguration({
               engineEventConfiguration: new EngineEventConfiguration({
@@ -174,8 +175,9 @@ export function generateFieldConfigurations(
       typeName: compositionFieldConfiguration.typeName,
     });
     const requiredOrScopes =
-      compositionFieldConfiguration.requiredScopes?.map((andScopes) => new Scopes({ requiredAndScopes: andScopes })) ||
-      [];
+      compositionFieldConfiguration.requiredScopes?.map(
+        (andScopes: string[]) => new Scopes({ requiredAndScopes: andScopes }),
+      ) || [];
     const hasRequiredOrScopes = requiredOrScopes.length > 0;
     if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {
       fieldConfiguration.authorizationConfiguration = new AuthorizationConfiguration({
