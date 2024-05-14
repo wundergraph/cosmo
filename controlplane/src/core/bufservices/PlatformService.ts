@@ -1683,22 +1683,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         req.excludeTags = [...new Set(req.excludeTags)];
 
-        if (!isValidSchemaTags(req.excludeTags)) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `Provided tags are invalid`,
+              details: `The user doesn't have the permissions to perform this operation`,
             },
             compositionErrors: [],
             deploymentErrors: [],
           };
         }
 
-        if (!authContext.hasWriteAccess) {
+        if (!isValidSchemaTags(req.excludeTags)) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `The user doesn't have the permissions to perform this operation`,
+              details: `Provided tags are invalid`,
             },
             compositionErrors: [],
             deploymentErrors: [],
