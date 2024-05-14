@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.68.0...@wundergraph/cosmo-connect@0.69.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
 # [0.68.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.67.0...@wundergraph/cosmo-connect@0.68.0) (2024-05-03)
 
 ### Features
