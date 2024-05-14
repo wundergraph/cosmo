@@ -3,13 +3,17 @@ package cmd
 import (
 	"context"
 	"flag"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/fsnotify/fsnotify"
+
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"go.uber.org/zap"
 
@@ -80,6 +84,44 @@ func Main() {
 			stop()
 		}
 	}()
+
+	configPath := result.Config.RouterConfigPath
+
+	if configPath != "" {
+		watcher, _ := fsnotify.NewWatcher()
+		defer watcher.Close()
+
+		go func() {
+			for {
+				select {
+				// watch for events
+				case event := <-watcher.Events:
+					if event.Has(fsnotify.Write) {
+						logger.Info("Config file has been written - updating router")
+
+						routerConfig, err := execution_config.SerializeConfigFromFile(configPath)
+
+						if err != nil {
+							logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", configPath))
+						}
+
+						err = router.UpdateServerAndStart(ctx, routerConfig)
+
+						if err != nil {
+							logger.Fatal("Could not update server", zap.Error(err))
+						}
+					}
+
+					// watch for errors
+				case err := <-watcher.Errors:
+					logger.Error("Error watching for config file changes", zap.Error(err))
+				}
+			}
+		}()
+
+		logger.Info("Watching for changes to config file", zap.String("path", configPath))
+		watcher.Add(configPath)
+	}
 
 	<-ctx.Done()
 

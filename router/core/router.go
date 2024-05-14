@@ -512,9 +512,7 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 	return subgraphs, nil
 }
 
-// UpdateServer starts a new server and swaps the active server with the new one. The old server is shutdown gracefully.
-// When the router can't be swapped due to an error the old server kept running. Not safe for concurrent use.
-func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Server, error) {
+func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Server, error) {
 	// Rebuild server with new router config
 	// In case of an error, we return early and keep the old server running
 	newServer, err := r.newServer(ctx, cfg)
@@ -537,9 +535,11 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 	return newServer, nil
 }
 
-func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterConfig) error {
+// UpdateServer starts a new server and swaps the active server with the new one. The old server is shutdown gracefully.
+// When the router can't be swapped due to an error the old server kept running. Not safe for concurrent use.
+func (r *Router) UpdateServerAndStart(ctx context.Context, cfg *nodev1.RouterConfig) error {
 
-	if _, err := r.UpdateServer(ctx, cfg); err != nil {
+	if _, err := r.updateServer(ctx, cfg); err != nil {
 		return err
 	}
 
@@ -629,7 +629,7 @@ func (r *Router) initModules(ctx context.Context) error {
 // NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
 // the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
 // The server can be shutdown with Router.Shutdown(). Use core.WithStaticRouterConfig to pass the initial config otherwise the Router will
-// try to fetch the config from the control plane. You can swap the router config by using Router.UpdateServer().
+// try to fetch the config from the control plane. You can swap the router config by using Router.UpdateServerAndStart().
 func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	if r.shutdown {
 		return nil, fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
@@ -642,7 +642,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.UpdateServer(ctx, r.routerConfig)
+		return r.updateServer(ctx, r.routerConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -655,7 +655,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if _, err := r.UpdateServer(ctx, routerConfig); err != nil {
+	if _, err := r.updateServer(ctx, routerConfig); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return nil, err
 	}
@@ -797,7 +797,7 @@ func (r *Router) Start(ctx context.Context) error {
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
 		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
-		return r.updateServerAndStart(ctx, r.routerConfig)
+		return r.UpdateServerAndStart(ctx, r.routerConfig)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -810,7 +810,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	if err := r.updateServerAndStart(ctx, routerConfig); err != nil {
+	if err := r.UpdateServerAndStart(ctx, routerConfig); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return err
 	}
@@ -822,7 +822,7 @@ func (r *Router) Start(ctx context.Context) error {
 			zap.String("old_version", oldVersion),
 			zap.String("new_version", newConfig.GetVersion()),
 		)
-		if err := r.updateServerAndStart(ctx, newConfig); err != nil {
+		if err := r.UpdateServerAndStart(ctx, newConfig); err != nil {
 			r.logger.Error("Failed to start server with new config. Trying again on the next update cycle.", zap.Error(err))
 			return err
 		}
