@@ -61,8 +61,8 @@ const CompositionsPage: NextPageWithLayout = () => {
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getCompositions.useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getCompositions.useQuery({
       fedGraphName: router.query.slug as string,
       namespace: router.query.namespace as string,
       limit: limit > 50 ? 50 : limit,
@@ -70,7 +70,8 @@ const CompositionsPage: NextPageWithLayout = () => {
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
     }),
-  );
+    placeholderData: (prev) => prev,
+  });
 
   if (isLoading) return <Loader fullscreen />;
 

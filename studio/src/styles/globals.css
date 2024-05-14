@@ -187,3 +187,7 @@ pre[class*="language-"] code {
   background-color: #ffff00;
   border-left: 3px solid #ff0000;
 }
+
+.monaco-editor .lines-content.monaco-editor-background {
+  margin-left: 8px;
+}

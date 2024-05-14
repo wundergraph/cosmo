@@ -83,6 +83,7 @@ const OverridesPage: NextPageWithLayout = () => {
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
     }),
+    placeholderData: (prev) => prev,
     enabled: !!graphContext?.graph?.name,
   });
 

@@ -73,8 +73,8 @@ const ChecksPage: NextPageWithLayout = () => {
 
   const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getChecksByFederatedGraphName.useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getChecksByFederatedGraphName.useQuery({
       name: router.query.slug as string,
       namespace: router.query.namespace as string,
       limit: limit > 50 ? 50 : limit,
@@ -82,7 +82,8 @@ const ChecksPage: NextPageWithLayout = () => {
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
     }),
-  );
+    placeholderData: (prev) => prev,
+  });
 
   if (isLoading) return <Loader fullscreen />;
 
