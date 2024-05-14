@@ -524,7 +524,7 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 	return subgraphs, nil
 }
 
-// UpdateServer starts a new server and swaps the active server with the new one. The old server is shutdown gracefully.
+// UpdateServer creates a new server and swaps the active server with the new one. The old server is shutdown gracefully.
 // When the router can't be swapped due to an error the old server kept running. Not safe for concurrent use.
 func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Server, error) {
 	// Rebuild server with new router config
