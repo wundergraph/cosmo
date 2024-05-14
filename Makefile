@@ -91,8 +91,9 @@ start-studio:
 start-router:
 	(cd router && make dev)
 
+DC_FLAGS=
 dc-dev:
-	docker compose --file docker-compose.yml --profile dev up --remove-orphans --detach --build
+	docker compose --file docker-compose.yml --profile dev up --remove-orphans --detach $(DC_FLAGS)
 
 dc-stack:
 	docker compose --file docker-compose.cosmo.yml up --remove-orphans --detach
