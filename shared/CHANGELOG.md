@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.25.2...@wundergraph/cosmo-shared@0.26.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
 ## [0.25.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.25.1...@wundergraph/cosmo-shared@0.25.2) (2024-05-10)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared
