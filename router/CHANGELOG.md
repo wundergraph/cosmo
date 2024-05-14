@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.86.1](https://github.com/wundergraph/cosmo/compare/router@0.86.0...router@0.86.1) (2024-05-14)
+
+### Bug Fixes
+
+* enable remove unused variables normalization rule ([#790](https://github.com/wundergraph/cosmo/issues/790)) ([4cac7e4](https://github.com/wundergraph/cosmo/commit/4cac7e4dd581f2d091bc61ae50c83ccede5cf2f0)) (@devsergiy)
+
 # [0.86.0](https://github.com/wundergraph/cosmo/compare/router@0.85.2...router@0.86.0) (2024-05-14)
 
 ### Bug Fixes
