@@ -2,6 +2,7 @@ import { Linter } from 'eslint';
 import { parseForESLint, rules } from '@graphql-eslint/eslint-plugin';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { baseDirectives } from '@wundergraph/composition';
+import { uid } from 'uid';
 import { LintIssueResult, RulesConfig, SchemaLintDTO, SchemaLintIssues, LintRules } from '../../types/index.js';
 import { LintRuleEnum } from '../../db/models.js';
 
@@ -176,7 +177,7 @@ export const schemaLintCheck = ({
       parserOptions: { schema: baseDirectives + schema },
       rules: rulesConfig,
     },
-    'schema.graphql',
+    `${uid()}.graphql`,
   );
 
   const lintWarnings: LintIssueResult[] = [];
