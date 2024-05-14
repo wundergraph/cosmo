@@ -865,35 +865,38 @@
                   "authentication": {
                     "description": "Authentication configuration for the NATS provider.",
                     "type": "object",
-                    "oneOf": [{
-                      "required": ["token"],
-                      "properties": {
-                        "token": {
-                          "type": "string",
-                          "description": "The token for token-based authentication."
+                    "oneOf": [
+                      {
+                        "required": ["token"],
+                        "properties": {
+                          "token": {
+                            "type": "string",
+                            "description": "The token for token-based authentication."
+                          }
                         }
-                      }
-                    }, {
-                      "type": "object",
-                      "properties": {
-                        "user_info": {
-                          "type": "object",
-                          "description": "Userinfo configuration for the NATS provider.",
-                          "additionalProperties": false,
-                          "required": ["username", "password"],
-                          "properties": {
-                            "username": {
-                              "type": "string",
-                              "description": "The username for username/password-based authentication."
-                            },
-                            "password": {
-                              "type": "string",
-                              "description": "The password for username/password-based authentication."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "user_info": {
+                            "type": "object",
+                            "description": "Userinfo configuration for the NATS provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for username/password-based authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for username/password-based authentication."
+                              }
                             }
                           }
                         }
                       }
-                    }]
+                    ]
                   }
                 }
               }
@@ -932,27 +935,29 @@
                   "authentication": {
                     "type": "object",
                     "description": "SASL Authentication configuration for the Kafka provider.",
-                    "oneOf": [{
-                      "type": "object",
-                      "properties": {
-                        "sasl_plain": {
-                          "type": "object",
-                          "description": "Plain SASL Authentication configuration for the Kafka provider.",
-                          "additionalProperties": false,
-                          "required": ["username", "password"],
-                          "properties": {
-                            "username": {
-                              "type": "string",
-                              "description": "The username for plain SASL authentication."
-                            },
-                            "password": {
-                              "type": "string",
-                              "description": "The password for plain SASL authentication."
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "sasl_plain": {
+                            "type": "object",
+                            "description": "Plain SASL Authentication configuration for the Kafka provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for plain SASL authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for plain SASL authentication."
+                              }
                             }
                           }
                         }
                       }
-                    }]
+                    ]
                   }
                 }
               }
@@ -988,6 +993,37 @@
             "type": "string",
             "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
             "format": "http-url"
+          }
+        }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "description": "The configuration to override subgraph config. The config is used to override the config for subgraphs.",
+      "additionalProperties": false,
+      "properties": {
+        "subgraphs": {
+          "type": "object",
+          "description": "The configuration for the subgraphs. The subgraphs are used to override the config for the subgraphs.",
+          "properties": {
+            "routing_url": {
+              "type": "string",
+              "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
+              "format": "http-url"
+            },
+            "subscription_url": {
+              "type": "string",
+              "description": "The Subscription URL of the subgraph. The URL is used to override the subscription URL for the subgraph.",
+              "format": "http-url"
+            },
+            "subscription_protocol": {
+              "type": "string",
+              "description": "The Subscription protocol of the subgraph. The protocol is used to override the subscription protocol for the subgraph."
+            },
+            "subscription_websocket_subprotocol": {
+              "type": "string",
+              "description": "The Websocket subprotocol of the subgraph. The protocol is used to override the Websocket subprotocol for the subgraph."
+            }
           }
         }
       }

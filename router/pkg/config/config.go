@@ -422,7 +422,7 @@ type Config struct {
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
-	Overrides OverridesConfiguration `yaml:"overrides,omitempty"`
+	Overrides OverridesConfiguration `yaml:"overrides"`
 
 	SecurityConfiguration SecurityConfiguration `yaml:"security,omitempty"`
 

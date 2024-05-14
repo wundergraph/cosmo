@@ -94,6 +94,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	options := []core.Option{
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
+		core.WithOverrides(cfg.Overrides),
 		core.WithLogger(logger),
 		core.WithConfigPoller(configPoller),
 		core.WithSelfRegistration(selfRegister),

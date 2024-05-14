@@ -234,6 +234,14 @@ override_routing_url:
   subgraphs:
     some-subgraph: http://router:3002/graphql
 
+overrides:
+  subgraphs:
+    some-subgraph:
+      routing_url: http://router:3002/graphql
+      subscription_url: http://router:3002/graphql/ws
+      subscription_protocol: ws
+      subscription_websocket_subprotocol: graphql-ws
+
 websocket:
   enabled: true
   absinthe_protocol:
