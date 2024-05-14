@@ -69,8 +69,10 @@ import useWindowSize from "@/hooks/use-window-size";
 import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import {
-  GraphQLField,
+  FieldMatch,
   GraphQLTypeCategory,
+  ParsedGraphQLField,
+  getAllFields,
   getCategoryDescription,
   getCategoryForType,
   getDeprecatedTypes,
@@ -201,7 +203,7 @@ const FieldUsageColumn = ({
 const Fields = (props: {
   typename: string;
   category: GraphQLTypeCategory;
-  fields: GraphQLField[];
+  fields: ParsedGraphQLField[];
   ast: GraphQLSchema;
 }) => {
   const router = useRouter();
@@ -245,6 +247,33 @@ const Fields = (props: {
     overscan: 5,
   });
   const items = virtualizer.getVirtualItems();
+
+  const fieldName = router.query.fieldName as string;
+
+  const [scrolledField, setScrolledField] = useState<string>();
+  useEffect(() => {
+    if (scrolledField === fieldName) {
+      return;
+    }
+
+    if (!fieldName) {
+      setScrolledField(undefined);
+      return;
+    }
+
+    const index = props.fields.findIndex((f) => f.name === fieldName);
+    if (index === -1) return;
+
+    const offset = items[index]?.start + 150;
+    if (!offset) return;
+
+    virtualizer.scrollToOffset(offset, {
+      align: "end",
+    });
+
+    setScrolledField(fieldName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fieldName, props.fields, virtualizer]);
 
   return (
     <TableWrapper ref={parentRef} className="max-h-full">
@@ -582,7 +611,7 @@ const Type = (props: {
   category: GraphQLTypeCategory;
   description: string;
   interfaces?: string[];
-  fields?: GraphQLField[];
+  fields?: ParsedGraphQLField[];
   ast: GraphQLSchema;
   startLineNo?: number;
   endLineNo?: number;
@@ -835,7 +864,13 @@ const TypeWrapper = ({
   );
 };
 
-const SearchDescription = ({ ast }: { ast: GraphQLSchema }) => {
+const SearchDescription = ({
+  ast,
+  allFields,
+}: {
+  ast: GraphQLSchema;
+  allFields: FieldMatch[];
+}) => {
   const activeValue = useCommandState((state) => state.value);
 
   if (!activeValue) {
@@ -846,14 +881,46 @@ const SearchDescription = ({ ast }: { ast: GraphQLSchema }) => {
   const types = getTypesByCategory(ast, category as any);
   const type = types[Number(index)];
 
+  const [fieldIndex, fieldType, fieldName] = activeValue
+    ?.split(".")
+    ?.map((v) => v.trim());
+  const field = allFields[Number(fieldIndex)]?.field;
+
   return (
     <div className="hidden w-64 flex-shrink-0 flex-col p-4 md:flex">
-      <Badge className="w-max">{category}</Badge>
-      <p className="mt-4 break-words text-sm text-muted-foreground">
-        {type.description || (
-          <span className="italic">No description provided</span>
-        )}
-      </p>
+      {type ? (
+        <>
+          <Badge className="w-max">{category}</Badge>
+          <p className="mt-4 break-words text-sm text-muted-foreground">
+            {type.description || (
+              <span className="italic">No description provided</span>
+            )}
+          </p>
+        </>
+      ) : field ? (
+        <div>
+          <div className="flex flex-col gap-y-4 text-sm">
+            <p className="break-words text-muted-foreground">
+              {field.description || (
+                <span className="italic">No description provided</span>
+              )}
+            </p>
+            {field.deprecationReason && (
+              <p className="flex flex-col items-start gap-x-1">
+                <span className="flex items-center gap-x-1 font-semibold">
+                  <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
+                  Deprecated
+                </span>{" "}
+                {field.deprecationReason}
+              </p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="text-sm italic text-muted-foreground">
+          No info available
+        </div>
+      )}
     </div>
   );
 };
@@ -879,6 +946,8 @@ const SearchType = ({
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, [setOpen]);
+
+  const allFields = getAllFields(ast);
 
   const counts = getTypeCounts(ast);
 
@@ -927,8 +996,35 @@ const SearchType = ({
               </CommandGroup>
             );
           })}
+          <CommandGroup heading="Fields">
+            {allFields.map((f, i) => {
+              return (
+                <CommandItem
+                  onSelect={() => {
+                    const newQuery = { ...router.query };
+                    newQuery.category = getCategoryForType(
+                      ast,
+                      f.type.name,
+                    ) as string;
+                    newQuery.typename = f.type.name;
+                    newQuery.fieldName = f.field.name;
+                    setOpen(false);
+                    router.push({
+                      query: newQuery,
+                    });
+                  }}
+                  key={f.field.name}
+                  value={`${i} . ${f.type.name} . ${f.field.name}`}
+                  className="subpixel-antialiased"
+                >
+                  <span className="text-primary">{f.type.name}</span>.
+                  {f.field.name}
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
         </CommandList>
-        <SearchDescription ast={ast} />
+        <SearchDescription ast={ast} allFields={allFields} />
       </div>
     </CommandDialog>
   );
