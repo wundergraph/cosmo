@@ -16,7 +16,7 @@ describe('Contracts', (ctx) => {
   });
 
   test('Creates a contract for a federated graph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -35,7 +35,6 @@ describe('Contracts', (ctx) => {
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
@@ -58,6 +57,7 @@ describe('Contracts', (ctx) => {
     expect(contractGraphRes.graph?.routingURL).toBe('http://localhost:8081');
     expect(contractGraphRes.graph?.readme).toBe('test');
     expect(contractGraphRes.graph?.supportsFederation).toEqual(true)
+    expect(blobStorage.keys().length).toBe(2);
 
     await server.close();
   });
@@ -108,7 +108,7 @@ describe('Contracts', (ctx) => {
   });
 
   test('Contract is deleted on deleting source federated graph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -127,7 +127,6 @@ describe('Contracts', (ctx) => {
       sourceGraphName: fedGraphName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
 
@@ -136,6 +135,8 @@ describe('Contracts', (ctx) => {
       namespace: 'default',
     });
     expect(contractGraphRes.graph?.contract).toBeDefined();
+
+    expect(blobStorage.keys().length).toBe(2);
 
     await client.deleteFederatedGraph({
       name: fedGraphName,
@@ -147,6 +148,8 @@ describe('Contracts', (ctx) => {
       namespace: 'default',
     });
     expect(contractGraphDeletedRes.response?.code).toEqual(EnumStatusCode.ERR_NOT_FOUND);
+
+    expect(blobStorage.keys().length).toBe(0);
 
     await server.close();
   });
@@ -400,7 +403,7 @@ describe('Contracts', (ctx) => {
   });
 
   test('Contract is deleted on deleting source monograph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname });
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -413,15 +416,23 @@ describe('Contracts', (ctx) => {
     });
     expect(createResp.response?.code).toBe(EnumStatusCode.OK);
 
+    const publishRes1 = await client.publishMonograph({
+      name: monographName,
+      namespace: 'default',
+      schema: 'type Query { hello: String!, hi: String! @tag(name: "test"), test: String! }'
+    });
+    expect(publishRes1.response?.code).toEqual(EnumStatusCode.OK)
+
     await client.createContract({
       name: contractGraphName,
       namespace: 'default',
       sourceGraphName: monographName,
       excludeTags: ['test'],
       routingUrl: 'http://localhost:8081',
-      admissionWebhookUrl: 'http://localhost:8085',
       readme: 'test',
     });
+
+    expect(blobStorage.keys().length).toBe(2);
 
     const deleteRes = await client.deleteMonograph({
       name: monographName,
@@ -434,6 +445,8 @@ describe('Contracts', (ctx) => {
       namespace: 'default',
     });
     expect(getContractRes.response?.code).toEqual(EnumStatusCode.ERR_NOT_FOUND)
+
+    expect(blobStorage.keys().length).toBe(0);
 
     await server.close();
   });
