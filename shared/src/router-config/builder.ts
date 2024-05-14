@@ -7,8 +7,7 @@ import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
-  // eslint-disable-next-line camelcase
-  DataSourceCustom_Events,
+  DataSourceCustomEvents,
   // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
   DataSourceKind,
@@ -105,11 +104,12 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     // eslint-disable-next-line camelcase
     let customGraphql: DataSourceCustom_GraphQL | undefined;
     // eslint-disable-next-line camelcase
-    let customEvents: DataSourceCustom_Events | undefined;
-    if (events.length > 0) {
+    let customEvents: DataSourceCustomEvents | undefined;
+    if (events.kafka.length > 0 || events.nats.length > 0) {
       kind = DataSourceKind.PUBSUB;
-      customEvents = new DataSourceCustom_Events({
-        events,
+      customEvents = new DataSourceCustomEvents({
+        kafka: events.kafka,
+        nats: events.nats,
       });
       // PUBSUB data sources cannot have root nodes other than
       // Query/Mutation/Subscription. Filter rootNodes in place

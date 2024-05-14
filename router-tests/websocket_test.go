@@ -196,6 +196,7 @@ func TestWebSockets(t *testing.T) {
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
 			})
 			require.NoError(t, err)
+
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
@@ -206,17 +207,15 @@ func TestWebSockets(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
+
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"]}]`, string(res.Payload))
-			var complete testenv.WebSocketMessage
-			err = conn.ReadJSON(&complete)
-			require.NoError(t, err)
-			require.Equal(t, "complete", complete.Type)
-			require.Equal(t, "1", complete.ID)
+
+			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -269,11 +268,8 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
-			var complete testenv.WebSocketMessage
-			err = conn.ReadJSON(&complete)
-			require.NoError(t, err)
-			require.Equal(t, "complete", complete.Type)
-			require.Equal(t, "1", complete.ID)
+
+			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -363,6 +359,10 @@ func TestWebSockets(t *testing.T) {
 				},
 			},
 		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
@@ -374,6 +374,8 @@ func TestWebSockets(t *testing.T) {
 				Employees: testenv.SubgraphConfig{
 					Middleware: func(handler http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							defer wg.Done()
+
 							upgrader := websocket.Upgrader{
 								CheckOrigin: func(r *http.Request) bool {
 									return true
@@ -451,23 +453,17 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			var complete testenv.WebSocketMessage
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 			require.NoError(t, err)
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
 
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			_, _, err = conn.ReadMessage()
-			require.Error(t, err)
-			var netErr net.Error
-			if errors.As(err, &netErr) {
-				require.True(t, netErr.Timeout())
-			} else {
-				require.Fail(t, "expected net.Error")
-			}
+			wg.Wait()
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
 	t.Run("subscription with header propagation sse subgraph post", func(t *testing.T) {

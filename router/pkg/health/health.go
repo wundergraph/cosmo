@@ -17,7 +17,7 @@ type Checker interface {
 	// and 503 Service Unavailable if the server is not ready to serve traffic.
 	Readiness() http.HandlerFunc
 
-	// SetReady should atomatically be set to true when the server is ready to accept traffic.
+	// SetReady should automatically be set to true when the server is ready to accept traffic.
 	SetReady(isReady bool)
 }
 

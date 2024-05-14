@@ -73,10 +73,15 @@ func Main() {
 		logger.Fatal("Could not create app", zap.Error(err))
 	}
 
+	// Provide a way to cancel all running components of the router after graceful shutdown
+	// Don't use the parent context that is canceled by the signal handler
+	routerCtx, routerCancel := context.WithCancel(context.Background())
+	defer routerCancel()
+
 	go func() {
-		if err := router.Start(ctx); err != nil {
+		if err := router.Start(routerCtx); err != nil {
 			logger.Error("Could not start server", zap.Error(err))
-			// Don't block and wait for shutdown. We don't want to shutdown hard because some sinks might be flushed.
+			// Stop the server if it fails to start
 			stop()
 		}
 	}()
@@ -84,6 +89,7 @@ func Main() {
 	<-ctx.Done()
 
 	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
+
 	// Enforce a maximum shutdown delay to avoid waiting forever
 	// Don't use the parent context that is canceled by the signal handler
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), result.Config.ShutdownDelay)

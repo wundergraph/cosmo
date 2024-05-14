@@ -26,7 +26,7 @@ const (
 	errorTypeContextCanceled
 	errorTypeContextTimeout
 	errorTypeUpgradeFailed
-	errorTypeEDFSNats
+	errorTypeEDFS
 )
 
 type (
@@ -64,9 +64,9 @@ func getErrorType(err error) errorType {
 			return errorTypeContextTimeout
 		}
 	}
-	var edfsErr *pubsub.EDFSNatsError
+	var edfsErr *pubsub.Error
 	if errors.As(err, &edfsErr) {
-		return errorTypeEDFSNats
+		return errorTypeEDFS
 	}
 	return errorTypeUnknown
 }
