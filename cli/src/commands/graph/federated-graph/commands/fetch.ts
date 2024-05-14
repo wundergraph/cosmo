@@ -129,7 +129,7 @@ export default (opts: BaseCommandOptions) => {
         subgraphs: cosmoSubgraphsConfig,
       });
       writeFileSync(join(basePath, `cosmo-composition.yaml`), cosmoCompositionConfig);
-      
+
       if (options.apolloCompatibility) {
         const roverCompositionConfig = yaml.dump({
           federation_version: '=2.6.1',
