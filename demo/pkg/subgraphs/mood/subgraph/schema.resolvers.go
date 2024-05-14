@@ -7,6 +7,7 @@ package subgraph
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/model"
@@ -17,15 +18,23 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 	storage.Set(employeeID, mood)
 	myNatsTopic := fmt.Sprintf("employeeUpdated.%d", employeeID)
 	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
-	err := r.PubSubBySourceName["default"].Publish(ctx, myNatsTopic, []byte(payload))
+	err := r.NatsPubSubByProviderID["default"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
+		Subject: myNatsTopic,
+		Data:    []byte(payload),
+	})
 	if err != nil {
 		return nil, err
 	}
+
 	defaultTopic := fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)
-	err = r.PubSubBySourceName["my-nats"].Publish(ctx, defaultTopic, []byte(payload))
+	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
+		Subject: defaultTopic,
+		Data:    []byte(payload),
+	})
 	if err != nil {
 		return nil, err
 	}
+
 	return &model.Employee{ID: employeeID, CurrentMood: mood}, nil
 }
 

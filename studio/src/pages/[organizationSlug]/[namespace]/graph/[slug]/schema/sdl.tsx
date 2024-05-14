@@ -8,10 +8,10 @@ import {
 import { PageHeader } from "@/components/layout/head";
 import { EmptySchema } from "@/components/schema/empty-schema-state";
 import {
-  SDLViewer,
   SDLViewerActions,
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
+import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import useHash from "@/hooks/use-hash";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { Component2Icon } from "@radix-ui/react-icons";
@@ -47,6 +48,8 @@ const SDLPage: NextPageWithLayout = () => {
   const fullPath = router.asPath;
   const pathWithHash = fullPath.split("?")[0];
   const pathname = pathWithHash.split("#")[0];
+
+  const hash = useHash();
 
   const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(
     getFederatedGraphSDLByName.useQuery({
@@ -76,8 +79,6 @@ const SDLPage: NextPageWithLayout = () => {
         query: `?subgraph=${each.name}`,
       };
     }) ?? [];
-
-  // useScrollIntoView(hash);
 
   const activeSubgraphObject = graphData?.subgraphs.find((each) => {
     return each.name === activeSubgraph;
@@ -126,10 +127,10 @@ const SDLPage: NextPageWithLayout = () => {
   } else {
     content = (
       <div className="flex h-full flex-col-reverse md:flex-col">
-        <SDLViewer
-          sdl={activeGraphWithSDL.sdl ?? ""}
-          targetId={activeGraphWithSDL?.targetId}
-          versionId={activeGraphWithSDL.versionId ?? ""}
+        <SDLViewerMonaco
+          schema={activeGraphWithSDL.sdl ?? ""}
+          line={hash ? Number(hash.slice(1)) : 0}
+          enableLinking
         />
         <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
           <p className="flex items-center gap-x-1">
