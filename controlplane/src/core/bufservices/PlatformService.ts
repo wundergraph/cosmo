@@ -3321,21 +3321,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               continue;
             }
 
-            const blobStorageDirectory = `${authContext.organizationId}/${contractGraph.id}`;
-            await opts.blobStorage.removeDirectory({
-              key: blobStorageDirectory,
-            });
-
             await fedGraphRepo.delete(contractGraph.targetId);
             deletedGraphs.push(contractGraph);
           }
 
-          const blobStorageDirectory = `${authContext.organizationId}/${graph.id}`;
-          await opts.blobStorage.removeDirectory({ key: blobStorageDirectory });
-
           await fedGraphRepo.delete(graph.targetId);
 
           deletedGraphs.unshift(graph);
+
+          for (const deletedGraph of deletedGraphs) {
+            const blobStorageDirectory = `${authContext.organizationId}/${deletedGraph.id}`;
+            await opts.blobStorage.removeDirectory({ key: blobStorageDirectory });
+          }
 
           if (subgraphs.length === 1) {
             await subgraphRepo.delete(subgraphs[0].targetId);
@@ -3421,11 +3418,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               continue;
             }
 
-            const blobStorageDirectory = `${authContext.organizationId}/${contractGraph.id}`;
-            await opts.blobStorage.removeDirectory({
-              key: blobStorageDirectory,
-            });
-
             await fedGraphRepo.delete(contractGraph.targetId);
             deletedGraphs.push(contractGraph);
           }
@@ -3434,10 +3426,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           deletedGraphs.unshift(federatedGraph);
 
-          const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
-          await opts.blobStorage.removeDirectory({
-            key: blobStorageDirectory,
-          });
+          for (const deletedGraph of deletedGraphs) {
+            const blobStorageDirectory = `${authContext.organizationId}/${deletedGraph.id}`;
+            await opts.blobStorage.removeDirectory({ key: blobStorageDirectory });
+          }
 
           for (const deletedGraph of deletedGraphs) {
             await auditLogRepo.addAuditLog({
