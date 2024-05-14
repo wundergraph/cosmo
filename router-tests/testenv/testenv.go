@@ -57,16 +57,16 @@ import (
 )
 
 const (
-	defaultSourceName = "nats"
-	myNatsSourceName  = "my-nats"
-	myKafkaSourceName = "my-kafka"
+	natsDefaultSourceName = "default"
+	myNatsProviderID      = "my-nats"
+	myKafkaProviderID     = "my-kafka"
 )
 
 var (
 	//go:embed testdata/config.json
-	configJSONTemplate   string
-	demoNatsSourceNames  = []string{defaultSourceName, myNatsSourceName}
-	demoKafkaSourceNames = []string{myKafkaSourceName}
+	configJSONTemplate string
+	demoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders = []string{myKafkaProviderID}
 )
 
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
@@ -75,7 +75,7 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	if err != nil {
 		t.Fatalf("could not create environment: %s", err)
 	}
-	t.Cleanup(env.close)
+	t.Cleanup(env.Shutdown)
 	f(t, env)
 }
 
@@ -86,7 +86,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	if err != nil {
 		b.Fatalf("could not create environment: %s", err)
 	}
-	b.Cleanup(env.close)
+	b.Cleanup(env.Shutdown)
 	b.StartTimer()
 	f(b, env)
 }
@@ -101,6 +101,7 @@ type Config struct {
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
+	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
@@ -137,7 +138,7 @@ type NatsData struct {
 }
 
 func setupNatsServers(t testing.TB) (*NatsData, error) {
-	length := len(demoNatsSourceNames)
+	length := len(demoNatsProviders)
 	natsData := &NatsData{
 		Connections: make([]*nats.Conn, 0, length),
 	}
@@ -174,7 +175,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		t.Fatalf("could not start NATS test server")
 	}
 	natsData.Server = natsServer
-	for range demoNatsSourceNames {
+	for range demoNatsProviders {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		if err != nil {
 			return nil, err
@@ -193,13 +194,15 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
-	seeds := []string{"localhost:9092"}
+	if len(cfg.KafkaSeeds) == 0 {
+		cfg.KafkaSeeds = []string{"localhost:9092"}
+	}
 
 	var kafkaAdminClient *kadm.Client
 	var kafkaClient *kgo.Client
 	{
 		client, err := kgo.NewClient(
-			kgo.SeedBrokers(seeds...),
+			kgo.SeedBrokers(cfg.KafkaSeeds...),
 		)
 		if err != nil {
 			t.Fatalf("could not create kafka client: %s", err)
@@ -537,19 +540,19 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
-	natsEventSources := make([]config.NatsEventSource, len(demoNatsSourceNames))
-	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaSourceNames))
+	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
+	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
 
-	for _, sourceName := range demoNatsSourceNames {
+	for _, sourceName := range demoNatsProviders {
 		natsEventSources = append(natsEventSources, config.NatsEventSource{
 			ID:  sourceName,
 			URL: natsServer.ClientURL(),
 		})
 	}
-	for _, sourceName := range demoKafkaSourceNames {
+	for _, sourceName := range demoKafkaProviders {
 		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
 			ID:      sourceName,
-			Brokers: []string{"localhost:9092"},
+			Brokers: testConfig.KafkaSeeds,
 		})
 	}
 
@@ -705,16 +708,36 @@ func (e *Environment) SetExtraURLQueryValues(values url.Values) {
 }
 
 func (e *Environment) Shutdown() {
-	// Terminate test server resources
-	e.cancel(errors.New("test environment closed"))
+	ctx, cancel := context.WithTimeout(e.Context, 10*time.Second)
+	defer cancel()
 
 	// Gracefully shutdown router
-	ctx, cancel := context.WithTimeout(e.Context, 5*time.Second)
-	defer cancel()
 	err := e.Router.Shutdown(ctx)
 	if err != nil {
 		e.t.Errorf("could not shutdown router: %s", err)
 	}
+
+	// Terminate test server resources
+	e.cancel(errors.New("test environment closed"))
+
+	// Close all test servers
+	for _, s := range e.Servers {
+		s.CloseClientConnections()
+		s.Close()
+	}
+
+	// Close the CDN
+	e.CDN.CloseClientConnections()
+	e.CDN.Close()
+
+	// Close NATS
+	e.NatsConnectionDefault.Close()
+	e.NatsConnectionMyNats.Close()
+	e.NatsServer.Shutdown()
+
+	// Close Kafka
+	e.KafkaAdminClient.Close()
+	e.KafkaClient.Close()
 }
 
 type SubgraphRequestCount struct {
@@ -968,39 +991,6 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 	return conn
 }
 
-func (e *Environment) close() {
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Gracefully shutdown router
-	err := e.Router.Shutdown(ctx)
-	if err != nil {
-		e.t.Errorf("could not shutdown router: %s", err)
-	}
-
-	// Terminate test server resources
-	e.cancel(errors.New("test environment closed"))
-
-	// Close all test servers
-	for _, s := range e.Servers {
-		s.CloseClientConnections()
-		s.Close()
-	}
-
-	// Close the CDN
-	e.CDN.CloseClientConnections()
-	e.CDN.Close()
-
-	// Close NATS
-	e.NatsConnectionDefault.Close()
-	e.NatsConnectionMyNats.Close()
-	e.NatsServer.Shutdown()
-
-	// Close Kafka
-	e.KafkaAdminClient.Close()
-}
-
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
@@ -1129,8 +1119,8 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 }
 
 func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.Server) *subgraphs.SubgraphOptions {
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsSourceNames))
-	for _, sourceName := range demoNatsSourceNames {
+	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
+	for _, sourceName := range demoNatsProviders {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		require.NoError(t, err)
 

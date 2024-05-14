@@ -104,9 +104,9 @@ export const versionOnePersistedDirectiveDefinitions = `
 `;
 
 export const eventDirectiveDefinitions = `
-  directive @edfs__natsPublish(providerId: String! = "nats", subject: String!) on FIELD_DEFINITION
-  directive @edfs__natsRequest(providerId: String! = "nats", subject: String!) on FIELD_DEFINITION
-  directive @edfs__natsSubscribe(providerId: String! = "nats", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
+  directive @edfs__natsPublish(providerId: String! = "default", subject: String!) on FIELD_DEFINITION
+  directive @edfs__natsRequest(providerId: String! = "default", subject: String!) on FIELD_DEFINITION
+  directive @edfs__natsSubscribe(providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
 `;
 
 export const versionOneRouterDefinitions = schemaQueryDefinition + versionOnePersistedDirectiveDefinitions;

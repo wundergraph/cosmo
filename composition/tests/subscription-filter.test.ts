@@ -22,7 +22,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           subscription: Subscription
         }
         
-        directive @edfs__kafkaPublish(providerId: String! = "kafka", topics: [String!]!) on FIELD_DEFINITION
+        directive @edfs__kafkaPublish(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
         directive @extends on INTERFACE | OBJECT
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT

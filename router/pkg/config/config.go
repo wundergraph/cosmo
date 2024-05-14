@@ -250,7 +250,7 @@ type CDNConfiguration struct {
 	CacheSize BytesString `yaml:"cache_size,omitempty" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
 }
 
-type NatTokenBasedAuthentication struct {
+type NatsTokenBasedAuthentication struct {
 	Token *string `yaml:"token,omitempty"`
 }
 
@@ -260,8 +260,8 @@ type NatsCredentialsAuthentication struct {
 }
 
 type NatsAuthentication struct {
-	NatsCredentialsAuthentication `yaml:",inline"`
-	NatTokenBasedAuthentication   `yaml:",inline"`
+	UserInfo                     NatsCredentialsAuthentication `yaml:"user_info"`
+	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
 type NatsEventSource struct {
@@ -270,13 +270,13 @@ type NatsEventSource struct {
 	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
 }
 
-type KafkaSASLAuthentication struct {
+type KafkaSASLPlainAuthentication struct {
 	Password *string `yaml:"password,omitempty"`
 	Username *string `yaml:"username,omitempty"`
 }
 
 type KafkaAuthentication struct {
-	KafkaSASLAuthentication `yaml:",inline"`
+	SASLPlain KafkaSASLPlainAuthentication `yaml:"sasl_plain,omitempty"`
 }
 
 type KafkaTLSConfiguration struct {
@@ -391,7 +391,7 @@ type Config struct {
 	LogLevel                      string                      `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" default:"60s" envconfig:"SHUTDOWN_DELAY"`
-	GracePeriod                   time.Duration               `yaml:"grace_period" default:"20s" envconfig:"GRACE_PERIOD"`
+	GracePeriod                   time.Duration               `yaml:"grace_period" default:"30s" envconfig:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" default:"10s" envconfig:"POLL_INTERVAL"`
 	HealthCheckPath               string                      `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH"`
 	ReadinessCheckPath            string                      `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH"`

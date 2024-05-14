@@ -7,14 +7,14 @@ import {
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
   invalidEventDrivenMutationResponseTypeErrorMessage,
-  invalidNatsStreamInputFieldsErrorMessage,
   invalidEventProviderIdErrorMessage,
   invalidEventSubjectsItemErrorMessage,
   invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidNatsStreamConfigurationDefinitionErrorMessage,
+  invalidNatsStreamInputFieldsErrorMessage,
   InvalidRootTypeFieldEventsDirectiveData,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
-  invalidNatsStreamConfigurationDefinitionErrorMessage,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
@@ -22,19 +22,20 @@ import {
   normalizeSubgraphFromString,
   Subgraph,
   subgraphValidationError,
-  undefinedRequiredArgumentsErrorMessage,
   undefinedNatsStreamConfigurationInputErrorMessage,
+  undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
 import { parse } from 'graphql';
 import {
-  NATS,
+  DEFAULT_EDFS_PROVIDER_ID,
   EDFS_NATS_PUBLISH,
   EDFS_NATS_REQUEST,
   EDFS_NATS_SUBSCRIBE,
   PROVIDER_ID,
+  PROVIDER_TYPE_KAFKA,
+  PROVIDER_TYPE_NATS,
   SUBJECTS,
-  KAFKA,
 } from '../src/utils/string-constants';
 import {
   normalizeString,
@@ -60,8 +61,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'findEntity',
-                  providerId: NATS,
-                  providerType: NATS,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['findEntity.{{ args.id }}'],
                   type: 'request',
                 },
@@ -85,8 +86,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'updateEntity',
-                  providerId: NATS,
-                  providerType: NATS,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['updateEntity.{{ args.id }}'],
                   type: 'publish',
                 },
@@ -103,14 +104,14 @@ describe('events Configuration tests', () => {
                 {
                   fieldName: 'entitySubscription',
                   providerId: 'my-provider',
-                  providerType: NATS,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['entities.{{ args.id }}'],
                   type: 'subscribe',
                 },
                 {
                   fieldName: 'entitySubscriptionTwo',
                   providerId: 'double',
-                  providerType: NATS,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['firstSub.{{ args.firstID }}', 'secondSub.{{ args.secondID }}'],
                   type: 'subscribe',
                   streamConfiguration: {
@@ -183,8 +184,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'entitySubscription',
-                  providerId: NATS,
-                  providerType: NATS,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['entities.{{ args.id }}'],
                   type: 'subscribe',
                 },
@@ -220,7 +221,7 @@ describe('events Configuration tests', () => {
                 {
                   fieldName: 'findEntity',
                   providerId: 'myQuerySourceName',
-                  providerType: NATS,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['findEntity.{{ args.id }}'],
                   type: 'request',
                 },
@@ -245,7 +246,7 @@ describe('events Configuration tests', () => {
                 {
                   fieldName: 'updateEntity',
                   providerId: 'myMutationSourceName',
-                  providerType: NATS,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['updateEntity.{{ args.id }}'],
                   type: 'publish',
                 },
@@ -262,7 +263,7 @@ describe('events Configuration tests', () => {
                 {
                   fieldName: 'entitySubscription',
                   providerId: 'mySubscriptionSourceName',
-                  providerType: NATS,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['entities.{{ args.id }}'],
                   type: 'subscribe',
                 },
@@ -414,14 +415,14 @@ describe('events Configuration tests', () => {
                 {
                   fieldName: 'kafkaMutation',
                   providerId: 'myKafka',
-                  providerType: KAFKA,
+                  providerType: PROVIDER_TYPE_KAFKA,
                   topics: ['entityAdded'],
                   type: 'publish',
                 },
                 {
                   fieldName: 'natsMutation',
                   providerId: 'myNats',
-                  providerType: NATS,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['updateEntity.{{ args.id }}'],
                   type: 'publish',
                 },
@@ -438,7 +439,7 @@ describe('events Configuration tests', () => {
                 {
                   fieldName: 'natsQuery',
                   providerId: 'myNats',
-                  providerType: NATS,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['updateEntity.{{ args.id }}'],
                   type: 'request',
                 },
@@ -455,7 +456,7 @@ describe('events Configuration tests', () => {
                 {
                   fieldName: 'kafkaSubscription',
                   providerId: 'myKafka',
-                  providerType: KAFKA,
+                  providerType: PROVIDER_TYPE_KAFKA,
                   topics: ['entityAdded', 'entityUpdated'],
                   type: 'subscribe',
                 },

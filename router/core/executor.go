@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/nats-io/nats.go/jetstream"
 	"net/http"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -12,9 +11,6 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.uber.org/zap"
 	"time"
 
@@ -46,8 +42,8 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, reporter resolve.Reporter) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig)
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders, reporter resolve.Reporter) (*Executor, error) {
+	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig, pubSubProviders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
@@ -141,23 +137,21 @@ func buildNatsOptions(eventSource config.NatsEventSource) ([]nats.Option, error)
 	if eventSource.Authentication != nil {
 		if eventSource.Authentication.Token != nil {
 			opts = append(opts, nats.Token(*eventSource.Authentication.Token))
-		} else if eventSource.Authentication.Username != nil || eventSource.Authentication.Password != nil {
-			opts = append(opts, nats.UserInfo(*eventSource.Authentication.Username, *eventSource.Authentication.Password))
+		} else if eventSource.Authentication.UserInfo.Username != nil && eventSource.Authentication.UserInfo.Password != nil {
+			opts = append(opts, nats.UserInfo(*eventSource.Authentication.UserInfo.Username, *eventSource.Authentication.UserInfo.Password))
 		}
 	}
 
 	return opts, nil
 }
 
+// buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
+// Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
+// configured in the KafkaPubSub implementation.
 func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(eventSource.Brokers...),
-		// We want to consume the events produced after the router starts
-		// This replicates a simple and stateless event sourcing pattern
-		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
-		// For observability, we set the client ID to the router
-		kgo.ClientID("router"),
 		// Ensure proper timeouts are set
 		kgo.ProduceRequestTimeout(10 * time.Second),
 		kgo.ConnIdleTimeout(60 * time.Second),
@@ -170,90 +164,20 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 		)
 	}
 
-	if eventSource.Authentication != nil && eventSource.Authentication.Username != nil && eventSource.Authentication.Password != nil {
+	if eventSource.Authentication != nil && eventSource.Authentication.SASLPlain.Username != nil && eventSource.Authentication.SASLPlain.Password != nil {
 		opts = append(opts, kgo.SASL(plain.Auth{
-			User: *eventSource.Authentication.Username,
-			Pass: *eventSource.Authentication.Password,
+			User: *eventSource.Authentication.SASLPlain.Username,
+			Pass: *eventSource.Authentication.SASLPlain.Password,
 		}.AsMechanism()))
 	}
 
 	return opts, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
-
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub)
-	kafkaPubSubByProviderID := make(map[string]pubsub_datasource.KafkaPubSub)
-
-	datasourceConfigurations := routerCfg.EngineConfig.GetDatasourceConfigurations()
-	for _, datasourceConfiguration := range datasourceConfigurations {
-		if datasourceConfiguration.CustomEvents == nil {
-			continue
-		}
-
-		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
-
-			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := natsPubSubByProviderID[providerID]
-			if ok {
-				continue
-			}
-
-			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
-				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
-					options, err := buildNatsOptions(eventSource)
-					if err != nil {
-						return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
-					}
-					natsConnection, err := nats.Connect(eventSource.URL, options...)
-					if err != nil {
-						return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
-					}
-					js, err := jetstream.New(natsConnection)
-					if err != nil {
-						return nil, err
-					}
-
-					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(b.logger, natsConnection, js).New(ctx)
-
-					break
-				}
-			}
-		}
-
-		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
-
-			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := kafkaPubSubByProviderID[providerID]
-			if ok {
-				continue
-			}
-
-			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
-
-				if eventSource.ID == providerID {
-					options, err := buildKafkaOptions(eventSource)
-					if err != nil {
-						return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
-					}
-					client, err := kgo.NewClient(options...)
-					if err != nil {
-						return nil, fmt.Errorf("failed to create client for Kafka provider with ID \"%s\": %w", providerID, err)
-					}
-
-					kafkaPubSubByProviderID[providerID] = kafka.NewConnector(b.logger, client).New(ctx)
-
-					break
-				}
-			}
-		}
-
-	}
 
 	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
 		ctx,
@@ -261,8 +185,8 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
-		natsPubSubByProviderID,
-		kafkaPubSubByProviderID,
+		pubSubProviders.nats,
+		pubSubProviders.kafka,
 	))
 
 	// this generates the plan config using the data source factories from the config package

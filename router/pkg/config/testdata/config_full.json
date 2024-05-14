@@ -218,8 +218,41 @@
   "DevelopmentMode": false,
   "Events": {
     "Providers": {
-      "Nats": null,
-      "Kafka": null
+      "Nats": [
+        {
+          "ID": "default",
+          "URL": "nats://localhost:4222",
+          "Authentication": null
+        },
+        {
+          "ID": "my-nats",
+          "URL": "nats://localhost:4222",
+          "Authentication": {
+            "UserInfo": {
+              "Password": "admin",
+              "Username": "admin"
+            },
+            "Token": null
+          }
+        }
+      ],
+      "Kafka": [
+        {
+          "ID": "my-kafka",
+          "Brokers": [
+            "localhost:9092"
+          ],
+          "Authentication": {
+            "SASLPlain": {
+              "Password": "admin",
+              "Username": "admin"
+            }
+          },
+          "TLS": {
+            "Enabled": true
+          }
+        }
+      ]
     }
   },
   "RouterConfigPath": "",

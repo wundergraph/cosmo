@@ -104,13 +104,13 @@ import {
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
-  invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidNatsStreamInputErrorMessage,
   invalidNatsStreamInputFieldsErrorMessage,
   invalidRootTypeDefinitionError,
   invalidRootTypeError,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
+  invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
   invalidSubscriptionFilterLocationError,
@@ -150,11 +150,11 @@ import {
   FIELDS,
   FROM,
   INACCESSIBLE,
-  KAFKA,
+  PROVIDER_TYPE_KAFKA,
   KEY,
   MUTATION,
   N_A,
-  NATS,
+  PROVIDER_TYPE_NATS,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_STRING,
@@ -180,6 +180,7 @@ import {
   SUCCESS,
   TOPIC,
   TOPICS,
+  DEFAULT_EDFS_PROVIDER_ID,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, EventConfiguration, NatsEventType } from '../router-configuration/router-configuration';
@@ -793,7 +794,7 @@ export class NormalizationFactory {
 
   getKafkaPublishConfiguration(directive: ConstDirectiveNode, errorMessages: string[]): EventConfiguration | undefined {
     const topics: string[] = [];
-    let providerId = KAFKA;
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case TOPIC: {
@@ -817,7 +818,7 @@ export class NormalizationFactory {
     if (errorMessages.length > 0) {
       return;
     }
-    return { fieldName: this.childName, providerId, providerType: KAFKA, topics, type: PUBLISH };
+    return { fieldName: this.childName, providerId, providerType: PROVIDER_TYPE_KAFKA, topics, type: PUBLISH };
   }
 
   getKafkaSubscribeConfiguration(
@@ -825,7 +826,7 @@ export class NormalizationFactory {
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const topics: string[] = [];
-    let providerId = KAFKA;
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case TOPICS: {
@@ -858,7 +859,7 @@ export class NormalizationFactory {
     return {
       fieldName: this.childName,
       providerId,
-      providerType: KAFKA,
+      providerType: PROVIDER_TYPE_KAFKA,
       topics: topics,
       type: SUBSCRIBE,
     };
@@ -870,7 +871,7 @@ export class NormalizationFactory {
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const subjects: string[] = [];
-    let providerId = NATS;
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
     for (const argumentNode of directive.arguments || []) {
       switch (argumentNode.name.value) {
         case SUBJECT: {
@@ -894,7 +895,7 @@ export class NormalizationFactory {
     if (errorMessages.length > 0) {
       return;
     }
-    return { fieldName: this.childName, providerId, providerType: NATS, subjects, type: eventType };
+    return { fieldName: this.childName, providerId, providerType: PROVIDER_TYPE_NATS, subjects, type: eventType };
   }
 
   getNatsSubscribeConfiguration(
@@ -902,7 +903,7 @@ export class NormalizationFactory {
     errorMessages: string[],
   ): EventConfiguration | undefined {
     const subjects: string[] = [];
-    let providerId = NATS;
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
     let consumerName = '';
     let streamName = '';
     for (const argumentNode of directive.arguments || []) {
@@ -986,7 +987,7 @@ export class NormalizationFactory {
     return {
       fieldName: this.childName,
       providerId,
-      providerType: NATS,
+      providerType: PROVIDER_TYPE_NATS,
       subjects,
       type: SUBSCRIBE,
       ...(consumerName && streamName ? { streamConfiguration: { consumerName: consumerName, streamName } } : {}),
@@ -1012,7 +1013,7 @@ export class NormalizationFactory {
   }
 
   extractEventDirectivesToConfiguration(node: FieldDefinitionNode) {
-    // Validation for event directives is handled elsewhere
+    // Validation is handled elsewhere
     if (!node.directives) {
       return;
     }
@@ -1021,14 +1022,12 @@ export class NormalizationFactory {
       const errorMessages: string[] = [];
       let eventConfiguration: EventConfiguration | undefined;
       switch (directive.name.value) {
-        case EDFS_KAFKA_PUBLISH: {
+        case EDFS_KAFKA_PUBLISH:
           eventConfiguration = this.getKafkaPublishConfiguration(directive, errorMessages);
           break;
-        }
-        case EDFS_KAFKA_SUBSCRIBE: {
+        case EDFS_KAFKA_SUBSCRIBE:
           eventConfiguration = this.getKafkaSubscribeConfiguration(directive, errorMessages);
           break;
-        }
         case EDFS_NATS_PUBLISH: {
           eventConfiguration = this.getNatsPublishAndRequestConfiguration(PUBLISH, directive, errorMessages);
           break;

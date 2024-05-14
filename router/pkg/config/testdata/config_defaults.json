@@ -111,7 +111,7 @@
   "LogLevel": "info",
   "JSONLog": true,
   "ShutdownDelay": 60000000000,
-  "GracePeriod": 20000000000,
+  "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
   "HealthCheckPath": "/health",
   "ReadinessCheckPath": "/health/ready",
