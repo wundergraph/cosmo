@@ -43,6 +43,6 @@ resource google_project_iam_member "comso-secret-manager-permissions" {
 
 resource google_project_iam_member "cosmo-service-account-permissions" {
     role = "roles/iam.serviceAccountUser"
-    project = "kube-418911"
+    project = var.project
     member = "serviceAccount:${google_service_account.cosmo-sa.email}"
 }
