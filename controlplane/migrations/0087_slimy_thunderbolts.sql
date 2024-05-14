@@ -4,4 +4,4 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
-ALTER TABLE "subgraphs" ADD COLUMN "websocket_subprotocol" "websocket_subprotocol";
+ALTER TABLE "subgraphs" ADD COLUMN "websocket_subprotocol" "websocket_subprotocol" DEFAULT 'auto' NOT NULL;

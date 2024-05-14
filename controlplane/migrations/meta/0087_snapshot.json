@@ -1,5 +1,5 @@
 {
-  "id": "28e0db9c-eccf-4d1c-9d45-6cc37312c123",
+  "id": "8eef1287-1321-4382-99cd-7fd6b2733678",
   "prevId": "0a05d2dd-08a7-4a28-9acf-2db15ca34e10",
   "version": "5",
   "dialect": "pg",
@@ -3304,7 +3304,8 @@
           "name": "websocket_subprotocol",
           "type": "websocket_subprotocol",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "'auto'"
         },
         "schema_version_id": {
           "name": "schema_version_id",

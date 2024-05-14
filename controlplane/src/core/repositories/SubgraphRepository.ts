@@ -111,12 +111,7 @@ export class SubgraphRepository {
           routingUrl,
           subscriptionUrl,
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
-          websocketSubprotocol:
-            // setting the websocket subprotocol only if the subscription protocol is ws or undefined as ws is the default
-            // falling back to auto if the subprotocol is not configured
-            data.subscriptionProtocol === 'ws' || data.subscriptionProtocol === undefined
-              ? data.websocketSubprotocol || 'auto'
-              : null,
+          websocketSubprotocol: data.websocketSubprotocol || 'auto',
         })
         .returning()
         .execute();
