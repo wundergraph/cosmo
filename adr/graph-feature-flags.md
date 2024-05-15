@@ -3,6 +3,9 @@ title: "Graph Feature Flags"
 author: Jens Neuse
 ---
 
+Graph Feature Flags are a way to enable or disable specific features in a federated graph.
+This can be used to test new feature in a staging environment, or to gradually roll out a new feature to production.
+
 ## Usage
 
 1. Create and publish a posts subgraph
