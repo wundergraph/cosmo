@@ -13,7 +13,7 @@ import (
 
 var _ Poller = (*Epoll)(nil)
 
-// Epoll is a epoll based poller.
+// Epoll is an epoll based poller.
 type Epoll struct {
 	fd int
 	ts syscall.Timespec
@@ -51,7 +51,7 @@ func newPollerWithBuffer(count int, pollTimeout time.Duration) (*Epoll, error) {
 		connBufferSize: count,
 		mu:             &sync.RWMutex{},
 		conns:          make(map[int]net.Conn),
-		connbuf:        make([]net.Conn, count, count),
+		connbuf:        make([]net.Conn, count),
 	}, nil
 }
 
