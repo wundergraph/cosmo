@@ -1364,6 +1364,9 @@ export class FederatedGraphRepository {
     });
   }
 
+  /**
+   * This method recomposes and deploys federated graphs and their respective contract graphs.
+   */
   public composeAndDeployGraphs = ({
     federatedGraphs,
     blobStorage,
