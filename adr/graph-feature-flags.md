@@ -198,3 +198,11 @@ Based on the selected feature flag, the Playground should set the appropriate he
 ### Introspection needs to be aware of Feature Flags
 
 Depending on the selected feature flag, the introspection query should return the schema that is associated with the feature flag.
+
+### No security through obscurity
+
+Feature Flags are not a security feature.
+They are not hidden.
+Publishing a feature flag is a public action.
+
+If you need to publish a feature flag privately, create a dedicated federated graph with restricted access.
