@@ -10,6 +10,7 @@ import NamespaceCommands from './namespace/index.js';
 import OperationCommands from './operations/index.js';
 import RouterCommands from './router/index.js';
 import SchemaCommands from './subgraph/index.js';
+import ContractCommands from './contract/index.js';
 
 const client = CreateClient({
   baseUrl: config.baseURL,
@@ -55,6 +56,11 @@ program.addCommand(
 );
 program.addCommand(
   NamespaceCommands({
+    client,
+  }),
+);
+program.addCommand(
+  ContractCommands({
     client,
   }),
 );
