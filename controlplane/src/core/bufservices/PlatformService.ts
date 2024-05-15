@@ -546,8 +546,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         const movedGraphs = [graph];
-        const targetIds = [graph.targetId];
+        const targetIdsToMove = [graph.targetId];
 
+        // Get all contracts that need to be moved along with the source graph.
+        // Then pass all the target ids to the move function below
         const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
         for (const contract of contracts) {
           const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
@@ -556,7 +558,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           movedGraphs.push(contractGraph);
-          targetIds.push(contractGraph.targetId);
+          targetIdsToMove.push(contractGraph.targetId);
         }
 
         const subgraphs = await subgraphRepo.listByFederatedGraph({
@@ -564,7 +566,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         if (subgraphs.length > 0) {
-          targetIds.push(subgraphs[0].targetId);
+          targetIdsToMove.push(subgraphs[0].targetId);
           await opts.authorizer.authorize({
             db: opts.db,
             graph: {
@@ -589,7 +591,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         await targetRepo.moveWithoutRecomposition({
-          targetIds,
+          targetIds: targetIdsToMove,
           newNamespaceId: newNamespace.id,
         });
 
@@ -2111,10 +2113,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             continue;
           }
 
-          if (limit <= 0) {
-            continue;
-          }
-
           const result = await trafficInspector.inspect(inspectorChanges, {
             daysToConsider: limit,
             federatedGraphId: composition.id,
@@ -3299,23 +3297,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             federatedGraphTargetId: graph.targetId,
           });
 
-          const deletedGraphs: FederatedGraphDTO[] = [];
-
-          // Delete downstream contracts
-          const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
-          for (const contract of contracts) {
-            const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
-            if (!contractGraph) {
-              continue;
-            }
-
-            await fedGraphRepo.delete(contractGraph.targetId);
-            deletedGraphs.push(contractGraph);
-          }
-
+          const deletedContracts = await contractRepo.deleteContractGraphs(graph.id);
           await fedGraphRepo.delete(graph.targetId);
 
-          deletedGraphs.unshift(graph);
+          const deletedGraphs: FederatedGraphDTO[] = [graph, ...deletedContracts];
 
           for (const deletedGraph of deletedGraphs) {
             const blobStorageDirectory = `${authContext.organizationId}/${deletedGraph.id}`;
@@ -3396,23 +3381,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             authContext,
           });
 
-          const deletedGraphs: FederatedGraphDTO[] = [];
-
-          // Delete downstream contracts
-          const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
-          for (const contract of contracts) {
-            const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
-            if (!contractGraph) {
-              continue;
-            }
-
-            await fedGraphRepo.delete(contractGraph.targetId);
-            deletedGraphs.push(contractGraph);
-          }
-
+          const deletedContracts = await contractRepo.deleteContractGraphs(federatedGraph.id);
           await fedGraphRepo.delete(federatedGraph.targetId);
 
-          deletedGraphs.unshift(federatedGraph);
+          const deletedGraphs: FederatedGraphDTO[] = [federatedGraph, ...deletedContracts];
+
+          for (const deletedGraph of deletedGraphs) {
+            const blobStorageDirectory = `${authContext.organizationId}/${deletedGraph.id}`;
+            await opts.blobStorage.removeDirectory({ key: blobStorageDirectory });
+          }
 
           for (const deletedGraph of deletedGraphs) {
             const blobStorageDirectory = `${authContext.organizationId}/${deletedGraph.id}`;

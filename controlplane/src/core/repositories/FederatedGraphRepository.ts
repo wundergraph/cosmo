@@ -1388,6 +1388,7 @@ export class FederatedGraphRepository {
       const compositionErrors: PlainMessage<CompositionError>[] = [];
 
       for (const federatedGraph of federatedGraphs) {
+        // Get published subgraphs for recomposition of the federated graph
         const subgraphs = await subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: federatedGraph.targetId,
           published: true,

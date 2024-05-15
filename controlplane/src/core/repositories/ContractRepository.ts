@@ -155,4 +155,26 @@ export class ContractRepository {
       return { deployment, contractErrors };
     });
   }
+
+  public deleteContractGraphs(sourceGraphId: string) {
+    return this.db.transaction(async (tx) => {
+      const deletedGraphs: FederatedGraphDTO[] = [];
+
+      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
+
+      const contracts = await contractRepo.bySourceFederatedGraphId(sourceGraphId);
+      for (const contract of contracts) {
+        const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+        if (!contractGraph) {
+          continue;
+        }
+
+        await fedGraphRepo.delete(contractGraph.targetId);
+        deletedGraphs.push(contractGraph);
+      }
+
+      return deletedGraphs;
+    });
+  }
 }
