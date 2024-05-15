@@ -999,18 +999,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
         );
 
-        const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
-
-        allDeploymentErrors.push(
-          ...deploymentErrors
-            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-            .map((e) => ({
-              federatedGraphName: graph.name,
-              namespace: graph.namespace,
-              message: e.message ?? '',
-            })),
-        );
-
         for (const graph of updatedFederatedGraphs) {
           orgWebhooks.send({
             eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
@@ -1024,7 +1012,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: authContext.organizationId,
                 slug: authContext.organizationSlug,
               },
-              errors: compositionErrors.length > 0 || allDeploymentErrors.length > 0,
+              errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
               actor_id: authContext.userId,
             },
           });
@@ -1046,7 +1034,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
             },
             compositionErrors: [],
-            deploymentErrors: allDeploymentErrors,
+            deploymentErrors,
           };
         }
 
@@ -3507,10 +3495,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         const federatedGraphSchemaUpdates: FederatedGraphSchemaUpdate[] = [];
-        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-        const compositionErrors: PlainMessage<CompositionError>[] = [];
 
-        await opts.db.transaction(async (tx) => {
+        const { compositionErrors, deploymentErrors } = await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
           const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
@@ -3522,6 +3508,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
             labels: subgraph.labels,
             namespaceId: subgraph.namespaceId,
+            excludeContracts: true,
           });
 
           // Delete the subgraph
@@ -3544,6 +3531,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
             labels: subgraph.labels,
             namespaceId: subgraph.namespaceId,
+            excludeContracts: true,
           });
 
           // Remove duplicates
@@ -3554,153 +3542,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             }
           }
 
-          // Validate all federated graphs that use this subgraph.
-          for (const federatedGraph of affectedFederatedGraphs) {
-            // only execute for base graphs. Contracts for each are handled automatically.
-            if (federatedGraph.contract) {
-              continue;
-            }
+          // Recompose and deploy all affected federated graphs and their respective contracts.
+          // Collects all composition and deployment errors if any.
+          const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
+            federatedGraphs: affectedFederatedGraphs,
+            blobStorage: opts.blobStorage,
+            admissionConfig: {
+              webhookJWTSecret: opts.admissionWebhookJWTSecret,
+              cdnBaseUrl: opts.cdnBaseUrl,
+            },
+            actorId: authContext.userId,
+          });
 
-            const namespace = await namespaceRepo.byTargetId(federatedGraph.targetId);
-            if (!namespace) {
-              throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, 'Could not find namespace');
-            }
-
-            const subgraphs = await subgraphRepo.listByFederatedGraph({
-              federatedGraphTargetId: federatedGraph.targetId,
-              published: true,
-            });
-
-            const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
-            const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
-            for (const contract of contracts) {
-              tagExclusionsByContractName.set(
-                contract.downstreamFederatedGraph.target.name,
-                new Set(contract.excludeTags),
-              );
-            }
-
-            const {
-              errors,
-              federationResult: result,
-              federationResultContainerByContractName,
-            } = composeSubgraphsWithContracts(
-              subgraphs.map((s) => ({
-                name: s.name,
-                url: s.routingUrl,
-                definitions: parse(s.schemaSDL),
-              })),
-              tagExclusionsByContractName,
-            );
-
-            // Collect all composition errors
-            compositionErrors.push(
-              ...(errors || []).map((e) => ({
-                federatedGraphName: federatedGraph.name,
-                namespace: federatedGraph.namespace,
-                message: e.message,
-              })),
-            );
-
-            const deployment = await composer.deployComposition({
-              composedGraph: mapResultToComposedGraph(federatedGraph, subgraphs, errors, result),
-              composedBy: authContext.userId,
-              blobStorage: opts.blobStorage,
-              organizationId: authContext.organizationId,
-              admissionWebhookURL: federatedGraph.admissionWebhookURL,
-              admissionConfig: {
-                cdnBaseUrl: opts.cdnBaseUrl,
-                jwtSecret: opts.admissionWebhookJWTSecret,
-              },
-            });
-
-            deploymentErrors.push(
-              ...deployment.errors
-                .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-                .map((e) => ({
-                  federatedGraphName: federatedGraph.name,
-                  namespace: federatedGraph.namespace,
-                  message: e.message ?? '',
-                })),
-            );
-
-            federatedGraphSchemaUpdates.push({
-              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-              payload: {
-                federated_graph: {
-                  id: federatedGraph.targetId,
-                  name: federatedGraph.name,
-                  namespace: namespace.name,
-                },
-                organization: {
-                  id: authContext.organizationId,
-                  slug: authContext.organizationSlug,
-                },
-                errors: (errors || []).length > 0 || deploymentErrors.length > 0,
-                actor_id: authContext.userId,
-              },
-            });
-
-            if (!federationResultContainerByContractName) {
-              continue;
-            }
-
-            for (const [contractName, resultContainer] of federationResultContainerByContractName.entries()) {
-              const { errors: contractErrors, federationResult: result } = resultContainer;
-
-              const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
-              if (!contractGraph) {
-                throw new Error(`Contract graph ${contractName} not found`);
-              }
-
-              const contractDeployment = await composer.deployComposition({
-                composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, contractErrors, result),
-                composedBy: authContext.userId,
-                blobStorage: opts.blobStorage,
-                organizationId: authContext.organizationId,
-                admissionWebhookURL: contractGraph.admissionWebhookURL,
-                admissionConfig: {
-                  cdnBaseUrl: opts.cdnBaseUrl,
-                  jwtSecret: opts.admissionWebhookJWTSecret,
-                },
-              });
-
-              compositionErrors.push(
-                ...(contractErrors || []).map((e) => ({
-                  federatedGraphName: contractGraph.name,
-                  namespace: contractGraph.namespace,
-                  message: e.message,
-                })),
-              );
-
-              deploymentErrors.push(
-                ...contractDeployment.errors
-                  .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-                  .map((e) => ({
-                    federatedGraphName: contractGraph.name,
-                    namespace: contractGraph.namespace,
-                    message: e.message ?? '',
-                  })),
-              );
-
-              federatedGraphSchemaUpdates.push({
-                eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-                payload: {
-                  federated_graph: {
-                    id: contractGraph.targetId,
-                    name: contractGraph.name,
-                    namespace: namespace.name,
-                  },
-                  organization: {
-                    id: authContext.organizationId,
-                    slug: authContext.organizationSlug,
-                  },
-                  errors: (contractErrors || []).length > 0 || deploymentErrors.length > 0,
-                  actor_id: authContext.userId,
-                },
-              });
-            }
-          }
+          return { compositionErrors, deploymentErrors };
         });
 
         for (const update of federatedGraphSchemaUpdates) {
@@ -4034,11 +3888,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         if (result?.compositionErrors) {
-          compositionErrors = result.compositionErrors.map((e) => ({
-            federatedGraphName: req.name,
-            namespace: federatedGraph.namespace,
-            message: e.message,
-          }));
+          compositionErrors = result.compositionErrors;
         }
 
         await auditLogRepo.addAuditLog({

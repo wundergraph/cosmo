@@ -1,7 +1,7 @@
 import { KeyObject } from 'node:crypto';
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, routerConfigFromJson } from '@wundergraph/cosmo-shared';
 import {
   SQL,
@@ -178,7 +178,10 @@ export class FederatedGraphRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
-  }): Promise<{ compositionErrors: Error[]; deploymentErrors: PlainMessage<DeploymentError>[] } | undefined> {
+  }): Promise<
+    | { compositionErrors: PlainMessage<CompositionError>[]; deploymentErrors: PlainMessage<DeploymentError>[] }
+    | undefined
+  > {
     const routingUrl = normalizeURL(data.routingUrl);
     const admissionWebhookURL = data.admissionWebhookURL ? normalizeURL(data.admissionWebhookURL) : undefined;
 
@@ -272,97 +275,15 @@ export class FederatedGraphRepository {
           }
         }
 
-        const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
-        for (const contract of contracts) {
-          tagExclusionsByContractName.set(contract.downstreamFederatedGraph.target.name, new Set(contract.excludeTags));
-        }
-
-        const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo);
-
-        const publishedSubgraphs = await subgraphRepo.listByFederatedGraph({
-          federatedGraphTargetId: federatedGraph.targetId,
-          published: true,
-        });
-
-        const {
-          errors,
-          federationResult: result,
-          federationResultContainerByContractName,
-        } = composeSubgraphsWithContracts(
-          publishedSubgraphs.map((s) => ({
-            name: s.name,
-            url: s.routingUrl,
-            definitions: parse(s.schemaSDL),
-          })),
-          tagExclusionsByContractName,
-        );
-
-        const deployment = await composer.deployComposition({
-          composedGraph: mapResultToComposedGraph(federatedGraph, publishedSubgraphs, errors, result),
-          composedBy: data.updatedBy,
+        const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
+          federatedGraphs: [federatedGraph],
           blobStorage: data.blobStorage,
-          organizationId: this.organizationId,
-          admissionWebhookURL: federatedGraph.admissionWebhookURL,
           admissionConfig: {
+            webhookJWTSecret: data.admissionConfig.jwtSecret,
             cdnBaseUrl: data.admissionConfig.cdnBaseUrl,
-            jwtSecret: data.admissionConfig.jwtSecret,
           },
+          actorId: data.updatedBy,
         });
-
-        const compositionErrors: Error[] = [];
-        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-
-        compositionErrors.push(...(errors || []));
-
-        deploymentErrors.push(
-          ...deployment.errors
-            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-            .map((e) => ({
-              federatedGraphName: federatedGraph.name,
-              namespace: federatedGraph.namespace,
-              message: e.message ?? '',
-            })),
-        );
-
-        if (!federationResultContainerByContractName) {
-          return {
-            compositionErrors,
-            deploymentErrors,
-          };
-        }
-
-        for (const [contractName, resultContainer] of federationResultContainerByContractName.entries()) {
-          const { errors: contractErrors, federationResult: contractResult } = resultContainer;
-
-          const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
-          if (!contractGraph) {
-            throw new Error(`Contract graph ${contractName} not found`);
-          }
-
-          const contractDeployment = await composer.deployComposition({
-            composedGraph: mapResultToComposedGraph(contractGraph, publishedSubgraphs, contractErrors, contractResult),
-            composedBy: data.updatedBy,
-            blobStorage: data.blobStorage,
-            organizationId: this.organizationId,
-            admissionWebhookURL: contractGraph.admissionWebhookURL,
-            admissionConfig: {
-              cdnBaseUrl: data.admissionConfig.cdnBaseUrl,
-              jwtSecret: data.admissionConfig.jwtSecret,
-            },
-          });
-
-          compositionErrors.push(...(contractErrors || []));
-
-          deploymentErrors.push(
-            ...contractDeployment.errors
-              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-              .map((e) => ({
-                federatedGraphName: contractGraph.name,
-                namespace: contractGraph.namespace,
-                message: e.message ?? '',
-              })),
-          );
-        }
 
         return {
           compositionErrors,
@@ -655,7 +576,11 @@ export class FederatedGraphRepository {
   /**
    * bySubgraphLabels returns federated graphs whose label matchers satisfy the given subgraph labels.
    */
-  public async bySubgraphLabels(data: { labels: Label[]; namespaceId: string }): Promise<FederatedGraphDTO[]> {
+  public async bySubgraphLabels(data: {
+    labels: Label[];
+    namespaceId: string;
+    excludeContracts?: boolean;
+  }): Promise<FederatedGraphDTO[]> {
     const uniqueLabels = normalizeLabels(data.labels);
 
     const graphs = await this.db
@@ -669,6 +594,7 @@ export class FederatedGraphRepository {
           eq(targets.organizationId, this.organizationId),
           eq(targets.type, 'federated'),
           eq(targets.namespaceId, data.namespaceId),
+          data.excludeContracts ? isNull(schema.contracts.id) : undefined,
           // In case labels are empty only compose with graphs whose label matchers are also empty.
           // This is a negative lookup. We check if the graph has label matchers and then
           // If there is a label matchers of a federated graph that does not match the given subgraph labels.
@@ -700,6 +626,7 @@ export class FederatedGraphRepository {
         ),
       )
       .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targets.id))
+      .fullJoin(schema.contracts, eq(schema.contracts.downstreamFederatedGraphId, federatedGraphs.id))
       .leftJoin(schemaVersion, eq(schemaVersion.id, federatedGraphs.composedSchemaVersionId))
       .orderBy(asc(targets.createdAt), asc(schemaVersion.createdAt))
       .execute();
@@ -707,6 +634,10 @@ export class FederatedGraphRepository {
     const graphsDTOs: FederatedGraphDTO[] = [];
 
     for (const target of graphs) {
+      if (!target.id) {
+        continue;
+      }
+
       const fg = await this.byTargetId(target.id);
       if (fg === undefined) {
         throw new Error(`FederatedGraph ${target.name} not found`);
@@ -1432,4 +1363,131 @@ export class FederatedGraphRepository {
       }
     });
   }
+
+  public composeAndDeployGraphs = ({
+    federatedGraphs,
+    blobStorage,
+    admissionConfig,
+    actorId,
+  }: {
+    federatedGraphs: FederatedGraphDTO[];
+    blobStorage: BlobStorage;
+    admissionConfig: {
+      webhookJWTSecret: string;
+      cdnBaseUrl: string;
+    };
+    actorId: string;
+  }) => {
+    return this.db.transaction(async (tx) => {
+      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
+      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
+      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo);
+
+      const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+      const compositionErrors: PlainMessage<CompositionError>[] = [];
+
+      for (const federatedGraph of federatedGraphs) {
+        const subgraphs = await subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: federatedGraph.targetId,
+          published: true,
+        });
+
+        const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
+        const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
+        for (const contract of contracts) {
+          tagExclusionsByContractName.set(contract.downstreamFederatedGraph.target.name, new Set(contract.excludeTags));
+        }
+
+        const {
+          errors,
+          federationResult: result,
+          federationResultContainerByContractName,
+        } = composeSubgraphsWithContracts(
+          subgraphs.map((s) => ({
+            name: s.name,
+            url: s.routingUrl,
+            definitions: parse(s.schemaSDL),
+          })),
+          tagExclusionsByContractName,
+        );
+
+        // Collect all composition errors
+        compositionErrors.push(
+          ...(errors || []).map((e) => ({
+            federatedGraphName: federatedGraph.name,
+            namespace: federatedGraph.namespace,
+            message: e.message,
+          })),
+        );
+
+        const deployment = await composer.deployComposition({
+          composedGraph: mapResultToComposedGraph(federatedGraph, subgraphs, errors, result),
+          composedBy: actorId,
+          blobStorage,
+          organizationId: this.organizationId,
+          admissionWebhookURL: federatedGraph.admissionWebhookURL,
+          admissionConfig: {
+            cdnBaseUrl: admissionConfig.cdnBaseUrl,
+            jwtSecret: admissionConfig.webhookJWTSecret,
+          },
+        });
+
+        deploymentErrors.push(
+          ...deployment.errors
+            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+            .map((e) => ({
+              federatedGraphName: federatedGraph.name,
+              namespace: federatedGraph.namespace,
+              message: e.message ?? '',
+            })),
+        );
+
+        if (!federationResultContainerByContractName) {
+          continue;
+        }
+
+        for (const [contractName, resultContainer] of federationResultContainerByContractName.entries()) {
+          const { errors: contractErrors, federationResult: result } = resultContainer;
+
+          const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
+          if (!contractGraph) {
+            throw new Error(`Contract graph ${contractName} not found`);
+          }
+
+          const contractDeployment = await composer.deployComposition({
+            composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, contractErrors, result),
+            composedBy: actorId,
+            blobStorage,
+            organizationId: this.organizationId,
+            admissionWebhookURL: contractGraph.admissionWebhookURL,
+            admissionConfig: {
+              cdnBaseUrl: admissionConfig.cdnBaseUrl,
+              jwtSecret: admissionConfig.webhookJWTSecret,
+            },
+          });
+
+          compositionErrors.push(
+            ...(contractErrors || []).map((e) => ({
+              federatedGraphName: contractGraph.name,
+              namespace: contractGraph.namespace,
+              message: e.message,
+            })),
+          );
+
+          deploymentErrors.push(
+            ...contractDeployment.errors
+              .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
+              .map((e) => ({
+                federatedGraphName: contractGraph.name,
+                namespace: contractGraph.namespace,
+                message: e.message ?? '',
+              })),
+          );
+        }
+      }
+
+      return { compositionErrors, deploymentErrors };
+    });
+  };
 }

@@ -374,12 +374,13 @@ export class Composer {
     const composedGraphs: ComposedFederatedGraph[] = [];
     let federationResultContainer: FederationResultContainerWithContracts;
 
-    for await (const graph of await this.federatedGraphRepo.bySubgraphLabels({ labels: subgraphLabels, namespaceId })) {
-      // Contracts will be handled for each source graph below
-      if (graph.contract) {
-        continue;
-      }
+    const graphs = await this.federatedGraphRepo.bySubgraphLabels({
+      labels: subgraphLabels,
+      namespaceId,
+      excludeContracts: true,
+    });
 
+    for await (const graph of graphs) {
       try {
         const [subgraphs, subgraphsToBeComposed] = mapSubgraphs(
           await this.subgraphRepo.listByFederatedGraph({ federatedGraphTargetId: graph.targetId }),
