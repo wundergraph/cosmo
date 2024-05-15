@@ -13,6 +13,7 @@ import {
 } from "@/components/schema/sdl-viewer";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { SchemaToolbar } from "@/components/schema/toolbar";
+import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -99,9 +100,9 @@ const SDLPage: NextPageWithLayout = () => {
         targetId: graphData?.graph?.targetId ?? "",
         routingUrl: graphData?.graph?.routingURL ?? "",
         sdl:
-          schemaType === "client"
-            ? federatedGraphSdl?.clientSchema
-            : federatedGraphSdl?.sdl ?? "",
+          schemaType === "router"
+            ? federatedGraphSdl?.sdl ?? ""
+            : federatedGraphSdl?.clientSchema,
         time: graphData?.graph?.lastUpdatedAt,
         versionId: federatedGraphSdl?.versionId,
       };
@@ -179,10 +180,11 @@ const SDLPage: NextPageWithLayout = () => {
                       : activeSubgraph
                       ? "Published SDL"
                       : "Router SDL"}
-                    {!activeSubgraph &&
-                      (schemaType === "client"
-                        ? " (client schema)"
-                        : " (composed schema)")}
+                    {!activeSubgraph && (
+                      <Badge variant="secondary" className="ml-2">
+                        {schemaType === "router" ? "router" : "client"}
+                      </Badge>
+                    )}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -192,9 +194,9 @@ const SDLPage: NextPageWithLayout = () => {
                         <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
                           <PiGraphLight className="h-3 w-3" /> Graph
                         </SelectLabel>
-                        <SelectItem value="">Composed Schema</SelectItem>
-                        <SelectItem value="?schemaType=client">
-                          Client Schema
+                        <SelectItem value="">Client Schema</SelectItem>
+                        <SelectItem value="?schemaType=router">
+                          Router Schema
                         </SelectItem>
                       </SelectGroup>
                       <Separator className="my-2" />

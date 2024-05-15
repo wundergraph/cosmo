@@ -711,7 +711,7 @@ const Type = (props: {
                 icon={<PiChat />}
                 title="Cannot start discussions here"
                 className="my-24 h-auto"
-                description={`Discussions can only be started on the composed schema`}
+                description={`Discussions can only be started on the router schema`}
               />
             ) : (
               <>
@@ -1081,14 +1081,28 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
             schemaType: v,
           });
         }}
-        value={(router.query.schemaType as string) || "composed"}
+        value={(router.query.schemaType as string) || "client"}
       >
         <SelectTrigger className="w-max">
-          <SelectValue />
+          <SelectValue>
+            {sentenceCase((router.query.schemaType as string) || "client")}{" "}
+            Schema
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="composed">Composed Schema</SelectItem>
-          <SelectItem value="client">Client Schema</SelectItem>
+          <SelectItem value="client">
+            Client Schema{" "}
+            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+              The schema available to the clients and through introspection
+            </p>
+          </SelectItem>
+          <Separator />
+          <SelectItem value="router">
+            Router Schema
+            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+              The full schema used by the router to plan your operations
+            </p>
+          </SelectItem>
         </SelectContent>
       </Select>
       {ast && (
@@ -1232,9 +1246,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   );
 
   const schema =
-    (router.query.schemaType as string) === "client"
-      ? data?.clientSchema
-      : data?.sdl;
+    (router.query.schemaType as string) === "router"
+      ? data?.sdl
+      : data?.clientSchema;
 
   const { ast, isParsing } = useParseSchema(schema);
 

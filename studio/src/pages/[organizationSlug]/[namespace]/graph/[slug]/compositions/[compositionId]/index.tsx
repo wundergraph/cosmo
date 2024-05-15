@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -37,12 +38,13 @@ import {
   getCompositionDetails,
   getSdlBySchemaVersion,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { sentenceCase } from "change-case";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
-import { PiGitBranch } from "react-icons/pi";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
+import { PiGitBranch } from "react-icons/pi";
 
 const CompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -54,9 +56,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   const tab = router.query.tab as string;
   const subgraph = router.query.subgraph as string;
 
-  const [schemaType, setSchemaType] = useState<"composed" | "client">(
-    "composed",
-  );
+  const [schemaType, setSchemaType] = useState<"router" | "client">("client");
 
   const graphData = useContext(GraphContext);
 
@@ -380,20 +380,32 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                             value={schemaType}
                           >
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue>
+                                {sentenceCase(schemaType)}
+                                Schema
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="composed">
-                                Composed Schema
-                              </SelectItem>
                               <SelectItem value="client">
                                 Client Schema
+                                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                                  The schema available to the clients and
+                                  through introspection
+                                </p>
+                              </SelectItem>
+                              <Separator />
+                              <SelectItem value="router">
+                                Router Schema
+                                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                                  The full schema used by the router to plan
+                                  your operations
+                                </p>
                               </SelectItem>
                             </SelectContent>
                           </Select>
                           <SDLViewerActions
                             sdl={
-                              schemaType === "composed"
+                              schemaType === "router"
                                 ? sdlData.sdl
                                 : sdlData.clientSchema
                             }
@@ -403,7 +415,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                         </div>
                         <SDLViewerMonaco
                           schema={
-                            schemaType === "composed"
+                            schemaType === "router"
                               ? sdlData.sdl
                               : sdlData.clientSchema
                           }
