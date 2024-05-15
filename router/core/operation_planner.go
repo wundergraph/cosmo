@@ -4,13 +4,13 @@ import (
 	"errors"
 	"strconv"
 
+	"golang.org/x/sync/singleflight"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"golang.org/x/sync/singleflight"
 
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
@@ -55,14 +55,6 @@ func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache) *Oper
 func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOperationContent string) (*planWithMetaData, error) {
 	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
 	if report.HasErrors() {
-		return nil, &reportError{report: &report}
-	}
-
-	validation := astvalidation.DefaultOperationValidator()
-
-	// validate the document before planning
-	state := validation.Validate(&doc, p.executor.Definition, &report)
-	if state != astvalidation.Valid {
 		return nil, &reportError{report: &report}
 	}
 

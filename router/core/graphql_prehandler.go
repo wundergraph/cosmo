@@ -11,23 +11,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-
-	"github.com/go-chi/chi/v5/middleware"
-	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/internal/pool"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type PreHandlerOptions struct {
@@ -250,6 +247,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan.SetAttributes(baseAttributeValues...)
 		metrics.AddAttributes(baseAttributeValues...)
+
+		/**
+		* Pre-Normalize Validation
+		 */
+		err = operationKit.ValidatePreNormalize()
+		if err != nil {
+			finalErr = err
+
+			writeOperationError(r, w, requestLogger, err)
+			return
+		}
 
 		/**
 		* Normalize the operation

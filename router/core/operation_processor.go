@@ -12,14 +12,14 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
@@ -109,14 +109,16 @@ type OperationProcessor struct {
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
-	parser              *astparser.Parser
-	doc                 *ast.Document
-	keyGen              hash.Hash64
-	normalizer          *astnormalization.OperationNormalizer
-	printer             *astprinter.Printer
-	normalizedOperation *bytes.Buffer
-	unescapedDocument   []byte
-	variablesValidator  *variablesvalidation.VariablesValidator
+	parser                 *astparser.Parser
+	doc                    *ast.Document
+	keyGen                 hash.Hash64
+	normalizer             *astnormalization.OperationNormalizer
+	printer                *astprinter.Printer
+	normalizedOperation    *bytes.Buffer
+	unescapedDocument      []byte
+	variablesValidator     *variablesvalidation.VariablesValidator
+	preNormalizeValidator  *astvalidation.OperationValidator
+	fullOperationValidator *astvalidation.OperationValidator
 }
 
 // OperationKit provides methods to parse, normalize and validate operations.
@@ -426,8 +428,25 @@ func (o *OperationKit) Normalize() error {
 	return nil
 }
 
-// Validate validates the operation variables.
+// ValidatePreNormalize validates fragments
+func (o *OperationKit) ValidatePreNormalize() error {
+	report := &operationreport.Report{}
+	state := o.kit.preNormalizeValidator.Validate(o.kit.doc, o.operationParser.executor.Definition, report)
+	if state != astvalidation.Valid {
+		return &reportError{report: report}
+	}
+
+	return nil
+}
+
+// Validate validates the operation.
 func (o *OperationKit) Validate() error {
+	report := &operationreport.Report{}
+	state := o.kit.fullOperationValidator.Validate(o.kit.doc, o.operationParser.executor.Definition, report)
+	if state != astvalidation.Valid {
+		return &reportError{report: report}
+	}
+
 	err := o.kit.variablesValidator.Validate(o.kit.doc, o.operationParser.executor.Definition, o.parsedOperation.Variables)
 	if err != nil {
 		return &inputError{
@@ -457,10 +476,12 @@ func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 						astnormalization.WithRemoveNotMatchingOperationDefinitions(),
 						astnormalization.WithRemoveUnusedVariables(),
 					),
-					printer:             &astprinter.Printer{},
-					normalizedOperation: &bytes.Buffer{},
-					unescapedDocument:   make([]byte, 1024),
-					variablesValidator:  variablesvalidation.NewVariablesValidator(),
+					printer:                &astprinter.Printer{},
+					normalizedOperation:    &bytes.Buffer{},
+					unescapedDocument:      make([]byte, 1024),
+					variablesValidator:     variablesvalidation.NewVariablesValidator(),
+					preNormalizeValidator:  astvalidation.NewOperationValidator([]astvalidation.Rule{astvalidation.Fragments()}),
+					fullOperationValidator: astvalidation.DefaultOperationValidator(),
 				}
 			},
 		},
