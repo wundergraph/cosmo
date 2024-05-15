@@ -3,27 +3,31 @@ import {
   ArgumentConfiguration,
   ArgumentSource,
   AuthorizationConfiguration,
+  DataSourceCustomEvents,
+  EngineEventConfiguration,
   EntityInterfaceConfiguration,
-  EventConfiguration,
   EventType,
   FieldConfiguration,
+  KafkaEventConfiguration,
+  NatsEventConfiguration,
+  NatsStreamConfiguration,
   RequiredField,
   Scopes,
-  StreamConfiguration,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   ConfigurationData,
-  EventType as CompositionEventType,
   FieldConfiguration as CompositionFieldConfiguration,
+  NatsEventType as CompositionEventType,
   RequiredFieldConfiguration,
 } from '@wundergraph/composition';
+import { PROVIDER_TYPE_KAFKA, PROVIDER_TYPE_NATS } from '@wundergraph/composition/dist/utils/string-constants.js';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
   childNodes: TypeField[];
   provides: RequiredField[];
-  events: EventConfiguration[];
+  events: DataSourceCustomEvents;
   keys: RequiredField[];
   requires: RequiredField[];
   entityInterfaces: EntityInterfaceConfiguration[];
@@ -62,7 +66,6 @@ function eventType(type: CompositionEventType) {
       return EventType.SUBSCRIBE;
     }
   }
-  throw new Error(`Unknown event type ${type}`);
 }
 
 export function configurationDataMapToDataSourceConfiguration(
@@ -73,7 +76,7 @@ export function configurationDataMapToDataSourceConfiguration(
     childNodes: [],
     keys: [],
     provides: [],
-    events: [],
+    events: new DataSourceCustomEvents({ nats: [], kafka: [] }),
     requires: [],
     entityInterfaces: [],
     interfaceObjects: [],
@@ -99,25 +102,54 @@ export function configurationDataMapToDataSourceConfiguration(
     addRequiredFields(data.keys, output.keys, typeName);
     addRequiredFields(data.provides, output.provides, typeName);
     addRequiredFields(data.requires, output.requires, typeName);
+    const natsEventConfigurations: NatsEventConfiguration[] = [];
+    const kafkaEventConfigurations: KafkaEventConfiguration[] = [];
     for (const event of data.events ?? []) {
-      output.events.push(
-        new EventConfiguration({
-          fieldName: event.fieldName,
-          sourceName: event.sourceName,
-          subjects: event.subjects,
-          type: eventType(event.type),
-          typeName,
-          ...(event.streamConfiguration
-            ? {
-                streamConfiguration: new StreamConfiguration({
-                  consumerName: event.streamConfiguration.consumerName,
-                  streamName: event.streamConfiguration.streamName,
-                }),
-              }
-            : {}),
-        }),
-      );
+      switch (event.providerType) {
+        case PROVIDER_TYPE_KAFKA: {
+          kafkaEventConfigurations.push(
+            new KafkaEventConfiguration({
+              engineEventConfiguration: new EngineEventConfiguration({
+                fieldName: event.fieldName,
+                providerId: event.providerId,
+                type: eventType(event.type),
+                typeName,
+              }),
+              topics: event.topics,
+            }),
+          );
+          break;
+        }
+        case PROVIDER_TYPE_NATS: {
+          natsEventConfigurations.push(
+            new NatsEventConfiguration({
+              engineEventConfiguration: new EngineEventConfiguration({
+                fieldName: event.fieldName,
+                providerId: event.providerId,
+                type: eventType(event.type),
+                typeName,
+              }),
+              subjects: event.subjects,
+              ...(event.streamConfiguration
+                ? {
+                    streamConfiguration: new NatsStreamConfiguration({
+                      consumerName: event.streamConfiguration.consumerName,
+                      streamName: event.streamConfiguration.streamName,
+                    }),
+                  }
+                : {}),
+            }),
+          );
+          break;
+        }
+        default: {
+          // TODO propagate this properly
+          throw new Error(`Unknown event provider.`);
+        }
+      }
     }
+    output.events.nats.push(...natsEventConfigurations);
+    output.events.kafka.push(...kafkaEventConfigurations);
   }
   return output;
 }
