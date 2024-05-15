@@ -206,3 +206,7 @@ They are not hidden.
 Publishing a feature flag is a public action.
 
 If you need to publish a feature flag privately, create a dedicated federated graph with restricted access.
+
+### Feature Flags info is forwarded to the Subgraph
+
+The Router will forward the feature flag Header to Subgraphs automatically.
