@@ -46,24 +46,39 @@ export const ComposeStatusMessage = ({
   lastUpdatedAt,
   isComposable,
   subgraphsCount,
+  isContract,
 }: {
   lastUpdatedAt?: string;
   isComposable: boolean;
   subgraphsCount: number;
+  isContract: boolean;
 }) => {
-  return lastUpdatedAt ? (
-    isComposable ? (
-      <span>Ready to be fetched from the router</span>
-    ) : (
+  if (lastUpdatedAt) {
+    if (isComposable) {
+      return <span>Ready to be fetched from the router.</span>;
+    }
+
+    return (
       <span className="whitespace-pre-line">
         <div>
           This version of the graph is not ready because the composition failed.
         </div>
       </span>
-    )
-  ) : subgraphsCount ? (
-    <span>Please publish a schema.</span>
-  ) : (
-    <span>Please create a subgraph.</span>
-  );
+    );
+  }
+
+  if (isContract) {
+    return (
+      <span>
+        No valid schema found in source graph. Once a schema is composed by the
+        source graph, this contract will be updated automatically.
+      </span>
+    );
+  }
+
+  if (subgraphsCount) {
+    return <span>Please publish a schema.</span>;
+  }
+
+  return <span>Please create a subgraph.</span>;
 };

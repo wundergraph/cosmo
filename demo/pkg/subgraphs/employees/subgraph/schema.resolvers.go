@@ -149,6 +149,24 @@ func (r *queryResolver) Teammates(ctx context.Context, team model.Department) ([
 	}
 }
 
+// FirstEmployee is the resolver for the firstEmployee field.
+func (r *queryResolver) FirstEmployee(ctx context.Context) (*model.Employee, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
+
+	employee := &model.Employee{
+		ID:        employees[0].ID,
+		Details:   employees[0].Details,
+		Tag:       employees[0].Tag,
+		Role:      employees[0].Role,
+		Notes:     employees[0].Notes,
+		UpdatedAt: time.Now().String(),
+		StartDate: employees[0].StartDate,
+	}
+
+	return employee, nil
+}
+
 // CurrentTime is the resolver for the currentTime field.
 func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.Time, error) {
 	ch := make(chan *model.Time)

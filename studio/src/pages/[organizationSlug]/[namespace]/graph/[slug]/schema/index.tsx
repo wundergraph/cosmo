@@ -706,13 +706,24 @@ const Type = (props: {
         <>
           <ResizableHandle withHandle />
           <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
-            <TypeDiscussions
-              name={props.name}
-              schemaVersionId={props.schemaVersionId}
-              startLineNo={props.startLineNo!}
-              endLineNo={props.endLineNo!}
-            />
-            <ThreadSheet schemaVersionId={props.schemaVersionId} />
+            {router.query.schemaType === "client" ? (
+              <EmptyState
+                icon={<PiChat />}
+                title="Cannot start discussions here"
+                className="my-24 h-auto"
+                description={`Discussions can only be started on the router schema`}
+              />
+            ) : (
+              <>
+                <TypeDiscussions
+                  name={props.name}
+                  schemaVersionId={props.schemaVersionId}
+                  startLineNo={props.startLineNo!}
+                  endLineNo={props.endLineNo!}
+                />
+                <ThreadSheet schemaVersionId={props.schemaVersionId} />
+              </>
+            )}
           </ResizablePanel>
         </>
       )}
@@ -1064,6 +1075,36 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
   return (
     <SchemaToolbar tab="explorer">
       <div className="hidden md:ml-auto md:block" />
+      <Select
+        onValueChange={(v) => {
+          applyParams({
+            schemaType: v,
+          });
+        }}
+        value={(router.query.schemaType as string) || "client"}
+      >
+        <SelectTrigger className="w-max">
+          <SelectValue>
+            {sentenceCase((router.query.schemaType as string) || "client")}{" "}
+            Schema
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="client">
+            Client Schema{" "}
+            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+              The schema available to the clients and through introspection
+            </p>
+          </SelectItem>
+          <Separator />
+          <SelectItem value="router">
+            Router Schema
+            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+              The full schema used by the router to plan your operations
+            </p>
+          </SelectItem>
+        </SelectContent>
+      </Select>
       {ast && (
         <>
           <SearchType ast={ast} open={open} setOpen={setOpen} />
@@ -1204,7 +1245,12 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     }),
   );
 
-  const { ast, isParsing } = useParseSchema(data?.sdl);
+  const schema =
+    (router.query.schemaType as string) === "router"
+      ? data?.sdl
+      : data?.clientSchema;
+
+  const { ast, isParsing } = useParseSchema(schema);
 
   const isLoadingAST = isLoading || isParsing;
 
@@ -1336,7 +1382,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           {isLoadingAST && <Loader fullscreen />}
           {!isLoadingAST &&
             data?.response?.code === EnumStatusCode.ERR_NOT_FOUND &&
-            !data.sdl && <EmptySchema />}
+            !schema && <EmptySchema />}
           {!isLoadingAST && error && (
             <EmptyState
               icon={<ExclamationTriangleIcon />}

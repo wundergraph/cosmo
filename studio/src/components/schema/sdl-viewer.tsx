@@ -171,14 +171,16 @@ const LineActions = ({
         >
           Copy link to line
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            setNewDiscussionLine(lineNo);
-          }}
-        >
-          Start new discussion
-        </DropdownMenuItem>
+        {router.query.schemaType !== "client" && (
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              setNewDiscussionLine(lineNo);
+            }}
+          >
+            Start new discussion
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

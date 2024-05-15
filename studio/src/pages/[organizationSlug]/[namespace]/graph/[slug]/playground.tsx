@@ -480,8 +480,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 
   const schema = useMemo(() => {
-    return parseSchema(data?.sdl);
-  }, [data?.sdl]);
+    return parseSchema(data?.clientSchema);
+  }, [data?.clientSchema]);
 
   const [query, setQuery] = useState<string | undefined>(
     operation ? decodeURIComponent(operation) : undefined,

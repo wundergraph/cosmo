@@ -2,9 +2,10 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, count, desc, eq, gt, lt } from 'drizzle-orm';
 import { JsonValue } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
+import { splitLabel } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import { graphCompositions, graphCompositionSubgraphs, schemaVersion, targets, users } from '../../db/schema.js';
-import { DateRange, GraphCompositionDTO } from '../../types/index.js';
+import { DateRange, GraphCompositionDTO, SubgraphDTO } from '../../types/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export class GraphCompositionRepository {
@@ -164,19 +165,37 @@ export class GraphCompositionRepository {
   }
 
   public async getCompositionSubgraphs(input: { compositionId: string }) {
-    return await this.db
+    const res = await this.db
       .select({
         id: graphCompositionSubgraphs.id,
-        schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
-        name: targets.name,
         targetId: targets.id,
+        name: targets.name,
+        routingUrl: schema.subgraphs.routingUrl,
+        subscriptionUrl: schema.subgraphs.subscriptionUrl,
+        subscriptionProtocol: schema.subgraphs.subscriptionProtocol,
+        schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
+        labels: schema.targets.labels,
+        namespaceId: schema.namespaces.id,
+        namespace: schema.namespaces.name,
+        lastUpdatedAt: graphCompositionSubgraphs.createdAt,
       })
       .from(graphCompositionSubgraphs)
       .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositionSubgraphs.schemaVersionId))
       .innerJoin(targets, eq(targets.id, schemaVersion.targetId))
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, targets.id))
+      .innerJoin(schema.namespaces, eq(schema.namespaces.id, targets.namespaceId))
       .where(eq(graphCompositions.id, input.compositionId))
       .execute();
+
+    return res.map((r) => ({
+      ...r,
+      schemaSDL: r.schemaSDL || '',
+      subscriptionUrl: r.subscriptionUrl || '',
+      lastUpdatedAt: r.lastUpdatedAt.toISOString(),
+      labels: r.labels?.map?.((l) => splitLabel(l)) ?? [],
+    }));
   }
 
   public async getGraphCompositions({

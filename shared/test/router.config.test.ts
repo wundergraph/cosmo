@@ -130,7 +130,7 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: federationResult.shouldIncludeClientSchema
+      federatedClientSDL: federationResult!.shouldIncludeClientSchema
         ? printSchema(federationResult!.federatedGraphClientSchema)
         : '',
       fieldConfigurations: [],
@@ -181,7 +181,7 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: federationResult.shouldIncludeClientSchema
+      federatedClientSDL: federationResult!.shouldIncludeClientSchema
         ? printSchema(federationResult!.federatedGraphClientSchema)
         : '',
       fieldConfigurations: [],
@@ -232,7 +232,7 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: federationResult.shouldIncludeClientSchema
+      federatedClientSDL: federationResult!.shouldIncludeClientSchema
         ? printSchema(federationResult!.federatedGraphClientSchema)
         : '',
       fieldConfigurations: [],
@@ -249,7 +249,7 @@ describe('Router Config Builder', () => {
   });
 
   test('that the builder config throws an error if normalization has failed', () => {
-    const subgraph:ComposedSubgraph = {
+    const subgraph: ComposedSubgraph = {
       id: '',
       name: '',
       sdl: `extend input Human {
