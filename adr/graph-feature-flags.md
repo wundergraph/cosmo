@@ -254,7 +254,21 @@ By default, feature flags are enabled and all feature flags are allowed.
 ```yaml
 featureFlags:
   enabled: true
-  allowList:
-    - "users-*"
-    - "posts-*"
 ```
+
+### Feature Flags can be enabled or disabled using the CLI
+
+```shell
+wgc ff enable users-v2
+wgc ff disable users-v2
+wgc ffg enable v2
+wgc ffg disable v2
+```
+
+Disabling a FF triggers composition and removes the FF from the Router Engine Config.
+Enabling a FF triggers composition and adds the FF to the Router Engine Config.
+If all FFs in a FFG are disabled, the FFG is disabled.
+If you enable a FFG, all FFs in the FFG must compose successfully.
+
+Enabling/Disabling a FF/FFG is like deleting and re-adding it without losing the FF/FFG definition.
+This can be useful, e.g. if a FF is incompatible with a new subgraph version and you want to temporarily disable it.
