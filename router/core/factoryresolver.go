@@ -138,7 +138,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 		return nil
 	}
 	if input.And != nil {
-		output.And = make([]plan.SubscriptionFilterCondition, len(input.And), len(input.And))
+		output.And = make([]plan.SubscriptionFilterCondition, len(input.And))
 		for i := range input.And {
 			mapProtoFilterToPlanFilter(input.And[i], &output.And[i])
 		}
