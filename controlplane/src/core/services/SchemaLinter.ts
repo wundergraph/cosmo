@@ -1,10 +1,9 @@
-import { Linter } from 'eslint';
 import { parseForESLint, rules } from '@graphql-eslint/eslint-plugin';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { baseDirectives } from '@wundergraph/composition';
+import { Linter } from 'eslint';
 import { uid } from 'uid';
-import { LintIssueResult, RulesConfig, SchemaLintDTO, SchemaLintIssues, LintRules } from '../../types/index.js';
 import { LintRuleEnum } from '../../db/models.js';
+import { LintIssueResult, LintRules, RulesConfig, SchemaLintDTO, SchemaLintIssues } from '../../types/index.js';
 
 export default class SchemaLinter {
   linter: Linter;
@@ -157,7 +156,13 @@ export default class SchemaLinter {
     return rulesConfig;
   };
 
-  schemaLintCheck = ({ schema, rulesInput }: { schema: string; rulesInput: SchemaLintDTO[] }): SchemaLintIssues => {
+  schemaLintCheck = ({
+    schema,
+    rulesInput,
+  }: {
+    schema: string;
+    rulesInput: SchemaLintDTO[];
+  }): SchemaLintIssues => {
     const rulesConfig: RulesConfig = this.createRulesConfig(rulesInput);
 
     this.linter.defineParser('@graphql-eslint/eslint-plugin', { parseForESLint });
@@ -173,11 +178,10 @@ export default class SchemaLinter {
       schema,
       {
         parser: '@graphql-eslint/eslint-plugin',
-        parserOptions: { schema: baseDirectives + schema },
+        parserOptions: { graphQLConfig: { schema } },
         rules: rulesConfig,
       },
       `${uid()}.graphql`,
-      // 'schema.graphql'
     );
 
     const lintWarnings: LintIssueResult[] = [];
