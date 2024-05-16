@@ -1,8 +1,6 @@
 {
   "extends": ["eslint-config-unjs", "plugin:require-extensions/recommended"],
-  "plugins": [
-        "require-extensions"
-  ],
+  "plugins": ["require-extensions"],
   "rules": {
     "space-before-function-paren": 0,
     "arrow-parens": 0,
@@ -23,6 +21,7 @@
     "@typescript-eslint/no-non-null-assertion": 0,
     "unicorn/expiring-todo-comments": 0,
     "no-useless-constructor": 0,
-    "unicorn/no-process-exit": 0
+    "unicorn/no-process-exit": 0,
+    "unicorn/prefer-top-level-await": 0
   }
 }
