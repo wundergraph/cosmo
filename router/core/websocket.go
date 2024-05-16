@@ -263,12 +263,15 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 	// Only when epoll is available. On Windows, epoll is not available
 	if h.epoll != nil {
+		h.logger.Debug("Epoll is available")
 		err = h.addConnection(c, handler)
 		if err != nil {
 			requestLogger.Error("Adding connection to epoll", zap.Error(err))
 			handler.Close()
 		}
 		return
+	} else {
+		h.logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
 	}
 
 	// Handle messages sync when epoll is not available
