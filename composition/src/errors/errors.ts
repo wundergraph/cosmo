@@ -1273,72 +1273,221 @@ export function invalidSubscriptionFilterDirectiveError(fieldPath: string, error
   );
 }
 
-export function invalidSubscriptionFilterFieldPathError(fieldPath: string, errorMessages: string[]) {}
+export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): string {
+  return (
+    ` The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
+    ` for any one filter condition.\n` +
+    ` If you require a larger maximum depth, please contact support.`
+  );
+}
 
-export const subscriptionFilterConditionDepthExceededErrorMessage = ` The maximum depth for a filter condition (${MAX_SUBSCRIPTION_FILTER_DEPTH})  was exceeded.`;
+const subscriptionFilterConditionFieldsString =
+  ` Each "${SUBSCRIPTION_FILTER_CONDITION}" input object must define exactly one of the following` +
+  ` input value fields: "${AND_UPPER}", "${IN_UPPER}", "${NOT_UPPER}", or "${OR_UPPER}".\n`;
 
-export function subscriptionFilterConditionInvalidInputFieldErrorMessage(invalidFieldName?: string): string {
-  let message =
-    ` Each "${SUBSCRIPTION_FILTER_CONDITION}" input object must define exactly one of the following` +
-    ` input value fields: "${AND_UPPER}", "${IN_UPPER}", "${NOT_UPPER}", or "${OR_UPPER}".`;
-  if (invalidFieldName) {
-    message += `\n However, the field "${invalidFieldName}" was defined.`;
-  }
-  return message;
+export function subscriptionFilterConditionInvalidInputFieldNumberErrorMessage(
+  inputPath: string,
+  fieldNumber: number,
+): string {
+  return subscriptionFilterConditionFieldsString + ` However, input path "${inputPath}" defines ${fieldNumber} fields.`;
+}
+
+export function subscriptionFilterConditionInvalidInputFieldErrorMessage(
+  inputPath: string,
+  invalidFieldName: string,
+): string {
+  return (
+    subscriptionFilterConditionFieldsString +
+    ` However, input path "${inputPath}" defines the invalid input value field "${invalidFieldName}".`
+  );
 }
 
 export function subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
-  fieldName: string,
+  inputPath: string,
   expectedTypeString: string,
   actualTypeString: string,
 ): string {
   return (
-    ` Expected input field "${fieldName}" to be type "${expectedTypeString}" but received type` +
-    ` "${actualTypeString}"`
+    ` Expected the value of input path "${inputPath}" to be type "${expectedTypeString}"` +
+    ` but received type "${actualTypeString}"`
+  );
+}
+
+const subscriptionFilterConditionArrayString =
+  ` An AND or OR input field defined on a "${SUBSCRIPTION_FILTER_CONDITION}" should define a list of 1–5` +
+  ` nested conditions.\n`;
+
+export function subscriptionFilterArrayConditionInvalidItemTypeErrorMessage(
+  inputPath: string,
+  invalidIndices: number[],
+): string {
+  const isPlural = invalidIndices.length > 1;
+  return (
+    subscriptionFilterConditionArrayString +
+    ` However, the following ` +
+    (isPlural ? `indices` : 'index') +
+    ` defined on input path "${inputPath}" ` +
+    (isPlural ? `are` : `is`) +
+    ` not type "object": ` +
+    invalidIndices.join(`,`)
   );
 }
 
 export function subscriptionFilterArrayConditionInvalidLengthErrorMessage(
-  fieldName: string,
+  inputPath: string,
   actualLength: number,
 ): string {
-  return ` Expected "${fieldName}" condition array to have length of 1–5 but received ${actualLength}.`;
+  return (
+    subscriptionFilterConditionArrayString +
+    ` However, the list defined on input path "${inputPath}" has a length of ${actualLength}.`
+  );
+}
+
+export function invalidInputFieldTypeErrorMessage(
+  inputPath: string,
+  expectedTypeString: string,
+  actualTypeString: string,
+): string {
+  return (
+    ` Expected the input path "${inputPath}" to be type "${expectedTypeString}"` + ` but received "${actualTypeString}"`
+  );
 }
 
 export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
+  inputPath: string,
   missingFieldNames: string[],
   duplicatedFieldNames: string[],
   invalidFieldNames: string[],
+  fieldErrorMessages: string[],
 ): string {
   let message =
     ` Each "${SUBSCRIPTION_FIELD_CONDITION}" input object must only define the following two` +
-    ` input value fields: "${FIELD_PATH}" and "${VALUES}".`;
-  if (missingFieldNames.length > 0 || duplicatedFieldNames.length > 0 || invalidFieldNames.length > 0) {
-    message += ` However:`;
-  }
+    ` input value fields: "${FIELD_PATH}" and "${VALUES}".\n However, input path "${inputPath}" is invalid because:`;
   if (missingFieldNames.length > 0) {
     message +=
-      `\n The following field` +
-      (missingFieldNames.length > 1 ? `s were` : ` was`) +
-      ` not defined:\n  "` +
+      `\n  The following field` +
+      (missingFieldNames.length > 1 ? `s are` : ` is`) +
+      ` not defined:\n   "` +
       missingFieldNames.join(QUOTATION_JOIN) +
       `"`;
   }
   if (duplicatedFieldNames.length > 0) {
     message +=
-      `\n The following field` +
-      (duplicatedFieldNames.length > 1 ? `s were` : ` was`) +
-      ` defined more than once:\n  "` +
+      `\n  The following field` +
+      (duplicatedFieldNames.length > 1 ? `s are` : ` is`) +
+      ` defined more than once:\n   "` +
       duplicatedFieldNames.join(QUOTATION_JOIN) +
       `"`;
   }
   if (invalidFieldNames.length > 0) {
     message +=
-      `\n The following invalid field` +
-      (invalidFieldNames.length > 1 ? `s were` : ` was`) +
-      ` defined:\n  "` +
+      `\n  The following invalid field` +
+      (invalidFieldNames.length > 1 ? `s are` : ` is`) +
+      ` defined:\n   "` +
       invalidFieldNames.join(QUOTATION_JOIN) +
       `"`;
   }
+  if (fieldErrorMessages.length > 0) {
+    message += `\n ` + fieldErrorMessages.join(`\n `);
+  }
   return message;
+}
+
+const subscriptionFieldConditionValuesString =
+  ` A "${SUBSCRIPTION_FIELD_CONDITION}" input object must define a "values" input value field` +
+  ` with a list of at least one non-empty string.\n`;
+
+export function subscriptionFieldConditionInvalidValuesArrayErrorMessage(
+  inputPath: string,
+  invalidIndices: number[],
+): string {
+  const isPlural = invalidIndices.length > 1;
+  return (
+    subscriptionFieldConditionValuesString +
+    ` However, the following ` +
+    (isPlural ? 'indices' : 'index') +
+    ` defined on input path "${inputPath}" ` +
+    (isPlural ? `are` : `is`) +
+    ` not type "string": ` +
+    invalidIndices.join(`,`)
+  );
+}
+
+export function subscriptionFieldConditionEmptyValuesArrayErrorMessage(inputPath: string): string {
+  return subscriptionFieldConditionValuesString + ` However, the list defined on input path "${inputPath}" is empty.`;
+}
+
+export function unknownFieldSubgraphNameError(fieldPath: string) {
+  return new Error(` Field "${fieldPath}" defined no subgraph names.`);
+}
+
+export function invalidSubscriptionFieldConditionFieldPathErrorMessage(inputPath: string, conditionFieldPath: string) {
+  return ` Input path "${inputPath}" defines the value "${conditionFieldPath}", which is not a period (.) delimited field path.`;
+}
+
+export function invalidSubscriptionFieldConditionFieldPathParentErrorMessage(
+  inputPath: string,
+  fullConditionFieldPath: string,
+  partialConditionFieldPath: string,
+) {
+  return (
+    ` Input path "${inputPath}" defines the value "${fullConditionFieldPath}".` +
+    `\n However, "${partialConditionFieldPath}" is not type "object"`
+  );
+}
+
+export function undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage(
+  inputPath: string,
+  fullConditionFieldPath: string,
+  partialConditionFieldPath: string,
+  fieldName: string,
+  parentTypeName: string,
+) {
+  return (
+    ` Input path "${inputPath}" defines the value "${fullConditionFieldPath}".` +
+    `\n However, the path "${partialConditionFieldPath}" is invalid because no field named "${fieldName}"` +
+    ` exists on type "${parentTypeName}".`
+  );
+}
+
+export function invalidSubscriptionFieldConditionFieldPathFieldErrorMessage(
+  inputPath: string,
+  fullConditionFieldPath: string,
+  partialConditionFieldPath: string,
+  fieldPath: string,
+  subgraphName: string,
+) {
+  return (
+    `Input path "${inputPath}" defines the value "${fullConditionFieldPath}".` +
+    `\n However, only fields that are defined in the same graph as the "@${SUBSCRIPTION_FILTER}" directive` +
+    ` can compose part of an "IN" condition's "fieldPath" input value field.` +
+    `\n Consequently, the path "${partialConditionFieldPath}" is invalid because field "${fieldPath}"` +
+    ` is not defined in subgraph "${subgraphName}".`
+  );
+}
+
+export function inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
+  inputPath: string,
+  fullConditionFieldPath: string,
+  partialConditionFieldPath: string,
+  fieldPath: string,
+) {
+  return (
+    ` Input path "${inputPath}" defines the value "${fullConditionFieldPath}".` +
+    `\n However, the path "${partialConditionFieldPath}" is invalid because "${fieldPath}" is declared @inaccessible.`
+  );
+}
+
+export function nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage(
+  inputPath: string,
+  fullConditionFieldPath: string,
+  fieldName: string,
+  typeString: string,
+  namedTypeName: string,
+) {
+  return (
+    ` Input path "${inputPath}" defines the value "${fullConditionFieldPath}".` +
+    `\n However, the final field "${fieldName}" is ${typeString} "${namedTypeName}", which is not a leaf type;` +
+    ` therefore, it requires further selections.`
+  );
 }

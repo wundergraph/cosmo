@@ -1,8 +1,18 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, invalidSubscriptionFilterLocationError, normalizeSubgraph, Subgraph } from '../src';
+import {
+  federateSubgraphs,
+  invalidSubscriptionFieldConditionFieldPathFieldErrorMessage,
+  invalidSubscriptionFilterDirectiveError,
+  invalidSubscriptionFilterLocationError,
+  kindToTypeString,
+  normalizeSubgraph,
+  Subgraph,
+  subscriptionFieldConditionInvalidInputFieldErrorMessage,
+  subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
+} from '../src';
 import { parse } from 'graphql';
 import { normalizeString, schemaToSortedNormalizedString } from './utils/utils';
-import { FIELD, SUBSCRIPTION } from '../src/utils/string-constants';
+import { CONDITION, FIELD, SUBSCRIPTION } from '../src/utils/string-constants';
 
 describe('@openfed__subscriptionFilter tests', () => {
   describe('Normalization tests', () => {
@@ -92,13 +102,13 @@ describe('@openfed__subscriptionFilter tests', () => {
                     or: [
                       {
                         in: {
-                          fieldPath: ['name'],
+                          fieldPath: ['object', 'name'],
                           values: ['Jens', 'Stefan'],
                         },
                       },
                       {
                         in: {
-                          fieldPath: ['age'],
+                          fieldPath: ['object', 'age'],
                           values: ['11', '22'],
                         },
                       },
@@ -110,14 +120,14 @@ describe('@openfed__subscriptionFilter tests', () => {
                     {
                       not: {
                         in: {
-                          fieldPath: ['products', 'sku'],
+                          fieldPath: ['product', 'sku'],
                           values: ['aaa'],
                         },
                       },
                     },
                     {
                       in: {
-                        fieldPath: ['products', 'continent'],
+                        fieldPath: ['product', 'continent'],
                         values: ['NA'],
                       },
                     },
@@ -129,10 +139,40 @@ describe('@openfed__subscriptionFilter tests', () => {
         ]);
       });
 
-      // TODO
-      test.skip('that configuration is generated correctly #3', () => {
-        const { errors } = normalizeSubgraph(subgraphE.definitions);
+      test('that an error is returned if an IN condition fieldPath references a field that is not defined in the same subgraph as the directive', () => {
+        const { errors } = federateSubgraphs([subgraphB, subgraphF]);
         expect(errors).toBeDefined();
+        expect(errors).toHaveLength(1);
+        expect(errors![0]).toStrictEqual(
+          invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
+            subscriptionFieldConditionInvalidInputFieldErrorMessage(
+              'condition.AND[0].NOT.OR[0].IN',
+              [],
+              [],
+              [],
+              [
+                invalidSubscriptionFieldConditionFieldPathFieldErrorMessage(
+                  'condition.AND[0].NOT.OR[0].IN.fieldPath',
+                  'object.field.name',
+                  'object',
+                  `Entity.object`,
+                  'subgraph-f',
+                ),
+              ],
+            ),
+          ]),
+        );
+      });
+
+      test('that an error is returned if a non-object condition is provided', () => {
+        const { errors } = federateSubgraphs([subgraphB, subgraphE]);
+        expect(errors).toBeDefined();
+        expect(errors).toHaveLength(1);
+        expect(errors![0]).toStrictEqual(
+          invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
+            subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(CONDITION, 'object', 'int'),
+          ]),
+        );
       });
     });
   });
@@ -160,7 +200,7 @@ const subgraphB: Subgraph = {
   name: 'subgraph-b',
   url: '',
   definitions: parse(`
-    enum Contient {
+    enum Continent {
       AS
       AF
       EU
@@ -169,15 +209,26 @@ const subgraphB: Subgraph = {
       SA
     }
     
-    type Entity @key(fields: "id") {
+    type Entity  @key(fields: "id object { name, age } product { sku, continent }") {
       age: Int!
       id: ID!
       name: String!
-      products: [Product!]!
+      object: Object!
+      product: Product!
     }
     
+    type NestedObject {
+      name: String!
+    }
+    
+    type Object @external {
+      name: String!
+      age: Int!
+      field: NestedObject!
+    }
+  
     type Product {
-      continent: Contient!
+      continent: Continent!
       sku: String!
     }
     
@@ -205,8 +256,29 @@ const subgraphD: Subgraph = {
   name: 'subgraph-d',
   url: '',
   definitions: parse(`
-  type Entity @key(fields: "id", resolvable: false) {
+  enum Continent {
+    AS
+    AF
+    EU
+    NA
+    OC
+    SA
+  }
+
+  type Entity @key(fields: "id object { name, age } product { sku, continent }", resolvable: false) {
     id: ID! @external
+    object: Object! @external
+    product: Product! @external
+  }
+  
+  type Object @external {
+    name: String!
+    age: Int!
+  }
+  
+  type Product @external {
+    continent: Continent!
+    sku: String!
   }
   
   type Subscription {
@@ -214,15 +286,15 @@ const subgraphD: Subgraph = {
       condition: { AND: [
         { NOT: 
           { OR: [
-            { IN: { fieldPath: "name", values: ["Jens", "Stefan"] } },
-            { IN: { fieldPath: "age", values: ["11", "22"] } },
+            { IN: { fieldPath: "object.name", values: ["Jens", "Stefan"] } },
+            { IN: { fieldPath: "object.age", values: ["11", "22"] } },
           ] },
         },
         { AND: [
           { NOT: 
-            { IN: { fieldPath: "products.sku", values: ["aaa"] } },
+            { IN: { fieldPath: "product.sku", values: ["aaa"] } },
           },
-          { IN: { fieldPath: "products.continent" values: ["NA"] } },
+          { IN: { fieldPath: "product.continent" values: ["NA"] } },
         ] },
       ] }
     )
@@ -240,6 +312,35 @@ const subgraphE: Subgraph = {
   
   type Subscription {
     field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: 1)
+  }
+`),
+};
+
+const subgraphF: Subgraph = {
+  name: 'subgraph-f',
+  url: '',
+  definitions: parse(`
+  type Entity @key(fields: "id", resolvable: false) {
+    id: ID! @external
+  }
+  
+  type Subscription {
+    field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
+      condition: { AND: [
+        { NOT: 
+          { OR: [
+            { IN: { fieldPath: "object.field.name", values: ["Jens", "Stefan"] } },
+            { IN: { fieldPath: "object.age", values: ["11", "22"] } },
+          ] },
+        },
+        { AND: [
+          { NOT: 
+            { IN: { fieldPath: "product.sku", values: ["aaa"] } },
+          },
+          { IN: { fieldPath: "product.continent" values: ["NA"] } },
+        ] },
+      ] }
+    )
   }
 `),
 };

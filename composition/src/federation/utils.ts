@@ -67,6 +67,7 @@ export type InterfaceImplementationData = {
 };
 
 export type SubscriptionFilterData = {
-  fieldData: FieldData;
   directive: ConstDirectiveNode;
+  directiveSubgraphName: string;
+  fieldData: FieldData;
 };

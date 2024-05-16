@@ -605,3 +605,9 @@ export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
     target.set(key, value);
   }
 }
+
+export function getSingleSetEntry<T>(set: Set<T>): T | undefined {
+  for (const entry of set) {
+    return entry;
+  }
+}
