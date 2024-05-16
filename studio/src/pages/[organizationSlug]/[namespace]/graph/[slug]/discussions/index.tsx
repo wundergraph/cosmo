@@ -116,7 +116,7 @@ const DiscussionsPage: NextPageWithLayout = () => {
       >
         <GraphDiscussions
           targetId={selectedGraph?.targetId}
-          linkToSchema={`/${organizationSlug}/${namespace}/graph/${graphName}/schema`}
+          linkToSchema={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?schemaType=router`}
         />
       </GraphPageLayout>
     </PageHeader>
