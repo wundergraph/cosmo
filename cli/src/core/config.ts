@@ -1,15 +1,11 @@
 import { readFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import pc from 'picocolors';
 import yaml from 'js-yaml';
 import envPaths from 'env-paths';
 
-const info = JSON.parse(
-  await readFile(new URL('../../package.json', import.meta.url), {
-    encoding: 'utf8',
-  }),
-);
+const packageJsonPath = path.join(process.cwd(), 'package.json');
+const info = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
 
 const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;

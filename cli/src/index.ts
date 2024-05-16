@@ -8,7 +8,9 @@ import program from './commands/index.js';
 dotenv.config();
 
 try {
-  await program.parseAsync(process.argv);
+  (async () => {
+    await program.parseAsync(process.argv);
+  })();
 } catch (e) {
   console.log('');
 
