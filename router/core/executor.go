@@ -130,9 +130,13 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}, nil
 }
 
-func buildNatsOptions(eventSource config.NatsEventSource) ([]nats.Option, error) {
+func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
 
-	var opts []nats.Option
+	opts := []nats.Option{
+		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+			logger.Error("nats error", zap.Error(err))
+		}),
+	}
 
 	if eventSource.Authentication != nil {
 		if eventSource.Authentication.Token != nil {

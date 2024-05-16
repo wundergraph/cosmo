@@ -841,13 +841,15 @@ func TestNatsEvents(t *testing.T) {
 
 			// Events 1, 3, 4, 6, 7, 9, 10, and 11 should be filtered
 			for i := 1; i < 13; i++ {
+				// NATS consumer can't keep up with the producer. We need to wait a bit.
+				time.Sleep(time.Millisecond * 100)
+
 				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
-				// If the events are sent too quickly, the go routine isn't able to keep up
-				time.Sleep(time.Millisecond * 100)
+
 			}
 
 			wg.Wait()
