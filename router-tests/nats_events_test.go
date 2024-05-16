@@ -763,6 +763,8 @@ func TestNatsEvents(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
+
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
@@ -829,9 +831,6 @@ func TestNatsEvents(t *testing.T) {
 				line, _, err = reader.ReadLine()
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
-
-				wg.Done()
-
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
