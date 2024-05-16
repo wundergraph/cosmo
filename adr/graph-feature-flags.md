@@ -37,6 +37,12 @@ wgc feature-flag publish users-v2 --schema ./subgraph-users-v2/schema.graphql
 # alias: wgc ff publish
 ```
 
+Alternatively, you can create and publish a feature flag in one step:
+
+```shell
+wgc ff publish users-v2 --label team=B --routing-url https://users-v2.domain.com --schema ./subgraph-users-v2/schema.graphql --subgraph users
+```
+
 5. make a request to the federated graph with the feature flag
 
 ```shell
@@ -104,10 +110,25 @@ Feature Flags are always replacing the subgraph they are associated with.
 This means that a feature flag can only be associated with one subgraph at a time.
 If a feature flag is associated with a subgraph, it will replace the subgraph in the federated graph.
 
+However, it's possible to have multiple feature flags that replace the same subgraph.
+
+Example:
+
+You have a Subgraph `users` with two feature flags `users-v2` and `users-v3`.
+If you send no feature flag, the default `users` subgraph will be used.
+If you send the `users-v2` feature flag, the `users-v2` subgraph will be used.
+If you send the `users-v3` feature flag, the `users-v3` subgraph will be used.
+
+It's not possible to combine `users-v2` and `users-v3` in a single request.
+You always exclusively use one feature flag per subgraph at a time.
+
 ### Conflicting Feature Flags that replace the same subgraph are allowed
 
-It's possible to have multiple feature flags that replace the same subgraph.
+It's possible to have multiple feature flags that replace the same subgraph like described above.
 This is useful and allowed for testing different variants of the same subgraph.
+
+However, a request can only contain one single feature flag or one single group feature flag at a time (see next section)
+This means that at any given time, only one feature flag per subgraph can be active.
 
 ### Feature Flags that replace the same subgraph are not allowed in a group feature flag
 
@@ -142,6 +163,7 @@ which means that the number of possible combinations defines the composition che
 
 When a subgraph gets published, the Control Plane needs to check if the subgraph is compatible with all active feature flags.
 If errors occur, they need to be reported in such a way that the user can easily identify which feature flag caused the error.
+The error will be reported in both the CLI and the Studio.
 
 ### Feature Flags must not break composition checks
 
@@ -210,3 +232,29 @@ If you need to publish a feature flag privately, create a dedicated federated gr
 ### Feature Flags info is forwarded to the Subgraph
 
 The Router will forward the feature flag Header to Subgraphs automatically.
+
+### Feature Flags can be listed in the Studio and the CLI
+
+The Studio and the CLI should show all available feature flags for a federated graph.
+
+```shell
+wgc ff list # lists all feature flags and group feature flags
+```
+
+### Feature Flags can be disabled in the router.yaml
+
+Feature Flags can be associated with a federated graph using label matching.
+However, you might want to run different Routers in different networks with feature flags enabled or disabled.
+For this reason, it should be possible to disable feature flags in the router.yaml and allow to configure an allow list of regexes for feature flags.
+
+If feature flags are disabled in the router.yaml or a feature flag is not in the allow list, the Router will return a 400 Bad Request error.
+If feature flags are enabled and the allow list is empty, all feature flags are allowed.
+By default, feature flags are enabled and all feature flags are allowed.
+
+```yaml
+featureFlags:
+  enabled: true
+  allowList:
+    - "users-*"
+    - "posts-*"
+```
