@@ -752,7 +752,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe with filter", func(t *testing.T) {
+	t.Run("subscribe sse with filter", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
