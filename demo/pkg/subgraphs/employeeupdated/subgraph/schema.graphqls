@@ -45,6 +45,9 @@ type Subscription {
     filteredEmployeeUpdated(id: ID!): Employee!
         @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.id }}"])
         @openfed__subscriptionFilter(condition: { NOT: { IN: { fieldPath: "id", values: ["2", "5", "8", "12"] } } })
+    filteredEmployeeUpdatedMyKafka(employeeID: ID!): Employee!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["2", "5", "6", "8", "9", "10", "12"] } })
 }
 
 type Employee @key(fields: "id", resolvable: false) {
