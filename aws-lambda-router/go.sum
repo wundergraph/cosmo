@@ -279,8 +279,8 @@ github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnA
 github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
 github.com/wundergraph/cosmo/router v0.0.0-20240516104554-a6a8698c2a58 h1:LIwMfI/LacNJR7NysW1/NdPTywUNz918762RuqsVnsI=
 github.com/wundergraph/cosmo/router v0.0.0-20240516104554-a6a8698c2a58/go.mod h1:3x2Pvs8JaH8N7Wq/oJ5DgIQqOF81ESLcAbi32hAQHWs=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.37 h1:lEiru6e7JRNYIShuugUnG1YmyT5Xf3GvI12R6cItuFY=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.37/go.mod h1:hNR2C7S1M+c9Ap24tHCEMe9gFY9K3smX46x5E1U1NQw=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.38 h1:IkYjUUkMumCgZ/j/KsGQTb6T84A0zI31ppRsc+EMNf4=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.38/go.mod h1:hNR2C7S1M+c9Ap24tHCEMe9gFY9K3smX46x5E1U1NQw=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=

@@ -757,7 +757,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -768,7 +768,7 @@ func TestNatsEvents(t *testing.T) {
 							Forename string `graphql:"forename"`
 							Surname  string `graphql:"surname"`
 						} `graphql:"details"`
-					} `graphql:"filteredEmployeeUpdated(id: 12)"`
+					} `graphql:"filteredEmployeeUpdated(id: 1)"`
 				} `json:"data"`
 			}
 
@@ -777,7 +777,7 @@ func TestNatsEvents(t *testing.T) {
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 12) { id details { forename, surname } } }"}`),
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename, surname } } }"}`),
 			})
 
 			require.NoError(t, err)
@@ -798,9 +798,9 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "next", msg.Type)
 				gErr = json.Unmarshal(msg.Payload, &payload)
 				require.NoError(t, gErr)
-				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdated.ID)
-				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdated.Details.Forename)
-				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
 
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -808,9 +808,29 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "next", msg.Type)
 				gErr = json.Unmarshal(msg.Payload, &payload)
 				require.NoError(t, gErr)
-				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdated.ID)
-				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdated.Details.Forename)
-				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdated.Details.Surname)
 
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -828,6 +848,16 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "next", msg.Type)
 				err = json.Unmarshal(msg.Payload, &payload)
 				require.NoError(t, gErr)
+				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
 				require.Equal(t, float64(8), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Nithin", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Kumar", payload.Data.FilteredEmployeeUpdated.Details.Surname)
@@ -838,21 +868,21 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "next", msg.Type)
 				gErr = json.Unmarshal(msg.Payload, &payload)
 				require.NoError(t, gErr)
-				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdated.ID)
-				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdated.Details.Forename)
-				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
 			}()
 
 			// Trigger the subscription via NATS
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":12,"__typename":"Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(`{"id":1,"__typename":"Employee"}`))
 			require.NoError(t, err)
 
-			// Events 1, 3, 4, 6, 7, 9, 10, and 11 should be filtered
+			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
 			for i := 1; i < 13; i++ {
 				// Ensure the NATS consumer can keep up with the provider
 				time.Sleep(time.Millisecond * 100)
 
-				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
+				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
@@ -868,7 +898,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 12) { id details { forename surname } } }"}`)
+			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -898,7 +928,7 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "event: next", string(eventNext))
 				data, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":12,\"details\":{\"forename\":\"David\",\"surname\":\"Stutt\"}}}}", string(data))
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
@@ -908,7 +938,27 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "event: next", string(eventNext))
 				data, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":2,\"details\":{\"forename\":\"Dustin\",\"surname\":\"Deus\"}}}}", string(data))
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":4,\"details\":{\"forename\":\"Björn\",\"surname\":\"Schwenzer\"}}}}", string(data))
 				line, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
@@ -928,6 +978,16 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "event: next", string(eventNext))
 				data, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":7,\"details\":{\"forename\":\"Suvij\",\"surname\":\"Surya\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
 				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":8,\"details\":{\"forename\":\"Nithin\",\"surname\":\"Kumar\"}}}}", string(data))
 				line, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
@@ -938,7 +998,7 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "event: next", string(eventNext))
 				data, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":12,\"details\":{\"forename\":\"David\",\"surname\":\"Stutt\"}}}}", string(data))
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":11,\"details\":{\"forename\":\"Alexandra\",\"surname\":\"Neuse\"}}}}", string(data))
 				line, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
@@ -947,15 +1007,15 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":12,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(`{"id":1,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
-			// Events 1, 3, 4, 6, 7, 9, 10, and 11 should be filtered
+			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
 			for i := 1; i < 13; i++ {
 				// Ensure the NATS consumer can keep up with the provider
 				time.Sleep(time.Millisecond * 100)
 
-				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
+				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()

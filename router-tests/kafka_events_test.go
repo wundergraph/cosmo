@@ -633,14 +633,14 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			// Trigger the subscription via Kafka
-			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1,"update":{"name":"foo"}}`)
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`)
 
-			// Events 2, 4, 5, 8, 11, and 12 should be filtered
+			// Events 1, 3, 4, 7, and 11 should be included (no employees with ids 6, 9, or 10)
 			for i := 1; i < 13; i++ {
 				// Ensure the Kafka consumer can keep up with the provider
 				time.Sleep(time.Millisecond * 100)
 
-				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d,"update":{"name":"foo"}}`, i))
+				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d,}`, i))
 			}
 
 			wg.Wait()

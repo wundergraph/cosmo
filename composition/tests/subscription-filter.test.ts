@@ -4,7 +4,6 @@ import {
   invalidSubscriptionFieldConditionFieldPathFieldErrorMessage,
   invalidSubscriptionFilterDirectiveError,
   invalidSubscriptionFilterLocationError,
-  kindToTypeString,
   normalizeSubgraph,
   Subgraph,
   subscriptionFieldConditionInvalidInputFieldErrorMessage,
