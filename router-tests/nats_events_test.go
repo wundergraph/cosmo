@@ -752,12 +752,123 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("subscribe ws with filter", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			type subscriptionPayload struct {
+				Data struct {
+					FilteredEmployeeUpdated struct {
+						ID      float64 `graphql:"id"`
+						Details struct {
+							Forename string `graphql:"forename"`
+							Surname  string `graphql:"surname"`
+						} `graphql:"details"`
+					} `graphql:"filteredEmployeeUpdated(id: 12)"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 12) { id details { forename, surname } } }"}`),
+			})
+
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, err)
+				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, err)
+				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, err)
+				require.Equal(t, float64(5), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Sergiy", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Petrunin", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, err)
+				require.Equal(t, float64(8), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Nithin", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Kumar", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, err)
+				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+			}()
+
+			// Trigger the subscription via NATS
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":12,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			// Events 1, 3, 4, 6, 7, 9, 10, and 11 should be filtered
+			for i := 1; i < 13; i++ {
+				// Ensure the NATS consumer can keep up with the provider
+				time.Sleep(time.Millisecond * 100)
+
+				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
+				require.NoError(t, err)
+
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+			}
+
+			wg.Wait()
+		})
+	})
+
 	t.Run("subscribe sse with filter", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(employeeID: 12) { id details { forename surname } } }"}`)
+			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 12) { id details { forename surname } } }"}`)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -841,7 +952,7 @@ func TestNatsEvents(t *testing.T) {
 
 			// Events 1, 3, 4, 6, 7, 9, 10, and 11 should be filtered
 			for i := 1; i < 13; i++ {
-				// NATS consumer can't keep up with the producer. We need to wait a bit.
+				// Ensure the NATS consumer can keep up with the provider
 				time.Sleep(time.Millisecond * 100)
 
 				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
