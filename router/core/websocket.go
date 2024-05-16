@@ -271,7 +271,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		}
 		return
 	} else {
-		h.logger.Warn("Epoll is not available")
+		h.logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
 	}
 
 	// Handle messages sync when epoll is not available
