@@ -135,6 +135,23 @@ This means that at any given time, only one feature flag per subgraph can be act
 A feature flag group is never allowed to contain multiple feature flags that replace the same subgraph.
 This would result in an ambiguous configuration.
 
+### Group Feature Flags can only contain Feature Flags
+
+A group feature flag can only contain feature flags.
+It's not possible to have a group feature flag that contains another group feature flag.
+
+### Group Feature Flags can use regular expressions
+
+A group feature flag can use regular expressions to match multiple feature flags.
+
+Example:
+
+```shell
+wgc ffg create v2 --label team=A --flags *-v2
+```
+
+This would create a group feature flag that contains all feature flags that end with `-v2`.
+
 ### Limiting a feature flag to specific federated graphs
 
 We've already established a pattern (label matching) to limit a subgraph to specific federated graphs.
