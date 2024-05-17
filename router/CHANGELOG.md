@@ -4,6 +4,10 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.86.2](https://github.com/wundergraph/cosmo/compare/router@0.86.1...router@0.86.2) (2024-05-17)
+
+**Note:** Version bump only for package router
+
 ## [0.86.1](https://github.com/wundergraph/cosmo/compare/router@0.86.0...router@0.86.1) (2024-05-14)
 
 ### Bug Fixes
