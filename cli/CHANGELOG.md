@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.2](https://github.com/wundergraph/cosmo/compare/wgc@0.54.1...wgc@0.54.2) (2024-05-17)
+
+### Bug Fixes
+
+* improve apollo compatibilty mode ([#802](https://github.com/wundergraph/cosmo/issues/802)) ([973758b](https://github.com/wundergraph/cosmo/commit/973758b874bf882156a2a9af94a7769a9391d700)) (@JivusAyrus)
+
 ## [0.54.1](https://github.com/wundergraph/cosmo/compare/wgc@0.54.0...wgc@0.54.1) (2024-05-17)
 
 ### Bug Fixes
