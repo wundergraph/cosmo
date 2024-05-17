@@ -282,7 +282,7 @@ export const GraphSelect = () => {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={true} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           role="combobox"
@@ -319,7 +319,7 @@ export const GraphSelect = () => {
                           }}
                           className="pl-4"
                           key={id}
-                          value={name}
+                          value={`${namespace}.${name}`}
                         >
                           {name}
                           {contract && (
@@ -338,7 +338,7 @@ export const GraphSelect = () => {
                     })}
                     {index !==
                       Object.entries(groupedGraphs ?? {}).length - 1 && (
-                      <CommandSeparator />
+                      <CommandSeparator className="mt-2" />
                     )}
                   </CommandGroup>
                 );
