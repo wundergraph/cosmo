@@ -1,17 +1,10 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { Command } from 'commander';
-import { join } from 'pathe';
 import yaml from 'js-yaml';
+import { join } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import {
-  Subgraph,
-  fetchRouterConfig,
-  getFederatedGraphSDL,
-  getSubgraphSDL,
-  getSubgraphsOfFedGraph,
-  injectRequiredDirectives,
-} from '../utils.js';
+import { fetchRouterConfig, getFederatedGraphSDL, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('fetch');
@@ -20,8 +13,8 @@ export default (opts: BaseCommandOptions) => {
   cmd.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
   cmd.option('-o, --out [string]', 'Destination folder for storing all the required files.');
   cmd.option(
-    '-a, --apollo-compatibility',
-    'Enable apollo compatibility to generate the composition configs and script to generate schema using rover',
+    '-a, --apollo-compatibility [version]',
+    'Enable apollo compatibility by passing the federation version to generate the composition configs and script to generate schema using rover',
   );
 
   cmd.action(async (name, options) => {
@@ -94,7 +87,6 @@ export default (opts: BaseCommandOptions) => {
           continue;
         }
         const filePath = join(subgraphPath, `${subgraph.name}.graphql`);
-        let finalSDL = subgraphSDL;
         cosmoSubgraphsConfig.push({
           name: subgraph.name,
           routing_url: subgraph.routingURL,
@@ -119,9 +111,8 @@ export default (opts: BaseCommandOptions) => {
               protocol: 'graphql_ws',
             };
           }
-          finalSDL = injectRequiredDirectives(subgraphSDL, subgraph.isV2Graph);
         }
-        writeFileSync(filePath, finalSDL);
+        writeFileSync(filePath, subgraphSDL);
       }
 
       const cosmoCompositionConfig = yaml.dump({
@@ -132,7 +123,7 @@ export default (opts: BaseCommandOptions) => {
 
       if (options.apolloCompatibility) {
         const roverCompositionConfig = yaml.dump({
-          federation_version: '=2.6.1',
+          federation_version: `=${options.apolloCompatibility}`,
           subgraphs: roverSubgraphsConfig,
           subscription:
             Object.keys(roverSubgraphsSubcriptionConfig).length === 0
