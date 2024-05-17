@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.85.2",
+  "version": "0.86.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -105,8 +105,8 @@
     "msw": "^2.2.11",
     "pino-pretty": "^10.3.1",
     "prettier": "^3.2.4",
-    "tsc-watch": "^6.0.4",
-    "tsx": "^4.7.1",
+    "tsc-watch": "^6.2.0",
+    "tsx": "^4.8.2",
     "typescript": "^5.2.2",
     "vitest": "^1.5.0"
   }

@@ -15,14 +15,15 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 
-	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 )
 
 var (
@@ -454,6 +455,7 @@ func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 						astnormalization.WithInlineFragmentSpreads(),
 						astnormalization.WithRemoveFragmentDefinitions(),
 						astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+						astnormalization.WithRemoveUnusedVariables(),
 					),
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},
