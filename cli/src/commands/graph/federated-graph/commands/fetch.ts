@@ -127,9 +127,13 @@ export default (opts: BaseCommandOptions) => {
 
       if (options.apolloCompatibility) {
         const roverCompositionConfig = yaml.dump({
-          federation_version: `${options.federationVersion && options.federationVersion.length > 1 && !options.federationVersion.startsWith('=') ? '=' : ''}${
-            options.federationVersion || '=2.5.0'
-          }`,
+          federation_version: `${
+            options.federationVersion &&
+            options.federationVersion.length > 1 &&
+            !options.federationVersion.startsWith('=')
+              ? '='
+              : ''
+          }${options.federationVersion || '=2.5.0'}`,
           subgraphs: roverSubgraphsConfig,
           subscription:
             Object.keys(roverSubgraphsSubcriptionConfig).length === 0
