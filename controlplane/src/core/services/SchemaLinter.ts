@@ -156,13 +156,7 @@ export default class SchemaLinter {
     return rulesConfig;
   };
 
-  schemaLintCheck = ({
-    schema,
-    rulesInput,
-  }: {
-    schema: string;
-    rulesInput: SchemaLintDTO[];
-  }): SchemaLintIssues => {
+  schemaLintCheck = ({ schema, rulesInput }: { schema: string; rulesInput: SchemaLintDTO[] }): SchemaLintIssues => {
     const rulesConfig: RulesConfig = this.createRulesConfig(rulesInput);
 
     this.linter.defineParser('@graphql-eslint/eslint-plugin', { parseForESLint });
@@ -178,6 +172,7 @@ export default class SchemaLinter {
       schema,
       {
         parser: '@graphql-eslint/eslint-plugin',
+        // passing the schema through graphQLConfig neglects all the parsing errors
         parserOptions: { graphQLConfig: { schema } },
         rules: rulesConfig,
       },
