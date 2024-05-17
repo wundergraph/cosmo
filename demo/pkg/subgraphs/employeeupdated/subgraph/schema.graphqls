@@ -48,6 +48,16 @@ type Subscription {
     filteredEmployeeUpdatedMyKafka(employeeID: ID!): Employee!
         @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
         @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["1", "3", "4", "7", "11"] } })
+    filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [ID!]!, secondIds: [ID!]!): Employee!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["{{ args.firstIds }}", "{{ args.secondIds }}"] } })
+    filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: KafkaInput!): Employee!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["{{ args.input.ids }}"] } })
+}
+
+input KafkaInput {
+    ids: [ID!]!
 }
 
 type Employee @key(fields: "id", resolvable: false) {

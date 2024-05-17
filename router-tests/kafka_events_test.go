@@ -646,6 +646,196 @@ func TestKafkaEvents(t *testing.T) {
 			wg.Wait()
 		})
 	})
+
+	t.Run("subscribe async with filter and multiple list field arguments", func(t *testing.T) {
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			ensureTopicExists(t, xEnv, topics...)
+
+			type subscriptionPayload struct {
+				Data struct {
+					FilteredEmployeeUpdatedMyKafkaWithListFieldArguments struct {
+						ID      float64 `graphql:"id"`
+						Details struct {
+							Forename string `graphql:"forename"`
+							Surname  string `graphql:"surname"`
+						} `graphql:"details"`
+					} `graphql:"filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [\"1\", \"12\"], secondIds: [\"3\", \"11\"]))"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [\"1\", \"12\"], secondIds: [\"2\", \"11\"]) { id details { forename, surname } } }"}`),
+			})
+
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				gErr := conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
+				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
+				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
+				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
+				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
+				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+			}()
+
+			// Events 1, 2, 11, and 12 should be included
+			for i := 1; i < 13; i++ {
+				// Ensure the Kafka consumer can keep up with the provider
+				time.Sleep(time.Millisecond * 100)
+
+				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d,}`, i))
+			}
+
+			wg.Wait()
+		})
+	})
+
+	t.Run("subscribe async with filter and nested list argument", func(t *testing.T) {
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			ensureTopicExists(t, xEnv, topics...)
+
+			type subscriptionPayload struct {
+				Data struct {
+					FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument struct {
+						ID      float64 `graphql:"id"`
+						Details struct {
+							Forename string `graphql:"forename"`
+							Surname  string `graphql:"surname"`
+						} `graphql:"details"`
+					} `graphql:"filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: { ids: [\"1\", \"2\", \"11\", \"12\"]}))"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: { ids: [\"1\", \"2\", \"11\", \"12\"]}) { id details { forename, surname } } }"}`),
+			})
+
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				gErr := conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
+				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
+				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
+				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
+				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
+				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+			}()
+
+			// Events 1, 2, 11, and 12 should be included
+			for i := 1; i < 13; i++ {
+				// Ensure the Kafka consumer can keep up with the provider
+				time.Sleep(time.Millisecond * 100)
+
+				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d,}`, i))
+			}
+
+			wg.Wait()
+		})
+	})
 }
 
 func ensureTopicExists(t *testing.T, xEnv *testenv.Environment, topics ...string) {
