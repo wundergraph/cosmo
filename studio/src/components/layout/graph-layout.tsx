@@ -282,7 +282,7 @@ export const GraphSelect = () => {
   }
 
   return (
-    <Popover open={true} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           role="combobox"
