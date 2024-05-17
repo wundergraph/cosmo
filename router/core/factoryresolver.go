@@ -244,7 +244,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				}
 			}
 
-			var wsSubprotocol string
+			wsSubprotocol := "auto"
 			if in.CustomGraphql.Subscription.WebsocketSubprotocol != nil {
 				switch *in.CustomGraphql.Subscription.WebsocketSubprotocol {
 				case common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS:
@@ -254,8 +254,6 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				case common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO:
 					wsSubprotocol = "auto"
 				}
-			} else {
-				wsSubprotocol = "auto"
 			}
 
 			dataSourceRules := FetchURLRules(&routerEngineConfig.Headers, routerConfig.Subgraphs, subscriptionUrl)
