@@ -16,7 +16,10 @@ export default (opts: BaseCommandOptions) => {
     '-a, --apollo-compatibility',
     'Enable apollo compatibility to generate the composition configs and script to generate schema using rover.',
   );
-  cmd.option('-v, --federation-version [string]', 'The version of federation used on Apollo GraphOS.');
+  cmd.option(
+    '-v, --federation-version [string]',
+    'The version of federation to be used by rover in the format "1", "2", or "2.x.y". Default is 2.5.0.',
+  );
 
   cmd.action(async (name, options) => {
     try {
@@ -124,7 +127,9 @@ export default (opts: BaseCommandOptions) => {
 
       if (options.apolloCompatibility) {
         const roverCompositionConfig = yaml.dump({
-          federation_version: `=${options.federationVersion || '2.6.1'}`,
+          federation_version: `${options.federationVersion && options.federationVersion.length > 1 && !options.federationVersion.startsWith('=') ? '=' : ''}${
+            options.federationVersion || '=2.5.0'
+          }`,
           subgraphs: roverSubgraphsConfig,
           subscription:
             Object.keys(roverSubgraphsSubcriptionConfig).length === 0
