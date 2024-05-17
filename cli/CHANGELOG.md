@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.1](https://github.com/wundergraph/cosmo/compare/wgc@0.54.0...wgc@0.54.1) (2024-05-17)
+
+### Bug Fixes
+
+* auth check for contract commands ([#800](https://github.com/wundergraph/cosmo/issues/800)) ([7858b55](https://github.com/wundergraph/cosmo/commit/7858b557904ca019e028510075e902db3b5966c3)) (@thisisnithin)
+
 # [0.54.0](https://github.com/wundergraph/cosmo/compare/wgc@0.53.3...wgc@0.54.0) (2024-05-17)
 
 ### Bug Fixes
