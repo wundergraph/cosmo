@@ -13,9 +13,10 @@ export default (opts: BaseCommandOptions) => {
   cmd.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
   cmd.option('-o, --out [string]', 'Destination folder for storing all the required files.');
   cmd.option(
-    '-a, --apollo-compatibility [version]',
-    'Enable apollo compatibility by passing the federation version to generate the composition configs and script to generate schema using rover',
+    '-a, --apollo-compatibility',
+    'Enable apollo compatibility to generate the composition configs and script to generate schema using rover.',
   );
+  cmd.option('-v, --federation-version [string]', 'The version of federation used on Apollo GraphOS.');
 
   cmd.action(async (name, options) => {
     try {
@@ -123,7 +124,7 @@ export default (opts: BaseCommandOptions) => {
 
       if (options.apolloCompatibility) {
         const roverCompositionConfig = yaml.dump({
-          federation_version: `=${options.apolloCompatibility}`,
+          federation_version: `=${options.federationVersion || '2.6.1'}`,
           subgraphs: roverSubgraphsConfig,
           subscription:
             Object.keys(roverSubgraphsSubcriptionConfig).length === 0
