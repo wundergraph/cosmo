@@ -15,6 +15,7 @@ import {
 } from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { validateSubscriptionProtocols } from '../../../utils.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -81,42 +82,10 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    if (options.subscriptionProtocol && !isValidSubscriptionProtocol(options.subscriptionProtocol)) {
-      program.error(
-        pc.red(
-          pc.bold(
-            `The subscription protocol '${pc.bold(
-              options.subscriptionProtocol,
-            )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
-          ),
-        ),
-      );
-    }
-
-    if (options.websocketSubprotocol) {
-      if (options.subscriptionProtocol && options.subscriptionProtocol !== 'ws') {
-        program.error(
-          pc.red(
-            pc.bold(
-              `The websocket subprotocol '${pc.bold(
-                options.websocketSubprotocol,
-              )}' can only be used if the subscription protocol is 'ws'.`,
-            ),
-          ),
-        );
-      }
-      if (!isValidWebsocketSubprotocol(options.websocketSubprotocol)) {
-        program.error(
-          pc.red(
-            pc.bold(
-              `The websocket subprotocol '${pc.bold(
-                options.websocketSubprotocol,
-              )}' is not valid. Please use one of the following: auto, graphql-ws, graphql-transport-ws.`,
-            ),
-          ),
-        );
-      }
-    }
+    validateSubscriptionProtocols({
+      subscriptionProtocol: options.subscriptionProtocol,
+      websocketSubprotocol: options.websocketSubprotocol,
+    });
 
     const spinner = ora('Subgraph is being published...').start();
 
