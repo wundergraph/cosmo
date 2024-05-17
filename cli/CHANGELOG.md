@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.54.0](https://github.com/wundergraph/cosmo/compare/wgc@0.53.3...wgc@0.54.0) (2024-05-17)
+
+### Bug Fixes
+
+* improve federated-graph fetch command ([#786](https://github.com/wundergraph/cosmo/issues/786)) ([4c4b2f7](https://github.com/wundergraph/cosmo/commit/4c4b2f73fd090c261c87b98404829f3ee346cc08)) (@JivusAyrus)
+* parser errors during linting ([#797](https://github.com/wundergraph/cosmo/issues/797)) ([9a88265](https://github.com/wundergraph/cosmo/commit/9a8826509264ad2f4e8255c7449ca3355d3ffb50)) (@JivusAyrus)
+
+### Features
+
+* schema contracts ([#751](https://github.com/wundergraph/cosmo/issues/751)) ([1bc1a78](https://github.com/wundergraph/cosmo/commit/1bc1a787f046d25f0a4affb3fe42efe39a1c6539)) (@thisisnithin)
+
 ## [0.53.3](https://github.com/wundergraph/cosmo/compare/wgc@0.53.2...wgc@0.53.3) (2024-05-14)
 
 **Note:** Version bump only for package wgc
