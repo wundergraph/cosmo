@@ -4,6 +4,50 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.77.0](https://github.com/wundergraph/cosmo/compare/studio@0.76.15...studio@0.77.0) (2024-05-17)
+
+### Features
+
+* schema contracts ([#751](https://github.com/wundergraph/cosmo/issues/751)) ([1bc1a78](https://github.com/wundergraph/cosmo/commit/1bc1a787f046d25f0a4affb3fe42efe39a1c6539)) (@thisisnithin)
+
+## [0.76.15](https://github.com/wundergraph/cosmo/compare/studio@0.76.14...studio@0.76.15) (2024-05-14)
+
+### Bug Fixes
+
+* schema and sdl page improvements and flickers ([#788](https://github.com/wundergraph/cosmo/issues/788)) ([486e3a1](https://github.com/wundergraph/cosmo/commit/486e3a1dbad2fec0246d1d732bb4f4de66d14ca2)) (@thisisnithin)
+
+## [0.76.14](https://github.com/wundergraph/cosmo/compare/studio@0.76.13...studio@0.76.14) (2024-05-03)
+
+**Note:** Version bump only for package studio
+
+## [0.76.13](https://github.com/wundergraph/cosmo/compare/studio@0.76.12...studio@0.76.13) (2024-05-02)
+
+### Bug Fixes
+
+* validate graphql operation in playground ([#763](https://github.com/wundergraph/cosmo/issues/763)) ([41bde5f](https://github.com/wundergraph/cosmo/commit/41bde5f06583242bbc9471e05179c1c16bb2f769)) (@thisisnithin)
+
+## [0.76.12](https://github.com/wundergraph/cosmo/compare/studio@0.76.11...studio@0.76.12) (2024-04-30)
+
+### Bug Fixes
+
+* scim server issues ([#754](https://github.com/wundergraph/cosmo/issues/754)) ([3fdf328](https://github.com/wundergraph/cosmo/commit/3fdf32816fde4ffdb3c16e6eb8b2fc9d63ee7e92)) (@JivusAyrus)
+
+## [0.76.11](https://github.com/wundergraph/cosmo/compare/studio@0.76.10...studio@0.76.11) (2024-04-26)
+
+**Note:** Version bump only for package studio
+
+## [0.76.10](https://github.com/wundergraph/cosmo/compare/studio@0.76.9...studio@0.76.10) (2024-04-23)
+
+### Bug Fixes
+
+* upgrade deps to cover CVEs ([#750](https://github.com/wundergraph/cosmo/issues/750)) ([e261beb](https://github.com/wundergraph/cosmo/commit/e261beb8375ca41eb8a2fa4b3223d202c3bb7460)) (@StarpTech)
+
+## [0.76.9](https://github.com/wundergraph/cosmo/compare/studio@0.76.8...studio@0.76.9) (2024-04-23)
+
+### Reverts
+
+* Revert "chore(release): Publish [skip ci]" ([feaf2ef](https://github.com/wundergraph/cosmo/commit/feaf2ef49321388daff7c4d9f4558cdda78b5744)) (@StarpTech)
+
 ## [0.76.8](https://github.com/wundergraph/cosmo/compare/studio@0.76.7...studio@0.76.8) (2024-04-17)
 
 ### Bug Fixes

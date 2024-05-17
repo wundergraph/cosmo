@@ -20,6 +20,7 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -152,7 +153,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]}]`, string(res.Payload))
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",9,"startDate"]}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
@@ -195,6 +196,7 @@ func TestWebSockets(t *testing.T) {
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
 			})
 			require.NoError(t, err)
+
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
@@ -205,17 +207,15 @@ func TestWebSockets(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
+
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"]}]`, string(res.Payload))
-			var complete testenv.WebSocketMessage
-			err = conn.ReadJSON(&complete)
-			require.NoError(t, err)
-			require.Equal(t, "complete", complete.Type)
-			require.Equal(t, "1", complete.ID)
+
+			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -268,11 +268,8 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
-			var complete testenv.WebSocketMessage
-			err = conn.ReadJSON(&complete)
-			require.NoError(t, err)
-			require.Equal(t, "complete", complete.Type)
-			require.Equal(t, "1", complete.ID)
+
+			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -362,6 +359,10 @@ func TestWebSockets(t *testing.T) {
 				},
 			},
 		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
@@ -373,11 +374,13 @@ func TestWebSockets(t *testing.T) {
 				Employees: testenv.SubgraphConfig{
 					Middleware: func(handler http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							defer wg.Done()
+
 							upgrader := websocket.Upgrader{
 								CheckOrigin: func(r *http.Request) bool {
 									return true
 								},
-								Subprotocols: []string{"graphql-ws"},
+								Subprotocols: []string{"graphql-transport-ws"},
 							}
 							require.Equal(t, "Bearer test", r.Header.Get("Authorization"))
 							conn, err := upgrader.Upgrade(w, r, nil)
@@ -393,16 +396,16 @@ func TestWebSockets(t *testing.T) {
 
 							_, message, err = conn.ReadMessage()
 							require.NoError(t, err)
-							require.Equal(t, `{"type":"start","id":"1","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
-							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"data","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
 							require.NoError(t, err)
 
 							_, message, err = conn.ReadMessage()
 							if errors.Is(err, websocket.ErrCloseSent) {
 								return
 							}
-							require.Equal(t, `{"type":"stop","id":"1"}`, string(message))
+							require.Equal(t, `{"id":"1","type":"complete"}`, string(message))
 
 							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
 							require.NoError(t, err)
@@ -450,23 +453,17 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			var complete testenv.WebSocketMessage
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 			require.NoError(t, err)
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
 
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			_, _, err = conn.ReadMessage()
-			require.Error(t, err)
-			var netErr net.Error
-			if errors.As(err, &netErr) {
-				require.True(t, netErr.Timeout())
-			} else {
-				require.Fail(t, "expected net.Error")
-			}
+			wg.Wait()
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
 	t.Run("subscription with header propagation sse subgraph post", func(t *testing.T) {
@@ -741,7 +738,7 @@ func TestWebSockets(t *testing.T) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-				cfg.StatusCodes = false
+				cfg.PropagateStatusCodes = false
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{

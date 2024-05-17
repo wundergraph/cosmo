@@ -7,14 +7,14 @@ import {
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
   invalidEventDrivenMutationResponseTypeErrorMessage,
-  invalidEventDrivenStreamConfigurationInputFieldsErrorMessage,
-  invalidEventSourceNameErrorMessage,
+  invalidEventProviderIdErrorMessage,
   invalidEventSubjectsItemErrorMessage,
   invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidNatsStreamConfigurationDefinitionErrorMessage,
+  invalidNatsStreamInputFieldsErrorMessage,
   InvalidRootTypeFieldEventsDirectiveData,
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
-  invalidStreamConfigurationInputErrorMessage,
   nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
@@ -22,17 +22,19 @@ import {
   normalizeSubgraphFromString,
   Subgraph,
   subgraphValidationError,
+  undefinedNatsStreamConfigurationInputErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
-  undefinedStreamConfigurationInputErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
 import { parse } from 'graphql';
 import {
-  DEFAULT,
-  EDFS_PUBLISH,
-  EDFS_REQUEST,
-  EDFS_SUBSCRIBE,
-  SOURCE_NAME,
+  DEFAULT_EDFS_PROVIDER_ID,
+  EDFS_NATS_PUBLISH,
+  EDFS_NATS_REQUEST,
+  EDFS_NATS_SUBSCRIBE,
+  PROVIDER_ID,
+  PROVIDER_TYPE_KAFKA,
+  PROVIDER_TYPE_NATS,
   SUBJECTS,
 } from '../src/utils/string-constants';
 import {
@@ -59,7 +61,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'findEntity',
-                  sourceName: DEFAULT,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['findEntity.{{ args.id }}'],
                   type: 'request',
                 },
@@ -83,7 +86,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'updateEntity',
-                  sourceName: DEFAULT,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['updateEntity.{{ args.id }}'],
                   type: 'publish',
                 },
@@ -99,13 +103,15 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'entitySubscription',
-                  sourceName: 'kafka',
+                  providerId: 'my-provider',
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['entities.{{ args.id }}'],
                   type: 'subscribe',
                 },
                 {
                   fieldName: 'entitySubscriptionTwo',
-                  sourceName: 'double',
+                  providerId: 'double',
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['firstSub.{{ args.firstID }}', 'secondSub.{{ args.secondID }}'],
                   type: 'subscribe',
                   streamConfiguration: {
@@ -136,25 +142,25 @@ describe('events Configuration tests', () => {
         }
         
         type Mutation {
-          updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__publish(subject: "updateEntity.{{ args.id }}")
+          updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}")
         }
         
         type Query {
-          findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
+          findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
         }
       
         type Subscription {
-          entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"], sourceName: "kafka")
-          entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__subscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName"})
+          entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
+          entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName"})
+        }
+        
+        input edfs__NatsStreamConfiguration {
+          consumerName: String!
+          streamName: String!
         }
       
         type edfs__PublishResult {
          success: Boolean!
-        }
-        
-        input edfs__StreamConfiguration {
-          consumerName: String!
-          streamName: String!
         }
         
         scalar openfed__FieldSet
@@ -178,7 +184,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'entitySubscription',
-                  sourceName: DEFAULT,
+                  providerId: DEFAULT_EDFS_PROVIDER_ID,
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['entities.{{ args.id }}'],
                   type: 'subscribe',
                 },
@@ -198,7 +205,7 @@ describe('events Configuration tests', () => {
       );
     });
 
-    test('that events configuration is correctly generated if sourceName is specified', () => {
+    test('that events configuration is correctly generated if providerId is specified', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphStringC);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
@@ -213,7 +220,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'findEntity',
-                  sourceName: 'myQuerySourceName',
+                  providerId: 'myQuerySourceName',
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['findEntity.{{ args.id }}'],
                   type: 'request',
                 },
@@ -237,7 +245,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'updateEntity',
-                  sourceName: 'myMutationSourceName',
+                  providerId: 'myMutationSourceName',
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['updateEntity.{{ args.id }}'],
                   type: 'publish',
                 },
@@ -253,7 +262,8 @@ describe('events Configuration tests', () => {
               events: [
                 {
                   fieldName: 'entitySubscription',
-                  sourceName: 'mySubscriptionSourceName',
+                  providerId: 'mySubscriptionSourceName',
+                  providerType: PROVIDER_TYPE_NATS,
                   subjects: ['entities.{{ args.id }}'],
                   type: 'subscribe',
                 },
@@ -277,17 +287,17 @@ describe('events Configuration tests', () => {
       const { errors } = normalizeSubgraph(subgraphN.definitions, subgraphN.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(3);
-      const directiveName = 'edfs__subscribe';
+      const directiveName = 'edfs__natsSubscribe';
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(errors![0]).toStrictEqual(
         invalidEventDirectiveError(directiveName, rootFieldPath, [
-          invalidEventSubjectsItemErrorMessage,
-          invalidEventSourceNameErrorMessage,
+          invalidEventSubjectsItemErrorMessage(SUBJECTS),
+          invalidEventProviderIdErrorMessage,
         ]),
       );
       expect(errors![1]).toStrictEqual(
         invalidDirectiveError(directiveName, rootFieldPath, [
-          duplicateDirectiveArgumentDefinitionsErrorMessage(directiveName, rootFieldPath, [SUBJECTS, SOURCE_NAME]),
+          duplicateDirectiveArgumentDefinitionsErrorMessage(directiveName, rootFieldPath, [SUBJECTS, PROVIDER_ID]),
           unexpectedDirectiveArgumentErrorMessage(directiveName, ['unknownArgument']),
         ]),
       );
@@ -306,7 +316,7 @@ describe('events Configuration tests', () => {
       const { errors } = normalizeSubgraph(subgraphR.definitions, subgraphR.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
-      const directiveName = 'edfs__subscribe';
+      const directiveName = 'edfs__natsSubscribe';
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(errors![0]).toStrictEqual(
         invalidDirectiveError(directiveName, rootFieldPath, [
@@ -328,14 +338,18 @@ describe('events Configuration tests', () => {
       const { errors } = normalizeSubgraph(subgraphO.definitions, subgraphO.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(invalidEventDrivenGraphError([undefinedStreamConfigurationInputErrorMessage]));
+      expect(errors![0]).toStrictEqual(
+        invalidEventDrivenGraphError([undefinedNatsStreamConfigurationInputErrorMessage]),
+      );
     });
 
-    test('that an error is returned if edfs__StreamConfiguration is improperly defined', () => {
+    test('that an error is returned if edfs__NatsStreamConfiguration is improperly defined', () => {
       const { errors } = normalizeSubgraph(subgraphP.definitions, subgraphP.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(invalidEventDrivenGraphError([invalidStreamConfigurationInputErrorMessage]));
+      expect(errors![0]).toStrictEqual(
+        invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
+      );
     });
 
     test('that an error is returned if streamConfiguration input is invalid #1', () => {
@@ -343,13 +357,8 @@ describe('events Configuration tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
-          invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
-            ['streamName'],
-            ['consumerName'],
-            [],
-            ['invalidField'],
-          ),
+        invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
+          invalidNatsStreamInputFieldsErrorMessage(['streamName'], ['consumerName'], [], ['invalidField']),
         ]),
       );
     });
@@ -359,8 +368,8 @@ describe('events Configuration tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
-          invalidEventDrivenStreamConfigurationInputFieldsErrorMessage([], [], ['consumerName', 'streamName'], []),
+        invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
+          invalidNatsStreamInputFieldsErrorMessage([], [], ['consumerName', 'streamName'], []),
         ]),
       );
     });
@@ -370,13 +379,98 @@ describe('events Configuration tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidEventDirectiveError('edfs__subscribe', 'Subscription.entitySubscription', [
-          invalidEventDrivenStreamConfigurationInputFieldsErrorMessage(
+        invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
+          invalidNatsStreamInputFieldsErrorMessage(
             ['consumerName', 'streamName'],
             [],
             [],
             ['invalidFieldOne', 'invalidFieldTwo'],
           ),
+        ]),
+      );
+    });
+
+    test('that edfs__NatsStreamConfiguration does not need to be defined if @edfs__natsSubscribe is not defined', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphU.definitions, subgraphU.name);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      expect(normalizationResult!.configurationDataByParentTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id', disableEntityResolver: true }],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Mutation',
+            {
+              fieldNames: new Set<string>(['kafkaMutation', 'natsMutation']),
+              isRootNode: true,
+              typeName: 'Mutation',
+              events: [
+                {
+                  fieldName: 'kafkaMutation',
+                  providerId: 'myKafka',
+                  providerType: PROVIDER_TYPE_KAFKA,
+                  topics: ['entityAdded'],
+                  type: 'publish',
+                },
+                {
+                  fieldName: 'natsMutation',
+                  providerId: 'myNats',
+                  providerType: PROVIDER_TYPE_NATS,
+                  subjects: ['updateEntity.{{ args.id }}'],
+                  type: 'publish',
+                },
+              ],
+            },
+          ],
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['natsQuery']),
+              isRootNode: true,
+              typeName: 'Query',
+              events: [
+                {
+                  fieldName: 'natsQuery',
+                  providerId: 'myNats',
+                  providerType: PROVIDER_TYPE_NATS,
+                  subjects: ['updateEntity.{{ args.id }}'],
+                  type: 'request',
+                },
+              ],
+            },
+          ],
+          [
+            'Subscription',
+            {
+              fieldNames: new Set<string>(['kafkaSubscription']),
+              isRootNode: true,
+              typeName: 'Subscription',
+              events: [
+                {
+                  fieldName: 'kafkaSubscription',
+                  providerId: 'myKafka',
+                  providerType: PROVIDER_TYPE_KAFKA,
+                  topics: ['entityAdded', 'entityUpdated'],
+                  type: 'subscribe',
+                },
+              ],
+            },
+          ],
+          [
+            'edfs__PublishResult',
+            {
+              fieldNames: new Set<string>(['success']),
+              isRootNode: false,
+              typeName: 'edfs__PublishResult',
+            },
+          ],
         ]),
       );
     });
@@ -517,7 +611,7 @@ describe('events Configuration tests', () => {
           entitySubscription(fieldSet: String!): Interface!
         }
         
-        input edfs__StreamConfiguration {
+        input edfs__NatsStreamConfiguration {
           consumerName: String!
           streamName: String!
         }
@@ -556,7 +650,7 @@ describe('events Configuration tests', () => {
         
         union Union = Entity
         
-        input edfs__StreamConfiguration {
+        input edfs__NatsStreamConfiguration {
           consumerName: String!
           streamName: String!
         }
@@ -574,9 +668,12 @@ describe('events Configuration tests', () => {
           invalidEventDrivenGraphError([
             invalidRootTypeFieldEventsDirectivesErrorMessage(
               new Map<string, InvalidRootTypeFieldEventsDirectiveData>([
-                ['Query.findEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_PUBLISH] }],
-                ['Mutation.publishEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_SUBSCRIBE] }],
-                ['Subscription.entitySubscription', { definesDirectives: true, invalidDirectiveNames: [EDFS_REQUEST] }],
+                ['Query.findEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_NATS_PUBLISH] }],
+                ['Mutation.publishEntity', { definesDirectives: true, invalidDirectiveNames: [EDFS_NATS_SUBSCRIBE] }],
+                [
+                  'Subscription.entitySubscription',
+                  { definesDirectives: true, invalidDirectiveNames: [EDFS_NATS_REQUEST] },
+                ],
               ]),
             ),
           ]),
@@ -603,7 +700,7 @@ describe('events Configuration tests', () => {
 
 const subgraphStringA = `
   type Query {
-    findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
+    findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
   }
 
   type edfs__PublishResult {
@@ -611,19 +708,19 @@ const subgraphStringA = `
   }
   
   type Mutation {
-    updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__publish(subject: "updateEntity.{{ args.id }}")
+    updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}")
   }
 
   type Subscription {
-    entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"], sourceName: "kafka")
-    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__subscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], sourceName: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName"})
+    entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
+    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName"})
   }
   
   type Entity @key(fields: "id", resolvable: false) {
     id: ID! @external
   }
   
-  input edfs__StreamConfiguration {
+  input edfs__NatsStreamConfiguration {
     consumerName: String!
     streamName: String!
   }
@@ -635,14 +732,14 @@ const subgraphStringB = `
   }
   
   type Subscriptions {
-    entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+    entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
   }
   
   type Entity @key(fields: "id", resolvable: false) {
     id: ID! @external
   }
   
-  input edfs__StreamConfiguration {
+  input edfs__NatsStreamConfiguration {
     consumerName: String!
     streamName: String!
   }
@@ -650,7 +747,7 @@ const subgraphStringB = `
 
 const subgraphStringC = `
   type Query {
-    findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}", sourceName: "myQuerySourceName")
+    findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}", providerId: "myQuerySourceName")
   }
 
   type edfs__PublishResult {
@@ -658,18 +755,18 @@ const subgraphStringC = `
   }
   
   type Mutation {
-    updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__publish(subject: "updateEntity.{{ args.id }}", sourceName: "myMutationSourceName")
+    updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}", providerId: "myMutationSourceName")
   }
   
   type Subscription {
-    entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"], sourceName: "mySubscriptionSourceName")
+    entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "mySubscriptionSourceName")
   }
   
   type Entity @key(fields: "id", resolvable: false) {
     id: ID! @external
   }
   
-  input edfs__StreamConfiguration {
+  input edfs__NatsStreamConfiguration {
     consumerName: String!
     streamName: String!
   }
@@ -680,11 +777,11 @@ const subgraphC: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -692,7 +789,7 @@ const subgraphC: Subgraph = {
       name: String!
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -704,18 +801,18 @@ const subgraphD: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID!
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -741,14 +838,14 @@ const subgraphE: Subgraph = {
     
     type Subscription {
       subscribeEntity(id: ID!): Entity!
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -760,18 +857,18 @@ const subgraphF: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      requestEntity(id: ID!): String! @edfs__request(subject: "findEntity.{{ args.id }}")
+      requestEntity(id: ID!): String! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -783,18 +880,18 @@ const subgraphG: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity! @edfs__request(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id") {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -806,11 +903,11 @@ const subgraphH: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(fieldSet: String!): Entity! @edfs__request(subject: "findEntity.{{ args.fieldSet }}")
+      findEntity(fieldSet: String!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.fieldSet }}")
     }
     
     type Subscription {
-      entitySubscription(fieldSet: String!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.fieldSet }}"])
+      entitySubscription(fieldSet: String!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
     
     type Entity @key(fields: "id object { id }", resolvable: false) {
@@ -822,7 +919,7 @@ const subgraphH: Subgraph = {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -834,11 +931,11 @@ const subgraphI: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(fieldSet: String!): Interface! @edfs__request(subject: "findEntity.{{ args.fieldSet }}")
+      findEntity(fieldSet: String!): Interface! @edfs__natsRequest(subject: "findEntity.{{ args.fieldSet }}")
     }
     
     type Subscription {
-      entitySubscription(fieldSet: String!): Interface! @edfs__subscribe(subjects: ["entities.{{ args.fieldSet }}"])
+      entitySubscription(fieldSet: String!): Interface! @edfs__natsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
     
     interface Interface {
@@ -854,7 +951,7 @@ const subgraphI: Subgraph = {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -866,11 +963,11 @@ const subgraphJ: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(fieldSet: String!): Union! @edfs__request(subject: "findEntity.{{ args.fieldSet }}")
+      findEntity(fieldSet: String!): Union! @edfs__natsRequest(subject: "findEntity.{{ args.fieldSet }}")
     }
     
     type Subscription {
-      entitySubscription(fieldSet: String!): Union! @edfs__subscribe(subjects: ["entities.{{ args.fieldSet }}"])
+      entitySubscription(fieldSet: String!): Union! @edfs__natsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
     
     union Union = Entity
@@ -884,7 +981,7 @@ const subgraphJ: Subgraph = {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -896,7 +993,7 @@ const subgraphK: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity! @edfs__publish(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity! @edfs__natsPublish(subject: "findEntity.{{ args.id }}")
     }
     
     type edfs__PublishResult {
@@ -904,18 +1001,18 @@ const subgraphK: Subgraph = {
     }
     
     type Mutation {
-      publishEntity(id: ID!): edfs__PublishResult! @edfs__subscribe(subjects: ["publishEntity.{{ args.id }}"])
+      publishEntity(id: ID!): edfs__PublishResult! @edfs__natsSubscribe(subjects: ["publishEntity.{{ args.id }}"])
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__request(subject: "entities.{{ args.id }}")
+      entitySubscription(id: ID!): Entity! @edfs__natsRequest(subject: "entities.{{ args.id }}")
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -927,18 +1024,18 @@ const subgraphL: Subgraph = {
   url: '',
   definitions: parse(`
     type Mutation {
-      publishEntity(id: ID!): Entity! @edfs__publish(subject: "publishEntity.{{ args.id }}")
+      publishEntity(id: ID!): Entity! @edfs__natsPublish(subject: "publishEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -950,18 +1047,18 @@ const subgraphM: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      findEntity(id: ID!): Entity @edfs__request(subject: "findEntity.{{ args.id }}")
+      findEntity(id: ID!): Entity @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
     
     type Subscription {
-      entitySubscription(id: ID!): [Entity!]! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): [Entity!]! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -973,14 +1070,14 @@ const subgraphN: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: [1], subjects: ["topic"], sourceName: false, sourceName: "sourceName", unknownArgument: null)
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: [1], subjects: ["topic"], providerId: false, providerId: "providerId", unknownArgument: null)
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -992,7 +1089,7 @@ const subgraphO: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -1006,14 +1103,14 @@ const subgraphP: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
     
-    scalar edfs__StreamConfiguration
+    scalar edfs__NatsStreamConfiguration
   `),
 };
 
@@ -1022,7 +1119,7 @@ const subgraphQ: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
         subjects: ["entities.{{ args.id }}"],
         streamConfiguration: { consumerName: "consumerName", consumerName: "hello", invalidField: 1 }
       )
@@ -1032,7 +1129,7 @@ const subgraphQ: Subgraph = {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -1044,14 +1141,14 @@ const subgraphR: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe
     }
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -1063,7 +1160,7 @@ const subgraphS: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
         subjects: ["entities.{{ args.id }}"],
         streamConfiguration: { consumerName: 1, streamName: "", }
       )
@@ -1073,7 +1170,7 @@ const subgraphS: Subgraph = {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
     }
@@ -1085,7 +1182,7 @@ const subgraphT: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__subscribe(
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
         subjects: ["entities.{{ args.id }}"],
         streamConfiguration: { invalidFieldOne: 1, invalidFieldTwo: "test", }
       )
@@ -1095,9 +1192,36 @@ const subgraphT: Subgraph = {
       id: ID! @external
     }
     
-    input edfs__StreamConfiguration {
+    input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
+    }
+  `),
+};
+
+const subgraphU: Subgraph = {
+  name: 'subgraph-u',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Mutation {
+      kafkaMutation: edfs__PublishResult! @edfs__kafkaPublish(topic: "entityAdded", providerId: "myKafka")
+      natsMutation(id: ID!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}", providerId: "myNats")
+    }
+    
+    type Query {
+      natsQuery(id: ID!): Entity! @edfs__natsRequest(subject: "updateEntity.{{ args.id }}", providerId: "myNats")
+    }
+    
+    type Subscription {
+      kafkaSubscription: Entity! @edfs__kafkaSubscribe(topics: ["entityAdded", "entityUpdated"], providerId: "myKafka")
+    }
+    
+    type edfs__PublishResult {
+      success: Boolean!
     }
   `),
 };

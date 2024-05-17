@@ -111,7 +111,7 @@
   "LogLevel": "info",
   "JSONLog": true,
   "ShutdownDelay": 60000000000,
-  "GracePeriod": 20000000000,
+  "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
   "HealthCheckPath": "/health",
   "ReadinessCheckPath": "/health/ready",
@@ -147,7 +147,10 @@
   },
   "DevelopmentMode": false,
   "Events": {
-    "Sources": null
+    "Providers": {
+      "Nats": null,
+      "Kafka": null
+    }
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
@@ -195,7 +198,10 @@
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
-    "StatusCodes": false,
-    "Mode": "wrapped"
+    "PropagateStatusCodes": false,
+    "Mode": "wrapped",
+    "RewritePaths": true,
+    "OmitLocations": true,
+    "OmitExtensions": false
   }
 }

@@ -4,6 +4,7 @@ import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, count, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import { parse } from 'graphql';
 import * as schema from '../../db/schema.js';
 import {
   graphCompositionSubgraphs,
@@ -27,9 +28,16 @@ import {
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { ComposeDeploymentError, Composer, RouterConfigUploadError } from '../composition/composer.js';
+import {
+  ComposeDeploymentError,
+  Composer,
+  RouterConfigUploadError,
+  mapResultToComposedGraph,
+} from '../composition/composer.js';
+import { composeSubgraphsWithContracts } from '../composition/composition.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { ContractRepository } from './ContractRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
@@ -169,6 +177,7 @@ export class SubgraphRepository {
       readme?: string;
       namespaceId: string;
       unsetLabels: boolean;
+      isV2Graph?: boolean;
     },
     blobStorage: BlobStorage,
     admissionConfig: {
@@ -191,7 +200,8 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
+      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
+      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo);
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
@@ -204,6 +214,7 @@ export class SubgraphRepository {
         const updatedSubgraph = await subgraphRepo.addSchemaVersion({
           targetId: subgraph.targetId,
           subgraphSchema: data.schemaSDL,
+          isV2Graph: data.isV2Graph,
         });
         if (!updatedSubgraph) {
           throw new Error(`Subgraph ${subgraph.name} not found`);
@@ -314,41 +325,16 @@ export class SubgraphRepository {
           ...(await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: data.namespaceId })),
         );
       }
-      // Validate all federated graphs that use this subgraph.
-      for (const federatedGraph of updatedFederatedGraphs) {
-        const composition = await composer.composeFederatedGraph(federatedGraph);
 
-        // Collect all composition errors
-        compositionErrors.push(
-          ...composition.errors.map((e) => ({
-            federatedGraphName: composition.name,
-            namespace: composition.namespace,
-            message: e.message,
-          })),
-        );
+      const { compositionErrors: cErrors, deploymentErrors: dErrors } = await fedGraphRepo.composeAndDeployGraphs({
+        federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
+        blobStorage,
+        admissionConfig,
+        actorId: data.updatedBy,
+      });
 
-        const deployment = await composer.deployComposition({
-          composedGraph: composition,
-          composedBy: data.updatedBy,
-          blobStorage,
-          organizationId: this.organizationId,
-          admissionWebhookURL: federatedGraph.admissionWebhookURL,
-          admissionConfig: {
-            cdnBaseUrl: admissionConfig.cdnBaseUrl,
-            jwtSecret: admissionConfig.webhookJWTSecret,
-          },
-        });
-
-        deploymentErrors.push(
-          ...deployment.errors
-            .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-            .map((e) => ({
-              federatedGraphName: federatedGraph.name,
-              namespace: federatedGraph.namespace,
-              message: e.message ?? '',
-            })),
-        );
-      }
+      compositionErrors.push(...cErrors);
+      deploymentErrors.push(...dErrors);
 
       // update the readme of the subgraph
       if (data.readme !== undefined) {
@@ -364,7 +350,7 @@ export class SubgraphRepository {
     };
   }
 
-  public async move(
+  public move(
     data: {
       targetId: string;
       subgraphId: string;
@@ -381,15 +367,14 @@ export class SubgraphRepository {
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
-    deploymentErrors: ComposeDeploymentError[];
+    deploymentErrors: PlainMessage<DeploymentError>[];
   }> {
-    const deploymentErrors: ComposeDeploymentError[] = [];
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const updatedFederatedGraphs: FederatedGraphDTO[] = [];
+    return this.db.transaction(async (tx) => {
+      const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
-    await this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
+      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
 
       updatedFederatedGraphs.push(
         ...(await fedGraphRepo.bySubgraphLabels({ labels: data.subgraphLabels, namespaceId: data.currentNamespaceId })),
@@ -422,36 +407,25 @@ export class SubgraphRepository {
           .execute();
       }
 
-      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo);
-      for (const federatedGraph of updatedFederatedGraphs) {
-        const composition = await composer.composeFederatedGraph(federatedGraph);
+      const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
+        federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
+        blobStorage,
+        admissionConfig: {
+          webhookJWTSecret: admissionConfig.jwtSecret,
+          cdnBaseUrl: admissionConfig.cdnBaseUrl,
+        },
+        actorId: data.updatedBy,
+      });
 
-        // Collect all composition errors
-        compositionErrors.push(
-          ...composition.errors.map((e) => ({
-            federatedGraphName: composition.name,
-            namespace: composition.namespace,
-            message: e.message,
-          })),
-        );
-
-        const deployment = await composer.deployComposition({
-          composedGraph: composition,
-          composedBy: data.updatedBy,
-          blobStorage,
-          organizationId: this.organizationId,
-          admissionWebhookURL: federatedGraph.admissionWebhookURL,
-          admissionConfig,
-        });
-
-        deploymentErrors.push(...deployment.errors);
-      }
+      return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
     });
-
-    return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
   }
 
-  public addSchemaVersion(data: { targetId: string; subgraphSchema: string }): Promise<SubgraphDTO | undefined> {
+  public addSchemaVersion(data: {
+    targetId: string;
+    subgraphSchema: string;
+    isV2Graph?: boolean;
+  }): Promise<SubgraphDTO | undefined> {
     return this.db.transaction(async (db) => {
       const subgraph = await this.byTargetId(data.targetId);
       if (subgraph === undefined) {
@@ -463,6 +437,7 @@ export class SubgraphRepository {
         .values({
           targetId: subgraph.targetId,
           schemaSDL: data.subgraphSchema,
+          isV2Graph: data.isV2Graph,
         })
         .returning({
           insertedId: schemaVersion.id,
@@ -627,6 +602,7 @@ export class SubgraphRepository {
     let lastUpdatedAt = '';
     let schemaSDL = '';
     let schemaVersionId = '';
+    let isV2Graph: boolean | undefined;
 
     // Subgraphs are created without a schema version.
     if (resp[0].schemaVersionId !== null) {
@@ -636,6 +612,7 @@ export class SubgraphRepository {
       lastUpdatedAt = sv?.createdAt?.toISOString() ?? '';
       schemaSDL = sv?.schemaSDL ?? '';
       schemaVersionId = sv?.id ?? '';
+      isV2Graph = sv?.isV2Graph || undefined;
     }
 
     return {
@@ -653,6 +630,7 @@ export class SubgraphRepository {
       creatorUserId: resp[0].createdBy || undefined,
       namespace: resp[0].namespaceName,
       namespaceId: resp[0].namespaceId,
+      isV2Graph,
     };
   }
 

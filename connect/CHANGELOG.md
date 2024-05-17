@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.70.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.69.0...@wundergraph/cosmo-connect@0.70.0) (2024-05-17)
+
+### Features
+
+* schema contracts ([#751](https://github.com/wundergraph/cosmo/issues/751)) ([1bc1a78](https://github.com/wundergraph/cosmo/commit/1bc1a787f046d25f0a4affb3fe42efe39a1c6539)) (@thisisnithin)
+
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.68.0...@wundergraph/cosmo-connect@0.69.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
+# [0.68.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.67.0...@wundergraph/cosmo-connect@0.68.0) (2024-05-03)
+
+### Features
+
+* support inaccessible and add foundation for contracts ([#764](https://github.com/wundergraph/cosmo/issues/764)) ([08a7db2](https://github.com/wundergraph/cosmo/commit/08a7db222ce1763ffe8062d3792c41e0c54b4224)) (@Aenimus)
+
+# [0.67.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.66.3...@wundergraph/cosmo-connect@0.67.0) (2024-04-26)
+
+### Features
+
+* add apollo compatibility mode in wgc federated-graph fetch command ([#742](https://github.com/wundergraph/cosmo/issues/742)) ([ecd73ab](https://github.com/wundergraph/cosmo/commit/ecd73ab91e1c8289008cae1062220826884d26e8)) (@JivusAyrus)
+
 ## [0.66.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.66.2...@wundergraph/cosmo-connect@0.66.3) (2024-04-17)
 
 ### Bug Fixes

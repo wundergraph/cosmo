@@ -1,11 +1,11 @@
 import {
   federateSubgraphs,
+  incompatibleObjectExtensionOrphanBaseTypeError,
+  incompatibleParentKindMergeError,
   invalidSubgraphNamesError,
   noBaseTypeExtensionError,
   noQueryRootTypeError,
   Subgraph,
-  incompatibleParentKindMergeError,
-  incompatibleObjectExtensionOrphanBaseTypeError,
 } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
@@ -15,10 +15,10 @@ import {
   schemaQueryDefinition,
   schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
-  versionTwoPersistedBaseSchema,
-  versionTwoPersistedDirectiveDefinitions,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
+  versionTwoClientDefinitions,
+  versionTwoRouterDefinitions,
+  versionTwoRouterDirectiveDefinitions,
 } from './utils/utils';
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -80,7 +80,7 @@ describe('FederationFactory tests', () => {
         subscription: Subscription
       }
       ` +
-          versionTwoPersistedDirectiveDefinitions +
+          versionTwoRouterDirectiveDefinitions +
           `
       type Alligator implements Animal & Pet {
         class: Class!
@@ -426,7 +426,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Panda {
         favoriteFood: String @tag(name: "nom-nom-nom")
@@ -511,7 +511,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Move {
         hasEffect: Boolean!
@@ -598,35 +598,179 @@ describe('FederationFactory tests', () => {
     );
   });
 
-  // TODO reassess
-  test.skip('that tag and inaccessible directives are persisted in the federated schema', () => {
+  test('that @tag and @inaccessible persist correctly #1.1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema +
+        versionTwoRouterDefinitions +
           `
-      interface I @tag(name: "interface1") @tag(name: "interface2") @inaccessible {
-        i: Int!
+      type Entity {
+        enum: Enum!
+        enumTwo: EnumTwo! @inaccessible
+        field(input: Input!): Int!
+        id: ID! @inaccessible
       }
-
+      
+      enum Enum @tag(name: "enum1") @tag(name: "enum2") @tag(name: "enum3") {
+        A @tag(name: "enum value2") @tag(name: "enum value1") @inaccessible
+        B @tag(name: "enum value1") @tag(name: "enum value3")
+        C @tag(name: "enum value4") @inaccessible
+        D @tag(name: "enum value1") @tag(name: "enum value2")
+      }
+      
+      enum EnumTwo @inaccessible {
+        A
+      }
+      
+      input Input @tag(name: "input object1") @tag(name: "input object2") {
+        one: String @tag(name: "input value2") @tag(name: "input value1") @inaccessible
+        two: Int! @tag(name: "input value1") @tag(name: "input value3")
+      }
+      
+      interface Interface @tag(name: "interface1") @tag(name: "interface2") @inaccessible {
+        field: String @tag(name: "field1") @tag(name: "field2") @inaccessible
+        id: Int! @inaccessible
+      }
+      
+      type Object implements Interface @tag(name: "object2") @tag(name: "object1") @inaccessible {
+        field: String @tag(name: "field1") @tag(name: "field2") @inaccessible
+        id: Int! @inaccessible
+      }
+      
       type Query @tag(name: "object2") @tag(name: "object1") {
         dummy: String @tag(name: "field1") @tag(name: "field2")
+        entities: [Entity!]!
+        field(scalar: Scalar @inaccessible): String!
+        scalar: Scalar @inaccessible
+        union: [Union!]!
       }
       
-      enum E @tag(name: "enum1") @tag(name: "enum2") @inaccessible {
+      scalar Scalar @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible
+      
+      union Union = Entity | Object
+
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        versionTwoClientDefinitions +
+          `
+      type Entity {
+        enum: Enum!
+        field(input: Input!): Int!
+      }
+      
+      enum Enum {
+        B
+        D
+      }
+      
+      input Input {
+        two: Int!
+      }
+      
+      type Query {
+        dummy: String
+        entities: [Entity!]!
+        field: String!
+        union: [Union!]!
+      }
+      
+      union Union = Entity
+      
+      scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
+  test('that @tag and @inaccessible persist correctly #1.2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphI]);
+    expect(errors).toBeUndefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      type Entity {
+        enum: Enum!
+        enumTwo: EnumTwo! @inaccessible
+        field(input: Input!): Int!
+        id: ID! @inaccessible
+      }
+      
+      enum Enum @tag(name: "enum2") @tag(name: "enum1") @tag(name: "enum3") {
         A @tag(name: "enum value2") @tag(name: "enum value1") @inaccessible
+        B @tag(name: "enum value1") @tag(name: "enum value3")
+        C @tag(name: "enum value4") @inaccessible
+        D @tag(name: "enum value1") @tag(name: "enum value2")
       }
       
-      input In @tag(name: "input object1") @tag(name: "input object2") @inaccessible {
-        field: String @tag(name: "input value2") @tag(name: "input value1") @inaccessible
+      enum EnumTwo @inaccessible {
+        A
       }
       
-      scalar S @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible
-            
-      type O implements I @tag(name: "object2") @tag(name: "object1") @inaccessible {
-        i: Int!
+      input Input @tag(name: "input object1") @tag(name: "input object2") {
+        one: String @tag(name: "input value1") @tag(name: "input value2") @inaccessible
+        two: Int! @tag(name: "input value3") @tag(name: "input value1")
       }
+      
+      interface Interface @tag(name: "interface1") @tag(name: "interface2") @inaccessible {
+        field: String @tag(name: "field1") @tag(name: "field2") @inaccessible
+        id: Int! @inaccessible
+      }
+      
+      type Object implements Interface @tag(name: "object2") @tag(name: "object1") @inaccessible {
+        field: String @tag(name: "field1") @tag(name: "field2") @inaccessible
+        id: Int! @inaccessible
+      }
+      
+      type Query @tag(name: "object2") @tag(name: "object1") {
+        dummy: String @tag(name: "field1") @tag(name: "field2")
+        entities: [Entity!]!
+        field(scalar: Scalar @inaccessible): String!
+        scalar: Scalar @inaccessible
+        union: [Union!]!
+      }
+      
+      scalar Scalar @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible
+      
+      union Union = Entity | Object
+
+      scalar openfed__Scope
+    `,
+      ),
+    );
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphClientSchema)).toBe(
+      normalizeString(
+        versionTwoClientDefinitions +
+          `
+      type Entity {
+        enum: Enum!
+        field(input: Input!): Int!
+      }
+      
+      enum Enum {
+        B
+        D
+      }
+      
+      input Input {
+        two: Int!
+      }
+      
+      type Query {
+        dummy: String
+        entities: [Entity!]!
+        field: String!
+        union: [Union!]!
+      }
+      
+      union Union = Entity
+      
+      scalar openfed__Scope
     `,
       ),
     );
@@ -655,7 +799,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
     type InnerNestedObject {
       fieldOne: String!
@@ -749,7 +893,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -776,7 +920,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -803,7 +947,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -831,7 +975,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -1170,29 +1314,41 @@ const subgraphI: Subgraph = {
   name: 'subgraph-i',
   url: '',
   definitions: parse(`
-    type Query @shareable @tag(name: "object2") @tag(name: "object1") @tag(name: "object1") {
+    type Query @tag(name: "object2") @tag(name: "object1") @tag(name: "object1") {
       dummy: String @tag(name: "field1") @tag(name: "field1") @tag(name: "field2")
+      entities: [Entity!]!
     }
     
-    enum E @tag(name: "enum1") @inaccessible @tag(name: "enum1") @tag(name: "enum2") {
+    extend type Entity @key(fields: "id") {
+      id: ID!
+      enum: Enum!
+    }
+    
+    enum Enum @tag(name: "enum1") @tag(name: "enum1") @tag(name: "enum2") {
       A @tag(name: "enum value2") @tag(name: "enum value2") @tag(name: "enum value1") @inaccessible
+      B @tag(name: "enum value1") @tag(name: "enum value3") @tag(name: "enum value1")
     }
     
-    input In @tag(name: "input object1") @tag(name: "input object1") @tag(name: "input object2") {
-      field: String @tag(name: "input value2") @tag(name: "input value2") @tag(name: "input value1") @inaccessible
+    extend enum Enum @tag(name: "enum3") {
+      C @tag(name: "enum value4") @inaccessible
     }
     
-    interface I @tag(name: "interface1") @inaccessible @tag(name: "interface1") @tag(name: "interface2") {
-      i: Int!
+    input Input @tag(name: "input object1") @tag(name: "input object1") @tag(name: "input object2") {
+      one: String @tag(name: "input value2") @tag(name: "input value2") @tag(name: "input value1")
+      two: Int @tag(name: "input value1")
+    }
+    
+    interface Interface @tag(name: "interface1") @inaccessible @tag(name: "interface1") @tag(name: "interface2") {
+      id: Int! @inaccessible
       field: String @tag(name: "field1") @tag(name: "field1") @inaccessible @tag(name: "field2")
     }
     
-    type O implements I @inaccessible @tag(name: "object2") @tag(name: "object1") @tag(name: "object1") @shareable {
-      i: Int!
-      field: String @tag(name: "field1") @inaccessible @tag(name: "field1") @tag(name: "field2")
+    type Object implements Interface @tag(name: "object2") @tag(name: "object1") @tag(name: "object1") @shareable {
+      id: Int! @inaccessible
+      field: String @tag(name: "field1") @tag(name: "field1") @tag(name: "field2")
     }
     
-    scalar S @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible @tag(name: "scalar1")
+    scalar Scalar @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible @tag(name: "scalar1")
   `),
 };
 
@@ -1200,23 +1356,42 @@ const subgraphJ: Subgraph = {
   name: 'subgraph-j',
   url: '',
   definitions: parse(`
-    enum E @inaccessible @tag(name: "enum2") @tag(name: "enum2") @tag(name: "enum1") {
-      A @tag(name: "enum value1") @tag(name: "enum value2") @tag(name: "enum value1")
+    type Entity @key(fields: "id") {
+      id: ID! @inaccessible
+      field(input: Input!): Int!
+      enumTwo: EnumTwo! @inaccessible
     }
     
-    input In @tag(name: "input object1") @inaccessible @tag(name: "input object1") @tag(name: "input object2") {
-      field: String @tag(name: "input value1") @inaccessible @tag(name: "input value2") @tag(name: "input value1")
+    enum Enum @tag(name: "enum2") @tag(name: "enum2") @tag(name: "enum1") {
+      D @tag(name: "enum value1") @tag(name: "enum value2") @tag(name: "enum value1")
     }
     
-    interface I @tag(name: "interface1") @tag(name: "interface1") @inaccessible @tag(name: "interface2") {
-      field: String @inaccessible @tag(name: "field1") @tag(name: "field1") @tag(name: "field2")
+    enum EnumTwo @inaccessible {
+      A
     }
     
-    type O implements I @tag(name: "object2") @shareable @tag(name: "object1") @inaccessible @tag(name: "object1") {
+    input Input @tag(name: "input object1") @tag(name: "input object1") @tag(name: "input object2") {
+      one: String @tag(name: "input value1") @inaccessible @tag(name: "input value2") @tag(name: "input value1")
+      two: Int! @tag(name: "input value3")
+    }
+    
+    interface Interface @tag(name: "interface1") @tag(name: "interface1") @tag(name: "interface2") {
+      field: String @tag(name: "field1") @tag(name: "field1") @tag(name: "field2")
+    }
+    
+    type Object implements Interface @tag(name: "object2") @shareable @tag(name: "object1") @inaccessible @tag(name: "object1") {
       field: String @tag(name: "field1") @tag(name: "field1") @inaccessible @tag(name: "field2")
     }
     
-    scalar S @tag(name: "scalar1") @tag(name: "scalar2") @tag(name: "scalar1") @inaccessible
+    extend type Query {
+      scalar: Scalar @inaccessible
+      field(scalar: Scalar @inaccessible): String!
+      union: [Union!]!
+    }
+    
+    scalar Scalar @tag(name: "scalar1") @tag(name: "scalar2") @tag(name: "scalar1") @inaccessible
+    
+    union Union = Entity | Object
   `),
 };
 

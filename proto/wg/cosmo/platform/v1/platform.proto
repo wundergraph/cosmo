@@ -253,6 +253,12 @@ message GetFederatedGraphsRequest {
   optional bool supports_federation = 5;
 }
 
+message Contract {
+  string id = 1;
+  string source_federated_graph_id = 2;
+  repeated string exclude_tags = 3;
+}
+
 message FederatedGraph {
   string id = 1;
   string name = 2;
@@ -268,6 +274,7 @@ message FederatedGraph {
   string namespace = 12;
   optional string compositionId = 13;
   bool supports_federation = 14;
+  optional Contract contract = 15;
 }
 
 message GetFederatedGraphsResponse {
@@ -302,6 +309,8 @@ message Subgraph {
   string subscriptionUrl = 8;
   string target_id = 9;
   string namespace = 10;
+  string subscriptionProtocol = 11;
+  optional bool isV2Graph = 12;
 }
 
 message GetSubgraphsResponse {
@@ -331,6 +340,7 @@ message GetFederatedGraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
   optional string version_id = 3;
+  optional string client_schema = 4;
 }
 
 message GetSubgraphByNameRequest {
@@ -1539,6 +1549,7 @@ message GetSdlBySchemaVersionRequest {
 message GetSdlBySchemaVersionResponse {
   Response response = 1;
   string sdl = 2;
+  string client_schema = 3;
 }
 
 message GetChangelogBySchemaVersionRequest {
@@ -1917,12 +1928,44 @@ message GetUserAccessiblePermissionsResponse {
   repeated Permission permissions = 2;
 }
 
+message CreateContractRequest {
+  string name = 1;
+  string namespace = 2;
+  string source_graph_name = 3;
+  string routing_url = 4;
+  string admission_webhook_url = 5;
+  repeated string exclude_tags = 6;
+  optional string readme = 7;
+}
+
+message CreateContractResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
+message UpdateContractRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated string exclude_tags = 3;
+}
+
+message UpdateContractResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
   rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse) {}
   rpc RenameNamespace(RenameNamespaceRequest) returns (RenameNamespaceResponse) {}
   rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
+
+  // Contracts
+  rpc CreateContract(CreateContractRequest) returns (CreateContractResponse) {}
+  rpc UpdateContract(UpdateContractRequest) returns (UpdateContractResponse) {}
 
   rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
   rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}
@@ -1934,7 +1977,7 @@ service PlatformService {
   rpc PublishMonograph(PublishMonographRequest) returns (PublishMonographResponse) {}
   // DeleteMonograph deletes a monograph from the control plane.
   rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
-  // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+  // UpdateMonograph updates a monograph with new urls, subscription config and readme
   rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
   // MigrateMonograph converts a monograph into a federated graph.
   rpc MigrateMonograph(MigrateMonographRequest) returns (MigrateMonographResponse) {}

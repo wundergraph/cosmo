@@ -15,14 +15,15 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 
-	"github.com/wundergraph/cosmo/router/internal/cdn"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 )
 
 var (
@@ -266,6 +267,9 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 			return errors.WithStack(err)
 		}
 		requestDocumentBytes = persistedOperationData
+
+		// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
+		requestExtensions = jsonparser.Delete(requestExtensions, "persistedQuery")
 	}
 
 	requestHasOperationName := requestOperationNameBytes != nil && !bytes.Equal(requestOperationNameBytes, literal.NULL)
@@ -451,6 +455,7 @@ func NewOperationParser(opts OperationParserOptions) *OperationProcessor {
 						astnormalization.WithInlineFragmentSpreads(),
 						astnormalization.WithRemoveFragmentDefinitions(),
 						astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+						astnormalization.WithRemoveUnusedVariables(),
 					),
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},

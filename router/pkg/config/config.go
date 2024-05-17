@@ -250,28 +250,53 @@ type CDNConfiguration struct {
 	CacheSize BytesString `yaml:"cache_size,omitempty" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
 }
 
-type TokenBasedAuthentication struct {
+type NatsTokenBasedAuthentication struct {
 	Token *string `yaml:"token,omitempty"`
 }
 
-type UsernamePasswordBasedAuthentication struct {
+type NatsCredentialsAuthentication struct {
 	Password *string `yaml:"password,omitempty"`
 	Username *string `yaml:"username,omitempty"`
 }
 
-type Authentication struct {
-	UsernamePasswordBasedAuthentication `yaml:",inline"`
-	TokenBasedAuthentication            `yaml:",inline"`
+type NatsAuthentication struct {
+	UserInfo                     NatsCredentialsAuthentication `yaml:"user_info"`
+	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
-type EventSource struct {
-	Provider       string          `yaml:"provider,omitempty"`
-	URL            string          `yaml:"url,omitempty"`
-	Authentication *Authentication `yaml:"authentication,omitempty"`
+type NatsEventSource struct {
+	ID             string              `yaml:"id,omitempty"`
+	URL            string              `yaml:"url,omitempty"`
+	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
+}
+
+type KafkaSASLPlainAuthentication struct {
+	Password *string `yaml:"password,omitempty"`
+	Username *string `yaml:"username,omitempty"`
+}
+
+type KafkaAuthentication struct {
+	SASLPlain KafkaSASLPlainAuthentication `yaml:"sasl_plain,omitempty"`
+}
+
+type KafkaTLSConfiguration struct {
+	Enabled bool `yaml:"enabled" default:"false"`
+}
+
+type KafkaEventSource struct {
+	ID             string                 `yaml:"id,omitempty"`
+	Brokers        []string               `yaml:"brokers,omitempty"`
+	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
+	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+}
+
+type EventProviders struct {
+	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
+	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
 }
 
 type EventsConfiguration struct {
-	Sources map[string]EventSource `yaml:"sources,omitempty"`
+	Providers EventProviders `yaml:"providers,omitempty"`
 }
 
 type Cluster struct {
@@ -335,9 +360,12 @@ const (
 )
 
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled     bool                         `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	StatusCodes bool                         `yaml:"status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
-	Mode        SubgraphErrorPropagationMode `yaml:"mode" default:"wrapped" envconfig:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
+	Enabled              bool                         `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
+	PropagateStatusCodes bool                         `yaml:"propagate_status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+	Mode                 SubgraphErrorPropagationMode `yaml:"mode" default:"wrapped" envconfig:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
+	RewritePaths         bool                         `yaml:"rewrite_paths" default:"true" envconfig:"SUBGRAPH_ERROR_PROPAGATION_REWRITE_PATHS"`
+	OmitLocations        bool                         `yaml:"omit_locations" default:"true" envconfig:"SUBGRAPH_ERROR_PROPAGATION_OMIT_LOCATIONS"`
+	OmitExtensions       bool                         `yaml:"omit_extensions" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
 }
 
 type Config struct {
@@ -363,7 +391,7 @@ type Config struct {
 	LogLevel                      string                      `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" default:"60s" envconfig:"SHUTDOWN_DELAY"`
-	GracePeriod                   time.Duration               `yaml:"grace_period" default:"20s" envconfig:"GRACE_PERIOD"`
+	GracePeriod                   time.Duration               `yaml:"grace_period" default:"30s" envconfig:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" default:"10s" envconfig:"POLL_INTERVAL"`
 	HealthCheckPath               string                      `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH"`
 	ReadinessCheckPath            string                      `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH"`
@@ -479,7 +507,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
-		cfg.Config.SubgraphErrorPropagation.StatusCodes = true
+		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 	}
 
 	return cfg, nil

@@ -65,6 +65,61 @@ export const federatedGraphs = pgTable('federated_graphs', {
   supportsFederation: boolean('supports_federation').default(true).notNull(),
 });
 
+export const contracts = pgTable(
+  'contracts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceFederatedGraphId: uuid('source_federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    downstreamFederatedGraphId: uuid('downstream_federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    excludeTags: text('exclude_tags').array().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => ({
+    uniqueFederatedGraphSourceDownstreamGraphId: unique('federated_graph_source_downstream_id').on(
+      t.sourceFederatedGraphId,
+      t.downstreamFederatedGraphId,
+    ),
+  }),
+);
+
+export const contractsRelations = relations(contracts, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [contracts.createdById],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [contracts.updatedById],
+    references: [users.id],
+  }),
+  sourceFederatedGraph: one(federatedGraphs, {
+    fields: [contracts.sourceFederatedGraphId],
+    references: [federatedGraphs.id],
+    relationName: 'source',
+  }),
+  downstreamFederatedGraph: one(federatedGraphs, {
+    fields: [contracts.downstreamFederatedGraphId],
+    references: [federatedGraphs.id],
+    relationName: 'downstream',
+  }),
+}));
+
 export const federatedGraphClients = pgTable(
   'federated_graph_clients',
   {
@@ -186,6 +241,12 @@ export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }
     references: [schemaVersion.id],
   }),
   subgraphs: many(subgraphsToFederatedGraph),
+  contract: one(contracts, {
+    fields: [federatedGraphs.id],
+    references: [contracts.downstreamFederatedGraphId],
+    relationName: 'downstream',
+  }),
+  contracts: many(contracts, { relationName: 'source' }),
 }));
 
 export const subgraphRelations = relations(subgraphs, ({ many, one }) => ({
@@ -354,7 +415,9 @@ export const schemaVersion = pgTable('schema_versions', {
   // For a monolithic GraphQL, it is the SDL.
   // For a federated Graph, this is the composition result.
   schemaSDL: text('schema_sdl'),
+  clientSchema: text('client_schema'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  isV2Graph: boolean('is_v2_graph'),
 });
 
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
@@ -591,6 +654,7 @@ export const schemaCheckComposition = pgTable('schema_check_composition', {
     }),
   compositionErrors: text('composition_errors'),
   composedSchemaSDL: text('composed_schema_sdl'),
+  clientSchema: text('client_schema'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

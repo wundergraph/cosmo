@@ -217,17 +217,42 @@
   },
   "DevelopmentMode": false,
   "Events": {
-    "Sources": {
-      "another-nats": {
-        "Provider": "NATS",
-        "URL": "nats://localhost:4223",
-        "Authentication": null
-      },
-      "default": {
-        "Provider": "NATS",
-        "URL": "nats://localhost:4222",
-        "Authentication": null
-      }
+    "Providers": {
+      "Nats": [
+        {
+          "ID": "default",
+          "URL": "nats://localhost:4222",
+          "Authentication": null
+        },
+        {
+          "ID": "my-nats",
+          "URL": "nats://localhost:4222",
+          "Authentication": {
+            "UserInfo": {
+              "Password": "admin",
+              "Username": "admin"
+            },
+            "Token": null
+          }
+        }
+      ],
+      "Kafka": [
+        {
+          "ID": "my-kafka",
+          "Brokers": [
+            "localhost:9092"
+          ],
+          "Authentication": {
+            "SASLPlain": {
+              "Password": "admin",
+              "Username": "admin"
+            }
+          },
+          "TLS": {
+            "Enabled": true
+          }
+        }
+      ]
     }
   },
   "RouterConfigPath": "",
@@ -278,7 +303,10 @@
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
-    "StatusCodes": false,
-    "Mode": "wrapped"
+    "PropagateStatusCodes": false,
+    "Mode": "wrapped",
+    "RewritePaths": true,
+    "OmitLocations": true,
+    "OmitExtensions": false
   }
 }

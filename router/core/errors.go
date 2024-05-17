@@ -26,7 +26,7 @@ const (
 	errorTypeContextCanceled
 	errorTypeContextTimeout
 	errorTypeUpgradeFailed
-	errorTypeEDFSNats
+	errorTypeEDFS
 )
 
 type (
@@ -64,9 +64,9 @@ func getErrorType(err error) errorType {
 			return errorTypeContextTimeout
 		}
 	}
-	var edfsErr *pubsub.EDFSNatsError
+	var edfsErr *pubsub.Error
 	if errors.As(err, &edfsErr) {
-		return errorTypeEDFSNats
+		return errorTypeEDFS
 	}
 	return errorTypeUnknown
 }
@@ -101,9 +101,13 @@ func trackResponseError(ctx context.Context, err error) {
 }
 
 // propagateSubgraphErrors propagates the subgraph errors to the request context
-func propagateSubgraphErrors(ctx *resolve.Context) {
+func propagateSubgraphErrors(ctx *resolve.Context, logger *zap.Logger) {
 	err := ctx.SubgraphErrors()
-	trackResponseError(ctx.Context(), err)
+
+	if err != nil {
+		logger.Error("subgraph errors", zap.Error(err))
+		trackResponseError(ctx.Context(), err)
+	}
 }
 
 // writeRequestErrors writes the given request errors to the http.ResponseWriter.

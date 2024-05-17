@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.7.6...aws-lambda-router@0.8.0) (2024-05-14)
+
+### Bug Fixes
+
+* usage of fragments on root query type, fix normalization issues ([#789](https://github.com/wundergraph/cosmo/issues/789)) ([e9239b4](https://github.com/wundergraph/cosmo/commit/e9239b40c938638eb11c94b858a436371474e7a5)) (@devsergiy)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
+## [0.7.6](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.7.5...aws-lambda-router@0.7.6) (2024-05-10)
+
+### Bug Fixes
+
+* root level [@requires](https://github.com/requires) planning ([#779](https://github.com/wundergraph/cosmo/issues/779)) ([30113b3](https://github.com/wundergraph/cosmo/commit/30113b3d78d651c58e8c0ec5d7123f5bd7ff3ec5)) (@devsergiy)
+
+## [0.7.5](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.7.4...aws-lambda-router@0.7.5) (2024-05-06)
+
+### Bug Fixes
+
+* ignore unknown router execution config fields ([#767](https://github.com/wundergraph/cosmo/issues/767)) ([649a0e1](https://github.com/wundergraph/cosmo/commit/649a0e1349820642491469890f9eaa7b1134e430)) (@Aenimus)
+
+## [0.7.4](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.7.3...aws-lambda-router@0.7.4) (2024-04-30)
+
+### Bug Fixes
+
+* normalization of non-compatible nested fragment types ([#761](https://github.com/wundergraph/cosmo/issues/761)) ([3f42a17](https://github.com/wundergraph/cosmo/commit/3f42a171d2d7a32b24ba695aadfa8bfba85c8e39)) (@devsergiy)
+
+## [0.7.3](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.7.2...aws-lambda-router@0.7.3) (2024-04-29)
+
+### Bug Fixes
+
+* field selection validation ([#758](https://github.com/wundergraph/cosmo/issues/758)) ([d29fbc6](https://github.com/wundergraph/cosmo/commit/d29fbc60df212eb6191a3fb4bbbd47d45de439cd)) (@devsergiy)
+
 ## [0.7.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.7.1...aws-lambda-router@0.7.2) (2024-04-18)
 
 **Note:** Version bump only for package aws-lambda-router
