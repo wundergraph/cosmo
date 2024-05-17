@@ -57,17 +57,18 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         if (resp.operationUsageStats.totalOperations === 0) {
           // Composition errors are still considered failures, otherwise we can consider this a success
           // because no operations were affected by the change
-          success = resp.compositionErrors.length === 0;
+          success = resp.compositionErrors.length === 0 && resp.lintErrors.length === 0;
           console.log(`No operations were affected by this schema change.`);
           finalStatement = `This schema change didn't affect any operations from existing client traffic.`;
         } else if (resp.operationUsageStats.totalOperations === resp.operationUsageStats.safeOperations) {
           // This is also a success because changes to these operations were marked as safe
-          success = resp.compositionErrors.length === 0;
+          success = resp.compositionErrors.length === 0 && resp.lintErrors.length === 0;
           console.log(`${resp.operationUsageStats.totalOperations} operations were considered safe due to overrides.`);
           finalStatement = `This schema change affected operations with safe overrides.`;
         } else {
           // Composition and breaking errors are considered failures because operations were affected by the change
-          success = resp.breakingChanges.length === 0 && resp.compositionErrors.length === 0;
+          success =
+            resp.breakingChanges.length === 0 && resp.compositionErrors.length === 0 && resp.lintErrors.length === 0;
 
           console.log(
             logSymbols.warning +
@@ -127,7 +128,6 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
       }
 
       if (resp.lintErrors.length > 0 || resp.lintWarnings.length > 0) {
-        success = resp.lintErrors.length === 0;
         console.log('\nDetected lint issues:');
         for (const error of resp.lintErrors) {
           lintIssuesTable.push([
