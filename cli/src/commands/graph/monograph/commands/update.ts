@@ -1,18 +1,14 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { Command, program } from 'commander';
-import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { resolve } from 'pathe';
-import {
-  isValidSubscriptionProtocol,
-  isValidWebsocketSubprotocol,
-  parseGraphQLSubscriptionProtocol,
-  parseGraphQLWebsocketSubprotocol,
-} from '@wundergraph/cosmo-shared';
+import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
+import { Command, program } from 'commander';
 import ora from 'ora';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { resolve } from 'pathe';
+import pc from 'picocolors';
+import { websocketSubprotocolDescription } from '../../../../constants.js';
 import { getBaseHeaders } from '../../../../core/config.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { validateSubscriptionProtocols } from '../../../../utils.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -33,10 +29,7 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the graph. The supported protocols are ws, sse, and sse_post.',
   );
-  command.option(
-    '--websocket-subprotocol <protocol>',
-    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto(default), graphql-ws, and graphql-transport-ws. Should be used only if the subscription protocol is ws.For more information see https://cosmo-docs.wundergraph.com/router/subscriptions/websocket-subprotocols',
-  );
+  command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
     let readmeFile;

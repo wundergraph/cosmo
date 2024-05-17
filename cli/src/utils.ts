@@ -1,3 +1,4 @@
+/* eslint-disable import/named */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
 import boxen from 'boxen';

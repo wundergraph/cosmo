@@ -7,8 +7,6 @@ import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  isValidSubscriptionProtocol,
-  isValidWebsocketSubprotocol,
   parseGraphQLSubscriptionProtocol,
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
@@ -16,6 +14,7 @@ import {
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
+import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -49,10 +48,7 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
   );
-  command.option(
-    '--websocket-subprotocol <protocol>',
-    'The subprotocol to use when subscribing to the subgraph. The supported protocols are auto(default), graphql-ws, and graphql-transport-ws. Should be used only if the subscription protocol is ws.For more information see https://cosmo-docs.wundergraph.com/router/subscriptions/websocket-subprotocols',
-  );
+  command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
   command.option(
     '--fail-on-composition-error',
     'If set, the command will fail if the composition of the federated graph fails.',
