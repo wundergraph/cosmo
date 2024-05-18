@@ -1,17 +1,10 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { Command } from 'commander';
-import { join } from 'pathe';
 import yaml from 'js-yaml';
+import { join } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import {
-  Subgraph,
-  fetchRouterConfig,
-  getFederatedGraphSDL,
-  getSubgraphSDL,
-  getSubgraphsOfFedGraph,
-  injectRequiredDirectives,
-} from '../utils.js';
+import { fetchRouterConfig, getFederatedGraphSDL, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('fetch');
@@ -21,7 +14,11 @@ export default (opts: BaseCommandOptions) => {
   cmd.option('-o, --out [string]', 'Destination folder for storing all the required files.');
   cmd.option(
     '-a, --apollo-compatibility',
-    'Enable apollo compatibility to generate the composition configs and script to generate schema using rover',
+    'Enable apollo compatibility to generate the composition configs and script to generate schema using rover.',
+  );
+  cmd.option(
+    '-v, --federation-version [string]',
+    'The version of federation to be used by rover in the format "1", "2", or "2.x.y". Default is 2.5.0.',
   );
 
   cmd.action(async (name, options) => {
@@ -94,19 +91,18 @@ export default (opts: BaseCommandOptions) => {
           continue;
         }
         const filePath = join(subgraphPath, `${subgraph.name}.graphql`);
-        let finalSDL = subgraphSDL;
+        cosmoSubgraphsConfig.push({
+          name: subgraph.name,
+          routing_url: subgraph.routingURL,
+          schema: {
+            file: filePath,
+          },
+          subscription:
+            subgraph.subscriptionURL === ''
+              ? undefined
+              : { url: subgraph.subscriptionURL, protocol: subgraph.subscriptionProtocol },
+        });
         if (options.apolloCompatibility) {
-          cosmoSubgraphsConfig.push({
-            name: subgraph.name,
-            routing_url: subgraph.routingURL,
-            schema: {
-              file: filePath,
-            },
-            subscription:
-              subgraph.subscriptionURL === ''
-                ? undefined
-                : { url: subgraph.subscriptionURL, protocol: subgraph.subscriptionProtocol },
-          });
           roverSubgraphsConfig[subgraph.name] = {
             routing_url: subgraph.routingURL,
             schema: {
@@ -119,18 +115,25 @@ export default (opts: BaseCommandOptions) => {
               protocol: 'graphql_ws',
             };
           }
-          finalSDL = injectRequiredDirectives(subgraphSDL, subgraph.isV2Graph);
         }
-        writeFileSync(filePath, finalSDL);
+        writeFileSync(filePath, subgraphSDL);
       }
 
+      const cosmoCompositionConfig = yaml.dump({
+        version: 1,
+        subgraphs: cosmoSubgraphsConfig,
+      });
+      writeFileSync(join(basePath, `cosmo-composition.yaml`), cosmoCompositionConfig);
+
       if (options.apolloCompatibility) {
-        const cosmoCompositionConfig = yaml.dump({
-          version: 1,
-          subgraphs: cosmoSubgraphsConfig,
-        });
         const roverCompositionConfig = yaml.dump({
-          federation_version: '=2.6.1',
+          federation_version: `${
+            options.federationVersion &&
+            options.federationVersion.length > 1 &&
+            !options.federationVersion.startsWith('=')
+              ? '='
+              : ''
+          }${options.federationVersion || '=2.5.0'}`,
           subgraphs: roverSubgraphsConfig,
           subscription:
             Object.keys(roverSubgraphsSubcriptionConfig).length === 0
@@ -144,7 +147,6 @@ export default (opts: BaseCommandOptions) => {
                   },
                 },
         });
-        writeFileSync(join(basePath, `cosmo-composition.yaml`), cosmoCompositionConfig);
         writeFileSync(join(basePath, `rover-composition.yaml`), roverCompositionConfig);
 
         const apolloScript = `npm install -g @apollo/rover

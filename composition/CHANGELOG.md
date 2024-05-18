@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.2...@wundergraph/composition@0.24.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
+## [0.23.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.1...@wundergraph/composition@0.23.2) (2024-05-10)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.23.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.0...@wundergraph/composition@0.23.1) (2024-05-06)
+
+### Bug Fixes
+
+* ignore unknown router execution config fields ([#767](https://github.com/wundergraph/cosmo/issues/767)) ([649a0e1](https://github.com/wundergraph/cosmo/commit/649a0e1349820642491469890f9eaa7b1134e430)) (@Aenimus)
+
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.22.1...@wundergraph/composition@0.23.0) (2024-05-03)
+
+### Features
+
+* support inaccessible and add foundation for contracts ([#764](https://github.com/wundergraph/cosmo/issues/764)) ([08a7db2](https://github.com/wundergraph/cosmo/commit/08a7db222ce1763ffe8062d3792c41e0c54b4224)) (@Aenimus)
+
 ## [0.22.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.22.0...@wundergraph/composition@0.22.1) (2024-04-23)
 
 ### Reverts
