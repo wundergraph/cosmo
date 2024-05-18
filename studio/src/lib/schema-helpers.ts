@@ -1,9 +1,11 @@
 import { noCase } from "change-case";
 import {
+  GraphQLArgument,
   GraphQLEnumType,
+  GraphQLField,
+  GraphQLInputField,
   GraphQLInputObjectType,
   GraphQLInterfaceType,
-  GraphQLList,
   GraphQLNamedType,
   GraphQLObjectType,
   GraphQLScalarType,
@@ -12,6 +14,8 @@ import {
   Kind,
   Location,
   buildASTSchema,
+  isInputObjectType,
+  isInterfaceType,
   isObjectType,
   isScalarType,
   parse,
@@ -42,7 +46,7 @@ export type GraphQLTypeCategory =
   | (typeof graphqlTypeCategories)[number]
   | "deprecated";
 
-export type GraphQLField = {
+export type ParsedGraphQLField = {
   name: string;
   description?: string;
   deprecationReason?: string;
@@ -64,7 +68,7 @@ export type GraphQLTypeDefinition = {
   name: string;
   description: string;
   interfaces?: string[];
-  fields?: GraphQLField[];
+  fields?: ParsedGraphQLField[];
   loc?: Location;
 };
 
@@ -440,14 +444,18 @@ export const getRootDescription = (name: string) => {
 export const parseSchema = (schema?: string) => {
   if (!schema) return null;
 
-  const doc = parse(schema);
+  try {
+    const doc = parse(schema);
 
-  const ast = buildASTSchema(doc, {
-    assumeValid: true,
-    assumeValidSDL: true,
-  });
+    const ast = buildASTSchema(doc, {
+      assumeValid: true,
+      assumeValidSDL: true,
+    });
 
-  return ast;
+    return ast;
+  } catch {
+    return null;
+  }
 };
 
 export const formatAndParseSchema = async (schema?: string) => {
@@ -550,7 +558,7 @@ export const getDeprecatedTypes = (
       loc: type.astNode?.loc,
     };
 
-    const deprecatedFields: GraphQLField[] = [];
+    const deprecatedFields: ParsedGraphQLField[] = [];
 
     let category: GraphQLTypeCategory | null = null;
 
@@ -640,4 +648,41 @@ export const getDeprecatedTypes = (
   }
 
   return deprecatedTypes;
+};
+
+export type FieldMatch = {
+  type: GraphQLNamedType;
+  field: GraphQLField<unknown, unknown> | GraphQLInputField;
+  argument?: GraphQLArgument;
+};
+
+export const getAllFields = (schema: GraphQLSchema): FieldMatch[] => {
+  const fields: FieldMatch[] = [];
+
+  const types = schema.getTypeMap();
+
+  for (const typeName in types) {
+    const type = types[typeName];
+
+    if (
+      !isObjectType(type) &&
+      !isInterfaceType(type) &&
+      !isInputObjectType(type)
+    ) {
+      continue;
+    }
+
+    const fieldMap = type.getFields();
+
+    for (const fieldName in fieldMap) {
+      const field = fieldMap[fieldName];
+
+      fields.push({
+        type,
+        field,
+      });
+    }
+  }
+
+  return fields;
 };

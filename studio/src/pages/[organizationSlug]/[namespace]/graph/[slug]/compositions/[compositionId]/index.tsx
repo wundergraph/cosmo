@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -37,12 +38,13 @@ import {
   getCompositionDetails,
   getSdlBySchemaVersion,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { sentenceCase } from "change-case";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext } from "react";
-import { PiGitBranch } from "react-icons/pi";
+import { useContext, useState } from "react";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
+import { PiGitBranch } from "react-icons/pi";
 
 const CompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -53,6 +55,8 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   const id = router.query.compositionId as string;
   const tab = router.query.tab as string;
   const subgraph = router.query.subgraph as string;
+
+  const [schemaType, setSchemaType] = useState<"router" | "client">("client");
 
   const graphData = useContext(GraphContext);
 
@@ -339,7 +343,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                 <TabsList>
                   <TabsTrigger value="output" asChild>
                     <Link href={{ query: { ...router.query, tab: "output" } }}>
-                      Composed Schema
+                      Output Schema
                     </Link>
                   </TabsTrigger>
                   <TabsTrigger value="input" asChild>
@@ -366,16 +370,56 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                     </div>
                   ) : (
                     sdlData &&
-                    sdlData.sdl !== "" && (
+                    sdlData.sdl !== "full" && (
                       <div className="relative flex h-full min-h-[60vh] flex-col">
-                        <div className="-top-[60px] right-8 w-max px-5 md:absolute md:w-auto md:px-0">
+                        <div className="-top-[60px] right-8 flex w-max items-center gap-x-4 px-5 md:absolute md:w-auto md:px-0">
+                          <Select
+                            onValueChange={(v: typeof schemaType) =>
+                              setSchemaType(v)
+                            }
+                            value={schemaType}
+                          >
+                            <SelectTrigger>
+                              <SelectValue>
+                                {sentenceCase(schemaType)}
+                                Schema
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="client">
+                                Client Schema
+                                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                                  The schema available to the clients and
+                                  through introspection
+                                </p>
+                              </SelectItem>
+                              <Separator />
+                              <SelectItem value="router">
+                                Router Schema
+                                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                                  The full schema used by the router to plan
+                                  your operations
+                                </p>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
                           <SDLViewerActions
-                            sdl={sdlData.sdl}
+                            sdl={
+                              schemaType === "router"
+                                ? sdlData.sdl
+                                : sdlData.clientSchema
+                            }
                             size="icon"
                             targetName={graphData?.graph?.name}
                           />
                         </div>
-                        <SDLViewerMonaco schema={sdlData.sdl} />
+                        <SDLViewerMonaco
+                          schema={
+                            schemaType === "router"
+                              ? sdlData.sdl
+                              : sdlData.clientSchema
+                          }
+                        />
                       </div>
                     )
                   )}

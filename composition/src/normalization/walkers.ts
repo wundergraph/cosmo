@@ -86,7 +86,7 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
       enter(node) {
         const name = node.name.value;
         if (EVENT_DIRECTIVE_NAMES.has(name)) {
-          nf.isEventDrivenSubgraph = true;
+          nf.edfsDirectiveReferences.add(name);
         }
         if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
           nf.isSubgraphVersionTwo = true;
@@ -156,8 +156,8 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
     },
   });
   /* It is possible that directives definitions are defined in the schema after the schema nodes that declare those
-     directives have been defined. Consequently, the directives can  only be validated after the walker has finished
-     collecting all directive definitions. */
+   * directives have been defined. Consequently, the directives can  only be validated after the walker has finished
+   * collecting all directive definitions. */
   for (const node of schemaNodes) {
     extractDirectives(
       node,

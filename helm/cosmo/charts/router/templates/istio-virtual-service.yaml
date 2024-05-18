@@ -1,0 +1,30 @@
+{{- if .Values.istioVirtualService -}}
+{{- if .Values.istioVirtualService.enabled -}}
+{{- $fullName := include "router.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+  {{- with .Values.istioVirtualService.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  gateways:
+  - {{ $fullName }}
+  hosts:
+  - '*'
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: {{ $fullName }}
+        port:
+          number: {{ $svcPort }}
+{{- end }}
+{{- end }}

@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.1](https://github.com/wundergraph/cosmo/compare/studio@0.77.0...studio@0.77.1) (2024-05-17)
+
+### Bug Fixes
+
+* graph select ui ([#799](https://github.com/wundergraph/cosmo/issues/799)) ([47ac0d4](https://github.com/wundergraph/cosmo/commit/47ac0d43da3fc8a7d6f2e5eb5671af9ee149c919)) (@thisisnithin)
+
+# [0.77.0](https://github.com/wundergraph/cosmo/compare/studio@0.76.15...studio@0.77.0) (2024-05-17)
+
+### Features
+
+* schema contracts ([#751](https://github.com/wundergraph/cosmo/issues/751)) ([1bc1a78](https://github.com/wundergraph/cosmo/commit/1bc1a787f046d25f0a4affb3fe42efe39a1c6539)) (@thisisnithin)
+
+## [0.76.15](https://github.com/wundergraph/cosmo/compare/studio@0.76.14...studio@0.76.15) (2024-05-14)
+
+### Bug Fixes
+
+* schema and sdl page improvements and flickers ([#788](https://github.com/wundergraph/cosmo/issues/788)) ([486e3a1](https://github.com/wundergraph/cosmo/commit/486e3a1dbad2fec0246d1d732bb4f4de66d14ca2)) (@thisisnithin)
+
+## [0.76.14](https://github.com/wundergraph/cosmo/compare/studio@0.76.13...studio@0.76.14) (2024-05-03)
+
+**Note:** Version bump only for package studio
+
+## [0.76.13](https://github.com/wundergraph/cosmo/compare/studio@0.76.12...studio@0.76.13) (2024-05-02)
+
+### Bug Fixes
+
+* validate graphql operation in playground ([#763](https://github.com/wundergraph/cosmo/issues/763)) ([41bde5f](https://github.com/wundergraph/cosmo/commit/41bde5f06583242bbc9471e05179c1c16bb2f769)) (@thisisnithin)
+
 ## [0.76.12](https://github.com/wundergraph/cosmo/compare/studio@0.76.11...studio@0.76.12) (2024-04-30)
 
 ### Bug Fixes

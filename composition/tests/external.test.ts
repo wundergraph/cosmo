@@ -5,7 +5,7 @@ import {
   baseDirectiveDefinitions,
   normalizeString,
   schemaToSortedNormalizedString,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 
 describe('@external directive tests', () => {
@@ -114,7 +114,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity implements Interface {
         age: Int!
@@ -151,7 +151,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity implements Interface {
         age: Int!
@@ -188,7 +188,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity implements Interface {
         age: Int!
@@ -227,7 +227,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity implements Interface {
         age: Int!
@@ -266,7 +266,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity implements Interface {
         age: Int!
@@ -305,7 +305,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity implements Interface {
         age: Int!
@@ -344,7 +344,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity implements Interface {
         age: Int!
@@ -383,7 +383,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity implements Interface {
         age: Int!
@@ -422,7 +422,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity {
         field: String!
@@ -445,7 +445,7 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+          versionTwoRouterDefinitions +
             `
       type Entity {
         field: String!

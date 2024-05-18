@@ -16,8 +16,8 @@ import { describe, expect, test } from 'vitest';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
-  versionTwoSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 import { FIELD } from '../src/utils/string-constants';
 
@@ -34,7 +34,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
         type Object {
           field(input: String): String
@@ -57,7 +57,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Float!): String
@@ -81,7 +81,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Int): String
@@ -105,7 +105,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       type Object {
         field(input: Boolean = false): String
@@ -173,7 +173,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoSchemaQueryAndPersistedDirectiveDefinitions +
+        versionTwoRouterDefinitions +
           `
       interface Interface {
         field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
@@ -269,7 +269,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
       type Entity implements Interface @tag(name: "subgraph-f") {
         field(
@@ -320,7 +320,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
         type Entity implements Identifiable {
           field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
@@ -345,7 +345,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+        versionOneRouterDefinitions +
           `
         type Entity implements Identifiable {
           field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String

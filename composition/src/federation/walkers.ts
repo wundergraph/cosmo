@@ -100,7 +100,7 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
           return;
         }
         ff.addValidPrimaryKeyTargetsToEntityData(ff.entityDataByTypeName.get(originalTypeName));
-        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(originalTypeName);
+        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(parentTypeName);
         if (originalTypeName === parentTypeName) {
           return;
         }

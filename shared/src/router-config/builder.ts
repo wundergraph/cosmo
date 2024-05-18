@@ -7,8 +7,7 @@ import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
-  // eslint-disable-next-line camelcase
-  DataSourceCustom_Events,
+  DataSourceCustomEvents,
   // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
   DataSourceKind,
@@ -22,6 +21,7 @@ import { configurationDataMapToDataSourceConfiguration, generateFieldConfigurati
 import { normalizationFailureError } from './errors.js';
 
 export interface Input {
+  federatedClientSDL: string;
   federatedSDL: string;
   fieldConfigurations: FieldConfiguration[];
   schemaVersionId: string;
@@ -104,11 +104,12 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     // eslint-disable-next-line camelcase
     let customGraphql: DataSourceCustom_GraphQL | undefined;
     // eslint-disable-next-line camelcase
-    let customEvents: DataSourceCustom_Events | undefined;
-    if (events.length > 0) {
+    let customEvents: DataSourceCustomEvents | undefined;
+    if (events.kafka.length > 0 || events.nats.length > 0) {
       kind = DataSourceKind.PUBSUB;
-      customEvents = new DataSourceCustom_Events({
-        events,
+      customEvents = new DataSourceCustomEvents({
+        kafka: events.kafka,
+        nats: events.nats,
       });
       // PUBSUB data sources cannot have root nodes other than
       // Query/Mutation/Subscription. Filter rootNodes in place
@@ -181,6 +182,9 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   }
   engineConfig.fieldConfigurations = generateFieldConfigurations(input.fieldConfigurations);
   engineConfig.graphqlSchema = input.federatedSDL;
+  if (input.federatedClientSDL !== '') {
+    engineConfig.graphqlClientSchema = input.federatedClientSDL;
+  }
   return new RouterConfig({
     engineConfig,
     version: input.schemaVersionId,
