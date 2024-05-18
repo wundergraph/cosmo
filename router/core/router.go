@@ -926,9 +926,22 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			h.ServeHTTP(w, r)
 		})
 	})
+	var customCompressibleContentTypes = []string{
+		"text/html",
+		"text/css",
+		"text/plain",
+		"text/javascript",
+		"application/javascript",
+		"application/x-javascript",
+		"application/json",
+		"application/atom+xml",
+		"application/rss+xml",
+		"image/svg+xml",
+		"application/graphql",
+	}
 
 	// Adds Brotli compressor
-	brCompressor := middleware.NewCompressor(5)
+	brCompressor := middleware.NewCompressor(5, customCompressibleContentTypes...)
 	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
 		return br.NewWriterLevel(w, level)
 	})
@@ -956,6 +969,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		})
 	}
 
+	httpRouter.Get("/echo", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/plain")
+		var body []byte
+		r.Body.Read(body)
+		w.Write(body)
+	})
 	httpRouter.Get(r.healthCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())

@@ -1,10 +1,11 @@
 package graphiql
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 type PlaygroundOptions struct {
@@ -20,6 +21,7 @@ type Playground struct {
 
 func NewPlayground(opts *PlaygroundOptions) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
+
 		return &Playground{
 			next: next,
 			opts: opts,
