@@ -558,9 +558,17 @@ type WebSocketConnectionHandler struct {
 	forwardUpgradeRequestHeaders     bool
 	forwardUpgradeRequestQueryParams bool
 	forwardInitialPayload            bool
+
+	hashHeadersWhitelist []string
 }
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
+	var hashHeadersWhitelist []string
+
+	if opts.Config != nil {
+		hashHeadersWhitelist = opts.Config.HashHeadersWhitelist
+	}
+
 	return &WebSocketConnectionHandler{
 		ctx:                              ctx,
 		operationProcessor:               opts.OperationProcessor,
@@ -580,6 +588,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		forwardUpgradeRequestHeaders:     opts.Config != nil && opts.Config.ForwardUpgradeHeaders,
 		forwardUpgradeRequestQueryParams: opts.Config != nil && opts.Config.ForwardUpgradeQueryParams,
 		forwardInitialPayload:            opts.Config != nil && opts.Config.ForwardInitialPayload,
+		hashHeadersWhitelist:             hashHeadersWhitelist,
 	}
 }
 
@@ -795,12 +804,15 @@ func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, ms
 
 func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	h.logger.Debug("Websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
+
+	// Initialize the protocol and get the initial payload
 	h.initialPayload, err = h.protocol.Initialize()
 	if err != nil {
 		h.logger.Error("Initializing websocket connection", zap.Error(err))
 		_ = h.requestError(fmt.Errorf("error initializing session"))
 		return err
 	}
+
 	if h.forwardUpgradeRequestQueryParams {
 		query := h.r.URL.Query()
 		if len(query) != 0 {
@@ -810,22 +822,35 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 			}
 		}
 	}
+	
 	if h.forwardUpgradeRequestHeaders {
-		header := make(http.Header, len(h.r.Header))
+		header := make(http.Header)
 		for k, v := range h.r.Header {
-			if h.ignoreHeader(k) {
-				continue
+			if !h.ignoreHeader(k) && h.shouldHashHeader(k) {
+				header[k] = v
 			}
-			header[k] = v
 		}
 		if len(header) > 0 {
 			h.upgradeRequestHeaders, err = json.Marshal(header)
-		}
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
+}
+
+func (h *WebSocketConnectionHandler) shouldHashHeader(header string) bool {
+	if len(h.hashHeadersWhitelist) == 0 {
+		return true // If no whitelist is provided, allow all headers by default
+	}
+	for _, allowed := range h.hashHeadersWhitelist {
+		if header == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {

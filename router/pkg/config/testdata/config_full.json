@@ -299,7 +299,11 @@
     },
     "ForwardUpgradeHeaders": true,
     "ForwardUpgradeQueryParams": true,
-    "ForwardInitialPayload": true
+    "ForwardInitialPayload": true,
+    "HashHeadersWhitelist": [
+      "Test-Header",
+      "Another-Header"
+    ]
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,

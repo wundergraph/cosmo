@@ -144,6 +144,13 @@
           "type": "boolean",
           "default": true,
           "description": "Forward the initial payload in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+        },
+        "hash_headers_whitelist": {
+          "type": "array",
+          "description": "A list of headers that should be hashed during the WebSocket upgrade process.",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
