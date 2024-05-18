@@ -17,7 +17,7 @@ export class UserRepository {
         id: users.id,
       })
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, email.toLowerCase()))
       .limit(1)
       .execute();
 
@@ -51,7 +51,7 @@ export class UserRepository {
       .insert(users)
       .values({
         id: input.id,
-        email: input.email,
+        email: input.email.toLowerCase(),
       })
       .execute();
   }
