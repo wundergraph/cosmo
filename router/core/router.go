@@ -15,8 +15,11 @@ import (
 	"sync"
 	"time"
 
-
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
 	"github.com/redis/go-redis/v9"
 
@@ -28,7 +31,9 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
