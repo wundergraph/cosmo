@@ -969,12 +969,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		})
 	}
 
-	httpRouter.Get("/echo", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "text/plain")
-		var body []byte
-		r.Body.Read(body)
-		w.Write(body)
-	})
 	httpRouter.Get(r.healthCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())
