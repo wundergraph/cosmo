@@ -1,8 +1,8 @@
 import { CodeViewer } from "@/components/code-viewer";
 import {
+  getGraphLayout,
   GraphContext,
   GraphPageLayout,
-  getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
@@ -28,7 +28,9 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -49,6 +51,7 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   getClients,
   getFederatedGraphSDLByName,
+  getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -60,13 +63,14 @@ import { GraphiQL } from "graphiql";
 import { GraphQLSchema, parse, validate } from "graphql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
 import { FiSave } from "react-icons/fi";
 import { PiBracketsCurly, PiDevices } from "react-icons/pi";
 import { TbDevicesCheck } from "react-icons/tb";
 import { z } from "zod";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
 
 const graphiQLFetch = async (
   onFetch: any,
@@ -472,16 +476,33 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   const graphContext = useContext(GraphContext);
 
-  const { data, isLoading } = useQuery(
+  const loadSchemaGraphId =
+    (router.query.load as string) || graphContext?.graph?.id || "";
+
+  const { data, isLoading: isLoadingGraphSchema } = useQuery(
     getFederatedGraphSDLByName.useQuery({
       name: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
     }),
   );
 
+  const { data: subgraphData, isLoading: isLoadingSubgraphSchema } = useQuery({
+    ...getSubgraphSDLFromLatestComposition.useQuery({
+      name: graphContext?.subgraphs.find((s) => s.id === loadSchemaGraphId)
+        ?.name,
+      fedGraphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    }),
+    enabled:
+      !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id,
+  });
+
+  const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
+
   const schema = useMemo(() => {
-    return parseSchema(data?.clientSchema);
-  }, [data?.clientSchema]);
+    console.log(!!subgraphData?.sdl, !!data?.clientSchema);
+    return parseSchema(subgraphData?.sdl || data?.clientSchema);
+  }, [data?.clientSchema, subgraphData?.sdl]);
 
   const [query, setQuery] = useState<string | undefined>(
     operation ? decodeURIComponent(operation) : undefined,
@@ -582,15 +603,38 @@ const PlaygroundPage: NextPageWithLayout = () => {
     }
   }, [query, isGraphiqlRendered]);
 
+  const { routingUrl, subscriptionUrl } = useMemo(() => {
+    if (!loadSchemaGraphId || loadSchemaGraphId === graphContext?.graph?.id) {
+      const url = graphContext?.graph?.routingURL ?? "";
+      return { routingUrl: url, subscriptionUrl: url.replace("http", "ws") };
+    }
+
+    const subgraph = graphContext?.subgraphs?.find(
+      (s) => s.id === loadSchemaGraphId,
+    );
+    if (!subgraph) {
+      return { routingUrl: "", subscriptionUrl: "" };
+    }
+
+    return {
+      routingUrl: subgraph.routingURL,
+      subscriptionUrl: subgraph.subscriptionUrl,
+    };
+  }, [
+    graphContext?.graph?.id,
+    graphContext?.graph?.routingURL,
+    graphContext?.subgraphs,
+    loadSchemaGraphId,
+  ]);
+
   const fetcher = useMemo(() => {
     const onFetch = (response: any) => {
       setResponse(JSON.stringify(response));
     };
 
-    const url = graphContext?.graph?.routingURL ?? "";
     return createGraphiQLFetcher({
-      url: url,
-      subscriptionUrl: url.replace("http", "ws"),
+      url: routingUrl,
+      subscriptionUrl: subscriptionUrl,
       fetch: (...args) =>
         graphiQLFetch(
           onFetch,
@@ -602,7 +646,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         ),
     });
   }, [
-    graphContext?.graph?.routingURL,
+    routingUrl,
+    subscriptionUrl,
     graphContext?.graphRequestToken,
     schema,
     clientValidationEnabled,
@@ -672,13 +717,59 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
-PlaygroundPage.getLayout = (page: React.ReactNode) => {
+const ConfigSelect = () => {
+  const router = useRouter();
+
+  const graphContext = useContext(GraphContext);
+  const subgraphs = graphContext?.subgraphs;
+
+  const selected =
+    (router.query.load as string) || graphContext?.graph?.id || "";
+
+  const applyParams = useApplyParams();
+
+  return (
+    <Select
+      value={selected}
+      onValueChange={(value) => {
+        applyParams({
+          load: value,
+        });
+      }}
+    >
+      <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
+        Config loaded :
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectItem value={graphContext?.graph?.id ?? ""}>
+            {graphContext?.graph?.name}
+          </SelectItem>
+        </SelectGroup>
+        <SelectSeparator />
+        {subgraphs && subgraphs.length > 0 && (
+          <SelectGroup>
+            {subgraphs.map(({ name, id }) => (
+              <SelectItem key={id} value={id}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        )}
+      </SelectContent>
+    </Select>
+  );
+};
+
+PlaygroundPage.getLayout = (page: ReactNode) => {
   return getGraphLayout(
     <PageHeader title="Playground | Studio">
       <GraphPageLayout
         title="Playground"
         subtitle="Execute queries against your graph"
         noPadding
+        toolbar={<ConfigSelect />}
       >
         {page}
       </GraphPageLayout>
