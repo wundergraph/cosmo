@@ -558,6 +558,7 @@ type WebSocketConnectionHandler struct {
 	forwardUpgradeRequestHeaders     bool
 	forwardUpgradeRequestQueryParams bool
 	forwardInitialPayload            bool
+	allowHeaders                     []string
 }
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
@@ -580,6 +581,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		forwardUpgradeRequestHeaders:     opts.Config != nil && opts.Config.ForwardUpgradeHeaders,
 		forwardUpgradeRequestQueryParams: opts.Config != nil && opts.Config.ForwardUpgradeQueryParams,
 		forwardInitialPayload:            opts.Config != nil && opts.Config.ForwardInitialPayload,
+		allowHeaders:                     opts.Config.AllowHeaders,
 	}
 }
 
@@ -811,13 +813,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 		}
 	}
 	if h.forwardUpgradeRequestHeaders {
-		header := make(http.Header, len(h.r.Header))
-		for k, v := range h.r.Header {
-			if h.ignoreHeader(k) {
-				continue
-			}
-			header[k] = v
-		}
+		header := filterHeaders(h.r.Header, h.allowHeaders)
 		if len(header) > 0 {
 			h.upgradeRequestHeaders, err = json.Marshal(header)
 		}
@@ -828,23 +824,16 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	return nil
 }
 
-func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
-	switch k {
-	case "Sec-Websocket-Protocol",
-		"Sec-Websocket-Version",
-		"Sec-Websocket-Key",
-		"Sec-Websocket-Extensions",
-		"Upgrade",
-		"Connection",
-		"Host",
-		"Origin",
-		"Pragma",
-		"Cache-Control",
-		"User-Agent",
-		"Accept-Encoding":
-		return true
+// filterHeaders returns a copy of HTTP headers with only the headers in the allow list
+func filterHeaders(h http.Header, allow []string) (filtered http.Header) {
+	filtered = make(http.Header)
+	for _, key := range allow {
+		key = http.CanonicalHeaderKey(key)
+		if value, ok := h[key]; ok {
+			filtered[key] = value
+		}
 	}
-	return false
+	return filtered
 }
 
 func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {

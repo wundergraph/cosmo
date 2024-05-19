@@ -144,6 +144,10 @@
           "type": "boolean",
           "default": true,
           "description": "Forward the initial payload in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+        },
+        "allow_headers": {
+          "type": "array",
+          "description": "AllowHeaders controls the list of headers used when hashing an initial subscription upgrade for a WebSocket connection. If unset, all headers are allowed."
         }
       }
     },

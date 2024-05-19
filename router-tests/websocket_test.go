@@ -364,6 +364,7 @@ func TestWebSockets(t *testing.T) {
 		wg.Add(1)
 
 		testenv.Run(t, &testenv.Config{
+			AllowHeaders: []string{"Authorization"},
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
@@ -466,6 +467,250 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
+	t.Run("subscription with header propagation and no allowed headers", func(t *testing.T) {
+		t.Parallel()
+		headerRules := config.HeaderRules{
+			All: config.GlobalHeaderRule{
+				Request: []config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "Authorization",
+					},
+				},
+			},
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		testenv.Run(t, &testenv.Config{
+			AllowHeaders: []string{},
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(headerRules),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							defer wg.Done()
+
+							upgrader := websocket.Upgrader{
+								CheckOrigin: func(r *http.Request) bool {
+									return true
+								},
+								Subprotocols: []string{"graphql-transport-ws"},
+							}
+							require.Equal(t, "Bearer test", r.Header.Get("Authorization"))
+							conn, err := upgrader.Upgrade(w, r, nil)
+							require.NoError(t, err)
+							defer conn.Close()
+
+							_, message, err := conn.ReadMessage()
+							require.NoError(t, err)
+							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							require.NoError(t, err)
+
+							_, message, err = conn.ReadMessage()
+							require.NoError(t, err)
+							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
+							require.NoError(t, err)
+
+							_, message, err = conn.ReadMessage()
+							if errors.Is(err, websocket.ErrCloseSent) {
+								return
+							}
+							require.Equal(t, `{"id":"1","type":"complete"}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
+							require.NoError(t, err)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			type currentTimePayload struct {
+				Data struct {
+					CurrentTime struct {
+						UnixTime  float64 `json:"unixTime"`
+						Timestamp string  `json:"timestamp"`
+					} `json:"currentTime"`
+				} `json:"data"`
+			}
+
+			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
+				"Authorization": []string{"Bearer test"},
+				"Extra":         []string{"forwarded-header", "another-value"},
+				"Unused":        []string{"some-value"},
+			}, []byte(`{"Custom-Auth":"test"}`))
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload currentTimePayload
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(1), payload.Data.CurrentTime.UnixTime)
+
+			// Sending a complete must stop the subscription
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "complete",
+			})
+			require.NoError(t, err)
+
+			var complete testenv.WebSocketMessage
+			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			require.NoError(t, err)
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "1", complete.ID)
+			require.Equal(t, "complete", complete.Type)
+
+			wg.Wait()
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("subscription with header propagation and multiple allowed headers", func(t *testing.T) {
+		t.Parallel()
+		headerRules := config.HeaderRules{
+			All: config.GlobalHeaderRule{
+				Request: []config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "Authorization",
+					},
+				},
+			},
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		testenv.Run(t, &testenv.Config{
+			AllowHeaders: []string{"Authorization", "Extra"},
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(headerRules),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							defer wg.Done()
+
+							upgrader := websocket.Upgrader{
+								CheckOrigin: func(r *http.Request) bool {
+									return true
+								},
+								Subprotocols: []string{"graphql-transport-ws"},
+							}
+							require.Equal(t, "Bearer test", r.Header.Get("Authorization"))
+							conn, err := upgrader.Upgrade(w, r, nil)
+							require.NoError(t, err)
+							defer conn.Close()
+
+							_, message, err := conn.ReadMessage()
+							require.NoError(t, err)
+							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"Extra":["forwarded-header","another-value"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							require.NoError(t, err)
+
+							_, message, err = conn.ReadMessage()
+							require.NoError(t, err)
+							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"Extra":["forwarded-header","another-value"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
+							require.NoError(t, err)
+
+							_, message, err = conn.ReadMessage()
+							if errors.Is(err, websocket.ErrCloseSent) {
+								return
+							}
+							require.Equal(t, `{"id":"1","type":"complete"}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
+							require.NoError(t, err)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			type currentTimePayload struct {
+				Data struct {
+					CurrentTime struct {
+						UnixTime  float64 `json:"unixTime"`
+						Timestamp string  `json:"timestamp"`
+					} `json:"currentTime"`
+				} `json:"data"`
+			}
+
+			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
+				"Authorization": []string{"Bearer test"},
+				"Extra":         []string{"forwarded-header", "another-value"},
+				"Unused":        []string{"some-value"},
+			}, []byte(`{"Custom-Auth":"test"}`))
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload currentTimePayload
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(1), payload.Data.CurrentTime.UnixTime)
+
+			// Sending a complete must stop the subscription
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "complete",
+			})
+			require.NoError(t, err)
+
+			var complete testenv.WebSocketMessage
+			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			require.NoError(t, err)
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "1", complete.ID)
+			require.Equal(t, "complete", complete.Type)
+
+			wg.Wait()
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
 	t.Run("subscription with header propagation sse subgraph post", func(t *testing.T) {
 		t.Parallel()
 		headerRules := config.HeaderRules{
@@ -479,6 +724,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}
 		testenv.Run(t, &testenv.Config{
+			AllowHeaders: []string{"Authorization"},
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
@@ -594,6 +840,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}
 		testenv.Run(t, &testenv.Config{
+			AllowHeaders: []string{"Authorization"},
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},

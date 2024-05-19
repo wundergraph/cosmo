@@ -92,6 +92,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 }
 
 type Config struct {
+	AllowHeaders                       []string
 	Subgraphs                          SubgraphsConfig
 	RouterOptions                      []core.Option
 	OverrideGraphQLPath                string
@@ -627,6 +628,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ForwardUpgradeHeaders:     true,
 			ForwardUpgradeQueryParams: true,
 			ForwardInitialPayload:     true,
+			AllowHeaders:              testConfig.AllowHeaders,
 		}))
 	}
 	return core.NewRouter(routerOpts...)

@@ -328,6 +328,8 @@ type WebSocketConfiguration struct {
 	ForwardUpgradeQueryParams bool `yaml:"forward_upgrade_query_params" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_QUERY_PARAMS"`
 	// ForwardInitialPayload true if the Router should forward the initial payload of a Subscription Request to the Subgraph
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
+	// AllowHeaders controls the list of headers used when hashing an initial subscription upgrade for a WebSocket connection
+	AllowHeaders []string `yaml:"allow_headers" envconfig:"WEBSOCKETS_ALLOW_HEADERS"`
 }
 
 type AnonymizeIpConfiguration struct {

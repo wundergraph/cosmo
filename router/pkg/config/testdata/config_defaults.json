@@ -194,7 +194,8 @@
     },
     "ForwardUpgradeHeaders": true,
     "ForwardUpgradeQueryParams": true,
-    "ForwardInitialPayload": true
+    "ForwardInitialPayload": true,
+    "AllowHeaders": []
   },
   "SubgraphErrorPropagation": {
     "Enabled": false,
