@@ -190,6 +190,13 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 				parseErr = invalidExtensionsTypeError(valueType)
 				return
 			}
+			if !gjson.ValidBytes(value) {
+				parseErr = &inputError{
+					message:    "error parsing request body",
+					statusCode: http.StatusBadRequest,
+				}
+				return
+			}
 			requestExtensions = value
 			persistedQuery, _, _, err := jsonparser.Get(value, "persistedQuery")
 			if err != nil {
