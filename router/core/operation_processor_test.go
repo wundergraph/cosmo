@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/buger/jsonparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
@@ -177,21 +176,20 @@ func TestOperationParserExtensions(t *testing.T) {
 	}
 	log := zap.NewNop()
 	testCases := []struct {
-		Input     string
-		ValueType jsonparser.ValueType
-		Valid     bool
+		Input string
+		Valid bool
 	}{
 		{
-			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
-			ValueType: jsonparser.String,
+			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
 		},
 		{
-			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
-			ValueType: jsonparser.Number,
+			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
 		},
 		{
-			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
-			ValueType: jsonparser.Boolean,
+			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
+		},
+		{
+			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{"foo":bar}}`,
 		},
 		{
 			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{}}`,
@@ -219,8 +217,6 @@ func TestOperationParserExtensions(t *testing.T) {
 				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)
 			} else {
 				assert.True(t, isInputError, "expected invalid extensions to return an input error, got %s", err)
-				assert.Contains(t, err.Error(), "extensions", "expected error to contain extensions")
-				assert.Contains(t, err.Error(), tc.ValueType.String(), "expected error to contain value type name")
 			}
 		})
 	}

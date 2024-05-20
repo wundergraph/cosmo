@@ -194,8 +194,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		)
 
 		operationKit, err := h.operationProcessor.NewKit(body)
-		defer operationKit.Free()
-
 		if err != nil {
 			finalErr = err
 
@@ -208,6 +206,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeOperationError(r, w, requestLogger, err)
 			return
 		}
+		defer operationKit.Free()
 
 		err = operationKit.Parse(r.Context(), clientInfo, requestLogger)
 		if err != nil {
