@@ -151,8 +151,6 @@ import {
 import { Composer, RouterConfigUploadError, mapResultToComposedGraph } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs, composeSubgraphsWithContracts } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
-import { schemaLintCheck } from '../composition/schemaLint.js';
-import { apiKeyPermissions } from '../constants.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { AuthenticationError, PublicError } from '../errors/errors.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
@@ -213,6 +211,8 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { apiKeyPermissions } from '../constants.js';
+import SchemaLinter from '../services/SchemaLinter.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -2144,7 +2144,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (namespace.enableLinting && newSchemaSDL !== '') {
           const lintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);
           if (lintConfigs.length > 0) {
-            lintIssues = await schemaLintCheck({
+            const schemaLinter = new SchemaLinter();
+            lintIssues = await schemaLinter.schemaLintCheck({
               schema: newSchemaSDL,
               rulesInput: lintConfigs,
             });
