@@ -14,7 +14,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		t.Run("correct baseline", func(t *testing.T) {
+		t.Run("valid request should return 200 OK with valid response", func(t *testing.T) {
 			header := http.Header{
 				"Content-Type": []string{"application/json"},
 				"Accept":       []string{"application/json"},
@@ -79,7 +79,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"error parsing request body"}],"data":null}`, string(data))
 		})
-		t.Run("missing variables should not be 400", func(t *testing.T) {
+		t.Run("missing variables should return 200 OK with validation errors response", func(t *testing.T) {
 			header := http.Header{
 				"Content-Type": []string{"application/json"},
 				"Accept":       []string{"application/json"},
