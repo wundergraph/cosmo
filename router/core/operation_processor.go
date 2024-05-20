@@ -12,6 +12,7 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 
@@ -252,7 +253,10 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	}
 
 	if parseErr != nil {
-		return errors.WithStack(parseErr)
+		return &inputError{
+			message:    "error parsing request body",
+			statusCode: http.StatusBadRequest,
+		}
 	}
 
 	if len(persistedQuerySha256Hash) > 0 {
@@ -275,6 +279,20 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	requestHasOperationName := requestOperationNameBytes != nil && !bytes.Equal(requestOperationNameBytes, literal.NULL)
 	if !requestHasOperationName {
 		requestOperationNameBytes = nil
+	}
+
+	if requestDocumentBytes == nil {
+		return &inputError{
+			message:    "error parsing request body",
+			statusCode: http.StatusBadRequest,
+		}
+	}
+
+	if requestVariableBytes != nil && !gjson.ValidBytes(requestVariableBytes) {
+		return &inputError{
+			message:    "error parsing request body",
+			statusCode: http.StatusBadRequest,
+		}
 	}
 
 	report := &operationreport.Report{}
@@ -432,7 +450,7 @@ func (o *OperationKit) Validate() error {
 	if err != nil {
 		return &inputError{
 			message:    err.Error(),
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusOK,
 		}
 	}
 
