@@ -2076,9 +2076,9 @@ export class SubscriptionFieldCondition extends Message<SubscriptionFieldConditi
   fieldPath: string[] = [];
 
   /**
-   * @generated from field: repeated string values = 2;
+   * @generated from field: string json = 2;
    */
-  values: string[] = [];
+  json = "";
 
   constructor(data?: PartialMessage<SubscriptionFieldCondition>) {
     super();
@@ -2089,7 +2089,7 @@ export class SubscriptionFieldCondition extends Message<SubscriptionFieldConditi
   static readonly typeName = "wg.cosmo.node.v1.SubscriptionFieldCondition";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "field_path", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 2, name: "values", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "json", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscriptionFieldCondition {

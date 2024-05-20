@@ -19,13 +19,13 @@ describe('Subscription filter proto generation tests', () => {
                 new SubscriptionFilterCondition({
                   in: new SubscriptionFieldCondition({
                     fieldPath: ['name'],
-                    values: ['Jens', 'Stefan'],
+                    json: `["Jens","Stefan"]`,
                   })
                 }),
                 new SubscriptionFilterCondition({
                   in: new SubscriptionFieldCondition({
                     fieldPath: ['age'],
-                    values: ['11', '22'],
+                    json: `[11,22]`,
                   }),
                 }),
               ],
@@ -37,14 +37,14 @@ describe('Subscription filter proto generation tests', () => {
                 not: new SubscriptionFilterCondition({
                   in: new SubscriptionFieldCondition({
                     fieldPath: ['products', 'sku'],
-                    values: ['aaa'],
+                    json: `["aaa"]`,
                   }),
                 }),
               }),
               new SubscriptionFilterCondition({
                 in: new SubscriptionFieldCondition({
                   fieldPath: ['products', 'continent'],
-                  values: ['NA'],
+                  json: `["N/A"]`,
                 }),
               }),
             ],

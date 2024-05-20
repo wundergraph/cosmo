@@ -73,7 +73,7 @@ export const subscriptionFilterCondition: SubscriptionCondition = {
           {
             in: {
               fieldPath: ['age'],
-              values: ['11', '22'],
+              values: [11, 22],
             },
           },
         ],
@@ -92,7 +92,7 @@ export const subscriptionFilterCondition: SubscriptionCondition = {
         {
           in: {
             fieldPath: ['products', 'continent'],
-            values: ['NA'],
+            values: ['N/A'],
           },
         },
       ],

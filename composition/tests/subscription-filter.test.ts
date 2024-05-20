@@ -21,7 +21,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(errors![0]).toStrictEqual(invalidSubscriptionFilterLocationError('Object.field'));
     });
 
-    test('that subscriptionFilter inputs are injected', () => {
+    test('that subscriptionFilter inputs and scalar are injected', () => {
       const { errors, normalizationResult } = normalizeSubgraph(subgraphC.definitions);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
@@ -52,7 +52,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         
         input openfed__SubscriptionFieldCondition {
           fieldPath: String!
-          values: [String!]!
+          values: [openfed__SubscriptionFilterValue]!
         }
         
         input openfed__SubscriptionFilterCondition {
@@ -61,118 +61,166 @@ describe('@openfed__subscriptionFilter tests', () => {
           NOT: openfed__SubscriptionFilterCondition
           OR: [openfed__SubscriptionFilterCondition!]
         }
+        
+        scalar openfed__SubscriptionFilterValue
       `),
       );
     });
 
-    describe('Federation tests', () => {
-      test('that configuration is generated correctly #1', () => {
-        const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphC]);
-        expect(errors).toBeUndefined();
-        expect(federationResult).toBeDefined();
-        expect(federationResult!.fieldConfigurations).toStrictEqual([
-          {
-            argumentNames: [],
-            fieldName: FIELD,
-            subscriptionFilterCondition: {
-              in: {
-                fieldPath: ['id'],
-                values: ['1'],
-              },
-            },
-            typeName: SUBSCRIPTION,
-          },
-        ]);
-      });
+    test('that inputs and scalars that are injected can be self-defined', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphG.definitions);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(`
+        schema {
+          subscription: Subscription
+        }
+        
+        directive @edfs__kafkaPublish(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
+        directive @extends on INTERFACE | OBJECT
+        directive @external on FIELD_DEFINITION | OBJECT
+        directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+        directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
+        directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+        
+        type Entity @key(fields: "id", resolvable: false) {
+          id: ID! @external
+        }
+        
+        type Subscription {
+          field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: {IN: {fieldPath: "id", values: [1]}})
+        }
+        
+        scalar openfed__FieldSet
 
-      test('that configuration is generated correctly #2', () => {
-        const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphD]);
-        expect(errors).toBeUndefined();
-        expect(federationResult).toBeDefined();
-        expect(federationResult!.fieldConfigurations).toStrictEqual([
-          {
-            argumentNames: [],
-            fieldName: FIELD,
-            typeName: SUBSCRIPTION,
-            subscriptionFilterCondition: {
-              and: [
-                {
-                  not: {
-                    or: [
-                      {
-                        in: {
-                          fieldPath: ['object', 'name'],
-                          values: ['Jens', 'Stefan'],
-                        },
-                      },
-                      {
-                        in: {
-                          fieldPath: ['object', 'age'],
-                          values: ['11', '22'],
-                        },
-                      },
-                    ],
-                  },
-                },
-                {
-                  and: [
+        input openfed__SubscriptionFieldCondition {
+          fieldPath: String!
+          values: [openfed__SubscriptionFilterValue]!
+        }
+        
+        input openfed__SubscriptionFilterCondition {
+          AND: [openfed__SubscriptionFilterCondition!]
+          IN: openfed__SubscriptionFieldCondition
+          NOT: openfed__SubscriptionFilterCondition
+          OR: [openfed__SubscriptionFilterCondition!]
+        }
+        
+        scalar openfed__SubscriptionFilterValue
+      `),
+      );
+    });
+  });
+
+  describe('Federation tests', () => {
+    test('that configuration is generated correctly #1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphC]);
+      expect(errors).toBeUndefined();
+      expect(federationResult).toBeDefined();
+      expect(federationResult!.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: FIELD,
+          subscriptionFilterCondition: {
+            in: {
+              fieldPath: ['id'],
+              values: ['1'],
+            },
+          },
+          typeName: SUBSCRIPTION,
+        },
+      ]);
+    });
+
+    test('that configuration is generated correctly #2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphD]);
+      expect(errors).toBeUndefined();
+      expect(federationResult).toBeDefined();
+      expect(federationResult!.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: FIELD,
+          typeName: SUBSCRIPTION,
+          subscriptionFilterCondition: {
+            and: [
+              {
+                not: {
+                  or: [
                     {
-                      not: {
-                        in: {
-                          fieldPath: ['product', 'sku'],
-                          values: ['aaa'],
-                        },
+                      in: {
+                        fieldPath: ['object', 'name'],
+                        values: ['Jens', 'Stefan'],
                       },
                     },
                     {
                       in: {
-                        fieldPath: ['product', 'continent'],
-                        values: ['NA'],
+                        fieldPath: ['object', 'age'],
+                        values: ['11', '22'],
                       },
                     },
                   ],
                 },
-              ],
-            },
+              },
+              {
+                and: [
+                  {
+                    not: {
+                      in: {
+                        fieldPath: ['product', 'sku'],
+                        values: ['aaa'],
+                      },
+                    },
+                  },
+                  {
+                    in: {
+                      fieldPath: ['product', 'continent'],
+                      values: ['NA'],
+                    },
+                  },
+                ],
+              },
+            ],
           },
-        ]);
-      });
+        },
+      ]);
+    });
 
-      test('that an error is returned if an IN condition fieldPath references a field that is not defined in the same subgraph as the directive', () => {
-        const { errors } = federateSubgraphs([subgraphB, subgraphF]);
-        expect(errors).toBeDefined();
-        expect(errors).toHaveLength(1);
-        expect(errors![0]).toStrictEqual(
-          invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
-            subscriptionFieldConditionInvalidInputFieldErrorMessage(
-              'condition.AND[0].NOT.OR[0].IN',
-              [],
-              [],
-              [],
-              [
-                invalidSubscriptionFieldConditionFieldPathFieldErrorMessage(
-                  'condition.AND[0].NOT.OR[0].IN.fieldPath',
-                  'object.field.name',
-                  'object',
-                  `Entity.object`,
-                  'subgraph-f',
-                ),
-              ],
-            ),
-          ]),
-        );
-      });
+    test('that an error is returned if an IN condition fieldPath references a field that is not defined in the same subgraph as the directive', () => {
+      const { errors } = federateSubgraphs([subgraphB, subgraphF]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.AND[0].NOT.OR[0].IN',
+            [],
+            [],
+            [],
+            [
+              invalidSubscriptionFieldConditionFieldPathFieldErrorMessage(
+                'condition.AND[0].NOT.OR[0].IN.fieldPath',
+                'object.field.name',
+                'object',
+                `Entity.object`,
+                'subgraph-f',
+              ),
+            ],
+          ),
+        ]),
+      );
+    });
 
-      test('that an error is returned if a non-object condition is provided', () => {
-        const { errors } = federateSubgraphs([subgraphB, subgraphE]);
-        expect(errors).toBeDefined();
-        expect(errors).toHaveLength(1);
-        expect(errors![0]).toStrictEqual(
-          invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
-            subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(CONDITION, 'object', 'int'),
-          ]),
-        );
-      });
+    test('that an error is returned if a non-object condition is provided', () => {
+      const { errors } = federateSubgraphs([subgraphB, subgraphE]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(CONDITION, 'object', 'int'),
+        ]),
+      );
     });
   });
 });
@@ -342,4 +390,32 @@ const subgraphF: Subgraph = {
     )
   }
 `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+  type Entity @key(fields: "id", resolvable: false) {
+    id: ID! @external
+  }
+  
+  type Subscription {
+    field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1] } })
+  }
+  
+  input openfed__SubscriptionFieldCondition {
+    fieldPath: String!
+    values: [openfed__SubscriptionFilterValue]!
+  }
+  
+  input openfed__SubscriptionFilterCondition {
+    AND: [openfed__SubscriptionFilterCondition!]
+    IN: openfed__SubscriptionFieldCondition
+    NOT: openfed__SubscriptionFilterCondition
+    OR: [openfed__SubscriptionFilterCondition!]
+  }
+  
+  scalar openfed__SubscriptionFilterValue
+  `),
 };

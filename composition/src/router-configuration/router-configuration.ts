@@ -26,9 +26,11 @@ export type NatsEventConfiguration = {
 
 export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguration;
 
+export type SubscriptionFilterValue = boolean | null | number | string;
+
 export type SubscriptionFieldCondition = {
   fieldPath: string[];
-  values: string[];
+  values: SubscriptionFilterValue[];
 };
 
 export type SubscriptionCondition = {

@@ -31,6 +31,7 @@ import {
   SUBSCRIPTION_FIELD_CONDITION,
   SUBSCRIPTION_FILTER,
   SUBSCRIPTION_FILTER_CONDITION,
+  SUBSCRIPTION_FILTER_VALUE,
   UNION,
   VALUES,
 } from '../utils/string-constants';
@@ -1329,7 +1330,7 @@ export function subscriptionFilterArrayConditionInvalidItemTypeErrorMessage(
     ` defined on input path "${inputPath}" ` +
     (isPlural ? `are` : `is`) +
     ` not type "object": ` +
-    invalidIndices.join(`,`)
+    invalidIndices.join(`, `)
   );
 }
 
@@ -1395,7 +1396,7 @@ export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
 
 const subscriptionFieldConditionValuesString =
   ` A "${SUBSCRIPTION_FIELD_CONDITION}" input object must define a "values" input value field` +
-  ` with a list of at least one non-empty string.\n`;
+  ` with a list of at least one valid "${SUBSCRIPTION_FILTER_VALUE}" kind (boolean, enum, float, int, null, or string).\n`;
 
 export function subscriptionFieldConditionInvalidValuesArrayErrorMessage(
   inputPath: string,
@@ -1408,8 +1409,8 @@ export function subscriptionFieldConditionInvalidValuesArrayErrorMessage(
     (isPlural ? 'indices' : 'index') +
     ` defined on input path "${inputPath}" ` +
     (isPlural ? `are` : `is`) +
-    ` not type "string": ` +
-    invalidIndices.join(`,`)
+    ` not a valid "${SUBSCRIPTION_FILTER_VALUE}": ` +
+    invalidIndices.join(`, `)
   );
 }
 

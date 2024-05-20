@@ -49,6 +49,7 @@ import {
   SUBSCRIPTION_FIELD_CONDITION_DEFINITION,
   SUBSCRIPTION_FILTER_CONDITION_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
+  SUBSCRIPTION_FILTER_VALUE_DEFINITION,
   VERSION_TWO_DIRECTIVE_DEFINITIONS,
 } from '../utils/constants';
 import {
@@ -1430,6 +1431,7 @@ export class NormalizationFactory {
       definitions.push(SUBSCRIPTION_FILTER_DEFINITION);
       definitions.push(SUBSCRIPTION_FILTER_CONDITION_DEFINITION);
       definitions.push(SUBSCRIPTION_FIELD_CONDITION_DEFINITION);
+      definitions.push(SUBSCRIPTION_FILTER_VALUE_DEFINITION);
     }
     for (const directiveDefinition of this.customDirectiveDefinitions.values()) {
       definitions.push(directiveDefinition);

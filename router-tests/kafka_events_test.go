@@ -760,7 +760,7 @@ func TestKafkaEvents(t *testing.T) {
 							Forename string `graphql:"forename"`
 							Surname  string `graphql:"surname"`
 						} `graphql:"details"`
-					} `graphql:"filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: { ids: [\"1\", \"2\", \"11\", \"12\"]}))"`
+					} `graphql:"filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: { ids: [1, 2, 11, 12] }))"`
 				} `json:"data"`
 			}
 
@@ -769,7 +769,7 @@ func TestKafkaEvents(t *testing.T) {
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: { ids: [\"1\", \"2\", \"11\", \"12\"]}) { id details { forename, surname } } }"}`),
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: { ids: [1, 2, 11, 12] }) { id details { forename, surname } } }"}`),
 			})
 
 			require.NoError(t, err)
@@ -830,8 +830,73 @@ func TestKafkaEvents(t *testing.T) {
 				// Ensure the Kafka consumer can keep up with the provider
 				time.Sleep(time.Millisecond * 100)
 
-				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d,}`, i))
+				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 			}
+
+			wg.Wait()
+		})
+	})
+
+	t.Run("subscribe async with filter non-matching filter and nested list argument", func(t *testing.T) {
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			KafkaSeeds: seeds,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			ensureTopicExists(t, xEnv, topics...)
+
+			type subscriptionPayload struct {
+				Data struct {
+					FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument struct {
+						ID      float64 `graphql:"id"`
+						Details struct {
+							Forename string `graphql:"forename"`
+							Surname  string `graphql:"surname"`
+						} `graphql:"details"`
+					} `graphql:"filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: { ids: [12] }))"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: { ids: [12] }) { id details { forename, surname } } }"}`),
+			})
+
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				gErr := conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
+				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
+				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+			}()
+
+			// The message should be ignored because "1" does not equal 1
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`)
+
+			// Ensure the Kafka consumer can keep up with the provider
+			time.Sleep(time.Millisecond * 100)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":12}`)
 
 			wg.Wait()
 		})

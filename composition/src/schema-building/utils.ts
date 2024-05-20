@@ -1,18 +1,23 @@
 import {
+  BooleanValueNode,
   ConstDirectiveNode,
   ConstValueNode,
   DirectiveDefinitionNode,
   EnumTypeDefinitionNode,
   EnumTypeExtensionNode,
   EnumValueDefinitionNode,
+  EnumValueNode,
   FieldDefinitionNode,
+  FloatValueNode,
   InputObjectTypeDefinitionNode,
   InputObjectTypeExtensionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
+  IntValueNode,
   Kind,
   NamedTypeNode,
+  NullValueNode,
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
   OperationTypeNode,
@@ -92,7 +97,6 @@ import {
   unexpectedDirectiveArgumentsErrorMessage,
 } from '../errors/errors';
 import {
-  AND_UPPER,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   DEPRECATED,
@@ -106,7 +110,6 @@ import {
   INT_SCALAR,
   KEY,
   MUTATION,
-  OR_UPPER,
   PERSISTED_CLIENT_DIRECTIVES,
   QUERY,
   REASON,
@@ -142,7 +145,7 @@ import {
   INHERITABLE_DIRECTIVE_NAMES,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
-import { FieldConfiguration } from '../router-configuration/router-configuration';
+import { FieldConfiguration, SubscriptionFilterValue } from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 
 export type ObjectData = ObjectDefinitionData | ObjectExtensionData;
@@ -1735,4 +1738,32 @@ export function isNodeDataInaccessible(data: NodeData | ObjectExtensionData): bo
 
 export function isLeafKind(kind: Kind): boolean {
   return kind === Kind.SCALAR_TYPE_DEFINITION || kind === Kind.ENUM_TYPE_DEFINITION;
+}
+
+export function getSubscriptionFilterValue(
+  valueNode: BooleanValueNode | EnumValueNode | FloatValueNode | IntValueNode | NullValueNode | StringValueNode,
+): SubscriptionFilterValue {
+  switch (valueNode.kind) {
+    case Kind.BOOLEAN: {
+      return valueNode.value;
+    }
+    case Kind.ENUM:
+    // intentional fallthrough
+    case Kind.STRING: {
+      return valueNode.value;
+    }
+    case Kind.FLOAT:
+    // intentional fallthrough
+    case Kind.INT: {
+      // The incoming value should never not be a number but wrap in a catch just in case
+      try {
+        return parseFloat(valueNode.value);
+      } catch {
+        return 'NaN';
+      }
+    }
+    case Kind.NULL: {
+      return null;
+    }
+  }
 }

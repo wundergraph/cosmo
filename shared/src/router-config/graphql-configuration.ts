@@ -21,10 +21,11 @@ import {
   ConfigurationData,
   FieldConfiguration as CompositionFieldConfiguration,
   NatsEventType as CompositionEventType,
+  PROVIDER_TYPE_KAFKA,
+  PROVIDER_TYPE_NATS,
   RequiredFieldConfiguration,
   SubscriptionCondition,
 } from '@wundergraph/composition';
-import { PROVIDER_TYPE_KAFKA, PROVIDER_TYPE_NATS } from '@wundergraph/composition/dist/utils/string-constants.js';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
@@ -146,8 +147,7 @@ export function configurationDataMapToDataSourceConfiguration(
           break;
         }
         default: {
-          // TODO propagate this properly
-          throw new Error(`Unknown event provider.`);
+          throw new Error(`Fatal: Unknown event provider.`);
         }
       }
     }
@@ -229,7 +229,7 @@ export function generateSubscriptionFilterCondition(
   if (condition.in !== undefined) {
     protoMessage.in = new SubscriptionFieldCondition({
       fieldPath: condition.in.fieldPath,
-      values: condition.in.values,
+      json: JSON.stringify(condition.in.values),
     });
     return;
   }

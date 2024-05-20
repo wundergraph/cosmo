@@ -63,6 +63,7 @@ import {
   SUBSCRIPTION_FIELD_CONDITION,
   SUBSCRIPTION_FILTER,
   SUBSCRIPTION_FILTER_CONDITION,
+  SUBSCRIPTION_FILTER_VALUE,
   TAG,
   TOPIC,
   TOPICS,
@@ -650,9 +651,15 @@ export const SUBSCRIPTION_FILTER_CONDITION_DEFINITION: InputObjectTypeDefinition
   name: stringToNameNode(SUBSCRIPTION_FILTER_CONDITION),
 };
 
+// scalar openfed__SubscriptionFilterValue
+export const SUBSCRIPTION_FILTER_VALUE_DEFINITION: MutableScalarNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(SUBSCRIPTION_FILTER_VALUE),
+};
+
 /* input openfed__SubscriptionFieldCondition {
  *   fieldPath: String!
- *   values: [String!]!
+ *   values: [openfed__SubscriptionFilterValue]!
  * }
  */
 export const SUBSCRIPTION_FIELD_CONDITION_DEFINITION: InputObjectTypeDefinitionNode = {
@@ -672,10 +679,7 @@ export const SUBSCRIPTION_FIELD_CONDITION_DEFINITION: InputObjectTypeDefinitionN
         kind: Kind.NON_NULL_TYPE,
         type: {
           kind: Kind.LIST_TYPE,
-          type: {
-            kind: Kind.NON_NULL_TYPE,
-            type: stringToNamedTypeNode(STRING_SCALAR),
-          },
+          type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_VALUE),
         },
       },
     },

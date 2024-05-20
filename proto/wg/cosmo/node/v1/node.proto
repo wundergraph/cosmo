@@ -300,7 +300,7 @@ message SingleTypeField {
 
 message SubscriptionFieldCondition {
   repeated string field_path = 1;
-  repeated string values = 2;
+  string json = 2;
 }
 
 message SubscriptionFilterCondition {

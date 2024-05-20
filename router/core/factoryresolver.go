@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/buger/jsonparser"
+
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/jensneuse/abstractlogger"
@@ -145,9 +147,20 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 		return output
 	}
 	if input.In != nil {
+		var values []string
+		// `[1,"cat",null]`
+		_, err := jsonparser.ArrayEach([]byte(input.In.Json), func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+			//marshalledValue, err := json.Marshal(string(value))
+			// todo handle err
+			//values = append(values, string(marshalledValue))
+			values = append(values, string(value))
+		})
+		if err != nil {
+			return nil
+		}
 		output.In = &plan.SubscriptionFieldCondition{
 			FieldPath: input.In.FieldPath,
-			Values:    input.In.Values,
+			Values:    values,
 		}
 		return output
 	}
@@ -156,7 +169,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 		return output
 	}
 	if input.Or != nil {
-		output.Or = make([]plan.SubscriptionFilterCondition, 0, len(input.Or))
+		output.Or = make([]plan.SubscriptionFilterCondition, len(input.Or))
 		for i := range input.Or {
 			output.Or[i] = plan.SubscriptionFilterCondition{}
 			mapProtoFilterToPlanFilter(input.Or[i], &output.Or[i])

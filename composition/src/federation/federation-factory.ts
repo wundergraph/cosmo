@@ -23,6 +23,7 @@ import {
   fieldTypeMergeFatalError,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredArgumentError,
+  inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
   incompatibleArgumentTypesError,
   incompatibleChildTypesError,
   incompatibleObjectExtensionOrphanBaseTypeError,
@@ -36,12 +37,13 @@ import {
   invalidReferencesOfInaccessibleTypeError,
   invalidRequiredInputValueError,
   invalidSubscriptionFieldConditionFieldPathErrorMessage,
-  undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
+  invalidSubscriptionFieldConditionFieldPathFieldErrorMessage,
   invalidSubscriptionFieldConditionFieldPathParentErrorMessage,
   invalidSubscriptionFilterDirectiveError,
   minimumSubgraphRequirementError,
   noBaseTypeExtensionError,
   noConcreteTypesForAbstractTypeError,
+  nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
   noQueryRootTypeError,
   orScopesLimitError,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
@@ -54,13 +56,11 @@ import {
   subscriptionFilterConditionInvalidInputFieldNumberErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
   undefinedEntityInterfaceImplementationsError,
+  undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
   unexpectedObjectResponseType,
   unexpectedParentKindErrorMessage,
   unknownFieldSubgraphNameError,
   unresolvableFieldError,
-  invalidSubscriptionFieldConditionFieldPathFieldErrorMessage,
-  inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
-  nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
 } from '../errors/errors';
 import {
   ChildTagData,
@@ -95,6 +95,7 @@ import {
   REQUIRES_SCOPES,
   ROOT_TYPES,
   SELECTION_REPRESENTATION,
+  STRING,
   SUBSCRIPTION_FILTER,
   SUBSCRIPTION_FILTER_INPUT_NAMES,
   SUBSCRIPTION_FILTER_LIST_INPUT_NAMES,
@@ -138,6 +139,7 @@ import {
   RequiredFieldConfiguration,
   SubscriptionCondition,
   SubscriptionFieldCondition,
+  SubscriptionFilterValue,
 } from '../router-configuration/router-configuration';
 import {
   AUTHENTICATED_DEFINITION,
@@ -176,6 +178,7 @@ import {
   getNodeForRouterSchemaByData,
   getNodeWithPersistedDirectivesByFieldData,
   getNodeWithPersistedDirectivesByInputValueData,
+  getSubscriptionFilterValue,
   getValidFieldArgumentNodes,
   isFieldExternalInAllMutualSubgraphs,
   isLeafKind,
@@ -2166,7 +2169,7 @@ export class FederationFactory {
           }
           if (objectFieldNode.value.kind !== Kind.STRING) {
             fieldErrorMessages.push(
-              invalidInputFieldTypeErrorMessage(inputFieldPath, 'string', kindToTypeString(objectFieldNode.value.kind)),
+              invalidInputFieldTypeErrorMessage(inputFieldPath, STRING, kindToTypeString(objectFieldNode.value.kind)),
             );
             hasErrors = true;
             break;
@@ -2193,29 +2196,30 @@ export class FederationFactory {
             duplicatedFieldNames.add(VALUES);
             break;
           }
-          // Coerce a string into a list
-          if (objectFieldNode.value.kind === Kind.STRING) {
-            condition.values = [objectFieldNode.value.value];
-            break;
-          }
-          if (objectFieldNode.value.kind !== Kind.LIST) {
+          const objectFieldValueKind = objectFieldNode.value.kind;
+          if (objectFieldValueKind == Kind.NULL || objectFieldValueKind == Kind.OBJECT) {
             fieldErrorMessages.push(
-              invalidInputFieldTypeErrorMessage(inputFieldPath, 'list', kindToTypeString(objectFieldNode.value.kind)),
+              invalidInputFieldTypeErrorMessage(inputFieldPath, LIST, kindToTypeString(objectFieldNode.value.kind)),
             );
             hasErrors = true;
             break;
           }
+          // Coerce scalars into a list
+          if (objectFieldValueKind !== Kind.LIST) {
+            condition.values = [getSubscriptionFilterValue(objectFieldNode.value)];
+            break;
+          }
           // Prevent duplicate values
-          const values = new Set<string>();
+          const values = new Set<SubscriptionFilterValue>();
           const invalidIndices: number[] = [];
           for (let i = 0; i < objectFieldNode.value.values.length; i++) {
             const valueNode = objectFieldNode.value.values[i];
-            if (valueNode.kind !== Kind.STRING) {
+            if (valueNode.kind === Kind.OBJECT || valueNode.kind === Kind.LIST) {
               hasErrors = true;
-              invalidIndices.push(i + 1);
+              invalidIndices.push(i);
               continue;
             }
-            values.add(valueNode.value);
+            values.add(getSubscriptionFilterValue(valueNode));
           }
           if (invalidIndices.length > 0) {
             errorMessages.push(
