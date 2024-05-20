@@ -123,16 +123,6 @@ html {
   }
 }
 
-.graphiql-container,
-.CodeMirror-info,
-.CodeMirror-lint-tooltip,
-.graphiql-dialog,
-.graphiql-dialog-overlay,
-.graphiql-tooltip,
-[data-radix-popper-content-wrapper] {
-  --color-base: var(--background);
-}
-
 @media (prefers-color-scheme: dark) {
   body:not(.graphiql-light) .graphiql-container,
   body:not(.graphiql-light) .CodeMirror-info,
