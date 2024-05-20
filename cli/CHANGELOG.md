@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.3](https://github.com/wundergraph/cosmo/compare/wgc@0.54.2...wgc@0.54.3) (2024-05-20)
+
+### Bug Fixes
+
+* token create prints special character ([#801](https://github.com/wundergraph/cosmo/issues/801)) ([432b639](https://github.com/wundergraph/cosmo/commit/432b639bdc23c834e2793fe9af1c629aa58c94ca)) (@thisisnithin)
+
 ## [0.54.2](https://github.com/wundergraph/cosmo/compare/wgc@0.54.1...wgc@0.54.2) (2024-05-17)
 
 ### Bug Fixes
