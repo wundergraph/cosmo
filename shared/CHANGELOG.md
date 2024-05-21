@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.27.0...@wundergraph/cosmo-shared@0.28.0) (2024-05-21)
+
+### Features
+
+* add support for websocket subprotocol ([#776](https://github.com/wundergraph/cosmo/issues/776)) ([e35aa26](https://github.com/wundergraph/cosmo/commit/e35aa262227b29f09ddfdd1ce361c010b769b2da)) (@JivusAyrus)
+
 # [0.27.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.26.0...@wundergraph/cosmo-shared@0.27.0) (2024-05-17)
 
 ### Features
