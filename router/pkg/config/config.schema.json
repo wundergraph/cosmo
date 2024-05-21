@@ -131,14 +131,46 @@
           }
         },
         "forward_upgrade_headers": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request Headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Forward upgrade request headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "The names of the headers to forward. The default value is 'Authorization'.",
+              "default": [
+                "Authorization"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_upgrade_query_params": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
+              "default": [
+                "Authorization"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_initial_payload": {
           "type": "boolean",
