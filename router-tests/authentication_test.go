@@ -389,7 +389,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"{ topSecretFederationFacts { ... on EntityFact { description } ... on MiscellaneousFact { title description } } }"}"
+				{"query":"{ topSecretFederationFacts { ... on EntityFact { description } ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -410,7 +410,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
-				{"query":"{ factTypes }"}"
+				{"query":"{ factTypes }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -430,7 +430,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
-				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}"
+				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -450,7 +450,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
-				{"query":"{ productTypes { ... on Cosmo { upc } } factTypes }"}"
+				{"query":"{ productTypes { ... on Cosmo { upc } } factTypes }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -475,7 +475,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}"
+				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -502,7 +502,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -529,7 +529,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -556,7 +556,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -586,7 +586,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
