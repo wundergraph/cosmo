@@ -2,10 +2,11 @@ package integration_test
 
 import (
 	"encoding/json"
-	"github.com/buger/jsonparser"
 	"io"
 	"net/http"
 	"testing"
+
+	"github.com/buger/jsonparser"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -21,7 +22,7 @@ func TestPersistedOperationNotFound(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-		require.JSONEq(t, `{"data": null, "errors": [{ "message": "PersistedQueryNotFound" }]}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Persisted Query not found"}],"data":null}`, res.Body)
 	})
 }
 
@@ -37,7 +38,7 @@ func TestPersistedOperation(t *testing.T) {
 			Header:        header,
 		})
 		require.NoError(t, err)
-		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
 }
 
@@ -57,7 +58,7 @@ func TestPersistedOperationWithBlock(t *testing.T) {
 			Header:        header,
 		})
 		require.NoError(t, err)
-		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
 }
 
@@ -91,7 +92,7 @@ func TestPersistedOperationPOExtensionNotTransmittedToSubgraph(t *testing.T) {
 			Header:        header,
 		})
 		require.NoError(t, err)
-		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
 }
 
@@ -111,7 +112,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res1.Body)
 		res2, err := xEnv.MakeGraphQLRequest(req)
 		require.NoError(t, err)
-		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
+		require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
 	}
 
 	retrieveNumberOfCDNRequests := func(t *testing.T, cdnURL string) int {
