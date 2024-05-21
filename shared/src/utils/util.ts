@@ -1,4 +1,4 @@
-import { SubscriptionProtocol } from '../router-config/builder.js';
+import { SubscriptionProtocol, WebsocketSubprotocol } from '../router-config/builder.js';
 
 export function delay(t: number) {
   return new Promise((resolve) => setTimeout(resolve, t));
@@ -56,6 +56,19 @@ export function isValidSubscriptionProtocol(protocol: SubscriptionProtocol) {
     case 'sse':
     case 'sse_post':
     case 'ws': {
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+export function isValidWebsocketSubprotocol(protocol: WebsocketSubprotocol) {
+  switch (protocol) {
+    case 'auto':
+    case 'graphql-ws':
+    case 'graphql-transport-ws': {
       return true;
     }
     default: {

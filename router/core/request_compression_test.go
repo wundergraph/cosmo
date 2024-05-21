@@ -1,4 +1,4 @@
-package integration_test
+package core
 
 import (
 	"compress/flate"
@@ -13,24 +13,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func UnitTestCompression(t *testing.T) {
+func TestCompression(t *testing.T) {
 	httpRouter := chi.NewRouter()
-	var customCompressibleContentTypes = []string{
-		"text/html",
-		"text/css",
-		"text/plain",
-		"text/javascript",
-		"application/javascript",
-		"application/x-javascript",
-		"application/json",
-		"application/atom+xml",
-		"application/rss+xml",
-		"image/svg+xml",
-		"application/graphql",
-	}
 
 	// Adds Brotli compressor
-	brCompressor := middleware.NewCompressor(5, customCompressibleContentTypes...)
+	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
 	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
 		return br.NewWriterLevel(w, level)
 	})

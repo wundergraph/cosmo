@@ -21,7 +21,6 @@ type Playground struct {
 
 func NewPlayground(opts *PlaygroundOptions) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-
 		return &Playground{
 			next: next,
 			opts: opts,
