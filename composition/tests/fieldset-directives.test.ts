@@ -382,7 +382,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
-              fieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['id', 'name']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',
@@ -448,7 +448,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
-              fieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['id', 'interface']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',
@@ -501,7 +501,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
-              fieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['id', 'interface']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',
@@ -595,7 +595,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
-              fieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['id', 'union']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',
@@ -706,7 +706,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
-              fieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['id', 'anotherObject']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',
@@ -754,7 +754,7 @@ describe('openfed_FieldSet Tests', () => {
           [
             'Entity',
             {
-              fieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['id', 'anotherObject']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',

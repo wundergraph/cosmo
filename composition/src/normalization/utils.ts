@@ -253,10 +253,11 @@ export function getNormalizedFieldSet(documentNode: DocumentNode): string {
 }
 
 function validateNonRepeatableFieldSet(
-  factory: NormalizationFactory,
+  nf: NormalizationFactory,
   parentData: ParentWithFieldsData,
   fieldSet: string,
   directiveFieldName: string,
+  fieldSetDirective: FieldSetDirective,
 ): NonRepeatableFieldSetValidationResult {
   // Create a new selection set so that the value can be parsed as a new DocumentNode
   const { error, documentNode } = safeParse('{' + fieldSet + '}');
@@ -303,6 +304,15 @@ function validateNonRepeatableFieldSet(
           errorMessage = undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName);
           return BREAK;
         }
+        if (
+          fieldSetDirective === FieldSetDirective.PROVIDES &&
+          fieldData.isExternalBySubgraphName.get(nf.subgraphName)
+        ) {
+          const configurationData = nf.configurationDataByParentTypeName.get(parentTypeName);
+          if (configurationData) {
+            configurationData.fieldNames.add(fieldName);
+          }
+        }
         if (definedFields[currentDepth].has(fieldName)) {
           errorMessage = duplicateFieldInFieldSetErrorMessage(fieldSet, fieldPath);
           return BREAK;
@@ -314,22 +324,21 @@ function validateNonRepeatableFieldSet(
           return;
         }
         // The child could itself be a parent and could exist as an object extension
-        const childContainer =
-          factory.parentDefinitionDataByTypeName.get(namedTypeName) ||
-          factory.parentExtensionDataByTypeName.get(namedTypeName);
-        if (!childContainer) {
+        const namedTypeData =
+          nf.parentDefinitionDataByTypeName.get(namedTypeName) || nf.parentExtensionDataByTypeName.get(namedTypeName);
+        if (!namedTypeData) {
           // Should not be possible to receive this error
           errorMessage = unknownTypeInFieldSetErrorMessage(fieldSet, fieldPath, namedTypeName);
           return BREAK;
         }
         if (
-          childContainer.kind === Kind.OBJECT_TYPE_DEFINITION ||
-          childContainer.kind === Kind.OBJECT_TYPE_EXTENSION ||
-          childContainer.kind === Kind.INTERFACE_TYPE_DEFINITION ||
-          childContainer.kind === Kind.UNION_TYPE_DEFINITION
+          namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION ||
+          namedTypeData.kind === Kind.OBJECT_TYPE_EXTENSION ||
+          namedTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION ||
+          namedTypeData.kind === Kind.UNION_TYPE_DEFINITION
         ) {
           shouldDefineSelectionSet = true;
-          parentDatas.push(childContainer);
+          parentDatas.push(namedTypeData);
           return;
         }
       },
@@ -354,8 +363,8 @@ function validateNonRepeatableFieldSet(
           return BREAK;
         }
         const fragmentTypeContainer =
-          factory.parentDefinitionDataByTypeName.get(typeConditionName) ||
-          factory.parentExtensionDataByTypeName.get(typeConditionName);
+          nf.parentDefinitionDataByTypeName.get(typeConditionName) ||
+          nf.parentExtensionDataByTypeName.get(typeConditionName);
         if (!fragmentTypeContainer) {
           errorMessage = unknownInlineFragmentTypeConditionErrorMessage(fieldSet, fieldPath, typeConditionName);
           return BREAK;
@@ -374,7 +383,7 @@ function validateNonRepeatableFieldSet(
           );
           return BREAK;
         }
-        const concreteTypeNames = factory.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
+        const concreteTypeNames = nf.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
         if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
           errorMessage = invalidInlineFragmentTypeConditionErrorMessage(
             fieldSet,
@@ -395,21 +404,21 @@ function validateNonRepeatableFieldSet(
     SelectionSet: {
       enter() {
         if (!shouldDefineSelectionSet) {
-          const parentContainer = parentDatas[currentDepth];
-          if (parentContainer.kind === Kind.UNION_TYPE_DEFINITION) {
+          const parentData = parentDatas[currentDepth];
+          if (parentData.kind === Kind.UNION_TYPE_DEFINITION) {
             // Should never happen
             errorMessage = unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName);
             return BREAK;
           }
-          const fieldData = parentContainer.fieldDataByFieldName.get(lastFieldName);
+          const fieldData = parentData.fieldDataByFieldName.get(lastFieldName);
           if (!fieldData) {
             errorMessage = undefinedFieldInFieldSetErrorMessage(fieldSet, fieldPath, lastFieldName);
             return BREAK;
           }
           const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // If the child is not found, it's a base scalar. Undefined types would have already been handled.
-          const childContainer = factory.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
-          const childKind = childContainer ? childContainer.kind : Kind.SCALAR_TYPE_DEFINITION;
+          const childData = nf.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
+          const childKind = childData ? childData.kind : Kind.SCALAR_TYPE_DEFINITION;
           errorMessage = invalidSelectionSetDefinitionErrorMessage(
             fieldSet,
             fieldPath,
@@ -653,7 +662,7 @@ enum FieldSetDirective {
 
 type FieldSetParentResult = {
   errorString?: string;
-  fieldSetParentContainer?: ParentWithFieldsData;
+  fieldSetParentData?: ParentWithFieldsData;
 };
 
 function getFieldSetParent(
@@ -664,7 +673,7 @@ function getFieldSetParent(
   parentTypeName: string,
 ): FieldSetParentResult {
   if (fieldSetDirective !== FieldSetDirective.PROVIDES) {
-    return factory.entityDataByTypeName.has(parentTypeName) ? { fieldSetParentContainer: parentData } : {};
+    return factory.entityDataByTypeName.has(parentTypeName) ? { fieldSetParentData: parentData } : {};
   }
   const fieldData = getOrThrowError(
     parentData.fieldDataByFieldName,
@@ -684,7 +693,7 @@ function getFieldSetParent(
       errorString: unknownProvidesEntityErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
     };
   }
-  return { fieldSetParentContainer: childData };
+  return { fieldSetParentData: childData };
 }
 
 function validateProvidesOrRequires(
@@ -701,7 +710,7 @@ function validateProvidesOrRequires(
      Consequently, at that time, it is unknown whether the named type is an entity.
      If it isn't, the @provides directive does not make sense and can be ignored.
     */
-    const { fieldSetParentContainer, errorString } = getFieldSetParent(
+    const { fieldSetParentData, errorString } = getFieldSetParent(
       factory,
       fieldSetDirective,
       parentData,
@@ -713,14 +722,15 @@ function validateProvidesOrRequires(
       errorMessages.push(errorString);
       continue;
     }
-    if (!fieldSetParentContainer) {
+    if (!fieldSetParentData) {
       continue;
     }
     const { errorMessage, configuration } = validateNonRepeatableFieldSet(
       factory,
-      fieldSetParentContainer,
+      fieldSetParentData,
       fieldSet,
       fieldName,
+      fieldSetDirective,
     );
     if (errorMessage) {
       errorMessages.push(` On "${parentTypeName}.${fieldName}" —` + errorMessage);

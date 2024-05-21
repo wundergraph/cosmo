@@ -517,7 +517,7 @@ describe('Router Configuration tests', () => {
           [
             'AnotherEntity',
             {
-              fieldNames: new Set<string>(['id', 'myField']),
+              fieldNames: new Set<string>(['id', 'field', 'myField']),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               requires: [{ fieldName: 'myField', selectionSet: 'anotherField { age name nested { name } }' }],
