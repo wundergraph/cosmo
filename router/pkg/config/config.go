@@ -202,6 +202,17 @@ type OverrideRoutingURLConfiguration struct {
 	Subgraphs map[string]string `yaml:"subgraphs"`
 }
 
+type SubgraphOverridesConfiguration struct {
+	RoutingURL                       string `yaml:"routing_url"`
+	SubscriptionURL                  string `yaml:"subscription_url"`
+	SubscriptionProtocol             string `yaml:"subscription_protocol"`
+	SubscriptionWebsocketSubprotocol string `yaml:"subscription_websocket_subprotocol"`
+}
+
+type OverridesConfiguration struct {
+	Subgraphs map[string]SubgraphOverridesConfiguration `yaml:"subgraphs"`
+}
+
 type AuthenticationProviderJWKS struct {
 	URL                 string        `yaml:"url"`
 	HeaderNames         []string      `yaml:"header_names"`
@@ -420,6 +431,8 @@ type Config struct {
 	RouterRegistration bool   `yaml:"router_registration" envconfig:"ROUTER_REGISTRATION" default:"true"`
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
+
+	Overrides OverridesConfiguration `yaml:"overrides"`
 
 	SecurityConfiguration SecurityConfiguration `yaml:"security,omitempty"`
 

@@ -262,6 +262,16 @@
       "some-subgraph": "http://router:3002/graphql"
     }
   },
+  "Overrides": {
+    "Subgraphs": {
+      "some-subgraph": {
+        "RoutingURL": "http://router:3002/graphql",
+        "SubscriptionURL": "http://router:3002/graphql/ws",
+        "SubscriptionProtocol": "ws",
+        "SubscriptionWebsocketSubprotocol": "graphql-ws"
+      }
+    }
+  },
   "SecurityConfiguration": {
     "BlockMutations": false,
     "BlockSubscriptions": false,

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
 	"net"
 	"net/http"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+
 	"github.com/nats-io/nuid"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
@@ -39,6 +41,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	brotli "go.withmatt.com/connect-brotli"
 
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
@@ -184,8 +187,10 @@ type (
 		securityConfiguration config.SecurityConfiguration
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
-
+		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
+		// the new overrides config
+		overrides config.OverridesConfiguration
 
 		authorization *config.AuthorizationConfiguration
 
@@ -499,22 +504,77 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 		subgraph.Url = parsedURL
 
 		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+		overrideSubgraph, overrideSubgraphOk := r.overrides.Subgraphs[sg.Name]
+
+		var overrideSubscriptionURL string
+		var overrideSubscriptionProtocol *common.GraphQLSubscriptionProtocol
+		var overrideSubscriptionWebsocketSubprotocol *common.GraphQLWebsocketSubprotocol
+
+		if overrideSubgraphOk {
+			if overrideSubgraph.RoutingURL != "" {
+				overrideURL = overrideSubgraph.RoutingURL
+			}
+			if overrideSubgraph.SubscriptionURL != "" {
+				overrideSubscriptionURL = overrideSubgraph.SubscriptionURL
+				_, err := url.Parse(overrideSubscriptionURL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideSubscriptionURL, err)
+				}
+			}
+			if overrideSubgraph.SubscriptionProtocol != "" {
+				switch overrideSubgraph.SubscriptionProtocol {
+				case "ws":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS.Enum()
+				case "sse":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE.Enum()
+				case "sse_post":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST.Enum()
+				default:
+					return nil, fmt.Errorf("invalid subscription protocol '%s'", overrideSubgraph.SubscriptionProtocol)
+				}
+			}
+			if overrideSubgraph.SubscriptionWebsocketSubprotocol != "" {
+				switch overrideSubgraph.SubscriptionWebsocketSubprotocol {
+				case "graphql-ws":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS.Enum()
+				case "graphql-transport-ws":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS.Enum()
+				case "auto":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO.Enum()
+				default:
+					return nil, fmt.Errorf("invalid subscription websocket subprotocol '%s'", overrideSubgraph.SubscriptionWebsocketSubprotocol)
+				}
+			}
+		}
 
 		// check if the subgraph is overridden
-		if ok && overrideURL != "" {
-			parsedURL, err := url.Parse(overrideURL)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
-			}
+		if ok || overrideSubgraphOk {
+			if overrideURL != "" {
+				parsedURL, err := url.Parse(overrideURL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+				}
 
-			subgraph.Url = parsedURL
+				subgraph.Url = parsedURL
+			}
 
 			// Override datasource urls
 			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
 				if conf.Id == sg.Id {
-					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
-					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
-					sg.RoutingUrl = overrideURL
+					if overrideURL != "" {
+						conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+						sg.RoutingUrl = overrideURL
+					}
+					if overrideSubscriptionURL != "" {
+						conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideSubscriptionURL
+					}
+					if overrideSubscriptionProtocol != nil {
+						conf.CustomGraphql.Subscription.Protocol = overrideSubscriptionProtocol
+					}
+					if overrideSubscriptionWebsocketSubprotocol != nil {
+						conf.CustomGraphql.Subscription.WebsocketSubprotocol = overrideSubscriptionWebsocketSubprotocol
+					}
+
 					break
 				}
 			}
@@ -1714,6 +1774,12 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfiguration) Option {
 	return func(r *Router) {
 		r.overrideRoutingURLConfiguration = overrideRoutingURL
+	}
+}
+
+func WithOverrides(overrides config.OverridesConfiguration) Option {
+	return func(r *Router) {
+		r.overrides = overrides
 	}
 }
 
