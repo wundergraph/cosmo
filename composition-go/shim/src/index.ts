@@ -1,5 +1,5 @@
 import { FieldConfiguration, federateSubgraphs as realFederateSubgraphs } from '@wundergraph/composition';
-import { buildRouterConfig, normalizeURL, SubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, normalizeURL, SubscriptionProtocol, WebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 import { DocumentNode, parse, print, printSchema } from 'graphql';
 
 export type Subgraph = {
@@ -8,6 +8,7 @@ export type Subgraph = {
   url: string;
   subscription_url?: string;
   subscription_protocol?: SubscriptionProtocol;
+  websocketSubprotocol?: WebsocketSubprotocol;
 };
 
 export type FederatedGraph = {
@@ -27,7 +28,6 @@ function createFederableSubgraph(subgraph: Subgraph) {
     name: subgraph.name,
     url: subgraph.url,
   };
-
 }
 
 export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
@@ -65,6 +65,7 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
         sdl: s.schema,
         subscriptionUrl: normalizeURL(s.subscription_url ?? s.url),
         subscriptionProtocol: s.subscription_protocol ?? 'ws',
+        websocketSubprotocol: s.subscription_protocol === 'ws' ? s.websocketSubprotocol || 'auto': undefined,
         schema,
         configurationDataMap,
       };
