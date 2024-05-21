@@ -248,5 +248,11 @@ websocket:
     enabled: true
     handler_path: /absinthe/socket
   forward_initial_payload: true
-  forward_upgrade_headers: true
-  forward_upgrade_query_params: true
+  forward_upgrade_headers:
+    enabled: true
+    allow_list:
+      - "Authorization"
+  forward_upgrade_query_params:
+    enabled: true
+    allow_list:
+      - "Authorization"

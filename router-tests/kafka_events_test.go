@@ -4,6 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"net/http"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -12,10 +17,6 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"net/http"
-	"sync"
-	"testing"
-	"time"
 )
 
 func TestLocalKafka(t *testing.T) {
@@ -31,6 +32,10 @@ func TestLocalKafka(t *testing.T) {
 
 func TestKafkaEvents(t *testing.T) {
 	// All tests are running in sequence because they are using the same kafka topic
+
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 
 	ctx := context.Background()
 	kafkaContainer, err := kafka.RunContainer(ctx, testcontainers.WithImage("confluentinc/confluent-local:7.6.1"))

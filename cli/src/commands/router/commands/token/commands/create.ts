@@ -33,7 +33,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (resp.response?.code === EnumStatusCode.OK) {
       if (options.raw) {
-        process.stdout.write(resp.token);
+        console.log(resp.token);
         return;
       }
 
