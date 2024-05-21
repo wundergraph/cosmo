@@ -234,6 +234,14 @@ Based on the selected feature flag, the Playground should set the appropriate he
 - Queries and Mutations over HTTP (header, cookie, extensions)
 - Subscriptions over SSE (header, cookie, extensions)
 
+### Feature Flags can be Headless (no existing Subgraph)
+
+It needs to be possible to create a Subgraph as an empty shell without publishing a Subgraph Schema,
+then publishing a feature flag on the Subgraph, so that the Subgraph only becomes part of the Federated Graph when the FF is active.
+In this case, the FF doesn't replace the existing Subgraph, which has no Schema, but is simply an addition to the existing Schema.
+
+The use case for this is when you'd like to add a new feature to the Federated Graph without adding anything to the non-FF Graph.
+
 ### Introspection needs to be aware of Feature Flags
 
 Depending on the selected feature flag, the introspection query should return the schema that is associated with the feature flag.
