@@ -158,8 +158,8 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 			}
 			// stringify values to prevent its actual type from being lost
 			// during the transport to the engine as bytes
-			marshaledValue, err := json.Marshal(string(value))
-			if err != nil {
+			marshaledValue, mErr := json.Marshal(string(value))
+			if mErr != nil {
 				return
 			}
 			values = append(values, string(marshaledValue))
