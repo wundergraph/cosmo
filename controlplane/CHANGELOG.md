@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.88.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.88.1...controlplane@0.88.2) (2024-05-21)
+
+### Bug Fixes
+
+* set expiry for the jwt ([#811](https://github.com/wundergraph/cosmo/issues/811)) ([05623c5](https://github.com/wundergraph/cosmo/commit/05623c59607a7bcab377e184f96c45374c3b7e27)) (@JivusAyrus)
+
 ## [0.88.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.88.0...controlplane@0.88.1) (2024-05-21)
 
 **Note:** Version bump only for package controlplane
