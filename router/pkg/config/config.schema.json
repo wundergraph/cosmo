@@ -139,7 +139,7 @@
               "default": true,
               "description": "Forward upgrade request headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
             },
-            "header_names": {
+            "allow_list": {
               "type": "array",
               "description": "The names of the headers to forward. The default value is 'Authorization'.",
               "default": [
@@ -160,10 +160,12 @@
               "default": false,
               "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
             },
-            "param_names": {
+            "allow_list": {
               "type": "array",
               "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
-              "default": [],
+              "default": [
+                "Authorization"
+              ],
               "items": {
                 "type": "string"
               }

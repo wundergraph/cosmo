@@ -101,6 +101,7 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
+	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
@@ -619,7 +620,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if !testConfig.DisableWebSockets {
-		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
+		wsConfig := &config.WebSocketConfiguration{
 			Enabled: true,
 			AbsintheProtocol: config.AbsintheProtocolConfiguration{
 				Enabled:     true,
@@ -636,9 +637,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			},
 			ForwardUpgradeQueryParams: config.ForwardUpgradeQueryParamsConfiguration{
 				Enabled: true,
+				AllowList: []string{
+					"token",
+					"Authorization",
+					"x-custom-*",
+				},
 			},
 			ForwardInitialPayload: true,
-		}))
+		}
+		if testConfig.ModifyWebsocketConfiguration != nil {
+			testConfig.ModifyWebsocketConfiguration(wsConfig)
+		}
+		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(wsConfig))
 	}
 	return core.NewRouter(routerOpts...)
 }
@@ -904,7 +914,7 @@ type GraphQLError struct {
 
 const maxSocketRetries = 5
 
-func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
+func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
 	}
@@ -914,8 +924,11 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websoc
 
 	var err error
 
-	for i := 0; i < maxSocketRetries; i++ {
+	for i := 0; i <= maxSocketRetries; i++ {
 		urlStr := e.GraphQLSubscriptionURL()
+		if query != nil {
+			urlStr += "?" + query.Encode()
+		}
 		conn, resp, err := dialer.Dial(urlStr, header)
 
 		if resp != nil && err == nil {
@@ -936,8 +949,8 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websoc
 	return nil, nil, err
 }
 
-func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initialPayload json.RawMessage) *websocket.Conn {
-	conn, _, err := e.GraphQLWebsocketDialWithRetry(header)
+func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query url.Values, initialPayload json.RawMessage) *websocket.Conn {
+	conn, _, err := e.GraphQLWebsocketDialWithRetry(header, query)
 	require.NoError(e.t, err)
 	e.t.Cleanup(func() {
 		_ = conn.Close()

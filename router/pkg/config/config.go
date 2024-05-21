@@ -332,12 +332,12 @@ type WebSocketConfiguration struct {
 
 type ForwardUpgradeHeadersConfiguration struct {
 	Enabled   bool     `yaml:"enabled" default:"true" envconfig:"FORWARD_UPGRADE_HEADERS_ENABLED"`
-	AllowList []string `yaml:"allow_list" envconfig:"FORWARD_UPGRADE_HEADERS_ALLOW_LIST"`
+	AllowList []string `yaml:"allow_list" default:"Authorization" envconfig:"FORWARD_UPGRADE_HEADERS_ALLOW_LIST"`
 }
 
 type ForwardUpgradeQueryParamsConfiguration struct {
 	Enabled   bool     `yaml:"enabled" default:"true" envconfig:"FORWARD_UPGRADE_QUERY_PARAMS_ENABLED"`
-	AllowList []string `yaml:"allow_list" envconfig:"FORWARD_UPGRADE_QUERY_PARAMS_ALLOW_LIST"`
+	AllowList []string `yaml:"allow_list" default:"Authorization" envconfig:"FORWARD_UPGRADE_QUERY_PARAMS_ALLOW_LIST"`
 }
 
 type AnonymizeIpConfiguration struct {
