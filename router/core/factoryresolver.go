@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -148,12 +149,21 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	}
 	if input.In != nil {
 		var values []string
-		// `[1,"cat",null]`
 		_, err := jsonparser.ArrayEach([]byte(input.In.Json), func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-			//marshalledValue, err := json.Marshal(string(value))
-			// todo handle err
-			//values = append(values, string(marshalledValue))
-			values = append(values, string(value))
+			// if the value is not a string, just append it as is because this is the JSON
+			// representation of the value. If it contains a template, we want to keep it as
+			// is to explode it later with the actual values
+			if dataType != jsonparser.String || plan.ContainsTemplateString(value) {
+				values = append(values, string(value))
+				return
+			}
+			// stringify values to prevent its actual type from being lost
+			// during the transport to the engine as bytes
+			marshaledValue, err := json.Marshal(string(value))
+			if err != nil {
+				return
+			}
+			values = append(values, string(marshaledValue))
 		})
 		if err != nil {
 			return nil

@@ -577,8 +577,8 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, "next", msg.Type)
 				gErr = json.Unmarshal(msg.Payload, &payload)
 				require.NoError(t, gErr)
-				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
 
 				gErr = conn.ReadJSON(&msg)
@@ -587,19 +587,9 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, "next", msg.Type)
 				gErr = json.Unmarshal(msg.Payload, &payload)
 				require.NoError(t, gErr)
-				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
 
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -617,30 +607,28 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, "next", msg.Type)
 				gErr = json.Unmarshal(msg.Payload, &payload)
 				require.NoError(t, gErr)
-				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
 
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
 				require.Equal(t, "next", msg.Type)
-				err = json.Unmarshal(msg.Payload, &payload)
+				gErr = json.Unmarshal(msg.Payload, &payload)
 				require.NoError(t, gErr)
-				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+
 			}()
 
-			// Trigger the subscription via Kafka
-			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`)
-
-			// Events 1, 3, 4, 7, and 11 should be included (no employees with ids 6, 9, or 10)
-			for i := 1; i < 13; i++ {
+			// Events 1, 3, 4, 7, and 11 should be included
+			for i := 12; i > 0; i-- {
 				// Ensure the Kafka consumer can keep up with the provider
 				time.Sleep(time.Millisecond * 100)
 
-				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d,}`, i))
+				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 			}
 
 			wg.Wait()
@@ -665,7 +653,7 @@ func TestKafkaEvents(t *testing.T) {
 							Forename string `graphql:"forename"`
 							Surname  string `graphql:"surname"`
 						} `graphql:"details"`
-					} `graphql:"filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [\"1\", \"12\"], secondIds: [\"3\", \"11\"]))"`
+					} `graphql:"filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [1, 12], secondIds: [2, 11]))"`
 				} `json:"data"`
 			}
 
@@ -674,7 +662,7 @@ func TestKafkaEvents(t *testing.T) {
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [\"1\", \"12\"], secondIds: [\"2\", \"11\"]) { id details { forename, surname } } }"}`),
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [1, 12], secondIds: [2, 11]) { id details { forename, surname } } }"}`),
 			})
 
 			require.NoError(t, err)
@@ -735,7 +723,7 @@ func TestKafkaEvents(t *testing.T) {
 				// Ensure the Kafka consumer can keep up with the provider
 				time.Sleep(time.Millisecond * 100)
 
-				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d,}`, i))
+				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 			}
 
 			wg.Wait()
