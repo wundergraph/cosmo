@@ -5,14 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+
 	"github.com/buger/jsonparser"
 	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"net/url"
 )
 
 const (
@@ -40,7 +41,7 @@ type PersistentOperationNotFoundError interface {
 
 type persistentOperationNotFoundError struct {
 	clientName string
-	sha256Hash []byte
+	sha256Hash string
 }
 
 func (e *persistentOperationNotFoundError) ClientName() string {
@@ -52,7 +53,7 @@ func (e *persistentOperationNotFoundError) Sha256Hash() string {
 }
 
 func (e *persistentOperationNotFoundError) Error() string {
-	return fmt.Sprintf("operation %s for client %s not found", unsafebytes.BytesToString(e.sha256Hash), e.clientName)
+	return fmt.Sprintf("operation %s for client %s not found", e.sha256Hash, e.clientName)
 }
 
 type cdnPersistedOperationsCache struct {
@@ -65,16 +66,16 @@ func (c *cdnPersistedOperationsCache) key(clientName string, operationHash []byt
 	return clientName + unsafebytes.BytesToString(operationHash)
 }
 
-func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash []byte) []byte {
+func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash string) []byte {
 	// Since we're returning nil when the item is not found, we don't need to
 	// check the return value from the cache nor the type assertion
-	item, _ := c.cache.Get(c.key(clientName, operationHash))
+	item, _ := c.cache.Get(c.key(clientName, unsafebytes.StringToBytes(operationHash)))
 	data, _ := item.([]byte)
 	return data
 }
 
-func (c *cdnPersistedOperationsCache) Set(clientName string, operationHash []byte, operationBody []byte) {
-	c.cache.Set(c.key(clientName, operationHash), operationBody, int64(len(operationBody)))
+func (c *cdnPersistedOperationsCache) Set(clientName, operationHash string, operationBody []byte) {
+	c.cache.Set(c.key(clientName, unsafebytes.StringToBytes(operationHash)), operationBody, int64(len(operationBody)))
 }
 
 type PersistentOperationsOptions struct {
@@ -98,7 +99,7 @@ type PersistentOperationClient struct {
 	logger          *zap.Logger
 }
 
-func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash []byte) ([]byte, error) {
+func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	if data := cdn.operationsCache.Get(clientName, sha256Hash); data != nil {
 		return data, nil
 	}
@@ -106,7 +107,7 @@ func (cdn *PersistentOperationClient) PersistedOperation(ctx context.Context, cl
 		cdn.organizationID,
 		cdn.federatedGraphID,
 		url.PathEscape(clientName),
-		url.PathEscape(unsafebytes.BytesToString(sha256Hash)))
+		url.PathEscape(sha256Hash))
 	operationURL := cdn.cdnURL.ResolveReference(&url.URL{Path: operationPath})
 
 	req, err := http.NewRequestWithContext(ctx, "GET", operationURL.String(), nil)

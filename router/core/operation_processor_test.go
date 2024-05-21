@@ -39,9 +39,9 @@ func TestOperationParser(t *testing.T) {
 		 * Test cases parse simple
 		 */
 		{
-			Input:         `{"query":"query { employees { name } }"`,
+			Input:         `{"query":"query { initialPayload(repeat:3) }", "variables": {"foo": "bar"}}`,
 			ExpectedType:  "query",
-			Variables:     `{}`,
+			Variables:     `{"foo": "bar"}`,
 			ExpectedError: nil,
 		},
 		/**
@@ -89,7 +89,7 @@ func TestOperationParser(t *testing.T) {
 			ExpectedError: nil,
 		},
 		{
-			Input:         `{"query":"query { initialPayload(repeat:3) }", "variables": {"foo": {"bar": "baz"}}`,
+			Input:         `{"query":"query { initialPayload(repeat:3) }", "variables": {"foo": {"bar": "baz"}}}`,
 			ExpectedType:  "query",
 			Variables:     `{"foo": {"bar": "baz"}}`,
 			ExpectedError: nil,
