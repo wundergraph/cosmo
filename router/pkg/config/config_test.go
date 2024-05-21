@@ -275,3 +275,23 @@ overrides:
 	_, err := LoadConfig(f, "")
 	require.NoError(t, err)
 }
+
+func TestOverridesWithWrongValue(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+overrides:
+  subgraphs:
+    some-subgraph:
+      routing_url: a
+      subscription_url: http://router:3002/graphql/ws
+      subscription_protocol: ws
+      subscription_websocket_subprotocol: graphql-ws
+`)
+	_, err := LoadConfig(f, "")
+	var js *jsonschema.ValidationError
+	require.ErrorAs(t, err, &js)
+}

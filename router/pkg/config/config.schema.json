@@ -1005,24 +1005,27 @@
         "subgraphs": {
           "type": "object",
           "description": "The configuration for the subgraphs. The subgraphs are used to override the config for the subgraphs.",
-          "properties": {
-            "routing_url": {
-              "type": "string",
-              "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
-              "format": "http-url"
-            },
-            "subscription_url": {
-              "type": "string",
-              "description": "The Subscription URL of the subgraph. The URL is used to override the subscription URL for the subgraph.",
-              "format": "http-url"
-            },
-            "subscription_protocol": {
-              "type": "string",
-              "description": "The Subscription protocol of the subgraph. The protocol is used to override the subscription protocol for the subgraph."
-            },
-            "subscription_websocket_subprotocol": {
-              "type": "string",
-              "description": "The Websocket subprotocol of the subgraph. The protocol is used to override the Websocket subprotocol for the subgraph."
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "routing_url": {
+                "type": "string",
+                "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
+                "format": "http-url"
+              },
+              "subscription_url": {
+                "type": "string",
+                "description": "The Subscription URL of the subgraph. The URL is used to override the subscription URL for the subgraph.",
+                "format": "http-url"
+              },
+              "subscription_protocol": {
+                "type": "string",
+                "description": "The Subscription protocol of the subgraph. The protocol is used to override the subscription protocol for the subgraph."
+              },
+              "subscription_websocket_subprotocol": {
+                "type": "string",
+                "description": "The Websocket subprotocol of the subgraph. The protocol is used to override the Websocket subprotocol for the subgraph."
+              }
             }
           }
         }
