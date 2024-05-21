@@ -2,10 +2,13 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/buger/jsonparser"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -132,6 +135,59 @@ type RouterEngineConfiguration struct {
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 }
 
+func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
+	if input == nil {
+		return nil
+	}
+	if input.And != nil {
+		output.And = make([]plan.SubscriptionFilterCondition, len(input.And))
+		for i := range input.And {
+			mapProtoFilterToPlanFilter(input.And[i], &output.And[i])
+		}
+		return output
+	}
+	if input.In != nil {
+		var values []string
+		_, err := jsonparser.ArrayEach([]byte(input.In.Json), func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+			// if the value is not a string, just append it as is because this is the JSON
+			// representation of the value. If it contains a template, we want to keep it as
+			// is to explode it later with the actual values
+			if dataType != jsonparser.String || plan.ContainsTemplateString(value) {
+				values = append(values, string(value))
+				return
+			}
+			// stringify values to prevent its actual type from being lost
+			// during the transport to the engine as bytes
+			marshaledValue, mErr := json.Marshal(string(value))
+			if mErr != nil {
+				return
+			}
+			values = append(values, string(marshaledValue))
+		})
+		if err != nil {
+			return nil
+		}
+		output.In = &plan.SubscriptionFieldCondition{
+			FieldPath: input.In.FieldPath,
+			Values:    values,
+		}
+		return output
+	}
+	if input.Not != nil {
+		output.Not = mapProtoFilterToPlanFilter(input.Not, &plan.SubscriptionFilterCondition{})
+		return output
+	}
+	if input.Or != nil {
+		output.Or = make([]plan.SubscriptionFilterCondition, len(input.Or))
+		for i := range input.Or {
+			output.Or[i] = plan.SubscriptionFilterCondition{}
+			mapProtoFilterToPlanFilter(input.Or[i], &output.Or[i])
+		}
+		return output
+	}
+	return nil
+}
+
 func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
 	var (
 		outConfig plan.Configuration
@@ -155,10 +211,11 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			args = append(args, arg)
 		}
 		fieldConfig := plan.FieldConfiguration{
-			TypeName:             configuration.TypeName,
-			FieldName:            configuration.FieldName,
-			Arguments:            args,
-			HasAuthorizationRule: l.fieldHasAuthorizationRule(configuration),
+			TypeName:                    configuration.TypeName,
+			FieldName:                   configuration.FieldName,
+			Arguments:                   args,
+			HasAuthorizationRule:        l.fieldHasAuthorizationRule(configuration),
+			SubscriptionFilterCondition: mapProtoFilterToPlanFilter(configuration.SubscriptionFilterCondition, &plan.SubscriptionFilterCondition{}),
 		}
 		outConfig.Fields = append(outConfig.Fields, fieldConfig)
 	}
