@@ -360,11 +360,11 @@ const AddSubgraphUsers = ({
 export const SubgraphsTable = ({
   graph,
   subgraphs,
-  totalCount, 
+  totalCount,
 }: {
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
-  totalCount: number
+  totalCount: number;
 }) => {
   const rbac = useFeature("rbac");
   const router = useRouter();
@@ -375,7 +375,6 @@ export const SubgraphsTable = ({
     : 1;
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
   const noOfPages = Math.ceil(totalCount / limit);
-
 
   if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} />;
 
@@ -432,7 +431,7 @@ export const SubgraphsTable = ({
                       {routingURL}
                     </TableCell>
                     <TableCell className="px-4">
-                      <div className="flex space-x-2">
+                      <div className="flex flex-wrap gap-2">
                         {labels.length === 0 && (
                           <Tooltip delayDuration={200}>
                             <TooltipTrigger>-</TooltipTrigger>
