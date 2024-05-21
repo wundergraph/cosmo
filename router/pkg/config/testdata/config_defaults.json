@@ -192,8 +192,18 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
-    "ForwardUpgradeHeaders": true,
-    "ForwardUpgradeQueryParams": true,
+    "ForwardUpgradeHeaders": {
+      "Enabled": true,
+      "AllowList": [
+        "Authorization"
+      ]
+    },
+    "ForwardUpgradeQueryParams": {
+      "Enabled": true,
+      "AllowList": [
+        "Authorization"
+      ]
+    },
     "ForwardInitialPayload": true
   },
   "SubgraphErrorPropagation": {
