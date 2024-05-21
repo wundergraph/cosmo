@@ -155,6 +155,8 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			}
 			args = append(args, arg)
 		}
+		// here we also need to pass through the override configuration, and the engine will also need access to the FeatureFlagProvider
+		// so it can figure out which instance of the field to use at planning time
 		fieldConfig := plan.FieldConfiguration{
 			TypeName:             configuration.TypeName,
 			FieldName:            configuration.FieldName,

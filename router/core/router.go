@@ -7,18 +7,19 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/nats-io/nuid"
 
@@ -192,6 +193,8 @@ type (
 		webSocketConfiguration *config.WebSocketConfiguration
 
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+
+		featureFlagProvider FeatureFlagProvider
 	}
 
 	Server interface {
@@ -1822,6 +1825,19 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 	return func(r *Router) {
 		r.tlsConfig = cfg
 	}
+}
+
+func WithFeatureFlagProvider(featureFlagProvider FeatureFlagProvider) Option {
+	return func(r *Router) {
+		r.featureFlagProvider = featureFlagProvider
+	}
+}
+
+type FeatureFlagProvider interface {
+	// IsEnabled returns true if the feature flag is enabled, otherwise false.
+	// If the feature flag isn't found, an error is returned and the
+	// router falls back to false.
+	IsEnabled(ctx RequestContext, flagName string) (bool, error)
 }
 
 func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {

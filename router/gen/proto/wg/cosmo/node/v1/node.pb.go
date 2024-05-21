@@ -1291,6 +1291,12 @@ type FieldConfiguration struct {
 	FieldName                  string                      `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
 	ArgumentsConfiguration     []*ArgumentConfiguration    `protobuf:"bytes,3,rep,name=arguments_configuration,json=argumentsConfiguration,proto3" json:"arguments_configuration,omitempty"`
 	AuthorizationConfiguration *AuthorizationConfiguration `protobuf:"bytes,4,opt,name=authorization_configuration,json=authorizationConfiguration,proto3" json:"authorization_configuration,omitempty"`
+	OverrideConfiguration 		 *OverrideConfiguration
+}
+
+type OverrideConfiguration struct {
+	FeatureFlagName string
+	IsOverride bool // compare this value to the value returned from FeatureFlagProvider.IsEnabled. If FeatureFlagProvider.IsEnabled == IsOverride, then use this field.
 }
 
 func (x *FieldConfiguration) Reset() {
