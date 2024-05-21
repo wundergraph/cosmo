@@ -52,6 +52,8 @@ export function subgraphDTOsToComposedSubgraphs(
       schemaVersionId: subgraph.schemaVersionId,
       subscriptionUrl: subgraph.subscriptionUrl,
       subscriptionProtocol: subgraph.subscriptionProtocol,
+      websocketSubprotocol:
+        subgraph.subscriptionProtocol === 'ws' ? subgraph.websocketSubprotocol || 'auto' : undefined,
       configurationDataMap,
       schema,
     };
@@ -358,6 +360,7 @@ export class Composer {
             schemaVersionId: subgraph.schemaVersionId,
             subscriptionUrl: subgraph.subscriptionUrl,
             subscriptionProtocol: subgraph.subscriptionProtocol,
+            websocketSubprotocol: subgraph.websocketSubprotocol,
           };
         }),
       };

@@ -135,3 +135,29 @@ proto3.util.setEnumType(GraphQLSubscriptionProtocol, "wg.cosmo.common.GraphQLSub
   { no: 2, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST" },
 ]);
 
+/**
+ * @generated from enum wg.cosmo.common.GraphQLWebsocketSubprotocol
+ */
+export enum GraphQLWebsocketSubprotocol {
+  /**
+   * @generated from enum value: GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO = 0;
+   */
+  GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO = 0,
+
+  /**
+   * @generated from enum value: GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS = 1;
+   */
+  GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS = 1,
+
+  /**
+   * @generated from enum value: GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS = 2;
+   */
+  GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(GraphQLWebsocketSubprotocol)
+proto3.util.setEnumType(GraphQLWebsocketSubprotocol, "wg.cosmo.common.GraphQLWebsocketSubprotocol", [
+  { no: 0, name: "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO" },
+  { no: 1, name: "GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS" },
+  { no: 2, name: "GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS" },
+]);
+

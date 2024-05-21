@@ -9,6 +9,7 @@ import {
   schemaCheckChangeActionOperationUsage,
   subgraphs,
   targets,
+  websocketSubprotocolEnum,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -21,6 +22,7 @@ export type NewBillingSubscription = typeof billingSubscriptions.$inferInsert;
 export type NewBillingPlan = typeof billingPlans.$inferInsert;
 export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
 export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
+export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
 
 export type AuditableType =
   | 'organization'

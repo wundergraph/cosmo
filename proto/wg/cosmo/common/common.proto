@@ -28,3 +28,9 @@ enum GraphQLSubscriptionProtocol {
   // Subscribe via SSE with a POST request
   GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2;
 }
+
+enum GraphQLWebsocketSubprotocol {
+  GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO = 0;
+  GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS = 1;
+  GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS = 2;
+}

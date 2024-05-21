@@ -1,9 +1,17 @@
+/* eslint-disable import/named */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
 import boxen from 'boxen';
 import { buildClientSchema, printSchema } from 'graphql';
 import yaml from 'js-yaml';
 import pc from 'picocolors';
+import { program } from 'commander';
+import {
+  SubscriptionProtocol,
+  WebsocketSubprotocol,
+  isValidSubscriptionProtocol,
+  isValidWebsocketSubprotocol,
+} from '@wundergraph/cosmo-shared';
 import { config, configFile } from './core/config.js';
 import { KeycloakToken } from './commands/auth/utils.js';
 
@@ -233,5 +241,50 @@ Run npm i -g wgc@latest`;
     throw new Error(
       `Failed to check for updates. You can disable update check by setting env DISABLE_UPDATE_CHECK=true. ${e.message}`,
     );
+  }
+};
+
+export const validateSubscriptionProtocols = ({
+  subscriptionProtocol,
+  websocketSubprotocol,
+}: {
+  subscriptionProtocol: SubscriptionProtocol;
+  websocketSubprotocol: WebsocketSubprotocol;
+}) => {
+  if (subscriptionProtocol && !isValidSubscriptionProtocol(subscriptionProtocol)) {
+    program.error(
+      pc.red(
+        pc.bold(
+          `The subscription protocol '${pc.bold(
+            subscriptionProtocol,
+          )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
+        ),
+      ),
+    );
+  }
+
+  if (websocketSubprotocol) {
+    if (subscriptionProtocol && subscriptionProtocol !== 'ws') {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The websocket subprotocol '${pc.bold(
+              websocketSubprotocol,
+            )}' can only be used if the subscription protocol is 'ws'.`,
+          ),
+        ),
+      );
+    }
+    if (!isValidWebsocketSubprotocol(websocketSubprotocol)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The websocket subprotocol '${pc.bold(
+              websocketSubprotocol,
+            )}' is not valid. Please use one of the following: auto, graphql-ws, graphql-transport-ws.`,
+          ),
+        ),
+      );
+    }
   }
 };

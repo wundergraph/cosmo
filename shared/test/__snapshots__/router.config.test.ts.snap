@@ -39,7 +39,8 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "url": {
               "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -105,7 +106,8 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "url": {
               "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -167,7 +169,8 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "url": {
               "staticVariableContent": "https://wg-federation-demo-reviews.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -229,7 +232,8 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "url": {
               "staticVariableContent": "https://wg-federation-demo-inventory.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -327,7 +331,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is not pro
             "url": {
               "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -381,7 +386,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is not pro
             "url": {
               "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -459,7 +465,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
             "url": {
               "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -513,7 +520,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
             "url": {
               "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -592,7 +600,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
             "url": {
               "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
@@ -646,7 +655,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
             "url": {
               "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
             },
-            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS"
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
           },
           "federation": {
             "enabled": true,
