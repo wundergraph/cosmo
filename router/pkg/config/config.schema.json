@@ -983,7 +983,8 @@
     },
     "override_routing_url": {
       "type": "object",
-      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs.",
+      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs. Please use the overrides section because this option is deprecated",
+      "deprecated": true,
       "additionalProperties": false,
       "properties": {
         "subgraphs": {

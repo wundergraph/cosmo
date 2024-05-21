@@ -157,6 +157,9 @@
   "OverrideRoutingURL": {
     "Subgraphs": {}
   },
+  "Overrides": {
+    "Subgraphs": {}
+  },
   "SecurityConfiguration": {
     "BlockMutations": false,
     "BlockSubscriptions": false,

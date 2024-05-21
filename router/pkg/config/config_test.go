@@ -294,4 +294,5 @@ overrides:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
+	require.Equal(t, js.Causes[0].Message, "'a' is not valid 'http-url'")
 }
