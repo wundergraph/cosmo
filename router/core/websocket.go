@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"regexp"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -555,12 +557,46 @@ type WebSocketConnectionHandler struct {
 	subscriptions   sync.Map
 	stats           WebSocketsStatistics
 
-	forwardUpgradeRequestHeaders     bool
 	forwardUpgradeRequestQueryParams bool
 	forwardInitialPayload            bool
+
+	forwardUpgradeHeaders forwardUpgradeHeadersConfig
 }
 
+type forwardUpgradeHeadersConfig struct {
+	enabled             bool
+	withStaticAllowList bool
+	staticAllowList     []string
+	withRegexAllowList  bool
+	regexAllowList      []*regexp.Regexp
+}
+
+var (
+	detectNonRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+)
+
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
+
+	forwardUpgradeHeaders := forwardUpgradeHeadersConfig{}
+	if opts.Config != nil && opts.Config.ForwardUpgradeHeaders.Enabled {
+		forwardUpgradeHeaders.enabled = true
+		for _, str := range opts.Config.ForwardUpgradeHeaders.AllowList {
+			if detectNonRegex.MatchString(str) {
+				canonicalHeaderKey := http.CanonicalHeaderKey(str)
+				forwardUpgradeHeaders.staticAllowList = append(forwardUpgradeHeaders.staticAllowList, canonicalHeaderKey)
+			} else {
+				re, err := regexp.Compile(str)
+				if err != nil {
+					opts.Logger.Warn("Invalid regex in forward upgrade headers allow list", zap.String("regex", str), zap.Error(err))
+					continue
+				}
+				forwardUpgradeHeaders.regexAllowList = append(forwardUpgradeHeaders.regexAllowList, re)
+			}
+		}
+		forwardUpgradeHeaders.withStaticAllowList = len(forwardUpgradeHeaders.staticAllowList) > 0
+		forwardUpgradeHeaders.withRegexAllowList = len(forwardUpgradeHeaders.regexAllowList) > 0
+	}
+
 	return &WebSocketConnectionHandler{
 		ctx:                              ctx,
 		operationProcessor:               opts.OperationProcessor,
@@ -577,8 +613,8 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		stats:                            opts.Stats,
 		clientInfo:                       opts.ClientInfo,
 		initRequestID:                    opts.InitRequestID,
-		forwardUpgradeRequestHeaders:     opts.Config != nil && opts.Config.ForwardUpgradeHeaders,
-		forwardUpgradeRequestQueryParams: opts.Config != nil && opts.Config.ForwardUpgradeQueryParams,
+		forwardUpgradeHeaders:            forwardUpgradeHeaders,
+		forwardUpgradeRequestQueryParams: opts.Config != nil && opts.Config.ForwardUpgradeQueryParams.Enabled,
 		forwardInitialPayload:            opts.Config != nil && opts.Config.ForwardInitialPayload,
 	}
 }
@@ -647,7 +683,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 		return
 	}
 
-	if h.forwardUpgradeRequestHeaders && h.upgradeRequestHeaders != nil {
+	if h.forwardUpgradeHeaders.enabled && h.upgradeRequestHeaders != nil {
 		if operationCtx.extensions == nil {
 			operationCtx.extensions = json.RawMessage("{}")
 		}
@@ -810,7 +846,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 			}
 		}
 	}
-	if h.forwardUpgradeRequestHeaders {
+	if h.forwardUpgradeHeaders.enabled {
 		header := make(http.Header, len(h.r.Header))
 		for k, v := range h.r.Header {
 			if h.ignoreHeader(k) {
@@ -829,22 +865,19 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 }
 
 func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
-	switch k {
-	case "Sec-Websocket-Protocol",
-		"Sec-Websocket-Version",
-		"Sec-Websocket-Key",
-		"Sec-Websocket-Extensions",
-		"Upgrade",
-		"Connection",
-		"Host",
-		"Origin",
-		"Pragma",
-		"Cache-Control",
-		"User-Agent",
-		"Accept-Encoding":
-		return true
+	if h.forwardUpgradeHeaders.withStaticAllowList {
+		if slices.Contains(h.forwardUpgradeHeaders.staticAllowList, k) {
+			return false
+		}
 	}
-	return false
+	if h.forwardUpgradeHeaders.withRegexAllowList {
+		for _, re := range h.forwardUpgradeHeaders.regexAllowList {
+			if re.MatchString(k) {
+				return false
+			}
+		}
+	}
+	return h.forwardUpgradeHeaders.withStaticAllowList || h.forwardUpgradeHeaders.withRegexAllowList
 }
 
 func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {

@@ -356,6 +356,10 @@ func TestWebSockets(t *testing.T) {
 						Operation: config.HeaderRuleOperationPropagate,
 						Named:     "Authorization",
 					},
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "Not-AllowListed-But-Forwarded",
+					},
 				},
 			},
 		}
@@ -376,6 +380,9 @@ func TestWebSockets(t *testing.T) {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							defer wg.Done()
 
+							notAllowListedButForwarded := r.Header.Get("Not-AllowListed-But-Forwarded")
+							require.Equal(t, "but still part of the origin upgrade request", notAllowListedButForwarded)
+
 							upgrader := websocket.Upgrader{
 								CheckOrigin: func(r *http.Request) bool {
 									return true
@@ -389,14 +396,14 @@ func TestWebSockets(t *testing.T) {
 
 							_, message, err := conn.ReadMessage()
 							require.NoError(t, err)
-							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"Canonical-Header-Name":["matches"],"Reverse-Canonical-Header-Name":["matches as well"],"X-Custom-Auth":["customAuth"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
 							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
 							require.NoError(t, err)
 
 							_, message, err = conn.ReadMessage()
 							require.NoError(t, err)
-							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"Canonical-Header-Name":["matches"],"Reverse-Canonical-Header-Name":["matches as well"],"X-Custom-Auth":["customAuth"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
 							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
 							require.NoError(t, err)
@@ -425,7 +432,12 @@ func TestWebSockets(t *testing.T) {
 			}
 
 			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
-				"Authorization": []string{"Bearer test"},
+				"Authorization":                 []string{"Bearer test"},
+				"Ignored":                       []string{"ignored"},
+				"X-Custom-Auth":                 []string{"customAuth"},
+				"canonical-header-name":         []string{"matches"},
+				"Reverse-Canonical-Header-Name": []string{"matches as well"},
+				"Not-AllowListed-But-Forwarded": []string{"but still part of the origin upgrade request"},
 			}, []byte(`{"Custom-Auth":"test"}`))
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",

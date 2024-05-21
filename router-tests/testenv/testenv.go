@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nats-io/nats.go/jetstream"
 	"io"
 	"log"
 	"math/rand"
@@ -22,6 +21,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -624,9 +625,19 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				Enabled:     true,
 				HandlerPath: "/absinthe/socket",
 			},
-			ForwardUpgradeHeaders:     true,
-			ForwardUpgradeQueryParams: true,
-			ForwardInitialPayload:     true,
+			ForwardUpgradeHeaders: config.ForwardUpgradeHeadersConfiguration{
+				Enabled: true,
+				AllowList: []string{
+					"Authorization",
+					"X-Custom-*",
+					"Canonical-Header-Name",
+					"reverse-canonical-header-name",
+				},
+			},
+			ForwardUpgradeQueryParams: config.ForwardUpgradeQueryParamsConfiguration{
+				Enabled: true,
+			},
+			ForwardInitialPayload: true,
 		}))
 	}
 	return core.NewRouter(routerOpts...)
