@@ -49,6 +49,16 @@
             ]
           },
           {
+            "typeName": "Employee",
+            "fieldNames": [
+              "notes"
+            ],
+            "overrideConfiguration": {
+              "featureFlagName": "Employee.notes",
+              "isOverride": false
+            }
+          },
+          {
             "typeName": "Consultancy",
             "fieldNames": [
               "upc",
@@ -494,9 +504,18 @@
             "typeName": "Employee",
             "fieldNames": [
               "id",
-              "products",
-              "notes"
+              "products"
             ]
+          },
+          {
+            "typeName": "Employee",
+            "fieldNames": [
+              "notes"
+            ],
+            "overrideConfiguration": {
+              "featureFlagName": "Employee.notes",
+              "isOverride": true
+            }
           },
           {
             "typeName": "Consultancy",

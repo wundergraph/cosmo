@@ -63,7 +63,7 @@ enum ProductName {
 type Employee @key(fields: "id") {
   id: Int!
   products: [ProductName!]!
-  notes: String @override(from: "employees")
+  notes: String @override(from: "employees") # this is overridden, but right now it's a 100% rollout vs incremental
 }
 
 union Products = Consultancy | Cosmo | Documentation
