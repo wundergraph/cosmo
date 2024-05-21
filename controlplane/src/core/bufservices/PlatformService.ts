@@ -6946,6 +6946,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           limit: req.limit,
           offset: req.offset,
           namespaceId: namespace?.id,
+          query: req.query,
+        });
+
+        const count = await repo.count({
+          namespaceId: namespace?.id,
+          query: req.query,
+          limit: 0,
+          offset: 0,
         });
 
         return {
@@ -6961,6 +6969,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
           })),
+          count,
           response: {
             code: EnumStatusCode.OK,
           },

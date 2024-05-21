@@ -2387,6 +2387,11 @@ export class GetSubgraphsRequest extends Message<GetSubgraphsRequest> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string query = 4;
+   */
+  query?: string;
+
   constructor(data?: PartialMessage<GetSubgraphsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2398,6 +2403,7 @@ export class GetSubgraphsRequest extends Message<GetSubgraphsRequest> {
     { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphsRequest {
@@ -2534,6 +2540,11 @@ export class GetSubgraphsResponse extends Message<GetSubgraphsResponse> {
    */
   graphs: Subgraph[] = [];
 
+  /**
+   * @generated from field: int32 count = 3;
+   */
+  count = 0;
+
   constructor(data?: PartialMessage<GetSubgraphsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2544,6 +2555,7 @@ export class GetSubgraphsResponse extends Message<GetSubgraphsResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "graphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 3, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphsResponse {

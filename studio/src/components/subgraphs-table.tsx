@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { IoPersonAdd } from "react-icons/io5";
+import { useApplyParams } from "./analytics/use-apply-params";
 import { EmptyState } from "./empty-state";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -51,6 +52,7 @@ import {
 } from "./ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
+import { Pagination } from "./ui/pagination";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   const router = useRouter();
@@ -358,135 +360,147 @@ const AddSubgraphUsers = ({
 export const SubgraphsTable = ({
   graph,
   subgraphs,
+  totalCount, 
 }: {
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
+  totalCount: number
 }) => {
   const rbac = useFeature("rbac");
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug;
 
+  const pageNumber = router.query.page
+    ? parseInt(router.query.page as string)
+    : 1;
+  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const noOfPages = Math.ceil(totalCount / limit);
+
+
   if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} />;
 
   return (
-    <TableWrapper>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="px-4">Name</TableHead>
-            <TableHead className="w-4/12 px-4">Url</TableHead>
-            <TableHead className="w-4/12 px-4">Labels</TableHead>
-            <TableHead className="w-2/12 px-4">Last Published</TableHead>
-            {rbac?.enabled && <TableHead className="w-1/12"></TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {subgraphs.map(
-            ({
-              name,
-              routingURL,
-              lastUpdatedAt,
-              labels,
-              creatorUserId,
-              namespace,
-            }) => {
-              const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
-              let analyticsPath = `${path}/analytics`;
-              if (router.asPath.split("/")[3] === "graph") {
-                const query = [
-                  {
-                    id: "federatedGraphId",
-                    value: [
-                      JSON.stringify({
-                        label: graph?.name,
-                        operator: 0,
-                        value: graph?.id,
-                      }),
-                    ],
-                  },
-                ];
-                analyticsPath += `?filterState=${encodeURIComponent(
-                  JSON.stringify(query),
-                )}`;
-              }
-              return (
-                <TableRow
-                  key={name}
-                  className=" group cursor-pointer py-1 hover:bg-secondary/30"
-                  onClick={() => router.push(path)}
-                >
-                  <TableCell className="px-4 font-medium">{name}</TableCell>
-                  <TableCell className="px-4 text-muted-foreground">
-                    {routingURL}
-                  </TableCell>
-                  <TableCell className="px-4">
-                    <div className="flex space-x-2">
-                      {labels.length === 0 && (
-                        <Tooltip delayDuration={200}>
-                          <TooltipTrigger>-</TooltipTrigger>
-                          <TooltipContent>
-                            Only graphs with empty label matchers will compose
-                            this subgraph
-                          </TooltipContent>
-                        </Tooltip>
+    <div className="flex h-full flex-col gap-y-3">
+      <TableWrapper>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="px-4">Name</TableHead>
+              <TableHead className="w-4/12 px-4">Url</TableHead>
+              <TableHead className="w-4/12 px-4">Labels</TableHead>
+              <TableHead className="w-2/12 px-4">Last Published</TableHead>
+              {rbac?.enabled && <TableHead className="w-1/12"></TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {subgraphs.map(
+              ({
+                name,
+                routingURL,
+                lastUpdatedAt,
+                labels,
+                creatorUserId,
+                namespace,
+              }) => {
+                const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
+                let analyticsPath = `${path}/analytics`;
+                if (router.asPath.split("/")[3] === "graph") {
+                  const query = [
+                    {
+                      id: "federatedGraphId",
+                      value: [
+                        JSON.stringify({
+                          label: graph?.name,
+                          operator: 0,
+                          value: graph?.id,
+                        }),
+                      ],
+                    },
+                  ];
+                  analyticsPath += `?filterState=${encodeURIComponent(
+                    JSON.stringify(query),
+                  )}`;
+                }
+                return (
+                  <TableRow
+                    key={name}
+                    className=" group cursor-pointer py-1 hover:bg-secondary/30"
+                    onClick={() => router.push(path)}
+                  >
+                    <TableCell className="px-4 font-medium">{name}</TableCell>
+                    <TableCell className="px-4 text-muted-foreground">
+                      {routingURL}
+                    </TableCell>
+                    <TableCell className="px-4">
+                      <div className="flex space-x-2">
+                        {labels.length === 0 && (
+                          <Tooltip delayDuration={200}>
+                            <TooltipTrigger>-</TooltipTrigger>
+                            <TooltipContent>
+                              Only graphs with empty label matchers will compose
+                              this subgraph
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {labels.map(({ key, value }) => {
+                          return (
+                            <Badge variant="secondary" key={key + value}>
+                              {key}={value}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 text-muted-foreground">
+                      {lastUpdatedAt
+                        ? formatDistanceToNow(new Date(lastUpdatedAt), {
+                            addSuffix: true,
+                          })
+                        : "Never"}
+                    </TableCell>
+                    <TableCell className="flex justify-end gap-2">
+                      {rbac?.enabled && (
+                        <AddSubgraphUsers
+                          subgraphName={name}
+                          namespace={namespace}
+                          creatorUserId={creatorUserId}
+                        />
                       )}
-                      {labels.map(({ key, value }) => {
-                        return (
-                          <Badge variant="secondary" key={key + value}>
-                            {key}={value}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-4 text-muted-foreground">
-                    {lastUpdatedAt
-                      ? formatDistanceToNow(new Date(lastUpdatedAt), {
-                          addSuffix: true,
-                        })
-                      : "Never"}
-                  </TableCell>
-                  <TableCell className="flex justify-end gap-2">
-                    {rbac?.enabled && (
-                      <AddSubgraphUsers
-                        subgraphName={name}
-                        namespace={namespace}
-                        creatorUserId={creatorUserId}
-                      />
-                    )}
-                    <Tooltip delayDuration={200}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="icon-sm"
-                          className="table-action"
-                        >
-                          <Link
-                            onClick={(e) => e.stopPropagation()}
-                            href={analyticsPath}
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon-sm"
+                            className="table-action"
                           >
-                            <ChartBarIcon className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Analytics</TooltipContent>
-                    </Tooltip>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="table-action"
-                    >
-                      <Link href={path}>View</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            },
-          )}
-        </TableBody>
-      </Table>
-    </TableWrapper>
+                            <Link
+                              onClick={(e) => e.stopPropagation()}
+                              href={analyticsPath}
+                            >
+                              <ChartBarIcon className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Analytics</TooltipContent>
+                      </Tooltip>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="table-action"
+                      >
+                        <Link href={path}>View</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              },
+            )}
+          </TableBody>
+        </Table>
+      </TableWrapper>
+      <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
+    </div>
   );
 };

@@ -58,6 +58,7 @@ import { ChartTooltip } from "./charts";
 import { createFilterState } from "./constructAnalyticsTableQueryState";
 import { useApplyParams } from "./use-apply-params";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 
 export const FieldUsage = ({
   usageData,
@@ -82,6 +83,8 @@ export const FieldUsage = ({
   const { isMobile } = useWindowSize();
 
   const applyParams = useApplyParams();
+
+  const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
   const onDateRangeChange: DateRangePickerChangeHandler = ({
     range,
@@ -123,7 +126,7 @@ export const FieldUsage = ({
           range={range}
           dateRange={dateRange}
           onChange={onDateRangeChange}
-          calendarDaysLimit={90}
+          calendarDaysLimit={analyticsRetention}
         />
       </div>
       <div className="h-64">
