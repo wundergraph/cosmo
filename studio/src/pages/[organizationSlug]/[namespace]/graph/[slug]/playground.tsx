@@ -561,6 +561,11 @@ const PlaygroundPage: NextPageWithLayout = () => {
       toolbar.append(toggleClientValidation);
     }
 
+    // remove settings button
+    const sidebarSection = document.getElementsByClassName("graphiql-sidebar-section")[1]
+    const children = Array.from(sidebarSection.childNodes.values())
+    sidebarSection.removeChild(children[2])
+
     setIsMounted(true);
   }, [isMounted]);
 
