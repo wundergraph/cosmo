@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -130,9 +131,21 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}, nil
 }
 
-func buildNatsOptions(eventSource config.NatsEventSource) ([]nats.Option, error) {
+func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
 
-	var opts []nats.Option
+	opts := []nats.Option{
+		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+
+			if errors.Is(err, nats.ErrSlowConsumer) {
+				logger.Warn(
+					"Nats slow consumer detected. Events are being dropped. Please consider increasing the buffer size or reducing the number of messages being sent.",
+					zap.Error(err),
+				)
+			} else {
+				logger.Error("nats error", zap.Error(err))
+			}
+		}),
+	}
 
 	if eventSource.Authentication != nil {
 		if eventSource.Authentication.Token != nil {

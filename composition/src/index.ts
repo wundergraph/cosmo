@@ -16,4 +16,5 @@ export * from './schema-building/utils';
 export * from './subgraph/subgraph';
 export * from './utils/utils';
 export * from './utils/constants';
+export * from './utils/string-constants';
 export * from './warnings/warnings';

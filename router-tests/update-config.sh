@@ -4,8 +4,8 @@
 
 ## using source code
 
-# cd "../cli"
-# pnpm wgc router compose -i ../demo/graph.yaml -o ../router-tests/testenv/testdata/config.json
+cd "../cli" || exit
+pnpm wgc router compose -i ../demo/graph.yaml -o ../router-tests/testenv/testdata/config.json
 
 ## using npm package
 

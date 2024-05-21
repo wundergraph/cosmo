@@ -4,14 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
@@ -261,7 +261,7 @@ func TestNatsEvents(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -746,6 +746,281 @@ func TestNatsEvents(t *testing.T) {
 				clientErr := client.Run()
 				require.NoError(t, clientErr)
 			}()
+
+			wg.Wait()
+		})
+	})
+
+	t.Run("subscribe ws with filter", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 100
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			type subscriptionPayload struct {
+				Data struct {
+					FilteredEmployeeUpdated struct {
+						ID      float64 `graphql:"id"`
+						Details struct {
+							Forename string `graphql:"forename"`
+							Surname  string `graphql:"surname"`
+						} `graphql:"details"`
+					} `graphql:"filteredEmployeeUpdated(id: 1)"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename, surname } } }"}`),
+			})
+
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				gErr := conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(5), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Sergiy", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Petrunin", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(8), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Nithin", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Kumar", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdated.ID)
+				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdated.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+			}()
+
+			// Trigger the subscription via NATS
+			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(`{"id":1,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
+			for i := 1; i < 13; i++ {
+				// Ensure the NATS consumer can keep up with the provider
+				time.Sleep(time.Millisecond * 100)
+
+				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
+				require.NoError(t, err)
+
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+			}
+
+			wg.Wait()
+		})
+	})
+
+	t.Run("subscribe sse with filter", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				client := http.Client{
+					Timeout: time.Second * 10,
+				}
+				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLServeSentEventsURL(), bytes.NewReader(subscribePayload))
+				require.NoError(t, gErr)
+
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Accept", "text/event-stream")
+				req.Header.Set("Connection", "keep-alive")
+				req.Header.Set("Cache-Control", "no-cache")
+
+				resp, gErr := client.Do(req)
+				require.NoError(t, gErr)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+				defer resp.Body.Close()
+				reader := bufio.NewReader(resp.Body)
+
+				eventNext, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
+				line, _, gErr := reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":4,\"details\":{\"forename\":\"Björn\",\"surname\":\"Schwenzer\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":5,\"details\":{\"forename\":\"Sergiy\",\"surname\":\"Petrunin\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":7,\"details\":{\"forename\":\"Suvij\",\"surname\":\"Surya\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":8,\"details\":{\"forename\":\"Nithin\",\"surname\":\"Kumar\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+
+				eventNext, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "event: next", string(eventNext))
+				data, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":11,\"details\":{\"forename\":\"Alexandra\",\"surname\":\"Neuse\"}}}}", string(data))
+				line, _, gErr = reader.ReadLine()
+				require.NoError(t, gErr)
+				require.Equal(t, "", string(line))
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			// Trigger the subscription via NATS
+			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(`{"id":1,"__typename": "Employee"}`))
+			require.NoError(t, err)
+
+			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
+			for i := 1; i < 13; i++ {
+				// Ensure the NATS consumer can keep up with the provider
+				time.Sleep(time.Millisecond * 100)
+
+				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
+				require.NoError(t, err)
+
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+
+			}
 
 			wg.Wait()
 		})

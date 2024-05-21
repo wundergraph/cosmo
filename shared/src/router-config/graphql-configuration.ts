@@ -13,15 +13,19 @@ import {
   NatsStreamConfiguration,
   RequiredField,
   Scopes,
+  SubscriptionFieldCondition,
+  SubscriptionFilterCondition,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   ConfigurationData,
   FieldConfiguration as CompositionFieldConfiguration,
   NatsEventType as CompositionEventType,
+  PROVIDER_TYPE_KAFKA,
+  PROVIDER_TYPE_NATS,
   RequiredFieldConfiguration,
+  SubscriptionCondition,
 } from '@wundergraph/composition';
-import { PROVIDER_TYPE_KAFKA, PROVIDER_TYPE_NATS } from '@wundergraph/composition/dist/utils/string-constants.js';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
@@ -143,8 +147,7 @@ export function configurationDataMapToDataSourceConfiguration(
           break;
         }
         default: {
-          // TODO propagate this properly
-          throw new Error(`Unknown event provider.`);
+          throw new Error(`Fatal: Unknown event provider.`);
         }
       }
     }
@@ -172,14 +175,23 @@ export function generateFieldConfigurations(
       typeName: compositionFieldConfiguration.typeName,
     });
     const requiredOrScopes =
-      compositionFieldConfiguration.requiredScopes?.map((andScopes) => new Scopes({ requiredAndScopes: andScopes })) ||
-      [];
+      compositionFieldConfiguration.requiredScopes?.map(
+        (andScopes: string[]) => new Scopes({ requiredAndScopes: andScopes }),
+      ) || [];
     const hasRequiredOrScopes = requiredOrScopes.length > 0;
     if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {
       fieldConfiguration.authorizationConfiguration = new AuthorizationConfiguration({
         requiresAuthentication: compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes,
         requiredOrScopes,
       });
+    }
+    if (compositionFieldConfiguration.subscriptionFilterCondition) {
+      const subscriptionFilterCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(
+        subscriptionFilterCondition,
+        compositionFieldConfiguration.subscriptionFilterCondition,
+      );
+      fieldConfiguration.subscriptionFilterCondition = subscriptionFilterCondition;
     }
     output.push(fieldConfiguration);
   }
@@ -199,3 +211,42 @@ const resolveNamedTypeName = (type: TypeNode): string => {
     }
   }
 };
+
+export function generateSubscriptionFilterCondition(
+  protoMessage: SubscriptionFilterCondition,
+  condition: SubscriptionCondition,
+) {
+  if (condition.and !== undefined) {
+    const protoAndConditions: SubscriptionFilterCondition[] = [];
+    for (const andCondition of condition.and) {
+      const protoAndCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(protoAndCondition, andCondition);
+      protoAndConditions.push(protoAndCondition);
+    }
+    protoMessage.and = protoAndConditions;
+    return;
+  }
+  if (condition.in !== undefined) {
+    protoMessage.in = new SubscriptionFieldCondition({
+      fieldPath: condition.in.fieldPath,
+      json: JSON.stringify(condition.in.values),
+    });
+    return;
+  }
+  if (condition.not !== undefined) {
+    protoMessage.not = new SubscriptionFilterCondition();
+    generateSubscriptionFilterCondition(protoMessage.not, condition.not);
+    return;
+  }
+  if (condition.or !== undefined) {
+    const protoOrConditions: SubscriptionFilterCondition[] = [];
+    for (const orCondition of condition.or) {
+      const protoOrCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(protoOrCondition, orCondition);
+      protoOrConditions.push(protoOrCondition);
+    }
+    protoMessage.or = protoOrConditions;
+    return;
+  }
+  throw new Error('Fatal: Incoming SubscriptionCondition object was malformed.');
+}

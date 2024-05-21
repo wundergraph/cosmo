@@ -1,10 +1,18 @@
-import { DEFAULT_DEPRECATION_REASON, DirectiveDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql';
+import {
+  DEFAULT_DEPRECATION_REASON,
+  DirectiveDefinitionNode,
+  InputObjectTypeDefinitionNode,
+  Kind,
+  ScalarTypeDefinitionNode,
+} from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
+  AND_UPPER,
   ARGUMENT_DEFINITION_UPPER,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
+  CONDITION,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
@@ -19,9 +27,11 @@ import {
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
+  FIELD_PATH,
   FIELD_SET_SCALAR,
   FIELDS,
   FROM,
+  IN_UPPER,
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
@@ -30,7 +40,9 @@ import {
   KEY,
   LINK,
   NAME,
+  NOT_UPPER,
   OBJECT_UPPER,
+  OR_UPPER,
   OVERRIDE,
   PROVIDER_ID,
   PROVIDES,
@@ -48,11 +60,16 @@ import {
   STRING_SCALAR,
   SUBJECT,
   SUBJECTS,
+  SUBSCRIPTION_FIELD_CONDITION,
+  SUBSCRIPTION_FILTER,
+  SUBSCRIPTION_FILTER_CONDITION,
+  SUBSCRIPTION_FILTER_VALUE,
   TAG,
   TOPIC,
   TOPICS,
   UNION_UPPER,
   URL_LOWER,
+  VALUES,
 } from './string-constants';
 import { MutableDirectiveDefinitionNode, MutableInputObjectNode, MutableScalarNode } from '../schema-building/ast';
 
@@ -207,7 +224,7 @@ const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__natsRequest(subject: String!, id: String! = "default") on FIELD_DEFINITION
+// directive @edfs__natsRequest(subject: String!, providerId String! = "default") on FIELD_DEFINITION
 const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -237,7 +254,7 @@ const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__natsSubscribe(subjects: [String!]!, id: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+// directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
 const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -570,6 +587,107 @@ const SHAREABLE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
+// directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
+export const SUBSCRIPTION_FILTER_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CONDITION),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_CONDITION),
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(SUBSCRIPTION_FILTER),
+  repeatable: false,
+};
+
+/* input openfed__SubscriptionFilterCondition {
+ *   AND: [openfed__SubscriptionFilterCondition!]
+ *   IN: openfed__SubscriptionFieldCondition
+ *   NOT: openfed__SubscriptionFilterCondition
+ *   OR: [openfed__SubscriptionFilterCondition!]
+ * }
+ */
+export const SUBSCRIPTION_FILTER_CONDITION_DEFINITION: InputObjectTypeDefinitionNode = {
+  fields: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(AND_UPPER),
+      type: {
+        kind: Kind.LIST_TYPE,
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_CONDITION),
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(IN_UPPER),
+      type: stringToNamedTypeNode(SUBSCRIPTION_FIELD_CONDITION),
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(OR_UPPER),
+      type: {
+        kind: Kind.LIST_TYPE,
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_CONDITION),
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(NOT_UPPER),
+      type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_CONDITION),
+    },
+  ],
+  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  name: stringToNameNode(SUBSCRIPTION_FILTER_CONDITION),
+};
+
+// scalar openfed__SubscriptionFilterValue
+export const SUBSCRIPTION_FILTER_VALUE_DEFINITION: MutableScalarNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(SUBSCRIPTION_FILTER_VALUE),
+};
+
+/* input openfed__SubscriptionFieldCondition {
+ *   fieldPath: String!
+ *   values: [openfed__SubscriptionFilterValue]!
+ * }
+ */
+export const SUBSCRIPTION_FIELD_CONDITION_DEFINITION: InputObjectTypeDefinitionNode = {
+  fields: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FIELD_PATH),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(VALUES),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: stringToNamedTypeNode(SUBSCRIPTION_FILTER_VALUE),
+        },
+      },
+    },
+  ],
+  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  name: stringToNameNode(SUBSCRIPTION_FIELD_CONDITION),
+};
+
 export const V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionNode>([
   [AUTHENTICATED, AUTHENTICATED_DEFINITION],
   [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION],
@@ -650,8 +768,6 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode =
     },
   ],
 };
-
-export const MAXIMUM_TYPE_NESTING = 30;
 
 export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
 

@@ -119,34 +119,70 @@ export function addSetsAndReturnMutationBoolean<T>(source: Set<T>, target: Set<T
 
 export function kindToTypeString(kind: Kind): string {
   switch (kind) {
-    case Kind.ENUM_TYPE_DEFINITION:
+    case Kind.BOOLEAN: {
+      return 'boolean';
+    }
+    case Kind.ENUM:
+    // intentional fallthrough
+    case Kind.ENUM_TYPE_DEFINITION: {
       return 'enum';
-    case Kind.ENUM_TYPE_EXTENSION:
+    }
+    case Kind.ENUM_TYPE_EXTENSION: {
       return 'enum extension';
-    case Kind.FIELD_DEFINITION:
+    }
+    case Kind.ENUM_VALUE_DEFINITION: {
+      return 'enum value';
+    }
+    case Kind.FIELD_DEFINITION: {
       return FIELD;
-    case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+    }
+    case Kind.FLOAT: {
+      return 'float';
+    }
+    case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
       return 'input object';
-    case Kind.INPUT_OBJECT_TYPE_EXTENSION:
+    }
+    case Kind.INPUT_OBJECT_TYPE_EXTENSION: {
       return 'input object extension';
-    case Kind.INPUT_VALUE_DEFINITION:
+    }
+    case Kind.INPUT_VALUE_DEFINITION: {
       return 'input value';
-    case Kind.INTERFACE_TYPE_DEFINITION:
+    }
+    case Kind.INT: {
+      return 'int';
+    }
+    case Kind.INTERFACE_TYPE_DEFINITION: {
       return 'interface';
-    case Kind.INTERFACE_TYPE_EXTENSION:
+    }
+    case Kind.INTERFACE_TYPE_EXTENSION: {
       return 'interface extension';
-    case Kind.OBJECT_TYPE_DEFINITION:
+    }
+    case Kind.NULL: {
+      return 'null';
+    }
+    case Kind.OBJECT:
+    // intentional fallthrough
+    case Kind.OBJECT_TYPE_DEFINITION: {
       return 'object';
-    case Kind.OBJECT_TYPE_EXTENSION:
+    }
+    case Kind.OBJECT_TYPE_EXTENSION: {
       return 'object extension';
-    case Kind.SCALAR_TYPE_DEFINITION:
+    }
+    case Kind.STRING: {
+      return 'string';
+    }
+    case Kind.SCALAR_TYPE_DEFINITION: {
       return 'scalar';
-    case Kind.SCALAR_TYPE_EXTENSION:
+    }
+    case Kind.SCALAR_TYPE_EXTENSION: {
       return 'scalar extension';
-    case Kind.UNION_TYPE_DEFINITION:
+    }
+    case Kind.UNION_TYPE_DEFINITION: {
       return UNION;
-    case Kind.UNION_TYPE_EXTENSION:
+    }
+    case Kind.UNION_TYPE_EXTENSION: {
       return 'union extension';
+    }
     default:
       return kind;
   }
@@ -567,5 +603,11 @@ export function isNodeKindInterface(kind: Kind) {
 export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
   for (const [key, value] of source) {
     target.set(key, value);
+  }
+}
+
+export function getSingleSetEntry<T>(set: Set<T>): T | undefined {
+  for (const entry of set) {
+    return entry;
   }
 }

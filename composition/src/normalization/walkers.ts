@@ -15,6 +15,7 @@ import { NormalizationFactory } from './normalization-factory';
 import {
   BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
   BASE_SCALARS,
+  SUBSCRIPTION_FILTER_DEFINITION,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
 import {
@@ -50,6 +51,7 @@ import {
   SCHEMA,
   SERVICE_FIELD,
   SERVICE_OBJECT,
+  SUBSCRIPTION_FILTER,
 } from '../utils/string-constants';
 import {
   addEnumDefinitionDataByNode,
@@ -95,6 +97,9 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
         if (BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
           return false;
         }
+        if (name === SUBSCRIPTION_FILTER) {
+          nf.directiveDefinitionByDirectiveName.set(SUBSCRIPTION_FILTER, SUBSCRIPTION_FILTER_DEFINITION);
+        }
         nf.referencedDirectiveNames.add(name);
       },
     },
@@ -113,6 +118,9 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
         }
         // The V1 directives are always injected
         if (BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
+          return false;
+        }
+        if (name === SUBSCRIPTION_FILTER) {
           return false;
         }
         nf.directiveDefinitionByDirectiveName.set(name, node);
@@ -262,10 +270,14 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
       enter(node) {
         nf.childName = node.name.value;
         if (isParentRootType) {
-          nf.extractEventDirectivesToConfiguration(node);
           if (nf.childName === SERVICE_FIELD || nf.childName === ENTITIES_FIELD) {
             return false;
           }
+          nf.extractEventDirectivesToConfiguration(node);
+        }
+        // subscriptionFilter is temporarily an edfs-only feature
+        if (nf.edfsDirectiveReferences.size > 0) {
+          nf.validateSubscriptionFilterDirectiveLocation(node);
         }
         nf.lastChildNodeKind = node.kind;
         nf.lastChildNodeKind = node.kind;

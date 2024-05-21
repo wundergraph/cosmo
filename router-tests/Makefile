@@ -25,7 +25,4 @@ update-test-config:
 .PHONY: test test-no-race lint test-stability clean-testcache update-test-config test-fresh
 
 bump-deps:
-	go get github.com/wundergraph/cosmo/router@upgrade
-	go get github.com/wundergraph/cosmo/demo@upgrade
-	go mod tidy
-	cd .. && go work sync
+	./bump-deps.sh

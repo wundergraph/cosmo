@@ -21,7 +21,7 @@ import {
 } from 'graphql';
 import { formatDescription, stringToNameNode } from '../ast/utils';
 import { maximumTypeNestingExceededError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
-import { MAXIMUM_TYPE_NESTING } from '../utils/constants';
+import { MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 
 export type MutableDirectiveDefinitionNode = {
   arguments: MutableInputValueNode[];
@@ -253,7 +253,7 @@ export function getMutableTypeNode(node: TypeNode, typePath: string, errors: Err
         throw unexpectedTypeNodeKindFatalError(typePath);
     }
   }
-  errors.push(maximumTypeNestingExceededError(typePath, MAXIMUM_TYPE_NESTING));
+  errors.push(maximumTypeNestingExceededError(typePath));
   // Return a dummy type when the type has exceeded nesting
   return { kind: Kind.NAMED_TYPE, name: stringToNameNode(getTypeNodeNamedTypeName(node)) };
 }

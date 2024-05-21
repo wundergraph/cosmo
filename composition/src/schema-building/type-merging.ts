@@ -1,9 +1,9 @@
 import { Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode, TypeNode } from 'graphql';
 import { maximumTypeNestingExceededError } from '../errors/errors';
 import { getMutableTypeNode, MutableIntermediateTypeNode } from './ast';
-import { MAXIMUM_TYPE_NESTING } from '../utils/constants';
 import { stringToNameNode } from '../ast/utils';
 import { FieldData } from './type-definition-data';
+import { MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 
 enum DivergentType {
   NONE,
@@ -90,7 +90,7 @@ function getMergedTypeNode(
     // At least one of the types must be a non-null wrapper, or the types are inconsistent
     return { typeErrors: [current.kind, other.kind] };
   }
-  errors.push(maximumTypeNestingExceededError(hostPath, MAXIMUM_TYPE_NESTING));
+  errors.push(maximumTypeNestingExceededError(hostPath));
   return { typeNode: current };
 }
 
@@ -124,7 +124,5 @@ export function renameNamedTypeName(fieldData: FieldData, newNamedTypeName: stri
   }
   // Use a dummy renamed type if the traversal fails
   fieldData.type = { kind: Kind.NAMED_TYPE, name: stringToNameNode(newNamedTypeName) };
-  errors.push(
-    maximumTypeNestingExceededError(`${fieldData.originalParentTypeName}.${fieldData.name}`, MAXIMUM_TYPE_NESTING),
-  );
+  errors.push(maximumTypeNestingExceededError(`${fieldData.originalParentTypeName}.${fieldData.name}`));
 }
