@@ -556,7 +556,7 @@ func TestKafkaEvents(t *testing.T) {
 			}
 
 			// conn.Close() is called in a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -662,7 +662,7 @@ func TestKafkaEvents(t *testing.T) {
 			}
 
 			// conn.Close() is called in a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -757,7 +757,7 @@ func TestKafkaEvents(t *testing.T) {
 			}
 
 			// conn.Close() is called in a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -852,7 +852,7 @@ func TestKafkaEvents(t *testing.T) {
 			}
 
 			// conn.Close() is called in a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",

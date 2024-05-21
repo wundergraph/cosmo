@@ -5,6 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"sync"
 	"testing"
@@ -769,7 +772,7 @@ func TestNatsEvents(t *testing.T) {
 			}
 
 			// conn.Close() is called in a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
