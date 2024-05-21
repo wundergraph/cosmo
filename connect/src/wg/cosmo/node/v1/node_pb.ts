@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
+import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from "../../common/common_pb.js";
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -1910,6 +1910,11 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
    */
   protocol?: GraphQLSubscriptionProtocol;
 
+  /**
+   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocketSubprotocol = 5;
+   */
+  websocketSubprotocol?: GraphQLWebsocketSubprotocol;
+
   constructor(data?: PartialMessage<GraphQLSubscriptionConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1922,6 +1927,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
     { no: 2, name: "url", kind: "message", T: ConfigurationVariable },
     { no: 3, name: "useSSE", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 5, name: "websocketSubprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphQLSubscriptionConfiguration {

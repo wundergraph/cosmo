@@ -131,14 +131,46 @@
           }
         },
         "forward_upgrade_headers": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request Headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Forward upgrade request headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "The names of the headers to forward. The default value is 'Authorization'.",
+              "default": [
+                "Authorization"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_upgrade_query_params": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
+              "default": [
+                "Authorization"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_initial_payload": {
           "type": "boolean",
@@ -865,35 +897,38 @@
                   "authentication": {
                     "description": "Authentication configuration for the NATS provider.",
                     "type": "object",
-                    "oneOf": [{
-                      "required": ["token"],
-                      "properties": {
-                        "token": {
-                          "type": "string",
-                          "description": "The token for token-based authentication."
+                    "oneOf": [
+                      {
+                        "required": ["token"],
+                        "properties": {
+                          "token": {
+                            "type": "string",
+                            "description": "The token for token-based authentication."
+                          }
                         }
-                      }
-                    }, {
-                      "type": "object",
-                      "properties": {
-                        "user_info": {
-                          "type": "object",
-                          "description": "Userinfo configuration for the NATS provider.",
-                          "additionalProperties": false,
-                          "required": ["username", "password"],
-                          "properties": {
-                            "username": {
-                              "type": "string",
-                              "description": "The username for username/password-based authentication."
-                            },
-                            "password": {
-                              "type": "string",
-                              "description": "The password for username/password-based authentication."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "user_info": {
+                            "type": "object",
+                            "description": "Userinfo configuration for the NATS provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for username/password-based authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for username/password-based authentication."
+                              }
                             }
                           }
                         }
                       }
-                    }]
+                    ]
                   }
                 }
               }
@@ -932,27 +967,29 @@
                   "authentication": {
                     "type": "object",
                     "description": "SASL Authentication configuration for the Kafka provider.",
-                    "oneOf": [{
-                      "type": "object",
-                      "properties": {
-                        "sasl_plain": {
-                          "type": "object",
-                          "description": "Plain SASL Authentication configuration for the Kafka provider.",
-                          "additionalProperties": false,
-                          "required": ["username", "password"],
-                          "properties": {
-                            "username": {
-                              "type": "string",
-                              "description": "The username for plain SASL authentication."
-                            },
-                            "password": {
-                              "type": "string",
-                              "description": "The password for plain SASL authentication."
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "sasl_plain": {
+                            "type": "object",
+                            "description": "Plain SASL Authentication configuration for the Kafka provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for plain SASL authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for plain SASL authentication."
+                              }
                             }
                           }
                         }
                       }
-                    }]
+                    ]
                   }
                 }
               }
@@ -978,7 +1015,8 @@
     },
     "override_routing_url": {
       "type": "object",
-      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs.",
+      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs. Please use the overrides section because this option is deprecated",
+      "deprecated": true,
       "additionalProperties": false,
       "properties": {
         "subgraphs": {
@@ -988,6 +1026,40 @@
             "type": "string",
             "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
             "format": "http-url"
+          }
+        }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "description": "The configuration to override subgraph config. The config is used to override the config for subgraphs.",
+      "additionalProperties": false,
+      "properties": {
+        "subgraphs": {
+          "type": "object",
+          "description": "The configuration for the subgraphs. The subgraphs are used to override the config for the subgraphs.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "routing_url": {
+                "type": "string",
+                "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
+                "format": "http-url"
+              },
+              "subscription_url": {
+                "type": "string",
+                "description": "The Subscription URL of the subgraph. The URL is used to override the subscription URL for the subgraph.",
+                "format": "http-url"
+              },
+              "subscription_protocol": {
+                "type": "string",
+                "description": "The Subscription protocol of the subgraph. The protocol is used to override the subscription protocol for the subgraph."
+              },
+              "subscription_websocket_subprotocol": {
+                "type": "string",
+                "description": "The Websocket subprotocol of the subgraph. The protocol is used to override the Websocket subprotocol for the subgraph."
+              }
+            }
           }
         }
       }

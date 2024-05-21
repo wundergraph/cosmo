@@ -214,12 +214,18 @@ export const federatedGraphPersistedOperationsRelations = relations(
 );
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
+export const websocketSubprotocolEnum = pgEnum('websocket_subprotocol', [
+  'auto',
+  'graphql-ws',
+  'graphql-transport-ws',
+] as const);
 
 export const subgraphs = pgTable('subgraphs', {
   id: uuid('id').primaryKey().defaultRandom(),
   routingUrl: text('routing_url').notNull(),
   subscriptionUrl: text('subscription_url'),
   subscriptionProtocol: subscriptionProtocolEnum('subscription_protocol').notNull().default('ws'),
+  websocketSubprotocol: websocketSubprotocolEnum('websocket_subprotocol').notNull().default('auto'),
   // This is the latest valid schema of the subgraph.
   schemaVersionId: uuid('schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',

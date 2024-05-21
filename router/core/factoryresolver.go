@@ -98,7 +98,6 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[gr
 		d.streamingClient,
 		d.engineCtx,
 		graphql_datasource.WithLogger(d.factoryLogger),
-		graphql_datasource.WithWSSubProtocol(graphql_datasource.ProtocolGraphQLTWS),
 	)
 
 	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, subscriptionClient)
@@ -301,6 +300,19 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 					subscriptionUseSSE = *in.CustomGraphql.Subscription.UseSSE
 				}
 			}
+
+			wsSubprotocol := "auto"
+			if in.CustomGraphql.Subscription.WebsocketSubprotocol != nil {
+				switch *in.CustomGraphql.Subscription.WebsocketSubprotocol {
+				case common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS:
+					wsSubprotocol = "graphql-ws"
+				case common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS:
+					wsSubprotocol = "graphql-transport-ws"
+				case common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO:
+					wsSubprotocol = "auto"
+				}
+			}
+
 			dataSourceRules := FetchURLRules(&routerEngineConfig.Headers, routerConfig.Subgraphs, subscriptionUrl)
 			forwardedClientHeaders, forwardedClientRegexps, err := PropagatedHeaders(dataSourceRules)
 			if err != nil {
@@ -338,6 +350,7 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 					SSEMethodPost:                           subscriptionSSEMethodPost,
 					ForwardedClientHeaderNames:              forwardedClientHeaders,
 					ForwardedClientHeaderRegularExpressions: forwardedClientRegexps,
+					WsSubProtocol:                           wsSubprotocol,
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,

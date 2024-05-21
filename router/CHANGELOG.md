@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.87.0](https://github.com/wundergraph/cosmo/compare/router@0.86.3...router@0.87.0) (2024-05-21)
+
+### Features
+
+* add support for websocket subprotocol ([#776](https://github.com/wundergraph/cosmo/issues/776)) ([e35aa26](https://github.com/wundergraph/cosmo/commit/e35aa262227b29f09ddfdd1ce361c010b769b2da)) (@JivusAyrus)
+* implement upgrade request allow list to forward headers and query params to the engine ([#748](https://github.com/wundergraph/cosmo/issues/748)) ([13a1624](https://github.com/wundergraph/cosmo/commit/13a1624c16d46a5adca21d82f48de181469621d8)) (@jensneuse)
+
+## [0.86.3](https://github.com/wundergraph/cosmo/compare/router@0.86.2...router@0.86.3) (2024-05-20)
+
+### Bug Fixes
+
+* add tests and implement graphql over http cases ([#806](https://github.com/wundergraph/cosmo/issues/806)) ([6d73074](https://github.com/wundergraph/cosmo/commit/6d7307466f8918c138a6aee47dca6f4615fa3ed2)) (@jensneuse)
+* playground theme settings ([#805](https://github.com/wundergraph/cosmo/issues/805)) ([00d692a](https://github.com/wundergraph/cosmo/commit/00d692aff8482e93cce7443e9665fec3031ef083)) (@thisisnithin)
+
 ## [0.86.2](https://github.com/wundergraph/cosmo/compare/router@0.86.1...router@0.86.2) (2024-05-17)
 
 **Note:** Version bump only for package router

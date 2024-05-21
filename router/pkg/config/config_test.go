@@ -1,13 +1,14 @@
 package config
 
 import (
-	"github.com/santhosh-tekuri/jsonschema/v5"
-	"github.com/sebdah/goldie/v2"
-	"github.com/stretchr/testify/require"
 	"os"
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfigRequiredValues(t *testing.T) {
@@ -254,4 +255,44 @@ graph:
 	)
 
 	g.AssertJson(t, "config_defaults", cfg.Config)
+}
+
+func TestOverrides(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+overrides:
+  subgraphs:
+    some-subgraph:
+      routing_url: http://router:3002/graphql
+      subscription_url: http://router:3002/graphql/ws
+      subscription_protocol: ws
+      subscription_websocket_subprotocol: graphql-ws
+`)
+	_, err := LoadConfig(f, "")
+	require.NoError(t, err)
+}
+
+func TestOverridesWithWrongValue(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+overrides:
+  subgraphs:
+    some-subgraph:
+      routing_url: a
+      subscription_url: http://router:3002/graphql/ws
+      subscription_protocol: ws
+      subscription_websocket_subprotocol: graphql-ws
+`)
+	_, err := LoadConfig(f, "")
+	var js *jsonschema.ValidationError
+	require.ErrorAs(t, err, &js)
+	require.Equal(t, js.Causes[0].Message, "'a' is not valid 'http-url'")
 }

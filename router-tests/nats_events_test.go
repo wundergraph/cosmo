@@ -10,10 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -555,7 +551,7 @@ func TestNatsEvents(t *testing.T) {
 			}
 
 			// conn.Close() is called in  a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -630,7 +626,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			// conn.Close() is called in a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err = conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
