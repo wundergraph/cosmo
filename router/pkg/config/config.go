@@ -202,6 +202,17 @@ type OverrideRoutingURLConfiguration struct {
 	Subgraphs map[string]string `yaml:"subgraphs"`
 }
 
+type SubgraphOverridesConfiguration struct {
+	RoutingURL                       string `yaml:"routing_url"`
+	SubscriptionURL                  string `yaml:"subscription_url"`
+	SubscriptionProtocol             string `yaml:"subscription_protocol"`
+	SubscriptionWebsocketSubprotocol string `yaml:"subscription_websocket_subprotocol"`
+}
+
+type OverridesConfiguration struct {
+	Subgraphs map[string]SubgraphOverridesConfiguration `yaml:"subgraphs"`
+}
+
 type AuthenticationProviderJWKS struct {
 	URL                 string        `yaml:"url"`
 	HeaderNames         []string      `yaml:"header_names"`
@@ -323,11 +334,21 @@ type WebSocketConfiguration struct {
 	// AbsintheProtocol configuration for the Absinthe Protocol
 	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol,omitempty"`
 	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
-	ForwardUpgradeHeaders bool `yaml:"forward_upgrade_headers" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_HEADERS"`
+	ForwardUpgradeHeaders ForwardUpgradeHeadersConfiguration `yaml:"forward_upgrade_headers"`
 	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph
-	ForwardUpgradeQueryParams bool `yaml:"forward_upgrade_query_params" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_QUERY_PARAMS"`
+	ForwardUpgradeQueryParams ForwardUpgradeQueryParamsConfiguration `yaml:"forward_upgrade_query_params"`
 	// ForwardInitialPayload true if the Router should forward the initial payload of a Subscription Request to the Subgraph
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
+}
+
+type ForwardUpgradeHeadersConfiguration struct {
+	Enabled   bool     `yaml:"enabled" default:"true" envconfig:"FORWARD_UPGRADE_HEADERS_ENABLED"`
+	AllowList []string `yaml:"allow_list" default:"Authorization" envconfig:"FORWARD_UPGRADE_HEADERS_ALLOW_LIST"`
+}
+
+type ForwardUpgradeQueryParamsConfiguration struct {
+	Enabled   bool     `yaml:"enabled" default:"true" envconfig:"FORWARD_UPGRADE_QUERY_PARAMS_ENABLED"`
+	AllowList []string `yaml:"allow_list" default:"Authorization" envconfig:"FORWARD_UPGRADE_QUERY_PARAMS_ALLOW_LIST"`
 }
 
 type AnonymizeIpConfiguration struct {
@@ -410,6 +431,8 @@ type Config struct {
 	RouterRegistration bool   `yaml:"router_registration" envconfig:"ROUTER_REGISTRATION" default:"true"`
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
+
+	Overrides OverridesConfiguration `yaml:"overrides"`
 
 	SecurityConfiguration SecurityConfiguration `yaml:"security,omitempty"`
 

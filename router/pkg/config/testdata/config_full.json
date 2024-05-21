@@ -262,6 +262,16 @@
       "some-subgraph": "http://router:3002/graphql"
     }
   },
+  "Overrides": {
+    "Subgraphs": {
+      "some-subgraph": {
+        "RoutingURL": "http://router:3002/graphql",
+        "SubscriptionURL": "http://router:3002/graphql/ws",
+        "SubscriptionProtocol": "ws",
+        "SubscriptionWebsocketSubprotocol": "graphql-ws"
+      }
+    }
+  },
   "SecurityConfiguration": {
     "BlockMutations": false,
     "BlockSubscriptions": false,
@@ -297,8 +307,18 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
-    "ForwardUpgradeHeaders": true,
-    "ForwardUpgradeQueryParams": true,
+    "ForwardUpgradeHeaders": {
+      "Enabled": true,
+      "AllowList": [
+        "Authorization"
+      ]
+    },
+    "ForwardUpgradeQueryParams": {
+      "Enabled": true,
+      "AllowList": [
+        "Authorization"
+      ]
+    },
     "ForwardInitialPayload": true
   },
   "SubgraphErrorPropagation": {

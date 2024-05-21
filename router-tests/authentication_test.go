@@ -864,7 +864,7 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 
-		conn, res, err := xEnv.GraphQLWebsocketDialWithRetry(nil)
+		conn, res, err := xEnv.GraphQLWebsocketDialWithRetry(nil, nil)
 		require.Nil(t, conn)
 		require.Error(t, err)
 		require.Equal(t, http.StatusUnauthorized, res.StatusCode)
@@ -875,7 +875,7 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 		headers := http.Header{
 			"Authorization": []string{"Bearer " + token},
 		}
-		conn, res, err = xEnv.GraphQLWebsocketDialWithRetry(headers)
+		conn, res, err = xEnv.GraphQLWebsocketDialWithRetry(headers, nil)
 		defer func() {
 			require.NoError(t, conn.Close())
 		}()

@@ -11,6 +11,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -28,6 +29,7 @@ const (
 	errorTypeContextTimeout
 	errorTypeUpgradeFailed
 	errorTypeEDFS
+	errorTypeInvalidWsSubprotocol
 )
 
 type (
@@ -68,6 +70,11 @@ func getErrorType(err error) errorType {
 	var edfsErr *pubsub.Error
 	if errors.As(err, &edfsErr) {
 		return errorTypeEDFS
+	}
+	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
+
+	if errors.As(err, &invalidWsSubprotocolErr) {
+		return errorTypeInvalidWsSubprotocol
 	}
 	return errorTypeUnknown
 }
