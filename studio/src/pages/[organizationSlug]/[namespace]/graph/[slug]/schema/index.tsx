@@ -146,15 +146,22 @@ const TypeLink = ({
   const router = useRouter();
   const cleanName = name.replace(/[\[\]!: ]/g, "");
   const category = getCategoryForType(ast, cleanName);
-  const href =
-    router.asPath.split("?")[0] + `?category=${category}&typename=${cleanName}`;
 
   if (!category) {
     return;
   }
 
   return (
-    <Link href={href}>
+    <Link
+      href={{
+        pathname: `${router.pathname}`,
+        query: {
+          ...router.query,
+          category,
+          typename: cleanName,
+        },
+      }}
+    >
       <span
         className={cn(
           "font-semibold text-primary underline-offset-2 hover:underline",
@@ -666,12 +673,11 @@ const Type = (props: {
             <Badge className="w-max">
               <Link
                 href={{
-                  pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                  pathname: `${router.pathname}`,
                   query: {
-                    organizationSlug: router.query.organizationSlug,
-                    namespace: router.query.namespace,
-                    slug: router.query.slug,
+                    ...router.query,
                     category: props.category,
+                    typename: undefined,
                   },
                 }}
               >
@@ -1266,7 +1272,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     title = sentenceCase(selectedCategory);
     breadcrumbs.push(
       <Link
-        href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema`}
+        href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?schemaType=${
+          router.query.schemaType || "client"
+        }`}
       >
         Schema
       </Link>,
@@ -1278,7 +1286,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     if (selectedCategory) {
       breadcrumbs.push(
         <Link
-          href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${selectedCategory}`}
+          href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${selectedCategory}&schemaType=${
+            router.query.schemaType || "client"
+          }`}
         >
           {sentenceCase(selectedCategory)}
         </Link>,
@@ -1315,9 +1325,14 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 >
                   <Link
                     className="gap-x-4"
-                    href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${category}&typename=${sentenceCase(
-                      category,
-                    )}`}
+                    href={{
+                      pathname: `${router.pathname}`,
+                      query: {
+                        ...router.query,
+                        category,
+                        typename: sentenceCase(category),
+                      },
+                    }}
                   >
                     {sentenceCase(category)}
                     {typeCounts && (
@@ -1346,7 +1361,14 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                     })}
                   >
                     <Link
-                      href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${gType}`}
+                      href={{
+                        pathname: `${router.pathname}`,
+                        query: {
+                          ...router.query,
+                          category: gType,
+                          typename: undefined,
+                        },
+                      }}
                     >
                       <span>{sentenceCase(gType)}</span>
                       {typeCounts && (
@@ -1373,7 +1395,14 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 })}
               >
                 <Link
-                  href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=deprecated`}
+                  href={{
+                    pathname: `${router.pathname}`,
+                    query: {
+                      ...router.query,
+                      category: "deprecated",
+                      typename: undefined,
+                    },
+                  }}
                 >
                   <span>Deprecated</span>
                   {typeCounts && ast && (
