@@ -31,7 +31,9 @@ import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
@@ -120,12 +122,14 @@ function GraphVisualization({
   const [topCategory, setTopCategory] = useState("latency");
 
   const subgraphs = useMemo(() => {
-    if (showAll) {
-      return graphData?.subgraphs ?? [];
+    let tempSubgraphs = [...(graphData?.subgraphs ?? [])];
+
+    if (!showAll) {
+      tempSubgraphs = tempSubgraphs.slice(0, 5);
     }
 
     return (
-      graphData?.subgraphs.slice(0, 5).sort((a, b) => {
+      tempSubgraphs.slice(0, 5).sort((a, b) => {
         const metricA = subgraphMetrics?.find((x) => x.subgraphID === a.id);
         const metricB = subgraphMetrics?.find((x) => x.subgraphID === b.id);
 
@@ -315,7 +319,7 @@ function GraphVisualization({
       <Background />
       <Panel
         position="top-left"
-        className="flex w-full items-center justify-between pr-8"
+        className="flex w-full flex-wrap items-center justify-between gap-2 pr-8"
       >
         <div>
           <h2 className="flex items-center gap-x-2">
@@ -343,18 +347,19 @@ function GraphVisualization({
               <TabsTrigger value="all">All</TabsTrigger>
             </TabsList>
           </Tabs>
-          {!showAll && (
-            <Select onValueChange={(v) => setTopCategory(v)}>
-              <SelectTrigger className="w-[180px] bg-background">
-                <SelectValue>{sentenceCase(topCategory)}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
+          <Select onValueChange={(v) => setTopCategory(v)}>
+            <SelectTrigger className="w-[180px] bg-background">
+              <SelectValue>{sentenceCase(topCategory)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Sort by</SelectLabel>
                 <SelectItem value="latency">Latency</SelectItem>
                 <SelectItem value="requestRate">Request Rate</SelectItem>
                 <SelectItem value="errorRate">Error Rate</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
       </Panel>
       <Panel

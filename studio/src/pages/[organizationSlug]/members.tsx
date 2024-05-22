@@ -44,7 +44,7 @@ import {
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getOrganizationMembers,
@@ -60,6 +60,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
+import { useDebounce } from "use-debounce";
 import { z } from "zod";
 
 const emailInputSchema = z.object({
@@ -333,6 +334,7 @@ const PendingInvitations = ({
 }) => {
   const user = useUser();
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const [debouncedSearch] = useDebounce(search, 500);
 
   const { data, isLoading, error, refetch } = useQuery({
     ...getPendingOrganizationMembers.useQuery({
@@ -340,12 +342,12 @@ const PendingInvitations = ({
         limit,
         offset,
       },
-      search,
+      search: debouncedSearch,
     }),
     queryKey: [
       user?.currentOrganization.slug || "",
       "GetPendingOrganizationMembers",
-      { pagination: { limit, offset }, search },
+      { pagination: { limit, offset }, search: debouncedSearch },
     ],
   });
 
@@ -417,6 +419,7 @@ const AcceptedMembers = ({
 }) => {
   const user = useUser();
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const [debouncedSearch] = useDebounce(search, 500);
 
   const { data, isLoading, error, refetch } = useQuery({
     ...getOrganizationMembers.useQuery({
@@ -424,12 +427,12 @@ const AcceptedMembers = ({
         limit,
         offset,
       },
-      search,
+      search: debouncedSearch,
     }),
     queryKey: [
       user?.currentOrganization.slug || "",
       "GetOrganizationMembers",
-      { pagination: { limit, offset }, search },
+      { pagination: { limit, offset }, search: debouncedSearch },
     ],
   });
 
@@ -495,6 +498,7 @@ const MembersToolbar = () => {
   const user = useUser();
   const organizationSlug = user?.currentOrganization.slug;
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const client = useQueryClient();
 
   const { data } = useQuery(isMemberLimitReached.useQuery());
 
@@ -516,7 +520,20 @@ const MembersToolbar = () => {
               organization
             </DialogDescription>
           </DialogHeader>
-          {!limitReached && isAdmin && <InviteForm onSuccess={() => {}} />}
+          {!limitReached && isAdmin && (
+            <InviteForm
+              onSuccess={() => {
+                const currentKey = getOrganizationMembers.getQueryKey();
+                const pendingKey = getPendingOrganizationMembers.getQueryKey();
+                client.invalidateQueries({
+                  queryKey: currentKey,
+                });
+                client.invalidateQueries({
+                  queryKey: pendingKey,
+                });
+              }}
+            />
+          )}
           {limitReached && isAdmin && (
             <Alert className="flex flex-col gap-y-4">
               <div className="flex-1">
@@ -539,11 +556,20 @@ const MembersToolbar = () => {
 
 const MembersPage: NextPageWithLayout = () => {
   const router = useRouter();
-
-  const tab = router.query.tab || "accepted";
+  const user = useUser();
+  const tab = router.query.tab || "current";
 
   const applyParams = useApplyParams();
   const [search, setSearch] = useState("");
+
+  const { data } = useQuery({
+    ...getPendingOrganizationMembers.useQuery(),
+    queryKey: [
+      user?.currentOrganization.slug || "",
+      "GetPendingOrganizationMembers",
+      {},
+    ],
+  });
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -563,11 +589,16 @@ const MembersPage: NextPageWithLayout = () => {
               pageSize: null,
             });
           }}
-          defaultValue="accepted"
+          defaultValue="current"
         >
           <TabsList>
-            <TabsTrigger value="accepted">Accepted</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="current">Current</TabsTrigger>
+            <TabsTrigger value="pending" className="gap-x-1">
+              Pending{" "}
+              {(data?.totalCount ?? 0 > 0) && (
+                <Badge className="px-2">{data?.totalCount ?? 0}</Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="relative">
@@ -593,7 +624,7 @@ const MembersPage: NextPageWithLayout = () => {
           )}
         </div>
       </div>
-      {tab === "accepted" ? (
+      {tab === "current" ? (
         <AcceptedMembers
           limit={limit}
           offset={offset}

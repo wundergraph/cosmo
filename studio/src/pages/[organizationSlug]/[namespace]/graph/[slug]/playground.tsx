@@ -562,9 +562,11 @@ const PlaygroundPage: NextPageWithLayout = () => {
     }
 
     // remove settings button
-    const sidebarSection = document.getElementsByClassName("graphiql-sidebar-section")[1]
-    const children = Array.from(sidebarSection.childNodes.values())
-    sidebarSection.removeChild(children[2])
+    const sidebarSection = document.getElementsByClassName(
+      "graphiql-sidebar-section",
+    )[1];
+    const children = Array.from(sidebarSection.childNodes.values());
+    sidebarSection.removeChild(children[2]);
 
     setIsMounted(true);
   }, [isMounted]);
@@ -734,36 +736,40 @@ const ConfigSelect = () => {
   const applyParams = useApplyParams();
 
   return (
-    <Select
-      value={selected}
-      onValueChange={(value) => {
-        applyParams({
-          load: value,
-        });
-      }}
-    >
-      <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
-        Config loaded :
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectItem value={graphContext?.graph?.id ?? ""}>
-            {graphContext?.graph?.name}
-          </SelectItem>
-        </SelectGroup>
-        <SelectSeparator />
-        {subgraphs && subgraphs.length > 0 && (
+    <div className="ml-1 flex items-center gap-x-2 pl-3">
+      <span className="text-sm text-muted-foreground">
+        Querying {selected === graphContext?.graph?.id ? "Graph" : "Subgraph"} :
+      </span>
+      <Select
+        value={selected}
+        onValueChange={(value) => {
+          applyParams({
+            load: value,
+          });
+        }}
+      >
+        <SelectTrigger className="ml-1 mr-4 flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 md:ml-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
           <SelectGroup>
-            {subgraphs.map(({ name, id }) => (
-              <SelectItem key={id} value={id}>
-                {name}
-              </SelectItem>
-            ))}
+            <SelectItem value={graphContext?.graph?.id ?? ""}>
+              {graphContext?.graph?.name}
+            </SelectItem>
           </SelectGroup>
-        )}
-      </SelectContent>
-    </Select>
+          <SelectSeparator />
+          {subgraphs && subgraphs.length > 0 && (
+            <SelectGroup>
+              {subgraphs.map(({ name, id }) => (
+                <SelectItem key={id} value={id}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
