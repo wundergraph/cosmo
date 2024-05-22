@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.24.0...@wundergraph/composition@0.25.0) (2024-05-21)
+
+### Features
+
+* implement subscription filter ([#780](https://github.com/wundergraph/cosmo/issues/780)) ([444a766](https://github.com/wundergraph/cosmo/commit/444a766b07de1998df52174a5a2e65086605e14c)) (@Aenimus)
+
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.2...@wundergraph/composition@0.24.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
+## [0.23.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.1...@wundergraph/composition@0.23.2) (2024-05-10)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 ## [0.23.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.0...@wundergraph/composition@0.23.1) (2024-05-06)
 
 ### Bug Fixes

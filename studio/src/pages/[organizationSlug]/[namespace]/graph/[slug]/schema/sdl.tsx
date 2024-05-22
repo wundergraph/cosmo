@@ -8,11 +8,12 @@ import {
 import { PageHeader } from "@/components/layout/head";
 import { EmptySchema } from "@/components/schema/empty-schema-state";
 import {
-  SDLViewer,
   SDLViewerActions,
   SchemaSettings,
 } from "@/components/schema/sdl-viewer";
+import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { SchemaToolbar } from "@/components/schema/toolbar";
+import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -24,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import useHash from "@/hooks/use-hash";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { Component2Icon } from "@radix-ui/react-icons";
@@ -43,10 +45,13 @@ const SDLPage: NextPageWithLayout = () => {
   const activeSubgraph = router.query.subgraph as string;
   const namespace = router.query.namespace as string;
   const graphName = router.query.slug as string;
+  const schemaType = router.query.schemaType as string;
 
   const fullPath = router.asPath;
   const pathWithHash = fullPath.split("?")[0];
   const pathname = pathWithHash.split("#")[0];
+
+  const hash = useHash();
 
   const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(
     getFederatedGraphSDLByName.useQuery({
@@ -77,8 +82,6 @@ const SDLPage: NextPageWithLayout = () => {
       };
     }) ?? [];
 
-  // useScrollIntoView(hash);
-
   const activeSubgraphObject = graphData?.subgraphs.find((each) => {
     return each.name === activeSubgraph;
   });
@@ -96,7 +99,10 @@ const SDLPage: NextPageWithLayout = () => {
         title: graphName,
         targetId: graphData?.graph?.targetId ?? "",
         routingUrl: graphData?.graph?.routingURL ?? "",
-        sdl: federatedGraphSdl?.sdl ?? "",
+        sdl:
+          schemaType === "router"
+            ? federatedGraphSdl?.sdl ?? ""
+            : federatedGraphSdl?.clientSchema,
         time: graphData?.graph?.lastUpdatedAt,
         versionId: federatedGraphSdl?.versionId,
       };
@@ -126,10 +132,10 @@ const SDLPage: NextPageWithLayout = () => {
   } else {
     content = (
       <div className="flex h-full flex-col-reverse md:flex-col">
-        <SDLViewer
-          sdl={activeGraphWithSDL.sdl ?? ""}
-          targetId={activeGraphWithSDL?.targetId}
-          versionId={activeGraphWithSDL.versionId ?? ""}
+        <SDLViewerMonaco
+          schema={activeGraphWithSDL.sdl ?? ""}
+          line={hash ? Number(hash.slice(1)) : 0}
+          enableLinking
         />
         <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
           <p className="flex items-center gap-x-1">
@@ -166,7 +172,7 @@ const SDLPage: NextPageWithLayout = () => {
               <Select onValueChange={(query) => router.push(pathname + query)}>
                 <SelectTrigger
                   value={activeGraphWithSDL.title}
-                  className="w-full md:ml-auto md:w-[200px]"
+                  className="w-full md:ml-auto md:w-max md:min-w-[200px]"
                 >
                   <SelectValue aria-label={activeGraphWithSDL.title}>
                     {graphData?.graph?.supportsFederation
@@ -174,6 +180,11 @@ const SDLPage: NextPageWithLayout = () => {
                       : activeSubgraph
                       ? "Published SDL"
                       : "Router SDL"}
+                    {!activeSubgraph && (
+                      <Badge variant="secondary" className="ml-2">
+                        {schemaType === "router" ? "router" : "client"}
+                      </Badge>
+                    )}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -183,7 +194,10 @@ const SDLPage: NextPageWithLayout = () => {
                         <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
                           <PiGraphLight className="h-3 w-3" /> Graph
                         </SelectLabel>
-                        <SelectItem value="">{graphName}</SelectItem>
+                        <SelectItem value="">Client Schema</SelectItem>
+                        <SelectItem value="?schemaType=router">
+                          Router Schema
+                        </SelectItem>
                       </SelectGroup>
                       <Separator className="my-2" />
                       <SelectGroup>

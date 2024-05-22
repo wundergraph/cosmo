@@ -1,7 +1,7 @@
-import { DocumentNode, FieldDefinitionNode, GraphQLSchema, Kind } from 'graphql';
+import { ConstDirectiveNode, DocumentNode, FieldDefinitionNode, GraphQLSchema, Kind } from 'graphql';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
 import { SubgraphConfig } from '../subgraph/subgraph';
-import { DefinitionWithFieldsData } from '../schema-building/type-definition-data';
+import { DefinitionWithFieldsData, FieldData } from '../schema-building/type-definition-data';
 
 export type FederationResultContainer = {
   errors?: Error[];
@@ -64,4 +64,10 @@ export function newChildTagData(name: string): ChildTagData {
 export type InterfaceImplementationData = {
   data: DefinitionWithFieldsData;
   clientSchemaFieldNodes: FieldDefinitionNode[];
+};
+
+export type SubscriptionFilterData = {
+  directive: ConstDirectiveNode;
+  directiveSubgraphName: string;
+  fieldData: FieldData;
 };

@@ -1,4 +1,4 @@
-# config.yaml
+# yaml-language-server: $schema=./pkg/config/config.schema.json
 
 # See pkg/config/config.go for the full list of configuration options.
 # This file is used to debugging purposes only.
@@ -14,7 +14,13 @@ engine:
     report_memory_usage: true
 
 events:
-  sources:
-    default:
-      provider: NATS
-      url: "nats://localhost:4222"
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+      - id: my-nats
+        url: "nats://localhost:4222"
+    kafka:
+      - id: my-kafka
+        brokers:
+          - "localhost:9092"

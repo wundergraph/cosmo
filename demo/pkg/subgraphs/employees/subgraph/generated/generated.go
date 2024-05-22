@@ -141,6 +141,7 @@ type ComplexityRoot struct {
 		Employee           func(childComplexity int, id int) int
 		EmployeeAsList     func(childComplexity int, id int) int
 		Employees          func(childComplexity int) int
+		FirstEmployee      func(childComplexity int) int
 		Products           func(childComplexity int) int
 		Teammates          func(childComplexity int, team model.Department) int
 		__resolve__service func(childComplexity int) int
@@ -202,6 +203,7 @@ type QueryResolver interface {
 	Employees(ctx context.Context) ([]*model.Employee, error)
 	Products(ctx context.Context) ([]model.Products, error)
 	Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error)
+	FirstEmployee(ctx context.Context) (*model.Employee, error)
 }
 type SubscriptionResolver interface {
 	CurrentTime(ctx context.Context) (<-chan *model.Time, error)
@@ -595,6 +597,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Employees(childComplexity), true
 
+	case "Query.firstEmployee":
+		if e.complexity.Query.FirstEmployee == nil {
+			break
+		}
+
+		return e.complexity.Query.FirstEmployee(childComplexity), true
+
 	case "Query.products":
 		if e.complexity.Query.Products == nil {
 			break
@@ -828,151 +837,151 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `directive @goField(
-    forceResolver: Boolean
-    name: String
-    omittable: Boolean
+  forceResolver: Boolean
+  name: String
+  omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
 type Query {
-    employee(id: Int!): Employee
-    employeeAsList(id: Int!): [Employee]
-    employees: [Employee]
-    products: [Products!]!
-    teammates(team: Department!): [Employee!]!
+  employee(id: Int!): Employee
+  employeeAsList(id: Int!): [Employee]
+  employees: [Employee]
+  products: [Products!]!
+  teammates(team: Department!): [Employee!]!
+  firstEmployee: Employee! @tag(name: "internal")
 }
 
 scalar Upload
 
 type Mutation {
   updateEmployeeTag(id: Int!, tag: String!): Employee
-
   singleUpload(file: Upload!): Boolean!
   multipleUpload(files: [Upload!]!): Boolean!
 }
 
 type Subscription {
-    """
-    ` + "`" + `currentTime` + "`" + ` will return a stream of ` + "`" + `Time` + "`" + ` objects.
-    """
-    currentTime: Time!
-    countEmp(max: Int!, intervalMilliseconds: Int!): Int!
-    countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
+  """
+  ` + "`" + `currentTime` + "`" + ` will return a stream of ` + "`" + `Time` + "`" + ` objects.
+  """
+  currentTime: Time!
+  countEmp(max: Int!, intervalMilliseconds: Int!): Int!
+  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
 }
 
 enum Department {
-    ENGINEERING
-    MARKETING
-    OPERATIONS
+  ENGINEERING
+  MARKETING
+  OPERATIONS
 }
 
 interface RoleType {
-    departments: [Department!]!
-    title: [String!]!
-    employees: [Employee!]! @goField(forceResolver: true)
+  departments: [Department!]!
+  title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum EngineerType {
-    BACKEND
-    FRONTEND
-    FULLSTACK
+  BACKEND
+  FRONTEND
+  FULLSTACK
 }
 
 interface Identifiable {
-    id: Int!
+  id: Int!
 }
 
 type Engineer implements RoleType {
-    departments: [Department!]!
-    title: [String!]!
-    employees: [Employee!]! @goField(forceResolver: true)
-    engineerType: EngineerType!
+  departments: [Department!]!
+  title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
+  engineerType: EngineerType!
 }
 
 type Marketer implements RoleType {
-    departments: [Department!]!
-    title: [String!]!
-    employees: [Employee!]! @goField(forceResolver: true)
+  departments: [Department!]!
+  title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
 }
 
 enum OperationType {
-    FINANCE
-    HUMAN_RESOURCES
+  FINANCE
+  HUMAN_RESOURCES
 }
 
 type Operator implements RoleType {
-    departments: [Department!]!
-    title: [String!]!
-    employees: [Employee!]! @goField(forceResolver: true)
-    operatorType: [OperationType!]!
+  departments: [Department!]!
+  title: [String!]!
+  employees: [Employee!]! @goField(forceResolver: true)
+  operatorType: [OperationType!]!
 }
 
 type Details {
-    forename: String! @shareable
-    location: Country!
-    surname: String! @shareable
-    pastLocations: [City!]!
+  forename: String! @shareable
+  location: Country!
+  surname: String! @shareable
+  pastLocations: [City!]!
 }
 
 type City {
-    type: String!
-    name: String!
-    country: Country
+  type: String!
+  name: String!
+  country: Country
 }
 
 # Using a nested key field simply because it can showcase potential bug
 # vectors / Federation capabilities.
 type Country @key(fields: "key { name }", resolvable: false) {
-    key: CountryKey!
+  key: CountryKey!
 }
 
 type CountryKey {
-    name: String!
+  name: String!
 }
 
 type Employee implements Identifiable @key(fields: "id") {
-    details: Details! @shareable
-    id: Int!
-    tag: String!
-    role: RoleType!
-    notes: String @shareable
-    updatedAt: String!
-    startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
-    rootFieldThrowsError: String @goField(forceResolver: true)
-    rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
+  details: Details! @shareable
+  id: Int!
+  tag: String!
+  role: RoleType!
+  notes: String @shareable
+  updatedAt: String!
+  startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+  rootFieldThrowsError: String @goField(forceResolver: true)
+  rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
 }
 
 type ErrorWrapper {
-    okField: String
-    errorField: String @goField(forceResolver: true)
+  okField: String
+  errorField: String @goField(forceResolver: true)
 }
 
 type Time {
-    unixTime: Int!
-    timeStamp: String!
+  unixTime: Int!
+  timeStamp: String!
 }
 
 union Products = Consultancy | Cosmo | SDK
 
 interface IProduct {
-    upc: ID!
-    engineers: [Employee!]!
+  upc: ID!
+  engineers: [Employee!]!
 }
 
 type Consultancy @key(fields: "upc") {
-    upc: ID!
-    lead: Employee!
+  upc: ID!
+  lead: Employee!
 }
 
 type Cosmo implements IProduct @key(fields: "upc") {
-    upc: ID!
-    engineers: [Employee!]!
-    lead: Employee!
+  upc: ID!
+  engineers: [Employee!]!
+  lead: Employee!
 }
 
 type SDK implements IProduct @key(fields: "upc") {
-    upc: ID!
-    engineers: [Employee!]!
-    owner: Employee!
+  upc: ID!
+  engineers: [Employee!]!
+  owner: Employee!
 }
 `, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
@@ -3816,6 +3825,70 @@ func (ec *executionContext) fieldContext_Query_teammates(ctx context.Context, fi
 	if fc.Args, err = ec.field_Query_teammates_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_firstEmployee(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_firstEmployee(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().FirstEmployee(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Employee)
+	fc.Result = res
+	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_firstEmployee(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "details":
+				return ec.fieldContext_Employee_details(ctx, field)
+			case "id":
+				return ec.fieldContext_Employee_id(ctx, field)
+			case "tag":
+				return ec.fieldContext_Employee_tag(ctx, field)
+			case "role":
+				return ec.fieldContext_Employee_role(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -7499,6 +7572,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_teammates(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "firstEmployee":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_firstEmployee(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

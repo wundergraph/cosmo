@@ -4,17 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
+	"net/http"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"net"
-	"net/http"
 )
 
 type errorType int
@@ -26,7 +28,8 @@ const (
 	errorTypeContextCanceled
 	errorTypeContextTimeout
 	errorTypeUpgradeFailed
-	errorTypeEDFSNats
+	errorTypeEDFS
+	errorTypeInvalidWsSubprotocol
 )
 
 type (
@@ -64,9 +67,14 @@ func getErrorType(err error) errorType {
 			return errorTypeContextTimeout
 		}
 	}
-	var edfsErr *pubsub.EDFSNatsError
+	var edfsErr *pubsub.Error
 	if errors.As(err, &edfsErr) {
-		return errorTypeEDFSNats
+		return errorTypeEDFS
+	}
+	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
+
+	if errors.As(err, &invalidWsSubprotocolErr) {
+		return errorTypeInvalidWsSubprotocol
 	}
 	return errorTypeUnknown
 }
@@ -148,7 +156,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 		requestLogger.Debug("persisted operation not found",
 			zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
 			zap.String("clientName", poNotFoundErr.ClientName()))
-		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), requestLogger)
+		writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(errors.New("persisted Query not found")), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
 		logInternalErrorsFromReport(reportErr.Report(), requestLogger)

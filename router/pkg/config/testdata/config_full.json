@@ -217,17 +217,42 @@
   },
   "DevelopmentMode": false,
   "Events": {
-    "Sources": {
-      "another-nats": {
-        "Provider": "NATS",
-        "URL": "nats://localhost:4223",
-        "Authentication": null
-      },
-      "default": {
-        "Provider": "NATS",
-        "URL": "nats://localhost:4222",
-        "Authentication": null
-      }
+    "Providers": {
+      "Nats": [
+        {
+          "ID": "default",
+          "URL": "nats://localhost:4222",
+          "Authentication": null
+        },
+        {
+          "ID": "my-nats",
+          "URL": "nats://localhost:4222",
+          "Authentication": {
+            "UserInfo": {
+              "Password": "admin",
+              "Username": "admin"
+            },
+            "Token": null
+          }
+        }
+      ],
+      "Kafka": [
+        {
+          "ID": "my-kafka",
+          "Brokers": [
+            "localhost:9092"
+          ],
+          "Authentication": {
+            "SASLPlain": {
+              "Password": "admin",
+              "Username": "admin"
+            }
+          },
+          "TLS": {
+            "Enabled": true
+          }
+        }
+      ]
     }
   },
   "RouterConfigPath": "",
@@ -235,6 +260,16 @@
   "OverrideRoutingURL": {
     "Subgraphs": {
       "some-subgraph": "http://router:3002/graphql"
+    }
+  },
+  "Overrides": {
+    "Subgraphs": {
+      "some-subgraph": {
+        "RoutingURL": "http://router:3002/graphql",
+        "SubscriptionURL": "http://router:3002/graphql/ws",
+        "SubscriptionProtocol": "ws",
+        "SubscriptionWebsocketSubprotocol": "graphql-ws"
+      }
     }
   },
   "SecurityConfiguration": {
@@ -272,8 +307,18 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
-    "ForwardUpgradeHeaders": true,
-    "ForwardUpgradeQueryParams": true,
+    "ForwardUpgradeHeaders": {
+      "Enabled": true,
+      "AllowList": [
+        "Authorization"
+      ]
+    },
+    "ForwardUpgradeQueryParams": {
+      "Enabled": true,
+      "AllowList": [
+        "Authorization"
+      ]
+    },
     "ForwardInitialPayload": true
   },
   "SubgraphErrorPropagation": {

@@ -198,13 +198,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		if err != nil {
-			if errors.Is(err, ErrUnauthorized) {
-				trackResponseError(ctx.Context(), err)
-				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestLogger)
-			} else if errors.Is(err, context.Canceled) {
+			if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
 				trackResponseError(r.Context(), err)
-				writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestLogger)
+				return
+			} else if errors.Is(err, ErrUnauthorized) {
+				trackResponseError(ctx.Context(), err)
+				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 				return
 			}
 
@@ -321,8 +321,13 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK)
 		}
-	case errorTypeEDFSNats:
-		response.Errors[0].Message = fmt.Sprintf("EDFS NATS error: %s", err.Error())
+	case errorTypeEDFS:
+		response.Errors[0].Message = fmt.Sprintf("EDFS error: %s", err.Error())
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusInternalServerError)
+		}
+	case errorTypeInvalidWsSubprotocol:
+		response.Errors[0].Message = fmt.Sprintf("Invalid Subprotocol error: %s or configure the subprotocol to be used using `wgc subgraph update` command.", err.Error())
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}

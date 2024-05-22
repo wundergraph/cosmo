@@ -4,7 +4,7 @@ require (
 	github.com/akrylysov/algnhsa v1.1.0
 	github.com/aws/aws-lambda-go v1.43.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wundergraph/cosmo/router v0.0.0-20240506080018-92e5b30c2df6
+	github.com/wundergraph/cosmo/router v0.0.0-20240522112046-54588254d7f1
 	go.uber.org/zap v1.26.0
 )
 
@@ -33,6 +33,7 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.3.1 // indirect
+	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.11.3 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/glog v1.1.2 // indirect
@@ -50,16 +51,17 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
-	github.com/klauspost/compress v1.17.6 // indirect
+	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/nats-io/nats.go v1.31.0 // indirect
-	github.com/nats-io/nkeys v0.4.6 // indirect
+	github.com/nats-io/nats.go v1.34.1 // indirect
+	github.com/nats-io/nkeys v0.4.7 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/phf/go-queue v0.0.0-20170504031614-9abe38d0371d // indirect
+	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
@@ -80,7 +82,9 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.31 // indirect
+	github.com/twmb/franz-go v1.16.1 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.43 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect
@@ -100,10 +104,10 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.withmatt.com/connect-brotli v0.4.0 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
@@ -115,4 +119,6 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
-go 1.21.0
+go 1.21.5
+
+toolchain go1.21.8

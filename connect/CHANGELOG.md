@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.72.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.72.0...@wundergraph/cosmo-connect@0.72.1) (2024-05-22)
+
+### Bug Fixes
+
+* playground config, subgraphs and members table, graph visualization ([#809](https://github.com/wundergraph/cosmo/issues/809)) ([bbdb8cd](https://github.com/wundergraph/cosmo/commit/bbdb8cd858a008051cd1ebb76d5d5f21a33f541a)) (@thisisnithin)
+
+# [0.72.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.71.0...@wundergraph/cosmo-connect@0.72.0) (2024-05-21)
+
+### Features
+
+* implement subscription filter ([#780](https://github.com/wundergraph/cosmo/issues/780)) ([444a766](https://github.com/wundergraph/cosmo/commit/444a766b07de1998df52174a5a2e65086605e14c)) (@Aenimus)
+
+# [0.71.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.70.0...@wundergraph/cosmo-connect@0.71.0) (2024-05-21)
+
+### Features
+
+* add support for websocket subprotocol ([#776](https://github.com/wundergraph/cosmo/issues/776)) ([e35aa26](https://github.com/wundergraph/cosmo/commit/e35aa262227b29f09ddfdd1ce361c010b769b2da)) (@JivusAyrus)
+
+# [0.70.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.69.0...@wundergraph/cosmo-connect@0.70.0) (2024-05-17)
+
+### Features
+
+* schema contracts ([#751](https://github.com/wundergraph/cosmo/issues/751)) ([1bc1a78](https://github.com/wundergraph/cosmo/commit/1bc1a787f046d25f0a4affb3fe42efe39a1c6539)) (@thisisnithin)
+
+# [0.69.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.68.0...@wundergraph/cosmo-connect@0.69.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
 # [0.68.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.67.0...@wundergraph/cosmo-connect@0.68.0) (2024-05-03)
 
 ### Features

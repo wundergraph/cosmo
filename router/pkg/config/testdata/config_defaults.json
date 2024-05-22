@@ -111,7 +111,7 @@
   "LogLevel": "info",
   "JSONLog": true,
   "ShutdownDelay": 60000000000,
-  "GracePeriod": 20000000000,
+  "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
   "HealthCheckPath": "/health",
   "ReadinessCheckPath": "/health/ready",
@@ -147,11 +147,17 @@
   },
   "DevelopmentMode": false,
   "Events": {
-    "Sources": null
+    "Providers": {
+      "Nats": null,
+      "Kafka": null
+    }
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
+    "Subgraphs": {}
+  },
+  "Overrides": {
     "Subgraphs": {}
   },
   "SecurityConfiguration": {
@@ -189,8 +195,18 @@
       "Enabled": true,
       "HandlerPath": "/absinthe/socket"
     },
-    "ForwardUpgradeHeaders": true,
-    "ForwardUpgradeQueryParams": true,
+    "ForwardUpgradeHeaders": {
+      "Enabled": true,
+      "AllowList": [
+        "Authorization"
+      ]
+    },
+    "ForwardUpgradeQueryParams": {
+      "Enabled": true,
+      "AllowList": [
+        "Authorization"
+      ]
+    },
     "ForwardInitialPayload": true
   },
   "SubgraphErrorPropagation": {

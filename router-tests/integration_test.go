@@ -244,7 +244,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"variables value must not be a number"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"error parsing variables: expected { character for map value"}],"data":null}`, res.Body)
 		})
 
 		t.Run("invalid string", func(t *testing.T) {
@@ -254,7 +254,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"variables value must not be a string"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"error parsing variables: expected { character for map value"}],"data":null}`, res.Body)
 		})
 
 		t.Run("invalid boolean", func(t *testing.T) {
@@ -264,7 +264,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"variables value must not be a boolean"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"error parsing variables: expected { character for map value"}],"data":null}`, res.Body)
 		})
 
 		t.Run("invalid array", func(t *testing.T) {
@@ -274,7 +274,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"variables value must not be an array"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"error parsing variables: expected { character for map value"}],"data":null}`, res.Body)
 		})
 
 		t.Run("missing", func(t *testing.T) {
@@ -283,7 +283,7 @@ func TestVariables(t *testing.T) {
 				Variables: json.RawMessage(`{}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}],"data":null}`, res.Body)
 		})
 
@@ -293,7 +293,7 @@ func TestVariables(t *testing.T) {
 				Variables: json.RawMessage(`{"criteria":1}`),
 			})
 			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1; Expected type \"SearchInput\" to be an object."}],"data":null}`, res.Body)
 		})
 	})

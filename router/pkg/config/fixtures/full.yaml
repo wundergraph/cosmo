@@ -182,13 +182,27 @@ cdn:
   cache_size: 100MB
 
 events:
-  sources:
-    default:
-      provider: NATS
-      url: "nats://localhost:4222"
-    another-nats:
-      provider: NATS
-      url: "nats://localhost:4223"
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+      - id: my-nats
+        url: "nats://localhost:4222"
+        authentication:
+          # token: "token"
+          user_info:
+            username: "admin"
+            password: "admin"
+    kafka:
+      - id: my-kafka
+        brokers:
+          - "localhost:9092"
+        tls:
+          enabled: true
+        authentication:
+          sasl_plain:
+            username: "admin"
+            password: "admin"
 
 engine:
   enable_single_flight: true
@@ -220,11 +234,25 @@ override_routing_url:
   subgraphs:
     some-subgraph: http://router:3002/graphql
 
+overrides:
+  subgraphs:
+    some-subgraph:
+      routing_url: http://router:3002/graphql
+      subscription_url: http://router:3002/graphql/ws
+      subscription_protocol: ws
+      subscription_websocket_subprotocol: graphql-ws
+
 websocket:
   enabled: true
   absinthe_protocol:
     enabled: true
     handler_path: /absinthe/socket
   forward_initial_payload: true
-  forward_upgrade_headers: true
-  forward_upgrade_query_params: true
+  forward_upgrade_headers:
+    enabled: true
+    allow_list:
+      - "Authorization"
+  forward_upgrade_query_params:
+    enabled: true
+    allow_list:
+      - "Authorization"

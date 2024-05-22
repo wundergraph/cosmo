@@ -3,27 +3,35 @@ import {
   ArgumentConfiguration,
   ArgumentSource,
   AuthorizationConfiguration,
+  DataSourceCustomEvents,
+  EngineEventConfiguration,
   EntityInterfaceConfiguration,
-  EventConfiguration,
   EventType,
   FieldConfiguration,
+  KafkaEventConfiguration,
+  NatsEventConfiguration,
+  NatsStreamConfiguration,
   RequiredField,
   Scopes,
-  StreamConfiguration,
+  SubscriptionFieldCondition,
+  SubscriptionFilterCondition,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   ConfigurationData,
-  EventType as CompositionEventType,
   FieldConfiguration as CompositionFieldConfiguration,
+  NatsEventType as CompositionEventType,
+  PROVIDER_TYPE_KAFKA,
+  PROVIDER_TYPE_NATS,
   RequiredFieldConfiguration,
+  SubscriptionCondition,
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
   childNodes: TypeField[];
   provides: RequiredField[];
-  events: EventConfiguration[];
+  events: DataSourceCustomEvents;
   keys: RequiredField[];
   requires: RequiredField[];
   entityInterfaces: EntityInterfaceConfiguration[];
@@ -62,7 +70,6 @@ function eventType(type: CompositionEventType) {
       return EventType.SUBSCRIBE;
     }
   }
-  throw new Error(`Unknown event type ${type}`);
 }
 
 export function configurationDataMapToDataSourceConfiguration(
@@ -73,7 +80,7 @@ export function configurationDataMapToDataSourceConfiguration(
     childNodes: [],
     keys: [],
     provides: [],
-    events: [],
+    events: new DataSourceCustomEvents({ nats: [], kafka: [] }),
     requires: [],
     entityInterfaces: [],
     interfaceObjects: [],
@@ -99,25 +106,53 @@ export function configurationDataMapToDataSourceConfiguration(
     addRequiredFields(data.keys, output.keys, typeName);
     addRequiredFields(data.provides, output.provides, typeName);
     addRequiredFields(data.requires, output.requires, typeName);
+    const natsEventConfigurations: NatsEventConfiguration[] = [];
+    const kafkaEventConfigurations: KafkaEventConfiguration[] = [];
     for (const event of data.events ?? []) {
-      output.events.push(
-        new EventConfiguration({
-          fieldName: event.fieldName,
-          sourceName: event.sourceName,
-          subjects: event.subjects,
-          type: eventType(event.type),
-          typeName,
-          ...(event.streamConfiguration
-            ? {
-                streamConfiguration: new StreamConfiguration({
-                  consumerName: event.streamConfiguration.consumerName,
-                  streamName: event.streamConfiguration.streamName,
-                }),
-              }
-            : {}),
-        }),
-      );
+      switch (event.providerType) {
+        case PROVIDER_TYPE_KAFKA: {
+          kafkaEventConfigurations.push(
+            new KafkaEventConfiguration({
+              engineEventConfiguration: new EngineEventConfiguration({
+                fieldName: event.fieldName,
+                providerId: event.providerId,
+                type: eventType(event.type),
+                typeName,
+              }),
+              topics: event.topics,
+            }),
+          );
+          break;
+        }
+        case PROVIDER_TYPE_NATS: {
+          natsEventConfigurations.push(
+            new NatsEventConfiguration({
+              engineEventConfiguration: new EngineEventConfiguration({
+                fieldName: event.fieldName,
+                providerId: event.providerId,
+                type: eventType(event.type),
+                typeName,
+              }),
+              subjects: event.subjects,
+              ...(event.streamConfiguration
+                ? {
+                    streamConfiguration: new NatsStreamConfiguration({
+                      consumerName: event.streamConfiguration.consumerName,
+                      streamName: event.streamConfiguration.streamName,
+                    }),
+                  }
+                : {}),
+            }),
+          );
+          break;
+        }
+        default: {
+          throw new Error(`Fatal: Unknown event provider.`);
+        }
+      }
     }
+    output.events.nats.push(...natsEventConfigurations);
+    output.events.kafka.push(...kafkaEventConfigurations);
   }
   return output;
 }
@@ -140,14 +175,23 @@ export function generateFieldConfigurations(
       typeName: compositionFieldConfiguration.typeName,
     });
     const requiredOrScopes =
-      compositionFieldConfiguration.requiredScopes?.map((andScopes) => new Scopes({ requiredAndScopes: andScopes })) ||
-      [];
+      compositionFieldConfiguration.requiredScopes?.map(
+        (andScopes: string[]) => new Scopes({ requiredAndScopes: andScopes }),
+      ) || [];
     const hasRequiredOrScopes = requiredOrScopes.length > 0;
     if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {
       fieldConfiguration.authorizationConfiguration = new AuthorizationConfiguration({
         requiresAuthentication: compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes,
         requiredOrScopes,
       });
+    }
+    if (compositionFieldConfiguration.subscriptionFilterCondition) {
+      const subscriptionFilterCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(
+        subscriptionFilterCondition,
+        compositionFieldConfiguration.subscriptionFilterCondition,
+      );
+      fieldConfiguration.subscriptionFilterCondition = subscriptionFilterCondition;
     }
     output.push(fieldConfiguration);
   }
@@ -167,3 +211,42 @@ const resolveNamedTypeName = (type: TypeNode): string => {
     }
   }
 };
+
+export function generateSubscriptionFilterCondition(
+  protoMessage: SubscriptionFilterCondition,
+  condition: SubscriptionCondition,
+) {
+  if (condition.and !== undefined) {
+    const protoAndConditions: SubscriptionFilterCondition[] = [];
+    for (const andCondition of condition.and) {
+      const protoAndCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(protoAndCondition, andCondition);
+      protoAndConditions.push(protoAndCondition);
+    }
+    protoMessage.and = protoAndConditions;
+    return;
+  }
+  if (condition.in !== undefined) {
+    protoMessage.in = new SubscriptionFieldCondition({
+      fieldPath: condition.in.fieldPath,
+      json: JSON.stringify(condition.in.values),
+    });
+    return;
+  }
+  if (condition.not !== undefined) {
+    protoMessage.not = new SubscriptionFilterCondition();
+    generateSubscriptionFilterCondition(protoMessage.not, condition.not);
+    return;
+  }
+  if (condition.or !== undefined) {
+    const protoOrConditions: SubscriptionFilterCondition[] = [];
+    for (const orCondition of condition.or) {
+      const protoOrCondition = new SubscriptionFilterCondition();
+      generateSubscriptionFilterCondition(protoOrCondition, orCondition);
+      protoOrConditions.push(protoOrCondition);
+    }
+    protoMessage.or = protoOrConditions;
+    return;
+  }
+  throw new Error('Fatal: Incoming SubscriptionCondition object was malformed.');
+}
