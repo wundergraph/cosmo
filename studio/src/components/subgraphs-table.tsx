@@ -401,9 +401,10 @@ export const SubgraphsTable = ({
   subgraphs: Subgraph[];
   totalCount: number;
 }) => {
+  const user = useUser();
   const rbac = useFeature("rbac");
   const router = useRouter();
-  const organizationSlug = router.query.organizationSlug;
+  const organizationSlug = user?.currentOrganization.slug;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
