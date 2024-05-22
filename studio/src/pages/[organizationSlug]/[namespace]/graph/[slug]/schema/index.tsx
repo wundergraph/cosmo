@@ -1240,8 +1240,9 @@ const DeprecatedTypes = () => {
 
 const SchemaExplorerPage: NextPageWithLayout = () => {
   const router = useRouter();
+  const user = useUser();
 
-  const organizationSlug = router.query.organizationSlug as string;
+  const organizationSlug = user?.currentOrganization.slug;
   const namespace = router.query.namespace as string;
   const graphName = router.query.slug as string;
   const selectedCategory = (router.query.category as string) ?? "query";

@@ -493,8 +493,7 @@ const AcceptedMembers = ({
 const MembersToolbar = () => {
   const usersFeature = useFeature("users");
   const user = useUser();
-  const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
+  const organizationSlug = user?.currentOrganization.slug;
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
 
   const { data } = useQuery(isMemberLimitReached.useQuery());
