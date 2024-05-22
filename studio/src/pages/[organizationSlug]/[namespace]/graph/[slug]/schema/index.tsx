@@ -63,7 +63,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useUser } from "@/hooks/use-user";
 import useWindowSize from "@/hooks/use-window-size";
 import { useChartData } from "@/lib/insights-helpers";
@@ -107,12 +109,13 @@ import {
 import { sentenceCase } from "change-case";
 import { useCommandState } from "cmdk";
 import { formatISO } from "date-fns";
-import { GraphQLSchema } from "graphql";
+import { GraphQLSchema, buildASTSchema, parse } from "graphql";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
   Dispatch,
   SetStateAction,
+  createContext,
   useContext,
   useEffect,
   useRef,
@@ -121,20 +124,34 @@ import {
 import { PiChat } from "react-icons/pi";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 
+const fallback = buildASTSchema(parse(`type Query { dummy: String! }`));
+
+const ExplorerContext = createContext<{
+  schemaVersionId: string;
+  ast: GraphQLSchema;
+}>({
+  schemaVersionId: "",
+  ast: fallback,
+});
+
 const TypeLink = ({
   name,
-  ast,
   isHeading = false,
 }: {
   name: string;
-  ast: GraphQLSchema;
   isHeading?: boolean;
 }) => {
+  const { ast } = useContext(ExplorerContext);
+
   const router = useRouter();
   const cleanName = name.replace(/[\[\]!: ]/g, "");
   const category = getCategoryForType(ast, cleanName);
   const href =
     router.asPath.split("?")[0] + `?category=${category}&typename=${cleanName}`;
+
+  if (!category) {
+    return;
+  }
 
   return (
     <Link href={href}>
@@ -204,7 +221,6 @@ const Fields = (props: {
   typename: string;
   category: GraphQLTypeCategory;
   fields: ParsedGraphQLField[];
-  ast: GraphQLSchema;
 }) => {
   const router = useRouter();
 
@@ -338,11 +354,9 @@ const Fields = (props: {
                         {field.name}
                       </button>
                     ) : (
-                      <TypeLink ast={props.ast} name={field.name} />
+                      <TypeLink name={field.name} />
                     )}
-                    {field.type && (
-                      <TypeLink ast={props.ast} name={`: ${field.type}`} />
-                    )}
+                    {field.type && <TypeLink name={`: ${field.type}`} />}
                   </p>
                 </TableCell>
                 {(hasDetails || hasArgs) && (
@@ -420,10 +434,7 @@ const Fields = (props: {
                                   </TooltipContent>
                                 </Tooltip>
 
-                                <TypeLink
-                                  ast={props.ast}
-                                  name={`: ${arg.type}`}
-                                />
+                                <TypeLink name={`: ${arg.type}`} />
                               </div>
                             );
                           })}
@@ -463,17 +474,16 @@ const Fields = (props: {
 
 const TypeDiscussions = ({
   name,
-  schemaVersionId,
   startLineNo,
   endLineNo,
 }: {
   name: string;
-  schemaVersionId: string;
   startLineNo: number;
   endLineNo: number;
 }) => {
   const router = useRouter();
   const graphData = useContext(GraphContext);
+  const { schemaVersionId } = useContext(ExplorerContext);
 
   const [hideResolvedDiscussions] = useLocalStorage(
     hideResolvedDiscussionsKey,
@@ -612,16 +622,16 @@ const Type = (props: {
   description: string;
   interfaces?: string[];
   fields?: ParsedGraphQLField[];
-  ast: GraphQLSchema;
   startLineNo?: number;
   endLineNo?: number;
-  schemaVersionId: string;
 }) => {
   const [hideDiscussions] = useLocalStorage(hideDiscussionsKey, false);
 
   const router = useRouter();
 
   const { isMobile } = useWindowSize();
+
+  const { schemaVersionId } = useContext(ExplorerContext);
 
   const showDiscussions =
     !!props.startLineNo && !!props.endLineNo && !isMobile && !hideDiscussions;
@@ -646,7 +656,7 @@ const Type = (props: {
               {props.interfaces &&
                 props.interfaces.map((t, index) => (
                   <div key={index} className="flex items-center gap-x-2">
-                    <TypeLink ast={props.ast} name={t} isHeading />
+                    <TypeLink name={t} isHeading />
                     {index !== props.interfaces!.length - 1 && (
                       <p className="font-normal text-muted-foreground">&</p>
                     )}
@@ -682,7 +692,6 @@ const Type = (props: {
             typename={props.name}
             category={props.category}
             fields={props.fields}
-            ast={props.ast}
           />
         )}
       </div>
@@ -717,11 +726,10 @@ const Type = (props: {
               <>
                 <TypeDiscussions
                   name={props.name}
-                  schemaVersionId={props.schemaVersionId}
                   startLineNo={props.startLineNo!}
                   endLineNo={props.endLineNo!}
                 />
-                <ThreadSheet schemaVersionId={props.schemaVersionId} />
+                <ThreadSheet schemaVersionId={schemaVersionId} />
               </>
             )}
           </ResizablePanel>
@@ -732,16 +740,16 @@ const Type = (props: {
 };
 
 const TypeWrapper = ({
-  ast,
-  schemaVersionId,
+  typename,
+  category,
 }: {
-  ast: GraphQLSchema;
-  schemaVersionId: string;
+  typename: string;
+  category: GraphQLTypeCategory;
 }) => {
   const router = useRouter();
 
-  const category = router.query.category as GraphQLTypeCategory;
-  const typename = router.query.typename as string;
+  const { ast } = useContext(ExplorerContext);
+
   const list = getTypesByCategory(ast, category);
 
   const parentRef = useRef<HTMLTableElement>(null);
@@ -818,7 +826,7 @@ const TypeWrapper = ({
                       }}
                     >
                       <TableCell className="my-1.5 w-4/12 flex-shrink-0 truncate">
-                        <TypeLink ast={ast} name={l.name} />
+                        <TypeLink name={l.name} />
                       </TableCell>
                       <TableCell className="my-1.5 w-5/12 text-muted-foreground group-hover:text-current">
                         {l.description || "-"}
@@ -868,21 +876,14 @@ const TypeWrapper = ({
         fields={type.fields}
         startLineNo={type.loc?.startToken.line}
         endLineNo={type.loc?.endToken.line}
-        schemaVersionId={schemaVersionId}
-        ast={ast}
       />
     </div>
   );
 };
 
-const SearchDescription = ({
-  ast,
-  allFields,
-}: {
-  ast: GraphQLSchema;
-  allFields: FieldMatch[];
-}) => {
+const SearchDescription = ({ allFields }: { allFields: FieldMatch[] }) => {
   const activeValue = useCommandState((state) => state.value);
+  const { ast } = useContext(ExplorerContext);
 
   if (!activeValue) {
     return null;
@@ -937,15 +938,14 @@ const SearchDescription = ({
 };
 
 const SearchType = ({
-  ast,
   open,
   setOpen,
 }: {
-  ast: GraphQLSchema;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
   const router = useRouter();
+  const { ast } = useContext(ExplorerContext);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -1035,18 +1035,21 @@ const SearchType = ({
             })}
           </CommandGroup>
         </CommandList>
-        <SearchDescription ast={ast} allFields={allFields} />
+        <SearchDescription allFields={allFields} />
       </div>
     </CommandDialog>
   );
 };
 
-const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
+const Toolbar = () => {
   const router = useRouter();
   const selectedCategory = (router.query.category as string) ?? "query";
   const [open, setOpen] = useState(false);
 
-  const typeCounts = ast ? getTypeCounts(ast) : undefined;
+  const { ast } = useContext(ExplorerContext);
+  const typeCounts = getTypeCounts(ast);
+
+  const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
   const applyParams = useApplyParams();
   const { range, dateRange } = useAnalyticsQueryState();
@@ -1107,7 +1110,7 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
       </Select>
       {ast && (
         <>
-          <SearchType ast={ast} open={open} setOpen={setOpen} />
+          <SearchType open={open} setOpen={setOpen} />
           <Button
             onClick={() => setOpen(true)}
             variant="outline"
@@ -1185,7 +1188,7 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
           range={range}
           dateRange={dateRange}
           onChange={onDateRangeChange}
-          calendarDaysLimit={90}
+          calendarDaysLimit={analyticsRetention}
         />
       )}
       <SchemaSettings />
@@ -1193,7 +1196,9 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
   );
 };
 
-const DeprecatedTypes = ({ ast }: { ast: GraphQLSchema }) => {
+const DeprecatedTypes = () => {
+  const { ast } = useContext(ExplorerContext);
+
   const types = getDeprecatedTypes(ast);
 
   if (types.length === 0) {
@@ -1219,8 +1224,6 @@ const DeprecatedTypes = ({ ast }: { ast: GraphQLSchema }) => {
               fields={type.fields}
               startLineNo={type.loc?.startToken.line}
               endLineNo={type.loc?.endToken.line}
-              schemaVersionId={""}
-              ast={ast}
             />
           </div>
         );
@@ -1237,6 +1240,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const graphName = router.query.slug as string;
   const selectedCategory = (router.query.category as string) ?? "query";
   const typename = router.query.typename as string;
+  const category = router.query.category as GraphQLTypeCategory;
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphSDLByName.useQuery({
@@ -1283,124 +1287,129 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   }
 
   return (
-    <GraphPageLayout
-      title={title}
-      breadcrumbs={breadcrumbs}
-      subtitle="Explore schema and field level metrics of your federated graph"
-      toolbar={<Toolbar ast={ast} />}
-      noPadding
+    <ExplorerContext.Provider
+      value={{
+        ast: ast ?? fallback,
+        schemaVersionId: data?.versionId ?? "",
+      }}
     >
-      <div className="flex h-full flex-row">
-        <div className="hidden h-full min-w-[200px] max-w-[240px] overflow-y-auto border-r py-2 scrollbar-thin xl:block">
-          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-6 xl:px-8">
-            {graphqlRootCategories.map((category) => (
-              <Button
-                key={category}
-                asChild
-                variant="ghost"
-                className={cn("justify-start px-3", {
-                  "bg-accent text-accent-foreground":
-                    selectedCategory === category,
-                })}
-              >
-                <Link
-                  className="gap-x-4"
-                  href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${category}&typename=${sentenceCase(
-                    category,
-                  )}`}
-                >
-                  {sentenceCase(category)}
-                  {typeCounts && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-auto bg-accent/50 px-1.5"
-                    >
-                      {typeCounts[category]}
-                    </Badge>
-                  )}
-                </Link>
-              </Button>
-            ))}
-          </div>
-          <Separator className="my-2" />
-          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-8">
-            {graphqlTypeCategories.map((gType) => {
-              return (
+      <GraphPageLayout
+        title={title}
+        breadcrumbs={breadcrumbs}
+        subtitle="Explore schema and field level metrics of your federated graph"
+        toolbar={<Toolbar />}
+        noPadding
+      >
+        <div className="flex h-full flex-row">
+          <div className="hidden h-full min-w-[200px] max-w-[240px] overflow-y-auto border-r py-2 scrollbar-thin xl:block">
+            <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-6 xl:px-8">
+              {graphqlRootCategories.map((category) => (
                 <Button
-                  key={gType}
+                  key={category}
                   asChild
                   variant="ghost"
                   className={cn("justify-start px-3", {
                     "bg-accent text-accent-foreground":
-                      selectedCategory === gType,
+                      selectedCategory === category,
                   })}
                 >
                   <Link
-                    href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${gType}`}
+                    className="gap-x-4"
+                    href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${category}&typename=${sentenceCase(
+                      category,
+                    )}`}
                   >
-                    <span>{sentenceCase(gType)}</span>
+                    {sentenceCase(category)}
                     {typeCounts && (
                       <Badge
                         variant="secondary"
                         className="ml-auto bg-accent/50 px-1.5"
                       >
-                        {typeCounts[gType]}
+                        {typeCounts[category]}
                       </Badge>
                     )}
                   </Link>
                 </Button>
-              );
-            })}
-          </div>
-          <Separator className="my-2" />
-          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-8">
-            <Button
-              asChild
-              variant="ghost"
-              className={cn("justify-start px-3", {
-                "bg-accent text-accent-foreground":
-                  selectedCategory === "deprecated",
-              })}
-            >
-              <Link
-                href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=deprecated`}
-              >
-                <span>Deprecated</span>
-                {typeCounts && ast && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-auto bg-accent/50 px-1.5"
+              ))}
+            </div>
+            <Separator className="my-2" />
+            <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-8">
+              {graphqlTypeCategories.map((gType) => {
+                return (
+                  <Button
+                    key={gType}
+                    asChild
+                    variant="ghost"
+                    className={cn("justify-start px-3", {
+                      "bg-accent text-accent-foreground":
+                        selectedCategory === gType,
+                    })}
                   >
-                    {getDeprecatedTypes(ast).length}
-                  </Badge>
-                )}
-              </Link>
-            </Button>
+                    <Link
+                      href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${gType}`}
+                    >
+                      <span>{sentenceCase(gType)}</span>
+                      {typeCounts && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto bg-accent/50 px-1.5"
+                        >
+                          {typeCounts[gType]}
+                        </Badge>
+                      )}
+                    </Link>
+                  </Button>
+                );
+              })}
+            </div>
+            <Separator className="my-2" />
+            <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-8">
+              <Button
+                asChild
+                variant="ghost"
+                className={cn("justify-start px-3", {
+                  "bg-accent text-accent-foreground":
+                    selectedCategory === "deprecated",
+                })}
+              >
+                <Link
+                  href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=deprecated`}
+                >
+                  <span>Deprecated</span>
+                  {typeCounts && ast && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto bg-accent/50 px-1.5"
+                    >
+                      {getDeprecatedTypes(ast).length}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin lg:px-8">
+            {isLoadingAST && <Loader fullscreen />}
+            {!isLoadingAST &&
+              data?.response?.code === EnumStatusCode.ERR_NOT_FOUND &&
+              !schema && <EmptySchema />}
+            {!isLoadingAST && error && (
+              <EmptyState
+                icon={<ExclamationTriangleIcon />}
+                title="Could not retrieve schema"
+                description={data?.response?.details || error?.message}
+                actions={<Button onClick={() => refetch()}>Retry</Button>}
+              />
+            )}
+            {ast && selectedCategory === "deprecated" && <DeprecatedTypes />}
+            {ast && selectedCategory !== "deprecated" && (
+              <TypeWrapper typename={typename} category={category} />
+            )}
+            <FieldUsageSheet />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin lg:px-8">
-          {isLoadingAST && <Loader fullscreen />}
-          {!isLoadingAST &&
-            data?.response?.code === EnumStatusCode.ERR_NOT_FOUND &&
-            !schema && <EmptySchema />}
-          {!isLoadingAST && error && (
-            <EmptyState
-              icon={<ExclamationTriangleIcon />}
-              title="Could not retrieve schema"
-              description={data?.response?.details || error?.message}
-              actions={<Button onClick={() => refetch()}>Retry</Button>}
-            />
-          )}
-          {ast && selectedCategory === "deprecated" && (
-            <DeprecatedTypes ast={ast} />
-          )}
-          {ast && selectedCategory !== "deprecated" && (
-            <TypeWrapper ast={ast} schemaVersionId={data?.versionId ?? ""} />
-          )}
-          <FieldUsageSheet />
-        </div>
-      </div>
-    </GraphPageLayout>
+      </GraphPageLayout>
+    </ExplorerContext.Provider>
   );
 };
 
