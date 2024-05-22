@@ -255,9 +255,9 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
           </dl>
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-          <dl className="grid w-full flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
+          <dl className="scrollbar-custom grid w-full flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
             {routerConfigSignature || admissionError ? (
-              <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
+              <div className="flex-start col-span-full flex flex-1 flex-col gap-4">
                 <dt className="text-sm text-muted-foreground">Admission</dt>
                 <dd className="flex flex-col space-y-3">
                   <div className="flex items-center gap-2">
@@ -312,15 +312,15 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                 <dt className="text-sm text-muted-foreground">
                   Composition Inputs
                 </dt>
-                <dd className="flex flex-col gap-2">
+                <dd className="mt-2 flex flex-col gap-2">
                   {compositionSubgraphs.length === 0 ? (
                     <span className="text-sm">No subgraphs stored.</span>
                   ) : (
                     compositionSubgraphs.map((cs) => {
                       return (
                         <div className="flex flex-col gap-y-1" key={cs.id}>
-                          <div className="flex items-center gap-x-1.5 text-sm">
-                            <CubeIcon className="h-4 w-4" />
+                          <div className="flex items-start gap-x-1.5 text-sm">
+                            <CubeIcon className="mt-1 h-4 w-4 flex-shrink-0" />
                             <span>{cs.name}</span>
                           </div>
                           <span className="pl-6 text-xs">
