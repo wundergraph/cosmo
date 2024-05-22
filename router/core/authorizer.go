@@ -115,7 +115,13 @@ func (a *CosmoAuthorizer) addMissingScopes(ctx *resolve.Context, coordinate reso
 			extension.extension.ActualScopes = actual
 		}
 	}
-	extension.extension.MissingScopes = append(extension.extension.MissingScopes, a.missingScopesError(coordinate, requiredOrScopes))
+	newMissingScopesError := a.missingScopesError(coordinate, requiredOrScopes)
+	if !slices.ContainsFunc(extension.extension.MissingScopes, func(existingMissingScopesError MissingScopesError) bool {
+		return existingMissingScopesError.Coordinate.TypeName == newMissingScopesError.Coordinate.TypeName &&
+			existingMissingScopesError.Coordinate.FieldName == newMissingScopesError.Coordinate.FieldName
+	}) {
+		extension.extension.MissingScopes = append(extension.extension.MissingScopes, newMissingScopesError)
+	}
 	extension.mux.Unlock()
 }
 

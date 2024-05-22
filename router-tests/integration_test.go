@@ -950,7 +950,7 @@ func TestWithOriginErrors(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'."}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'."}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
@@ -970,7 +970,7 @@ func TestWithOriginErrors500(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query', Reason: empty response.","extensions":{"statusCode":500}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query', Reason: empty response.","extensions":{"statusCode":500}}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
@@ -991,7 +991,7 @@ func TestWithOriginGraphQLErrorPropagated(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
@@ -1012,7 +1012,7 @@ func TestWithOriginGraphQLErrorPropagatedRemovingLocations(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
@@ -1036,7 +1036,7 @@ func TestWithOriginGraphQLErrorPropagatedKeepLocations(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'.","extensions":{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
@@ -1061,7 +1061,7 @@ func TestWithOriginGraphQLErrorPropagatedOmitExtensions(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
@@ -1087,7 +1087,7 @@ func TestWithOriginGraphQLErrorPassThroughKeepLocations(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}]}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}]}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
@@ -1111,7 +1111,7 @@ func TestWithOriginGraphQLErrorUnpropagated(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'."}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at Path 'query'."}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
@@ -1135,7 +1135,7 @@ func TestWithOriginGraphQLErrorPropagatedPassThrough(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id details { forename surname } notes } }`,
 		})
-		require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"data":null}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"data":{"employees":null}}`, res.Body)
 	})
 }
 
