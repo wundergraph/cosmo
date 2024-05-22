@@ -59,6 +59,7 @@ import { createFilterState } from "./constructAnalyticsTableQueryState";
 import { useApplyParams } from "./use-apply-params";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { useUser } from "@/hooks/use-user";
 
 export const FieldUsage = ({
   usageData,
@@ -66,7 +67,9 @@ export const FieldUsage = ({
   usageData: GetFieldUsageResponse;
 }) => {
   const router = useRouter();
-  const { slug, organizationSlug } = router.query;
+  const user = useUser();
+  const organizationSlug = user?.currentOrganization.slug;
+  const slug = router.query.slug;
 
   const subgraphs = useContext(GraphContext)?.subgraphs ?? [];
 
@@ -211,14 +214,14 @@ export const FieldUsage = ({
                 value={clientName + clientVersion}
               >
                 <AccordionTrigger className="hover:bg-secondary/30 hover:no-underline">
-                  <div className="flex w-full items-center justify-between gap-x-2">
-                    <span>
+                  <div className="flex w-full items-center justify-between gap-x-2 text-start">
+                    <span className="break-all">
                       {clientName}{" "}
                       <span className="text-muted-foreground">
                         (version: {clientVersion})
                       </span>
                     </span>
-                    <Badge variant="secondary" className="mr-4">
+                    <Badge variant="secondary" className="mr-4 flex-shrink-0">
                       {totalRequests} Requests
                     </Badge>
                   </div>
@@ -248,7 +251,7 @@ export const FieldUsage = ({
                                       query: {
                                         namespace: router.query.namespace,
                                         organizationSlug:
-                                          router.query.organizationSlug,
+                                          user?.currentOrganization.slug,
                                         slug: router.query.slug,
                                         filterState: createFilterState({
                                           operationName: op.name,
@@ -301,8 +304,8 @@ export const FieldUsage = ({
                       href={`/${organizationSlug}/${subgraph.namespace}/graph/${slug}/schema/sdl?subgraph=${subgraph.name}`}
                       className="text-primary"
                     >
-                      <div className="flex items-center gap-x-1">
-                        <CubeIcon className="" />
+                      <div className="flex items-start gap-x-1">
+                        <CubeIcon className="mt-1.5 flex-shrink-0 break-all" />
                         {subgraph.name}
                       </div>
                     </Link>
