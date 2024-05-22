@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
+import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from "../../common/common_pb.js";
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -949,6 +949,11 @@ export class FieldConfiguration extends Message<FieldConfiguration> {
    */
   authorizationConfiguration?: AuthorizationConfiguration;
 
+  /**
+   * @generated from field: optional wg.cosmo.node.v1.SubscriptionFilterCondition subscription_filter_condition = 5;
+   */
+  subscriptionFilterCondition?: SubscriptionFilterCondition;
+
   constructor(data?: PartialMessage<FieldConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -961,6 +966,7 @@ export class FieldConfiguration extends Message<FieldConfiguration> {
     { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "arguments_configuration", kind: "message", T: ArgumentConfiguration, repeated: true },
     { no: 4, name: "authorization_configuration", kind: "message", T: AuthorizationConfiguration },
+    { no: 5, name: "subscription_filter_condition", kind: "message", T: SubscriptionFilterCondition, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldConfiguration {
@@ -1904,6 +1910,11 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
    */
   protocol?: GraphQLSubscriptionProtocol;
 
+  /**
+   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocketSubprotocol = 5;
+   */
+  websocketSubprotocol?: GraphQLWebsocketSubprotocol;
+
   constructor(data?: PartialMessage<GraphQLSubscriptionConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1916,6 +1927,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
     { no: 2, name: "url", kind: "message", T: ConfigurationVariable },
     { no: 3, name: "useSSE", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 5, name: "websocketSubprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphQLSubscriptionConfiguration {
@@ -2057,6 +2069,104 @@ export class SingleTypeField extends Message<SingleTypeField> {
 
   static equals(a: SingleTypeField | PlainMessage<SingleTypeField> | undefined, b: SingleTypeField | PlainMessage<SingleTypeField> | undefined): boolean {
     return proto3.util.equals(SingleTypeField, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.SubscriptionFieldCondition
+ */
+export class SubscriptionFieldCondition extends Message<SubscriptionFieldCondition> {
+  /**
+   * @generated from field: repeated string field_path = 1;
+   */
+  fieldPath: string[] = [];
+
+  /**
+   * @generated from field: string json = 2;
+   */
+  json = "";
+
+  constructor(data?: PartialMessage<SubscriptionFieldCondition>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.SubscriptionFieldCondition";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_path", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "json", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscriptionFieldCondition {
+    return new SubscriptionFieldCondition().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscriptionFieldCondition {
+    return new SubscriptionFieldCondition().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscriptionFieldCondition {
+    return new SubscriptionFieldCondition().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubscriptionFieldCondition | PlainMessage<SubscriptionFieldCondition> | undefined, b: SubscriptionFieldCondition | PlainMessage<SubscriptionFieldCondition> | undefined): boolean {
+    return proto3.util.equals(SubscriptionFieldCondition, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.SubscriptionFilterCondition
+ */
+export class SubscriptionFilterCondition extends Message<SubscriptionFilterCondition> {
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.SubscriptionFilterCondition and = 1;
+   */
+  and: SubscriptionFilterCondition[] = [];
+
+  /**
+   * @generated from field: optional wg.cosmo.node.v1.SubscriptionFieldCondition in = 2;
+   */
+  in?: SubscriptionFieldCondition;
+
+  /**
+   * @generated from field: optional wg.cosmo.node.v1.SubscriptionFilterCondition not = 3;
+   */
+  not?: SubscriptionFilterCondition;
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.SubscriptionFilterCondition or = 4;
+   */
+  or: SubscriptionFilterCondition[] = [];
+
+  constructor(data?: PartialMessage<SubscriptionFilterCondition>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.SubscriptionFilterCondition";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "and", kind: "message", T: SubscriptionFilterCondition, repeated: true },
+    { no: 2, name: "in", kind: "message", T: SubscriptionFieldCondition, opt: true },
+    { no: 3, name: "not", kind: "message", T: SubscriptionFilterCondition, opt: true },
+    { no: 4, name: "or", kind: "message", T: SubscriptionFilterCondition, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscriptionFilterCondition {
+    return new SubscriptionFilterCondition().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscriptionFilterCondition {
+    return new SubscriptionFilterCondition().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscriptionFilterCondition {
+    return new SubscriptionFilterCondition().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubscriptionFilterCondition | PlainMessage<SubscriptionFilterCondition> | undefined, b: SubscriptionFilterCondition | PlainMessage<SubscriptionFilterCondition> | undefined): boolean {
+    return proto3.util.equals(SubscriptionFilterCondition, a, b);
   }
 }
 

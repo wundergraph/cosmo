@@ -53,6 +53,8 @@ message PublishFederatedSubgraphRequest {
   string namespace = 8;
   // If true, the labels will be unset
   optional bool unset_labels = 9;
+  // The subscription subprotocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -97,6 +99,8 @@ message CreateMonographRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
   optional string readme = 7;
   string admissionWebhookURL = 8;
+  // The subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message CreateMonographResponse {
@@ -130,6 +134,7 @@ message CreateFederatedSubgraphRequest {
   // readme of the subgraph
   optional string readme = 7;
   string namespace = 8;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message DeleteFederatedGraphRequest {
@@ -520,6 +525,7 @@ message UpdateSubgraphRequest {
   optional string readme = 7;
   string namespace = 8;
   optional bool unset_labels = 9;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
 }
 
 message UpdateSubgraphResponse {
@@ -552,6 +558,7 @@ message UpdateMonographRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
   optional string subscription_url = 6;
   optional string readme = 7;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 8;
 }
 
 message UpdateMonographResponse {
