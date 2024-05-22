@@ -83,6 +83,7 @@ import {
   GetOrganizationRequestsCountResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
+  GetPendingOrganizationMembersResponse,
   GetPersistedOperationsResponse,
   GetRouterTokensResponse,
   GetRoutersResponse,
@@ -98,6 +99,7 @@ import {
   GetUserAccessibleResourcesResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
+  IsMemberLimitReachedResponse,
   LeaveOrganizationResponse,
   LintConfig,
   LintSeverity,
@@ -6960,6 +6962,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           limit: req.limit,
           offset: req.offset,
           namespaceId: namespace?.id,
+          query: req.query,
+        });
+
+        const count = await repo.count({
+          namespaceId: namespace?.id,
+          query: req.query,
+          limit: 0,
+          offset: 0,
         });
 
         return {
@@ -6975,6 +6985,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
           })),
+          count,
           response: {
             code: EnumStatusCode.OK,
           },
@@ -7933,6 +7944,34 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    isMemberLimitReached: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<IsMemberLimitReachedResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+
+        const count = await orgRepo.memberCount(authContext.organizationId);
+
+        const usersFeature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'users',
+        });
+        const limit = usersFeature?.limit === -1 ? undefined : usersFeature?.limit;
+        const limitReached = !!limit && count >= limit;
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          limitReached,
+          memberCount: count,
+        };
+      });
+    },
+
     getOrganizationMembers: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
@@ -7941,19 +7980,50 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-        const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
-        const orgMembers = await orgRepo.getMembers({ organizationID: authContext.organizationId });
-        const pendingInvitations = await orgInvitationRepo.getPendingInvitationsOfOrganization({
-          organizationId: authContext.organizationId,
+        const orgMembers = await orgRepo.getMembers({
+          organizationID: authContext.organizationId,
+          offset: req.pagination?.offset,
+          limit: req.pagination?.limit,
+          search: req.search,
         });
+
+        const count = await orgRepo.memberCount(authContext.organizationId, req.search);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           members: orgMembers,
+          totalCount: count,
+        };
+      });
+    },
+
+    getPendingOrganizationMembers: (req, ctx) => {
+      let logger = getLogger(ctx, opts.logger);
+
+      return handleError<PlainMessage<GetPendingOrganizationMembersResponse>>(ctx, logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        logger = enrichLogger(ctx, logger, authContext);
+
+        const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
+
+        const pendingInvitations = await orgInvitationRepo.getPendingInvitationsOfOrganization({
+          organizationId: authContext.organizationId,
+          offset: req.pagination?.offset,
+          limit: req.pagination?.limit,
+          search: req.search,
+        });
+
+        const count = await orgInvitationRepo.invitationsCount(authContext.organizationId, req.search);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
           pendingInvitations,
+          totalCount: count,
         };
       });
     },

@@ -5,7 +5,7 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, eq, inArray, not, sql } from 'drizzle-orm';
+import { SQL, and, asc, eq, inArray, like, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
@@ -256,13 +256,19 @@ export class OrganizationRepository {
     );
   }
 
-  public async memberCount(organizationId: string): Promise<number> {
+  public async memberCount(organizationId: string, search?: string): Promise<number> {
     const count = await this.db
       .select({
         count: sql<number>`cast(count(${organizationsMembers.id}) as int)`,
       })
       .from(organizationsMembers)
-      .where(eq(organizationsMembers.organizationId, organizationId))
+      .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .where(
+        and(
+          eq(organizationsMembers.organizationId, organizationId),
+          search ? like(users.email, `%${search}%`) : undefined,
+        ),
+      )
       .groupBy(organizationsMembers.organizationId)
       .execute();
 
@@ -343,11 +349,19 @@ export class OrganizationRepository {
     organizationID,
     offset = 0,
     limit = 999,
+    search,
   }: {
     organizationID: string;
     offset?: number;
     limit?: number;
+    search?: string;
   }): Promise<OrganizationMemberDTO[]> {
+    const conditions: SQL<unknown>[] = [eq(organizationsMembers.organizationId, organizationID)];
+
+    if (search) {
+      conditions.push(like(users.email, `%${search}%`));
+    }
+
     const orgMembers = await this.db
       .select({
         userID: users.id,
@@ -357,7 +371,7 @@ export class OrganizationRepository {
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .where(eq(organizationsMembers.organizationId, organizationID))
+      .where(and(...conditions))
       .orderBy(asc(organizationsMembers.createdAt))
       .offset(offset)
       .limit(limit)

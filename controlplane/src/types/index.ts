@@ -38,6 +38,7 @@ export interface SubgraphListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
+  query?: string;
 }
 
 export interface Label {

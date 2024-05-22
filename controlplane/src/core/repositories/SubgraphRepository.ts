@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
@@ -496,6 +496,10 @@ export class SubgraphRepository {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
     }
 
+    if (opts.query) {
+      conditions.push(like(schema.targets.name, `%${opts.query}%`));
+    }
+
     const targets = await this.db
       .select({
         id: schema.targets.id,
@@ -523,6 +527,34 @@ export class SubgraphRepository {
     }
 
     return subgraphs;
+  }
+
+  public async count(opts: SubgraphListFilterOptions): Promise<number> {
+    const conditions: SQL<unknown>[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+    ];
+
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
+    if (opts.query) {
+      conditions.push(like(schema.targets.name, `%${opts.query}%`));
+    }
+
+    const subgraphsCount = await this.db
+      .select({
+        count: count(),
+      })
+      .from(schema.targets)
+      .where(and(...conditions));
+
+    if (subgraphsCount.length === 0) {
+      return 0;
+    }
+
+    return subgraphsCount[0].count;
   }
 
   /**
