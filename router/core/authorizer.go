@@ -25,9 +25,8 @@ func NewCosmoAuthorizer(opts *CosmoAuthorizerOptions) *CosmoAuthorizer {
 }
 
 type CosmoAuthorizer struct {
-	fieldConfigurations                  []*nodev1.FieldConfiguration
-	rejectUnauthorized                   bool
-	coordinatesWithPropagatedScopesError []resolve.GraphCoordinate
+	fieldConfigurations []*nodev1.FieldConfiguration
+	rejectUnauthorized  bool
 }
 
 func (a *CosmoAuthorizer) HasResponseExtensionData(ctx *resolve.Context) bool {
