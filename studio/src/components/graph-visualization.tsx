@@ -6,13 +6,13 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
+  addEdge,
   Background,
   ConnectionLineType,
   Edge,
   Node,
   Panel,
   Position,
-  addEdge,
   useEdgesState,
   useNodesInitialized,
   useNodesState,
@@ -124,29 +124,29 @@ function GraphVisualization({
   const subgraphs = useMemo(() => {
     let tempSubgraphs = [...(graphData?.subgraphs ?? [])];
 
+    tempSubgraphs.sort((a, b) => {
+      const metricA = subgraphMetrics?.find((x) => x.subgraphID === a.id);
+      const metricB = subgraphMetrics?.find((x) => x.subgraphID === b.id);
+
+      if (!metricA || !metricB) {
+        return 0;
+      }
+
+      if (topCategory === "latency") {
+        return metricB.latency - metricA.latency;
+      }
+      if (topCategory === "errorRate") {
+        return metricB.errorRate - metricA.errorRate;
+      }
+
+      return metricB.requestRate - metricA.requestRate;
+    });
+
     if (!showAll) {
       tempSubgraphs = tempSubgraphs.slice(0, 5);
     }
 
-    return (
-      tempSubgraphs.slice(0, 5).sort((a, b) => {
-        const metricA = subgraphMetrics?.find((x) => x.subgraphID === a.id);
-        const metricB = subgraphMetrics?.find((x) => x.subgraphID === b.id);
-
-        if (!metricA || !metricB) {
-          return 0;
-        }
-
-        if (topCategory === "latency") {
-          return metricB.latency - metricA.latency;
-        }
-        if (topCategory === "errorRate") {
-          return metricB.errorRate - metricA.errorRate;
-        }
-
-        return metricB.requestRate - metricA.requestRate;
-      }) ?? []
-    );
+    return tempSubgraphs;
   }, [showAll, topCategory, graphData?.subgraphs, subgraphMetrics]);
 
   useEffect(() => {
