@@ -26,7 +26,7 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | deploymentStrategy | object | `{}` |  |
 | existingConfigmap | string | `""` | If this is set, the commonConfiguration section is ignored. |
 | existingSecret | string | `""` | Existing secret in the same namespace containing the graphApiToken. The secret key has to match with current secret. |
-| extraEnvVars | string | `nil` | Allows to set additional environment / runtime variables on the container. Useful for global application non-specific settings. |
+| extraEnvVars | list | `[]` | Allows to set additional environment / runtime variables on the container. Useful for global application non-specific settings. |
 | extraEnvVarsCM | string | `""` | Name of existing ConfigMap containing extra env vars |
 | extraEnvVarsSecret | string | `""` | Name of existing Secret containing extra env vars |
 | extraVolumeMounts | list | `[]` | Optionally specify extra list of additional volumeMounts for Router container's |
