@@ -175,7 +175,7 @@ func (p *absintheWSProtocol) Pong(msg *Message) error {
 }
 
 func (p *absintheWSProtocol) WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
-	payload, err := sjson.SetRawBytes(nil, "result", data)
+	payload, err := sjson.SetBytes(nil, "result", data)
 	if err != nil {
 		return err
 	}
