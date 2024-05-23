@@ -235,7 +235,6 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       userName: user.email,
       name: {
         givenName: keycloakUsers[0].firstName || '',
-        middleName: '',
         familyName: keycloakUsers[0].lastName || '',
       },
       active: keycloakUsers[0].enabled,
@@ -243,7 +242,6 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         {
           primary: true,
           value: user.email,
-          type: 'work',
         },
       ],
       groups: [],
@@ -262,7 +260,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           schemas: string[];
           userName: string;
           name: { givenName: string; familyName: string };
-          emails: { primary: boolean; value: string; type: string }[];
+          emails: { primary: boolean; value: string }[];
           password: string;
           displayName: string;
           groups: string[];
@@ -388,8 +386,8 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           schemas: string[];
           id: string;
           userName: string;
-          name: { givenName?: string; familyName?: string; middleName?: string };
-          emails: { primary: boolean; value: string; type: string }[];
+          name: { givenName?: string; familyName?: string };
+          emails: { primary: boolean; value: string }[];
           password: string;
           groups: string[];
           active: boolean;
