@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func HTTP(next http.Handler) http.Handler {
@@ -18,12 +19,30 @@ func HTTPFunc(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			panic(err)
 		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+
+		contentType := r.Header.Get("Content-Type")
+
 		if len(body) > 0 {
-			payload := map[string]interface{}{}
-			if err := json.Unmarshal(body, &payload); err != nil {
-				panic(err)
+			if strings.Contains(contentType, "multipart/form-data") {
+				clone := r.Clone(r.Context())
+				if err := clone.ParseMultipartForm(200 << 20); err != nil {
+					panic(err)
+				}
+				payload := make(map[string]interface{})
+				for key, values := range clone.MultipartForm.Value {
+					if len(values) > 0 {
+						payload[key] = values[0]
+					}
+				}
+				r = r.WithContext(NewContextWithInitPayload(r.Context(), payload))
+			} else {
+				payload := map[string]interface{}{}
+				if err := json.Unmarshal(body, &payload); err != nil {
+					panic(err)
+				}
+				r = r.WithContext(NewContextWithInitPayload(r.Context(), payload))
 			}
-			r = r.WithContext(NewContextWithInitPayload(r.Context(), payload))
 		}
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		next.ServeHTTP(w, r)
