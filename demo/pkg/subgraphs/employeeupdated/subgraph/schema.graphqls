@@ -10,9 +10,11 @@ input edfs__NatsStreamConfiguration {
     streamName: String!
 }
 
+scalar openfed__SubscriptionFilterValue
+
 input openfed__SubscriptionFieldCondition {
     fieldPath: String!
-    values: [String!]!
+    values: [openfed__SubscriptionFilterValue]!
 }
 
 input openfed__SubscriptionFilterCondition {
