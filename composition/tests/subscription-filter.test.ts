@@ -1,12 +1,23 @@
 import { describe, expect, test } from 'vitest';
 import {
   federateSubgraphs,
+  inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
+  invalidDirectiveError,
+  invalidInputFieldTypeErrorMessage,
+  invalidRepeatedDirectiveErrorMessage,
   invalidSubscriptionFieldConditionFieldPathFieldErrorMessage,
   invalidSubscriptionFilterDirectiveError,
   invalidSubscriptionFilterLocationError,
+  LIST,
+  nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
   normalizeSubgraph,
+  NULL,
+  OBJECT,
   Subgraph,
+  subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldErrorMessage,
+  subscriptionFieldConditionInvalidValuesArrayErrorMessage,
+  subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
 } from '../src';
 import { parse } from 'graphql';
@@ -112,6 +123,16 @@ describe('@openfed__subscriptionFilter tests', () => {
       `),
       );
     });
+
+    test('that an error is returned if @openfed__subscriptionFilter is repeated', () => {
+      const { errors } = normalizeSubgraph(subgraphK.definitions);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError('openfed__subscriptionFilter', 'Subscription.one', [
+          invalidRepeatedDirectiveErrorMessage('openfed__subscriptionFilter', 'Subscription.one'),
+        ]),
+      ]);
+    });
   });
 
   describe('Federation tests', () => {
@@ -187,7 +208,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       ]);
     });
 
-    test('that an error is returned if an IN condition fieldPath references a field that is not defined in the same subgraph as the directive', () => {
+    test('that an error is returned if condition.IN.fieldPath references a field that is not defined in the same subgraph as the directive', () => {
       const { errors } = federateSubgraphs([subgraphB, subgraphF]);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
@@ -221,6 +242,188 @@ describe('@openfed__subscriptionFilter tests', () => {
           subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(CONDITION, 'object', 'int'),
         ]),
       );
+    });
+
+    test('that an error is returned if invalid condition.IN inputs are provided', () => {
+      const { errors } = federateSubgraphs([subgraphB, subgraphH]);
+      expect(errors).toHaveLength(2);
+      expect(errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.one', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.IN',
+            ['fieldPath', 'values'],
+            [],
+            ['field', 'value'],
+            [],
+          ),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.two', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage('condition.IN', [], ['fieldPath', 'values'], [], []),
+        ]),
+      ]);
+    });
+
+    test('that an error is returned if condition.IN.values is provided an invalid value', () => {
+      const { errors } = federateSubgraphs([subgraphB, subgraphI]);
+      expect(errors).toHaveLength(4);
+      expect(errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.one', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.IN',
+            [],
+            [],
+            [],
+            [invalidInputFieldTypeErrorMessage('condition.IN.values', LIST, OBJECT)],
+          ),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.two', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.IN',
+            [],
+            [],
+            [],
+            [subscriptionFieldConditionInvalidValuesArrayErrorMessage('condition.IN.values', [0])],
+          ),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.three', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.IN',
+            [],
+            [],
+            [],
+            [subscriptionFieldConditionEmptyValuesArrayErrorMessage('condition.IN.values')],
+          ),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.four', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.IN',
+            [],
+            [],
+            [],
+            [invalidInputFieldTypeErrorMessage('condition.IN.values', LIST, NULL)],
+          ),
+        ]),
+      ]);
+    });
+
+    test('that valid non-list values provided to condition.IN.values will be coerced into a list', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphJ]);
+      expect(errors).toBeUndefined();
+      expect(federationResult!.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: 'one',
+          typeName: 'Subscription',
+          subscriptionFilterCondition: {
+            in: {
+              fieldPath: ['id'],
+              values: ['string'],
+            },
+          },
+        },
+        {
+          argumentNames: [],
+          fieldName: 'two',
+          typeName: 'Subscription',
+          subscriptionFilterCondition: {
+            in: {
+              fieldPath: ['id'],
+              values: [1],
+            },
+          },
+        },
+        {
+          argumentNames: [],
+          fieldName: 'three',
+          typeName: 'Subscription',
+          subscriptionFilterCondition: {
+            in: {
+              fieldPath: ['id'],
+              values: [3.3],
+            },
+          },
+        },
+        {
+          argumentNames: [],
+          fieldName: 'four',
+          typeName: 'Subscription',
+          subscriptionFilterCondition: {
+            in: {
+              fieldPath: ['id'],
+              values: [true],
+            },
+          },
+        },
+      ]);
+    });
+
+    test('that an error is returned if condition input value fields are invalid', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphL]);
+      expect(errors).toHaveLength(5);
+      expect(errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.one', [
+          subscriptionFilterConditionInvalidInputFieldErrorMessage('condition', 'OUT'),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.two', [
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage('condition.AND', LIST, OBJECT),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.three', [
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage('condition.OR', LIST, OBJECT),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.four', [
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage('condition.IN', OBJECT, LIST),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.five', [
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage('condition.NOT', OBJECT, LIST),
+        ]),
+      ]);
+    });
+
+    test('that an error is returned if fieldPath references a non-leaf kind', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphM]);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.one', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.IN',
+            [],
+            [],
+            [],
+            [
+              nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage(
+                'condition.IN.fieldPath',
+                'object',
+                'object',
+                OBJECT,
+                'Object',
+              ),
+            ],
+          ),
+        ]),
+      ]);
+    });
+
+    test('that an error is returned if fieldPath references an inaccessible field', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphN]);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.one', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.IN',
+            [],
+            [],
+            [],
+            [
+              inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
+                'condition.IN.fieldPath',
+                'object.id',
+                'object.id',
+                'Object.id',
+              ),
+            ],
+          ),
+        ]),
+      ]);
     });
   });
 });
@@ -303,49 +506,49 @@ const subgraphD: Subgraph = {
   name: 'subgraph-d',
   url: '',
   definitions: parse(`
-  enum Continent {
-    AS
-    AF
-    EU
-    NA
-    OC
-    SA
-  }
-
-  type Entity @key(fields: "id object { name, age } product { sku, continent }", resolvable: false) {
-    id: ID! @external
-    object: Object! @external
-    product: Product! @external
-  }
+    enum Continent {
+      AS
+      AF
+      EU
+      NA
+      OC
+      SA
+    }
   
-  type Object @external {
-    name: String!
-    age: Int!
-  }
-  
-  type Product @external {
-    continent: Continent!
-    sku: String!
-  }
-  
-  type Subscription {
-    field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
-      condition: { AND: [
-        { NOT: 
-          { OR: [
-            { IN: { fieldPath: "object.name", values: ["Jens", "Stefan"] } },
-            { IN: { fieldPath: "object.age", values: ["11", "22"] } },
-          ] },
-        },
-        { AND: [
+    type Entity @key(fields: "id object { name, age } product { sku, continent }", resolvable: false) {
+      id: ID! @external
+      object: Object! @external
+      product: Product! @external
+    }
+    
+    type Object @external {
+      name: String!
+      age: Int!
+    }
+    
+    type Product @external {
+      continent: Continent!
+      sku: String!
+    }
+    
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
+        condition: { AND: [
           { NOT: 
-            { IN: { fieldPath: "product.sku", values: ["aaa"] } },
+            { OR: [
+              { IN: { fieldPath: "object.name", values: ["Jens", "Stefan"] } },
+              { IN: { fieldPath: "object.age", values: ["11", "22"] } },
+            ] },
           },
-          { IN: { fieldPath: "product.continent" values: ["NA"] } },
-        ] },
-      ] }
-    )
-  }
+          { AND: [
+            { NOT: 
+              { IN: { fieldPath: "product.sku", values: ["aaa"] } },
+            },
+            { IN: { fieldPath: "product.continent" values: ["NA"] } },
+          ] },
+        ] }
+      )
+    }
 `),
 };
 
@@ -353,13 +556,13 @@ const subgraphE: Subgraph = {
   name: 'subgraph-e',
   url: '',
   definitions: parse(`
-  type Entity @key(fields: "id", resolvable: false) {
-    id: ID! @external
-  }
-  
-  type Subscription {
-    field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: 1)
-  }
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: 1)
+    }
 `),
 };
 
@@ -367,28 +570,28 @@ const subgraphF: Subgraph = {
   name: 'subgraph-f',
   url: '',
   definitions: parse(`
-  type Entity @key(fields: "id", resolvable: false) {
-    id: ID! @external
-  }
-  
-  type Subscription {
-    field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
-      condition: { AND: [
-        { NOT: 
-          { OR: [
-            { IN: { fieldPath: "object.field.name", values: ["Jens", "Stefan"] } },
-            { IN: { fieldPath: "object.age", values: ["11", "22"] } },
-          ] },
-        },
-        { AND: [
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
+        condition: { AND: [
           { NOT: 
-            { IN: { fieldPath: "product.sku", values: ["aaa"] } },
+            { OR: [
+              { IN: { fieldPath: "object.field.name", values: ["Jens", "Stefan"] } },
+              { IN: { fieldPath: "object.age", values: ["11", "22"] } },
+            ] },
           },
-          { IN: { fieldPath: "product.continent" values: ["NA"] } },
-        ] },
-      ] }
-    )
-  }
+          { AND: [
+            { NOT: 
+              { IN: { fieldPath: "product.sku", values: ["aaa"] } },
+            },
+            { IN: { fieldPath: "product.continent" values: ["NA"] } },
+          ] },
+        ] }
+      )
+    }
 `),
 };
 
@@ -396,26 +599,152 @@ const subgraphG: Subgraph = {
   name: 'subgraph-g',
   url: '',
   definitions: parse(`
-  type Entity @key(fields: "id", resolvable: false) {
-    id: ID! @external
-  }
-  
-  type Subscription {
-    field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1] } })
-  }
-  
-  input openfed__SubscriptionFieldCondition {
-    fieldPath: String!
-    values: [openfed__SubscriptionFilterValue]!
-  }
-  
-  input openfed__SubscriptionFilterCondition {
-    AND: [openfed__SubscriptionFilterCondition!]
-    IN: openfed__SubscriptionFieldCondition
-    NOT: openfed__SubscriptionFilterCondition
-    OR: [openfed__SubscriptionFilterCondition!]
-  }
-  
-  scalar openfed__SubscriptionFilterValue
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1] } })
+    }
+    
+    input openfed__SubscriptionFieldCondition {
+      fieldPath: String!
+      values: [openfed__SubscriptionFilterValue]!
+    }
+    
+    input openfed__SubscriptionFilterCondition {
+      AND: [openfed__SubscriptionFilterCondition!]
+      IN: openfed__SubscriptionFieldCondition
+      NOT: openfed__SubscriptionFilterCondition
+      OR: [openfed__SubscriptionFilterCondition!]
+    }
+    
+    scalar openfed__SubscriptionFilterValue
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { field: "id", value: [1], } })
+      two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1], fieldPath: "id", values: [1] } })
+    }
+  `),
+};
+
+const subgraphI: Subgraph = {
+  name: 'subgraph-i',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: { hello: "world" } } })
+      two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [{ hello: "world" }] } })
+      three: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [] } })
+      four: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: null } })
+    }
+  `),
+};
+
+const subgraphJ: Subgraph = {
+  name: 'subgraph-j',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: "string" } })
+      two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: 1 } })
+      three: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: 3.3 } })
+      four: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: true } })
+    }
+  `),
+};
+
+const subgraphK: Subgraph = {
+  name: 'subgraph-k',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: "string" } })
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: "string" } })
+    }
+  `),
+};
+
+const subgraphL: Subgraph = {
+  name: 'subgraph-l',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
+        @openfed__subscriptionFilter(condition: { OUT: { fieldPath: "id", values: "string" } })
+      two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
+        @openfed__subscriptionFilter(condition: { AND: { fieldPath: "id", values: "string" } })
+      three: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
+        @openfed__subscriptionFilter(condition: { OR: { fieldPath: "id", values: "string" } })
+      four: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
+        @openfed__subscriptionFilter(condition: { IN: [{ fieldPath: "id", values: "string" }] })
+      five: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
+        @openfed__subscriptionFilter(condition: { NOT: [{ fieldPath: "id", values: "string" }] })
+    }
+  `),
+};
+
+const subgraphM: Subgraph = {
+  name: 'subgraph-m',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id object { id }", resolvable: false) {
+      id: ID! @external
+      object: Object! @external
+    }
+    
+    type Object {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "object", values: [1], } })
+    }
+  `),
+};
+
+const subgraphN: Subgraph = {
+  name: 'subgraph-n',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id object { id }", resolvable: false) {
+      id: ID! @external
+      object: Object! @external
+    }
+    
+    type Object {
+      id: ID! @external @inaccessible
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "object.id", values: [1], } })
+    }
   `),
 };
