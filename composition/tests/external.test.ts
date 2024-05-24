@@ -1,10 +1,19 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, normalizeSubgraphFromString, Subgraph } from '../src';
+import {
+  EXTERNAL,
+  federateSubgraphs,
+  invalidDirectiveError,
+  invalidRepeatedDirectiveErrorMessage,
+  normalizeSubgraph,
+  normalizeSubgraphFromString,
+  Subgraph,
+} from '../src';
 import { parse } from 'graphql';
 import {
   baseDirectiveDefinitions,
   normalizeString,
   schemaToSortedNormalizedString,
+  versionTwoDirectiveDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
 
@@ -105,6 +114,34 @@ describe('@external directive tests', () => {
       `,
         ),
       );
+    });
+
+    test('that @external declared on both the parent and field level is not repeated', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphF.definitions);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          baseDirectiveDefinitions +
+            `
+           type Entity @key(fields: "id") {
+            field: String! @external
+            id: ID! @external
+           }
+           
+           scalar openfed__FieldSet
+          `,
+        ),
+      );
+    });
+
+    test('that an error is returned if @external is repeated on the same level', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphG.definitions);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(EXTERNAL, 'Entity.field', [
+          invalidRepeatedDirectiveErrorMessage(EXTERNAL, 'Entity.field'),
+        ]),
+      ]);
     });
   });
 
@@ -565,6 +602,28 @@ const subgraphE: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       field: String!
+    }
+  `),
+};
+
+const subgraphF: Subgraph = {
+  name: 'subgraph-f',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") @external {
+      id: ID!
+      field: String! @external
+    }
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      field: String! @external @external
     }
   `),
 };
