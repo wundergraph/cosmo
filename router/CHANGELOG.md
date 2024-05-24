@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.89.1](https://github.com/wundergraph/cosmo/compare/router@0.89.0...router@0.89.1) (2024-05-22)
+
+### Bug Fixes
+
+* level of null data propagation ([#812](https://github.com/wundergraph/cosmo/issues/812)) ([e6d92d6](https://github.com/wundergraph/cosmo/commit/e6d92d6adab101cf44756151961f15583f435ed8)) (@Aenimus)
+
+# [0.89.0](https://github.com/wundergraph/cosmo/compare/router@0.88.0...router@0.89.0) (2024-05-21)
+
+### Features
+
+* improve operation parsing ([#810](https://github.com/wundergraph/cosmo/issues/810)) ([40da2d7](https://github.com/wundergraph/cosmo/commit/40da2d7c59c299228613d7bae4347089de13d061)) (@jensneuse)
+
+# [0.88.0](https://github.com/wundergraph/cosmo/compare/router@0.87.0...router@0.88.0) (2024-05-21)
+
+### Features
+
+* implement subscription filter ([#780](https://github.com/wundergraph/cosmo/issues/780)) ([444a766](https://github.com/wundergraph/cosmo/commit/444a766b07de1998df52174a5a2e65086605e14c)) (@Aenimus)
+
 # [0.87.0](https://github.com/wundergraph/cosmo/compare/router@0.86.3...router@0.87.0) (2024-05-21)
 
 ### Features

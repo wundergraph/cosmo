@@ -35,7 +35,7 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.41
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.44
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -60,7 +60,10 @@ require (
 	google.golang.org/protobuf v1.33.0
 )
 
+
 require github.com/andybalholm/brotli v1.1.0
+require github.com/goccy/go-json v0.10.2
+
 
 require (
 	github.com/99designs/gqlgen v0.17.45 // indirect
@@ -76,7 +79,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/glog v1.1.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -126,4 +128,4 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
-// replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2

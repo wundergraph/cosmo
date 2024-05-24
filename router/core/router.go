@@ -969,7 +969,7 @@ func (r *Router) buildPubSubConfiguration(ctx context.Context, routerCfg *nodev1
 
 			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
 				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
-					options, err := buildNatsOptions(eventSource)
+					options, err := buildNatsOptions(eventSource, r.logger)
 					if err != nil {
 						return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
 					}
