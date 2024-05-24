@@ -17,6 +17,8 @@ import {
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldErrorMessage,
   subscriptionFieldConditionInvalidValuesArrayErrorMessage,
+  subscriptionFilterArrayConditionInvalidLengthErrorMessage,
+  subscriptionFilterConditionDepthExceededErrorMessage,
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
 } from '../src';
@@ -425,6 +427,35 @@ describe('@openfed__subscriptionFilter tests', () => {
         ]),
       ]);
     });
+
+    test('that an error is if condition.AND or condition.OR contain no elements or more than 5 elements', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphO]);
+      expect(errors).toHaveLength(4);
+      expect(errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.one', [
+          subscriptionFilterArrayConditionInvalidLengthErrorMessage('condition.AND', 6),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.two', [
+          subscriptionFilterArrayConditionInvalidLengthErrorMessage('condition.AND', 0),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.three', [
+          subscriptionFilterArrayConditionInvalidLengthErrorMessage('condition.OR', 6),
+        ]),
+        invalidSubscriptionFilterDirectiveError('Subscription.four', [
+          subscriptionFilterArrayConditionInvalidLengthErrorMessage('condition.OR', 0),
+        ]),
+      ]);
+    });
+
+    test('that an error is returned if a condition has more than 5 layers of nesting', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphP]);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.one', [
+          subscriptionFilterConditionDepthExceededErrorMessage('condition.NOT.NOT.NOT.NOT.NOT.IN'),
+        ]),
+      ]);
+    });
   });
 });
 
@@ -745,6 +776,85 @@ const subgraphN: Subgraph = {
     
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "object.id", values: [1], } })
+    }
+  `),
+};
+
+const subgraphO: Subgraph = {
+  name: 'subgraph-o',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
+        condition: { 
+          AND: [
+            { fieldPath: "id", values: [1], },
+            { fieldPath: "id", values: [2], },
+            { fieldPath: "id", values: [3], },
+            { fieldPath: "id", values: [4], },
+            { fieldPath: "id", values: [5], },
+            { fieldPath: "id", values: [6], },
+          ] 
+        }
+      )
+      two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
+        condition: { 
+          AND: [
+          ] 
+        }
+      )
+      three: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
+        condition: { 
+          OR: [
+            { fieldPath: "id", values: [1], },
+            { fieldPath: "id", values: [2], },
+            { fieldPath: "id", values: [3], },
+            { fieldPath: "id", values: [4], },
+            { fieldPath: "id", values: [5], },
+            { fieldPath: "id", values: [6], },
+          ] 
+        }
+      )
+      four: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
+        condition: { 
+          OR: [
+          ] 
+        }
+      )
+    }
+  `),
+};
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
+        condition: { 
+          NOT: {
+            NOT: {
+              NOT: {
+                NOT: {
+                  NOT: {
+                    IN: {
+                      fieldPath: "id", values: [1],
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      )
     }
   `),
 };
