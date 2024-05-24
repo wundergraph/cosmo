@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.88.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.88.3...controlplane@0.88.4) (2024-05-24)
+
+### Bug Fixes
+
+* remove unused attributes ([#819](https://github.com/wundergraph/cosmo/issues/819)) ([1066d9f](https://github.com/wundergraph/cosmo/commit/1066d9fc97f460357434b633ce6be8baa78ae929)) (@JivusAyrus)
+* unset admission webhook using empty string ([#820](https://github.com/wundergraph/cosmo/issues/820)) ([eaf470e](https://github.com/wundergraph/cosmo/commit/eaf470e6b31f828b8b316751337b739c4c158e5d)) (@thisisnithin)
+
 ## [0.88.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.88.2...controlplane@0.88.3) (2024-05-22)
 
 ### Bug Fixes
