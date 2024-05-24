@@ -4,7 +4,6 @@ import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, routerConfigFromJson } from '@wundergraph/cosmo-shared';
 import {
-  SQL,
   and,
   asc,
   desc,
@@ -18,12 +17,13 @@ import {
   notExists,
   notInArray,
   or,
+  SQL,
   sql,
 } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
-import { SignJWT, generateKeyPair, importPKCS8 } from 'jose';
+import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
 import * as schema from '../../db/schema.js';
 import {
@@ -50,8 +50,8 @@ import { BlobStorage } from '../blobstorage/index.js';
 import {
   ComposeDeploymentError,
   Composer,
-  RouterConfigUploadError,
   mapResultToComposedGraph,
+  RouterConfigUploadError,
 } from '../composition/composer.js';
 import { composeSubgraphsWithContracts } from '../composition/composition.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
@@ -183,8 +183,6 @@ export class FederatedGraphRepository {
     | undefined
   > {
     const routingUrl = normalizeURL(data.routingUrl);
-    const admissionWebhookURL = data.admissionWebhookURL ? normalizeURL(data.admissionWebhookURL) : undefined;
-
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -202,7 +200,9 @@ export class FederatedGraphRepository {
       }
 
       // Update admission webhook URL when changed. (Is optional)
-      if (admissionWebhookURL !== undefined && federatedGraph.admissionWebhookURL !== admissionWebhookURL) {
+      if (data.admissionWebhookURL !== undefined && federatedGraph.admissionWebhookURL !== data.admissionWebhookURL) {
+        const admissionWebhookURL = data.admissionWebhookURL ? normalizeURL(data.admissionWebhookURL) : '';
+
         await tx
           .update(federatedGraphs)
           .set({ admissionWebhookURL: admissionWebhookURL || null })
