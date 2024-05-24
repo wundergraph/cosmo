@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.24.0...@wundergraph/composition@0.25.0) (2024-05-21)
+
+### Features
+
+* implement subscription filter ([#780](https://github.com/wundergraph/cosmo/issues/780)) ([444a766](https://github.com/wundergraph/cosmo/commit/444a766b07de1998df52174a5a2e65086605e14c)) (@Aenimus)
+
 # [0.24.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.23.2...@wundergraph/composition@0.24.0) (2024-05-14)
 
 ### Features

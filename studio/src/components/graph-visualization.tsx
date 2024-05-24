@@ -4,15 +4,15 @@ import {
   Subgraph,
   SubgraphMetrics,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
+  addEdge,
   Background,
   ConnectionLineType,
   Edge,
   Node,
   Panel,
   Position,
-  addEdge,
   useEdgesState,
   useNodesInitialized,
   useNodesState,
@@ -27,6 +27,17 @@ import ReactFlowGraphNode from "./reactflow-graph-node";
 import { buttonVariants } from "./ui/button";
 import SubgraphMetricsEdge from "@/components/reactflow-metrics-edge";
 import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { sentenceCase } from "change-case";
 
 export interface Graph {
   id: string;
@@ -107,6 +118,37 @@ function GraphVisualization({
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
+  const [showAll, setShowAll] = useState(false);
+  const [topCategory, setTopCategory] = useState("latency");
+
+  const subgraphs = useMemo(() => {
+    let tempSubgraphs = [...(graphData?.subgraphs ?? [])];
+
+    tempSubgraphs.sort((a, b) => {
+      const metricA = subgraphMetrics?.find((x) => x.subgraphID === a.id);
+      const metricB = subgraphMetrics?.find((x) => x.subgraphID === b.id);
+
+      if (!metricA || !metricB) {
+        return 0;
+      }
+
+      if (topCategory === "latency") {
+        return metricB.latency - metricA.latency;
+      }
+      if (topCategory === "errorRate") {
+        return metricB.errorRate - metricA.errorRate;
+      }
+
+      return metricB.requestRate - metricA.requestRate;
+    });
+
+    if (!showAll) {
+      tempSubgraphs = tempSubgraphs.slice(0, 5);
+    }
+
+    return tempSubgraphs;
+  }, [showAll, topCategory, graphData?.subgraphs, subgraphMetrics]);
+
   useEffect(() => {
     if (!graphData?.graph) return;
 
@@ -135,7 +177,7 @@ function GraphVisualization({
       return graphs;
     };
 
-    let graphs = buildGraphs(graphData.subgraphs);
+    let graphs = buildGraphs(subgraphs);
 
     const buildNodes = (spans: Graph[]): Node[] => {
       return spans.map((span, index) => {
@@ -226,7 +268,7 @@ function GraphVisualization({
     setEdges(layoutedEdges);
   }, [
     graphData?.graph,
-    graphData?.subgraphs,
+    subgraphs,
     subgraphMetrics,
     federatedGraphMetrics,
     supportsFederation,
@@ -275,20 +317,50 @@ function GraphVisualization({
       edgeTypes={edgeTypes}
     >
       <Background />
-      <Panel position="top-left">
-        <h2 className="flex items-center gap-x-2">
-          <span className="font-semibold leading-none tracking-tight">
-            Graph Constellation & Metrics
+      <Panel
+        position="top-left"
+        className="flex w-full flex-wrap items-center justify-between gap-2 pr-8"
+      >
+        <div>
+          <h2 className="flex items-center gap-x-2">
+            <span className="font-semibold leading-none tracking-tight">
+              Graph Metrics
+            </span>
+          </h2>
+          <span className="text-xs text-muted-foreground">
+            Latency & Request Per Minute (RPM)
           </span>
-          <div
-            data-orientation="vertical"
-            role="none"
-            className="h-4 w-[1px] shrink-0 bg-border"
-          ></div>
-        </h2>
-        <span className="text-xs text-muted-foreground">
-          P95 Request Latency & Request Per Minute (RPM)
-        </span>
+        </div>
+        <div className="flex items-center gap-x-2">
+          <Tabs
+            defaultValue="top"
+            onValueChange={(v) => {
+              if (v === "all") {
+                setShowAll(true);
+              } else {
+                setShowAll(false);
+              }
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="top">Top 5</TabsTrigger>
+              <TabsTrigger value="all">All</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Select onValueChange={(v) => setTopCategory(v)}>
+            <SelectTrigger className="w-[180px] bg-background">
+              <SelectValue>{sentenceCase(topCategory)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Sort by</SelectLabel>
+                <SelectItem value="latency">Latency</SelectItem>
+                <SelectItem value="requestRate">Request Rate</SelectItem>
+                <SelectItem value="errorRate">Error Rate</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
       </Panel>
       <Panel
         position="bottom-left"

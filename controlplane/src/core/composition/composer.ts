@@ -191,7 +191,7 @@ export class Composer {
             const token = await signJwtHS256<AdmissionWebhookJwtPayload>({
               secret: admissionConfig.jwtSecret,
               token: {
-                iat: nowInSeconds() + 5 * 60, // 5 minutes
+                exp: nowInSeconds() + 5 * 60, // 5 minutes
                 aud: audiences.cosmoCDNAdmission, // to distinguish from other tokens
                 organization_id: organizationId,
                 federated_graph_id: composedGraph.id,

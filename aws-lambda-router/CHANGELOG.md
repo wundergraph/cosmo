@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.10.0...aws-lambda-router@0.10.1) (2024-05-22)
+
+### Bug Fixes
+
+* level of null data propagation ([#812](https://github.com/wundergraph/cosmo/issues/812)) ([e6d92d6](https://github.com/wundergraph/cosmo/commit/e6d92d6adab101cf44756151961f15583f435ed8)) (@Aenimus)
+
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.9.0...aws-lambda-router@0.10.0) (2024-05-21)
+
+### Features
+
+* implement subscription filter ([#780](https://github.com/wundergraph/cosmo/issues/780)) ([444a766](https://github.com/wundergraph/cosmo/commit/444a766b07de1998df52174a5a2e65086605e14c)) (@Aenimus)
+
 # [0.9.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.8.0...aws-lambda-router@0.9.0) (2024-05-21)
 
 ### Features

@@ -11,9 +11,8 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
+	"github.com/goccy/go-json"
 	"github.com/pkg/errors"
-	"github.com/tidwall/gjson"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -31,29 +30,6 @@ var (
 	// staticOperationName is used to replace the operation name in the document when generating the operation ID
 	// this ensures that the operation ID is the same for the same operation regardless of the operation name
 	staticOperationName = []byte("O")
-	parseOperationKeys  = [][]string{
-		{"query"},
-		{"variables"},
-		{"operationName"},
-		{"extensions"},
-	}
-
-	persistedQueryKeys = [][]string{
-		{"version"},
-		{"sha256Hash"},
-	}
-)
-
-const (
-	parseOperationKeysQueryIndex = iota
-	parseOperationKeysVariablesIndex
-	parseOperationKeysOperationNameIndex
-	parseOperationKeysExtensionsIndex
-)
-
-const (
-	persistedQueryKeysVersionIndex = iota
-	persistedQueryKeysSha256HashIndex
 )
 
 type ParsedOperation struct {
@@ -132,6 +108,22 @@ type OperationKit struct {
 	parsedOperation          *ParsedOperation
 }
 
+type GraphQLRequest struct {
+	Query         string          `json:"query"`
+	OperationName string          `json:"operationName"`
+	Variables     json.RawMessage `json:"variables"`
+	Extensions    json.RawMessage `json:"extensions"`
+}
+
+type GraphQLRequestExtensions struct {
+	PersistedQuery *GraphQLRequestExtensionsPersistedQuery `json:"persistedQuery"`
+}
+
+type GraphQLRequestExtensionsPersistedQuery struct {
+	Version    int    `json:"version"`
+	Sha256Hash string `json:"sha256Hash"`
+}
+
 // NewOperationKit creates a new OperationKit. The kit is used to parse, normalize and validate operations.
 // It allocates resources that need to be freed by calling OperationKit.Free()
 func NewOperationKit(parser *OperationProcessor, data []byte) *OperationKit {
@@ -150,152 +142,72 @@ func (o *OperationKit) Free() {
 
 func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *zap.Logger) error {
 	var (
-		requestOperationType            string
-		requestOperationNameBytes       []byte
-		requestExtensions               []byte
 		operationCount                  = 0
 		anonymousOperationCount         = 0
 		anonymousOperationDefinitionRef = -1
-		requestDocumentBytes            []byte
-		requestVariableBytes            []byte
-		persistedQueryVersion           []byte
-		persistedQuerySha256Hash        []byte
-		parseErr                        error
-		variablesValueType              jsonparser.ValueType
+		operationType                   string
+		request                         GraphQLRequest
+		extensions                      GraphQLRequestExtensions
 	)
 
-	jsonparser.EachKey(o.data, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
-		if parseErr != nil {
-			// If we already have an error, don't overwrite it
-			return
+	err := json.Unmarshal(o.data, &request)
+	if err != nil {
+		return &inputError{
+			message:    fmt.Sprintf("error parsing request body: %s", err),
+			statusCode: http.StatusBadRequest,
 		}
+	}
+	if request.Extensions != nil {
+		var mapExtensions map[string]any
+		err = json.Unmarshal(request.Extensions, &mapExtensions)
 		if err != nil {
-			parseErr = err
-			return
-		}
-		switch i {
-		case parseOperationKeysQueryIndex:
-			requestDocumentBytes, err = jsonparser.Unescape(value, o.kit.unescapedDocument)
-			if err != nil {
-				parseErr = fmt.Errorf("error unescaping query: %w", err)
-				return
-			}
-		case parseOperationKeysVariablesIndex:
-			variablesValueType = valueType
-			requestVariableBytes = value
-		case parseOperationKeysOperationNameIndex:
-			requestOperationNameBytes = value
-		case parseOperationKeysExtensionsIndex:
-			if valueType != jsonparser.Null && valueType != jsonparser.Object {
-				parseErr = invalidExtensionsTypeError(valueType)
-				return
-			}
-			if !gjson.ValidBytes(value) {
-				parseErr = &inputError{
-					message:    "error parsing request body",
-					statusCode: http.StatusBadRequest,
-				}
-				return
-			}
-			requestExtensions = value
-			persistedQuery, _, _, err := jsonparser.Get(value, "persistedQuery")
-			if err != nil {
-				return
-			}
-			if len(persistedQuery) > 0 {
-				jsonparser.EachKey(persistedQuery, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
-					if err != nil {
-						parseErr = err
-						return
-					}
-					switch i {
-					case persistedQueryKeysVersionIndex:
-						persistedQueryVersion = value
-					case persistedQueryKeysSha256HashIndex:
-						persistedQuerySha256Hash = value
-					}
-				}, persistedQueryKeys...)
-				if persistedQueryVersion == nil {
-					log.Warn("persistedQuery.version is missing")
-					persistedQuerySha256Hash = nil
-					return
-				}
-				if len(persistedQueryVersion) != 1 || persistedQueryVersion[0] != '1' {
-					log.Warn("unsupported persistedQuery.version", zap.String("version", string(persistedQueryVersion)))
-					persistedQuerySha256Hash = nil
-					return
-				}
+			return &inputError{
+				message:    fmt.Sprintf("error parsing extensions: %s", err),
+				statusCode: http.StatusBadRequest,
 			}
 		}
-	}, parseOperationKeys...)
-
-	switch variablesValueType {
-	case jsonparser.Null, jsonparser.Unknown, jsonparser.Object, jsonparser.NotExist:
-	// valid, continue
-	case jsonparser.Array:
-		return &inputError{
-			message:    "variables value must not be an array",
-			statusCode: http.StatusBadRequest,
+		err = json.Unmarshal(request.Extensions, &extensions)
+		if err != nil {
+			return &inputError{
+				message:    fmt.Sprintf("error parsing extensions: %s", err),
+				statusCode: http.StatusBadRequest,
+			}
 		}
-	case jsonparser.String:
-		return &inputError{
-			message:    "variables value must not be a string",
-			statusCode: http.StatusBadRequest,
+		if extensions.PersistedQuery != nil {
+			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
+			request.Extensions = jsonparser.Delete(request.Extensions, "persistedQuery")
 		}
-	case jsonparser.Number:
-		return &inputError{
-			message:    "variables value must not be a number",
-			statusCode: http.StatusBadRequest,
-		}
-	case jsonparser.Boolean:
-		return &inputError{
-			message:    "variables value must not be a boolean",
-			statusCode: http.StatusBadRequest,
-		}
-	default:
-		return &inputError{
-			message:    "variables value must be a JSON object",
-			statusCode: http.StatusBadRequest,
+	}
+	if request.Variables != nil {
+		var mapVariables map[string]any
+		err = json.Unmarshal(request.Variables, &mapVariables)
+		if err != nil {
+			return &inputError{
+				message:    fmt.Sprintf("error parsing variables: %s", err),
+				statusCode: http.StatusBadRequest,
+			}
 		}
 	}
 
-	if parseErr != nil {
-		return &inputError{
-			message:    "error parsing request body",
-			statusCode: http.StatusBadRequest,
-		}
-	}
-
-	if len(persistedQuerySha256Hash) > 0 {
+	if extensions.PersistedQuery != nil && len(extensions.PersistedQuery.Sha256Hash) > 0 {
 		if o.operationParser.cdn == nil {
 			return &inputError{
 				message:    "could not resolve persisted query, feature is not configured",
 				statusCode: http.StatusOK,
 			}
 		}
-		persistedOperationData, err := o.operationParser.cdn.PersistedOperation(ctx, clientInfo.Name, persistedQuerySha256Hash)
+		persistedOperationData, err := o.operationParser.cdn.PersistedOperation(ctx, clientInfo.Name, extensions.PersistedQuery.Sha256Hash)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
-		requestDocumentBytes = persistedOperationData
-
-		// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
-		requestExtensions = jsonparser.Delete(requestExtensions, "persistedQuery")
+		request.Query = string(persistedOperationData)
 	}
 
-	requestHasOperationName := requestOperationNameBytes != nil && !bytes.Equal(requestOperationNameBytes, literal.NULL)
-	if !requestHasOperationName {
-		requestOperationNameBytes = nil
+	if request.OperationName == "null" {
+		request.OperationName = ""
 	}
 
-	if requestDocumentBytes == nil {
-		return &inputError{
-			message:    "error parsing request body",
-			statusCode: http.StatusBadRequest,
-		}
-	}
-
-	if requestVariableBytes != nil && !gjson.ValidBytes(requestVariableBytes) {
+	if len(request.Query) == 0 {
 		return &inputError{
 			message:    "error parsing request body",
 			statusCode: http.StatusBadRequest,
@@ -303,7 +215,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	}
 
 	report := &operationreport.Report{}
-	o.kit.doc.Input.ResetInputBytes(requestDocumentBytes)
+	o.kit.doc.Input.ResetInputString(request.Query)
 	o.kit.parser.Parse(o.kit.doc, report)
 	if report.HasErrors() {
 		return &reportError{
@@ -317,7 +229,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 		}
 		operationCount++
 		ref := o.kit.doc.RootNodes[i].Ref
-		name := o.kit.doc.Input.ByteSlice(o.kit.doc.OperationDefinitions[ref].Name)
+		name := o.kit.doc.Input.ByteSliceString(o.kit.doc.OperationDefinitions[ref].Name)
 		if len(name) == 0 {
 			anonymousOperationCount++
 			if anonymousOperationDefinitionRef == -1 {
@@ -325,28 +237,28 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 			}
 			continue
 		}
-		if requestOperationNameBytes == nil {
+		if request.OperationName == "" {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
-			requestOperationNameBytes = name
+			request.OperationName = name
 			continue
 		}
-		if bytes.Equal(name, requestOperationNameBytes) && o.operationDefinitionRef == -1 {
+		if name == request.OperationName && o.operationDefinitionRef == -1 {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
 		}
 	}
 
-	if !requestHasOperationName && operationCount > 1 {
+	if request.OperationName == "" && operationCount > 1 {
 		return &inputError{
 			message:    "operation name is required when multiple operations are defined",
 			statusCode: http.StatusOK,
 		}
 	}
 
-	if requestHasOperationName && operationCount != 0 && o.operationDefinitionRef == -1 {
+	if request.OperationName != "" && operationCount != 0 && o.operationDefinitionRef == -1 {
 		return &inputError{
-			message:    fmt.Sprintf("operation with name '%s' not found", string(requestOperationNameBytes)),
+			message:    fmt.Sprintf("operation with name '%s' not found", request.OperationName),
 			statusCode: http.StatusOK,
 		}
 	}
@@ -361,7 +273,7 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 			}
 		} else {
 			return &inputError{
-				message:    fmt.Sprintf("operation with name '%s' not found", string(requestOperationNameBytes)),
+				message:    fmt.Sprintf("operation with name '%s' not found", request.OperationName),
 				statusCode: http.StatusOK,
 			}
 		}
@@ -369,11 +281,11 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 
 	switch o.kit.doc.OperationDefinitions[o.operationDefinitionRef].OperationType {
 	case ast.OperationTypeQuery:
-		requestOperationType = "query"
+		operationType = "query"
 	case ast.OperationTypeMutation:
-		requestOperationType = "mutation"
+		operationType = "mutation"
 	case ast.OperationTypeSubscription:
-		requestOperationType = "subscription"
+		operationType = "subscription"
 	default:
 		return &inputError{
 			message:    "operation type not supported",
@@ -382,14 +294,14 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	}
 
 	// set variables to empty object if they are null or not present
-	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
-		requestVariableBytes = []byte("{}")
+	if request.Variables == nil || bytes.Equal(request.Variables, []byte("null")) {
+		request.Variables = []byte("{}")
 	}
 
 	// Set variables on doc input before normalization
 	// IMPORTANT: this is required for the normalization to work correctly!
 	// Normalization reads/rewrites/adds variables
-	o.kit.doc.Input.Variables = requestVariableBytes
+	o.kit.doc.Input.Variables = request.Variables
 
 	// Replace the operation name with a static name to avoid different IDs for the same operation
 	replaceOperationName := o.kit.doc.Input.AppendInputBytes(staticOperationName)
@@ -402,11 +314,14 @@ func (o *OperationKit) Parse(ctx context.Context, clientInfo *ClientInfo, log *z
 	o.parsedOperation = &ParsedOperation{
 		ID:                       0,  // will be set after normalization
 		NormalizedRepresentation: "", // will be set after normalization
-		Name:                     string(requestOperationNameBytes),
-		Type:                     requestOperationType,
-		Extensions:               requestExtensions,
-		PersistedID:              string(persistedQuerySha256Hash),
+		Name:                     request.OperationName,
+		Type:                     operationType,
+		Extensions:               request.Extensions,
 		Variables:                variablesCopy,
+	}
+
+	if extensions.PersistedQuery != nil {
+		o.parsedOperation.PersistedID = extensions.PersistedQuery.Sha256Hash
 	}
 
 	return nil

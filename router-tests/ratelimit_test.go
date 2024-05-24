@@ -133,17 +133,17 @@ func TestRateLimit(t *testing.T) {
 				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				Variables: json.RawMessage(`{"n":1}`),
 			})
-			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":null,"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":{"employee":null},"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				Variables: json.RawMessage(`{"n":1}`),
 			})
-			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":null,"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":{"employee":null},"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				Variables: json.RawMessage(`{"n":1}`),
 			})
-			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":null,"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":{"employee":null},"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
 		})
 	})
 	t.Run("enabled - below limit with nesting", func(t *testing.T) {

@@ -1,18 +1,23 @@
 import {
+  BooleanValueNode,
   ConstDirectiveNode,
   ConstValueNode,
   DirectiveDefinitionNode,
   EnumTypeDefinitionNode,
   EnumTypeExtensionNode,
   EnumValueDefinitionNode,
+  EnumValueNode,
   FieldDefinitionNode,
+  FloatValueNode,
   InputObjectTypeDefinitionNode,
   InputObjectTypeExtensionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
+  IntValueNode,
   Kind,
   NamedTypeNode,
+  NullValueNode,
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
   OperationTypeNode,
@@ -140,7 +145,7 @@ import {
   INHERITABLE_DIRECTIVE_NAMES,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
-import { FieldConfiguration } from '../router-configuration/router-configuration';
+import { FieldConfiguration, SubscriptionFilterValue } from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 
 export type ObjectData = ObjectDefinitionData | ObjectExtensionData;
@@ -1570,11 +1575,12 @@ export function getValidFieldArgumentNodes(
   if (invalidRequiredArguments.length > 0) {
     errors.push(invalidRequiredInputValueError(FIELD, fieldPath, invalidRequiredArguments));
   } else if (argumentNames.length > 0) {
-    fieldConfigurationByFieldPath.set(fieldPath, {
+    // fieldConfiguration might already exist through subscriptionFilter
+    getValueOrDefault(fieldConfigurationByFieldPath, fieldPath, () => ({
       argumentNames,
       fieldName: fieldData.name,
       typeName: fieldData.renamedParentTypeName,
-    });
+    })).argumentNames = argumentNames;
   }
   return argumentNodes;
 }
@@ -1728,4 +1734,36 @@ export function isTypeValidImplementation(
 
 export function isNodeDataInaccessible(data: NodeData | ObjectExtensionData): boolean {
   return data.persistedDirectivesData.directives.has(INACCESSIBLE);
+}
+
+export function isLeafKind(kind: Kind): boolean {
+  return kind === Kind.SCALAR_TYPE_DEFINITION || kind === Kind.ENUM_TYPE_DEFINITION;
+}
+
+export function getSubscriptionFilterValue(
+  valueNode: BooleanValueNode | EnumValueNode | FloatValueNode | IntValueNode | NullValueNode | StringValueNode,
+): SubscriptionFilterValue {
+  switch (valueNode.kind) {
+    case Kind.BOOLEAN: {
+      return valueNode.value;
+    }
+    case Kind.ENUM:
+    // intentional fallthrough
+    case Kind.STRING: {
+      return valueNode.value;
+    }
+    case Kind.FLOAT:
+    // intentional fallthrough
+    case Kind.INT: {
+      // The incoming value should never not be a number but wrap in a catch just in case
+      try {
+        return parseFloat(valueNode.value);
+      } catch {
+        return 'NaN';
+      }
+    }
+    case Kind.NULL: {
+      return null;
+    }
+  }
 }
