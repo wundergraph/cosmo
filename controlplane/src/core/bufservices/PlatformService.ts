@@ -7093,6 +7093,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             requestSeries: requestSeriesList[g.id] ?? [],
             supportsFederation: g.supportsFederation,
             contract: g.contract,
+            admissionWebhookUrl: g.admissionWebhookURL,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -7146,6 +7147,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetId: g.targetId,
             supportsFederation: g.supportsFederation,
             contract: g.contract,
+            admissionWebhookUrl: g.admissionWebhookURL,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -7336,6 +7338,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             readme: federatedGraph.readme,
             supportsFederation: federatedGraph.supportsFederation,
             contract: federatedGraph.contract,
+            admissionWebhookUrl: federatedGraph.admissionWebhookURL,
           },
           subgraphs: list.map((g) => ({
             id: g.id,

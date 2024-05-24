@@ -2219,6 +2219,11 @@ export class FederatedGraph extends Message<FederatedGraph> {
    */
   contract?: Contract;
 
+  /**
+   * @generated from field: optional string admission_webhook_url = 16;
+   */
+  admissionWebhookUrl?: string;
+
   constructor(data?: PartialMessage<FederatedGraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2242,6 +2247,7 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 13, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "contract", kind: "message", T: Contract, opt: true },
+    { no: 16, name: "admission_webhook_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {

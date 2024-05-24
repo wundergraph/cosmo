@@ -124,7 +124,7 @@ export function invalidSubgraphNamesError(names: string[], invalidNameErrorMessa
 }
 
 export function duplicateFieldDefinitionError(fieldName: string, typeName: string): Error {
-  return new Error(`Extension error:\n Field "${fieldName} already exists on type "${typeName}".`);
+  return new Error(`Extension error:\n Field "${fieldName}" already exists on type "${typeName}".`);
 }
 
 export function duplicateDirectiveDefinitionError(directiveName: string) {
@@ -1350,7 +1350,8 @@ export function invalidInputFieldTypeErrorMessage(
   actualTypeString: string,
 ): string {
   return (
-    ` Expected the input path "${inputPath}" to be type "${expectedTypeString}"` + ` but received "${actualTypeString}"`
+    ` Expected the input path "${inputPath}" to be type "${expectedTypeString}"` +
+    ` but received "${actualTypeString}".`
   );
 }
 
@@ -1366,7 +1367,7 @@ export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
     ` input value fields: "${FIELD_PATH}" and "${VALUES}".\n However, input path "${inputPath}" is invalid because:`;
   if (missingFieldNames.length > 0) {
     message +=
-      `\n  The following field` +
+      `\n  The following required field` +
       (missingFieldNames.length > 1 ? `s are` : ` is`) +
       ` not defined:\n   "` +
       missingFieldNames.join(QUOTATION_JOIN) +
@@ -1374,7 +1375,7 @@ export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
   }
   if (duplicatedFieldNames.length > 0) {
     message +=
-      `\n  The following field` +
+      `\n  The following required field` +
       (duplicatedFieldNames.length > 1 ? `s are` : ` is`) +
       ` defined more than once:\n   "` +
       duplicatedFieldNames.join(QUOTATION_JOIN) +
@@ -1475,7 +1476,8 @@ export function inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage
 ) {
   return (
     ` Input path "${inputPath}" defines the value "${fullConditionFieldPath}".` +
-    `\n However, the path "${partialConditionFieldPath}" is invalid because "${fieldPath}" is declared @inaccessible.`
+    `\n  The path segment "${partialConditionFieldPath}" is invalid because it refers to "${fieldPath}",` +
+    ` which is declared @inaccessible.`
   );
 }
 
