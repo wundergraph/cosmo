@@ -280,6 +280,7 @@ message FederatedGraph {
   optional string compositionId = 13;
   bool supports_federation = 14;
   optional Contract contract = 15;
+  optional string admission_webhook_url = 16;
 }
 
 message GetFederatedGraphsResponse {
