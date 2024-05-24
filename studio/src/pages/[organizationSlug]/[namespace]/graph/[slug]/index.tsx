@@ -374,20 +374,19 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                   />
                 </div>
               )}
-              <span className="text-muted-foreground">Router Url</span>
-              <CLI className="mt-1 md:w-full" command={routingURL} />
               {admissionWebhookUrl && (
-                <>
-                  <span className="mt-4 text-muted-foreground">
+                <div className="mb-4 w-full">
+                  <span className="text-muted-foreground">
                     Admission Webhook Url
                   </span>
                   <CLI
                     className="mt-1 md:w-full"
                     command={admissionWebhookUrl}
                   />
-                </>
+                </div>
               )}
-
+              <span className="text-muted-foreground">Router Url</span>
+              <CLI className="mt-1 md:w-full" command={routingURL} />
               <RunRouterCommand
                 open={open}
                 setOpen={setOpen}
