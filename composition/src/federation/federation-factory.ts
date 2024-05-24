@@ -2104,11 +2104,6 @@ export class FederationFactory {
         );
         return [];
       }
-      if (BASE_SCALARS.has(fieldData.namedTypeName)) {
-        lastData = { kind: Kind.SCALAR_TYPE_DEFINITION, name: fieldData.namedTypeName } as ScalarDefinitionData;
-        continue;
-      }
-      lastData = getOrThrowError(this.parentDefinitionDataByTypeName, fieldData.namedTypeName, PARENT_DEFINITION_DATA);
       if (this.inaccessiblePaths.has(fieldPath)) {
         fieldErrorMessages.push(
           inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
@@ -2120,6 +2115,11 @@ export class FederationFactory {
         );
         return [];
       }
+      if (BASE_SCALARS.has(fieldData.namedTypeName)) {
+        lastData = { kind: Kind.SCALAR_TYPE_DEFINITION, name: fieldData.namedTypeName } as ScalarDefinitionData;
+        continue;
+      }
+      lastData = getOrThrowError(this.parentDefinitionDataByTypeName, fieldData.namedTypeName, PARENT_DEFINITION_DATA);
     }
     if (!isLeafKind(lastData.kind)) {
       fieldErrorMessages.push(
@@ -2222,19 +2222,21 @@ export class FederationFactory {
             values.add(getSubscriptionFilterValue(valueNode));
           }
           if (invalidIndices.length > 0) {
-            errorMessages.push(
+            fieldErrorMessages.push(
               subscriptionFieldConditionInvalidValuesArrayErrorMessage(inputFieldPath, invalidIndices),
             );
             continue;
           }
           if (values.size < 1) {
-            errorMessages.push(subscriptionFieldConditionEmptyValuesArrayErrorMessage(inputFieldPath));
+            hasErrors = true;
+            fieldErrorMessages.push(subscriptionFieldConditionEmptyValuesArrayErrorMessage(inputFieldPath));
             continue;
           }
           condition.values = [...values];
           break;
         }
         default: {
+          hasErrors = true;
           invalidFieldNames.add(inputFieldName);
         }
       }
