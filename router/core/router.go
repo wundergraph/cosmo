@@ -1108,22 +1108,22 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
-	httpRouter.Use(func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
-			h.ServeHTTP(w, r)
-		})
-	})
+	httpRouter.Use(middleware.AllowContentEncoding("deflate", "gzip", "br"))
 
-	// Adds Brotli compressor
+	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+
 	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
 	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
 		return br.NewWriterLevel(w, level)
 	})
 	httpRouter.Use(brCompressor.Handler)
 
-	// Adds deflate & gzip compressor
-	httpRouter.Use(middleware.AllowContentEncoding("deflate", "gzip"))
+	httpRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
+			h.ServeHTTP(w, r)
+		})
+	})
 
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
