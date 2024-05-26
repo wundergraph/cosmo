@@ -176,8 +176,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			} else {
 				requestLogger.Error("failed to read request body", zap.Error(err))
 			}
-
-			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+			writeOperationError(r, w, requestLogger, err)
 			return
 		}
 
