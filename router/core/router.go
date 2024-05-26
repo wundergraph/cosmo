@@ -1108,7 +1108,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
-	httpRouter.Use(middleware.AllowContentEncoding("deflate", "gzip", "br"))
 
 	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
 
