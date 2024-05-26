@@ -7,6 +7,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
+
 	"net"
 	"net/http"
 	"net/url"
@@ -16,12 +18,10 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
 	"github.com/redis/go-redis/v9"
 
@@ -33,7 +33,9 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
@@ -49,6 +51,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 
+	br "github.com/andybalholm/brotli"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -73,6 +76,20 @@ const (
 	Hash   IPAnonymizationMethod = "hash"
 	Redact IPAnonymizationMethod = "redact"
 )
+
+var CustomCompressibleContentTypes = []string{
+	"text/html",
+	"text/css",
+	"text/plain",
+	"text/javascript",
+	"application/javascript",
+	"application/x-javascript",
+	"application/json",
+	"application/atom+xml",
+	"application/rss+xml",
+	"image/svg+xml",
+	"application/graphql",
+}
 
 type (
 	// Router is the main application instance.
@@ -1091,15 +1108,26 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
+
+	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+
+	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
+	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+		return br.NewWriterLevel(w, level)
+	})
+	httpRouter.Use(brCompressor.Handler)
+
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
 			h.ServeHTTP(w, r)
 		})
 	})
+
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
+
 	// Register the trace middleware before the request logger, so we can log the trace ID
 	if traceHandler != nil {
 		httpRouter.Use(traceHandler.Handler)
