@@ -1,10 +1,11 @@
 package graphiql
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 type PlaygroundOptions struct {

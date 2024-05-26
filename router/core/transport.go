@@ -3,13 +3,14 @@ package core
 import (
 	"bytes"
 	"fmt"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"io"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"time"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"

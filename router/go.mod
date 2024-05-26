@@ -60,11 +60,12 @@ require (
 	google.golang.org/protobuf v1.33.0
 )
 
+require github.com/andybalholm/brotli v1.1.0
+
 require github.com/goccy/go-json v0.10.2
 
 require (
 	github.com/99designs/gqlgen v0.17.45 // indirect
-	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
