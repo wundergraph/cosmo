@@ -218,13 +218,30 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "default": false
             },
             "sampling_rate": {
               "type": "number",
               "description": "The sampling rate for the traces. The value must be between 0 and 1. If the value is 0, no traces will be sampled. If the value is 1, all traces will be sampled. The default value is 1.",
+              "default": 1,
               "minimum": 0,
               "maximum": 1
+            },
+            "parent_based_sampler": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable the parent-based sampler. The parent-based sampler is used to sample the traces based on the parent trace. The default value is true."
+            },
+            "export_graphql_variables": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable the export of the GraphQL variables. The GraphQL variables are exported with the traces. The default value is false to avoid leaking sensitive information."
+            },
+            "with_new_root": {
+              "type": "boolean",
+              "default": false,
+              "description": " specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers."
             },
             "exporters": {
               "type": "array",
@@ -300,13 +317,6 @@
                   "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
                 }
               }
-            },
-            "export_graphql_variables": {
-              "type": "boolean",
-              "description": "Enable the export of the GraphQL variables. The GraphQL variables are exported with the traces."
-            },
-            "with_new_root": {
-              "type": "boolean"
             }
           }
         },

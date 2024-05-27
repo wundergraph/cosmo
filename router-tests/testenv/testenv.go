@@ -105,6 +105,7 @@ type Config struct {
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
+	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
 	MetricReader                       metric.Reader
@@ -585,6 +586,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Enabled:            true,
 			Sampler:            1,
 			TestMemoryExporter: testConfig.TraceExporter,
+			ParentBasedSampler: testConfig.DisableParentBasedSampler == false,
+			Propagators: []rtrace.Propagator{
+				rtrace.PropagatorTraceContext,
+			},
 		}))
 	}
 
