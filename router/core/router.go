@@ -1110,7 +1110,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
-
+	httpRouter.Use(recoveryHandler)
+	httpRouter.Use(middleware.RequestSize(int64(r.routerTrafficConfig.MaxRequestBodyBytes)))
 	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
 
 	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
@@ -1126,7 +1127,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		})
 	})
 
-	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
 
