@@ -241,7 +241,7 @@
             "with_new_root": {
               "type": "boolean",
               "default": false,
-              "description": " specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers."
+              "description": "Specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers. This is useful when the router must be the entry point of the trace."
             },
             "exporters": {
               "type": "array",
