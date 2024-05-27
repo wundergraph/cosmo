@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.90.0](https://github.com/wundergraph/cosmo/compare/router@0.89.2...router@0.90.0) (2024-05-27)
+
+### Bug Fixes
+
+* avoid reading large bodies when limit was hit ([#823](https://github.com/wundergraph/cosmo/issues/823)) ([a485aaf](https://github.com/wundergraph/cosmo/commit/a485aafd1a00d46904a3763a67a019fdf3b0f479)) (@StarpTech)
+
+### Features
+
+* add support for response compression ([#723](https://github.com/wundergraph/cosmo/issues/723)) ([a6c6ac4](https://github.com/wundergraph/cosmo/commit/a6c6ac415f79ad1e5a85e1bbd95337c13b47616f)) (@Rutik7066)
+* allow to disable parent based sampling ([#825](https://github.com/wundergraph/cosmo/issues/825)) ([fdcc145](https://github.com/wundergraph/cosmo/commit/fdcc145b053f2aee520c64d534026839b73289e1)) (@StarpTech)
+
 ## [0.89.2](https://github.com/wundergraph/cosmo/compare/router@0.89.1...router@0.89.2) (2024-05-24)
 
 ### Bug Fixes
