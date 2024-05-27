@@ -415,7 +415,7 @@ func TestTelemetry(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 				Header: map[string][]string{
 					// traceparent header with sample flag set
-					"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-01"}, // 01 = not sampled
+					"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-01"}, // 01 = sampled
 				},
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
@@ -482,7 +482,7 @@ func TestTelemetry(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 				Header: map[string][]string{
 					// traceparent header without sample flag set
-					"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"},
+					"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"}, // 00 = not sampled
 				},
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
