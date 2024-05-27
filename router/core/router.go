@@ -1945,3 +1945,77 @@ func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
 		ExpectContinueTimeout: opts.ExpectContinueTimeout,
 	}
 }
+
+func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
+	var exporters []*rtrace.ExporterConfig
+	for _, exp := range cfg.Tracing.Exporters {
+		exporters = append(exporters, &rtrace.ExporterConfig{
+			Disabled:      exp.Disabled,
+			Endpoint:      exp.Endpoint,
+			Exporter:      exp.Exporter,
+			BatchTimeout:  exp.BatchTimeout,
+			ExportTimeout: exp.ExportTimeout,
+			Headers:       exp.Headers,
+			HTTPPath:      exp.HTTPPath,
+		})
+	}
+
+	var propagators []rtrace.Propagator
+
+	if cfg.Tracing.Propagation.TraceContext {
+		propagators = append(propagators, rtrace.PropagatorTraceContext)
+	}
+	if cfg.Tracing.Propagation.B3 {
+		propagators = append(propagators, rtrace.PropagatorB3)
+	}
+	if cfg.Tracing.Propagation.Jaeger {
+		propagators = append(propagators, rtrace.PropagatorJaeger)
+	}
+	if cfg.Tracing.Propagation.Baggage {
+		propagators = append(propagators, rtrace.PropagatorBaggage)
+	}
+
+	return &rtrace.Config{
+		Enabled:            cfg.Tracing.Enabled,
+		Name:               cfg.ServiceName,
+		Version:            Version,
+		Sampler:            cfg.Tracing.SamplingRate,
+		ParentBasedSampler: cfg.Tracing.ParentBasedSampler,
+		WithNewRoot:        cfg.Tracing.WithNewRoot,
+		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
+			Enabled: cfg.Tracing.ExportGraphQLVariables,
+		},
+		Exporters:   exporters,
+		Propagators: propagators,
+	}
+}
+
+func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
+	var openTelemetryExporters []*rmetric.OpenTelemetryExporter
+	for _, exp := range cfg.Metrics.OTLP.Exporters {
+		openTelemetryExporters = append(openTelemetryExporters, &rmetric.OpenTelemetryExporter{
+			Disabled: exp.Disabled,
+			Endpoint: exp.Endpoint,
+			Exporter: exp.Exporter,
+			Headers:  exp.Headers,
+			HTTPPath: exp.HTTPPath,
+		})
+	}
+
+	return &rmetric.Config{
+		Name:    cfg.ServiceName,
+		Version: Version,
+		OpenTelemetry: rmetric.OpenTelemetry{
+			Enabled:       cfg.Metrics.OTLP.Enabled,
+			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
+			Exporters:     openTelemetryExporters,
+		},
+		Prometheus: rmetric.PrometheusConfig{
+			Enabled:             cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
+			Path:                cfg.Metrics.Prometheus.Path,
+			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
+		},
+	}
+}

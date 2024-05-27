@@ -135,14 +135,25 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 			AttributePerEventCountLimit: sdktrace.DefaultEventCountLimit,
 			AttributePerLinkCountLimit:  sdktrace.DefaultAttributePerLinkCountLimit,
 		}),
-		sdktrace.WithSampler(
-			sdktrace.ParentBased(
-				sdktrace.TraceIDRatioBased(config.Config.Sampler),
-				// By default, when the parent span is sampled, the child span will be sampled.
-			),
-		),
 		// Record information about this application in a Resource.
 		sdktrace.WithResource(r),
+	}
+
+	if config.Config.ParentBasedSampler {
+		opts = append(opts,
+			sdktrace.WithSampler(
+				sdktrace.ParentBased(
+					sdktrace.TraceIDRatioBased(config.Config.Sampler),
+					// By default, when the parent span is sampled, the child span will be sampled.
+				),
+			),
+		)
+	} else {
+		opts = append(opts,
+			sdktrace.WithSampler(
+				sdktrace.TraceIDRatioBased(config.Config.Sampler),
+			),
+		)
 	}
 
 	if config.IPAnonymization != nil && config.IPAnonymization.Enabled {

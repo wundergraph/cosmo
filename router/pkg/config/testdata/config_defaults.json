@@ -10,6 +10,7 @@
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
+      "ParentBasedSampler": true,
       "Exporters": [],
       "Propagation": {
         "TraceContext": true,
