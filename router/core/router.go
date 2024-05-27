@@ -30,12 +30,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/trace"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
@@ -1948,10 +1946,10 @@ func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
 	}
 }
 
-func TraceConfigFromTelemetry(cfg *config.Telemetry) *trace.Config {
-	var exporters []*trace.ExporterConfig
+func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
+	var exporters []*rtrace.ExporterConfig
 	for _, exp := range cfg.Tracing.Exporters {
-		exporters = append(exporters, &trace.ExporterConfig{
+		exporters = append(exporters, &rtrace.ExporterConfig{
 			Disabled:      exp.Disabled,
 			Endpoint:      exp.Endpoint,
 			Exporter:      exp.Exporter,
@@ -1962,29 +1960,29 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *trace.Config {
 		})
 	}
 
-	var propagators []trace.Propagator
+	var propagators []rtrace.Propagator
 
 	if cfg.Tracing.Propagation.TraceContext {
-		propagators = append(propagators, trace.PropagatorTraceContext)
+		propagators = append(propagators, rtrace.PropagatorTraceContext)
 	}
 	if cfg.Tracing.Propagation.B3 {
-		propagators = append(propagators, trace.PropagatorB3)
+		propagators = append(propagators, rtrace.PropagatorB3)
 	}
 	if cfg.Tracing.Propagation.Jaeger {
-		propagators = append(propagators, trace.PropagatorJaeger)
+		propagators = append(propagators, rtrace.PropagatorJaeger)
 	}
 	if cfg.Tracing.Propagation.Baggage {
-		propagators = append(propagators, trace.PropagatorBaggage)
+		propagators = append(propagators, rtrace.PropagatorBaggage)
 	}
 
-	return &trace.Config{
+	return &rtrace.Config{
 		Enabled:            cfg.Tracing.Enabled,
 		Name:               cfg.ServiceName,
 		Version:            Version,
 		Sampler:            cfg.Tracing.SamplingRate,
 		ParentBasedSampler: cfg.Tracing.ParentBasedSampler,
 		WithNewRoot:        cfg.Tracing.WithNewRoot,
-		ExportGraphQLVariables: trace.ExportGraphQLVariables{
+		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
 			Enabled: cfg.Tracing.ExportGraphQLVariables,
 		},
 		Exporters:   exporters,
@@ -1992,10 +1990,10 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *trace.Config {
 	}
 }
 
-func MetricConfigFromTelemetry(cfg *config.Telemetry) *metric.Config {
-	var openTelemetryExporters []*metric.OpenTelemetryExporter
+func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
+	var openTelemetryExporters []*rmetric.OpenTelemetryExporter
 	for _, exp := range cfg.Metrics.OTLP.Exporters {
-		openTelemetryExporters = append(openTelemetryExporters, &metric.OpenTelemetryExporter{
+		openTelemetryExporters = append(openTelemetryExporters, &rmetric.OpenTelemetryExporter{
 			Disabled: exp.Disabled,
 			Endpoint: exp.Endpoint,
 			Exporter: exp.Exporter,
@@ -2004,15 +2002,15 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *metric.Config {
 		})
 	}
 
-	return &metric.Config{
+	return &rmetric.Config{
 		Name:    cfg.ServiceName,
 		Version: Version,
-		OpenTelemetry: metric.OpenTelemetry{
+		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:       cfg.Metrics.OTLP.Enabled,
 			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
 			Exporters:     openTelemetryExporters,
 		},
-		Prometheus: metric.PrometheusConfig{
+		Prometheus: rmetric.PrometheusConfig{
 			Enabled:             cfg.Metrics.Prometheus.Enabled,
 			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
 			Path:                cfg.Metrics.Prometheus.Path,
