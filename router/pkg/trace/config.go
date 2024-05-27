@@ -54,7 +54,7 @@ type Config struct {
 	WithNewRoot bool
 	// Sampler represents the sampler for tracing. The default value is 1.
 	Sampler float64
-	// ParentBasedSampler specifies if the parent-based sampler should be used. The default value is false.
+	// ParentBasedSampler specifies if the parent-based sampler should be used. The default value is true.
 	ParentBasedSampler bool
 	// ExportGraphQLVariables defines if and how GraphQL variables should be exported as span attributes.
 	ExportGraphQLVariables ExportGraphQLVariables
@@ -87,11 +87,12 @@ func DefaultExporter(cfg *Config) *ExporterConfig {
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
-		Enabled:     false,
-		Name:        ServerName,
-		Version:     serviceVersion,
-		Sampler:     1,
-		WithNewRoot: false,
+		Enabled:            false,
+		Name:               ServerName,
+		Version:            serviceVersion,
+		Sampler:            1,
+		WithNewRoot:        false,
+		ParentBasedSampler: true,
 		ExportGraphQLVariables: ExportGraphQLVariables{
 			Enabled: true,
 		},
