@@ -7,10 +7,10 @@ package subgraph
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability/subgraph/model"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 // UpdateAvailability is the resolver for the updateAvailability field.
