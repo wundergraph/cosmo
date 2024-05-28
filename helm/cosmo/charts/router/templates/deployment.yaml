@@ -133,7 +133,7 @@ spec:
               value: 127.0.0.1:{{ .Values.configuration.prometheus.port }}
             - name: PROMETHEUS_HTTP_PATH
               value: {{ .Values.configuration.prometheus.path }}
-             {{- end }}
+            {{- end }}
           envFrom:
             {{- if .Values.extraEnvVarsCM }}
             - configMapRef:
