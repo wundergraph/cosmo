@@ -45,7 +45,7 @@ export class OrganizationInvitationRepository {
       .execute();
   }
 
-  public async invitationsCount(organizationId: string, search?: string): Promise<number> {
+  public async pendingInvitationsCount(organizationId: string, search?: string): Promise<number> {
     const count = await this.db
       .select({
         count: sql<number>`cast(count(${organizationInvitations.id}) as int)`,
