@@ -8019,7 +8019,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           search: req.search,
         });
 
-        const count = await orgInvitationRepo.invitationsCount(authContext.organizationId, req.search);
+        const count = await orgInvitationRepo.pendingInvitationsCount(authContext.organizationId, req.search);
 
         return {
           response: {

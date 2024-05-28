@@ -45,7 +45,7 @@ export class OrganizationInvitationRepository {
       .execute();
   }
 
-  public async invitationsCount(organizationId: string, search?: string): Promise<number> {
+  public async pendingInvitationsCount(organizationId: string, search?: string): Promise<number> {
     const count = await this.db
       .select({
         count: sql<number>`cast(count(${organizationInvitations.id}) as int)`,
@@ -55,6 +55,7 @@ export class OrganizationInvitationRepository {
       .where(
         and(
           eq(organizationInvitations.organizationId, organizationId),
+          eq(organizationInvitations.accepted, false),
           search ? like(users.email, `%${search}%`) : undefined,
         ),
       )
