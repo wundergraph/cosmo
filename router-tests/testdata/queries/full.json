@@ -31,11 +31,11 @@
             "category": "SPORT"
           },
           {
-            "yearsOfExperience": 20,
             "genres": [
               "FPS"
             ],
-            "name": "Counter Strike"
+            "name": "Counter Strike",
+            "yearsOfExperience": 20
           },
           {
             "name": "WunderGraph"
@@ -100,11 +100,11 @@
             "category": "STRENGTH_TRAINING"
           },
           {
-            "yearsOfExperience": 0.5,
             "genres": [
               "FPS"
             ],
-            "name": "Counter Strike"
+            "name": "Counter Strike",
+            "yearsOfExperience": 0.5
           },
           {
             "languages": [
@@ -388,11 +388,11 @@
         },
         "hobbies": [
           {
-            "yearsOfExperience": 9.5,
             "genres": [
               "BOARD"
             ],
-            "name": "Chess"
+            "name": "Chess",
+            "yearsOfExperience": 9.5
           },
           {
             "name": "Watching anime"
@@ -431,14 +431,14 @@
             "category": "STRENGTH_TRAINING"
           },
           {
-            "yearsOfExperience": 17,
             "genres": [
               "ADVENTURE",
               "RPG",
               "SIMULATION",
               "STRATEGY"
             ],
-            "name": "Miscellaneous"
+            "name": "Miscellaneous",
+            "yearsOfExperience": 17
           },
           {
             "name": "Watching anime"
@@ -620,7 +620,6 @@
             "category": "STRENGTH_TRAINING"
           },
           {
-            "yearsOfExperience": 25.5,
             "genres": [
               "ADVENTURE",
               "BOARD",
@@ -630,7 +629,8 @@
               "SIMULATION",
               "STRATEGY"
             ],
-            "name": "Miscellaneous"
+            "name": "Miscellaneous",
+            "yearsOfExperience": 25.5
           },
           {
             "countriesLived": [
