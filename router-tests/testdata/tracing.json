@@ -680,7 +680,6 @@
             "path": [
               "employees"
             ],
-            "fields": null,
             "items": [
               {
                 "fetch": {
@@ -1692,7 +1691,6 @@
                       "path": [
                         "hobbies"
                       ],
-                      "fields": null,
                       "items": [
                         {
                           "node_type": "object",
@@ -1704,7 +1702,6 @@
                                 "path": [
                                   "countriesLived"
                                 ],
-                                "fields": null,
                                 "items": [
                                   {
                                     "fetch": {
@@ -2031,27 +2028,22 @@
                                         }
                                       }
                                     },
-                                    "node_type": "object",
-                                    "fields": [],
-                                    "items": null
+                                    "node_type": "object"
                                   }
                                 ]
                               }
                             }
-                          ],
-                          "items": null
+                          ]
                         }
                       ]
                     }
                   }
-                ],
-                "items": null
+                ]
               }
             ]
           }
         }
-      ],
-      "items": null
+      ]
     }
   }
 }
