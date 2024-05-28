@@ -129,12 +129,21 @@ spec:
                   key: graphApiToken
             {{- end }}
             - name: PROMETHEUS_ENABLED
-              value: {{ .Values.configuration.prometheus.enabled }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: prometheusEnabled
             {{ if .Values.configuration.prometheus.enabled }}
             - name: PROMETHEUS_LISTEN_ADDR
-              value: 127.0.0.1:{{ .Values.configuration.prometheus.port }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: prometheusPort
             - name: PROMETHEUS_HTTP_PATH
-              value: {{ .Values.configuration.prometheus.path }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: prometheusPath
             {{- end }}
           envFrom:
             {{- if .Values.extraEnvVarsCM }}

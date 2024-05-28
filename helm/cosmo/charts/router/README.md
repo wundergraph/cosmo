@@ -22,6 +22,9 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | configuration.graphqlMetricsCollectorUrl | string | `""` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |
 | configuration.otelCollectorUrl | string | `""` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set. |
+| configuration.prometheus.enabled | bool | `true` | Enables prometheus metrics support. Default is true. |
+| configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
+| configuration.prometheus.port | int | `8088` | The port where metrics will be exposed. Default is port 8088. |
 | configuration.routerConfigPath | string | `""` | A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled. |
 | deploymentStrategy | object | `{}` |  |
 | existingConfigmap | string | `""` | If this is set, the commonConfiguration section is ignored. |
