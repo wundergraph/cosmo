@@ -25,7 +25,6 @@ global:
     enabled: false
     webUrl: 'http://router.wundergraph.local'
     port: 3002
-    metricsPort: 8088
 
   clickhouse:
     enabled: true
