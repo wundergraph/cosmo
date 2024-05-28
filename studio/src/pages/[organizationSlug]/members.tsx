@@ -40,6 +40,7 @@ import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, getHighestPriorityRole } from "@/lib/utils";
 import {
+  EllipsisVerticalIcon,
   ExclamationTriangleIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
@@ -168,7 +169,7 @@ const MemberCard = ({
     <TableRow>
       <TableCell>{email}</TableCell>
       <TableCell>
-        <div className="flex items-center gap-x-4 text-muted-foreground">
+        <div className="flex items-center justify-between text-muted-foreground">
           {active === false && <Badge variant="destructive">Disabled</Badge>}
           <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
             {acceptedInvite && role ? (
@@ -184,9 +185,9 @@ const MemberCard = ({
             {isAdmin && !isCurrentUser && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className="cursor-pointer">
-                    <HiOutlineDotsVertical />
-                  </div>
+                  <Button variant="ghost" size="icon">
+                    <EllipsisVerticalIcon className="h-4 w-4" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[180px]">
                   {!acceptedInvite && (
