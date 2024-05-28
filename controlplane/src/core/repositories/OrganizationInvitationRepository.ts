@@ -55,6 +55,7 @@ export class OrganizationInvitationRepository {
       .where(
         and(
           eq(organizationInvitations.organizationId, organizationId),
+          eq(organizationInvitations.accepted, false),
           search ? like(users.email, `%${search}%`) : undefined,
         ),
       )
