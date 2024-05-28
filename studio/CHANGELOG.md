@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.7](https://github.com/wundergraph/cosmo/compare/studio@0.77.6...studio@0.77.7) (2024-05-28)
+
+### Bug Fixes
+
+* merging response nodes, improve playground trace for skipped fetches ([#827](https://github.com/wundergraph/cosmo/issues/827)) ([70fc005](https://github.com/wundergraph/cosmo/commit/70fc005f3e2e7826d8f517de5f42119b96f95e79)) (@devsergiy)
+
 ## [0.77.6](https://github.com/wundergraph/cosmo/compare/studio@0.77.5...studio@0.77.6) (2024-05-24)
 
 ### Bug Fixes
