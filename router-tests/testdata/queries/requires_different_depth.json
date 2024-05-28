@@ -1,0 +1,15 @@
+{
+  "data": {
+    "products": [
+      {
+        "lead": {
+          "id": 1,
+          "derivedID": 1
+        },
+        "isLeadAvailable": false
+      },
+      {},
+      {}
+    ]
+  }
+}

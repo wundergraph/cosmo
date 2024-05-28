@@ -1,0 +1,13 @@
+query Requires {
+  products {
+    __typename
+    ... on Consultancy {
+      lead {
+        __typename
+        id
+        derivedID
+      }
+      isLeadAvailable
+    }
+  }
+}

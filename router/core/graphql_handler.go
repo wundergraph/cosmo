@@ -13,10 +13,11 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/wundergraph/cosmo/router/internal/pool"
 
@@ -332,7 +333,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		}
 	}
 	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
-		traceNode := resolve.GetTrace(ctx.Context(), res.Data)
+		traceNode := resolve.GetTrace(ctx.Context(), res.FetchTree)
 		if traceNode != nil {
 			if response.Extensions == nil {
 				response.Extensions = &Extensions{}

@@ -97,6 +97,10 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 					return fmt.Errorf(`resolving Entity "Consultancy": %w`, err)
 				}
 
+				err = ec.PopulateConsultancyRequires(ctx, entity, rep)
+				if err != nil {
+					return fmt.Errorf(`populating requires for Entity "Consultancy": %w`, err)
+				}
 				list[idx[i]] = entity
 				return nil
 			}
@@ -137,6 +141,10 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 					return fmt.Errorf(`resolving Entity "Employee": %w`, err)
 				}
 
+				err = ec.PopulateEmployeeRequires(ctx, entity, rep)
+				if err != nil {
+					return fmt.Errorf(`populating requires for Entity "Employee": %w`, err)
+				}
 				list[idx[i]] = entity
 				return nil
 			}
