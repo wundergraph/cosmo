@@ -92,9 +92,9 @@ const SubgraphOverviewPage = () => {
     <div className="flex h-full flex-col">
       <div className="flex-shrink-0 overflow-x-auto border-b scrollbar-thin">
         <dl className="flex w-full flex-row gap-y-2 space-x-4 px-4 py-4 text-sm lg:px-8">
-          <div className="flex-start flex max-w-[300px] flex-1 flex-col gap-1">
+          <div className="flex-start flex max-w-[300px] flex-1 flex-col gap-2">
             <dt className="text-sm text-muted-foreground">Routing URL</dt>
-            <dd>
+            <dd className="text-sm">
               <Tooltip delayDuration={100}>
                 <TooltipTrigger className="w-full truncate text-start text-sm">
                   {subgraph.routingURL}
@@ -121,7 +121,7 @@ const SubgraphOverviewPage = () => {
 
           <div
             className={cn("flex-start flex flex-1 flex-col gap-2", {
-              "max-w-[250px]": subgraph.subscriptionUrl === "",
+              "max-w-[160px]": subgraph.subscriptionUrl === "",
               "max-w-[300px]": subgraph.subscriptionUrl !== "",
             })}
           >
@@ -132,14 +132,51 @@ const SubgraphOverviewPage = () => {
                   "ml-12": subgraph.subscriptionUrl === "",
                 })}
               >
+                {subgraph.subscriptionUrl !== "" ? (
+                  <Tooltip delayDuration={100}>
+                    <TooltipTrigger className="w-full truncate text-start text-sm">
+                      {subgraph.subscriptionUrl}
+                    </TooltipTrigger>
+                    <TooltipContent>{subgraph.subscriptionUrl}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  "-"
+                )}
+              </p>
+            </dd>
+          </div>
+
+          <div
+            className="flex-start flex flex-1 flex-col gap-2 max-w-[180px]"
+          >
+            <dt className="text-sm text-muted-foreground">Subscription Protocol</dt>
+            <dd>
+              <p
+                className="text-sm max-w-[130px] text-center"
+              >
                 {subgraph.subscriptionUrl !== ""
-                  ? subgraph.subscriptionUrl
+                  ? subgraph.subscriptionProtocol
                   : "-"}
               </p>
             </dd>
           </div>
 
-          <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-2 ">
+          <div
+            className="flex-start flex flex-1 flex-col gap-2 max-w-[250px]"
+          >
+            <dt className="text-sm text-muted-foreground">Subscription WS Subprotocol</dt>
+            <dd>
+              <p
+                className="text-sm max-w-[180px] text-center"
+              >
+                {subgraph.subscriptionUrl !== ""
+                  ? subgraph.websocketSubprotocol
+                  : "-"}
+              </p>
+            </dd>
+          </div>
+
+          <div className="flex-start flex max-w-[120px] flex-1 flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Last Published</dt>
             <dd className="whitespace-nowrap text-sm">
               {subgraph.lastUpdatedAt ? (

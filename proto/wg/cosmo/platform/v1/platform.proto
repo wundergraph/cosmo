@@ -318,6 +318,7 @@ message Subgraph {
   string namespace = 10;
   string subscriptionProtocol = 11;
   optional bool isV2Graph = 12;
+  string websocketSubprotocol = 13;
 }
 
 message GetSubgraphsResponse {

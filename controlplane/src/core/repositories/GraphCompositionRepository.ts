@@ -179,6 +179,7 @@ export class GraphCompositionRepository {
         namespaceId: schema.namespaces.id,
         namespace: schema.namespaces.name,
         lastUpdatedAt: graphCompositionSubgraphs.createdAt,
+        websocketSubprotocol: schema.subgraphs.websocketSubprotocol,
       })
       .from(graphCompositionSubgraphs)
       .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
