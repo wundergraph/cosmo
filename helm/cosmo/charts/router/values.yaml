@@ -67,6 +67,7 @@ securityContext: {}
 service:
   type: ClusterIP
   port: 3002
+  metricsPort: 8088
 
 ingress:
 #  enabled: true

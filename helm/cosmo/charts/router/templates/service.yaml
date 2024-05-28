@@ -15,5 +15,9 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+    - port: {{ .Values.service.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
   selector:
     {{- include "router.selectorLabels" . | nindent 4 }}
