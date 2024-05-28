@@ -94,7 +94,8 @@ type Employee struct {
 	Notes                 *string       `json:"notes,omitempty"`
 	UpdatedAt             string        `json:"updatedAt"`
 	StartDate             string        `json:"startDate"`
-	DerivedID             int           `json:"derivedID"`
+	CurrentMood           Mood          `json:"currentMood"`
+	DerivedMood           Mood          `json:"derivedMood"`
 	IsAvailable           bool          `json:"isAvailable"`
 	RootFieldThrowsError  *string       `json:"rootFieldThrowsError,omitempty"`
 	RootFieldErrorWrapper *ErrorWrapper `json:"rootFieldErrorWrapper,omitempty"`
@@ -346,6 +347,47 @@ func (e *EngineerType) UnmarshalGQL(v interface{}) error {
 }
 
 func (e EngineerType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type Mood string
+
+const (
+	MoodHappy Mood = "HAPPY"
+	MoodSad   Mood = "SAD"
+)
+
+var AllMood = []Mood{
+	MoodHappy,
+	MoodSad,
+}
+
+func (e Mood) IsValid() bool {
+	switch e {
+	case MoodHappy, MoodSad:
+		return true
+	}
+	return false
+}
+
+func (e Mood) String() string {
+	return string(e)
+}
+
+func (e *Mood) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Mood(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Mood", str)
+	}
+	return nil
+}
+
+func (e Mood) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

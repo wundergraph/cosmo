@@ -1,11 +1,11 @@
-query Requires {
+query RequiresMood {
   products {
     ... on Consultancy {
       lead {
+        __typename
         id
-        derivedID
+        derivedMood
       }
-      isLeadAvailable
     }
   }
 }
