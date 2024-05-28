@@ -53,6 +53,8 @@ message PublishFederatedSubgraphRequest {
   string namespace = 8;
   // If true, the labels will be unset
   optional bool unset_labels = 9;
+  // The subscription subprotocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -97,6 +99,8 @@ message CreateMonographRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
   optional string readme = 7;
   string admissionWebhookURL = 8;
+  // The subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message CreateMonographResponse {
@@ -130,6 +134,7 @@ message CreateFederatedSubgraphRequest {
   // readme of the subgraph
   optional string readme = 7;
   string namespace = 8;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message DeleteFederatedGraphRequest {
@@ -275,6 +280,7 @@ message FederatedGraph {
   optional string compositionId = 13;
   bool supports_federation = 14;
   optional Contract contract = 15;
+  optional string admission_webhook_url = 16;
 }
 
 message GetFederatedGraphsResponse {
@@ -296,6 +302,7 @@ message GetSubgraphsRequest {
   int32 limit = 1;
   int32 offset = 2;
   string namespace = 3;
+  optional string query = 4;
 }
 
 message Subgraph {
@@ -316,6 +323,7 @@ message Subgraph {
 message GetSubgraphsResponse {
   Response response = 1;
   repeated Subgraph graphs = 2;
+  int32 count = 3;
 }
 
 message GetFederatedGraphByNameRequest {
@@ -518,6 +526,7 @@ message UpdateSubgraphRequest {
   optional string readme = 7;
   string namespace = 8;
   optional bool unset_labels = 9;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
 }
 
 message UpdateSubgraphResponse {
@@ -550,6 +559,7 @@ message UpdateMonographRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
   optional string subscription_url = 6;
   optional string readme = 7;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 8;
 }
 
 message UpdateMonographResponse {
@@ -765,12 +775,26 @@ message PendingOrgInvitation{
   string email = 2;
 }
 
-message GetOrganizationMembersRequest {}
+message GetPendingOrganizationMembersRequest {
+  Pagination pagination = 1;
+  optional string search = 2;
+}
+
+message GetPendingOrganizationMembersResponse {
+  Response response = 1;
+  repeated PendingOrgInvitation pendingInvitations = 2;
+  int32 total_count = 3;
+}
+
+message GetOrganizationMembersRequest {
+  Pagination pagination = 1;
+  optional string search = 2;
+}
 
 message GetOrganizationMembersResponse {
   Response response = 1;
   repeated OrgMember members = 2;
-  repeated PendingOrgInvitation pendingInvitations = 3;
+  int32 total_count = 3;
 }
 
 message InviteUserRequest {
@@ -1956,6 +1980,14 @@ message UpdateContractResponse {
   repeated DeploymentError deploymentErrors = 3;
 }
 
+message IsMemberLimitReachedRequest {}
+
+message IsMemberLimitReachedResponse {
+  Response response = 1;
+  bool limit_reached = 2;
+  int32 member_count = 3;  
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2065,6 +2097,10 @@ service PlatformService {
   rpc CreateFederatedGraphToken(CreateFederatedGraphTokenRequest) returns (CreateFederatedGraphTokenResponse) {}
   // GetOrganizationMembers returns the list of organization members
   rpc GetOrganizationMembers(GetOrganizationMembersRequest) returns (GetOrganizationMembersResponse){}
+  // GetOrganizationMembers returns the list of pending organization invites
+  rpc GetPendingOrganizationMembers(GetPendingOrganizationMembersRequest) returns (GetPendingOrganizationMembersResponse){}
+  // IsMemberLimitReached returns whether the organization has reached the member limit
+  rpc IsMemberLimitReached(IsMemberLimitReachedRequest) returns (IsMemberLimitReachedResponse){}
   // InviteUser invites an user to join the organization
   rpc InviteUser(InviteUserRequest) returns (InviteUserResponse){}
   // GetAPIKeys returns a list of API keys of the organization

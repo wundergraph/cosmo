@@ -1,10 +1,11 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
+import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   graphCompositionSubgraphs,
@@ -78,6 +79,7 @@ export class SubgraphRepository {
     labels: Label[];
     subscriptionUrl?: string;
     subscriptionProtocol?: SubscriptionProtocol;
+    websocketSubprotocol?: WebsocketSubprotocol;
     readme?: string;
     namespaceId: string;
   }): Promise<SubgraphDTO | undefined> {
@@ -117,6 +119,7 @@ export class SubgraphRepository {
           routingUrl,
           subscriptionUrl,
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
+          websocketSubprotocol: data.websocketSubprotocol || 'auto',
         })
         .returning()
         .execute();
@@ -173,6 +176,7 @@ export class SubgraphRepository {
       subscriptionUrl?: string;
       schemaSDL?: string;
       subscriptionProtocol?: SubscriptionProtocol;
+      websocketSubprotocol?: WebsocketSubprotocol;
       updatedBy: string;
       readme?: string;
       namespaceId: string;
@@ -252,6 +256,17 @@ export class SubgraphRepository {
           .set({
             // ws is the default protocol
             subscriptionProtocol: data.subscriptionProtocol || 'ws',
+          })
+          .where(eq(subgraphs.id, subgraph.id))
+          .execute();
+      }
+
+      if (data.websocketSubprotocol !== undefined && data.websocketSubprotocol !== subgraph.websocketSubprotocol) {
+        subgraphChanged = true;
+        await tx
+          .update(subgraphs)
+          .set({
+            websocketSubprotocol: data.websocketSubprotocol || null,
           })
           .where(eq(subgraphs.id, subgraph.id))
           .execute();
@@ -461,6 +476,7 @@ export class SubgraphRepository {
         routingUrl: subgraph.routingUrl,
         subscriptionUrl: subgraph.subscriptionUrl,
         subscriptionProtocol: subgraph.subscriptionProtocol,
+        websocketSubprotocol: subgraph.websocketSubprotocol,
         lastUpdatedAt: insertedVersion[0].createdAt.toISOString() ?? '',
         name: subgraph.name,
         labels: subgraph.labels,
@@ -478,6 +494,10 @@ export class SubgraphRepository {
 
     if (opts.namespaceId) {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
+    if (opts.query) {
+      conditions.push(like(schema.targets.name, `%${opts.query}%`));
     }
 
     const targets = await this.db
@@ -507,6 +527,34 @@ export class SubgraphRepository {
     }
 
     return subgraphs;
+  }
+
+  public async count(opts: SubgraphListFilterOptions): Promise<number> {
+    const conditions: SQL<unknown>[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+    ];
+
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
+    if (opts.query) {
+      conditions.push(like(schema.targets.name, `%${opts.query}%`));
+    }
+
+    const subgraphsCount = await this.db
+      .select({
+        count: count(),
+      })
+      .from(schema.targets)
+      .where(and(...conditions));
+
+    if (subgraphsCount.length === 0) {
+      return 0;
+    }
+
+    return subgraphsCount[0].count;
   }
 
   /**
@@ -585,6 +633,7 @@ export class SubgraphRepository {
         routingUrl: schema.subgraphs.routingUrl,
         subscriptionUrl: schema.subgraphs.subscriptionUrl,
         subscriptionProtocol: schema.subgraphs.subscriptionProtocol,
+        websocketSubprotocol: schema.subgraphs.websocketSubprotocol,
         targetId: schema.subgraphs.targetId,
         namespaceId: schema.namespaces.id,
         namespaceName: schema.namespaces.name,
@@ -622,6 +671,7 @@ export class SubgraphRepository {
       readme: resp[0].readme || undefined,
       subscriptionUrl: resp[0].subscriptionUrl ?? '',
       subscriptionProtocol: resp[0].subscriptionProtocol ?? 'ws',
+      websocketSubprotocol: resp[0].websocketSubprotocol || undefined,
       name: resp[0].name,
       schemaSDL,
       schemaVersionId,

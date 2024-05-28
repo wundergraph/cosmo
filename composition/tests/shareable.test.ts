@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'vitest';
-import { federateSubgraphs, normalizeSubgraphFromString, Subgraph } from '../src';
+import {
+  federateSubgraphs,
+  invalidDirectiveError,
+  invalidRepeatedDirectiveErrorMessage,
+  normalizeSubgraph,
+  normalizeSubgraphFromString,
+  SHAREABLE,
+  Subgraph,
+} from '../src';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
@@ -107,7 +115,38 @@ describe('@shareable directive tests', () => {
         ),
       );
     });
+
+    test('that @shareable declared on both the parent and field level is not repeated', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphD.definitions);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          versionTwoDirectiveDefinitions +
+            `
+           type Entity @key(fields: "id") {
+            field: String! @shareable
+            id: ID! @shareable
+           }
+           
+           scalar openfed__FieldSet
+           
+           scalar openfed__Scope
+          `,
+        ),
+      );
+    });
+
+    test('that an error is returned if @shareable is repeated on the same level', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphE.definitions);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
+        invalidDirectiveError(SHAREABLE, 'Entity.field', [
+          invalidRepeatedDirectiveErrorMessage(SHAREABLE, 'Entity.field'),
+        ]),
+      ]);
+    });
   });
+
   describe('Federation tests', () => {
     test('that @shareable functions with extensions correctly #1.1', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB, subgraphC]);
@@ -302,6 +341,28 @@ const subgraphC: Subgraph = {
     extend type Entity implements Interface @key(fields: "id") @shareable {
       id: ID!
       field: String!
+    }
+  `),
+};
+
+const subgraphD: Subgraph = {
+  name: 'subgraph-d',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") @shareable {
+      id: ID!
+      field: String! @shareable
+    }
+  `),
+};
+
+const subgraphE: Subgraph = {
+  name: 'subgraph-e',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      field: String! @shareable @shareable
     }
   `),
 };

@@ -38,7 +38,7 @@ export const Pagination = ({
   );
 
   return (
-    <div className="mr-2 flex justify-end">
+    <div className="flex justify-end">
       <div className="flex items-center space-x-2">
         <p className="text-sm font-medium">Rows per page</p>
         <Select

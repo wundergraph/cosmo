@@ -3,6 +3,7 @@ module github.com/wundergraph/cosmo/router-tests
 go 1.21.0
 
 require (
+	github.com/andybalholm/brotli v1.1.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/google/uuid v1.6.0
@@ -23,9 +24,9 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20240514143637-d659067fd1d0
-	github.com/wundergraph/cosmo/router v0.0.0-20240514143637-d659067fd1d0
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.37
+	github.com/wundergraph/cosmo/demo v0.0.0-20240527153944-f69e36f08478
+	github.com/wundergraph/cosmo/router v0.0.0-20240527153944-f69e36f08478
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.45
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/sdk/metric v1.24.0
@@ -45,7 +46,6 @@ require (
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/alitto/pond v1.8.3 // indirect
-	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -73,6 +73,7 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.3.1 // indirect
+	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.11.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.1.2 // indirect

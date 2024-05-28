@@ -176,8 +176,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			} else {
 				requestLogger.Error("failed to read request body", zap.Error(err))
 			}
-
-			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+			writeOperationError(r, w, requestLogger, err)
 			return
 		}
 
@@ -194,8 +193,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		)
 
 		operationKit, err := h.operationProcessor.NewKit(body)
-		defer operationKit.Free()
-
 		if err != nil {
 			finalErr = err
 
@@ -208,6 +205,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeOperationError(r, w, requestLogger, err)
 			return
 		}
+		defer operationKit.Free()
 
 		err = operationKit.Parse(r.Context(), clientInfo, requestLogger)
 		if err != nil {

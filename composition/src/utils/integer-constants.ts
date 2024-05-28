@@ -1,0 +1,3 @@
+export const MAXIMUM_TYPE_NESTING = 30;
+
+export const MAX_SUBSCRIPTION_FILTER_DEPTH = 5;

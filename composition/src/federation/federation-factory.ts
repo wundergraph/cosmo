@@ -23,6 +23,7 @@ import {
   fieldTypeMergeFatalError,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredArgumentError,
+  inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
   incompatibleArgumentTypesError,
   incompatibleChildTypesError,
   incompatibleObjectExtensionOrphanBaseTypeError,
@@ -31,17 +32,34 @@ import {
   incompatibleSharedEnumError,
   invalidFieldShareabilityError,
   invalidImplementedTypeError,
+  invalidInputFieldTypeErrorMessage,
   invalidInterfaceImplementationError,
   invalidReferencesOfInaccessibleTypeError,
   invalidRequiredInputValueError,
+  invalidSubscriptionFieldConditionFieldPathErrorMessage,
+  invalidSubscriptionFieldConditionFieldPathFieldErrorMessage,
+  invalidSubscriptionFieldConditionFieldPathParentErrorMessage,
+  invalidSubscriptionFilterDirectiveError,
   minimumSubgraphRequirementError,
   noBaseTypeExtensionError,
   noConcreteTypesForAbstractTypeError,
+  nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
   noQueryRootTypeError,
   orScopesLimitError,
+  subscriptionFieldConditionEmptyValuesArrayErrorMessage,
+  subscriptionFieldConditionInvalidInputFieldErrorMessage,
+  subscriptionFieldConditionInvalidValuesArrayErrorMessage,
+  subscriptionFilterArrayConditionInvalidItemTypeErrorMessage,
+  subscriptionFilterArrayConditionInvalidLengthErrorMessage,
+  subscriptionFilterConditionDepthExceededErrorMessage,
+  subscriptionFilterConditionInvalidInputFieldErrorMessage,
+  subscriptionFilterConditionInvalidInputFieldNumberErrorMessage,
+  subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
   undefinedEntityInterfaceImplementationsError,
+  undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
   unexpectedObjectResponseType,
   unexpectedParentKindErrorMessage,
+  unknownFieldSubgraphNameError,
   unresolvableFieldError,
 } from '../errors/errors';
 import {
@@ -53,22 +71,37 @@ import {
   newParentTagData,
   ParentTagData,
   RootTypeFieldData,
+  SubscriptionFilterData,
 } from './utils';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../subgraph/subgraph';
 import {
+  AND_UPPER,
   AUTHENTICATED,
+  CONDITION,
   DEPRECATED,
   ENTITIES,
   FIELD,
+  FIELD_PATH,
+  IN_UPPER,
   INACCESSIBLE,
   INPUT_OBJECT,
+  LIST,
+  NOT_UPPER,
+  OBJECT,
+  OR_UPPER,
   PARENT_DEFINITION_DATA,
+  PERIOD,
   QUERY,
   REQUIRES_SCOPES,
   ROOT_TYPES,
   SELECTION_REPRESENTATION,
+  STRING,
+  SUBSCRIPTION_FILTER,
+  SUBSCRIPTION_FILTER_INPUT_NAMES,
+  SUBSCRIPTION_FILTER_LIST_INPUT_NAMES,
   TAG,
   UNION,
+  VALUES,
 } from '../utils/string-constants';
 import {
   addIterableValuesToSet,
@@ -82,6 +115,7 @@ import {
   getAllMutualEntries,
   getEntriesNotInHashSet,
   getOrThrowError,
+  getSingleSetEntry,
   getValueOrDefault,
   hasSimplePath,
   ImplementationErrors,
@@ -103,6 +137,9 @@ import {
   ConfigurationData,
   FieldConfiguration,
   RequiredFieldConfiguration,
+  SubscriptionCondition,
+  SubscriptionFieldCondition,
+  SubscriptionFilterValue,
 } from '../router-configuration/router-configuration';
 import {
   AUTHENTICATED_DEFINITION,
@@ -129,6 +166,7 @@ import {
   ParentDefinitionData,
   ParentWithFieldsData,
   PersistedDirectiveDefinitionData,
+  ScalarDefinitionData,
   UnionDefinitionData,
 } from '../schema-building/type-definition-data';
 import {
@@ -140,8 +178,10 @@ import {
   getNodeForRouterSchemaByData,
   getNodeWithPersistedDirectivesByFieldData,
   getNodeWithPersistedDirectivesByInputValueData,
+  getSubscriptionFilterValue,
   getValidFieldArgumentNodes,
   isFieldExternalInAllMutualSubgraphs,
+  isLeafKind,
   isNodeDataInaccessible,
   isShareabilityOfAllFieldInstancesValid,
   isTypeRequired,
@@ -157,6 +197,8 @@ import { ObjectExtensionData } from '../schema-building/type-extension-data';
 import { createMultiGraphAndRenameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import { getLeastRestrictiveMergedTypeNode, getMostRestrictiveMergedTypeNode } from '../schema-building/type-merging';
+import { ConstDirectiveNode, ConstObjectValueNode } from 'graphql/index';
+import { MAX_SUBSCRIPTION_FILTER_DEPTH } from '../utils/integer-constants';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -192,6 +234,8 @@ export class FederationFactory {
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
   routerDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION, TAG_DEFINITION];
   shareableErrorTypeNames = new Map<string, Set<string>>();
+  subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
+  isMaxDepth = false;
   tagNamesByPath = new Map<string, Set<string>>();
   warnings: string[];
 
@@ -981,6 +1025,24 @@ export class FederationFactory {
     }
   }
 
+  handleSubscriptionFilterDirective(incomingData: FieldData, fieldPath: string, baseData?: FieldData) {
+    const subscriptionFilters = incomingData.directivesByDirectiveName.get(SUBSCRIPTION_FILTER);
+    if (subscriptionFilters) {
+      // There should only be a single entry in the set
+      const subgraphName = getSingleSetEntry(incomingData.subgraphNames);
+      if (subgraphName === undefined) {
+        this.errors.push(unknownFieldSubgraphNameError(fieldPath));
+        return;
+      }
+      // @openfed__subscriptionFilter is non-repeatable
+      this.subscriptionFilterDataByFieldPath.set(fieldPath, {
+        directive: subscriptionFilters[0],
+        fieldData: baseData || incomingData,
+        directiveSubgraphName: subgraphName,
+      });
+    }
+  }
+
   upsertFieldData(
     fieldDataByFieldName: Map<string, FieldData>,
     incomingData: FieldData,
@@ -991,6 +1053,7 @@ export class FederationFactory {
     this.namedOutputTypeNames.add(incomingData.namedTypeName);
     const existingData = fieldDataByFieldName.get(incomingData.name);
     const baseData = existingData || incomingData;
+    this.handleSubscriptionFilterDirective(incomingData, fieldPath, baseData);
     extractPersistedDirectives(
       baseData.persistedDirectivesData,
       incomingData.directivesByDirectiveName,
@@ -1181,6 +1244,7 @@ export class FederationFactory {
               type: fieldData.type,
             };
             const fieldPath = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
+            this.handleSubscriptionFilterDirective(fieldData, fieldPath);
             getValueOrDefault(this.pathsByNamedTypeName, fieldData.namedTypeName, () => new Set<string>()).add(
               fieldPath,
             );
@@ -1399,7 +1463,7 @@ export class FederationFactory {
         for (const [fieldName, fieldData] of data.fieldDataByFieldName) {
           const fieldPath = `${fieldData.renamedParentTypeName}.${fieldName}`;
           this.inaccessiblePaths.add(fieldPath);
-          for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
+          for (const inputValueData of fieldData.argumentDataByArgumentName.values()) {
             this.inaccessiblePaths.add(inputValueData.renamedPath);
           }
         }
@@ -1889,7 +1953,7 @@ export class FederationFactory {
   federateSubgraphData() {
     this.federateInternalSubgraphData();
     this.handleEntityInterfaces();
-    for (const [parentTypeName, objectExtensionData] of this.objectExtensionDataByTypeName) {
+    for (const objectExtensionData of this.objectExtensionDataByTypeName.values()) {
       this.upsertValidObjectExtensionData(objectExtensionData);
     }
     // generate the map of tag data that is used by contracts
@@ -1901,8 +1965,7 @@ export class FederationFactory {
     interfaceImplementations: InterfaceImplementationData[],
   ) {
     for (const { data, clientSchemaFieldNodes } of interfaceImplementations) {
-      const validInterfaces = this.getValidImplementedInterfaces(data);
-      data.node.interfaces = validInterfaces;
+      data.node.interfaces = this.getValidImplementedInterfaces(data);
       this.routerDefinitions.push(
         getNodeForRouterSchemaByData(data, this.persistedDirectiveDefinitionByDirectiveName, this.errors),
       );
@@ -1975,7 +2038,438 @@ export class FederationFactory {
     this.errors.push(noQueryRootTypeError);
   }
 
+  validateSubscriptionFieldConditionFieldPath(
+    conditionFieldPath: string,
+    objectData: ObjectDefinitionData,
+    inputFieldPath: string,
+    directiveSubgraphName: string,
+    fieldErrorMessages: string[],
+  ): string[] {
+    const paths = conditionFieldPath.split(PERIOD);
+    if (paths.length < 1) {
+      fieldErrorMessages.push(
+        invalidSubscriptionFieldConditionFieldPathErrorMessage(inputFieldPath, conditionFieldPath),
+      );
+      return [];
+    }
+    let lastData: ParentDefinitionData = objectData;
+    if (this.inaccessiblePaths.has(lastData.renamedTypeName)) {
+      fieldErrorMessages.push(
+        inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
+          inputFieldPath,
+          conditionFieldPath,
+          paths[0],
+          lastData.renamedTypeName,
+        ),
+      );
+      return [];
+    }
+    let partialConditionFieldPath = '';
+    for (let i = 0; i < paths.length; i++) {
+      const fieldName = paths[i];
+      partialConditionFieldPath += partialConditionFieldPath.length > 0 ? `.${fieldName}` : fieldName;
+      if (lastData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        fieldErrorMessages.push(
+          invalidSubscriptionFieldConditionFieldPathParentErrorMessage(
+            inputFieldPath,
+            conditionFieldPath,
+            partialConditionFieldPath,
+          ),
+        );
+        return [];
+      }
+      const fieldData = lastData.fieldDataByFieldName.get(fieldName);
+      if (!fieldData) {
+        fieldErrorMessages.push(
+          undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage(
+            inputFieldPath,
+            conditionFieldPath,
+            partialConditionFieldPath,
+            fieldName,
+            lastData.renamedTypeName,
+          ),
+        );
+        return [];
+      }
+      const fieldPath = `${lastData.renamedTypeName}.${fieldName}`;
+      if (!fieldData.subgraphNames.has(directiveSubgraphName)) {
+        fieldErrorMessages.push(
+          invalidSubscriptionFieldConditionFieldPathFieldErrorMessage(
+            inputFieldPath,
+            conditionFieldPath,
+            partialConditionFieldPath,
+            fieldPath,
+            directiveSubgraphName,
+          ),
+        );
+        return [];
+      }
+      if (this.inaccessiblePaths.has(fieldPath)) {
+        fieldErrorMessages.push(
+          inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
+            inputFieldPath,
+            conditionFieldPath,
+            partialConditionFieldPath,
+            fieldPath,
+          ),
+        );
+        return [];
+      }
+      if (BASE_SCALARS.has(fieldData.namedTypeName)) {
+        lastData = { kind: Kind.SCALAR_TYPE_DEFINITION, name: fieldData.namedTypeName } as ScalarDefinitionData;
+        continue;
+      }
+      lastData = getOrThrowError(this.parentDefinitionDataByTypeName, fieldData.namedTypeName, PARENT_DEFINITION_DATA);
+    }
+    if (!isLeafKind(lastData.kind)) {
+      fieldErrorMessages.push(
+        nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage(
+          inputFieldPath,
+          conditionFieldPath,
+          paths[paths.length - 1],
+          kindToTypeString(lastData.kind),
+          lastData.name,
+        ),
+      );
+      return [];
+    }
+    return paths;
+  }
+
+  validateSubscriptionFieldCondition(
+    objectValueNode: ConstObjectValueNode,
+    condition: SubscriptionFieldCondition,
+    objectData: ObjectDefinitionData,
+    depth: number,
+    inputPath: string,
+    directiveSubgraphName: string,
+    errorMessages: string[],
+  ): boolean {
+    if (depth > MAX_SUBSCRIPTION_FILTER_DEPTH || this.isMaxDepth) {
+      errorMessages.push(subscriptionFilterConditionDepthExceededErrorMessage(inputPath));
+      this.isMaxDepth = true;
+      return false;
+    }
+    let hasErrors = false;
+    const validFieldNames = new Set<string>([FIELD_PATH, VALUES]);
+    const duplicatedFieldNames = new Set<string>();
+    const invalidFieldNames = new Set<string>();
+    const fieldErrorMessages: string[] = [];
+    for (const objectFieldNode of objectValueNode.fields) {
+      const inputFieldName = objectFieldNode.name.value;
+      const inputFieldPath = inputPath + `.${inputFieldName}`;
+      switch (inputFieldName) {
+        case FIELD_PATH: {
+          if (validFieldNames.has(FIELD_PATH)) {
+            validFieldNames.delete(FIELD_PATH);
+          } else {
+            hasErrors = true;
+            duplicatedFieldNames.add(FIELD_PATH);
+            break;
+          }
+          if (objectFieldNode.value.kind !== Kind.STRING) {
+            fieldErrorMessages.push(
+              invalidInputFieldTypeErrorMessage(inputFieldPath, STRING, kindToTypeString(objectFieldNode.value.kind)),
+            );
+            hasErrors = true;
+            break;
+          }
+          const fieldPath = this.validateSubscriptionFieldConditionFieldPath(
+            objectFieldNode.value.value,
+            objectData,
+            inputFieldPath,
+            directiveSubgraphName,
+            fieldErrorMessages,
+          );
+          if (fieldPath.length < 1) {
+            hasErrors = true;
+            break;
+          }
+          condition.fieldPath = fieldPath;
+          break;
+        }
+        case VALUES: {
+          if (validFieldNames.has(VALUES)) {
+            validFieldNames.delete(VALUES);
+          } else {
+            hasErrors = true;
+            duplicatedFieldNames.add(VALUES);
+            break;
+          }
+          const objectFieldValueKind = objectFieldNode.value.kind;
+          if (objectFieldValueKind == Kind.NULL || objectFieldValueKind == Kind.OBJECT) {
+            fieldErrorMessages.push(
+              invalidInputFieldTypeErrorMessage(inputFieldPath, LIST, kindToTypeString(objectFieldNode.value.kind)),
+            );
+            hasErrors = true;
+            break;
+          }
+          // Coerce scalars into a list
+          if (objectFieldValueKind !== Kind.LIST) {
+            condition.values = [getSubscriptionFilterValue(objectFieldNode.value)];
+            break;
+          }
+          // Prevent duplicate values
+          const values = new Set<SubscriptionFilterValue>();
+          const invalidIndices: number[] = [];
+          for (let i = 0; i < objectFieldNode.value.values.length; i++) {
+            const valueNode = objectFieldNode.value.values[i];
+            if (valueNode.kind === Kind.OBJECT || valueNode.kind === Kind.LIST) {
+              hasErrors = true;
+              invalidIndices.push(i);
+              continue;
+            }
+            values.add(getSubscriptionFilterValue(valueNode));
+          }
+          if (invalidIndices.length > 0) {
+            fieldErrorMessages.push(
+              subscriptionFieldConditionInvalidValuesArrayErrorMessage(inputFieldPath, invalidIndices),
+            );
+            continue;
+          }
+          if (values.size < 1) {
+            hasErrors = true;
+            fieldErrorMessages.push(subscriptionFieldConditionEmptyValuesArrayErrorMessage(inputFieldPath));
+            continue;
+          }
+          condition.values = [...values];
+          break;
+        }
+        default: {
+          hasErrors = true;
+          invalidFieldNames.add(inputFieldName);
+        }
+      }
+    }
+    if (!hasErrors) {
+      return true;
+    }
+    errorMessages.push(
+      subscriptionFieldConditionInvalidInputFieldErrorMessage(
+        inputPath,
+        [...validFieldNames],
+        [...duplicatedFieldNames],
+        [...invalidFieldNames],
+        fieldErrorMessages,
+      ),
+    );
+
+    return false;
+  }
+
+  validateSubscriptionFilterCondition(
+    objectValueNode: ConstObjectValueNode,
+    configuration: SubscriptionCondition,
+    objectData: ObjectDefinitionData,
+    depth: number,
+    inputPath: string,
+    directiveSubgraphName: string,
+    errorMessages: string[],
+  ): boolean {
+    if (depth > MAX_SUBSCRIPTION_FILTER_DEPTH || this.isMaxDepth) {
+      errorMessages.push(subscriptionFilterConditionDepthExceededErrorMessage(inputPath));
+      this.isMaxDepth = true;
+      return false;
+    }
+    depth += 1;
+    if (objectValueNode.fields.length !== 1) {
+      errorMessages.push(
+        subscriptionFilterConditionInvalidInputFieldNumberErrorMessage(inputPath, objectValueNode.fields.length),
+      );
+      return false;
+    }
+    const objectFieldNode = objectValueNode.fields[0];
+    const fieldName = objectFieldNode.name.value;
+    if (!SUBSCRIPTION_FILTER_INPUT_NAMES.has(fieldName)) {
+      errorMessages.push(subscriptionFilterConditionInvalidInputFieldErrorMessage(inputPath, fieldName));
+      return false;
+    }
+    const inputFieldPath = inputPath + `.${fieldName}`;
+    switch (objectFieldNode.value.kind) {
+      case Kind.OBJECT: {
+        switch (fieldName) {
+          case IN_UPPER: {
+            configuration.in = { fieldPath: [], values: [] };
+            return this.validateSubscriptionFieldCondition(
+              objectFieldNode.value,
+              configuration.in,
+              objectData,
+              depth,
+              inputPath + `.IN`,
+              directiveSubgraphName,
+              errorMessages,
+            );
+          }
+          case NOT_UPPER: {
+            configuration.not = {};
+            return this.validateSubscriptionFilterCondition(
+              objectFieldNode.value,
+              configuration.not,
+              objectData,
+              depth,
+              inputPath + `.NOT`,
+              directiveSubgraphName,
+              errorMessages,
+            );
+          }
+          default:
+            // The field is guaranteed to be an AND or an OR
+            errorMessages.push(
+              subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(inputFieldPath, LIST, OBJECT),
+            );
+            return false;
+        }
+      }
+      case Kind.LIST: {
+        const listConfigurations: SubscriptionCondition[] = [];
+        switch (fieldName) {
+          case AND_UPPER: {
+            configuration.and = listConfigurations;
+            break;
+          }
+          case OR_UPPER: {
+            configuration.or = listConfigurations;
+            break;
+          }
+          default:
+            // The field is guaranteed to be an IN or a NOT
+            errorMessages.push(
+              subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(inputFieldPath, OBJECT, LIST),
+            );
+            return false;
+        }
+        const listLength = objectFieldNode.value.values.length;
+        if (listLength < 1 || listLength > 5) {
+          errorMessages.push(subscriptionFilterArrayConditionInvalidLengthErrorMessage(inputFieldPath, listLength));
+          return false;
+        }
+        let isValid = true;
+        const invalidIndices: number[] = [];
+        for (let i = 0; i < objectFieldNode.value.values.length; i++) {
+          const arrayIndexPath = inputFieldPath + `[${i}]`;
+          const listValueNode = objectFieldNode.value.values[i];
+          if (listValueNode.kind !== Kind.OBJECT) {
+            invalidIndices.push(i);
+            continue;
+          }
+          const listConfiguration: SubscriptionCondition = {};
+          isValid &&= this.validateSubscriptionFilterCondition(
+            listValueNode,
+            listConfiguration,
+            objectData,
+            depth,
+            arrayIndexPath,
+            directiveSubgraphName,
+            errorMessages,
+          );
+          if (isValid) {
+            listConfigurations.push(listConfiguration);
+          }
+        }
+        if (invalidIndices.length > 0) {
+          errorMessages.push(
+            subscriptionFilterArrayConditionInvalidItemTypeErrorMessage(inputFieldPath, invalidIndices),
+          );
+          return false;
+        }
+        return isValid;
+      }
+      default: {
+        const expectedTypeString = SUBSCRIPTION_FILTER_LIST_INPUT_NAMES.has(fieldName) ? LIST : OBJECT;
+        errorMessages.push(
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+            inputFieldPath,
+            expectedTypeString,
+            kindToTypeString(objectFieldNode.value.kind),
+          ),
+        );
+        return false;
+      }
+    }
+  }
+
+  validateSubscriptionFilterAndGenerateConfiguration(
+    directiveNode: ConstDirectiveNode,
+    objectData: ObjectDefinitionData,
+    fieldPath: string,
+    fieldName: string,
+    parentTypeName: string,
+    directiveSubgraphName: string,
+  ) {
+    // directive validation occurs elsewhere
+    if (!directiveNode.arguments || directiveNode.arguments.length !== 1) {
+      return;
+    }
+    const argumentNode = directiveNode.arguments[0];
+    if (argumentNode.value.kind !== Kind.OBJECT) {
+      this.errors.push(
+        invalidSubscriptionFilterDirectiveError(fieldPath, [
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+            CONDITION,
+            'object',
+            kindToTypeString(argumentNode.value.kind),
+          ),
+        ]),
+      );
+      return;
+    }
+    const condition = {} as SubscriptionCondition;
+    const errorMessages: string[] = [];
+    if (
+      !this.validateSubscriptionFilterCondition(
+        argumentNode.value,
+        condition,
+        objectData,
+        0,
+        CONDITION,
+        directiveSubgraphName,
+        errorMessages,
+      )
+    ) {
+      this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, errorMessages));
+      this.isMaxDepth = false;
+      return;
+    }
+    getValueOrDefault(this.fieldConfigurationByFieldPath, fieldPath, () => ({
+      argumentNames: [],
+      fieldName,
+      typeName: parentTypeName,
+    })).subscriptionFilterCondition = condition;
+  }
+
+  validateSubscriptionFiltersAndGenerateConfiguration() {
+    for (const [fieldPath, data] of this.subscriptionFilterDataByFieldPath) {
+      if (this.inaccessiblePaths.has(fieldPath)) {
+        continue;
+      }
+      const namedTypeData = getOrThrowError(
+        this.parentDefinitionDataByTypeName,
+        data.fieldData.namedTypeName,
+        PARENT_DEFINITION_DATA,
+      );
+      if (isNodeDataInaccessible(namedTypeData)) {
+        // @inaccessible error are caught elsewhere
+        continue;
+      }
+      // TODO handle Unions and Interfaces
+      if (namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        continue;
+      }
+      this.validateSubscriptionFilterAndGenerateConfiguration(
+        data.directive,
+        namedTypeData,
+        fieldPath,
+        data.fieldData.name,
+        data.fieldData.renamedParentTypeName,
+        data.directiveSubgraphName,
+      );
+    }
+  }
+
   buildFederationResult(): FederationResultContainer {
+    if (this.subscriptionFilterDataByFieldPath.size > 0) {
+      this.validateSubscriptionFiltersAndGenerateConfiguration();
+    }
     if (this.invalidOrScopesHostPaths.size > 0) {
       this.errors.push(orScopesLimitError(maxOrScopes, [...this.invalidOrScopesHostPaths]));
     }
@@ -2162,6 +2656,9 @@ export class FederationFactory {
             this.inaccessiblePaths.add(parentTypeName);
           }
       }
+    }
+    if (this.subscriptionFilterDataByFieldPath.size > 0) {
+      this.validateSubscriptionFiltersAndGenerateConfiguration();
     }
     for (const data of this.potentialPersistedDirectiveDefinitionDataByDirectiveName.values()) {
       addValidPersistedDirectiveDefinitionNodeByData(

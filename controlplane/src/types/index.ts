@@ -38,6 +38,7 @@ export interface SubgraphListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
+  query?: string;
 }
 
 export interface Label {
@@ -93,6 +94,7 @@ export interface SubgraphDTO {
   routingUrl: string;
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
+  websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
   schemaSDL: string;
   schemaVersionId: string;
   lastUpdatedAt: string;

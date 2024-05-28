@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
+import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from "../../common/common_pb.js";
 import { EventMeta } from "../../notifications/events_pb.js";
 
 /**
@@ -611,6 +611,13 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
    */
   unsetLabels?: boolean;
 
+  /**
+   * The subscription subprotocol to use when subscribing to this subgraph
+   *
+   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
+   */
+  websocketSubprotocol?: GraphQLWebsocketSubprotocol;
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -627,6 +634,7 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
     { no: 7, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "unset_labels", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 10, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphRequest {
@@ -920,6 +928,13 @@ export class CreateMonographRequest extends Message<CreateMonographRequest> {
    */
   admissionWebhookURL = "";
 
+  /**
+   * The subscription protocol to use when subscribing to this subgraph
+   *
+   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+   */
+  websocketSubprotocol?: GraphQLWebsocketSubprotocol;
+
   constructor(data?: PartialMessage<CreateMonographRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -936,6 +951,7 @@ export class CreateMonographRequest extends Message<CreateMonographRequest> {
     { no: 6, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateMonographRequest {
@@ -1118,6 +1134,11 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+   */
+  websocketSubprotocol?: GraphQLWebsocketSubprotocol;
+
   constructor(data?: PartialMessage<CreateFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1133,6 +1154,7 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedSubgraphRequest {
@@ -2197,6 +2219,11 @@ export class FederatedGraph extends Message<FederatedGraph> {
    */
   contract?: Contract;
 
+  /**
+   * @generated from field: optional string admission_webhook_url = 16;
+   */
+  admissionWebhookUrl?: string;
+
   constructor(data?: PartialMessage<FederatedGraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2220,6 +2247,7 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 13, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "contract", kind: "message", T: Contract, opt: true },
+    { no: 16, name: "admission_webhook_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {
@@ -2387,6 +2415,11 @@ export class GetSubgraphsRequest extends Message<GetSubgraphsRequest> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string query = 4;
+   */
+  query?: string;
+
   constructor(data?: PartialMessage<GetSubgraphsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2398,6 +2431,7 @@ export class GetSubgraphsRequest extends Message<GetSubgraphsRequest> {
     { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphsRequest {
@@ -2534,6 +2568,11 @@ export class GetSubgraphsResponse extends Message<GetSubgraphsResponse> {
    */
   graphs: Subgraph[] = [];
 
+  /**
+   * @generated from field: int32 count = 3;
+   */
+  count = 0;
+
   constructor(data?: PartialMessage<GetSubgraphsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2544,6 +2583,7 @@ export class GetSubgraphsResponse extends Message<GetSubgraphsResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "graphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 3, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphsResponse {
@@ -4108,6 +4148,11 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   unsetLabels?: boolean;
 
+  /**
+   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
+   */
+  websocketSubprotocol?: GraphQLWebsocketSubprotocol;
+
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4125,6 +4170,7 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "unset_labels", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 10, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {
@@ -4354,6 +4400,11 @@ export class UpdateMonographRequest extends Message<UpdateMonographRequest> {
    */
   readme?: string;
 
+  /**
+   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 8;
+   */
+  websocketSubprotocol?: GraphQLWebsocketSubprotocol;
+
   constructor(data?: PartialMessage<UpdateMonographRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4369,6 +4420,7 @@ export class UpdateMonographRequest extends Message<UpdateMonographRequest> {
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateMonographRequest {
@@ -5725,9 +5777,111 @@ export class PendingOrgInvitation extends Message<PendingOrgInvitation> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetPendingOrganizationMembersRequest
+ */
+export class GetPendingOrganizationMembersRequest extends Message<GetPendingOrganizationMembersRequest> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Pagination pagination = 1;
+   */
+  pagination?: Pagination;
+
+  /**
+   * @generated from field: optional string search = 2;
+   */
+  search?: string;
+
+  constructor(data?: PartialMessage<GetPendingOrganizationMembersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetPendingOrganizationMembersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pagination", kind: "message", T: Pagination },
+    { no: 2, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPendingOrganizationMembersRequest {
+    return new GetPendingOrganizationMembersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPendingOrganizationMembersRequest {
+    return new GetPendingOrganizationMembersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPendingOrganizationMembersRequest {
+    return new GetPendingOrganizationMembersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPendingOrganizationMembersRequest | PlainMessage<GetPendingOrganizationMembersRequest> | undefined, b: GetPendingOrganizationMembersRequest | PlainMessage<GetPendingOrganizationMembersRequest> | undefined): boolean {
+    return proto3.util.equals(GetPendingOrganizationMembersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetPendingOrganizationMembersResponse
+ */
+export class GetPendingOrganizationMembersResponse extends Message<GetPendingOrganizationMembersResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.PendingOrgInvitation pendingInvitations = 2;
+   */
+  pendingInvitations: PendingOrgInvitation[] = [];
+
+  /**
+   * @generated from field: int32 total_count = 3;
+   */
+  totalCount = 0;
+
+  constructor(data?: PartialMessage<GetPendingOrganizationMembersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetPendingOrganizationMembersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "pendingInvitations", kind: "message", T: PendingOrgInvitation, repeated: true },
+    { no: 3, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPendingOrganizationMembersResponse {
+    return new GetPendingOrganizationMembersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPendingOrganizationMembersResponse {
+    return new GetPendingOrganizationMembersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPendingOrganizationMembersResponse {
+    return new GetPendingOrganizationMembersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPendingOrganizationMembersResponse | PlainMessage<GetPendingOrganizationMembersResponse> | undefined, b: GetPendingOrganizationMembersResponse | PlainMessage<GetPendingOrganizationMembersResponse> | undefined): boolean {
+    return proto3.util.equals(GetPendingOrganizationMembersResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetOrganizationMembersRequest
  */
 export class GetOrganizationMembersRequest extends Message<GetOrganizationMembersRequest> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Pagination pagination = 1;
+   */
+  pagination?: Pagination;
+
+  /**
+   * @generated from field: optional string search = 2;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<GetOrganizationMembersRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5736,6 +5890,8 @@ export class GetOrganizationMembersRequest extends Message<GetOrganizationMember
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationMembersRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pagination", kind: "message", T: Pagination },
+    { no: 2, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationMembersRequest {
@@ -5770,9 +5926,9 @@ export class GetOrganizationMembersResponse extends Message<GetOrganizationMembe
   members: OrgMember[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.PendingOrgInvitation pendingInvitations = 3;
+   * @generated from field: int32 total_count = 3;
    */
-  pendingInvitations: PendingOrgInvitation[] = [];
+  totalCount = 0;
 
   constructor(data?: PartialMessage<GetOrganizationMembersResponse>) {
     super();
@@ -5784,7 +5940,7 @@ export class GetOrganizationMembersResponse extends Message<GetOrganizationMembe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "members", kind: "message", T: OrgMember, repeated: true },
-    { no: 3, name: "pendingInvitations", kind: "message", T: PendingOrgInvitation, repeated: true },
+    { no: 3, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationMembersResponse {
@@ -15495,6 +15651,86 @@ export class UpdateContractResponse extends Message<UpdateContractResponse> {
 
   static equals(a: UpdateContractResponse | PlainMessage<UpdateContractResponse> | undefined, b: UpdateContractResponse | PlainMessage<UpdateContractResponse> | undefined): boolean {
     return proto3.util.equals(UpdateContractResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.IsMemberLimitReachedRequest
+ */
+export class IsMemberLimitReachedRequest extends Message<IsMemberLimitReachedRequest> {
+  constructor(data?: PartialMessage<IsMemberLimitReachedRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.IsMemberLimitReachedRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IsMemberLimitReachedRequest {
+    return new IsMemberLimitReachedRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IsMemberLimitReachedRequest {
+    return new IsMemberLimitReachedRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IsMemberLimitReachedRequest {
+    return new IsMemberLimitReachedRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IsMemberLimitReachedRequest | PlainMessage<IsMemberLimitReachedRequest> | undefined, b: IsMemberLimitReachedRequest | PlainMessage<IsMemberLimitReachedRequest> | undefined): boolean {
+    return proto3.util.equals(IsMemberLimitReachedRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.IsMemberLimitReachedResponse
+ */
+export class IsMemberLimitReachedResponse extends Message<IsMemberLimitReachedResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: bool limit_reached = 2;
+   */
+  limitReached = false;
+
+  /**
+   * @generated from field: int32 member_count = 3;
+   */
+  memberCount = 0;
+
+  constructor(data?: PartialMessage<IsMemberLimitReachedResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.IsMemberLimitReachedResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "limit_reached", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "member_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IsMemberLimitReachedResponse {
+    return new IsMemberLimitReachedResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IsMemberLimitReachedResponse {
+    return new IsMemberLimitReachedResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IsMemberLimitReachedResponse {
+    return new IsMemberLimitReachedResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IsMemberLimitReachedResponse | PlainMessage<IsMemberLimitReachedResponse> | undefined, b: IsMemberLimitReachedResponse | PlainMessage<IsMemberLimitReachedResponse> | undefined): boolean {
+    return proto3.util.equals(IsMemberLimitReachedResponse, a, b);
   }
 }
 

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nats-io/nats.go/jetstream"
 	"io"
 	"log"
 	"math/rand"
@@ -22,6 +21,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -100,9 +101,11 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
+	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
+	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
 	MetricReader                       metric.Reader
@@ -583,6 +586,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Enabled:            true,
 			Sampler:            1,
 			TestMemoryExporter: testConfig.TraceExporter,
+			ParentBasedSampler: !testConfig.DisableParentBasedSampler,
+			Propagators: []rtrace.Propagator{
+				rtrace.PropagatorTraceContext,
+			},
 		}))
 	}
 
@@ -618,16 +625,35 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if !testConfig.DisableWebSockets {
-		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
+		wsConfig := &config.WebSocketConfiguration{
 			Enabled: true,
 			AbsintheProtocol: config.AbsintheProtocolConfiguration{
 				Enabled:     true,
 				HandlerPath: "/absinthe/socket",
 			},
-			ForwardUpgradeHeaders:     true,
-			ForwardUpgradeQueryParams: true,
-			ForwardInitialPayload:     true,
-		}))
+			ForwardUpgradeHeaders: config.ForwardUpgradeHeadersConfiguration{
+				Enabled: true,
+				AllowList: []string{
+					"Authorization",
+					"X-Custom-*",
+					"Canonical-Header-Name",
+					"reverse-canonical-header-name",
+				},
+			},
+			ForwardUpgradeQueryParams: config.ForwardUpgradeQueryParamsConfiguration{
+				Enabled: true,
+				AllowList: []string{
+					"token",
+					"Authorization",
+					"x-custom-*",
+				},
+			},
+			ForwardInitialPayload: true,
+		}
+		if testConfig.ModifyWebsocketConfiguration != nil {
+			testConfig.ModifyWebsocketConfiguration(wsConfig)
+		}
+		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(wsConfig))
 	}
 	return core.NewRouter(routerOpts...)
 }
@@ -893,7 +919,7 @@ type GraphQLError struct {
 
 const maxSocketRetries = 5
 
-func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
+func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
 	}
@@ -903,8 +929,11 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websoc
 
 	var err error
 
-	for i := 0; i < maxSocketRetries; i++ {
+	for i := 0; i <= maxSocketRetries; i++ {
 		urlStr := e.GraphQLSubscriptionURL()
+		if query != nil {
+			urlStr += "?" + query.Encode()
+		}
 		conn, resp, err := dialer.Dial(urlStr, header)
 
 		if resp != nil && err == nil {
@@ -925,8 +954,8 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websoc
 	return nil, nil, err
 }
 
-func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initialPayload json.RawMessage) *websocket.Conn {
-	conn, _, err := e.GraphQLWebsocketDialWithRetry(header)
+func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query url.Values, initialPayload json.RawMessage) *websocket.Conn {
+	conn, _, err := e.GraphQLWebsocketDialWithRetry(header, query)
 	require.NoError(e.t, err)
 	e.t.Cleanup(func() {
 		_ = conn.Close()

@@ -7,12 +7,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"io"
+
 	"net"
 	"net/http"
 	"net/url"
@@ -20,7 +16,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
 	"github.com/redis/go-redis/v9"
 
@@ -32,12 +33,15 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	brotli "go.withmatt.com/connect-brotli"
 
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
@@ -47,6 +51,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 
+	br "github.com/andybalholm/brotli"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -71,6 +76,20 @@ const (
 	Hash   IPAnonymizationMethod = "hash"
 	Redact IPAnonymizationMethod = "redact"
 )
+
+var CustomCompressibleContentTypes = []string{
+	"text/html",
+	"text/css",
+	"text/plain",
+	"text/javascript",
+	"application/javascript",
+	"application/x-javascript",
+	"application/json",
+	"application/atom+xml",
+	"application/rss+xml",
+	"image/svg+xml",
+	"application/graphql",
+}
 
 type (
 	// Router is the main application instance.
@@ -182,8 +201,10 @@ type (
 		securityConfiguration config.SecurityConfiguration
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
-
+		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
+		// the new overrides config
+		overrides config.OverridesConfiguration
 
 		authorization *config.AuthorizationConfiguration
 
@@ -497,22 +518,77 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 		subgraph.Url = parsedURL
 
 		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+		overrideSubgraph, overrideSubgraphOk := r.overrides.Subgraphs[sg.Name]
+
+		var overrideSubscriptionURL string
+		var overrideSubscriptionProtocol *common.GraphQLSubscriptionProtocol
+		var overrideSubscriptionWebsocketSubprotocol *common.GraphQLWebsocketSubprotocol
+
+		if overrideSubgraphOk {
+			if overrideSubgraph.RoutingURL != "" {
+				overrideURL = overrideSubgraph.RoutingURL
+			}
+			if overrideSubgraph.SubscriptionURL != "" {
+				overrideSubscriptionURL = overrideSubgraph.SubscriptionURL
+				_, err := url.Parse(overrideSubscriptionURL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideSubscriptionURL, err)
+				}
+			}
+			if overrideSubgraph.SubscriptionProtocol != "" {
+				switch overrideSubgraph.SubscriptionProtocol {
+				case "ws":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS.Enum()
+				case "sse":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE.Enum()
+				case "sse_post":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST.Enum()
+				default:
+					return nil, fmt.Errorf("invalid subscription protocol '%s'", overrideSubgraph.SubscriptionProtocol)
+				}
+			}
+			if overrideSubgraph.SubscriptionWebsocketSubprotocol != "" {
+				switch overrideSubgraph.SubscriptionWebsocketSubprotocol {
+				case "graphql-ws":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS.Enum()
+				case "graphql-transport-ws":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS.Enum()
+				case "auto":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO.Enum()
+				default:
+					return nil, fmt.Errorf("invalid subscription websocket subprotocol '%s'", overrideSubgraph.SubscriptionWebsocketSubprotocol)
+				}
+			}
+		}
 
 		// check if the subgraph is overridden
-		if ok && overrideURL != "" {
-			parsedURL, err := url.Parse(overrideURL)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
-			}
+		if ok || overrideSubgraphOk {
+			if overrideURL != "" {
+				parsedURL, err := url.Parse(overrideURL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+				}
 
-			subgraph.Url = parsedURL
+				subgraph.Url = parsedURL
+			}
 
 			// Override datasource urls
 			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
 				if conf.Id == sg.Id {
-					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
-					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
-					sg.RoutingUrl = overrideURL
+					if overrideURL != "" {
+						conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+						sg.RoutingUrl = overrideURL
+					}
+					if overrideSubscriptionURL != "" {
+						conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideSubscriptionURL
+					}
+					if overrideSubscriptionProtocol != nil {
+						conf.CustomGraphql.Subscription.Protocol = overrideSubscriptionProtocol
+					}
+					if overrideSubscriptionWebsocketSubprotocol != nil {
+						conf.CustomGraphql.Subscription.WebsocketSubprotocol = overrideSubscriptionWebsocketSubprotocol
+					}
+
 					break
 				}
 			}
@@ -893,7 +969,7 @@ func (r *Router) buildPubSubConfiguration(ctx context.Context, routerCfg *nodev1
 
 			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
 				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
-					options, err := buildNatsOptions(eventSource)
+					options, err := buildNatsOptions(eventSource, r.logger)
 					if err != nil {
 						return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
 					}
@@ -1032,15 +1108,26 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
+	httpRouter.Use(recoveryHandler)
+	httpRouter.Use(middleware.RequestSize(int64(r.routerTrafficConfig.MaxRequestBodyBytes)))
+	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+
+	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
+	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+		return br.NewWriterLevel(w, level)
+	})
+	httpRouter.Use(brCompressor.Handler)
+
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
 			h.ServeHTTP(w, r)
 		})
 	})
-	httpRouter.Use(recoveryHandler)
+
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
+
 	// Register the trace middleware before the request logger, so we can log the trace ID
 	if traceHandler != nil {
 		httpRouter.Use(traceHandler.Handler)
@@ -1690,6 +1777,12 @@ func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfigur
 	}
 }
 
+func WithOverrides(overrides config.OverridesConfiguration) Option {
+	return func(r *Router) {
+		r.overrides = overrides
+	}
+}
+
 func WithSecurityConfig(cfg config.SecurityConfiguration) Option {
 	return func(r *Router) {
 		r.securityConfiguration = cfg
@@ -1850,5 +1943,79 @@ func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
 		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
 		ExpectContinueTimeout: opts.ExpectContinueTimeout,
+	}
+}
+
+func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
+	var exporters []*rtrace.ExporterConfig
+	for _, exp := range cfg.Tracing.Exporters {
+		exporters = append(exporters, &rtrace.ExporterConfig{
+			Disabled:      exp.Disabled,
+			Endpoint:      exp.Endpoint,
+			Exporter:      exp.Exporter,
+			BatchTimeout:  exp.BatchTimeout,
+			ExportTimeout: exp.ExportTimeout,
+			Headers:       exp.Headers,
+			HTTPPath:      exp.HTTPPath,
+		})
+	}
+
+	var propagators []rtrace.Propagator
+
+	if cfg.Tracing.Propagation.TraceContext {
+		propagators = append(propagators, rtrace.PropagatorTraceContext)
+	}
+	if cfg.Tracing.Propagation.B3 {
+		propagators = append(propagators, rtrace.PropagatorB3)
+	}
+	if cfg.Tracing.Propagation.Jaeger {
+		propagators = append(propagators, rtrace.PropagatorJaeger)
+	}
+	if cfg.Tracing.Propagation.Baggage {
+		propagators = append(propagators, rtrace.PropagatorBaggage)
+	}
+
+	return &rtrace.Config{
+		Enabled:            cfg.Tracing.Enabled,
+		Name:               cfg.ServiceName,
+		Version:            Version,
+		Sampler:            cfg.Tracing.SamplingRate,
+		ParentBasedSampler: cfg.Tracing.ParentBasedSampler,
+		WithNewRoot:        cfg.Tracing.WithNewRoot,
+		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
+			Enabled: cfg.Tracing.ExportGraphQLVariables,
+		},
+		Exporters:   exporters,
+		Propagators: propagators,
+	}
+}
+
+func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
+	var openTelemetryExporters []*rmetric.OpenTelemetryExporter
+	for _, exp := range cfg.Metrics.OTLP.Exporters {
+		openTelemetryExporters = append(openTelemetryExporters, &rmetric.OpenTelemetryExporter{
+			Disabled: exp.Disabled,
+			Endpoint: exp.Endpoint,
+			Exporter: exp.Exporter,
+			Headers:  exp.Headers,
+			HTTPPath: exp.HTTPPath,
+		})
+	}
+
+	return &rmetric.Config{
+		Name:    cfg.ServiceName,
+		Version: Version,
+		OpenTelemetry: rmetric.OpenTelemetry{
+			Enabled:       cfg.Metrics.OTLP.Enabled,
+			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
+			Exporters:     openTelemetryExporters,
+		},
+		Prometheus: rmetric.PrometheusConfig{
+			Enabled:             cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
+			Path:                cfg.Metrics.Prometheus.Path,
+			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
+		},
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/tidwall/sjson"
 	"math/big"
 )
 
@@ -174,12 +175,21 @@ func (p *absintheWSProtocol) Pong(msg *Message) error {
 }
 
 func (p *absintheWSProtocol) WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
+	payload, err := sjson.SetBytes(nil, "result", data)
+	if err != nil {
+		return err
+	}
+	payload, err = sjson.SetBytes(payload, "subscriptionId", toSubscriptionId(&id))
+	if err != nil {
+		return err
+	}
+
 	return p.conn.WriteJSON(absintheMessage{
 		ID:       &id,
 		Channel:  "1",
 		Protocol: "__absinthe__:control",
 		Type:     absintheMessageEventTypeSubscriptionData,
-		Payload:  json.RawMessage(fmt.Sprintf(`{"result": %s, "subscriptionId": %q}`, string(data), toSubscriptionId(&id))),
+		Payload:  payload,
 	})
 }
 
