@@ -24,6 +24,6 @@ data:
   routerConfigPath: "{{ .Values.configuration.routerConfigPath }}"
   prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
   {{ if .Values.configuration.prometheus.enabled }}
-  prometheusPort: "{{ .Values.configuration.prometheus.port }}"
+  prometheusListenAddr: "0.0.0.0:{{ .Values.configuration.prometheus.port }}"
   prometheusPath: "{{ .Values.configuration.prometheus.path }}"
   {{- end }}

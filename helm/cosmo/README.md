@@ -163,6 +163,6 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | router.deploymentStrategy.rollingUpdate.maxUnavailable | int | `0` |  |
 | router.prometheus.enabled | bool | `true` | Enables prometheus metrics support. Default is true. |
 | router.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
-| router.prometheus.port | int | `8088` | The port where metrics will be exposed. Default is port 8088. |
+| router.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | router.terminationGracePeriodSeconds | int | `60` |  |
 

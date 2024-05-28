@@ -216,7 +216,7 @@ configuration:
   prometheus:
     # -- Enables prometheus metrics support. Default is true.
     enabled: true
-    # -- The port where metrics will be exposed. Default is port 8088.
+    # -- The port where metrics are exposed. Default is port 8088.
     port: 8088
     # -- The HTTP path where metrics are exposed. Default is "/metrics".
     path: "/metrics"

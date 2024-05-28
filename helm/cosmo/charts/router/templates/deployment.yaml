@@ -138,7 +138,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
-                  key: prometheusPort
+                  key: prometheusListenAddr
             - name: PROMETHEUS_HTTP_PATH
               valueFrom:
                 configMapKeyRef:
