@@ -267,10 +267,12 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `type Mutation {
     updateMood(employeeID: Int!, mood: Mood!): Employee!
 }
+
 enum Mood {
     HAPPY
     SAD
 }
+
 type Employee @key(fields: "id") {
   id: Int!
   currentMood: Mood!
