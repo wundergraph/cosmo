@@ -10,10 +10,22 @@ message Subgraph {
   string routing_url = 3;
 }
 
+message FeatureFlagRouterExecutionConfigs {
+  map<string, FeatureFlagRouterExecutionConfig> config_by_feature_flag_name = 1;
+}
+
+message FeatureFlagRouterExecutionConfig {
+  EngineConfiguration engine_config = 1;
+  string version = 2;
+  repeated Subgraph subgraphs = 3;
+}
+
 message RouterConfig {
   EngineConfiguration engine_config = 1;
   string version = 2;
   repeated Subgraph subgraphs = 3;
+  // The map of feature flag router execution configs requires a wrapper to be non-breaking
+  optional FeatureFlagRouterExecutionConfigs feature_flag_configs = 4;
 }
 
 message Response {

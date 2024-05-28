@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { ConfigurationData, FieldConfiguration } from '@wundergraph/composition';
+import { ConfigurationData, FieldConfiguration, ROOT_TYPES } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   GraphQLSubscriptionProtocol,
@@ -135,14 +135,14 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       // PUBSUB data sources cannot have root nodes other than
       // Query/Mutation/Subscription. Filter rootNodes in place
       // while moving items that do not pass the filter to childNodes.
-      const isWellKnownRootNode = (node: TypeField) => {
-        return ['Query', 'Mutation', 'Subscription'].includes(node.typeName);
+      const isRootTypeNode = (node: TypeField) => {
+        return ROOT_TYPES.has(node.typeName);
       };
       let ii = 0;
       let filtered = 0;
       while (ii < rootNodes.length) {
         const node = rootNodes[ii];
-        if (isWellKnownRootNode(node)) {
+        if (isRootTypeNode(node)) {
           rootNodes[filtered++] = node;
         } else {
           childNodes.push(node);
@@ -217,3 +217,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     })),
   });
 };
+
+// export function foo(parentRouterConfig: RouterConfig) {
+//   parentRouterConfig.executionConfigByFeatureFlagName = new Map<string, RouterConfig>
+// }

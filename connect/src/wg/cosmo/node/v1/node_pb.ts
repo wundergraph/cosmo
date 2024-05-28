@@ -219,6 +219,92 @@ export class Subgraph extends Message<Subgraph> {
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs
+ */
+export class FeatureFlagRouterExecutionConfigs extends Message<FeatureFlagRouterExecutionConfigs> {
+  /**
+   * @generated from field: map<string, wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig> config_by_feature_flag_name = 1;
+   */
+  configByFeatureFlagName: { [key: string]: FeatureFlagRouterExecutionConfig } = {};
+
+  constructor(data?: PartialMessage<FeatureFlagRouterExecutionConfigs>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "config_by_feature_flag_name", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FeatureFlagRouterExecutionConfig} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FeatureFlagRouterExecutionConfigs {
+    return new FeatureFlagRouterExecutionConfigs().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfigs {
+    return new FeatureFlagRouterExecutionConfigs().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfigs {
+    return new FeatureFlagRouterExecutionConfigs().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FeatureFlagRouterExecutionConfigs | PlainMessage<FeatureFlagRouterExecutionConfigs> | undefined, b: FeatureFlagRouterExecutionConfigs | PlainMessage<FeatureFlagRouterExecutionConfigs> | undefined): boolean {
+    return proto3.util.equals(FeatureFlagRouterExecutionConfigs, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig
+ */
+export class FeatureFlagRouterExecutionConfig extends Message<FeatureFlagRouterExecutionConfig> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.EngineConfiguration engine_config = 1;
+   */
+  engineConfig?: EngineConfiguration;
+
+  /**
+   * @generated from field: string version = 2;
+   */
+  version = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.Subgraph subgraphs = 3;
+   */
+  subgraphs: Subgraph[] = [];
+
+  constructor(data?: PartialMessage<FeatureFlagRouterExecutionConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "engine_config", kind: "message", T: EngineConfiguration },
+    { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FeatureFlagRouterExecutionConfig {
+    return new FeatureFlagRouterExecutionConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfig {
+    return new FeatureFlagRouterExecutionConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfig {
+    return new FeatureFlagRouterExecutionConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FeatureFlagRouterExecutionConfig | PlainMessage<FeatureFlagRouterExecutionConfig> | undefined, b: FeatureFlagRouterExecutionConfig | PlainMessage<FeatureFlagRouterExecutionConfig> | undefined): boolean {
+    return proto3.util.equals(FeatureFlagRouterExecutionConfig, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.RouterConfig
  */
 export class RouterConfig extends Message<RouterConfig> {
@@ -237,6 +323,13 @@ export class RouterConfig extends Message<RouterConfig> {
    */
   subgraphs: Subgraph[] = [];
 
+  /**
+   * The map of feature flag router execution configs requires a wrapper to be non-breaking
+   *
+   * @generated from field: optional wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs feature_flag_configs = 4;
+   */
+  featureFlagConfigs?: FeatureFlagRouterExecutionConfigs;
+
   constructor(data?: PartialMessage<RouterConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -248,6 +341,7 @@ export class RouterConfig extends Message<RouterConfig> {
     { no: 1, name: "engine_config", kind: "message", T: EngineConfiguration },
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 4, name: "feature_flag_configs", kind: "message", T: FeatureFlagRouterExecutionConfigs, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RouterConfig {
