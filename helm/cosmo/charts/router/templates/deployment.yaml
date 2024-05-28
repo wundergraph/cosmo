@@ -54,9 +54,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{ if .Values.configuration.prometheus.enabled }}
             - name: metrics
               containerPort: {{ .Values.configuration.prometheus.port }}
               protocol: TCP
+            {{- end }}
           env:
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
