@@ -473,11 +473,18 @@ const WebhooksPage: NextPageWithLayout = () => {
   const router = useRouter();
   const { data, isLoading, error, refetch } = useQuery(
     getOrganizationWebhookConfigs,
-    {},
-    {
-      queryKey: [user?.currentOrganization.slug || "", router.asPath || "", {}],
-    },
   );
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   if (isLoading) return <Loader fullscreen />;
 
