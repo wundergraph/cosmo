@@ -55,7 +55,7 @@ spec:
               containerPort: {{ .Values.service.port }}
               protocol: TCP
             - name: metrics
-              containerPort: {{ .Values.service.metricsPort }}
+              containerPort: {{ .Values.configuration.prometheus.port }}
               protocol: TCP
           env:
             {{- if .Values.extraEnvVars }}
@@ -126,6 +126,14 @@ spec:
                   name: {{ include "router.secretName" . }}
                   key: graphApiToken
             {{- end }}
+            - name: PROMETHEUS_ENABLED
+              value: {{ .Values.configuration.prometheus.enabled }}
+            {{ if .Values.configuration.prometheus.enabled }}
+            - name: PROMETHEUS_LISTEN_ADDR
+              value: 127.0.0.1:{{ .Values.configuration.prometheus.port }}
+            - name: PROMETHEUS_HTTP_PATH
+              value: {{ .Values.configuration.prometheus.path }}
+             {{- end }}
           envFrom:
             {{- if .Values.extraEnvVarsCM }}
             - configMapRef:

@@ -67,7 +67,6 @@ securityContext: {}
 service:
   type: ClusterIP
   port: 3002
-  metricsPort: 8088
 
 ingress:
 #  enabled: true
@@ -212,3 +211,8 @@ configuration:
   # -- The path to the router execution config file. Before, you have to mount the file as a volume and set the path here.
   # -- A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled.
   routerConfigPath: ""
+
+  prometheus:
+    enabled: true
+    port: 8088
+    path: "/metrics"
