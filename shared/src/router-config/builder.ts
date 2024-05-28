@@ -217,7 +217,3 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     })),
   });
 };
-
-// export function foo(parentRouterConfig: RouterConfig) {
-//   parentRouterConfig.executionConfigByFeatureFlagName = new Map<string, RouterConfig>
-// }
