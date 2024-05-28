@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -1174,5 +1175,21 @@ func TestWithNestedSubgraphErrorInList(t *testing.T) {
 			Query: `{ employeeAsList(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 		})
 		require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employeeAsList",0,"rootFieldThrowsError"]},{"message":"error resolving ErrorField","path":["employeeAsList",0,"rootFieldErrorWrapper","errorField"]},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employeeAsList"]}],"data":{"employeeAsList":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}]}}`, res.Body)
+	})
+}
+
+func TestRequestBodySizeLimit(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+			MaxRequestBodyBytes: 10,
+		})},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: `{ employeeAsList(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusRequestEntityTooLarge, res.Response.StatusCode)
+		require.Equal(t, `{"errors":[{"message":"request body too large"}],"data":null}`, res.Body)
 	})
 }

@@ -264,12 +264,13 @@ export function getDirectiveValidationErrors(
     );
   }
   if (!directiveDefinition.repeatable && directivesByDirectiveName.get(directiveName)) {
-    const handledRepeatedDirectives = handledRepeatedDirectivesByHostPath.get(hostPath);
-    // Add the directive name to the existing set (if other invalid repeated directives exist) or a new set
+    const handledRepeatedDirectives = getValueOrDefault(
+      handledRepeatedDirectivesByHostPath,
+      hostPath,
+      () => new Set<string>(),
+    );
     // If the directive name exists as a value on the host path key, the repeatable error has been handled
-    if (!handledRepeatedDirectives) {
-      handledRepeatedDirectivesByHostPath.set(hostPath, new Set<string>([directiveName]));
-    } else if (!handledRepeatedDirectives.has(directiveName)) {
+    if (!handledRepeatedDirectives.has(directiveName)) {
       handledRepeatedDirectives.add(directiveName);
       errorMessages.push(invalidRepeatedDirectiveErrorMessage(directiveName, hostPath));
     }
