@@ -44,7 +44,12 @@ import {
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  createConnectQueryKey,
+} from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getOrganizationMembers,
@@ -58,7 +63,7 @@ import {
 import { sentenceCase } from "change-case";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
@@ -80,7 +85,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
     schema: emailInputSchema,
   });
 
-  const { mutate, isPending } = useMutation(inviteUser.useMutation());
+  const { mutate, isPending } = useMutation(inviteUser);
 
   const { toast } = useToast();
 
@@ -152,16 +157,10 @@ const MemberCard = ({
 }) => {
   const user = useContext(UserContext);
 
-  const { mutate: resendInvitation } = useMutation(inviteUser.useMutation());
-  const { mutate: revokeInvitation } = useMutation(
-    removeInvitation.useMutation(),
-  );
-  const { mutate: removeMember } = useMutation(
-    removeOrganizationMember.useMutation(),
-  );
-  const { mutate: updateUserRole } = useMutation(
-    updateOrgMemberRole.useMutation(),
-  );
+  const { mutate: resendInvitation } = useMutation(inviteUser);
+  const { mutate: revokeInvitation } = useMutation(removeInvitation);
+  const { mutate: removeMember } = useMutation(removeOrganizationMember);
+  const { mutate: updateUserRole } = useMutation(updateOrgMemberRole);
 
   const { toast, update } = useToast();
 
@@ -336,22 +335,36 @@ const PendingInvitations = ({
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getPendingOrganizationMembers.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getPendingOrganizationMembers,
+    {
       pagination: {
         limit,
         offset,
       },
       search: debouncedSearch,
-    }),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetPendingOrganizationMembers",
-      { pagination: { limit, offset }, search: debouncedSearch },
-    ],
-  });
+    },
+    // {
+    //   queryKey: [
+    //     user?.currentOrganization.slug || "",
+    //     "GetPendingOrganizationMembers",
+    //     { pagination: { limit, offset }, search: debouncedSearch },
+    //   ],
+    // },
+  );
 
   const noOfPages = Math.ceil(data?.totalCount ?? 0 / limit);
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -421,22 +434,36 @@ const AcceptedMembers = ({
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getOrganizationMembers.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getOrganizationMembers,
+    {
       pagination: {
         limit,
         offset,
       },
       search: debouncedSearch,
-    }),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetOrganizationMembers",
-      { pagination: { limit, offset }, search: debouncedSearch },
-    ],
-  });
+    },
+    // {
+    //   queryKey: [
+    //     user?.currentOrganization.slug || "",
+    //     "GetOrganizationMembers",
+    //     { pagination: { limit, offset }, search: debouncedSearch },
+    //   ],
+    // },
+  );
 
   const noOfPages = Math.ceil(data?.totalCount ?? 0 / limit);
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -500,7 +527,7 @@ const MembersToolbar = () => {
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
   const client = useQueryClient();
 
-  const { data } = useQuery(isMemberLimitReached.useQuery());
+  const { data } = useQuery(isMemberLimitReached);
 
   const limitReached = data?.limitReached ?? false;
 
@@ -523,8 +550,12 @@ const MembersToolbar = () => {
           {!limitReached && isAdmin && (
             <InviteForm
               onSuccess={() => {
-                const currentKey = getOrganizationMembers.getQueryKey();
-                const pendingKey = getPendingOrganizationMembers.getQueryKey();
+                const currentKey = createConnectQueryKey(
+                  getOrganizationMembers,
+                );
+                const pendingKey = createConnectQueryKey(
+                  getPendingOrganizationMembers,
+                );
                 client.invalidateQueries({
                   queryKey: currentKey,
                 });
@@ -562,14 +593,17 @@ const MembersPage: NextPageWithLayout = () => {
   const applyParams = useApplyParams();
   const [search, setSearch] = useState("");
 
-  const { data } = useQuery({
-    ...getPendingOrganizationMembers.useQuery(),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetPendingOrganizationMembers",
-      {},
-    ],
-  });
+  const { data, refetch } = useQuery(
+    getPendingOrganizationMembers,
+    // {},
+    // {
+    //   queryKey: [
+    //     user?.currentOrganization.slug || "",
+    //     "GetPendingOrganizationMembers",
+    //     {},
+    //   ],
+    // },
+  );
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -577,6 +611,17 @@ const MembersPage: NextPageWithLayout = () => {
   const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
   const limit = pageSize > 50 ? 50 : pageSize;
   const offset = (pageNumber - 1) * limit;
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   return (
     <div className="flex h-full flex-col gap-y-6">

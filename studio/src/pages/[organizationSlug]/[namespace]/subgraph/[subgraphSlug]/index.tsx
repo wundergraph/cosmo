@@ -16,7 +16,7 @@ import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   getOrganizationMembers,
   getSubgraphMembers,
@@ -59,15 +59,18 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
 
 const SubgraphOverviewPage = () => {
   const graph = useSubgraph();
-  const { data } = useQuery(getOrganizationMembers.useQuery());
+  const { data } = useQuery(getOrganizationMembers);
 
-  const { data: subgraphMembersData, refetch } = useQuery({
-    ...getSubgraphMembers.useQuery({
+  const { data: subgraphMembersData, refetch } = useQuery(
+    getSubgraphMembers,
+    {
       subgraphName: graph?.subgraph?.name,
       namespace: graph?.subgraph?.namespace,
-    }),
-    enabled: !!graph,
-  });
+    },
+    {
+      enabled: !!graph,
+    },
+  );
 
   const [inviteOptions, setInviteOptions] = useState<string[]>([]);
 

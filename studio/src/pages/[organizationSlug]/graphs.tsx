@@ -17,12 +17,13 @@ import {
 import { Toolbar } from "@/components/ui/toolbar";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { capitalCase } from "change-case";
 import { useRouter } from "next/router";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const GraphToolbar = () => {
   const router = useRouter();
@@ -60,17 +61,31 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 
   const type = (router.query.type as string) || "all-graphs";
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getFederatedGraphs.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getFederatedGraphs,
+    {
       includeMetrics: true,
       namespace,
-    }),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetFederatedGraphs",
-      { includeMetrics: true, namespace },
-    ],
-  });
+    },
+    // {
+    //   queryKey: [
+    //     user?.currentOrganization.slug || "",
+    //     "GetFederatedGraphs",
+    //     { includeMetrics: true, namespace },
+    //   ],
+    // },
+  );
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   if (isLoading) return <Loader fullscreen />;
 

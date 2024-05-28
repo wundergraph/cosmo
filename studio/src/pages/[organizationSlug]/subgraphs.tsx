@@ -10,11 +10,11 @@ import { Loader } from "@/components/ui/loader";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getSubgraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
 
 const SubgraphsDashboardPage: NextPageWithLayout = () => {
@@ -26,27 +26,41 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     ? parseInt(router.query.page as string)
     : 1;
   const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
-  const limit = pageSize > 50 ? 50 : pageSize
-  const offset = (pageNumber - 1) * limit
+  const limit = pageSize > 50 ? 50 : pageSize;
+  const offset = (pageNumber - 1) * limit;
 
   const [search, setSearch] = useState(router.query.search as string);
   const [query] = useDebounce(search, 500);
 
   const applyParams = useApplyParams();
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getSubgraphs.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getSubgraphs,
+    {
       namespace,
       query,
       limit,
       offset,
-    }),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetSubgraphs",
-      { namespace, query, limit, offset },
-    ],
-  });
+    },
+    // {
+    //   queryKey: [
+    //     user?.currentOrganization.slug || "",
+    //     "GetSubgraphs",
+    //     { namespace, query, limit, offset },
+    //   ],
+    // },
+  );
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   let content;
 
@@ -66,7 +80,9 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
   } else if (!data?.graphs) {
     content = null;
   } else {
-    content = <SubgraphsTable subgraphs={data.graphs} totalCount={data.count} />;
+    content = (
+      <SubgraphsTable subgraphs={data.graphs} totalCount={data.count} />
+    );
   }
 
   return (

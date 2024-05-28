@@ -28,15 +28,17 @@ import {
   DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getAuditLogs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
 import { useRouter } from "next/router";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { useUser } from "@/hooks/use-user";
 
 const AuditLogPage: NextPageWithLayout = () => {
   const router = useRouter();
+  const user = useUser();
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
     : 1;
@@ -51,15 +53,29 @@ const AuditLogPage: NextPageWithLayout = () => {
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getAuditLogs.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getAuditLogs,
+    {
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
-    }),
-    queryKey: [router.asPath, "GetAuditLogs", {}],
-  });
+    },
+    // {
+    //   queryKey: [router.asPath, "GetAuditLogs", {}],
+    // },
+  );
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   if (isLoading) return <Loader fullscreen />;
 

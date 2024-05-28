@@ -51,7 +51,7 @@ import {
   KeyIcon,
 } from "@heroicons/react/24/outline";
 import { PlusIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createAPIKey,
@@ -87,12 +87,10 @@ const CreateAPIKeyDialog = ({
   const rbac = useFeature("rbac");
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation(createAPIKey.useMutation());
+  const { mutate, isPending } = useMutation(createAPIKey);
 
-  const { data } = useQuery(getUserAccessibleResources.useQuery());
-  const { data: permissionsData } = useQuery(
-    getUserAccessiblePermissions.useQuery(),
-  );
+  const { data } = useQuery(getUserAccessibleResources);
+  const { data: permissionsData } = useQuery(getUserAccessiblePermissions);
   const federatedGraphs = data?.federatedGraphs || [];
   const subgraphs = data?.subgraphs || [];
   const isAdmin = user?.currentOrganization.roles.includes("admin");
@@ -533,7 +531,7 @@ const DeleteAPIKeyDialog = ({
 }) => {
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation(deleteAPIKey.useMutation());
+  const { mutate, isPending } = useMutation(deleteAPIKey);
 
   const regex = new RegExp(`^${apiKeyName}$`);
   const schema = z.object({
@@ -751,10 +749,13 @@ export const CreateAPIKey = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
   const user = useContext(UserContext);
-  const { refetch } = useQuery({
-    ...getAPIKeys.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
-  });
+  const { refetch } = useQuery(
+    getAPIKeys,
+    {},
+    // {
+    //   queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
+    // },
+  );
 
   useEffect(() => {
     if (!apiKey) return;
@@ -773,10 +774,13 @@ export const CreateAPIKey = ({
 
 const APIKeysPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getAPIKeys.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
-  });
+  const { data, isLoading, error, refetch } = useQuery(
+    getAPIKeys,
+    // {},
+    // {
+    //   queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
+    // },
+  );
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [apiKey, setApiKey] = useState<string | undefined>();
@@ -784,6 +788,17 @@ const APIKeysPage: NextPageWithLayout = () => {
     string | undefined
   >();
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   useEffect(() => {
     if (!openApiKeyCreatedDialog) setApiKey(undefined);
