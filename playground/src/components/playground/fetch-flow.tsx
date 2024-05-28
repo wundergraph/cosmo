@@ -140,6 +140,11 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
     }
   };
 
+  const httpInfo = {
+    method: data.outputTrace?.request?.method || data.input?.method,
+    url: data.outputTrace?.request?.url || data.input?.url,
+  };
+
   return (
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
@@ -160,15 +165,15 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
         </div>
         <div className="flex flex-col gap-y-1 px-4 py-4 text-sm">
           <p>Fetch Type: {sentenceCase(data.type)}</p>
-          {data.outputTrace && (
+          {httpInfo.method && httpInfo.url && (
             <>
-              <p>Method: {data.outputTrace?.request?.method}</p>
+              <p>Method: {httpInfo.method}</p>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <p className="max-w-sm truncate text-left">URL: {data.outputTrace?.request?.url}</p>
+                    <p className="max-w-sm truncate text-left">URL: {httpInfo.url}</p>
                   </TooltipTrigger>
-                  <TooltipContent>{data.outputTrace?.request?.url}</TooltipContent>
+                  <TooltipContent>{httpInfo.url}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </>

@@ -23,11 +23,11 @@
             "category": "SPORT"
           },
           {
-            "yearsOfExperience": 20,
             "name": "Counter Strike",
             "genres": [
               "FPS"
-            ]
+            ],
+            "yearsOfExperience": 20
           },
           {
             "name": "WunderGraph"
@@ -71,11 +71,11 @@
             "category": "STRENGTH_TRAINING"
           },
           {
-            "yearsOfExperience": 0.5,
             "name": "Counter Strike",
             "genres": [
               "FPS"
-            ]
+            ],
+            "yearsOfExperience": 0.5
           },
           {
             "languages": [
@@ -216,11 +216,11 @@
         },
         "hobbies": [
           {
-            "yearsOfExperience": 9.5,
             "name": "Chess",
             "genres": [
               "BOARD"
-            ]
+            ],
+            "yearsOfExperience": 9.5
           },
           {
             "name": "Watching anime"
@@ -247,14 +247,14 @@
             "category": "STRENGTH_TRAINING"
           },
           {
-            "yearsOfExperience": 17,
             "name": "Miscellaneous",
             "genres": [
               "ADVENTURE",
               "RPG",
               "SIMULATION",
               "STRATEGY"
-            ]
+            ],
+            "yearsOfExperience": 17
           },
           {
             "name": "Watching anime"
@@ -367,7 +367,6 @@
             "category": "STRENGTH_TRAINING"
           },
           {
-            "yearsOfExperience": 25.5,
             "name": "Miscellaneous",
             "genres": [
               "ADVENTURE",
@@ -377,7 +376,8 @@
               "RPG",
               "SIMULATION",
               "STRATEGY"
-            ]
+            ],
+            "yearsOfExperience": 25.5
           },
           {
             "countriesLived": [
@@ -672,7 +672,6 @@
         }
       },
       "node_type": "object",
-      "nullable": true,
       "fields": [
         {
           "name": "employees",
@@ -1684,152 +1683,7 @@
                   ]
                 },
                 "node_type": "object",
-                "nullable": true,
                 "fields": [
-                  {
-                    "name": "id",
-                    "value": {
-                      "node_type": "integer",
-                      "path": [
-                        "id"
-                      ]
-                    },
-                    "parent_type_names": [
-                      "Employee"
-                    ],
-                    "named_type": "Int",
-                    "data_source_ids": [
-                      "0"
-                    ]
-                  },
-                  {
-                    "name": "details",
-                    "value": {
-                      "node_type": "object",
-                      "path": [
-                        "details"
-                      ],
-                      "fields": [
-                        {
-                          "name": "forename",
-                          "value": {
-                            "node_type": "string",
-                            "path": [
-                              "forename"
-                            ]
-                          },
-                          "parent_type_names": [
-                            "Details"
-                          ],
-                          "named_type": "String",
-                          "data_source_ids": [
-                            "1"
-                          ]
-                        },
-                        {
-                          "name": "surname",
-                          "value": {
-                            "node_type": "string",
-                            "path": [
-                              "surname"
-                            ]
-                          },
-                          "parent_type_names": [
-                            "Details"
-                          ],
-                          "named_type": "String",
-                          "data_source_ids": [
-                            "1"
-                          ]
-                        },
-                        {
-                          "name": "hasChildren",
-                          "value": {
-                            "node_type": "boolean",
-                            "path": [
-                              "hasChildren"
-                            ]
-                          },
-                          "parent_type_names": [
-                            "Details"
-                          ],
-                          "named_type": "Boolean",
-                          "data_source_ids": [
-                            "1"
-                          ]
-                        }
-                      ]
-                    },
-                    "parent_type_names": [
-                      "Employee"
-                    ],
-                    "named_type": "Details",
-                    "data_source_ids": [
-                      "1"
-                    ]
-                  },
-                  {
-                    "name": "role",
-                    "value": {
-                      "node_type": "object",
-                      "path": [
-                        "role"
-                      ],
-                      "fields": [
-                        {
-                          "name": "title",
-                          "value": {
-                            "node_type": "array",
-                            "path": [
-                              "title"
-                            ],
-                            "items": [
-                              {
-                                "node_type": "string",
-                                "nullable": true
-                              }
-                            ]
-                          },
-                          "parent_type_names": [
-                            "RoleType"
-                          ],
-                          "named_type": "String",
-                          "data_source_ids": [
-                            "0"
-                          ]
-                        },
-                        {
-                          "name": "departments",
-                          "value": {
-                            "node_type": "array",
-                            "path": [
-                              "departments"
-                            ],
-                            "items": [
-                              {
-                                "node_type": "string",
-                                "nullable": true
-                              }
-                            ]
-                          },
-                          "parent_type_names": [
-                            "RoleType"
-                          ],
-                          "named_type": "Department",
-                          "data_source_ids": [
-                            "0"
-                          ]
-                        }
-                      ]
-                    },
-                    "parent_type_names": [
-                      "Employee"
-                    ],
-                    "named_type": "RoleType",
-                    "data_source_ids": [
-                      "0"
-                    ]
-                  },
                   {
                     "name": "hobbies",
                     "value": {
@@ -1840,124 +1694,7 @@
                       "items": [
                         {
                           "node_type": "object",
-                          "nullable": true,
                           "fields": [
-                            {
-                              "name": "category",
-                              "value": {
-                                "node_type": "string",
-                                "path": [
-                                  "category"
-                                ]
-                              },
-                              "parent_type_names": [
-                                "Exercise"
-                              ],
-                              "named_type": "ExerciseType",
-                              "data_source_ids": [
-                                "2"
-                              ]
-                            },
-                            {
-                              "name": "planeModels",
-                              "value": {
-                                "node_type": "array",
-                                "path": [
-                                  "planeModels"
-                                ],
-                                "items": [
-                                  {
-                                    "node_type": "string",
-                                    "nullable": true
-                                  }
-                                ]
-                              },
-                              "parent_type_names": [
-                                "Flying"
-                              ],
-                              "named_type": "String",
-                              "data_source_ids": [
-                                "2"
-                              ]
-                            },
-                            {
-                              "name": "yearsOfExperience",
-                              "value": {
-                                "node_type": "float",
-                                "path": [
-                                  "yearsOfExperience"
-                                ]
-                              },
-                              "parent_type_names": [
-                                "Flying",
-                                "Gaming"
-                              ],
-                              "named_type": "Float",
-                              "data_source_ids": [
-                                "2"
-                              ]
-                            },
-                            {
-                              "name": "name",
-                              "value": {
-                                "node_type": "string",
-                                "path": [
-                                  "name"
-                                ]
-                              },
-                              "parent_type_names": [
-                                "Gaming",
-                                "Other"
-                              ],
-                              "named_type": "String",
-                              "data_source_ids": [
-                                "2"
-                              ]
-                            },
-                            {
-                              "name": "genres",
-                              "value": {
-                                "node_type": "array",
-                                "path": [
-                                  "genres"
-                                ],
-                                "items": [
-                                  {
-                                    "node_type": "string",
-                                    "nullable": true
-                                  }
-                                ]
-                              },
-                              "parent_type_names": [
-                                "Gaming"
-                              ],
-                              "named_type": "GameGenre",
-                              "data_source_ids": [
-                                "2"
-                              ]
-                            },
-                            {
-                              "name": "languages",
-                              "value": {
-                                "node_type": "array",
-                                "path": [
-                                  "languages"
-                                ],
-                                "items": [
-                                  {
-                                    "node_type": "string",
-                                    "nullable": true
-                                  }
-                                ]
-                              },
-                              "parent_type_names": [
-                                "Programming"
-                              ],
-                              "named_type": "ProgrammingLanguage",
-                              "data_source_ids": [
-                                "2"
-                              ]
-                            },
                             {
                               "name": "countriesLived",
                               "value": {
@@ -2291,60 +2028,20 @@
                                         }
                                       }
                                     },
-                                    "node_type": "object",
-                                    "nullable": true,
-                                    "fields": [
-                                      {
-                                        "name": "language",
-                                        "value": {
-                                          "node_type": "string",
-                                          "path": [
-                                            "language"
-                                          ]
-                                        },
-                                        "parent_type_names": [
-                                          "Country"
-                                        ],
-                                        "named_type": "String",
-                                        "data_source_ids": [
-                                          "7"
-                                        ]
-                                      }
-                                    ]
+                                    "node_type": "object"
                                   }
                                 ]
-                              },
-                              "parent_type_names": [
-                                "Travelling"
-                              ],
-                              "named_type": "Country",
-                              "data_source_ids": [
-                                "2"
-                              ]
+                              }
                             }
                           ]
                         }
                       ]
-                    },
-                    "parent_type_names": [
-                      "Employee"
-                    ],
-                    "named_type": "Hobby",
-                    "data_source_ids": [
-                      "2"
-                    ]
+                    }
                   }
                 ]
               }
             ]
-          },
-          "parent_type_names": [
-            "Query"
-          ],
-          "named_type": "Employee",
-          "data_source_ids": [
-            "0"
-          ]
+          }
         }
       ]
     }
