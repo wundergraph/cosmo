@@ -471,6 +471,8 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		out.ChildNodes = append(out.ChildNodes, plan.TypeField{
 			TypeName:   node.TypeName,
 			FieldNames: node.FieldNames,
+			// TODO requires engine changes
+			//ExternalFieldNames: node.ExternalFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {

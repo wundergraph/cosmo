@@ -56,6 +56,7 @@ export type RequiredFieldConfiguration = {
 };
 
 export type ConfigurationData = {
+  externalFieldNames: Set<string>;
   fieldNames: Set<string>;
   isRootNode: boolean;
   typeName: string;
