@@ -49,11 +49,8 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { RocketIcon, UpdateIcon } from "@radix-ui/react-icons";
-import {
-  keepPreviousData,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
 import Link from "next/link";
@@ -75,24 +72,26 @@ const GraphOverviewPage: NextPageWithLayout = () => {
   const { range, dateRange, refreshInterval } = useAnalyticsQueryState(4);
   const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
-  const getView = getDashboardAnalyticsView.useQuery({
-    namespace: graphContext?.graph?.namespace,
-    federatedGraphName: graphContext?.graph?.name,
-    range,
-    startDate: range ? undefined : formatISO(dateRange.start),
-    endDate: range ? undefined : formatISO(dateRange.end),
-  });
   const {
     data: dashboardView,
     isLoading: dashboardViewLoading,
     isFetching,
-  } = useQuery({
-    ...getView,
-    enabled: !!graphContext?.graph?.name,
-    placeholderData: keepPreviousData,
-    refetchInterval: refreshInterval,
-    refetchOnWindowFocus: false,
-  });
+  } = useQuery(
+    getDashboardAnalyticsView,
+    {
+      namespace: graphContext?.graph?.namespace,
+      federatedGraphName: graphContext?.graph?.name,
+      range,
+      startDate: range ? undefined : formatISO(dateRange.start),
+      endDate: range ? undefined : formatISO(dateRange.end),
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+      placeholderData: keepPreviousData,
+      refetchInterval: refreshInterval,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   if (!graphContext?.graph) return null;
 
@@ -165,7 +164,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               isLoading={!!isFetching}
               onClick={() => {
                 client.invalidateQueries({
-                  queryKey: getView.queryKey,
+                  queryKey: createConnectQueryKey(getDashboardAnalyticsView),
                 });
               }}
               variant="outline"
