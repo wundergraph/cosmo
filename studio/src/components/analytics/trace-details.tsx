@@ -12,7 +12,7 @@ import { docsBaseURL } from "@/lib/constants";
 import { extractVariablesFromGraphQL } from "@/lib/schema-helpers";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { PlayIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getTrace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GraphQLSchema } from "graphql";
@@ -34,12 +34,15 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
 
   const traceID = query.traceID as string;
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getTrace.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getTrace,
+    {
       id: traceID,
-    }),
-    refetchInterval: 10000,
-  });
+    },
+    {
+      refetchInterval: 10000,
+    },
+  );
 
   useEffect(() => {
     const set = async (content: string, variables: string) => {
