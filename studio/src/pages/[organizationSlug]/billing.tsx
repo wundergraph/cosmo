@@ -21,7 +21,7 @@ import { getStripe } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createBillingPortalSession,
@@ -62,9 +62,7 @@ const BillingPage: NextPageWithLayout = () => {
     }
   }, [router.query.success, toast]);
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getBillingPlans.useQuery(),
-  });
+  const { data, isLoading, error, refetch } = useQuery(getBillingPlans);
 
   const currentPlan = useCurrentPlan();
 
@@ -166,9 +164,7 @@ const BillingPage: NextPageWithLayout = () => {
 
 const useBillingPortal = () => {
   const router = useRouter();
-  const { mutateAsync, isPending } = useMutation(
-    createBillingPortalSession.useMutation(),
-  );
+  const { mutateAsync, isPending } = useMutation(createBillingPortalSession);
 
   const openPortal = async () => {
     if (isPending) return;
@@ -266,12 +262,9 @@ const UpgradeButton = ({
 }) => {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const { mutateAsync, isPending } = useMutation(
-    createCheckoutSession.useMutation(),
-  );
-  const { mutateAsync: upgradeAsync, isPending: isUpgrading } = useMutation(
-    upgradePlan.useMutation(),
-  );
+  const { mutateAsync, isPending } = useMutation(createCheckoutSession);
+  const { mutateAsync: upgradeAsync, isPending: isUpgrading } =
+    useMutation(upgradePlan);
 
   const { toast } = useToast();
 
