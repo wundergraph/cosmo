@@ -83,7 +83,7 @@ export class SubgraphMetricsRepository {
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate,
           sum(TotalRequests) AS total
-        FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+        FROM ${this.client.database}.subgraph_request_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND SubgraphID = '${subgraphId}'
@@ -111,7 +111,7 @@ export class SubgraphMetricsRepository {
           OperationName as name,
           IF(empty(OperationPersistedID), false, true) as isPersisted,
           sum(TotalRequests) as total
-        FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+        FROM ${this.client.database}.subgraph_request_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND SubgraphID = '${subgraphId}'
@@ -132,7 +132,7 @@ export class SubgraphMetricsRepository {
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           round(sum(TotalRequests) / ${granule}, 4) AS value
-      FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+      FROM ${this.client.database}.subgraph_request_metrics_5_30
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
         AND SubgraphID = '${subgraphId}'
@@ -205,7 +205,7 @@ export class SubgraphMetricsRepository {
 
           -- Histogram aggregations
           sumForEachMerge(BucketCounts) as BucketCounts
-        FROM ${this.client.database}.subgraph_latency_metrics_5_30_mv
+        FROM ${this.client.database}.subgraph_latency_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND SubgraphID = '${subgraphId}'
@@ -240,7 +240,7 @@ export class SubgraphMetricsRepository {
 
           -- Histogram aggregations
           sumForEachMerge(BucketCounts) as BucketCounts
-        FROM ${this.client.database}.subgraph_latency_metrics_5_30_mv
+        FROM ${this.client.database}.subgraph_latency_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND SubgraphID = '${subgraphId}'
@@ -273,7 +273,7 @@ export class SubgraphMetricsRepository {
 
             -- Histogram aggregations
             sumForEachMerge(BucketCounts) as BucketCounts
-        FROM ${this.client.database}.subgraph_latency_metrics_5_30_mv
+        FROM ${this.client.database}.subgraph_latency_metrics_5_30
         WHERE timestamp >= startDate AND timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND SubgraphID = '${subgraphId}'
@@ -343,7 +343,7 @@ export class SubgraphMetricsRepository {
           SELECT
             sum(TotalRequests) as totalRequests,
             sum(TotalErrors) as totalErrors
-          FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+          FROM ${this.client.database}.subgraph_request_metrics_5_30
           WHERE Timestamp >= startDate AND Timestamp <= endDate
             AND OrganizationID = '${organizationId}'
             AND SubgraphID = '${subgraphId}'
@@ -378,7 +378,7 @@ export class SubgraphMetricsRepository {
           sum(TotalErrors) as totalErrors,
           if(totalErrors > 0, round(totalErrors / totalRequests * 100, 2), 0) AS errorPercentage,
           IF(empty(OperationPersistedID), false, true) as isPersisted
-        FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+        FROM ${this.client.database}.subgraph_request_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND SubgraphID = '${subgraphId}'
@@ -401,7 +401,7 @@ export class SubgraphMetricsRepository {
           sum(TotalErrors) AS errors,
           sum(TotalRequests) AS requests,
           if(errors > 0, round(errors / requests * 100, 2), 0) AS value
-      FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+      FROM ${this.client.database}.subgraph_request_metrics_5_30
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
         AND SubgraphID = '${subgraphId}'
@@ -464,7 +464,7 @@ export class SubgraphMetricsRepository {
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           round(sum(TotalRequests) / ${granule}, 4) AS requestRate,
           round(sum(TotalErrors) / ${granule}, 4) AS errorRate
-      FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+      FROM ${this.client.database}.subgraph_request_metrics_5_30
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${organizationId}'
         AND SubgraphID = '${subgraphId}'
@@ -630,7 +630,7 @@ export class SubgraphMetricsRepository {
         OperationName as operationName,
         ClientName as clientName,
         ClientVersion as clientVersion
-      FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+      FROM ${this.client.database}.subgraph_request_metrics_5_30
       WHERE Timestamp >= startDate AND Timestamp <= endDate
         AND OrganizationID = '${organizationId}'
         AND SubgraphID = '${subgraphId}'

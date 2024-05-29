@@ -268,7 +268,7 @@ export class AnalyticsRequestViewRepository {
             ClientVersion as clientVersion,
             IF(empty(OperationPersistedID), false, true) as isPersisted
           FROM
-            ${this.client.database}.traces_mv
+            ${this.client.database}.traces
           WHERE
             ${baseWhereSql}
             ${baseOrderSql || 'ORDER BY Timestamp DESC'}
@@ -291,7 +291,7 @@ export class AnalyticsRequestViewRepository {
             ) as errorsWithRate,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-            ${this.client.database}.traces_by_operation_quarter_hourly_mv
+            ${this.client.database}.traces_by_operation_quarter_hourly
           WHERE
             ${baseWhereSql}
           GROUP BY
@@ -318,7 +318,7 @@ export class AnalyticsRequestViewRepository {
             ) as errorsWithRate,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-            ${this.client.database}.traces_by_client_quarter_hourly_mv
+            ${this.client.database}.traces_by_client_quarter_hourly
           WHERE
             ${baseWhereSql}
           GROUP BY
@@ -338,7 +338,7 @@ export class AnalyticsRequestViewRepository {
             quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-            ${this.client.database}.traces_by_http_status_code_quarter_hourly_mv
+            ${this.client.database}.traces_by_http_status_code_quarter_hourly
           WHERE
             ${baseWhereSql}
           GROUP BY
@@ -365,7 +365,7 @@ export class AnalyticsRequestViewRepository {
     switch (name) {
       case AnalyticsViewGroupName.None: {
         totalCountQuery = `
-          SELECT COUNT(*) as count FROM ${this.client.database}.traces_mv
+          SELECT COUNT(*) as count FROM ${this.client.database}.traces
           WHERE
             ${baseWhereSql}
         `;
@@ -379,7 +379,7 @@ export class AnalyticsRequestViewRepository {
               OperationType as operationType,
               quantilesMerge(0.95)(DurationQuantiles)[1] as p95
             FROM
-              ${this.client.database}.traces_by_operation_quarter_hourly_mv
+              ${this.client.database}.traces_by_operation_quarter_hourly
             WHERE
               ${baseWhereSql}
             GROUP BY
@@ -396,7 +396,7 @@ export class AnalyticsRequestViewRepository {
             SELECT
               ClientName
             FROM
-              ${this.client.database}.traces_by_client_quarter_hourly_mv
+              ${this.client.database}.traces_by_client_quarter_hourly
             WHERE
               ${baseWhereSql}
             GROUP BY
@@ -413,7 +413,7 @@ export class AnalyticsRequestViewRepository {
             SELECT
               HttpStatusCode as httpStatusCode
             FROM
-              ${this.client.database}.traces_by_http_status_code_quarter_hourly_mv
+              ${this.client.database}.traces_by_http_status_code_quarter_hourly
             WHERE
               ${baseWhereSql}
             GROUP BY
@@ -444,7 +444,7 @@ export class AnalyticsRequestViewRepository {
 
     const allOperationNamesQuery = `
       SELECT DISTINCT OperationName, OrganizationID, FederatedGraphID
-        FROM ${this.client.database}.traces_by_operation_quarter_hourly_mv
+        FROM ${this.client.database}.traces_by_operation_quarter_hourly
       WHERE ${whereSql}
         ORDER BY Timestamp DESC
       LIMIT 100
@@ -471,7 +471,7 @@ export class AnalyticsRequestViewRepository {
 
     const query = `
       SELECT DISTINCT ClientName, OrganizationID, FederatedGraphID
-        FROM ${this.client.database}.traces_by_client_quarter_hourly_mv
+        FROM ${this.client.database}.traces_by_client_quarter_hourly
       WHERE ${whereSql}
         ORDER BY Timestamp DESC
       LIMIT 100
@@ -503,7 +503,7 @@ export class AnalyticsRequestViewRepository {
 
     const query = `
       SELECT DISTINCT ClientVersion, OrganizationID, FederatedGraphID
-        FROM ${this.client.database}.traces_by_client_quarter_hourly_mv
+        FROM ${this.client.database}.traces_by_client_quarter_hourly
       WHERE ${whereSql}
         ORDER BY Timestamp DESC
       LIMIT 100
@@ -534,7 +534,7 @@ export class AnalyticsRequestViewRepository {
 
     const query = `
       SELECT HttpStatusCode
-        FROM ${this.client.database}.traces_mv
+        FROM ${this.client.database}.traces
       WHERE ${whereSql}
         GROUP BY HttpStatusCode
       LIMIT 100

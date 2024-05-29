@@ -30,7 +30,7 @@ export class AnalyticsDashboardViewRepository {
         toStartOfDay(Timestamp) as timestamp,
         sum(TotalRequests) as totalRequests,
         sum(TotalErrors) as erroredRequests
-      FROM ${this.client.database}.operation_request_metrics_5_30_mv
+      FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE Timestamp >= toDate(now()) - interval 6 day
         AND FederatedGraphID = '${federatedGraphId}'
         AND OrganizationID = '${organizationId}'
@@ -70,7 +70,7 @@ export class AnalyticsDashboardViewRepository {
           toStartOfInterval(Timestamp, INTERVAL ${filter.granule} MINUTE) AS timestamp,
         sum(TotalRequests) as totalRequests,
         sum(TotalErrors) as erroredRequests
-      FROM ${this.client.database}.operation_request_metrics_5_30_mv
+      FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND FederatedGraphID = '${federatedGraphId}'
         AND OrganizationID = '${organizationId}'
@@ -108,7 +108,7 @@ export class AnalyticsDashboardViewRepository {
       OperationHash as operationHash,
       OperationName as operationName,
       sum(TotalRequests) as totalRequests
-    FROM ${this.client.database}.operation_request_metrics_5_30_mv
+    FROM ${this.client.database}.operation_request_metrics_5_30
     WHERE Timestamp >= toDateTime('${dateRange.start}') 
       AND Timestamp <= toDateTime('${dateRange.end}')
       AND OrganizationID = '${organizationId}'
@@ -142,7 +142,7 @@ export class AnalyticsDashboardViewRepository {
         FederatedGraphID as federatedGraphID,
         round(sum(TotalRequests) / ${multiplier}, 3) AS requestRate,
         round(sum(TotalErrors) / ${multiplier}, 3) AS errorRate
-      FROM ${this.client.database}.operation_request_metrics_5_30_mv
+      FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE Timestamp >= toDateTime('${dateRange.start}')
       AND Timestamp <= toDateTime('${dateRange.end}')
       AND FederatedGraphID = '${federatedGraphId}'
@@ -196,7 +196,7 @@ export class AnalyticsDashboardViewRepository {
         SubgraphID as subgraphID,
         round(sum(TotalRequests) / ${multiplier}, 3) AS requestRate,
         round(sum(TotalErrors) / ${multiplier}, 3) AS errorRate
-      FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
+      FROM ${this.client.database}.subgraph_request_metrics_5_30
       WHERE Timestamp >= toDateTime('${dateRange.start}')
         AND Timestamp <= toDateTime('${dateRange.end}')
         AND FederatedGraphID = '${federatedGraphId}'
@@ -238,7 +238,7 @@ export class AnalyticsDashboardViewRepository {
   
           -- Histogram aggregations
           sumForEachMerge(BucketCounts)                    as BucketCounts
-          from ${this.client.database}.subgraph_latency_metrics_5_30_mv
+          from ${this.client.database}.subgraph_latency_metrics_5_30
         WHERE Timestamp >= toDateTime('${dateRange.start}')
           AND Timestamp <= toDateTime('${dateRange.end}')
           AND FederatedGraphID = '${federatedGraphId}'

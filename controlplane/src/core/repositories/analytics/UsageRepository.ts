@@ -28,7 +28,7 @@ export class UsageRepository {
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           SUM(TotalUsages) AS totalRequests,
           SUM(TotalErrors) AS erroredRequests
-      FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
+      FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
       WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
       GROUP BY timestamp
       ORDER BY timestamp WITH FILL 
@@ -74,7 +74,7 @@ export class UsageRepository {
                 OperationName,
                 OperationHash,
                 sum(TotalUsages) AS requestCount
-            FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
+            FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
             WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
             GROUP BY ClientName, ClientVersion, OperationHash, OperationName
         )
@@ -112,7 +112,7 @@ export class UsageRepository {
       arrayReduce('groupUniqArray', arrayFlatten(groupArray(SubgraphIDs))) as subgraphIds,
       toString(toUnixTimestamp(min(Timestamp))) as firstSeenTimestamp,
       toString(toUnixTimestamp(max(Timestamp))) as latestSeenTimestamp
-    FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
+    FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
     WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
     `;
 
