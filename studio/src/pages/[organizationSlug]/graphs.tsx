@@ -66,6 +66,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
     namespace,
   });
 
+  // refetch the query when the organization changes
   useEffect(() => {
     if (
       !user ||
