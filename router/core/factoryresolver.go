@@ -465,6 +465,8 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		out.RootNodes = append(out.RootNodes, plan.TypeField{
 			TypeName:   node.TypeName,
 			FieldNames: node.FieldNames,
+			// TODO requires engine changes
+			//ExternalFieldNames: node.ExternalFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
