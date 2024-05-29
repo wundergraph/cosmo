@@ -10,7 +10,7 @@ export class MonthlyRequestViewRepository {
          toLastDayOfMonth(now()) AS endDate
         SELECT
           sum(TotalRequests) as totalRequests
-        FROM ${this.client.database}.operation_request_metrics_5_30_mv
+        FROM ${this.client.database}.operation_request_metrics_5_30
         WHERE OrganizationID = '${organizationId}'
           AND toDate(Timestamp) >= startDate AND toDate(Timestamp) <= endDate
     `;
