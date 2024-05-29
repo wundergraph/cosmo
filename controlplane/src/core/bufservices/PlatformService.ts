@@ -2735,19 +2735,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           await subgraphRepo.update(
             {
               targetId: subgraph.targetId,
-              labels: req.labels,
-              unsetLabels: req.unsetLabels ?? false,
-              routingUrl: req.routingUrl,
-              subscriptionUrl: req.subscriptionUrl,
+              labels: subgraph.labels,
+              unsetLabels: false,
               schemaSDL: subgraphSchemaSDL,
-              subscriptionProtocol:
-                req.subscriptionProtocol === undefined
-                  ? undefined
-                  : formatSubscriptionProtocol(req.subscriptionProtocol),
-              websocketSubprotocol:
-                req.websocketSubprotocol === undefined
-                  ? undefined
-                  : formatWebsocketSubprotocol(req.websocketSubprotocol),
               updatedBy: authContext.userId,
               namespaceId: namespace.id,
               isV2Graph,

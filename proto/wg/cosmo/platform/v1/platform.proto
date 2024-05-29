@@ -51,10 +51,8 @@ message PublishFederatedSubgraphRequest {
   optional string subscription_url = 7;
   // The namespace of the subgraph
   string namespace = 8;
-  // If true, the labels will be unset
-  optional bool unset_labels = 9;
   // The subscription subprotocol to use when subscribing to this subgraph
-  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message PublishFederatedSubgraphResponse {
