@@ -607,7 +607,7 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
   /**
    * The subscription subprotocol to use when subscribing to this subgraph
    *
-   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
+   * @generated from field: optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
    */
   websocketSubprotocol?: GraphQLWebsocketSubprotocol;
 
@@ -626,7 +626,7 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
     { no: 6, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 7, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
+    { no: 9, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphRequest {
