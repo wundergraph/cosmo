@@ -482,9 +482,10 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 
 	for _, keyConfiguration := range in.Keys {
 		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
-			TypeName:     keyConfiguration.TypeName,
-			FieldName:    keyConfiguration.FieldName,
-			SelectionSet: keyConfiguration.SelectionSet,
+			TypeName:              keyConfiguration.TypeName,
+			FieldName:             keyConfiguration.FieldName,
+			SelectionSet:          keyConfiguration.SelectionSet,
+			DisableEntityResolver: keyConfiguration.DisableEntityResolver,
 		})
 	}
 	for _, providesConfiguration := range in.Provides {
