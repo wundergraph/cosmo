@@ -11,7 +11,6 @@ import {
   DocumentArrowDownIcon,
 } from "@heroicons/react/24/outline";
 import { Component2Icon } from "@radix-ui/react-icons";
-import { useMutation } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -56,7 +55,7 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
-import { Badge } from "./ui/badge";
+import { useMutation } from "@connectrpc/connect-query";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -112,7 +111,7 @@ const MigrationDialog = ({
 
   const { toast } = useToast();
 
-  const { mutate } = useMutation(migrateFromApollo.useMutation());
+  const { mutate } = useMutation(migrateFromApollo);
 
   const [open, setOpen] = useState(migrate || false);
 

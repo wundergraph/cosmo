@@ -27,7 +27,7 @@ import { SideNav, NavLink } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 import { checkUserAccess, cn } from "@/lib/utils";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { AiOutlineAudit } from "react-icons/ai";
 import { UserContext } from "@/components/app-provider";
@@ -82,10 +82,13 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   );
   const [render, setRender] = useState<string>();
 
-  const plans = useQuery({
-    ...getBillingPlans.useQuery(),
-    gcTime: Infinity,
-  });
+  const plans = useQuery(
+    getBillingPlans,
+    {},
+    {
+      gcTime: Infinity,
+    },
+  );
 
   const isAdmin = checkUserAccess({
     rolesToBe: ["admin"],

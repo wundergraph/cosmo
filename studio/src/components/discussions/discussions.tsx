@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
 import { ArrowRightIcon, CheckCircledIcon } from "@radix-ui/react-icons";
 import { Separator } from "@radix-ui/react-separator";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   getOrganizationMembers,
   getAllDiscussions,
@@ -33,14 +33,7 @@ const Discussions = ({
 
   const user = useUser();
 
-  const { data: membersData } = useQuery({
-    ...getOrganizationMembers.useQuery(),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetOrganizationMembers",
-      {},
-    ],
-  });
+  const { data: membersData } = useQuery(getOrganizationMembers);
 
   const search = router.query.search as string;
 
@@ -128,13 +121,16 @@ export const GraphDiscussions = ({
   const router = useRouter();
   const resolved = router.query.resolved as string;
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getAllDiscussions.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getAllDiscussions,
+    {
       targetId: targetId,
       schemaVersionId: undefined,
-    }),
-    enabled: !!targetId,
-  });
+    },
+    {
+      enabled: !!targetId,
+    },
+  );
 
   const discussionsBySchema = data?.discussions
     .filter((d) => d.isResolved === !!resolved)
