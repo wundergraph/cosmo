@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	MAX_SUPPORTED_FILES_UPLOAD = 10
+	MaxSupportedFilesUpload = 10
 )
 
 type PreHandlerOptions struct {
@@ -213,7 +213,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			// We will register a handler for each file in the request. AFAIK, we can't know how many files we have
 			// before parsing the request, so we will support 10 files max.
-			for i := 0; i < MAX_SUPPORTED_FILES_UPLOAD; i++ {
+			for i := 0; i < MaxSupportedFilesUpload; i++ {
 				fileKey := fmt.Sprintf("%d", i)
 				err = parser.Register(fileKey, func(reader io.Reader, header formstream.Header) error {
 					// Create and open a temporary file to store the file content
