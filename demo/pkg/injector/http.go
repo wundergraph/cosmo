@@ -26,7 +26,7 @@ func HTTPFunc(next http.HandlerFunc) http.HandlerFunc {
 		if len(body) > 0 {
 			if strings.Contains(contentType, "multipart/form-data") {
 				clone := r.Clone(r.Context())
-				if err := clone.ParseMultipartForm(200 << 20); err != nil {
+				if err := clone.ParseMultipartForm(1 << 30); err != nil {
 					panic(err)
 				}
 				payload := make(map[string]interface{})
