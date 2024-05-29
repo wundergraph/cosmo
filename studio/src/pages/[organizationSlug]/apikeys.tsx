@@ -748,14 +748,7 @@ export const CreateAPIKey = ({
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
-  const user = useContext(UserContext);
-  const { refetch } = useQuery(
-    getAPIKeys,
-    {},
-    // {
-    //   queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
-    // },
-  );
+  const { refetch } = useQuery(getAPIKeys);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -774,13 +767,7 @@ export const CreateAPIKey = ({
 
 const APIKeysPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
-  const { data, isLoading, error, refetch } = useQuery(
-    getAPIKeys,
-    // {},
-    // {
-    //   queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
-    // },
-  );
+  const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [apiKey, setApiKey] = useState<string | undefined>();

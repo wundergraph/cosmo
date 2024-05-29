@@ -61,20 +61,10 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 
   const type = (router.query.type as string) || "all-graphs";
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getFederatedGraphs,
-    {
-      includeMetrics: true,
-      namespace,
-    },
-    // {
-    //   queryKey: [
-    //     user?.currentOrganization.slug || "",
-    //     "GetFederatedGraphs",
-    //     { includeMetrics: true, namespace },
-    //   ],
-    // },
-  );
+  const { data, isLoading, error, refetch } = useQuery(getFederatedGraphs, {
+    includeMetrics: true,
+    namespace,
+  });
 
   useEffect(() => {
     if (

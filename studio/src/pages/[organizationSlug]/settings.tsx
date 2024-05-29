@@ -1460,13 +1460,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
     data: providerData,
     refetch: refetchOIDCProvider,
     isLoading: fetchingOIDCProvider,
-  } = useQuery(
-    getOIDCProvider,
-    // {},
-    // {
-    //   queryKey: [user?.currentOrganization.slug || "", "GetOIDCProvider", {}],
-    // },
-  );
+  } = useQuery(getOIDCProvider);
 
   const orgs = user?.organizations?.length || 0;
 

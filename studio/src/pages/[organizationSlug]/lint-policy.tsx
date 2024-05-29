@@ -84,19 +84,9 @@ const LintPolicyPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
   const router = useRouter();
   const namespace = router.query.namespace as string;
-  const { data, isLoading, refetch, error } = useQuery(
-    getNamespaceLintConfig,
-    {
-      namespace,
-    },
-    // {
-    //   queryKey: [
-    //     user?.currentOrganization.slug || "",
-    //     "GetNamespaceLintConfig",
-    //     { namespace },
-    //   ],
-    // },
-  );
+  const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {
+    namespace,
+  });
   const { mutate: configureLintRules, isPending: isConfiguring } = useMutation(
     configureNamespaceLintConfig,
   );
@@ -114,7 +104,7 @@ const LintPolicyPage: NextPageWithLayout = () => {
       !user ||
       !user.currentOrganization ||
       !user.currentOrganization.slug ||
-      !refetch 
+      !refetch
     )
       return;
     refetch();

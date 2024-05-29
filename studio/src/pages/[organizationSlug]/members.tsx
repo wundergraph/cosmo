@@ -345,13 +345,6 @@ const PendingInvitations = ({
       },
       search: debouncedSearch,
     },
-    // {
-    //   queryKey: [
-    //     user?.currentOrganization.slug || "",
-    //     "GetPendingOrganizationMembers",
-    //     { pagination: { limit, offset }, search: debouncedSearch },
-    //   ],
-    // },
   );
 
   const noOfPages = Math.ceil(data?.totalCount ?? 0 / limit);
@@ -435,23 +428,13 @@ const AcceptedMembers = ({
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getOrganizationMembers,
-    {
-      pagination: {
-        limit,
-        offset,
-      },
-      search: debouncedSearch,
+  const { data, isLoading, error, refetch } = useQuery(getOrganizationMembers, {
+    pagination: {
+      limit,
+      offset,
     },
-    // {
-    //   queryKey: [
-    //     user?.currentOrganization.slug || "",
-    //     "GetOrganizationMembers",
-    //     { pagination: { limit, offset }, search: debouncedSearch },
-    //   ],
-    // },
-  );
+    search: debouncedSearch,
+  });
 
   const noOfPages = Math.ceil(data?.totalCount ?? 0 / limit);
 
@@ -594,17 +577,7 @@ const MembersPage: NextPageWithLayout = () => {
   const applyParams = useApplyParams();
   const [search, setSearch] = useState("");
 
-  const { data, refetch } = useQuery(
-    getPendingOrganizationMembers,
-    // {},
-    // {
-    //   queryKey: [
-    //     user?.currentOrganization.slug || "",
-    //     "GetPendingOrganizationMembers",
-    //     {},
-    //   ],
-    // },
-  );
+  const { data, refetch } = useQuery(getPendingOrganizationMembers);
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)

@@ -42,13 +42,6 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
       limit,
       offset,
     },
-    // {
-    //   queryKey: [
-    //     user?.currentOrganization.slug || "",
-    //     "GetSubgraphs",
-    //     { namespace, query, limit, offset },
-    //   ],
-    // },
   );
 
   useEffect(() => {

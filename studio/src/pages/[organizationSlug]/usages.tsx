@@ -85,14 +85,6 @@ const UsagesPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
   const { data, isLoading, error, refetch } = useQuery(
     getOrganizationRequestsCount,
-    // {},
-    // {
-    //   queryKey: [
-    //     user?.currentOrganization.slug || "",
-    //     "GetOrganizationRequestsCount",
-    //     {},
-    //   ],
-    // },
   );
 
   const requestLimitRaw = useFeatureLimit("requests", 1000);

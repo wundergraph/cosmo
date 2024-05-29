@@ -542,10 +542,6 @@ const IntegrationsPage: NextPageWithLayout = () => {
 
   const { data, isLoading, error, refetch } = useQuery(
     getOrganizationIntegrations,
-    // {},
-    // {
-    //   queryKey: [user?.currentOrganization.slug || "", router.asPath, {}],
-    // },
   );
 
   useEffect(() => {

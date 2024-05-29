@@ -61,9 +61,6 @@ const AuditLogPage: NextPageWithLayout = () => {
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
     },
-    // {
-    //   queryKey: [router.asPath, "GetAuditLogs", {}],
-    // },
   );
 
   useEffect(() => {
