@@ -211,3 +211,12 @@ configuration:
   # -- The path to the router execution config file. Before, you have to mount the file as a volume and set the path here.
   # -- A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled.
   routerConfigPath: ""
+
+  # Use this section to disable/enable and configure prometheus metrics.
+  prometheus:
+    # -- Enables prometheus metrics support. Default is true.
+    enabled: true
+    # -- The port where metrics are exposed. Default is port 8088.
+    port: 8088
+    # -- The HTTP path where metrics are exposed. Default is "/metrics".
+    path: "/metrics"

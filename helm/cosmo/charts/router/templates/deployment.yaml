@@ -54,6 +54,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{ if .Values.configuration.prometheus.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.configuration.prometheus.port }}
+              protocol: TCP
+            {{- end }}
           env:
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
@@ -122,6 +127,23 @@ spec:
                 secretKeyRef:
                   name: {{ include "router.secretName" . }}
                   key: graphApiToken
+            {{- end }}
+            - name: PROMETHEUS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: prometheusEnabled
+            {{ if .Values.configuration.prometheus.enabled }}
+            - name: PROMETHEUS_LISTEN_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: prometheusListenAddr
+            - name: PROMETHEUS_HTTP_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: prometheusPath
             {{- end }}
           envFrom:
             {{- if .Values.extraEnvVarsCM }}
