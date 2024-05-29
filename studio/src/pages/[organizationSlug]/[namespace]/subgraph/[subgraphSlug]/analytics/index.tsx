@@ -35,9 +35,13 @@ import { ExclamationTriangleIcon, UpdateIcon } from "@radix-ui/react-icons";
 import {
   keepPreviousData,
   useIsFetching,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  createConnectQueryKey,
+} from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getSubgraphMetrics,
@@ -85,8 +89,9 @@ const SubgraphErrorRateOverTimeCard = () => {
     isLoading,
     error,
     refetch,
-  } = useQuery({
-    ...getSubgraphMetricsErrorRate.useQuery({
+  } = useQuery(
+    getSubgraphMetricsErrorRate,
+    {
       subgraphName: subgraph?.subgraph?.name,
       namespace: subgraph?.subgraph?.namespace,
       range,
@@ -97,11 +102,13 @@ const SubgraphErrorRateOverTimeCard = () => {
             end: formatISO(dateRange.end),
           },
       filters,
-    }),
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval,
-  });
+    },
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+      refetchInterval: refreshInterval,
+    },
+  );
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     differenceInHours(dateRange.end, dateRange.start) ?? 24,
@@ -217,8 +224,9 @@ const OverviewToolbar = () => {
   const client = useQueryClient();
   const isFetching = useIsFetching();
 
-  let { data } = useQuery({
-    ...getSubgraphMetrics.useQuery({
+  let { data } = useQuery(
+    getSubgraphMetrics,
+    {
       subgraphName: subgraph?.subgraph?.name,
       namespace: subgraph?.subgraph?.namespace,
       range,
@@ -229,11 +237,13 @@ const OverviewToolbar = () => {
             end: formatISO(dateRange.end),
           },
       filters,
-    }),
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval,
-  });
+    },
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+      refetchInterval: refreshInterval,
+    },
+  );
 
   const dataFilters = useMemo(() => {
     if (
@@ -307,14 +317,14 @@ const OverviewToolbar = () => {
           isLoading={!!isFetching}
           onClick={() => {
             client.invalidateQueries({
-              queryKey: getSubgraphMetrics.getQueryKey({
+              queryKey: createConnectQueryKey(getSubgraphMetrics, {
                 subgraphName: subgraph?.subgraph?.name,
                 namespace: subgraph?.subgraph?.namespace,
                 range,
               }),
             });
             client.invalidateQueries({
-              queryKey: getSubgraphMetricsErrorRate.getQueryKey({
+              queryKey: createConnectQueryKey(getSubgraphMetricsErrorRate, {
                 subgraphName: subgraph?.subgraph?.name,
                 namespace: subgraph?.subgraph?.namespace,
                 range,
@@ -341,8 +351,9 @@ const SubgraphAnalyticsPage: NextPageWithLayout = () => {
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
 
-  let { data, isLoading, error, refetch } = useQuery({
-    ...getSubgraphMetrics.useQuery({
+  let { data, isLoading, error, refetch } = useQuery(
+    getSubgraphMetrics,
+    {
       subgraphName: subgraph?.subgraph?.name,
       namespace: subgraph?.subgraph?.namespace,
       range,
@@ -353,11 +364,13 @@ const SubgraphAnalyticsPage: NextPageWithLayout = () => {
             end: formatISO(dateRange.end),
           },
       filters,
-    }),
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval,
-  });
+    },
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+      refetchInterval: refreshInterval,
+    },
+  );
 
   if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
     return (

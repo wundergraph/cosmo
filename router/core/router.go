@@ -7,6 +7,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
+
 	"net"
 	"net/http"
 	"net/url"
@@ -16,12 +18,10 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
 	"github.com/redis/go-redis/v9"
 
@@ -33,7 +33,9 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
@@ -49,6 +51,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 
+	br "github.com/andybalholm/brotli"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -73,6 +76,20 @@ const (
 	Hash   IPAnonymizationMethod = "hash"
 	Redact IPAnonymizationMethod = "redact"
 )
+
+var CustomCompressibleContentTypes = []string{
+	"text/html",
+	"text/css",
+	"text/plain",
+	"text/javascript",
+	"application/javascript",
+	"application/x-javascript",
+	"application/json",
+	"application/atom+xml",
+	"application/rss+xml",
+	"image/svg+xml",
+	"application/graphql",
+}
 
 type (
 	// Router is the main application instance.
@@ -1091,15 +1108,26 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
+	httpRouter.Use(recoveryHandler)
+	httpRouter.Use(middleware.RequestSize(int64(r.routerTrafficConfig.MaxRequestBodyBytes)))
+	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+
+	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
+	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+		return br.NewWriterLevel(w, level)
+	})
+	httpRouter.Use(brCompressor.Handler)
+
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
 			h.ServeHTTP(w, r)
 		})
 	})
-	httpRouter.Use(recoveryHandler)
+
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
+
 	// Register the trace middleware before the request logger, so we can log the trace ID
 	if traceHandler != nil {
 		httpRouter.Use(traceHandler.Handler)
@@ -1915,5 +1943,79 @@ func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
 		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
 		ExpectContinueTimeout: opts.ExpectContinueTimeout,
+	}
+}
+
+func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
+	var exporters []*rtrace.ExporterConfig
+	for _, exp := range cfg.Tracing.Exporters {
+		exporters = append(exporters, &rtrace.ExporterConfig{
+			Disabled:      exp.Disabled,
+			Endpoint:      exp.Endpoint,
+			Exporter:      exp.Exporter,
+			BatchTimeout:  exp.BatchTimeout,
+			ExportTimeout: exp.ExportTimeout,
+			Headers:       exp.Headers,
+			HTTPPath:      exp.HTTPPath,
+		})
+	}
+
+	var propagators []rtrace.Propagator
+
+	if cfg.Tracing.Propagation.TraceContext {
+		propagators = append(propagators, rtrace.PropagatorTraceContext)
+	}
+	if cfg.Tracing.Propagation.B3 {
+		propagators = append(propagators, rtrace.PropagatorB3)
+	}
+	if cfg.Tracing.Propagation.Jaeger {
+		propagators = append(propagators, rtrace.PropagatorJaeger)
+	}
+	if cfg.Tracing.Propagation.Baggage {
+		propagators = append(propagators, rtrace.PropagatorBaggage)
+	}
+
+	return &rtrace.Config{
+		Enabled:            cfg.Tracing.Enabled,
+		Name:               cfg.ServiceName,
+		Version:            Version,
+		Sampler:            cfg.Tracing.SamplingRate,
+		ParentBasedSampler: cfg.Tracing.ParentBasedSampler,
+		WithNewRoot:        cfg.Tracing.WithNewRoot,
+		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
+			Enabled: cfg.Tracing.ExportGraphQLVariables,
+		},
+		Exporters:   exporters,
+		Propagators: propagators,
+	}
+}
+
+func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
+	var openTelemetryExporters []*rmetric.OpenTelemetryExporter
+	for _, exp := range cfg.Metrics.OTLP.Exporters {
+		openTelemetryExporters = append(openTelemetryExporters, &rmetric.OpenTelemetryExporter{
+			Disabled: exp.Disabled,
+			Endpoint: exp.Endpoint,
+			Exporter: exp.Exporter,
+			Headers:  exp.Headers,
+			HTTPPath: exp.HTTPPath,
+		})
+	}
+
+	return &rmetric.Config{
+		Name:    cfg.ServiceName,
+		Version: Version,
+		OpenTelemetry: rmetric.OpenTelemetry{
+			Enabled:       cfg.Metrics.OTLP.Enabled,
+			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
+			Exporters:     openTelemetryExporters,
+		},
+		Prometheus: rmetric.PrometheusConfig{
+			Enabled:             cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
+			Path:                cfg.Metrics.Prometheus.Path,
+			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
+		},
 	}
 }

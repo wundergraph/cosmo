@@ -11,6 +11,8 @@ federation:
   filename: subgraph/generated/federation.go
   package: generated
   version: 2
+  options:
+    explicit_requires: true
 
 # Where should any generated models go?
 model:

@@ -432,15 +432,13 @@ func (p *OperationProcessor) entityTooLarge() error {
 }
 
 func (p *OperationProcessor) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, error) {
-	// Use an extra byte for the max size. This way we can check if N became
-	// zero to detect if the request body was too large.
-	limitedReader := &io.LimitedReader{R: r, N: p.maxOperationSizeInBytes + 1}
-	if _, err := io.Copy(buf, limitedReader); err != nil {
+	if _, err := io.Copy(buf, r); err != nil {
+		// Set when http.MaxBytesReader is used before
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			return nil, p.entityTooLarge()
+		}
 		return nil, fmt.Errorf("failed to read request body: %w", err)
-	}
-
-	if limitedReader.N == 0 {
-		return nil, p.entityTooLarge()
 	}
 
 	return buf.Bytes(), nil
@@ -456,6 +454,9 @@ func (p *OperationProcessor) NewKitFromReader(r io.Reader) (*OperationKit, error
 	return NewOperationKit(p, data, nil), nil
 }
 
+// NewKit creates a new OperationKit. The kit is used to parse, normalize and
+// validate operations. It also validates if the operation size is within the
+// limit.
 func (p *OperationProcessor) NewKit(data []byte, files []httpclient.File) (*OperationKit, error) {
 	if len(data) > int(p.maxOperationSizeInBytes) {
 		return nil, p.entityTooLarge()

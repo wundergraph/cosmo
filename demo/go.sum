@@ -157,10 +157,10 @@ github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnA
 github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h1:NEUrhuqOaTO1dpW8pz2tu6dKbQAqFvgiF/m4NXdzZm0=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
-github.com/wundergraph/cosmo/router v0.0.0-20240522132911-886f942451b5 h1:6tytF3Mz91/Ca/2DvDOnr+fz93ZZ0w/tQFBbfISb/OY=
-github.com/wundergraph/cosmo/router v0.0.0-20240522132911-886f942451b5/go.mod h1:uAVSYpDg0xdZ783cbgac9XuYEssDkj7+fxCfsRdZxYI=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.44 h1:X4xrx6RwfdTL88JwfclczftIbBR7IQIhZ9umcEvJTao=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.44/go.mod h1:hNR2C7S1M+c9Ap24tHCEMe9gFY9K3smX46x5E1U1NQw=
+github.com/wundergraph/cosmo/router v0.0.0-20240529080143-6e0451b4c6d5 h1:e/H1/yV5VxLRure0r6RNx5OpjW9qzvKtThTx320rl3Y=
+github.com/wundergraph/cosmo/router v0.0.0-20240529080143-6e0451b4c6d5/go.mod h1:DhaCZkMzICBPx18cn0ceLWhjsVsIS8ycXb8X4j0SJAA=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.45 h1:+k95FDN25ExwiLQ8uzulEmlmWK/A1FWPh5e9mB1GTM0=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.45/go.mod h1:vK5zyREd8kDz+q2y1l1Fn32ytqiPLejQW8ypt3IpyfI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e h1:+SOyEddqYF09QP7vr7CgJ1eti3pY9Fn3LHO1M1r/0sI=
 github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
@@ -209,8 +209,7 @@ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn
 golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
 golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
-golang.org/x/net v0.22.0 h1:9sGLhx7iRIHEiX0oAJ3MRZMUCElJgy7Br1nO+AMN3Tc=
-golang.org/x/net v0.22.0/go.mod h1:JKghWKKOSdJwpW2GEx0Ja7fmaKnMsbu+MWVZTokSYmg=
+golang.org/x/net v0.23.0 h1:7EYJ93RZ9vYSZAIb2x3lnuvqO5zneoD6IvWjuhfxjTs=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.6.0 h1:5BMeUDZ7vkXGfEr1x9B4bRcTH4lpkTkpdh0T/J+qjbQ=

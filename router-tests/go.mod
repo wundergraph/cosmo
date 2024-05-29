@@ -5,6 +5,7 @@ go 1.21.5
 toolchain go1.21.8
 
 require (
+	github.com/andybalholm/brotli v1.1.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/google/uuid v1.6.0
@@ -25,9 +26,9 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20240522132911-886f942451b5
-	github.com/wundergraph/cosmo/router v0.0.0-20240522132911-886f942451b5
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.44
+	github.com/wundergraph/cosmo/demo v0.0.0-20240529080143-6e0451b4c6d5
+	github.com/wundergraph/cosmo/router v0.0.0-20240529080143-6e0451b4c6d5
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.45
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/sdk/metric v1.24.0
@@ -38,7 +39,7 @@ require (
 )
 
 require (
-	connectrpc.com/connect v1.11.1 // indirect
+	connectrpc.com/connect v1.16.2 // indirect
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/99designs/gqlgen v0.17.45 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
@@ -47,7 +48,6 @@ require (
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/alitto/pond v1.8.3 // indirect
-	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -149,7 +149,7 @@ require (
 	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea // indirect
 	golang.org/x/mod v0.16.0 // indirect
-	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect

@@ -322,11 +322,10 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         );
         const directivesByDirectiveName = nf.extractDirectivesAndAuthorization(
           node,
-          addInheritedDirectivesToFieldData(
-            parentData.directivesByDirectiveName,
-            new Map<string, ConstDirectiveNode[]>(),
-          ),
+          new Map<string, ConstDirectiveNode[]>(),
         );
+        // Add parent-level shareable and external to the field extraction and repeatable validation
+        addInheritedDirectivesToFieldData(parentData.directivesByDirectiveName, directivesByDirectiveName);
         const fieldData = addFieldDataByNode(
           parentData.fieldDataByFieldName,
           node,

@@ -189,7 +189,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					requestLogger.Error("failed to read request body", zap.Error(err))
 				}
 
-				writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+				writeOperationError(r, w, requestLogger, err)
 				return
 			}
 		} else if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {

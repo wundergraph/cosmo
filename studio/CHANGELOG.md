@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.9](https://github.com/wundergraph/cosmo/compare/studio@0.77.8...studio@0.77.9) (2024-05-29)
+
+**Note:** Version bump only for package studio
+
+## [0.77.8](https://github.com/wundergraph/cosmo/compare/studio@0.77.7...studio@0.77.8) (2024-05-28)
+
+### Bug Fixes
+
+* members invite count and ui spacing ([#833](https://github.com/wundergraph/cosmo/issues/833)) ([487b4e1](https://github.com/wundergraph/cosmo/commit/487b4e18333a0315dca99f1a20884c8bedeff88d)) (@thisisnithin)
+
+## [0.77.7](https://github.com/wundergraph/cosmo/compare/studio@0.77.6...studio@0.77.7) (2024-05-28)
+
+### Bug Fixes
+
+* merging response nodes, improve playground trace for skipped fetches ([#827](https://github.com/wundergraph/cosmo/issues/827)) ([70fc005](https://github.com/wundergraph/cosmo/commit/70fc005f3e2e7826d8f517de5f42119b96f95e79)) (@devsergiy)
+
+## [0.77.6](https://github.com/wundergraph/cosmo/compare/studio@0.77.5...studio@0.77.6) (2024-05-24)
+
+### Bug Fixes
+
+* graph visualization toggle ([#816](https://github.com/wundergraph/cosmo/issues/816)) ([b126b99](https://github.com/wundergraph/cosmo/commit/b126b9939adaf1a023da8781d5ffe17c90251215)) (@thisisnithin)
+* unset admission webhook using empty string ([#820](https://github.com/wundergraph/cosmo/issues/820)) ([eaf470e](https://github.com/wundergraph/cosmo/commit/eaf470e6b31f828b8b316751337b739c4c158e5d)) (@thisisnithin)
+
 ## [0.77.5](https://github.com/wundergraph/cosmo/compare/studio@0.77.4...studio@0.77.5) (2024-05-22)
 
 ### Bug Fixes

@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.11.1...aws-lambda-router@0.11.2) (2024-05-29)
+
+**Note:** Version bump only for package aws-lambda-router
+
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.11.0...aws-lambda-router@0.11.1) (2024-05-28)
+
+### Bug Fixes
+
+* merging response nodes, improve playground trace for skipped fetches ([#827](https://github.com/wundergraph/cosmo/issues/827)) ([70fc005](https://github.com/wundergraph/cosmo/commit/70fc005f3e2e7826d8f517de5f42119b96f95e79)) (@devsergiy)
+
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.10.1...aws-lambda-router@0.11.0) (2024-05-27)
+
+### Features
+
+* add support for response compression ([#723](https://github.com/wundergraph/cosmo/issues/723)) ([a6c6ac4](https://github.com/wundergraph/cosmo/commit/a6c6ac415f79ad1e5a85e1bbd95337c13b47616f)) (@Rutik7066)
+
 ## [0.10.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.10.0...aws-lambda-router@0.10.1) (2024-05-22)
 
 ### Bug Fixes
