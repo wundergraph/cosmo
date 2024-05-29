@@ -26,7 +26,7 @@ import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphsBySubgraphLabels } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -168,13 +168,16 @@ const FederatedGraphsPage: NextPageWithLayout = () => {
   const subgraphSlug = router.query.subgraphSlug as string;
   const namespace = router.query.namespace as string;
 
-  const { data, error, refetch, isLoading } = useQuery({
-    ...getFederatedGraphsBySubgraphLabels.useQuery({
+  const { data, error, refetch, isLoading } = useQuery(
+    getFederatedGraphsBySubgraphLabels,
+    {
       subgraphName: subgraphSlug,
       namespace,
-    }),
-    enabled: !!subgraphSlug,
-  });
+    },
+    {
+      enabled: !!subgraphSlug,
+    },
+  );
 
   if (isLoading) {
     return <Loader fullscreen />;

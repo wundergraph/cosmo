@@ -32,7 +32,7 @@ import {
   MagnifyingGlassIcon,
   Share1Icon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOperationIgnoreAllOverride,
@@ -56,18 +56,21 @@ export const CheckOperations = () => {
 
   const id = router.query.checkId as string;
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getCheckOperations.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getCheckOperations,
+    {
       checkId: id,
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-    }),
-    enabled: !!graphContext?.graph?.name,
-  });
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+    },
+  );
 
   const { mutate: createOverrides, isPending: creatingOverrides } = useMutation(
+    createOperationOverrides,
     {
-      ...createOperationOverrides.useMutation(),
       onSuccess: (d) => {
         if (d.response?.code === EnumStatusCode.OK) {
           refetch();
@@ -89,53 +92,59 @@ export const CheckOperations = () => {
     },
   );
 
-  const { mutate: removeIgnoreAll, isPending: removing } = useMutation({
-    ...removeOperationIgnoreAllOverride.useMutation(),
-    onSuccess: (d) => {
-      if (d.response?.code === EnumStatusCode.OK) {
-        refetch();
-      } else {
+  const { mutate: removeIgnoreAll, isPending: removing } = useMutation(
+    removeOperationIgnoreAllOverride,
+    {
+      onSuccess: (d) => {
+        if (d.response?.code === EnumStatusCode.OK) {
+          refetch();
+        } else {
+          toast({
+            description:
+              d.response?.details ??
+              "Could not remove ignore all override. Please try again.",
+            duration: 3000,
+          });
+        }
+      },
+      onError: () => {
         toast({
           description:
-            d.response?.details ??
             "Could not remove ignore all override. Please try again.",
           duration: 3000,
         });
-      }
+      },
     },
-    onError: () => {
-      toast({
-        description: "Could not remove ignore all override. Please try again.",
-        duration: 3000,
-      });
-    },
-  });
+  );
 
-  const { mutate: createIgnoreAll, isPending: ignoring } = useMutation({
-    ...createOperationIgnoreAllOverride.useMutation(),
-    onSuccess: (d) => {
-      if (d.response?.code === EnumStatusCode.OK) {
-        refetch();
-      } else {
+  const { mutate: createIgnoreAll, isPending: ignoring } = useMutation(
+    createOperationIgnoreAllOverride,
+    {
+      onSuccess: (d) => {
+        if (d.response?.code === EnumStatusCode.OK) {
+          refetch();
+        } else {
+          toast({
+            description:
+              d.response?.details ??
+              "Could not create ignore all override. Please try again.",
+            duration: 3000,
+          });
+        }
+      },
+      onError: () => {
         toast({
           description:
-            d.response?.details ??
             "Could not create ignore all override. Please try again.",
           duration: 3000,
         });
-      }
+      },
     },
-    onError: () => {
-      toast({
-        description: "Could not create ignore all override. Please try again.",
-        duration: 3000,
-      });
-    },
-  });
+  );
 
   const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(
+    removeOperationOverrides,
     {
-      ...removeOperationOverrides.useMutation(),
       onSuccess: (d) => {
         if (d.response?.code === EnumStatusCode.OK) {
           refetch();

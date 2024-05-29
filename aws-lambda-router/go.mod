@@ -4,12 +4,12 @@ require (
 	github.com/akrylysov/algnhsa v1.1.0
 	github.com/aws/aws-lambda-go v1.43.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wundergraph/cosmo/router v0.0.0-20240527153944-f69e36f08478
+	github.com/wundergraph/cosmo/router v0.0.0-20240529082401-37a9701a2b9c
 	go.uber.org/zap v1.26.0
 )
 
 require (
-	connectrpc.com/connect v1.11.1 // indirect
+	connectrpc.com/connect v1.16.2 // indirect
 	github.com/MicahParks/keyfunc/v2 v2.1.0 // indirect
 	github.com/alitto/pond v1.8.3 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
@@ -103,7 +103,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.withmatt.com/connect-brotli v0.4.0 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
-	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect

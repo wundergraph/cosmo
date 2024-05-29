@@ -5,7 +5,8 @@ import {
   Cross1Icon,
   GlobeIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { createConnectQueryKey, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOperationOverrides,
@@ -150,15 +151,15 @@ const Row = ({
   const client = useQueryClient();
 
   const invalidateCheckOperations = () => {
-    const key = getCheckOperations.getQueryKey();
+    const key = createConnectQueryKey(getCheckOperations);
     client.invalidateQueries({
       queryKey: key,
     });
   };
 
   const { mutate: createOverrides, isPending: creatingOverrides } = useMutation(
+    createOperationOverrides,
     {
-      ...createOperationOverrides.useMutation(),
       onSuccess: (d) => {
         if (d.response?.code === EnumStatusCode.OK) {
           invalidateCheckOperations();
@@ -181,8 +182,8 @@ const Row = ({
   );
 
   const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(
+    removeOperationOverrides,
     {
-      ...removeOperationOverrides.useMutation(),
       onSuccess: (d) => {
         if (d.response?.code === EnumStatusCode.OK) {
           invalidateCheckOperations();

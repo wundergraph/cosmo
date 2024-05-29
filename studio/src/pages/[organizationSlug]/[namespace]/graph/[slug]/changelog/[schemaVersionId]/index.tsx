@@ -17,7 +17,7 @@ import {
   PlusIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getChangelogBySchemaVersion } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraphChangelog } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -149,9 +149,10 @@ const SchemaVersionChangelogPage: NextPageWithLayout = () => {
   const id = router.query.schemaVersionId as string;
 
   const { data, isLoading, error, refetch } = useQuery(
-    getChangelogBySchemaVersion.useQuery({
+    getChangelogBySchemaVersion,
+    {
       schemaVersionId: id,
-    }),
+    },
   );
 
   if (isLoading) return <Loader fullscreen />;

@@ -3,7 +3,7 @@ module github.com/wundergraph/cosmo/router
 go 1.21.0
 
 require (
-	connectrpc.com/connect v1.11.1
+	connectrpc.com/connect v1.16.2
 	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/alitto/pond v1.8.3
 	github.com/andybalholm/brotli v1.1.0
@@ -113,7 +113,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
-	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect

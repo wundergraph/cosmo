@@ -4,7 +4,7 @@ import {
   FileTextIcon,
   HomeIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getSubgraphByName,
@@ -52,12 +52,10 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
   const namespace = router.query.namespace as string;
   const slug = router.query.subgraphSlug as string;
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getSubgraphByName.useQuery({
-      name: slug,
-      namespace,
-    }),
-  );
+  const { data, isLoading, error, refetch } = useQuery(getSubgraphByName, {
+    name: slug,
+    namespace,
+  });
 
   const subgraphContextData = useMemo(() => {
     if (!data) {
@@ -139,7 +137,7 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
 };
 
 export const SubgraphSelect = () => {
-  const { data } = useQuery(getSubgraphs.useQuery());
+  const { data } = useQuery(getSubgraphs);
 
   const router = useRouter();
   const slug = router.query.subgraphSlug as string;

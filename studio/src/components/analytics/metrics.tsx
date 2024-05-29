@@ -32,7 +32,8 @@ import {
   ChevronRightIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getMetricsErrorRate } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -687,8 +688,9 @@ export const ErrorRateOverTimeCard = () => {
     isLoading,
     error,
     refetch,
-  } = useQuery({
-    ...getMetricsErrorRate.useQuery({
+  } = useQuery(
+    getMetricsErrorRate,
+    {
       federatedGraphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
       range,
@@ -699,11 +701,13 @@ export const ErrorRateOverTimeCard = () => {
             end: formatISO(dateRange.end),
           },
       filters,
-    }),
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval,
-  });
+    },
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+      refetchInterval: refreshInterval,
+    },
+  );
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     differenceInHours(dateRange.end, dateRange.start) ?? 24,

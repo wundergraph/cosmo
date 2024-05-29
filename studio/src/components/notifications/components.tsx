@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import {
   EventMeta,
   OrganizationEventName,
@@ -54,7 +54,7 @@ export const SelectGraphs = ({
   type: "federated" | "monograph";
   eventName: OrganizationEventName;
 }) => {
-  const { data } = useQuery(getFederatedGraphs.useQuery());
+  const { data } = useQuery(getFederatedGraphs);
 
   const graphIds = useMemo(() => {
     const entry = meta.find((m) => m.eventName === eventName);

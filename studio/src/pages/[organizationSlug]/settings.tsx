@@ -59,7 +59,8 @@ import { calURL, docsBaseURL, scimBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOIDCProvider,
@@ -76,7 +77,13 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useContext, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { FaMagic } from "react-icons/fa";
 import { z } from "zod";
 
@@ -116,9 +123,7 @@ const OrganizationDetails = () => {
     mode: "onChange",
   });
 
-  const { mutate, isPending } = useMutation(
-    updateOrganizationDetails.useMutation(),
-  );
+  const { mutate, isPending } = useMutation(updateOrganizationDetails);
 
   const { toast } = useToast();
 
@@ -380,13 +385,8 @@ const OpenIDConnectProvider = ({
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
 
-  const { mutate, isPending, data } = useMutation(
-    createOIDCProvider.useMutation(),
-  );
-
-  const { mutate: deleteOidcProvider } = useMutation(
-    deleteOIDCProvider.useMutation(),
-  );
+  const { mutate, isPending, data } = useMutation(createOIDCProvider);
+  const { mutate: deleteOidcProvider } = useMutation(deleteOIDCProvider);
 
   const { toast } = useToast();
 
@@ -842,9 +842,7 @@ const CosmoAi = () => {
   const router = useRouter();
   const ai = useFeature("ai");
   const queryClient = useQueryClient();
-  const { mutate, isPending, data } = useMutation(
-    updateFeatureSettings.useMutation(),
-  );
+  const { mutate, isPending, data } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
 
   const disable = () => {
@@ -967,9 +965,7 @@ const RBAC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const rbac = useFeature("rbac");
-  const { mutate, isPending } = useMutation(
-    updateFeatureSettings.useMutation(),
-  );
+  const { mutate, isPending } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
 
   const disable = () => {
@@ -1104,9 +1100,7 @@ const Scim = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const scim = useFeature("scim");
-  const { mutate, isPending } = useMutation(
-    updateFeatureSettings.useMutation(),
-  );
+  const { mutate, isPending } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
 
   const disable = () => {
@@ -1250,7 +1244,7 @@ const LeaveOrganization = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const { mutate } = useMutation(leaveOrganization.useMutation());
+  const { mutate } = useMutation(leaveOrganization);
 
   const { toast } = useToast();
 
@@ -1346,7 +1340,7 @@ const DeleteOrganization = () => {
     mode: "onChange",
   });
 
-  const { mutate, isPending } = useMutation(deleteOrganization.useMutation());
+  const { mutate, isPending } = useMutation(deleteOrganization);
 
   const { toast } = useToast();
 
@@ -1466,12 +1460,20 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
     data: providerData,
     refetch: refetchOIDCProvider,
     isLoading: fetchingOIDCProvider,
-  } = useQuery({
-    ...getOIDCProvider.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetOIDCProvider", {}],
-  });
+  } = useQuery(getOIDCProvider);
 
   const orgs = user?.organizations?.length || 0;
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetchOIDCProvider
+    )
+      return;
+    refetchOIDCProvider();
+  }, [refetchOIDCProvider, user, user?.currentOrganization.slug]);
 
   if (fetchingOIDCProvider) {
     return <Loader fullscreen />;

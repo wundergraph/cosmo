@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { getOperationContent } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import graphQLPlugin from "prettier/plugins/graphql";
 import * as prettier from "prettier/standalone";
@@ -27,12 +27,15 @@ const OperationContent = ({
 }) => {
   const [content, setContent] = useState("");
 
-  const { data, error, isLoading, refetch } = useQuery({
-    ...getOperationContent.useQuery({
+  const { data, error, isLoading, refetch } = useQuery(
+    getOperationContent,
+    {
       hash,
-    }),
-    enabled,
-  });
+    },
+    {
+      enabled,
+    },
+  );
 
   useEffect(() => {
     const set = async (source: string) => {

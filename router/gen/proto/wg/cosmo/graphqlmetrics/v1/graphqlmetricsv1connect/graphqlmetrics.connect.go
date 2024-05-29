@@ -20,7 +20,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// GraphQLMetricsServiceName is the fully-qualified name of the GraphQLMetricsService service.
@@ -38,6 +38,12 @@ const (
 	// GraphQLMetricsServicePublishGraphQLMetricsProcedure is the fully-qualified name of the
 	// GraphQLMetricsService's PublishGraphQLMetrics RPC.
 	GraphQLMetricsServicePublishGraphQLMetricsProcedure = "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/PublishGraphQLMetrics"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	graphQLMetricsServiceServiceDescriptor                     = v1.File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto.Services().ByName("GraphQLMetricsService")
+	graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishGraphQLMetrics")
 )
 
 // GraphQLMetricsServiceClient is a client for the wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService
@@ -61,7 +67,8 @@ func NewGraphQLMetricsServiceClient(httpClient connect.HTTPClient, baseURL strin
 		publishGraphQLMetrics: connect.NewClient[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse](
 			httpClient,
 			baseURL+GraphQLMetricsServicePublishGraphQLMetricsProcedure,
-			opts...,
+			connect.WithSchema(graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
@@ -93,7 +100,8 @@ func NewGraphQLMetricsServiceHandler(svc GraphQLMetricsServiceHandler, opts ...c
 	graphQLMetricsServicePublishGraphQLMetricsHandler := connect.NewUnaryHandler(
 		GraphQLMetricsServicePublishGraphQLMetricsProcedure,
 		svc.PublishGraphQLMetrics,
-		opts...,
+		connect.WithSchema(graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	return "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

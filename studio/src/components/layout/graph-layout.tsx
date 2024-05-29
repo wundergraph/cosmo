@@ -27,7 +27,7 @@ import {
   MagnifyingGlassIcon,
   PlayIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getFederatedGraphByName,
@@ -85,13 +85,14 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   const slug = router.query.slug as string;
 
   const { data, isLoading, error, refetch } = useQuery(
-    getFederatedGraphByName.useQuery({
+    getFederatedGraphByName,
+    {
       name: slug,
       namespace,
-    }),
+    },
   );
 
-  const { data: graphsData } = useQuery(getFederatedGraphs.useQuery());
+  const { data: graphsData } = useQuery(getFederatedGraphs);
 
   const graphContextData = useMemo(() => {
     if (!data || !graphsData) {

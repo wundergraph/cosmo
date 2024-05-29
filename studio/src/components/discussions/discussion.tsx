@@ -14,7 +14,6 @@ import {
   ListBulletIcon,
   StrikethroughIcon,
 } from "@radix-ui/react-icons";
-import { useMutation } from "@tanstack/react-query";
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -52,6 +51,7 @@ import { Separator } from "../ui/separator";
 import { Toggle } from "../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";
+import { useMutation } from "@connectrpc/connect-query";
 
 const getEditorOptions = (opts?: {
   className?: string;
@@ -151,51 +151,55 @@ export const CommentCard = ({
 
   const { toast } = useToast();
 
-  const { mutate: update, isPending: isUpdating } = useMutation({
-    ...updateDiscussionComment.useMutation(),
-    onSuccess(data) {
-      if (data.response?.code !== EnumStatusCode.OK) {
+  const { mutate: update, isPending: isUpdating } = useMutation(
+    updateDiscussionComment,
+    {
+      onSuccess(data) {
+        if (data.response?.code !== EnumStatusCode.OK) {
+          toast({
+            variant: "destructive",
+            title: "Could not update comment",
+            description: data.response?.details ?? "Please try again",
+          });
+          return;
+        }
+
         toast({
-          variant: "destructive",
-          title: "Could not update comment",
-          description: data.response?.details ?? "Please try again",
+          title: "Comment updated successfully",
         });
-        return;
-      }
 
-      toast({
-        title: "Comment updated successfully",
-      });
+        setEditable(false);
 
-      setEditable(false);
-
-      onUpdate?.();
+        onUpdate?.();
+      },
     },
-  });
+  );
 
-  const { mutate: deleteComment, isPending: isDeleting } = useMutation({
-    ...deleteDiscussionComment.useMutation(),
-    onSuccess(data) {
-      if (data.response?.code !== EnumStatusCode.OK) {
+  const { mutate: deleteComment, isPending: isDeleting } = useMutation(
+    deleteDiscussionComment,
+    {
+      onSuccess(data) {
+        if (data.response?.code !== EnumStatusCode.OK) {
+          toast({
+            variant: "destructive",
+            title: `Could not delete ${
+              isOpeningComment ? "discussion" : "comment"
+            }`,
+            description: data.response?.details ?? "Please try again",
+          });
+          return;
+        }
+
         toast({
-          variant: "destructive",
-          title: `Could not delete ${
-            isOpeningComment ? "discussion" : "comment"
-          }`,
-          description: data.response?.details ?? "Please try again",
+          title: `${
+            isOpeningComment ? "Discussion" : "Comment"
+          } deleted successfully`,
         });
-        return;
-      }
 
-      toast({
-        title: `${
-          isOpeningComment ? "Discussion" : "Comment"
-        } deleted successfully`,
-      });
-
-      onDelete?.();
+        onDelete?.();
+      },
     },
-  });
+  );
 
   const editor = useEditor(
     {
@@ -383,8 +387,7 @@ export const NewDiscussion = ({
 
   const graph = useContext(GraphContext);
 
-  const { mutate, isPending } = useMutation({
-    ...createDiscussion.useMutation(),
+  const { mutate, isPending } = useMutation(createDiscussion, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
@@ -458,8 +461,7 @@ export const NewComment = ({
 
   const [showEditor, setShowEditor] = useState(false);
 
-  const { mutate, isPending } = useMutation({
-    ...replyToDiscussion.useMutation(),
+  const { mutate, isPending } = useMutation(replyToDiscussion, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({

@@ -46,7 +46,7 @@ import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { MobileIcon } from "@radix-ui/react-icons";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getClients,
@@ -161,8 +161,7 @@ const PersistOperation = () => {
 
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation({
-    ...publishPersistedOperations.useMutation(),
+  const { mutate, isPending } = useMutation(publishPersistedOperations, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
@@ -193,12 +192,10 @@ const PersistOperation = () => {
     },
   });
 
-  const { data, refetch } = useQuery(
-    getClients.useQuery({
-      fedGraphName: slug,
-      namespace,
-    }),
-  );
+  const { data, refetch } = useQuery(getClients, {
+    fedGraphName: slug,
+    namespace,
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -480,22 +477,26 @@ const PlaygroundPage: NextPageWithLayout = () => {
     (router.query.load as string) || graphContext?.graph?.id || "";
 
   const { data, isLoading: isLoadingGraphSchema } = useQuery(
-    getFederatedGraphSDLByName.useQuery({
+    getFederatedGraphSDLByName,
+    {
       name: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-    }),
+    },
   );
 
-  const { data: subgraphData, isLoading: isLoadingSubgraphSchema } = useQuery({
-    ...getSubgraphSDLFromLatestComposition.useQuery({
+  const { data: subgraphData, isLoading: isLoadingSubgraphSchema } = useQuery(
+    getSubgraphSDLFromLatestComposition,
+    {
       name: graphContext?.subgraphs.find((s) => s.id === loadSchemaGraphId)
         ?.name,
       fedGraphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
-    }),
-    enabled:
-      !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id,
-  });
+    },
+    {
+      enabled:
+        !!loadSchemaGraphId && loadSchemaGraphId !== graphContext?.graph?.id,
+    },
+  );
 
   const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
 

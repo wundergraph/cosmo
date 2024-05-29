@@ -19,20 +19,23 @@ import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getLatestSubgraphSDL } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 
 const SubgraphSchemaPage: NextPageWithLayout = () => {
   const graph = useSubgraph();
-  const { data, error, refetch, isLoading } = useQuery({
-    ...getLatestSubgraphSDL.useQuery({
+  const { data, error, refetch, isLoading } = useQuery(
+    getLatestSubgraphSDL,
+    {
       name: graph?.subgraph?.name,
       namespace: graph?.subgraph?.namespace,
-    }),
-    enabled: !!graph && !!graph.subgraph,
-  });
+    },
+    {
+      enabled: !!graph && !!graph.subgraph,
+    },
+  );
 
   if (isLoading) {
     return <Loader fullscreen />;

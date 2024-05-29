@@ -32,7 +32,7 @@ import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { CubeIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Component2Icon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getCompositionDetails,
@@ -60,11 +60,9 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
 
   const graphData = useContext(GraphContext);
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getCompositionDetails.useQuery({
-      compositionId: id,
-    }),
-  );
+  const { data, isLoading, error, refetch } = useQuery(getCompositionDetails, {
+    compositionId: id,
+  });
 
   const compositionSubgraph = data?.compositionSubgraphs.find(
     (s) => s.name === subgraph,
@@ -74,22 +72,25 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   const activeSubgraphName = activeSubgraph?.name;
   const activeSubgraphVersionId = activeSubgraph?.schemaVersionId;
 
-  const { data: sdlData, isLoading: fetchingSdl } = useQuery({
-    ...getSdlBySchemaVersion.useQuery({
+  const { data: sdlData, isLoading: fetchingSdl } = useQuery(
+    getSdlBySchemaVersion,
+    {
       targetId:
         tab === "input" ? activeSubgraph?.targetId : graphData?.graph?.targetId,
       schemaVersionId:
         tab === "input"
           ? activeSubgraphVersionId
           : data?.composition?.schemaVersionId,
-    }),
-    enabled:
-      tab === "input"
-        ? !!activeSubgraphName && !!activeSubgraphVersionId
-        : data?.composition && data.composition.schemaVersionId
-        ? true
-        : false,
-  });
+    },
+    {
+      enabled:
+        tab === "input"
+          ? !!activeSubgraphName && !!activeSubgraphVersionId
+          : data?.composition && data.composition.schemaVersionId
+          ? true
+          : false,
+    },
+  );
 
   if (isLoading || fetchingSdl) return <Loader fullscreen />;
 
