@@ -501,7 +501,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
 
   const schema = useMemo(() => {
-    console.log(!!subgraphData?.sdl, !!data?.clientSchema);
     return parseSchema(subgraphData?.sdl || data?.clientSchema);
   }, [data?.clientSchema, subgraphData?.sdl]);
 

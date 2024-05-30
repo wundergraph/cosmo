@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS cosmo.subgraph_request_metrics_5_30 (
    OperationType LowCardinality(String) CODEC (ZSTD(3)),
    FederatedGraphID LowCardinality(String) CODEC(ZSTD(3)),
    OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
-   SubgraphID String CODEC (ZSTD(3)),
+   SubgraphID LowCardinality(String) CODEC (ZSTD(3)),
    TotalRequests UInt64 CODEC(ZSTD(3)),
    TotalErrors UInt64 CODEC(ZSTD(3)),
    TotalClientErrors UInt64 CODEC(ZSTD(3)),
