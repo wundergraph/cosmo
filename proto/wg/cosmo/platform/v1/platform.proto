@@ -393,6 +393,12 @@ message GetChecksByFederatedGraphNameRequest {
 }
 
 message SchemaCheck {
+  message GhDetails {
+    string commitSha = 1;
+    string ownerSlug = 2;
+    string repositorySlug = 3;
+  }
+
   string id = 1;
   string targetID = 2;
   string subgraphName = 3;
@@ -402,15 +408,8 @@ message SchemaCheck {
   bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
   bool isDeleted = 9;
-  optional SchemaCheckGhDetails ghDetails = 10;
+  optional GhDetails ghDetails = 10;
   bool hasLintErrors = 11;
-}
-
-message SchemaCheckGhDetails {
-  string commitSha = 1;
-  string ownerSlug = 3;
-  string repositorySlug = 4;
-  int32 checkRunId = 5;
 }
 
 message GetChecksByFederatedGraphNameResponse {
