@@ -76,6 +76,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
     data: dashboardView,
     isLoading: dashboardViewLoading,
     isFetching,
+    refetch,
   } = useQuery(
     getDashboardAnalyticsView,
     {
@@ -163,9 +164,7 @@ const GraphOverviewPage: NextPageWithLayout = () => {
             <Button
               isLoading={!!isFetching}
               onClick={() => {
-                client.invalidateQueries({
-                  queryKey: createConnectQueryKey(getDashboardAnalyticsView),
-                });
+                refetch();
               }}
               variant="outline"
               size="icon"

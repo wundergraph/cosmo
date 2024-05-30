@@ -57,7 +57,7 @@ const OverviewToolbar = () => {
 
   const isFetching = useIsFetching();
 
-  let { data } = useQuery(
+  const { data } = useQuery(
     getGraphMetrics,
     {
       namespace: graphContext?.graph?.namespace,
