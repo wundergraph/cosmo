@@ -7,7 +7,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_by_operation_quarter_hourly_
     ) as Timestamp,
     SpanAttributes [ 'wg.operation.name' ] as OperationName,
     toLowCardinality(SpanAttributes [ 'wg.operation.type' ]) as OperationType,
-    SpanAttributes [ 'wg.federated_graph.id'] as FederatedGraphID,
+    toLowCardinality(SpanAttributes [ 'wg.federated_graph.id']) as FederatedGraphID,
     toLowCardinality(SpanAttributes ['wg.organization.id']) as OrganizationID,
     mapContains(SpanAttributes, 'wg.subscription') as IsSubscription,
     count() AS TotalRequests,

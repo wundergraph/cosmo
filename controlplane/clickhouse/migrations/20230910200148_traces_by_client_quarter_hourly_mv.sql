@@ -9,7 +9,7 @@ SELECT
     SpanAttributes [ 'wg.client.name' ] as ClientName,
     SpanAttributes [ 'wg.client.version' ] as ClientVersion,
     toLowCardinality(SpanAttributes ['wg.organization.id']) as OrganizationID,
-    SpanAttributes [ 'wg.federated_graph.id'] as FederatedGraphID,
+    toLowCardinality(SpanAttributes [ 'wg.federated_graph.id']) as FederatedGraphID,
     count() AS TotalRequests,
     countIf(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error')) AS TotalRequestsError,
     countIf(not(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error'))) AS TotalRequestsOk,
