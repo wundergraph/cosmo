@@ -3196,9 +3196,9 @@ export class SchemaCheck extends Message<SchemaCheck> {
   isDeleted = false;
 
   /**
-   * @generated from field: optional wg.cosmo.platform.v1.SchemaCheck.SchemaCheckGhDetails ghDetails = 10;
+   * @generated from field: optional wg.cosmo.platform.v1.SchemaCheck.GhDetails ghDetails = 10;
    */
-  ghDetails?: SchemaCheck_SchemaCheckGhDetails;
+  ghDetails?: SchemaCheck_GhDetails;
 
   /**
    * @generated from field: bool hasLintErrors = 11;
@@ -3222,7 +3222,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 7, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 9, name: "isDeleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 10, name: "ghDetails", kind: "message", T: SchemaCheck_SchemaCheckGhDetails, opt: true },
+    { no: 10, name: "ghDetails", kind: "message", T: SchemaCheck_GhDetails, opt: true },
     { no: 11, name: "hasLintErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
@@ -3244,9 +3244,9 @@ export class SchemaCheck extends Message<SchemaCheck> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.SchemaCheck.SchemaCheckGhDetails
+ * @generated from message wg.cosmo.platform.v1.SchemaCheck.GhDetails
  */
-export class SchemaCheck_SchemaCheckGhDetails extends Message<SchemaCheck_SchemaCheckGhDetails> {
+export class SchemaCheck_GhDetails extends Message<SchemaCheck_GhDetails> {
   /**
    * @generated from field: string commitSha = 1;
    */
@@ -3262,33 +3262,33 @@ export class SchemaCheck_SchemaCheckGhDetails extends Message<SchemaCheck_Schema
    */
   repositorySlug = "";
 
-  constructor(data?: PartialMessage<SchemaCheck_SchemaCheckGhDetails>) {
+  constructor(data?: PartialMessage<SchemaCheck_GhDetails>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.SchemaCheck.SchemaCheckGhDetails";
+  static readonly typeName = "wg.cosmo.platform.v1.SchemaCheck.GhDetails";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "commitSha", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "ownerSlug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "repositorySlug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck_SchemaCheckGhDetails {
-    return new SchemaCheck_SchemaCheckGhDetails().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck_GhDetails {
+    return new SchemaCheck_GhDetails().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SchemaCheck_SchemaCheckGhDetails {
-    return new SchemaCheck_SchemaCheckGhDetails().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SchemaCheck_GhDetails {
+    return new SchemaCheck_GhDetails().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SchemaCheck_SchemaCheckGhDetails {
-    return new SchemaCheck_SchemaCheckGhDetails().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SchemaCheck_GhDetails {
+    return new SchemaCheck_GhDetails().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SchemaCheck_SchemaCheckGhDetails | PlainMessage<SchemaCheck_SchemaCheckGhDetails> | undefined, b: SchemaCheck_SchemaCheckGhDetails | PlainMessage<SchemaCheck_SchemaCheckGhDetails> | undefined): boolean {
-    return proto3.util.equals(SchemaCheck_SchemaCheckGhDetails, a, b);
+  static equals(a: SchemaCheck_GhDetails | PlainMessage<SchemaCheck_GhDetails> | undefined, b: SchemaCheck_GhDetails | PlainMessage<SchemaCheck_GhDetails> | undefined): boolean {
+    return proto3.util.equals(SchemaCheck_GhDetails, a, b);
   }
 }
 

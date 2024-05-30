@@ -393,7 +393,7 @@ message GetChecksByFederatedGraphNameRequest {
 }
 
 message SchemaCheck {
-  message SchemaCheckGhDetails {
+  message GhDetails {
     string commitSha = 1;
     string ownerSlug = 2;
     string repositorySlug = 3;
@@ -408,7 +408,7 @@ message SchemaCheck {
   bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
   bool isDeleted = 9;
-  optional SchemaCheckGhDetails ghDetails = 10;
+  optional GhDetails ghDetails = 10;
   bool hasLintErrors = 11;
 }
 
