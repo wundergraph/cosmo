@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS cosmo.traces_by_client_quarter_hourly (
     ClientName String CODEC (ZSTD(3)),
     ClientVersion String CODEC(ZSTD(3)),
     OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
-    FederatedGraphID String CODEC(ZSTD(3)),
+    FederatedGraphID LowCardinality(String) CODEC(ZSTD(3)),
     TotalRequests UInt64 CODEC(ZSTD(3)),
     TotalRequestsError UInt64 CODEC(ZSTD(3)),
     TotalRequestsOk UInt64 CODEC(ZSTD(3)),
