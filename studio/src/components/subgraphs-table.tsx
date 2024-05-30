@@ -416,8 +416,8 @@ export const SubgraphsTable = ({
   if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} />;
 
   return (
-    <div className="flex h-full flex-col gap-y-3">
-      <TableWrapper>
+    <>
+      <TableWrapper className="mb-3">
         <Table>
           <TableHeader>
             <TableRow>
@@ -537,6 +537,6 @@ export const SubgraphsTable = ({
         </Table>
       </TableWrapper>
       <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
-    </div>
+    </>
   );
 };
