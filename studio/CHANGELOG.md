@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.11](https://github.com/wundergraph/cosmo/compare/studio@0.77.10...studio@0.77.11) (2024-05-30)
+
+### Bug Fixes
+
+* incorrect query key for invalidation ([#839](https://github.com/wundergraph/cosmo/issues/839)) ([65f8274](https://github.com/wundergraph/cosmo/commit/65f8274f363390acfbbf4157134810c3bd997766)) (@thisisnithin)
+
 ## [0.77.10](https://github.com/wundergraph/cosmo/compare/studio@0.77.9...studio@0.77.10) (2024-05-30)
 
 **Note:** Version bump only for package studio
