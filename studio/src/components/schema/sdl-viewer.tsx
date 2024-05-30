@@ -17,7 +17,7 @@ import {
   DownloadIcon,
   GearIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
 import {
   getAllDiscussions,
@@ -171,14 +171,16 @@ const LineActions = ({
         >
           Copy link to line
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            setNewDiscussionLine(lineNo);
-          }}
-        >
-          Start new discussion
-        </DropdownMenuItem>
+        {router.query.schemaType !== "client" && (
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              setNewDiscussionLine(lineNo);
+            }}
+          >
+            Start new discussion
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -231,23 +233,12 @@ const Block = ({
 
   const [newDiscussionLine, setNewDiscussionLine] = useState(-1);
 
-  const { data, refetch } = useQuery({
-    ...getAllDiscussions.useQuery({
-      schemaVersionId: versionId,
-      targetId,
-    }),
+  const { data, refetch } = useQuery(getAllDiscussions, {
+    schemaVersionId: versionId,
+    targetId,
   });
 
-  const user = useUser();
-
-  const { data: membersData } = useQuery({
-    ...getOrganizationMembers.useQuery(),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetOrganizationMembers",
-      {},
-    ],
-  });
+  const { data: membersData } = useQuery(getOrganizationMembers);
 
   const discussions = data?.discussions;
 

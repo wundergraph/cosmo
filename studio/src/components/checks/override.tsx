@@ -17,7 +17,12 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { ClipboardCopyIcon, GlobeIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  createConnectQueryKey,
+} from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOperationIgnoreAllOverride,
@@ -72,8 +77,8 @@ const Override = ({
   const graphContext = useContext(GraphContext);
 
   const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(
+    removeOperationOverrides,
     {
-      ...removeOperationOverrides.useMutation(),
       onSuccess: (d) => {
         if (d.response?.code === EnumStatusCode.OK) {
           refresh?.();
@@ -204,67 +209,79 @@ export const ConfigureOverride = () => {
   const { toast } = useToast();
   const applyParams = useApplyParams();
 
-  const { data, error, isLoading, refetch } = useQuery({
-    ...getOperationOverrides.useQuery({
+  const { data, error, isLoading, refetch } = useQuery(
+    getOperationOverrides,
+    {
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
       operationHash,
-    }),
-    enabled: !!operationHash,
-  });
+    },
+    {
+      enabled: !!operationHash,
+    },
+  );
 
   const invalidateOverrides = () => {
-    const key = getAllOverrides.getQueryKey();
+    const key = createConnectQueryKey(getAllOverrides, {
+      graphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    });
     client.invalidateQueries({
       queryKey: key,
     });
   };
 
-  const { mutate: removeIgnoreAll, isPending: removing } = useMutation({
-    ...removeOperationIgnoreAllOverride.useMutation(),
-    onSuccess: (d) => {
-      if (d.response?.code === EnumStatusCode.OK) {
-        refetch();
-        invalidateOverrides();
-      } else {
+  const { mutate: removeIgnoreAll, isPending: removing } = useMutation(
+    removeOperationIgnoreAllOverride,
+    {
+      onSuccess: (d) => {
+        if (d.response?.code === EnumStatusCode.OK) {
+          refetch();
+          invalidateOverrides();
+        } else {
+          toast({
+            description:
+              d.response?.details ??
+              "Could not remove ignore all override. Please try again.",
+            duration: 3000,
+          });
+        }
+      },
+      onError: () => {
         toast({
           description:
-            d.response?.details ??
             "Could not remove ignore all override. Please try again.",
           duration: 3000,
         });
-      }
+      },
     },
-    onError: () => {
-      toast({
-        description: "Could not remove ignore all override. Please try again.",
-        duration: 3000,
-      });
-    },
-  });
+  );
 
-  const { mutate: createIgnoreAll, isPending: ignoring } = useMutation({
-    ...createOperationIgnoreAllOverride.useMutation(),
-    onSuccess: (d) => {
-      if (d.response?.code === EnumStatusCode.OK) {
-        refetch();
-        invalidateOverrides();
-      } else {
+  const { mutate: createIgnoreAll, isPending: ignoring } = useMutation(
+    createOperationIgnoreAllOverride,
+    {
+      onSuccess: (d) => {
+        if (d.response?.code === EnumStatusCode.OK) {
+          refetch();
+          invalidateOverrides();
+        } else {
+          toast({
+            description:
+              d.response?.details ??
+              "Could not create ignore all override. Please try again.",
+            duration: 3000,
+          });
+        }
+      },
+      onError: () => {
         toast({
           description:
-            d.response?.details ??
             "Could not create ignore all override. Please try again.",
           duration: 3000,
         });
-      }
+      },
     },
-    onError: () => {
-      toast({
-        description: "Could not create ignore all override. Please try again.",
-        duration: 3000,
-      });
-    },
-  });
+  );
 
   let content;
 

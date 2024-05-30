@@ -4,11 +4,17 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { splitLabel, parseGraphQLSubscriptionProtocol, isValidSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import {
+  splitLabel,
+  parseGraphQLSubscriptionProtocol,
+  parseGraphQLWebsocketSubprotocol,
+} from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { validateSubscriptionProtocols } from '../../../utils.js';
+import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
@@ -35,6 +41,7 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
   );
+  command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
 
   command.action(async (name, options) => {
@@ -50,17 +57,10 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    if (options.subscriptionProtocol && !isValidSubscriptionProtocol(options.subscriptionProtocol)) {
-      program.error(
-        pc.red(
-          pc.bold(
-            `The subscription protocol '${pc.bold(
-              options.subscriptionProtocol,
-            )}' is not valid. Please use one of the following: sse, sse_post, ws.`,
-          ),
-        ),
-      );
-    }
+    validateSubscriptionProtocols({
+      subscriptionProtocol: options.subscriptionProtocol,
+      websocketSubprotocol: options.websocketSubprotocol,
+    });
 
     const spinner = ora('Subgraph is being updated...').start();
     const resp = await opts.client.platform.updateSubgraph(
@@ -80,6 +80,9 @@ export default (opts: BaseCommandOptions) => {
         routingUrl: options.routingUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+          : undefined,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },

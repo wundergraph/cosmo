@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
@@ -9,8 +10,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"github.com/wundergraph/cosmo/router/core"
@@ -42,7 +41,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	logger := params.Logger
 
 	if cfg.RouterConfigPath != "" {
-		routerConfig, err = core.SerializeConfigFromFile(cfg.RouterConfigPath)
+		routerConfig, err = execution_config.SerializeConfigFromFile(cfg.RouterConfigPath)
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
@@ -93,6 +92,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	options := []core.Option{
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
+		core.WithOverrides(cfg.Overrides),
 		core.WithLogger(logger),
 		core.WithConfigPoller(configPoller),
 		core.WithSelfRegistration(selfRegister),
@@ -151,8 +151,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			},
 		}),
 		core.WithDevelopmentMode(cfg.DevelopmentMode),
-		core.WithTracing(traceConfig(&cfg.Telemetry)),
-		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
+		core.WithTracing(core.TraceConfigFromTelemetry(&cfg.Telemetry)),
+		core.WithMetrics(core.MetricConfigFromTelemetry(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithAuthorizationConfig(&cfg.Authorization),
@@ -168,77 +168,4 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 	options = append(options, additionalOptions...)
 
 	return core.NewRouter(options...)
-}
-
-func traceConfig(cfg *config.Telemetry) *trace.Config {
-	var exporters []*trace.ExporterConfig
-	for _, exp := range cfg.Tracing.Exporters {
-		exporters = append(exporters, &trace.ExporterConfig{
-			Disabled:      exp.Disabled,
-			Endpoint:      exp.Endpoint,
-			Exporter:      exp.Exporter,
-			BatchTimeout:  exp.BatchTimeout,
-			ExportTimeout: exp.ExportTimeout,
-			Headers:       exp.Headers,
-			HTTPPath:      exp.HTTPPath,
-		})
-	}
-
-	var propagators []trace.Propagator
-
-	if cfg.Tracing.Propagation.TraceContext {
-		propagators = append(propagators, trace.PropagatorTraceContext)
-	}
-	if cfg.Tracing.Propagation.B3 {
-		propagators = append(propagators, trace.PropagatorB3)
-	}
-	if cfg.Tracing.Propagation.Jaeger {
-		propagators = append(propagators, trace.PropagatorJaeger)
-	}
-	if cfg.Tracing.Propagation.Baggage {
-		propagators = append(propagators, trace.PropagatorBaggage)
-	}
-
-	return &trace.Config{
-		Enabled:     cfg.Tracing.Enabled,
-		Name:        cfg.ServiceName,
-		Version:     core.Version,
-		Sampler:     cfg.Tracing.SamplingRate,
-		WithNewRoot: cfg.Tracing.WithNewRoot,
-		ExportGraphQLVariables: trace.ExportGraphQLVariables{
-			Enabled: cfg.Tracing.ExportGraphQLVariables,
-		},
-		Exporters:   exporters,
-		Propagators: propagators,
-	}
-}
-
-func metricsConfig(cfg *config.Telemetry) *metric.Config {
-	var openTelemetryExporters []*metric.OpenTelemetryExporter
-	for _, exp := range cfg.Metrics.OTLP.Exporters {
-		openTelemetryExporters = append(openTelemetryExporters, &metric.OpenTelemetryExporter{
-			Disabled: exp.Disabled,
-			Endpoint: exp.Endpoint,
-			Exporter: exp.Exporter,
-			Headers:  exp.Headers,
-			HTTPPath: exp.HTTPPath,
-		})
-	}
-
-	return &metric.Config{
-		Name:    cfg.ServiceName,
-		Version: core.Version,
-		OpenTelemetry: metric.OpenTelemetry{
-			Enabled:       cfg.Metrics.OTLP.Enabled,
-			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
-			Exporters:     openTelemetryExporters,
-		},
-		Prometheus: metric.PrometheusConfig{
-			Enabled:             cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
-			Path:                cfg.Metrics.Prometheus.Path,
-			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
-			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
-		},
-	}
 }

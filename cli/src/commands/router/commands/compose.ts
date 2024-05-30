@@ -20,6 +20,7 @@ type Config = {
     subscription?: {
       url?: string;
       protocol?: 'ws' | 'sse' | 'sse_post';
+      websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
     };
     introspection?: {
       url: string;
@@ -92,9 +93,13 @@ export default (opts: BaseCommandOptions) => {
       program.error('Failed to compose given subgraphs');
     }
 
+    const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
+      ? printSchema(result.federationResult.federatedGraphSchema)
+      : '';
     const routerConfig = buildRouterConfig({
-      fieldConfigurations: result.federationResult.fieldConfigurations,
+      federatedClientSDL,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
+      fieldConfigurations: result.federationResult.fieldConfigurations,
       schemaVersionId: '',
       subgraphs: config.subgraphs.map((s, index) => {
         const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
@@ -107,6 +112,8 @@ export default (opts: BaseCommandOptions) => {
           sdl: sdls[index],
           subscriptionUrl: s.subscription?.url || s.routing_url,
           subscriptionProtocol: s.subscription?.protocol || 'ws',
+          websocketSubprotocol:
+            s.subscription?.protocol === 'ws' ? s.subscription?.websocketSubprotocol || 'auto' : undefined,
           schema,
           configurationDataMap,
         };

@@ -1,12 +1,15 @@
 import { randomFill } from 'node:crypto';
 import { HandlerContext } from '@connectrpc/connect';
-import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import {
+  GraphQLSubscriptionProtocol,
+  GraphQLWebsocketSubprotocol,
+} from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
-import { MemberRole } from '../db/models.js';
+import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
 import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
@@ -14,6 +17,7 @@ import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
+const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -104,6 +108,32 @@ export function normalizeLabels(labels: Label[]): Label[] {
   return [...uniqueLabels].map((label) => splitLabel(label));
 }
 
+export function isValidSchemaTag(tag: string): boolean {
+  if (!tag) {
+    return false;
+  }
+
+  if (tag.length > 128) {
+    return false;
+  }
+
+  if (!schemaTagRegex.test(tag)) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isValidSchemaTags(tags: string[]): boolean {
+  for (const tag of tags) {
+    if (!isValidSchemaTag(tag)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /**
  * Both key and value must be 63 characters or fewer (cannot be empty).
  * Must begin and end with an alphanumeric character ([a-z0-9A-Z]).
@@ -190,6 +220,20 @@ export const formatSubscriptionProtocol = (protocol: GraphQLSubscriptionProtocol
     }
     case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST: {
       return 'sse_post';
+    }
+  }
+};
+
+export const formatWebsocketSubprotocol = (protocol: GraphQLWebsocketSubprotocol): WebsocketSubprotocol => {
+  switch (protocol) {
+    case GraphQLWebsocketSubprotocol.GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO: {
+      return 'auto';
+    }
+    case GraphQLWebsocketSubprotocol.GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS: {
+      return 'graphql-ws';
+    }
+    case GraphQLWebsocketSubprotocol.GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS: {
+      return 'graphql-transport-ws';
     }
   }
 };

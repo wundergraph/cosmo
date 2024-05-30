@@ -335,6 +335,163 @@ func TestTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Spans are sampled because parent based sampling is disabled and ratio based sampler is set 1 (always)", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:             exporter,
+			DisableParentBasedSampler: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+				Header: map[string][]string{
+					// traceparent header without sample flag set
+					"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"}, // 00 = not sampled
+				},
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+
+			// Pre-Handler Operation steps
+			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, sn[0].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
+
+			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, sn[1].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
+
+			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
+			require.Equal(t, sn[2].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
+
+			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, sn[3].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
+
+			// Engine Transport
+			require.Equal(t, "query myQuery", sn[4].Name())
+			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
+			require.Equal(t, sn[4].Parent().SpanID(), sn[5].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
+
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			require.Equal(t, sn[5].Parent().SpanID(), sn[6].SpanContext().SpanID())
+			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[6].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			require.Equal(t, sn[6].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
+
+			// Root Server middleware
+			require.Equal(t, "query myQuery", sn[7].Name())
+			require.Equal(t, sn[7].ChildSpanCount(), 5)
+			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+		})
+	})
+
+	t.Run("Spans are sampled because parent based sampler is enabled by default and parent span sample flag is set", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+				Header: map[string][]string{
+					// traceparent header with sample flag set
+					"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-01"}, // 01 = sampled
+				},
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 8, "expected 8 spans, got %d", len(sn))
+
+			// Pre-Handler Operation steps
+			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, sn[0].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
+
+			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, sn[1].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
+
+			require.Equal(t, "Operation - Validate", sn[2].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
+			require.Equal(t, sn[2].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
+
+			require.Equal(t, "Operation - Plan", sn[3].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, sn[3].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
+
+			// Engine Transport
+			require.Equal(t, "query myQuery", sn[4].Name())
+			require.Equal(t, trace.SpanKindClient, sn[4].SpanKind())
+			require.Equal(t, sn[4].Parent().SpanID(), sn[5].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[4].Status())
+
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[5].Name())
+			require.Equal(t, sn[5].Parent().SpanID(), sn[6].SpanContext().SpanID())
+			require.Equal(t, trace.SpanKindInternal, sn[5].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[6].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			require.Equal(t, sn[6].Parent().SpanID(), sn[7].SpanContext().SpanID())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
+
+			// Root Server middleware
+			require.Equal(t, "query myQuery", sn[7].Name())
+			require.Equal(t, sn[7].ChildSpanCount(), 5)
+			require.Equal(t, trace.SpanKindServer, sn[7].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+		})
+	})
+
+	t.Run("Spans are not sampled because parent based sampler is enabled by default and parent span sample flag is not set", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+				Header: map[string][]string{
+					// traceparent header without sample flag set
+					"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"}, // 00 = not sampled
+				},
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 0, "expected 0 spans, got %d", len(sn))
+		})
+	})
+
 	t.Run("Trace named operation with parent-child relationship", func(t *testing.T) {
 		t.Parallel()
 
@@ -430,6 +587,13 @@ func TestTelemetry(t *testing.T) {
 			events := sn[7].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
 			require.Equal(t, "exception", events[0].Name)
+
+			// Validate if the root span has the correct status and error
+			require.Equal(t, "query unnamed", sn[9].Name())
+			require.Equal(t, trace.SpanKindServer, sn[9].SpanKind())
+			require.Equal(t, codes.Error, sn[9].Status().Code)
+			require.Contains(t, sn[9].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph '3' at Path: 'query.employees.@'.")
+
 		})
 	})
 
@@ -522,6 +686,92 @@ Downstream errors:
 				otel.WgSubgraphErrorMessage.String("MyErrorMessage"),
 			}, events[2].Attributes)
 
+			// Validate if the root span has the correct status and error
+			require.Equal(t, "query myQuery", sn[9].Name())
+			require.Equal(t, trace.SpanKindServer, sn[9].SpanKind())
+			require.Equal(t, codes.Error, sn[9].Status().Code)
+			require.Contains(t, sn[9].Status().Description, `Failed to fetch from Subgraph '3' at Path: 'query.employees.@'.
+Downstream errors:
+1. Subgraph error at Path 'foo', Message: Unauthorized, Extension Code: UNAUTHORIZED.
+2. Subgraph error at Path 'bar', Message: MyErrorMessage, Extension Code: YOUR_ERROR_CODE.
+`)
+		})
+	})
+
+	t.Run("Operation parsing errors are traced", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `invalid query`,
+			})
+			require.Equal(t, `{"errors":[{"message":"unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]","locations":[{"line":1,"column":1}]}],"data":null}`, res.Body)
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Len(t, sn, 2, "expected 2 spans, got %d", len(sn))
+
+			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, codes.Error, sn[0].Status().Code)
+			require.Contains(t, sn[0].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
+
+			events := sn[0].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL parsing failed")
+			require.Equal(t, "exception", events[0].Name)
+
+			require.Equal(t, "POST /graphql", sn[1].Name())
+			require.Equal(t, trace.SpanKindServer, sn[1].SpanKind())
+			require.Equal(t, codes.Error, sn[1].Status().Code)
+			require.Contains(t, sn[1].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
+
+			events = sn[1].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
+			require.Equal(t, "exception", events[0].Name)
+		})
+	})
+
+	t.Run("Operation normalization errors are traced", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query foo { employeesTypeNotExist { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"field: employeesTypeNotExist not defined on type: Query","path":["query","employeesTypeNotExist"]}],"data":null}`, res.Body)
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Len(t, sn, 3, "expected 3 spans, got %d", len(sn))
+
+			require.Equal(t, "Operation - Parse", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, codes.Unset, sn[0].Status().Code)
+			require.Empty(t, sn[0].Status().Description)
+
+			require.Empty(t, sn[0].Events())
+
+			require.Equal(t, "Operation - Normalize", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, codes.Error, sn[1].Status().Code)
+			require.Equal(t, sn[1].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+
+			events := sn[1].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL normalization failed")
+			require.Equal(t, "exception", events[0].Name)
+
+			require.Equal(t, "query foo", sn[2].Name())
+			require.Equal(t, trace.SpanKindServer, sn[2].SpanKind())
+			require.Equal(t, codes.Error, sn[2].Status().Code)
+			require.Contains(t, sn[2].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+
+			events = sn[2].Events()
+			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
+			require.Equal(t, "exception", events[0].Name)
 		})
 	})
 }

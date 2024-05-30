@@ -18,10 +18,14 @@ export const TraceContext = createContext<{
   subgraphs: { id: string; name: string }[];
   headers: string;
   response: string;
+  clientValidationEnabled: boolean;
+  setClientValidationEnabled: (val: boolean) => void;
 }>({
   subgraphs: [],
   headers: '',
   response: '',
+  clientValidationEnabled: true,
+  setClientValidationEnabled: () => {},
 });
 
 const Trace = ({
@@ -192,7 +196,7 @@ const Trace = ({
     const parseJson = (json: any, parentId?: string): FetchNode | undefined => {
       const fetchNode = parseFetch(json.fetch, parentId);
 
-      json.fields.forEach((field: any) => {
+      json.fields?.forEach((field: any) => {
         if (field.value && field.value.node_type === 'array') {
           field.value.items.forEach((fieldItem: any) => {
             if (fieldItem.node_type === 'object') {

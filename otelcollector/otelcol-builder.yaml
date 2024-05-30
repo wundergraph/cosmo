@@ -5,25 +5,26 @@ dist:
   description: Local OpenTelemetry Collector binary
   output_path: ./otelcol-dev
 
+
 extensions:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.93.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension v0.93.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.93.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.93.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.101.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension v0.101.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.101.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.101.0
     import: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage
 
 exporters:
-  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.93.0
-  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.93.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/clickhouseexporter v0.93.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.93.0
+  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.101.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.101.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/clickhouseexporter v0.101.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.101.0
 
 receivers:
-  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.93.0
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.101.0
 
 processors:
-  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.93.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.93.0
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.101.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.101.0
 
 replaces:
-  - github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension => github.com/wundergraph/opentelemetry-collector-contrib/extension/jwtauthextension dbd7cc5
+  - github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension => github.com/wundergraph/opentelemetry-collector-contrib/extension/jwtauthextension ae9abed6a8ffd6b6848df7bba89f89c04c17d40b

@@ -51,14 +51,15 @@ message PublishFederatedSubgraphRequest {
   optional string subscription_url = 7;
   // The namespace of the subgraph
   string namespace = 8;
-  // If true, the labels will be unset
-  optional bool unset_labels = 9;
+  // The subscription subprotocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message PublishFederatedSubgraphResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
+  optional bool hasChanged = 4;
 }
 
 message GitInfo {
@@ -96,6 +97,8 @@ message CreateMonographRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
   optional string readme = 7;
   string admissionWebhookURL = 8;
+  // The subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message CreateMonographResponse {
@@ -129,6 +132,7 @@ message CreateFederatedSubgraphRequest {
   // readme of the subgraph
   optional string readme = 7;
   string namespace = 8;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
 }
 
 message DeleteFederatedGraphRequest {
@@ -252,6 +256,12 @@ message GetFederatedGraphsRequest {
   optional bool supports_federation = 5;
 }
 
+message Contract {
+  string id = 1;
+  string source_federated_graph_id = 2;
+  repeated string exclude_tags = 3;
+}
+
 message FederatedGraph {
   string id = 1;
   string name = 2;
@@ -267,6 +277,8 @@ message FederatedGraph {
   string namespace = 12;
   optional string compositionId = 13;
   bool supports_federation = 14;
+  optional Contract contract = 15;
+  optional string admission_webhook_url = 16;
 }
 
 message GetFederatedGraphsResponse {
@@ -288,6 +300,7 @@ message GetSubgraphsRequest {
   int32 limit = 1;
   int32 offset = 2;
   string namespace = 3;
+  optional string query = 4;
 }
 
 message Subgraph {
@@ -301,11 +314,14 @@ message Subgraph {
   string subscriptionUrl = 8;
   string target_id = 9;
   string namespace = 10;
+  string subscriptionProtocol = 11;
+  optional bool isV2Graph = 12;
 }
 
 message GetSubgraphsResponse {
   Response response = 1;
   repeated Subgraph graphs = 2;
+  int32 count = 3;
 }
 
 message GetFederatedGraphByNameRequest {
@@ -330,6 +346,7 @@ message GetFederatedGraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
   optional string version_id = 3;
+  optional string client_schema = 4;
 }
 
 message GetSubgraphByNameRequest {
@@ -376,6 +393,12 @@ message GetChecksByFederatedGraphNameRequest {
 }
 
 message SchemaCheck {
+  message GhDetails {
+    string commitSha = 1;
+    string ownerSlug = 2;
+    string repositorySlug = 3;
+  }
+
   string id = 1;
   string targetID = 2;
   string subgraphName = 3;
@@ -385,15 +408,8 @@ message SchemaCheck {
   bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
   bool isDeleted = 9;
-  optional SchemaCheckGhDetails ghDetails = 10;
+  optional GhDetails ghDetails = 10;
   bool hasLintErrors = 11;
-}
-
-message SchemaCheckGhDetails {
-  string commitSha = 1;
-  string ownerSlug = 3;
-  string repositorySlug = 4;
-  int32 checkRunId = 5;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -507,6 +523,7 @@ message UpdateSubgraphRequest {
   optional string readme = 7;
   string namespace = 8;
   optional bool unset_labels = 9;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
 }
 
 message UpdateSubgraphResponse {
@@ -539,6 +556,7 @@ message UpdateMonographRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
   optional string subscription_url = 6;
   optional string readme = 7;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 8;
 }
 
 message UpdateMonographResponse {
@@ -754,12 +772,26 @@ message PendingOrgInvitation{
   string email = 2;
 }
 
-message GetOrganizationMembersRequest {}
+message GetPendingOrganizationMembersRequest {
+  Pagination pagination = 1;
+  optional string search = 2;
+}
+
+message GetPendingOrganizationMembersResponse {
+  Response response = 1;
+  repeated PendingOrgInvitation pendingInvitations = 2;
+  int32 total_count = 3;
+}
+
+message GetOrganizationMembersRequest {
+  Pagination pagination = 1;
+  optional string search = 2;
+}
 
 message GetOrganizationMembersResponse {
   Response response = 1;
   repeated OrgMember members = 2;
-  repeated PendingOrgInvitation pendingInvitations = 3;
+  int32 total_count = 3;
 }
 
 message InviteUserRequest {
@@ -800,6 +832,7 @@ message CreateAPIKeyRequest {
   repeated string federatedGraphTargetIds = 4;
   repeated string subgraphTargetIds = 5;
   repeated string permissions = 6;
+  bool allowAllResources = 7;
 }
 
 message CreateAPIKeyResponse {
@@ -975,6 +1008,7 @@ message CreateOrganizationWebhookConfigRequest {
 
 message CreateOrganizationWebhookConfigResponse {
   Response response = 1;
+  string webhook_config_id = 2;
 }
 
 message GetOrganizationWebhookConfigsRequest {}
@@ -1536,6 +1570,7 @@ message GetSdlBySchemaVersionRequest {
 message GetSdlBySchemaVersionResponse {
   Response response = 1;
   string sdl = 2;
+  string client_schema = 3;
 }
 
 message GetChangelogBySchemaVersionRequest {
@@ -1914,12 +1949,52 @@ message GetUserAccessiblePermissionsResponse {
   repeated Permission permissions = 2;
 }
 
+message CreateContractRequest {
+  string name = 1;
+  string namespace = 2;
+  string source_graph_name = 3;
+  string routing_url = 4;
+  string admission_webhook_url = 5;
+  repeated string exclude_tags = 6;
+  optional string readme = 7;
+}
+
+message CreateContractResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
+message UpdateContractRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated string exclude_tags = 3;
+}
+
+message UpdateContractResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
+message IsMemberLimitReachedRequest {}
+
+message IsMemberLimitReachedResponse {
+  Response response = 1;
+  bool limit_reached = 2;
+  int32 member_count = 3;  
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
   rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse) {}
   rpc RenameNamespace(RenameNamespaceRequest) returns (RenameNamespaceResponse) {}
   rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
+
+  // Contracts
+  rpc CreateContract(CreateContractRequest) returns (CreateContractResponse) {}
+  rpc UpdateContract(UpdateContractRequest) returns (UpdateContractResponse) {}
 
   rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
   rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}
@@ -1931,7 +2006,7 @@ service PlatformService {
   rpc PublishMonograph(PublishMonographRequest) returns (PublishMonographResponse) {}
   // DeleteMonograph deletes a monograph from the control plane.
   rpc DeleteMonograph(DeleteMonographRequest) returns (DeleteMonographResponse) {}
-  // UpdateMonograph updates a monograph with new labels, urls, subscription config and readme
+  // UpdateMonograph updates a monograph with new urls, subscription config and readme
   rpc UpdateMonograph(UpdateMonographRequest) returns (UpdateMonographResponse) {}
   // MigrateMonograph converts a monograph into a federated graph.
   rpc MigrateMonograph(MigrateMonographRequest) returns (MigrateMonographResponse) {}
@@ -2019,6 +2094,10 @@ service PlatformService {
   rpc CreateFederatedGraphToken(CreateFederatedGraphTokenRequest) returns (CreateFederatedGraphTokenResponse) {}
   // GetOrganizationMembers returns the list of organization members
   rpc GetOrganizationMembers(GetOrganizationMembersRequest) returns (GetOrganizationMembersResponse){}
+  // GetOrganizationMembers returns the list of pending organization invites
+  rpc GetPendingOrganizationMembers(GetPendingOrganizationMembersRequest) returns (GetPendingOrganizationMembersResponse){}
+  // IsMemberLimitReached returns whether the organization has reached the member limit
+  rpc IsMemberLimitReached(IsMemberLimitReachedRequest) returns (IsMemberLimitReachedResponse){}
   // InviteUser invites an user to join the organization
   rpc InviteUser(InviteUserRequest) returns (InviteUserResponse){}
   // GetAPIKeys returns a list of API keys of the organization

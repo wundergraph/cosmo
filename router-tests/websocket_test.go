@@ -20,6 +20,7 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -37,14 +38,14 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			DisableWebSockets: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			_, _, err := xEnv.GraphQLWebsocketDialWithRetry(nil)
+			_, _, err := xEnv.GraphQLWebsocketDialWithRetry(nil, nil)
 			require.Error(t, err)
 		})
 	})
 	t.Run("query", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -92,7 +93,7 @@ func TestWebSockets(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			conn := xEnv.InitGraphQLWebSocketConnection(header, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
 			err = conn.WriteJSON(testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -140,7 +141,7 @@ func TestWebSockets(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			conn := xEnv.InitGraphQLWebSocketConnection(header, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
 			err = conn.WriteJSON(testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -152,7 +153,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]}]`, string(res.Payload))
+			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",9,"startDate"]}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
@@ -188,13 +189,14 @@ func TestWebSockets(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			conn := xEnv.InitGraphQLWebSocketConnection(header, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
 			err = conn.WriteJSON(testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
 			})
 			require.NoError(t, err)
+
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
@@ -205,17 +207,15 @@ func TestWebSockets(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
+
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"]}]`, string(res.Payload))
-			var complete testenv.WebSocketMessage
-			err = conn.ReadJSON(&complete)
-			require.NoError(t, err)
-			require.Equal(t, "complete", complete.Type)
-			require.Equal(t, "1", complete.ID)
+
+			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -245,7 +245,7 @@ func TestWebSockets(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			conn := xEnv.InitGraphQLWebSocketConnection(header, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
 			err = conn.WriteJSON(testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -268,11 +268,8 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
-			var complete testenv.WebSocketMessage
-			err = conn.ReadJSON(&complete)
-			require.NoError(t, err)
-			require.Equal(t, "complete", complete.Type)
-			require.Equal(t, "1", complete.ID)
+
+			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -293,7 +290,7 @@ func TestWebSockets(t *testing.T) {
 				} `json:"data"`
 			}
 
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -359,9 +356,17 @@ func TestWebSockets(t *testing.T) {
 						Operation: config.HeaderRuleOperationPropagate,
 						Named:     "Authorization",
 					},
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "Not-AllowListed-But-Forwarded",
+					},
 				},
 			},
 		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
@@ -373,11 +378,16 @@ func TestWebSockets(t *testing.T) {
 				Employees: testenv.SubgraphConfig{
 					Middleware: func(handler http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							defer wg.Done()
+
+							notAllowListedButForwarded := r.Header.Get("Not-AllowListed-But-Forwarded")
+							require.Equal(t, "but still part of the origin upgrade request", notAllowListedButForwarded)
+
 							upgrader := websocket.Upgrader{
 								CheckOrigin: func(r *http.Request) bool {
 									return true
 								},
-								Subprotocols: []string{"graphql-ws"},
+								Subprotocols: []string{"graphql-transport-ws"},
 							}
 							require.Equal(t, "Bearer test", r.Header.Get("Authorization"))
 							conn, err := upgrader.Upgrade(w, r, nil)
@@ -386,23 +396,23 @@ func TestWebSockets(t *testing.T) {
 
 							_, message, err := conn.ReadMessage()
 							require.NoError(t, err)
-							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"User-Agent":["Go-http-client/1.1"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":"Bearer test","Canonical-Header-Name":"matches","Reverse-Canonical-Header-Name":"matches as well","X-Custom-Auth":"customAuth"},"upgradeQueryParams":{"token":"Bearer Something"},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
 							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
 							require.NoError(t, err)
 
 							_, message, err = conn.ReadMessage()
 							require.NoError(t, err)
-							require.Equal(t, `{"type":"start","id":"1","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"User-Agent":["Go-http-client/1.1"]},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":"Bearer test","Canonical-Header-Name":"matches","Reverse-Canonical-Header-Name":"matches as well","X-Custom-Auth":"customAuth"},"upgradeQueryParams":{"token":"Bearer Something"},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
-							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"data","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
 							require.NoError(t, err)
 
 							_, message, err = conn.ReadMessage()
 							if errors.Is(err, websocket.ErrCloseSent) {
 								return
 							}
-							require.Equal(t, `{"type":"stop","id":"1"}`, string(message))
+							require.Equal(t, `{"id":"1","type":"complete"}`, string(message))
 
 							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
 							require.NoError(t, err)
@@ -422,8 +432,18 @@ func TestWebSockets(t *testing.T) {
 			}
 
 			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
-				"Authorization": []string{"Bearer test"},
-			}, []byte(`{"Custom-Auth":"test"}`))
+				"Authorization":                 []string{"Bearer test"},
+				"Ignored":                       []string{"ignored"},
+				"X-Custom-Auth":                 []string{"customAuth"},
+				"canonical-header-name":         []string{"matches"},
+				"Reverse-Canonical-Header-Name": []string{"matches as well"},
+				"Not-AllowListed-But-Forwarded": []string{"but still part of the origin upgrade request"},
+			}, url.Values{
+				"token":   []string{"Bearer Something"},
+				"ignored": []string{"ignored"},
+			},
+				[]byte(`{"Custom-Auth":"test"}`),
+			)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -450,23 +470,160 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			var complete testenv.WebSocketMessage
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 			require.NoError(t, err)
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
 
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			_, _, err = conn.ReadMessage()
-			require.Error(t, err)
-			var netErr net.Error
-			if errors.As(err, &netErr) {
-				require.True(t, netErr.Timeout())
-			} else {
-				require.Fail(t, "expected net.Error")
+			wg.Wait()
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+	t.Run("empty allow lists should allow all headers and query args", func(t *testing.T) {
+		t.Parallel()
+		headerRules := config.HeaderRules{
+			All: config.GlobalHeaderRule{
+				Request: []config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "Authorization",
+					},
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "Not-AllowListed-But-Forwarded",
+					},
+				},
+			},
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.ForwardUpgradeHeaders.AllowList = nil
+				cfg.ForwardUpgradeQueryParams.AllowList = nil
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(headerRules),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							defer wg.Done()
+
+							notAllowListedButForwarded := r.Header.Get("Not-AllowListed-But-Forwarded")
+							require.Equal(t, "but still part of the origin upgrade request", notAllowListedButForwarded)
+
+							upgrader := websocket.Upgrader{
+								CheckOrigin: func(r *http.Request) bool {
+									return true
+								},
+								Subprotocols: []string{"graphql-transport-ws"},
+							}
+							require.Equal(t, "Bearer test", r.Header.Get("Authorization"))
+							conn, err := upgrader.Upgrade(w, r, nil)
+							require.NoError(t, err)
+							defer conn.Close()
+
+							_, message, err := conn.ReadMessage()
+							require.NoError(t, err)
+							message = jsonparser.Delete(message, "payload", "extensions", "upgradeHeaders", "Sec-Websocket-Key") // Sec-Websocket-Key is a random value
+							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":"Bearer test","Canonical-Header-Name":"matches","Connection":"Upgrade","Ignored":"ignored","Not-Allowlisted-But-Forwarded":"but still part of the origin upgrade request","Reverse-Canonical-Header-Name":"matches as well","Sec-Websocket-Protocol":"graphql-transport-ws","Sec-Websocket-Version":"13","Upgrade":"websocket","User-Agent":"Go-http-client/1.1","X-Custom-Auth":"customAuth"},"upgradeQueryParams":{"ignored":"ignored","token":"Bearer Something","x-custom-auth":"customAuth"},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							require.NoError(t, err)
+
+							_, message, err = conn.ReadMessage()
+							require.NoError(t, err)
+							message = jsonparser.Delete(message, "payload", "extensions", "upgradeHeaders", "Sec-Websocket-Key") // Sec-Websocket-Key is a random value
+							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":"Bearer test","Canonical-Header-Name":"matches","Connection":"Upgrade","Ignored":"ignored","Not-Allowlisted-But-Forwarded":"but still part of the origin upgrade request","Reverse-Canonical-Header-Name":"matches as well","Sec-Websocket-Protocol":"graphql-transport-ws","Sec-Websocket-Version":"13","Upgrade":"websocket","User-Agent":"Go-http-client/1.1","X-Custom-Auth":"customAuth"},"upgradeQueryParams":{"ignored":"ignored","token":"Bearer Something","x-custom-auth":"customAuth"},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
+							require.NoError(t, err)
+
+							_, message, err = conn.ReadMessage()
+							if errors.Is(err, websocket.ErrCloseSent) {
+								return
+							}
+							require.Equal(t, `{"id":"1","type":"complete"}`, string(message))
+
+							err = conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
+							require.NoError(t, err)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			type currentTimePayload struct {
+				Data struct {
+					CurrentTime struct {
+						UnixTime  float64 `json:"unixTime"`
+						Timestamp string  `json:"timestamp"`
+					} `json:"currentTime"`
+				} `json:"data"`
 			}
+
+			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
+				"Authorization":                 []string{"Bearer test"},
+				"Ignored":                       []string{"ignored"},
+				"X-Custom-Auth":                 []string{"customAuth"},
+				"canonical-header-name":         []string{"matches"},
+				"Reverse-Canonical-Header-Name": []string{"matches as well"},
+				"Not-AllowListed-But-Forwarded": []string{"but still part of the origin upgrade request"},
+			}, url.Values{
+				"token":         []string{"Bearer Something"},
+				"ignored":       []string{"ignored"},
+				"x-custom-auth": []string{"customAuth"},
+			},
+				[]byte(`{"Custom-Auth":"test"}`),
+			)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload currentTimePayload
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(1), payload.Data.CurrentTime.UnixTime)
+
+			// Sending a complete must stop the subscription
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "complete",
+			})
+			require.NoError(t, err)
+
+			var complete testenv.WebSocketMessage
+			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			require.NoError(t, err)
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "1", complete.ID)
+			require.Equal(t, "complete", complete.Type)
+
+			wg.Wait()
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
 	t.Run("subscription with header propagation sse subgraph post", func(t *testing.T) {
@@ -507,7 +664,7 @@ func TestWebSockets(t *testing.T) {
 							data, err := io.ReadAll(r.Body)
 							require.NoError(t, err)
 							defer r.Body.Close()
-							require.Equal(t, `{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":["Bearer test"],"User-Agent":["Go-http-client/1.1"]},"initialPayload":{"Custom-Auth":"test"}}}`, string(data))
+							require.Equal(t, `{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":"Bearer test"},"initialPayload":{"Custom-Auth":"test"}}}`, string(data))
 
 							w.Header().Set("Content-Type", "text/event-stream")
 							w.Header().Set("Cache-Control", "no-cache")
@@ -538,7 +695,7 @@ func TestWebSockets(t *testing.T) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
 				"Authorization": []string{"Bearer test"},
-			}, []byte(`{"Custom-Auth":"test"}`))
+			}, nil, []byte(`{"Custom-Auth":"test"}`))
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -622,7 +779,7 @@ func TestWebSockets(t *testing.T) {
 							require.Equal(t, http.MethodGet, r.Method)
 							query := r.URL.Query()
 							require.Equal(t, "subscription{currentTime {unixTime timeStamp}}", query.Get("query"))
-							require.Equal(t, `{"upgradeHeaders":{"Authorization":["Bearer test"],"User-Agent":["Go-http-client/1.1"]},"initialPayload":{"Custom-Auth":"test"}}`, query.Get("extensions"))
+							require.Equal(t, `{"upgradeHeaders":{"Authorization":"Bearer test"},"initialPayload":{"Custom-Auth":"test"}}`, query.Get("extensions"))
 
 							w.Header().Set("Content-Type", "text/event-stream")
 							w.Header().Set("Cache-Control", "no-cache")
@@ -653,7 +810,7 @@ func TestWebSockets(t *testing.T) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
 				"Authorization": []string{"Bearer test"},
-			}, []byte(`{"Custom-Auth":"test"}`))
+			}, nil, []byte(`{"Custom-Auth":"test"}`))
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -717,7 +874,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -741,7 +898,7 @@ func TestWebSockets(t *testing.T) {
 				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
 			},
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-				cfg.StatusCodes = false
+				cfg.PropagateStatusCodes = false
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -755,7 +912,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -790,7 +947,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -828,7 +985,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -853,7 +1010,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -976,7 +1133,7 @@ func TestWebSockets(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -1068,8 +1225,8 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Make sure sending two simultaneous subscriptions with different extensions
 			// triggers two subscriptions to the upstream
-			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
-			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			var err error
 			err = conn1.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
@@ -1118,7 +1275,7 @@ func TestWebSockets(t *testing.T) {
 				"Authorization": []string{"token 123"},
 			})
 
-			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			var err error
 			err = conn1.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
@@ -1137,7 +1294,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, `{"extensions":{"token":"456","upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]},"upgradeQueryParams":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
+			require.Equal(t, `{"extensions":{"token":"456","upgradeQueryParams":{"Authorization":"token 123"}}}`, string(payload.Data.InitialPayload))
 		})
 	})
 	t.Run("forward query params via initial payload alongside existing", func(t *testing.T) {
@@ -1150,7 +1307,7 @@ func TestWebSockets(t *testing.T) {
 				"Authorization": []string{"token 123"},
 			})
 
-			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			var err error
 			err = conn1.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
@@ -1169,7 +1326,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
-			require.Equal(t, `{"extensions":{"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]},"upgradeQueryParams":{"Authorization":["token 123"]}}}`, string(payload.Data.InitialPayload))
+			require.Equal(t, `{"extensions":{"upgradeQueryParams":{"Authorization":"token 123"}}}`, string(payload.Data.InitialPayload))
 		})
 	})
 	t.Run("same graphql path as playground", func(t *testing.T) {
@@ -1177,7 +1334,7 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			OverrideGraphQLPath: "/",
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"123": 456, "extensions": {"hello": "world"}}`))
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123": 456, "extensions": {"hello": "world"}}`))
 			var err error
 			err = conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
@@ -1188,7 +1345,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("different path", func(t *testing.T) {
@@ -1196,7 +1353,7 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			OverrideGraphQLPath: "/foo",
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"123": 456, "extensions": {"hello": "world"}}`))
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123": 456, "extensions": {"hello": "world"}}`))
 			var err error
 			err = conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
@@ -1207,7 +1364,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
 	})
 
@@ -1221,7 +1378,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.WebSocketReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -1249,7 +1406,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.WebSocketReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -1276,7 +1433,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.WebSocketReadTimeout = time.Millisecond * 10
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -1286,7 +1443,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("single connection with initial payload and extensions in the request", func(t *testing.T) {
@@ -1297,7 +1454,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// "extensions" in the request should override the "extensions" in initial payload
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -1307,14 +1464,14 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2","initialPayload":{"123":456,"extensions":{"hello":"world"}},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2","initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("single connection multiple differing subscriptions", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 
 			xEnv.WaitForConnectionCount(1, time.Second*5)
 
@@ -1430,8 +1587,8 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// "extensions" in the request should override the "extensions" in initial payload
-			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"id":1}`))
-			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, []byte(`{"id":2}`))
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"id":1}`))
+			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"id":2}`))
 			err := conn1.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -1447,11 +1604,11 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			err = conn1.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":1},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}},"id":1}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":1}},"id":1}}}`, string(msg.Payload))
 
 			err = conn2.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":2},"upgradeHeaders":{"User-Agent":["Go-http-client/1.1"]}},"id":2}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"initialPayload":{"extensions":{"initialPayload":{"id":2}},"id":2}}}`, string(msg.Payload))
 		})
 	})
 	t.Run("absinthe subscription", func(t *testing.T) {

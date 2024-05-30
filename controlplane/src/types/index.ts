@@ -38,11 +38,19 @@ export interface SubgraphListFilterOptions {
   namespaceId?: string;
   limit: number;
   offset: number;
+  query?: string;
 }
 
 export interface Label {
   key: string;
   value: string;
+}
+
+export interface ContractDTO {
+  id: string;
+  sourceFederatedGraphId: string;
+  downstreamFederatedGraphId: string;
+  excludeTags: string[];
 }
 
 export interface FederatedGraphDTO {
@@ -64,6 +72,7 @@ export interface FederatedGraphDTO {
   namespace: string;
   namespaceId: string;
   supportsFederation: boolean;
+  contract?: ContractDTO;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -85,6 +94,7 @@ export interface SubgraphDTO {
   routingUrl: string;
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
+  websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
   schemaSDL: string;
   schemaVersionId: string;
   lastUpdatedAt: string;
@@ -93,6 +103,7 @@ export interface SubgraphDTO {
   readme?: string;
   namespace: string;
   namespaceId: string;
+  isV2Graph?: boolean;
 }
 
 export interface MigrationSubgraph {

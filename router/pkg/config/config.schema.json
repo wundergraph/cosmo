@@ -6,9 +6,7 @@
     "version": {
       "type": "string",
       "description": "The version of the configuration file. This is used to ensure that the configuration file is compatible.",
-      "enum": [
-        "1"
-      ]
+      "enum": ["1"]
     },
     "instance_id": {
       "type": "string",
@@ -78,9 +76,7 @@
               "type": "object",
               "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the provided certificate.",
               "additionalProperties": false,
-              "required": [
-                "cert_file"
-              ],
+              "required": ["cert_file"],
               "properties": {
                 "required": {
                   "type": "boolean",
@@ -103,10 +99,7 @@
             }
           },
           "then": {
-            "required": [
-              "cert_file",
-              "key_file"
-            ]
+            "required": ["cert_file", "key_file"]
           }
         }
       }
@@ -138,14 +131,46 @@
           }
         },
         "forward_upgrade_headers": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request Headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Forward upgrade request headers in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "The names of the headers to forward. The default value is 'Authorization'.",
+              "default": [
+                "Authorization"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_upgrade_query_params": {
-          "type": "boolean",
-          "default": true,
-          "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph. The default value is true."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
+              "default": [
+                "Authorization"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "forward_initial_payload": {
           "type": "boolean",
@@ -172,10 +197,7 @@
               "type": "string",
               "default": "redact",
               "description": "The method used to anonymize the IP addresses. The supported methods are 'redact' and 'hash'. The default value is 'redact'. The 'redact' method replaces the IP addresses with the string '[REDACTED]'. The 'hash' method hashes the IP addresses using the SHA-256 algorithm.",
-              "enum": [
-                "redact",
-                "hash"
-              ]
+              "enum": ["redact", "hash"]
             }
           }
         }
@@ -196,22 +218,37 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "default": false
             },
             "sampling_rate": {
               "type": "number",
               "description": "The sampling rate for the traces. The value must be between 0 and 1. If the value is 0, no traces will be sampled. If the value is 1, all traces will be sampled. The default value is 1.",
+              "default": 1,
               "minimum": 0,
               "maximum": 1
+            },
+            "parent_based_sampler": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable the parent-based sampler. The parent-based sampler is used to sample the traces based on the parent trace. The default value is true."
+            },
+            "export_graphql_variables": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable the export of the GraphQL variables. The GraphQL variables are exported with the traces. The default value is false to avoid leaking sensitive information."
+            },
+            "with_new_root": {
+              "type": "boolean",
+              "default": false,
+              "description": "Specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers. This is useful when the router must be the entry point of the trace."
             },
             "exporters": {
               "type": "array",
               "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
               "items": {
                 "type": "object",
-                "required": [
-                  "endpoint"
-                ],
+                "required": ["endpoint"],
                 "additionalProperties": false,
                 "properties": {
                   "disabled": {
@@ -221,10 +258,7 @@
                     "type": "string",
                     "description": "The exporter to use for the traces. The supported exporters are 'http' and 'grpc'.",
                     "default": "http",
-                    "enum": [
-                      "http",
-                      "grpc"
-                    ]
+                    "enum": ["http", "grpc"]
                   },
                   "endpoint": {
                     "type": "string"
@@ -283,13 +317,6 @@
                   "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
                 }
               }
-            },
-            "export_graphql_variables": {
-              "type": "boolean",
-              "description": "Enable the export of the GraphQL variables. The GraphQL variables are exported with the traces."
-            },
-            "with_new_root": {
-              "type": "boolean"
             }
           }
         },
@@ -327,10 +354,7 @@
                         "type": "string",
                         "description": "The exporter protocol to use to export metrics. The supported exporters are 'http' and 'grpc'.",
                         "default": "http",
-                        "enum": [
-                          "http",
-                          "grpc"
-                        ]
+                        "enum": ["http", "grpc"]
                       },
                       "endpoint": {
                         "type": "string",
@@ -350,10 +374,7 @@
                         }
                       }
                     },
-                    "required": [
-                      "exporter",
-                      "endpoint"
-                    ]
+                    "required": ["exporter", "endpoint"]
                   }
                 }
               }
@@ -406,32 +427,18 @@
         "allow_origins": {
           "type": "array",
           "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
-          "default": [
-            "*"
-          ],
+          "default": ["*"],
           "items": {
             "type": "string"
           }
         },
         "allow_methods": {
           "type": "array",
-          "default": [
-            "GET",
-            "POST",
-            "HEAD"
-          ],
+          "default": ["GET", "POST", "HEAD"],
           "description": "The allowed HTTP methods. The default value is to allow the methods 'GET', 'POST', and 'HEAD'.",
           "items": {
             "type": "string",
-            "enum": [
-              "GET",
-              "POST",
-              "HEAD",
-              "PUT",
-              "DELETE",
-              "PATCH",
-              "OPTIONS"
-            ]
+            "enum": ["GET", "POST", "HEAD", "PUT", "DELETE", "PATCH", "OPTIONS"]
           }
         },
         "allow_headers": {
@@ -507,14 +514,7 @@
     },
     "log_level": {
       "type": "string",
-      "enum": [
-        "debug",
-        "info",
-        "warning",
-        "error",
-        "fatal",
-        "panic"
-      ],
+      "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
       "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
       "default": "info"
     },
@@ -648,9 +648,7 @@
                 "algorithm": {
                   "type": "string",
                   "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
-                  "enum": [
-                    "backoff_jitter"
-                  ]
+                  "enum": ["backoff_jitter"]
                 },
                 "max_attempts": {
                   "type": "integer",
@@ -745,9 +743,7 @@
                   "header_names": {
                     "type": "array",
                     "description": "The names of the headers. The headers are used to extract the token from the request. The default value is 'Authorization'",
-                    "default": [
-                      "Authorization"
-                    ],
+                    "default": ["Authorization"],
                     "items": {
                       "type": "string"
                     }
@@ -755,9 +751,7 @@
                   "header_value_prefixes": {
                     "type": "array",
                     "description": "The prefixes of the header values. The prefixes are used to extract the token from the header value. The default value is 'Bearer'",
-                    "default": [
-                      "Bearer"
-                    ],
+                    "default": ["Bearer"],
                     "items": {
                       "type": "string"
                     }
@@ -771,14 +765,10 @@
                     "default": "1m"
                   }
                 },
-                "required": [
-                  "url"
-                ]
+                "required": ["url"]
               }
             },
-            "required": [
-              "name"
-            ]
+            "required": ["name"]
           }
         }
       }
@@ -807,9 +797,7 @@
         },
         "strategy": {
           "type": "string",
-          "enum": [
-            "simple"
-          ],
+          "enum": ["simple"],
           "description": "The strategy used to enforce the rate limit. The supported strategies are 'simple'."
         },
         "simple_strategy": {
@@ -838,11 +826,7 @@
               "description": "Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected."
             }
           },
-          "required": [
-            "rate",
-            "burst",
-            "period"
-          ]
+          "required": ["rate", "burst", "period"]
         },
         "storage": {
           "type": "object",
@@ -898,21 +882,22 @@
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
       "additionalProperties": false,
       "properties": {
-        "sources": {
+        "providers": {
           "type": "object",
-          "description": "The provider configuration by source name",
-          "additionalProperties": {
-            "oneOf": [
-              {
+          "description": "The provider configuration. The provider configuration is used to configure the event-driven federated subscriptions.",
+          "additionalProperties": false,
+          "properties": {
+            "nats": {
+              "type": "array",
+              "description": "The NATS configuration. The NATS is used to configure the event-driven federated subscriptions.",
+              "items": {
                 "type": "object",
+                "required": ["id", "url"],
                 "additionalProperties": false,
-                "required": ["provider", "url"],
                 "properties": {
-                  "provider": {
-                    "description": "The events provider. Supported providers include: \"NATS\"",
-                    "enum": [
-                      "NATS"
-                    ]
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
                   },
                   "url": {
                     "type": "string",
@@ -920,15 +905,10 @@
                     "format": "url"
                   },
                   "authentication": {
-                    "type": "object",
                     "description": "Authentication configuration for the NATS provider.",
-                    "unevaluatedProperties": false,
-                    "properties": {
-                    },
+                    "type": "object",
                     "oneOf": [
                       {
-                        "type": "object",
-                        "additionalProperties": false,
                         "required": ["token"],
                         "properties": {
                           "token": {
@@ -939,16 +919,22 @@
                       },
                       {
                         "type": "object",
-                        "additionalProperties": false,
-                        "required": ["username", "password"],
                         "properties": {
-                          "username": {
-                            "type": "string",
-                            "description": "The username for username/password-based authentication."
-                          },
-                          "password": {
-                            "type": "string",
-                            "description": "The password for username/password-based authentication."
+                          "user_info": {
+                            "type": "object",
+                            "description": "Userinfo configuration for the NATS provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for username/password-based authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for username/password-based authentication."
+                              }
+                            }
                           }
                         }
                       }
@@ -956,7 +942,68 @@
                   }
                 }
               }
-            ]
+            },
+            "kafka": {
+              "type": "array",
+              "description": "The Kafka configuration. The Kafka is used to configure the event-driven federated subscriptions.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "brokers"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+                  },
+                  "brokers": {
+                    "type": "array",
+                    "description": "The list of Kafka brokers. The brokers are used to connect to the Kafka provider.",
+                    "items": {
+                      "type": "string",
+                      "format": "hostname-port"
+                    }
+                  },
+                  "tls": {
+                    "type": "object",
+                    "description": "TLS configuration for the Kafka provider. If enabled, it uses SystemCertPool for RootCAs by default.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Enables the TLS."
+                      }
+                    }
+                  },
+                  "authentication": {
+                    "type": "object",
+                    "description": "SASL Authentication configuration for the Kafka provider.",
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "sasl_plain": {
+                            "type": "object",
+                            "description": "Plain SASL Authentication configuration for the Kafka provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for plain SASL authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for plain SASL authentication."
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -978,7 +1025,8 @@
     },
     "override_routing_url": {
       "type": "object",
-      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs.",
+      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs. Please use the overrides section because this option is deprecated",
+      "deprecated": true,
       "additionalProperties": false,
       "properties": {
         "subgraphs": {
@@ -988,6 +1036,40 @@
             "type": "string",
             "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
             "format": "http-url"
+          }
+        }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "description": "The configuration to override subgraph config. The config is used to override the config for subgraphs.",
+      "additionalProperties": false,
+      "properties": {
+        "subgraphs": {
+          "type": "object",
+          "description": "The configuration for the subgraphs. The subgraphs are used to override the config for the subgraphs.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "routing_url": {
+                "type": "string",
+                "description": "The URL of the subgraph. The URL is used to override the routing URL for the subgraph.",
+                "format": "http-url"
+              },
+              "subscription_url": {
+                "type": "string",
+                "description": "The Subscription URL of the subgraph. The URL is used to override the subscription URL for the subgraph.",
+                "format": "http-url"
+              },
+              "subscription_protocol": {
+                "type": "string",
+                "description": "The Subscription protocol of the subgraph. The protocol is used to override the subscription protocol for the subgraph."
+              },
+              "subscription_websocket_subprotocol": {
+                "type": "string",
+                "description": "The Websocket subprotocol of the subgraph. The protocol is used to override the Websocket subprotocol for the subgraph."
+              }
+            }
           }
         }
       }
@@ -1125,12 +1207,33 @@
         "enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable error propagation. If the value is true, Subgraph errors will be propagated to the client."
+          "description": "Enable error propagation. If the value is true (default: false), Subgraph errors will be propagated to the client."
         },
-        "status_codes": {
-            "type": "boolean",
-            "default": false,
-            "description": "Propagate Subgraph status codes. If the value is true, Subgraph Response status codes will be propagated to the client."
+        "mode": {
+          "type": "string",
+          "enum": ["wrapped", "pass-through"],
+          "default": "wrapped",
+          "description": "The mode of error propagation. The supported modes are 'wrapped' (default) and 'pass-through'. The 'wrapped' mode wraps the error in a custom error object to hide internals. The 'pass-through' mode returns the error as is from the Subgraph."
+        },
+        "rewrite_paths": {
+          "type": "boolean",
+          "default": true,
+          "description": "Rewrite the paths of the Subgraph errors. If the value is true (default), the paths of the Subgraph errors will be rewritten to match the Schema of the Federated Graph."
+        },
+        "omit_locations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Omit the location field of Subgraph errors. If the value is true (default), the location field of Subgraph errors will be omitted. This is useful because the locations of a Subgraph error is internal to the Subgraph and not relevant to the client."
+        },
+        "omit_extensions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Omit the extensions field of Subgraph errors. If the value is true (default: false), the extensions field of Subgraph errors will be omitted. This is useful in case you want to avoid leaking internal information to the client. Some users of GraphQL leverage the errors.extensions.code field to implement error handling logic in the client, in which case you might want to set this to false."
+        },
+        "propagate_status_codes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Propagate Subgraph status codes. If the value is true (default: false), Subgraph Response status codes will be propagated to the client in the errors.extensions.code field."
         }
       }
     }
@@ -1143,39 +1246,32 @@
       "properties": {
         "op": {
           "type": "string",
-          "enum": [
-            "propagate"
-          ],
-          "examples": [
-            "propagate"
-          ],
+          "enum": ["propagate"],
+          "examples": ["propagate"],
           "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
         },
         "matching": {
           "type": "string",
-          "examples": [
-            "(?i)^X-Custom-.*"
-          ],
+          "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
         "named": {
           "type": "string",
-          "examples": [
-            "X-Test-Header"
-          ],
+          "examples": ["X-Test-Header"],
           "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
+        },
+        "rename": {
+          "type": "string",
+          "examples": ["X-Rename-Test-Header"],
+          "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
         },
         "default": {
           "type": "string",
-          "examples": [
-            "default-value"
-          ],
+          "examples": ["default-value"],
           "description": "The default value of the header in case it is not present in the request."
         }
       },
-      "required": [
-        "op"
-      ]
+      "required": ["op"]
     }
   }
 }

@@ -7,6 +7,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
+
 	"net"
 	"net/http"
 	"net/url"
@@ -14,7 +16,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
 	"github.com/redis/go-redis/v9"
 
@@ -26,12 +33,15 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	brotli "go.withmatt.com/connect-brotli"
 
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
@@ -41,6 +51,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 
+	br "github.com/andybalholm/brotli"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -65,6 +76,20 @@ const (
 	Hash   IPAnonymizationMethod = "hash"
 	Redact IPAnonymizationMethod = "redact"
 )
+
+var CustomCompressibleContentTypes = []string{
+	"text/html",
+	"text/css",
+	"text/plain",
+	"text/javascript",
+	"application/javascript",
+	"application/x-javascript",
+	"application/json",
+	"application/atom+xml",
+	"application/rss+xml",
+	"image/svg+xml",
+	"application/graphql",
+}
 
 type (
 	// Router is the main application instance.
@@ -106,6 +131,11 @@ type (
 		KeyFile  string
 
 		ClientAuth *TlsClientAuthConfig
+	}
+
+	EnginePubSubProviders struct {
+		nats  map[string]pubsub_datasource.NatsPubSub
+		kafka map[string]pubsub_datasource.KafkaPubSub
 	}
 
 	// Config defines the configuration options for the Router.
@@ -153,6 +183,7 @@ type (
 		routerTrafficConfig      *config.RouterTrafficConfiguration
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
+		redisClient              *redis.Client
 		processStartTime         time.Time
 		developmentMode          bool
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
@@ -170,8 +201,10 @@ type (
 		securityConfiguration config.SecurityConfiguration
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
-
+		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
+		// the new overrides config
+		overrides config.OverridesConfiguration
 
 		authorization *config.AuthorizationConfiguration
 
@@ -191,22 +224,19 @@ type (
 	// server is the main router instance.
 	server struct {
 		Config
-		server      *http.Server
-		metricStore rmetric.Store
-		// rootContext that all services depending on the router should
-		// use as a parent context
-		rootContext       context.Context
-		rootContextCancel func()
-		routerConfig      *nodev1.RouterConfig
-		healthChecks      health.Checker
+		httpServer      *http.Server
+		metricStore     rmetric.Store
+		routerConfig    *nodev1.RouterConfig
+		healthChecks    health.Checker
+		pubSubProviders *EnginePubSubProviders
 	}
 
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
 
-func (r *server) BaseURL() string {
-	return r.baseURL
+func (s *server) BaseURL() string {
+	return s.baseURL
 }
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
@@ -460,8 +490,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
 	}
 
-	for _, source := range r.eventsConfig.Sources {
-		r.logger.Info("Event source enabled", zap.String("provider", source.Provider), zap.String("url", source.URL))
+	for _, source := range r.eventsConfig.Providers.Nats {
+		r.logger.Info("Nats Event source enabled", zap.String("providerID", source.ID), zap.String("url", source.URL))
+	}
+	for _, source := range r.eventsConfig.Providers.Kafka {
+		r.logger.Info("Kafka Event source enabled", zap.String("providerID", source.ID), zap.Strings("brokers", source.Brokers))
 	}
 
 	return r, nil
@@ -485,22 +518,77 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 		subgraph.Url = parsedURL
 
 		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+		overrideSubgraph, overrideSubgraphOk := r.overrides.Subgraphs[sg.Name]
+
+		var overrideSubscriptionURL string
+		var overrideSubscriptionProtocol *common.GraphQLSubscriptionProtocol
+		var overrideSubscriptionWebsocketSubprotocol *common.GraphQLWebsocketSubprotocol
+
+		if overrideSubgraphOk {
+			if overrideSubgraph.RoutingURL != "" {
+				overrideURL = overrideSubgraph.RoutingURL
+			}
+			if overrideSubgraph.SubscriptionURL != "" {
+				overrideSubscriptionURL = overrideSubgraph.SubscriptionURL
+				_, err := url.Parse(overrideSubscriptionURL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideSubscriptionURL, err)
+				}
+			}
+			if overrideSubgraph.SubscriptionProtocol != "" {
+				switch overrideSubgraph.SubscriptionProtocol {
+				case "ws":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS.Enum()
+				case "sse":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE.Enum()
+				case "sse_post":
+					overrideSubscriptionProtocol = common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST.Enum()
+				default:
+					return nil, fmt.Errorf("invalid subscription protocol '%s'", overrideSubgraph.SubscriptionProtocol)
+				}
+			}
+			if overrideSubgraph.SubscriptionWebsocketSubprotocol != "" {
+				switch overrideSubgraph.SubscriptionWebsocketSubprotocol {
+				case "graphql-ws":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS.Enum()
+				case "graphql-transport-ws":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS.Enum()
+				case "auto":
+					overrideSubscriptionWebsocketSubprotocol = common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO.Enum()
+				default:
+					return nil, fmt.Errorf("invalid subscription websocket subprotocol '%s'", overrideSubgraph.SubscriptionWebsocketSubprotocol)
+				}
+			}
+		}
 
 		// check if the subgraph is overridden
-		if ok && overrideURL != "" {
-			parsedURL, err := url.Parse(overrideURL)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
-			}
+		if ok || overrideSubgraphOk {
+			if overrideURL != "" {
+				parsedURL, err := url.Parse(overrideURL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+				}
 
-			subgraph.Url = parsedURL
+				subgraph.Url = parsedURL
+			}
 
 			// Override datasource urls
 			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
 				if conf.Id == sg.Id {
-					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
-					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
-					sg.RoutingUrl = overrideURL
+					if overrideURL != "" {
+						conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+						sg.RoutingUrl = overrideURL
+					}
+					if overrideSubscriptionURL != "" {
+						conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideSubscriptionURL
+					}
+					if overrideSubscriptionProtocol != nil {
+						conf.CustomGraphql.Subscription.Protocol = overrideSubscriptionProtocol
+					}
+					if overrideSubscriptionWebsocketSubprotocol != nil {
+						conf.CustomGraphql.Subscription.WebsocketSubprotocol = overrideSubscriptionWebsocketSubprotocol
+					}
+
 					break
 				}
 			}
@@ -512,7 +600,7 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 	return subgraphs, nil
 }
 
-// UpdateServer starts a new server and swaps the active server with the new one. The old server is shutdown gracefully.
+// UpdateServer creates a new server and swaps the active server with the new one. The old server is shutdown gracefully.
 // When the router can't be swapped due to an error the old server kept running. Not safe for concurrent use.
 func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Server, error) {
 	// Rebuild server with new router config
@@ -525,8 +613,25 @@ func (r *Router) UpdateServer(ctx context.Context, cfg *nodev1.RouterConfig) (Se
 
 	// Shutdown old server
 	if r.activeServer != nil {
+
+		// Respect grace period
+		if r.gracePeriod > 0 {
+			ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
+			defer cancel()
+
+			ctx = ctxWithTimer
+		}
+
 		if err := r.activeServer.Shutdown(ctx); err != nil {
 			r.logger.Error("Could not shutdown router", zap.Error(err))
+
+			if errors.Is(err, context.DeadlineExceeded) {
+				r.logger.Warn(
+					"Shutdown deadline exceeded. Router took too long to shutdown. Consider increasing the grace period",
+					zap.Duration("grace_period", r.gracePeriod),
+				)
+			}
+
 			return nil, err
 		}
 	}
@@ -548,7 +653,8 @@ func (r *Router) updateServerAndStart(ctx context.Context, cfg *nodev1.RouterCon
 
 	// Start new server
 	go func() {
-		r.logger.Info("Server listening",
+
+		r.logger.Info("Server listening and serving",
 			zap.String("listen_addr", r.listenAddr),
 			zap.Bool("playground", r.playground),
 			zap.Bool("introspection", r.introspection),
@@ -767,6 +873,15 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
 
+	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
+		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
+		if err != nil {
+			return fmt.Errorf("failed to parse the redis connection url: %w", err)
+		}
+
+		r.redisClient = redis.NewClient(options)
+	}
+
 	if r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
 		r.WebsocketStats = NewWebSocketStats(ctx, r.logger)
 	}
@@ -818,7 +933,7 @@ func (r *Router) Start(ctx context.Context) error {
 	r.logger.Info("Polling for router config updates in the background")
 
 	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
-		r.logger.Info("Router config has changed, upgrading server",
+		r.logger.Info("Router execution config has changed, upgrading server",
 			zap.String("old_version", oldVersion),
 			zap.String("new_version", newConfig.GetVersion()),
 		)
@@ -832,6 +947,84 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
+func (r *Router) buildPubSubConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*EnginePubSubProviders, error) {
+
+	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub)
+	kafkaPubSubByProviderID := make(map[string]pubsub_datasource.KafkaPubSub)
+
+	datasourceConfigurations := routerCfg.EngineConfig.GetDatasourceConfigurations()
+	for _, datasourceConfiguration := range datasourceConfigurations {
+		if datasourceConfiguration.CustomEvents == nil {
+			continue
+		}
+
+		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
+
+			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+			// if this source name's provider has already been initiated, do not try to initiate again
+			_, ok := natsPubSubByProviderID[providerID]
+			if ok {
+				continue
+			}
+
+			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
+				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
+					options, err := buildNatsOptions(eventSource, r.logger)
+					if err != nil {
+						return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
+					}
+					natsConnection, err := nats.Connect(eventSource.URL, options...)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
+					}
+					js, err := jetstream.New(natsConnection)
+					if err != nil {
+						return nil, err
+					}
+
+					natsPubSubByProviderID[providerID] = pubsubNats.NewConnector(r.logger, natsConnection, js).New(ctx)
+
+					break
+				}
+			}
+		}
+
+		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
+
+			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+			// if this source name's provider has already been initiated, do not try to initiate again
+			_, ok := kafkaPubSubByProviderID[providerID]
+			if ok {
+				continue
+			}
+
+			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
+
+				if eventSource.ID == providerID {
+					options, err := buildKafkaOptions(eventSource)
+					if err != nil {
+						return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
+					}
+					ps, err := kafka.NewConnector(r.logger, options)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", providerID, err)
+					}
+
+					kafkaPubSubByProviderID[providerID] = ps.New(ctx)
+
+					break
+				}
+			}
+		}
+
+	}
+
+	return &EnginePubSubProviders{
+		nats:  natsPubSubByProviderID,
+		kafka: kafkaPubSubByProviderID,
+	}, nil
+}
+
 // newServer creates a new server instance.
 // All stateful data is copied from the Router over to the new server instance. Not safe for concurrent use.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*server, error) {
@@ -840,13 +1033,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, err
 	}
 
-	rootContext, rootContextCancel := context.WithCancel(ctx)
 	ro := &server{
-		rootContext:       rootContext,
-		rootContextCancel: rootContextCancel,
-		routerConfig:      routerConfig,
-		Config:            r.Config,
-		metricStore:       rmetric.NewNoopMetrics(),
+		routerConfig: routerConfig,
+		Config:       r.Config,
+		metricStore:  rmetric.NewNoopMetrics(),
 	}
 
 	baseAttributes := []attribute.KeyValue{
@@ -918,15 +1108,26 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
+	httpRouter.Use(recoveryHandler)
+	httpRouter.Use(middleware.RequestSize(int64(r.routerTrafficConfig.MaxRequestBodyBytes)))
+	httpRouter.Use(middleware.Compress(5, CustomCompressibleContentTypes...))
+
+	brCompressor := middleware.NewCompressor(5, CustomCompressibleContentTypes...)
+	brCompressor.SetEncoder("br", func(w io.Writer, level int) io.Writer {
+		return br.NewWriterLevel(w, level)
+	})
+	httpRouter.Use(brCompressor.Handler)
+
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
 			h.ServeHTTP(w, r)
 		})
 	})
-	httpRouter.Use(recoveryHandler)
+
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
+
 	// Register the trace middleware before the request logger, so we can log the trace ID
 	if traceHandler != nil {
 		httpRouter.Use(traceHandler.Handler)
@@ -1040,7 +1241,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, r.WebsocketStats)
+	pubSubProviders, err := r.buildPubSubConfiguration(ctx, routerConfig, routerEngineConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
+	}
+	ro.pubSubProviders = pubSubProviders
+
+	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, pubSubProviders, r.WebsocketStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -1087,21 +1294,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		EngineLoaderHooks:                      NewEngineRequestHooks(ro.metricStore),
 	}
 
-	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
+	if r.Config.redisClient != nil {
 		handlerOpts.RateLimitConfig = r.Config.rateLimit
-		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
-		}
-
-		client := redis.NewClient(options)
-
-		err = client.FlushDB(ctx).Err()
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to redis: %w", err)
-		}
 		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
-			RedisClient: client,
+			RedisClient: r.Config.redisClient,
 			Debug:       r.Config.rateLimit.Debug,
 		})
 		r.logger.Info("Rate limiting enabled",
@@ -1151,7 +1347,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	graphqlChiRouter := chi.NewRouter()
 
 	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
+		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
 			OperationProcessor:         operationParser,
 			OperationBlocker:           operationBlocker,
 			Planner:                    operationPlanner,
@@ -1189,7 +1385,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	graphqlChiRouter.Post("/", graphqlHandler.ServeHTTP)
 
-	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
+	// Serve GraphQL. MetricStore are collected after the request is handled and classified as a GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
 
 	if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
@@ -1207,7 +1403,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		zap.String("url", graphqlEndpointURL),
 	)
 
-	ro.server = &http.Server{
+	ro.httpServer = &http.Server{
 		Addr: r.listenAddr,
 		// https://ieftimov.com/posts/make-resilient-golang-net-http-servers-using-timeouts-deadlines-context-cancellation/
 		ReadTimeout:       1 * time.Minute,
@@ -1222,14 +1418,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
-func (r *server) listenAndServe() error {
-	if r.tlsConfig != nil && r.tlsConfig.Enabled {
+func (s *server) listenAndServe() error {
+	if s.tlsConfig != nil && s.tlsConfig.Enabled {
 		// Leave the cert and key empty to use the default ones
-		if err := r.server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.httpServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 	} else {
-		if err := r.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 	}
@@ -1318,6 +1514,21 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		}()
 	}
 
+	if r.redisClient != nil {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			if subErr := r.redisClient.FlushAll(ctx); subErr.Err() != nil {
+				err = errors.Join(err, fmt.Errorf("failed to flush redis client: %w", subErr.Err()))
+			}
+			if closeErr := r.redisClient.Close(); closeErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to close redis client: %w", closeErr))
+			}
+		}()
+	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1337,43 +1548,60 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 }
 
 // Shutdown gracefully shutdown the server.
-func (r *server) Shutdown(ctx context.Context) error {
-	r.logger.Info("Gracefully shutting down the router ...",
-		zap.String("config_version", r.routerConfig.GetVersion()),
-		zap.String("grace_period", r.gracePeriod.String()),
+func (s *server) Shutdown(ctx context.Context) error {
+
+	s.healthChecks.SetReady(false)
+
+	s.logger.Info("Gracefully shutting down the router ...",
+		zap.String("config_version", s.routerConfig.GetVersion()),
+		zap.String("grace_period", s.gracePeriod.String()),
 	)
 
-	err := r.metricStore.Flush(ctx)
-	if err != nil {
-		r.logger.Error("Failed to flush metric store", zap.Error(err))
-	}
+	var finalErr error
 
-	r.rootContextCancel()
-
-	if r.gracePeriod > 0 {
-		ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
-		ctx = ctxWithTimer
-		defer cancel()
-	}
-
-	r.healthChecks.SetReady(false)
-
-	if r.server != nil {
-		// HTTP server shutdown
-		if err := r.server.Shutdown(ctx); err != nil {
-			return err
+	if s.httpServer != nil {
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			s.logger.Error("Failed to shutdown HTTP server", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
-	return err
+	if err := s.metricStore.Flush(ctx); err != nil {
+		s.logger.Error("Failed to flush metric store", zap.Error(err))
+		finalErr = errors.Join(finalErr, err)
+	}
+
+	if s.pubSubProviders != nil {
+
+		s.logger.Debug("Shutting down pubsub providers")
+
+		for _, pubSub := range s.pubSubProviders.nats {
+			if p, ok := pubSub.(pubsub.Lifecycle); ok {
+				if err := p.Shutdown(ctx); err != nil {
+					s.logger.Error("Failed to shutdown Nats pubsub provider", zap.Error(err))
+					finalErr = errors.Join(finalErr, err)
+				}
+			}
+		}
+		for _, pubSub := range s.pubSubProviders.kafka {
+			if p, ok := pubSub.(pubsub.Lifecycle); ok {
+				if err := p.Shutdown(ctx); err != nil {
+					s.logger.Error("Failed to shutdown Kafka pubsub provider", zap.Error(err))
+					finalErr = errors.Join(finalErr, err)
+				}
+			}
+		}
+	}
+
+	return finalErr
 }
 
-func (r *server) HealthChecks() health.Checker {
-	return r.healthChecks
+func (s *server) HealthChecks() health.Checker {
+	return s.healthChecks
 }
 
-func (r *server) HttpServer() *http.Server {
-	return r.server
+func (s *server) HttpServer() *http.Server {
+	return s.httpServer
 }
 
 func WithListenerAddr(addr string) Option {
@@ -1549,6 +1777,12 @@ func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfigur
 	}
 }
 
+func WithOverrides(overrides config.OverridesConfiguration) Option {
+	return func(r *Router) {
+		r.overrides = overrides
+	}
+}
+
 func WithSecurityConfig(cfg config.SecurityConfiguration) Option {
 	return func(r *Router) {
 		r.securityConfiguration = cfg
@@ -1709,5 +1943,79 @@ func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
 		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
 		ExpectContinueTimeout: opts.ExpectContinueTimeout,
+	}
+}
+
+func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
+	var exporters []*rtrace.ExporterConfig
+	for _, exp := range cfg.Tracing.Exporters {
+		exporters = append(exporters, &rtrace.ExporterConfig{
+			Disabled:      exp.Disabled,
+			Endpoint:      exp.Endpoint,
+			Exporter:      exp.Exporter,
+			BatchTimeout:  exp.BatchTimeout,
+			ExportTimeout: exp.ExportTimeout,
+			Headers:       exp.Headers,
+			HTTPPath:      exp.HTTPPath,
+		})
+	}
+
+	var propagators []rtrace.Propagator
+
+	if cfg.Tracing.Propagation.TraceContext {
+		propagators = append(propagators, rtrace.PropagatorTraceContext)
+	}
+	if cfg.Tracing.Propagation.B3 {
+		propagators = append(propagators, rtrace.PropagatorB3)
+	}
+	if cfg.Tracing.Propagation.Jaeger {
+		propagators = append(propagators, rtrace.PropagatorJaeger)
+	}
+	if cfg.Tracing.Propagation.Baggage {
+		propagators = append(propagators, rtrace.PropagatorBaggage)
+	}
+
+	return &rtrace.Config{
+		Enabled:            cfg.Tracing.Enabled,
+		Name:               cfg.ServiceName,
+		Version:            Version,
+		Sampler:            cfg.Tracing.SamplingRate,
+		ParentBasedSampler: cfg.Tracing.ParentBasedSampler,
+		WithNewRoot:        cfg.Tracing.WithNewRoot,
+		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
+			Enabled: cfg.Tracing.ExportGraphQLVariables,
+		},
+		Exporters:   exporters,
+		Propagators: propagators,
+	}
+}
+
+func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
+	var openTelemetryExporters []*rmetric.OpenTelemetryExporter
+	for _, exp := range cfg.Metrics.OTLP.Exporters {
+		openTelemetryExporters = append(openTelemetryExporters, &rmetric.OpenTelemetryExporter{
+			Disabled: exp.Disabled,
+			Endpoint: exp.Endpoint,
+			Exporter: exp.Exporter,
+			Headers:  exp.Headers,
+			HTTPPath: exp.HTTPPath,
+		})
+	}
+
+	return &rmetric.Config{
+		Name:    cfg.ServiceName,
+		Version: Version,
+		OpenTelemetry: rmetric.OpenTelemetry{
+			Enabled:       cfg.Metrics.OTLP.Enabled,
+			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
+			Exporters:     openTelemetryExporters,
+		},
+		Prometheus: rmetric.PrometheusConfig{
+			Enabled:             cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
+			Path:                cfg.Metrics.Prometheus.Path,
+			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
+		},
 	}
 }

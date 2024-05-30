@@ -27,7 +27,7 @@ import {
 } from "@/lib/insights-helpers";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { CubeIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFieldUsage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFieldUsageResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -58,6 +58,8 @@ import { ChartTooltip } from "./charts";
 import { createFilterState } from "./constructAnalyticsTableQueryState";
 import { useApplyParams } from "./use-apply-params";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { useUser } from "@/hooks/use-user";
 
 export const FieldUsage = ({
   usageData,
@@ -65,7 +67,9 @@ export const FieldUsage = ({
   usageData: GetFieldUsageResponse;
 }) => {
   const router = useRouter();
-  const { slug, organizationSlug } = router.query;
+  const user = useUser();
+  const organizationSlug = user?.currentOrganization.slug;
+  const slug = router.query.slug;
 
   const subgraphs = useContext(GraphContext)?.subgraphs ?? [];
 
@@ -82,6 +86,8 @@ export const FieldUsage = ({
   const { isMobile } = useWindowSize();
 
   const applyParams = useApplyParams();
+
+  const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
   const onDateRangeChange: DateRangePickerChangeHandler = ({
     range,
@@ -123,7 +129,7 @@ export const FieldUsage = ({
           range={range}
           dateRange={dateRange}
           onChange={onDateRangeChange}
-          calendarDaysLimit={90}
+          calendarDaysLimit={analyticsRetention}
         />
       </div>
       <div className="h-64">
@@ -208,14 +214,14 @@ export const FieldUsage = ({
                 value={clientName + clientVersion}
               >
                 <AccordionTrigger className="hover:bg-secondary/30 hover:no-underline">
-                  <div className="flex w-full items-center justify-between gap-x-2">
-                    <span>
+                  <div className="flex w-full items-center justify-between gap-x-2 text-start">
+                    <span className="break-all">
                       {clientName}{" "}
                       <span className="text-muted-foreground">
                         (version: {clientVersion})
                       </span>
                     </span>
-                    <Badge variant="secondary" className="mr-4">
+                    <Badge variant="secondary" className="mr-4 flex-shrink-0">
                       {totalRequests} Requests
                     </Badge>
                   </div>
@@ -245,7 +251,7 @@ export const FieldUsage = ({
                                       query: {
                                         namespace: router.query.namespace,
                                         organizationSlug:
-                                          router.query.organizationSlug,
+                                          user?.currentOrganization.slug,
                                         slug: router.query.slug,
                                         filterState: createFilterState({
                                           operationName: op.name,
@@ -298,8 +304,8 @@ export const FieldUsage = ({
                       href={`/${organizationSlug}/${subgraph.namespace}/graph/${slug}/schema/sdl?subgraph=${subgraph.name}`}
                       className="text-primary"
                     >
-                      <div className="flex items-center gap-x-1">
-                        <CubeIcon className="" />
+                      <div className="flex items-start gap-x-1">
+                        <CubeIcon className="mt-1.5 flex-shrink-0 break-all" />
                         {subgraph.name}
                       </div>
                     </Link>
@@ -347,8 +353,9 @@ export const FieldUsageSheet = () => {
 
   const graph = useContext(GraphContext);
 
-  const { data, error, isLoading, refetch } = useQuery({
-    ...getFieldUsage.useQuery({
+  const { data, error, isLoading, refetch, } = useQuery(
+    getFieldUsage,
+    {
       field,
       typename: isNamedType ? undefined : type,
       namedType: isNamedType ? type : undefined,
@@ -359,10 +366,12 @@ export const FieldUsageSheet = () => {
         start: formatISO(dateRange.start),
         end: formatISO(dateRange.end),
       },
-    }),
-    enabled: !!showUsage && !!graph?.graph?.name,
-    refetchOnWindowFocus: false,
-  });
+    },
+    {
+      enabled: !!showUsage && !!graph?.graph?.name,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   let content: React.ReactNode;
 

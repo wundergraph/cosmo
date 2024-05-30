@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -24,8 +24,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 |  | otelcollector | ^0 |
 |  | router | ^0 |
 |  | studio | ^0 |
-| https://charts.bitnami.com/bitnami | clickhouse | ^5.0.2 |
-| https://charts.bitnami.com/bitnami | keycloak | ^17.3.1 |
+| https://charts.bitnami.com/bitnami | clickhouse | 5.0.2 |
+| https://charts.bitnami.com/bitnami | keycloak | 17.3.1 |
 | https://charts.bitnami.com/bitnami | minio | 12.10.0 |
 | https://charts.bitnami.com/bitnami | postgresql | 12.8.0 |
 | https://charts.bitnami.com/bitnami | redis | 18.9.1 |
@@ -161,5 +161,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | router.configuration.otelCollectorUrl | string | `"http://cosmo-otelcollector:4318"` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. |
 | router.deploymentStrategy.rollingUpdate.maxSurge | int | `1` |  |
 | router.deploymentStrategy.rollingUpdate.maxUnavailable | int | `0` |  |
+| router.prometheus.enabled | bool | `true` | Enables prometheus metrics support. Default is true. |
+| router.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
+| router.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
 | router.terminationGracePeriodSeconds | int | `60` |  |
 

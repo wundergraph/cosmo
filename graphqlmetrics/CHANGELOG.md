@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.17.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.17.0...graphqlmetrics@0.17.1) (2024-05-29)
+
+**Note:** Version bump only for package graphqlmetrics
+
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.16.0...graphqlmetrics@0.17.0) (2024-05-21)
+
+### Features
+
+* add support for websocket subprotocol ([#776](https://github.com/wundergraph/cosmo/issues/776)) ([e35aa26](https://github.com/wundergraph/cosmo/commit/e35aa262227b29f09ddfdd1ce361c010b769b2da)) (@JivusAyrus)
+
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.15.3...graphqlmetrics@0.16.0) (2024-05-14)
+
+### Features
+
+* refactor edfs and add kafka support ([#770](https://github.com/wundergraph/cosmo/issues/770)) ([d659067](https://github.com/wundergraph/cosmo/commit/d659067fd1d094621788f42bac6d121b0831ebb7)) (@StarpTech)
+
+## [0.15.3](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.15.2...graphqlmetrics@0.15.3) (2024-04-12)
+
+**Note:** Version bump only for package graphqlmetrics
+
 ## [0.15.2](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.15.1...graphqlmetrics@0.15.2) (2024-04-09)
 
 **Note:** Version bump only for package graphqlmetrics

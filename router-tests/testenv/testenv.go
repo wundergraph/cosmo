@@ -9,14 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/prometheus/client_golang/prometheus"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/trace"
 	"io"
 	"log"
 	"math/rand"
@@ -29,6 +21,20 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/nats-io/nats.go/jetstream"
+
+	"github.com/twmb/franz-go/pkg/kadm"
+	"github.com/twmb/franz-go/pkg/kgo"
+
+	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/hashicorp/go-cleanhttp"
 
@@ -52,14 +58,16 @@ import (
 )
 
 const (
-	defaultSourceName = "default"
-	myNatsSourceName  = "my-nats"
+	natsDefaultSourceName = "default"
+	myNatsProviderID      = "my-nats"
+	myKafkaProviderID     = "my-kafka"
 )
 
 var (
 	//go:embed testdata/config.json
-	configJSONTemplate  string
-	demoNatsSourceNames = []string{defaultSourceName, myNatsSourceName}
+	configJSONTemplate string
+	demoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders = []string{myKafkaProviderID}
 )
 
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
@@ -68,7 +76,7 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	if err != nil {
 		t.Fatalf("could not create environment: %s", err)
 	}
-	t.Cleanup(env.close)
+	t.Cleanup(env.Shutdown)
 	f(t, env)
 }
 
@@ -79,7 +87,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	if err != nil {
 		b.Fatalf("could not create environment: %s", err)
 	}
-	b.Cleanup(env.close)
+	b.Cleanup(env.Shutdown)
 	b.StartTimer()
 	f(b, env)
 }
@@ -93,8 +101,11 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
+	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
+	KafkaSeeds                         []string
 	DisableWebSockets                  bool
+	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
 	MetricReader                       metric.Reader
@@ -130,7 +141,7 @@ type NatsData struct {
 }
 
 func setupNatsServers(t testing.TB) (*NatsData, error) {
-	length := len(demoNatsSourceNames)
+	length := len(demoNatsProviders)
 	natsData := &NatsData{
 		Connections: make([]*nats.Conn, 0, length),
 	}
@@ -167,7 +178,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		t.Fatalf("could not start NATS test server")
 	}
 	natsData.Server = natsServer
-	for range demoNatsSourceNames {
+	for range demoNatsProviders {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		if err != nil {
 			return nil, err
@@ -185,6 +196,25 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	defer envCreateMux.Unlock()
 
 	ctx, cancel := context.WithCancelCause(context.Background())
+
+	if len(cfg.KafkaSeeds) == 0 {
+		cfg.KafkaSeeds = []string{"localhost:9092"}
+	}
+
+	var kafkaAdminClient *kadm.Client
+	var kafkaClient *kgo.Client
+	{
+		client, err := kgo.NewClient(
+			kgo.SeedBrokers(cfg.KafkaSeeds...),
+		)
+		if err != nil {
+			t.Fatalf("could not create kafka client: %s", err)
+		}
+
+		kafkaClient = client
+
+		kafkaAdminClient = kadm.NewClient(client)
+	}
 
 	natsData, err := setupNatsServers(t)
 	if err != nil {
@@ -427,6 +457,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		NatsConnectionDefault: natsData.Connections[0],
 		NatsConnectionMyNats:  natsData.Connections[1],
 		SubgraphRequestCount:  counters,
+		KafkaAdminClient:      kafkaAdminClient,
+		KafkaClient:           kafkaClient,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -452,8 +484,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			CacheSize: 1024 * 1024,
 		},
 		SubgraphErrorPropagation: config.SubgraphErrorPropagationConfiguration{
-			Enabled:     true,
-			StatusCodes: true,
+			Enabled:              true,
+			PropagateStatusCodes: true,
+			Mode:                 config.SubgraphErrorPropagationModeWrapped,
+			OmitExtensions:       false,
+			OmitLocations:        true,
+			RewritePaths:         true,
 		},
 	}
 
@@ -507,13 +543,22 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
-	eventSourceBySourceName := make(map[string]config.EventSource, len(demoNatsSourceNames))
-	for _, sourceName := range demoNatsSourceNames {
-		eventSourceBySourceName[sourceName] = config.EventSource{
-			Provider: "NATS",
-			URL:      natsServer.ClientURL(),
-		}
+	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
+	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
+
+	for _, sourceName := range demoNatsProviders {
+		natsEventSources = append(natsEventSources, config.NatsEventSource{
+			ID:  sourceName,
+			URL: natsServer.ClientURL(),
+		})
 	}
+	for _, sourceName := range demoKafkaProviders {
+		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
+			ID:      sourceName,
+			Brokers: testConfig.KafkaSeeds,
+		})
+	}
+
 	routerOpts := []core.Option{
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
@@ -528,7 +573,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithEvents(config.EventsConfiguration{
-			Sources: eventSourceBySourceName,
+			Providers: config.EventProviders{
+				Nats:  natsEventSources,
+				Kafka: kafkaEventSources,
+			},
 		}),
 	}
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
@@ -538,6 +586,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Enabled:            true,
 			Sampler:            1,
 			TestMemoryExporter: testConfig.TraceExporter,
+			ParentBasedSampler: !testConfig.DisableParentBasedSampler,
+			Propagators: []rtrace.Propagator{
+				rtrace.PropagatorTraceContext,
+			},
 		}))
 	}
 
@@ -573,16 +625,35 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if !testConfig.DisableWebSockets {
-		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(&config.WebSocketConfiguration{
+		wsConfig := &config.WebSocketConfiguration{
 			Enabled: true,
 			AbsintheProtocol: config.AbsintheProtocolConfiguration{
 				Enabled:     true,
 				HandlerPath: "/absinthe/socket",
 			},
-			ForwardUpgradeHeaders:     true,
-			ForwardUpgradeQueryParams: true,
-			ForwardInitialPayload:     true,
-		}))
+			ForwardUpgradeHeaders: config.ForwardUpgradeHeadersConfiguration{
+				Enabled: true,
+				AllowList: []string{
+					"Authorization",
+					"X-Custom-*",
+					"Canonical-Header-Name",
+					"reverse-canonical-header-name",
+				},
+			},
+			ForwardUpgradeQueryParams: config.ForwardUpgradeQueryParamsConfiguration{
+				Enabled: true,
+				AllowList: []string{
+					"token",
+					"Authorization",
+					"x-custom-*",
+				},
+			},
+			ForwardInitialPayload: true,
+		}
+		if testConfig.ModifyWebsocketConfiguration != nil {
+			testConfig.ModifyWebsocketConfiguration(wsConfig)
+		}
+		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(wsConfig))
 	}
 	return core.NewRouter(routerOpts...)
 }
@@ -652,6 +723,8 @@ type Environment struct {
 	NatsConnectionDefault *nats.Conn
 	NatsConnectionMyNats  *nats.Conn
 	SubgraphRequestCount  *SubgraphRequestCount
+	KafkaAdminClient      *kadm.Client
+	KafkaClient           *kgo.Client
 
 	extraURLQueryValues url.Values
 }
@@ -661,16 +734,36 @@ func (e *Environment) SetExtraURLQueryValues(values url.Values) {
 }
 
 func (e *Environment) Shutdown() {
-	// Terminate test server resources
-	e.cancel(errors.New("test environment closed"))
+	ctx, cancel := context.WithTimeout(e.Context, 10*time.Second)
+	defer cancel()
 
 	// Gracefully shutdown router
-	ctx, cancel := context.WithTimeout(e.Context, 5*time.Second)
-	defer cancel()
 	err := e.Router.Shutdown(ctx)
 	if err != nil {
 		e.t.Errorf("could not shutdown router: %s", err)
 	}
+
+	// Terminate test server resources
+	e.cancel(errors.New("test environment closed"))
+
+	// Close all test servers
+	for _, s := range e.Servers {
+		s.CloseClientConnections()
+		s.Close()
+	}
+
+	// Close the CDN
+	e.CDN.CloseClientConnections()
+	e.CDN.Close()
+
+	// Close NATS
+	e.NatsConnectionDefault.Close()
+	e.NatsConnectionMyNats.Close()
+	e.NatsServer.Shutdown()
+
+	// Close Kafka
+	e.KafkaAdminClient.Close()
+	e.KafkaClient.Close()
 }
 
 type SubgraphRequestCount struct {
@@ -826,7 +919,7 @@ type GraphQLError struct {
 
 const maxSocketRetries = 5
 
-func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websocket.Conn, *http.Response, error) {
+func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
 	}
@@ -836,8 +929,11 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websoc
 
 	var err error
 
-	for i := 0; i < maxSocketRetries; i++ {
+	for i := 0; i <= maxSocketRetries; i++ {
 		urlStr := e.GraphQLSubscriptionURL()
+		if query != nil {
+			urlStr += "?" + query.Encode()
+		}
 		conn, resp, err := dialer.Dial(urlStr, header)
 
 		if resp != nil && err == nil {
@@ -858,8 +954,8 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header) (*websoc
 	return nil, nil, err
 }
 
-func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, initialPayload json.RawMessage) *websocket.Conn {
-	conn, _, err := e.GraphQLWebsocketDialWithRetry(header)
+func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query url.Values, initialPayload json.RawMessage) *websocket.Conn {
+	conn, _, err := e.GraphQLWebsocketDialWithRetry(header, query)
 	require.NoError(e.t, err)
 	e.t.Cleanup(func() {
 		_ = conn.Close()
@@ -924,36 +1020,6 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 	return conn
 }
 
-func (e *Environment) close() {
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Gracefully shutdown router
-	err := e.Router.Shutdown(ctx)
-	if err != nil {
-		e.t.Errorf("could not shutdown router: %s", err)
-	}
-
-	// Terminate test server resources
-	e.cancel(errors.New("test environment closed"))
-
-	// Close all test servers
-	for _, s := range e.Servers {
-		s.CloseClientConnections()
-		s.Close()
-	}
-
-	// Close the CDN
-	e.CDN.CloseClientConnections()
-	e.CDN.Close()
-
-	// Close NATS
-	e.NatsConnectionDefault.Close()
-	e.NatsConnectionMyNats.Close()
-	e.NatsServer.Shutdown()
-}
-
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
@@ -972,11 +1038,12 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
 			return
-		case report, ok := <-sub:
+		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
+				e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", r.Subscriptions, desiredCount)
 				return
 			}
+			report = r
 			if report.Subscriptions == desiredCount {
 				time.Sleep(100 * time.Millisecond) // Give NATS some time to have the subscription set up
 				return
@@ -1004,11 +1071,12 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
 			return
-		case report, ok := <-sub:
+		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
+				e.t.Fatalf("timed out waiting for connection count, got %d, want %d", r.Connections, desiredCount)
 				return
 			}
+			report = r
 			if report.Connections == desiredCount {
 				return
 			}
@@ -1034,11 +1102,12 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
 			return
-		case report, ok := <-sub:
+		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
+				e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", r.MessagesSent, desiredCount)
 				return
 			}
+			report = r
 			if report.MessagesSent == desiredCount {
 				return
 			}
@@ -1064,11 +1133,12 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
 			return
-		case report, ok := <-sub:
+		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", r.Triggers, desiredCount)
 				return
 			}
+			report = r
 			if report.Triggers == desiredCount {
 				return
 			}
@@ -1078,14 +1148,19 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 }
 
 func subgraphOptions(ctx context.Context, t testing.TB, natsServer *natsserver.Server) *subgraphs.SubgraphOptions {
-	pubsubBySourceName := make(map[string]pubsub_datasource.PubSub, len(demoNatsSourceNames))
-	for _, sourceName := range demoNatsSourceNames {
+	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
+	for _, sourceName := range demoNatsProviders {
 		natsConnection, err := nats.Connect(natsServer.ClientURL())
 		require.NoError(t, err)
-		pubsubBySourceName[sourceName] = pubsub.NewNATSConnector(natsConnection).New(ctx)
+
+		js, err := jetstream.New(natsConnection)
+		require.NoError(t, err)
+
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection, js).New(ctx)
 	}
+
 	return &subgraphs.SubgraphOptions{
-		PubSubBySourceName: pubsubBySourceName,
+		NatsPubSubByProviderID: natsPubSubByProviderID,
 	}
 }
 

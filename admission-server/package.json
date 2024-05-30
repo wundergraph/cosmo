@@ -9,14 +9,14 @@
     "build": "del dist && tsc"
   },
   "dependencies": {
-    "@hono/node-server": "^1.8.2",
-    "@wundergraph/cosmo-connect": "^0.62.0",
+    "@hono/node-server": "1.11.0",
+    "@wundergraph/cosmo-shared": "workspace:^",
     "dotenv": "^16.4.5",
-    "hono": "^4.1.0"
+    "hono": "4.2.7"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
-    "typescript": "^5.3.2",
-    "tsx": "^3.12.2"
+    "tsx": "^4.7.2",
+    "typescript": "^5.3.2"
   }
 }

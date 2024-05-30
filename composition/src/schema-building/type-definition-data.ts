@@ -62,6 +62,7 @@ export type FieldData = {
 export type InputObjectDefinitionData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   inputValueDataByValueName: Map<string, InputValueData>;
+  isInaccessible: boolean;
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
   name: string;
   node: MutableInputObjectNode;
@@ -91,6 +92,7 @@ export type InterfaceDefinitionData = {
   fieldDataByFieldName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
   isEntity: boolean;
+  isInaccessible: boolean;
   kind: Kind.INTERFACE_TYPE_DEFINITION;
   name: string;
   node: MutableInterfaceNode;
@@ -104,6 +106,7 @@ export type ObjectDefinitionData = {
   fieldDataByFieldName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
   isEntity: boolean;
+  isInaccessible: boolean;
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_DEFINITION;
   name: string;
@@ -184,5 +187,3 @@ export type DefinitionData =
   | UnionDefinitionData;
 
 export type NodeData = ParentDefinitionData | ChildData;
-
-export type TypedChildData = FieldData | InputValueData;

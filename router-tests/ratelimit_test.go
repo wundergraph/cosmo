@@ -10,12 +10,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestRateLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	t.Parallel()
 
 	t.Run("disabled", func(t *testing.T) {
@@ -133,17 +138,17 @@ func TestRateLimit(t *testing.T) {
 				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				Variables: json.RawMessage(`{"n":1}`),
 			})
-			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":null,"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":{"employee":null},"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				Variables: json.RawMessage(`{"n":1}`),
 			})
-			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":null,"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":{"employee":null},"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				Variables: json.RawMessage(`{"n":1}`),
 			})
-			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":null,"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph '0' at Path 'query'."}],"data":{"employee":null},"extensions":{"rateLimit":{"requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, res.Body)
 		})
 	})
 	t.Run("enabled - below limit with nesting", func(t *testing.T) {

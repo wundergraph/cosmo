@@ -127,7 +127,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]}],"data":null}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",9,"startDate"]}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]}}`, string(data))
 		})
 	})
 	t.Run("scopes required valid token no scopes", func(t *testing.T) {
@@ -152,7 +152,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"]}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(data))
 		})
 	})
 	t.Run("scopes required valid token AND scopes present", func(t *testing.T) {
@@ -206,7 +206,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"]}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
 		})
 	})
 	t.Run("reject unauthorized missing scope", func(t *testing.T) {
@@ -389,7 +389,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"{ topSecretFederationFacts { ... on EntityFact { description } ... on MiscellaneousFact { title description } } }"}"
+				{"query":"{ topSecretFederationFacts { ... on EntityFact { description } ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -410,7 +410,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
-				{"query":"{ factTypes }"}"
+				{"query":"{ factTypes }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -430,7 +430,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
-				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}"
+				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -450,7 +450,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
-				{"query":"{ productTypes { ... on Cosmo { upc } } factTypes }"}"
+				{"query":"{ productTypes { ... on Cosmo { upc } } factTypes }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -475,7 +475,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}"
+				{"query":"{ factTypes productTypes { ... on Cosmo { upc } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -502,7 +502,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -529,7 +529,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -556,14 +556,14 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at Path 'mutation', Reason: missing required scopes."}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized request to Subgraph '3' at Path 'mutation', Reason: missing required scopes."},{"message":"Unauthorized to load field 'Mutation.addFact', Reason: missing required scopes.","path":["addFact"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Mutation","fieldName":"addFact"},"required":[["write:fact"],["write:all"]]}],"actualScopes":["read:miscellaneous","read:all"]}}}`, string(data))
 		})
 	})
 	t.Run("mutation with scope missing for mutation root field (with reject)", func(t *testing.T) {
@@ -586,7 +586,7 @@ func TestAuthentication(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`
-				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}"
+				{"query":"mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }"}
 			`))
 			require.NoError(t, err)
 			defer res.Body.Close()
@@ -864,7 +864,7 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 
-		conn, res, err := xEnv.GraphQLWebsocketDialWithRetry(nil)
+		conn, res, err := xEnv.GraphQLWebsocketDialWithRetry(nil, nil)
 		require.Nil(t, conn)
 		require.Error(t, err)
 		require.Equal(t, http.StatusUnauthorized, res.StatusCode)
@@ -875,7 +875,7 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 		headers := http.Header{
 			"Authorization": []string{"Bearer " + token},
 		}
-		conn, res, err = xEnv.GraphQLWebsocketDialWithRetry(headers)
+		conn, res, err = xEnv.GraphQLWebsocketDialWithRetry(headers, nil)
 		defer func() {
 			require.NoError(t, conn.Close())
 		}()

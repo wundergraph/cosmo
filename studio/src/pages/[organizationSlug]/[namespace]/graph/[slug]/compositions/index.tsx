@@ -35,7 +35,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getCompositions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow, formatISO } from "date-fns";
@@ -62,14 +62,18 @@ const CompositionsPage: NextPageWithLayout = () => {
   const endDate = range ? createDateRange(range).end : end;
 
   const { data, isLoading, error, refetch } = useQuery(
-    getCompositions.useQuery({
+    getCompositions,
+    {
       fedGraphName: router.query.slug as string,
       namespace: router.query.namespace as string,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
-    }),
+    },
+    {
+      placeholderData: (prev) => prev,
+    },
   );
 
   if (isLoading) return <Loader fullscreen />;

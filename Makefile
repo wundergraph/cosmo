@@ -1,9 +1,9 @@
 all: dev-setup
 
 setup-build-tools:
-	go install github.com/bufbuild/buf/cmd/buf@v1.28.1
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
-	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.12.0
+	go install github.com/bufbuild/buf/cmd/buf@v1.32.2
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.1
+	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.16.2
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
@@ -20,17 +20,23 @@ prerequisites: setup-dev-tools
 
 infra-up: dc-dev
 
+edfs-infra-up:
+	docker compose -f docker-compose.yml --profile edfs up --remove-orphans --detach
+
+edfs-infra-down:
+	docker compose -f docker-compose.yml --profile edfs down --remove-orphans
+
 infra-down:
-	docker compose -f docker-compose.yml down --remove-orphans
+	docker compose -f docker-compose.yml --profile dev down --remove-orphans
 
 infra-build:
-	docker compose -f docker-compose.yml build
+	docker compose -f docker-compose.yml --profile dev build
 
 infra-restart:
-	docker compose -f docker-compose.yml down && make infra-up
+	docker compose -f docker-compose.yml --profile dev down && make infra-up
 
 infra-down-v:
-	docker compose -f docker-compose.yml down --remove-orphans -v
+	docker compose -f docker-compose.yml --profile dev down --remove-orphans -v
 
 seed:
 	pnpm -r run --filter './controlplane' seed
@@ -85,8 +91,9 @@ start-studio:
 start-router:
 	(cd router && make dev)
 
+DC_FLAGS=
 dc-dev:
-	docker compose --file docker-compose.yml up --remove-orphans --detach
+	docker compose --file docker-compose.yml --profile dev up --remove-orphans --detach $(DC_FLAGS)
 
 dc-stack:
 	docker compose --file docker-compose.cosmo.yml up --remove-orphans --detach
@@ -140,11 +147,10 @@ run-subgraphs-local:
 	cd demo && go run cmd/all/main.go
 
 sync-go-workspace:
-	go work sync
 	cd router && go mod tidy
-	cd router-tests && make bump-deps
-	cd demo && go mod tidy
+	cd demo && make bump-deps
 	cd aws-lambda-router && make bump-deps
 	cd composition-go && go mod tidy
 	cd graphqlmetrics && go mod tidy
+	cd router-tests && make bump-deps
 	go work sync

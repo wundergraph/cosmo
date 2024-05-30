@@ -44,44 +44,53 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
   });
 
   fastify.addHook('preHandler', async (req, res) => {
-    const authorization = req.headers.authorization;
-    if (!authorization) {
+    try {
+      const authorization = req.headers.authorization;
+      if (!authorization) {
+        return res.code(401).send(
+          ScimError({
+            detail: 'Missing Authorization header.',
+            status: 401,
+          }),
+        );
+      }
+      const token = authorization.replace(/^bearer\s+/i, '');
+      const authContext = await opts.authenticator.authenticate(token);
+
+      const feature = await opts.organizationRepository.getFeature({
+        organizationId: authContext.organizationId,
+        featureId: 'scim',
+      });
+      if (!feature?.enabled) {
+        return res.code(400).send(
+          ScimError({
+            detail: 'Scim feature is not enabled for this organization.',
+            status: 400,
+          }),
+        );
+      }
+
+      const isAuthorized = await opts.apiKeyRepository.verifyAPIKeyPermissions({ apiKey: token, permission: 'scim' });
+      if (!isAuthorized) {
+        return res.code(400).send(
+          ScimError({
+            detail: 'API key doesnt have the permission to perform scim operations.',
+            status: 400,
+          }),
+        );
+      }
+
+      await opts.keycloakClient.authenticateClient();
+
+      req.authContext = authContext;
+    } catch (err: any) {
       return res.code(401).send(
         ScimError({
-          detail: 'Missing Authorization header.',
+          detail: err.message,
           status: 401,
         }),
       );
     }
-    const token = authorization.replace(/^bearer\s+/i, '');
-    const authContext = await opts.authenticator.authenticate(token);
-
-    const feature = await opts.organizationRepository.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: 'scim',
-    });
-    if (!feature?.enabled) {
-      return res.code(400).send(
-        ScimError({
-          detail: 'Scim feature is not enabled for this organization.',
-          status: 400,
-        }),
-      );
-    }
-
-    const isAuthorized = await opts.apiKeyRepository.verifyAPIKeyPermissions({ apiKey: token, permission: 'scim' });
-    if (!isAuthorized) {
-      return res.code(400).send(
-        ScimError({
-          detail: 'API key doesnt have the permission to perform scim operations.',
-          status: 400,
-        }),
-      );
-    }
-
-    await opts.keycloakClient.authenticateClient();
-
-    req.authContext = authContext;
   });
 
   fastify.get('/', (req, res) => {
@@ -226,7 +235,6 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       userName: user.email,
       name: {
         givenName: keycloakUsers[0].firstName || '',
-        middleName: '',
         familyName: keycloakUsers[0].lastName || '',
       },
       active: keycloakUsers[0].enabled,
@@ -234,7 +242,6 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         {
           primary: true,
           value: user.email,
-          type: 'work',
         },
       ],
       groups: [],
@@ -253,7 +260,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           schemas: string[];
           userName: string;
           name: { givenName: string; familyName: string };
-          emails: { primary: boolean; value: string; type: string }[];
+          emails: { primary: boolean; value: string }[];
           password: string;
           displayName: string;
           groups: string[];
@@ -270,16 +277,6 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
 
       const email = emails.find((e) => e.primary === true)?.value || userName;
 
-      const user = await opts.userRepository.byEmail(email);
-      if (user) {
-        return res.code(409).send(
-          ScimError({
-            detail: 'User already exists in the database.',
-            status: 409,
-          }),
-        );
-      }
-
       const keycloakUsers = await opts.keycloakClient.client.users.find({
         realm: opts.keycloakRealm,
         email,
@@ -294,14 +291,34 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         );
       }
 
-      const keycloakUserID = await opts.keycloakClient.addKeycloakUser({
-        realm: opts.keycloakRealm,
-        firstName: name.givenName,
-        lastName: name.familyName,
-        email,
-        password,
-        isPasswordTemp: false,
-      });
+      const user = await opts.userRepository.byEmail(email);
+      if (user) {
+        return res.code(409).send(
+          ScimError({
+            detail: 'User already exists in the database.',
+            status: 409,
+          }),
+        );
+      }
+
+      let keycloakUserID = '';
+      try {
+        keycloakUserID = await opts.keycloakClient.addKeycloakUser({
+          realm: opts.keycloakRealm,
+          firstName: name.givenName,
+          lastName: name.familyName,
+          email,
+          password,
+          isPasswordTemp: false,
+        });
+      } catch (err: any) {
+        return res.code(500).send(
+          ScimError({
+            detail: err.responseData.errorMessage || err.message,
+            status: 500,
+          }),
+        );
+      }
 
       const organizationGroups = await opts.keycloakClient.client.groups.find({
         max: 1,
@@ -369,8 +386,8 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           schemas: string[];
           id: string;
           userName: string;
-          name: { givenName?: string; familyName?: string; middleName?: string };
-          emails: { primary: boolean; value: string; type: string }[];
+          name: { givenName?: string; familyName?: string };
+          emails: { primary: boolean; value: string }[];
           password: string;
           groups: string[];
           active: boolean;

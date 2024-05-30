@@ -2,14 +2,18 @@ package core
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"net/http"
 
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 
+	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/plain"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -39,23 +43,44 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, reporter resolve.Reporter) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig)
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders, reporter resolve.Reporter) (*Executor, error) {
+	planConfig, err := b.buildPlannerConfiguration(ctx, routerConfig, routerEngineConfig, pubSubProviders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
-	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx, resolve.ResolverOptions{
+	options := resolve.ResolverOptions{
 		MaxConcurrency:               routerEngineConfig.Execution.MaxConcurrentResolvers,
+		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
 		Reporter:                     reporter,
 		PropagateSubgraphErrors:      routerEngineConfig.SubgraphErrorPropagation.Enabled,
-		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.StatusCodes,
-		Debug:                        routerEngineConfig.Execution.Debug.EnableResolverDebugging,
-	})
+		PropagateSubgraphStatusCodes: routerEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
+		RewriteSubgraphErrorPaths:    routerEngineConfig.SubgraphErrorPropagation.RewritePaths,
+		OmitSubgraphErrorLocations:   routerEngineConfig.SubgraphErrorPropagation.OmitLocations,
+		OmitSubgraphErrorExtensions:  routerEngineConfig.SubgraphErrorPropagation.OmitExtensions,
+	}
+
+	switch routerEngineConfig.SubgraphErrorPropagation.Mode {
+	case config.SubgraphErrorPropagationModePassthrough:
+		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModePassThrough
+	case config.SubgraphErrorPropagationModeWrapped:
+		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModeWrapped
+	default:
+		options.SubgraphErrorPropagationMode = resolve.SubgraphErrorPropagationModeWrapped
+	}
+
+	// this is the resolver, it's stateful and manages all the client connections, etc...
+	resolver := resolve.New(ctx, options)
 
 	// this is the GraphQL Schema that we will expose from our API
-	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
+	var definition ast.Document
+	var report operationreport.Report
+	// The client schema may not be present in old configs
+	if routerConfig.EngineConfig.GetGraphqlClientSchema() != "" {
+		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GetGraphqlClientSchema())
+	} else {
+		definition, report = astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
+	}
 	if report.HasErrors() {
 		return nil, fmt.Errorf("failed to parse graphql schema from engine config: %w", report)
 	}
@@ -106,56 +131,66 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}, nil
 }
 
-func natsAuthenticationOptions(authentication *config.Authentication) ([]nats.Option, error) {
-	if authentication == nil {
-		return nil, nil
+func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
+
+	opts := []nats.Option{
+		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+
+			if errors.Is(err, nats.ErrSlowConsumer) {
+				logger.Warn(
+					"Nats slow consumer detected. Events are being dropped. Please consider increasing the buffer size or reducing the number of messages being sent.",
+					zap.Error(err),
+				)
+			} else {
+				logger.Error("nats error", zap.Error(err))
+			}
+		}),
 	}
-	if authentication.Token != nil {
-		return []nats.Option{nats.Token(*authentication.Token)}, nil
+
+	if eventSource.Authentication != nil {
+		if eventSource.Authentication.Token != nil {
+			opts = append(opts, nats.Token(*eventSource.Authentication.Token))
+		} else if eventSource.Authentication.UserInfo.Username != nil && eventSource.Authentication.UserInfo.Password != nil {
+			opts = append(opts, nats.UserInfo(*eventSource.Authentication.UserInfo.Username, *eventSource.Authentication.UserInfo.Password))
+		}
 	}
-	if authentication.Username == nil || authentication.Password == nil {
-		return nil, fmt.Errorf("must provide username and password if token is not provided")
-	}
-	return []nats.Option{nats.UserInfo(*authentication.Username, *authentication.Password)}, nil
+
+	return opts, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
+// buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
+// Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
+// configured in the KafkaPubSub implementation.
+func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
+
+	opts := []kgo.Opt{
+		kgo.SeedBrokers(eventSource.Brokers...),
+		// Ensure proper timeouts are set
+		kgo.ProduceRequestTimeout(10 * time.Second),
+		kgo.ConnIdleTimeout(60 * time.Second),
+	}
+
+	if eventSource.TLS != nil && eventSource.TLS.Enabled {
+		opts = append(opts,
+			// Configure TLS. Uses SystemCertPool for RootCAs by default.
+			kgo.DialTLSConfig(new(tls.Config)),
+		)
+	}
+
+	if eventSource.Authentication != nil && eventSource.Authentication.SASLPlain.Username != nil && eventSource.Authentication.SASLPlain.Password != nil {
+		opts = append(opts, kgo.SASL(plain.Auth{
+			User: *eventSource.Authentication.SASLPlain.Username,
+			Pass: *eventSource.Authentication.SASLPlain.Password,
+		}.AsMechanism()))
+	}
+
+	return opts, nil
+}
+
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
-
-	pubSubBySourceName := make(map[string]pubsub_datasource.PubSub)
-	datasourceConfigurations := routerCfg.EngineConfig.GetDatasourceConfigurations()
-	for _, datasourceConfiguration := range datasourceConfigurations {
-		if datasourceConfiguration.CustomEvents == nil {
-			continue
-		}
-		for _, eventConfiguration := range datasourceConfiguration.CustomEvents.Events {
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := pubSubBySourceName[eventConfiguration.SourceName]
-			if ok {
-				continue
-			}
-			eventSource, ok := routerEngineCfg.Events.Sources[eventConfiguration.SourceName]
-			if !ok {
-				return nil, fmt.Errorf("unknown event source name %s", eventConfiguration.SourceName)
-			}
-			switch eventSource.Provider {
-			case "NATS":
-				options, err := natsAuthenticationOptions(eventSource.Authentication)
-				if err != nil {
-					return nil, fmt.Errorf("failed to add authentication for NATS provider with sourceName \"%s\": %w", eventConfiguration.SourceName, err)
-				}
-				natsConnection, err := nats.Connect(eventSource.URL, options...)
-				if err != nil {
-					return nil, fmt.Errorf("failed to connect to NATS: %w", err)
-				}
-				pubSubBySourceName[eventConfiguration.SourceName] = pubsub.NewNATSConnector(natsConnection).New(ctx)
-			default:
-				return nil, fmt.Errorf("unknown event source provider %s for sourceName \"%s\"", eventConfiguration.SourceName, eventSource.Provider)
-			}
-		}
-	}
 
 	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
 		ctx,
@@ -163,7 +198,8 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
-		pubSubBySourceName,
+		pubSubProviders.nats,
+		pubSubProviders.kafka,
 	))
 
 	// this generates the plan config using the data source factories from the config package

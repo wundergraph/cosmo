@@ -46,7 +46,7 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getChecksByFederatedGraphName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow, formatISO } from "date-fns";
@@ -74,14 +74,18 @@ const ChecksPage: NextPageWithLayout = () => {
   const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
   const { data, isLoading, error, refetch } = useQuery(
-    getChecksByFederatedGraphName.useQuery({
+    getChecksByFederatedGraphName,
+    {
       name: router.query.slug as string,
       namespace: router.query.namespace as string,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
-    }),
+    },
+    {
+      placeholderData: (prev) => prev,
+    },
   );
 
   if (isLoading) return <Loader fullscreen />;

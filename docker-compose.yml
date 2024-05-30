@@ -16,6 +16,8 @@ services:
     restart: unless-stopped
     networks:
       - primary
+    profiles:
+      - dev
 
   keycloak:
     build:
@@ -39,6 +41,8 @@ services:
       - postgres
     networks:
       - primary
+    profiles:
+      - dev
 
   # Only to test OTEL Instrumentation
   jaeger:
@@ -52,6 +56,8 @@ services:
       - LOG_LEVEL=debug
     networks:
       - primary
+    profiles:
+      - debug
 
   # Only to test prometheus integration
   prometheus:
@@ -72,6 +78,8 @@ services:
       - 'host.docker.internal:host-gateway'
     ports:
       - '9090:9090'
+    profiles:
+      - debug
 
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
@@ -89,6 +97,8 @@ services:
       - clickhouse
     networks:
       - primary
+    profiles:
+      - dev
 
   otelcollector:
     build:
@@ -100,14 +110,17 @@ services:
     ports:
       - '4317:4317' # otlpgrpc
       - '4318:4318' # otlphttp
+      - '8888:8888' # prometheus metrics
     restart: unless-stopped
     depends_on:
       - clickhouse
     networks:
       - primary
+    profiles:
+      - dev
 
   clickhouse:
-    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.1}
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.2.2}
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
@@ -122,6 +135,8 @@ services:
       - ./docker/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     networks:
       - primary
+    profiles:
+      - dev
 
   minio:
     image: quay.io/minio/minio:${DC_MINIO_VERSION:-RELEASE.2023-11-06T22-26-08Z}
@@ -137,6 +152,8 @@ services:
     entrypoint: /entrypoint.sh
     networks:
       - primary
+    profiles:
+      - dev
 
   cdn:
     build:
@@ -151,6 +168,8 @@ services:
       - '11000:11000'
     networks:
       - primary
+    profiles:
+      - dev
 
   nats:
     image: nats:${DC_NATS_VERSION:-2.10.6}
@@ -162,6 +181,8 @@ services:
       - "--js"
     networks:
       - primary
+    profiles:
+      - edfs
 
   redis:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
@@ -173,6 +194,8 @@ services:
       - redis:/data
     networks:
       - primary
+    profiles:
+      - dev
 
   redis-slave:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
@@ -186,6 +209,28 @@ services:
       - redis-slave:/data
     networks:
       - primary
+    profiles:
+      - dev
+
+  kafka:
+    image: bitnami/kafka:3.7.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ENABLE_KRAFT: yes
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CFG_TRANSACTION_PARTITION_VERIFICATION_ENABLE: false
+      # Set this to "PLAINTEXT://127.0.0.1:9092" if you want to run this container on localhost via Docker
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_NODE_ID: 1
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_KRAFT_CLUSTER_ID: XkpGZQ27R3eTl3OdTm2LYA # 16 byte base64-encoded UUID
+    profiles:
+      - edfs
 
 # This network is shared between this file and docker-compose.full.yml to
 # allow the demo subgraphs to communicate with the rest of the infra

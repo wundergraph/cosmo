@@ -45,6 +45,7 @@ type TracingExporter struct {
 type Tracing struct {
 	Enabled               bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
 	SamplingRate          float64           `yaml:"sampling_rate" default:"1" envconfig:"TRACING_SAMPLING_RATE"`
+	ParentBasedSampler    bool              `yaml:"parent_based_sampler" default:"true" envconfig:"TRACING_PARENT_BASED_SAMPLER"`
 	Exporters             []TracingExporter `yaml:"exporters"`
 	Propagation           PropagationConfig `yaml:"propagation"`
 	TracingGlobalFeatures `yaml:",inline"`
@@ -159,6 +160,8 @@ type RequestHeaderRule struct {
 	Matching string `yaml:"matching"`
 	// Named is the exact header name to match
 	Named string `yaml:"named"`
+	// Rename renames the header's key to the provided value
+	Rename string `yaml:"rename,omitempty"`
 	// Default is the default value to set if the header is not present
 	Default string `yaml:"default"`
 }
@@ -198,6 +201,17 @@ type SecurityConfiguration struct {
 
 type OverrideRoutingURLConfiguration struct {
 	Subgraphs map[string]string `yaml:"subgraphs"`
+}
+
+type SubgraphOverridesConfiguration struct {
+	RoutingURL                       string `yaml:"routing_url"`
+	SubscriptionURL                  string `yaml:"subscription_url"`
+	SubscriptionProtocol             string `yaml:"subscription_protocol"`
+	SubscriptionWebsocketSubprotocol string `yaml:"subscription_websocket_subprotocol"`
+}
+
+type OverridesConfiguration struct {
+	Subgraphs map[string]SubgraphOverridesConfiguration `yaml:"subgraphs"`
 }
 
 type AuthenticationProviderJWKS struct {
@@ -248,28 +262,53 @@ type CDNConfiguration struct {
 	CacheSize BytesString `yaml:"cache_size,omitempty" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
 }
 
-type TokenBasedAuthentication struct {
+type NatsTokenBasedAuthentication struct {
 	Token *string `yaml:"token,omitempty"`
 }
 
-type UsernamePasswordBasedAuthentication struct {
+type NatsCredentialsAuthentication struct {
 	Password *string `yaml:"password,omitempty"`
 	Username *string `yaml:"username,omitempty"`
 }
 
-type Authentication struct {
-	UsernamePasswordBasedAuthentication `yaml:",inline"`
-	TokenBasedAuthentication            `yaml:",inline"`
+type NatsAuthentication struct {
+	UserInfo                     NatsCredentialsAuthentication `yaml:"user_info"`
+	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
-type EventSource struct {
-	Provider       string          `yaml:"provider,omitempty"`
-	URL            string          `yaml:"url,omitempty"`
-	Authentication *Authentication `yaml:"authentication,omitempty"`
+type NatsEventSource struct {
+	ID             string              `yaml:"id,omitempty"`
+	URL            string              `yaml:"url,omitempty"`
+	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
+}
+
+type KafkaSASLPlainAuthentication struct {
+	Password *string `yaml:"password,omitempty"`
+	Username *string `yaml:"username,omitempty"`
+}
+
+type KafkaAuthentication struct {
+	SASLPlain KafkaSASLPlainAuthentication `yaml:"sasl_plain,omitempty"`
+}
+
+type KafkaTLSConfiguration struct {
+	Enabled bool `yaml:"enabled" default:"false"`
+}
+
+type KafkaEventSource struct {
+	ID             string                 `yaml:"id,omitempty"`
+	Brokers        []string               `yaml:"brokers,omitempty"`
+	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
+	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+}
+
+type EventProviders struct {
+	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
+	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
 }
 
 type EventsConfiguration struct {
-	Sources map[string]EventSource `yaml:"sources,omitempty"`
+	Providers EventProviders `yaml:"providers,omitempty"`
 }
 
 type Cluster struct {
@@ -296,11 +335,21 @@ type WebSocketConfiguration struct {
 	// AbsintheProtocol configuration for the Absinthe Protocol
 	AbsintheProtocol AbsintheProtocolConfiguration `yaml:"absinthe_protocol,omitempty"`
 	// ForwardUpgradeHeaders true if the Router should forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph
-	ForwardUpgradeHeaders bool `yaml:"forward_upgrade_headers" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_HEADERS"`
+	ForwardUpgradeHeaders ForwardUpgradeHeadersConfiguration `yaml:"forward_upgrade_headers"`
 	// ForwardUpgradeQueryParamsInExtensions true if the Router should forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph
-	ForwardUpgradeQueryParams bool `yaml:"forward_upgrade_query_params" default:"true" envconfig:"WEBSOCKETS_FORWARD_UPGRADE_QUERY_PARAMS"`
+	ForwardUpgradeQueryParams ForwardUpgradeQueryParamsConfiguration `yaml:"forward_upgrade_query_params"`
 	// ForwardInitialPayload true if the Router should forward the initial payload of a Subscription Request to the Subgraph
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" default:"true" envconfig:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
+}
+
+type ForwardUpgradeHeadersConfiguration struct {
+	Enabled   bool     `yaml:"enabled" default:"true" envconfig:"FORWARD_UPGRADE_HEADERS_ENABLED"`
+	AllowList []string `yaml:"allow_list" default:"Authorization" envconfig:"FORWARD_UPGRADE_HEADERS_ALLOW_LIST"`
+}
+
+type ForwardUpgradeQueryParamsConfiguration struct {
+	Enabled   bool     `yaml:"enabled" default:"true" envconfig:"FORWARD_UPGRADE_QUERY_PARAMS_ENABLED"`
+	AllowList []string `yaml:"allow_list" default:"Authorization" envconfig:"FORWARD_UPGRADE_QUERY_PARAMS_ALLOW_LIST"`
 }
 
 type AnonymizeIpConfiguration struct {
@@ -325,9 +374,20 @@ type TLSConfiguration struct {
 	Server TLSServerConfiguration `yaml:"server"`
 }
 
+type SubgraphErrorPropagationMode string
+
+const (
+	SubgraphErrorPropagationModeWrapped     SubgraphErrorPropagationMode = "wrapped"
+	SubgraphErrorPropagationModePassthrough SubgraphErrorPropagationMode = "pass-through"
+)
+
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled     bool `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	StatusCodes bool `yaml:"status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+	Enabled              bool                         `yaml:"enabled" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
+	PropagateStatusCodes bool                         `yaml:"propagate_status_codes" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
+	Mode                 SubgraphErrorPropagationMode `yaml:"mode" default:"wrapped" envconfig:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
+	RewritePaths         bool                         `yaml:"rewrite_paths" default:"true" envconfig:"SUBGRAPH_ERROR_PROPAGATION_REWRITE_PATHS"`
+	OmitLocations        bool                         `yaml:"omit_locations" default:"true" envconfig:"SUBGRAPH_ERROR_PROPAGATION_OMIT_LOCATIONS"`
+	OmitExtensions       bool                         `yaml:"omit_extensions" default:"false" envconfig:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
 }
 
 type Config struct {
@@ -353,7 +413,7 @@ type Config struct {
 	LogLevel                      string                      `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" default:"60s" envconfig:"SHUTDOWN_DELAY"`
-	GracePeriod                   time.Duration               `yaml:"grace_period" default:"20s" envconfig:"GRACE_PERIOD"`
+	GracePeriod                   time.Duration               `yaml:"grace_period" default:"30s" envconfig:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" default:"10s" envconfig:"POLL_INTERVAL"`
 	HealthCheckPath               string                      `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH"`
 	ReadinessCheckPath            string                      `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH"`
@@ -372,6 +432,8 @@ type Config struct {
 	RouterRegistration bool   `yaml:"router_registration" envconfig:"ROUTER_REGISTRATION" default:"true"`
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
+
+	Overrides OverridesConfiguration `yaml:"overrides"`
 
 	SecurityConfiguration SecurityConfiguration `yaml:"security,omitempty"`
 
@@ -469,7 +531,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
-		cfg.Config.SubgraphErrorPropagation.StatusCodes = true
+		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 	}
 
 	return cfg, nil

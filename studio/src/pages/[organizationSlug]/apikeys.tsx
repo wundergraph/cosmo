@@ -38,8 +38,8 @@ import {
   TableWrapper,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
+import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useHasFeature } from "@/hooks/use-has-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
@@ -51,7 +51,7 @@ import {
   KeyIcon,
 } from "@heroicons/react/24/outline";
 import { PlusIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createAPIKey,
@@ -84,15 +84,13 @@ const CreateAPIKeyDialog = ({
   refresh: () => void;
 }) => {
   const user = useUser();
-  const rbac = useHasFeature("rbac");
+  const rbac = useFeature("rbac");
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation(createAPIKey.useMutation());
+  const { mutate, isPending } = useMutation(createAPIKey);
 
-  const { data } = useQuery(getUserAccessibleResources.useQuery());
-  const { data: permissionsData } = useQuery(
-    getUserAccessiblePermissions.useQuery(),
-  );
+  const { data } = useQuery(getUserAccessibleResources);
+  const { data: permissionsData } = useQuery(getUserAccessiblePermissions);
   const federatedGraphs = data?.federatedGraphs || [];
   const subgraphs = data?.subgraphs || [];
   const isAdmin = user?.currentOrganization.roles.includes("admin");
@@ -139,12 +137,12 @@ const CreateAPIKeyDialog = ({
 
   const onSubmit: SubmitHandler<CreateAPIKeyInput> = (data) => {
     if (
-      rbac &&
+      rbac?.enabled &&
       !selectedAllResources &&
       selectedFedGraphs.length === 0 &&
       selectedSubgraphs.length === 0
     ) {
-      setErrorMsg("Please select at least one of the resource.");
+      setErrorMsg("Please select at least one of the resources.");
       return;
     }
 
@@ -156,6 +154,7 @@ const CreateAPIKeyDialog = ({
         federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
         subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
         permissions: selectedPermissions,
+        allowAllResources: selectedAllResources,
       },
       {
         onSuccess: (d) => {
@@ -200,7 +199,7 @@ const CreateAPIKeyDialog = ({
   // When rbac is enabled and this is the case for enterprise users
   // you can only create an API key if you are an admin or have access to at least one federated graph or subgraph
   if (
-    rbac &&
+    rbac?.enabled &&
     !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
   ) {
     return (
@@ -323,41 +322,17 @@ const CreateAPIKeyDialog = ({
                 })}
               </div>
             )}
-          {rbac && (
+          {rbac?.enabled && (
             <div className="mt-3 flex flex-col gap-y-3">
               <div className="flex flex-col gap-y-1">
                 <span className="text-base font-semibold">
                   Select Resources
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  {
-                    "Select resources the API key can access, or choose 'All resources' to include current and future resources."
-                  }
+                  {"Select resources the API key can access."}
                 </span>
               </div>
               <div className="flex flex-col gap-y-2">
-                {isAdmin && (
-                  <div className="flex items-center gap-x-2">
-                    <Checkbox
-                      id="all-resources"
-                      checked={selectedAllResources}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedAllResources(true);
-                          setErrorMsg(undefined);
-                        } else {
-                          setSelectedAllResources(false);
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor="all-resources"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      All Resources
-                    </label>
-                  </div>
-                )}
                 {federatedGraphs.length > 0 && (
                   <div className="flex flex-col gap-y-1">
                     <div>
@@ -480,6 +455,37 @@ const CreateAPIKeyDialog = ({
                     </div>
                   </div>
                 )}
+                {isAdmin && (
+                  <div className="mt-2 flex flex-col gap-y-2">
+                    <div className="flex items-start gap-x-2">
+                      <Checkbox
+                        id="all-resources"
+                        checked={selectedAllResources}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedAllResources(true);
+                            setErrorMsg(undefined);
+                          } else {
+                            setSelectedAllResources(false);
+                          }
+                        }}
+                      />
+                      <div className="flex flex-col gap-y-1">
+                        <label
+                          htmlFor="all-resources"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          All Resources
+                        </label>
+                        <span className="text-sm text-muted-foreground">
+                          {
+                            "Choose 'All resources' to include all the current and future resources"
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -490,7 +496,15 @@ const CreateAPIKeyDialog = ({
           <Button
             className="mt-2"
             type="submit"
-            disabled={!isValid || !!errorMsg}
+            disabled={
+              // should be disabled if the form is invalid or if either the resources or the all resources option is not selected
+              !isValid ||
+              !!errorMsg ||
+              (rbac?.enabled &&
+                !selectedAllResources &&
+                selectedFedGraphs.length === 0 &&
+                selectedSubgraphs.length === 0)
+            }
             variant="default"
             isLoading={isPending}
           >
@@ -517,7 +531,7 @@ const DeleteAPIKeyDialog = ({
 }) => {
   const { toast } = useToast();
 
-  const { mutate, isPending } = useMutation(deleteAPIKey.useMutation());
+  const { mutate, isPending } = useMutation(deleteAPIKey);
 
   const regex = new RegExp(`^${apiKeyName}$`);
   const schema = z.object({
@@ -734,11 +748,7 @@ export const CreateAPIKey = ({
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
-  const user = useContext(UserContext);
-  const { refetch } = useQuery({
-    ...getAPIKeys.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
-  });
+  const { refetch } = useQuery(getAPIKeys);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -757,10 +767,7 @@ export const CreateAPIKey = ({
 
 const APIKeysPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getAPIKeys.useQuery(),
-    queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
-  });
+  const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [apiKey, setApiKey] = useState<string | undefined>();
@@ -768,6 +775,17 @@ const APIKeysPage: NextPageWithLayout = () => {
     string | undefined
   >();
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
+
+  useEffect(() => {
+    if (
+      !user ||
+      !user.currentOrganization ||
+      !user.currentOrganization.slug ||
+      !refetch
+    )
+      return;
+    refetch();
+  }, [refetch, user, user?.currentOrganization.slug]);
 
   useEffect(() => {
     if (!openApiKeyCreatedDialog) setApiKey(undefined);

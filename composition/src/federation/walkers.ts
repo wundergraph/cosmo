@@ -50,7 +50,7 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
         // If the parent node is never an entity, add the child edge
         // Otherwise, only add the child edge if the child is a field on a subgraph where the object is an entity
         // TODO resolvable false
-        const entity = ff.entityContainersByTypeName.get(parentTypeName);
+        const entity = ff.entityDataByTypeName.get(parentTypeName);
         if (entity && !entity.fieldNames.has(fieldName)) {
           return false;
         }
@@ -99,11 +99,8 @@ export function createMultiGraphAndRenameRootTypes(ff: FederationFactory, subgra
         if (ff.entityInterfaceFederationDataByTypeName.get(originalTypeName)) {
           return;
         }
-        const entityContainer = ff.entityContainersByTypeName.get(originalTypeName);
-        if (entityContainer && !parentData.isEntity) {
-          ff.validateKeyFieldSetsForImplicitEntity(entityContainer);
-        }
-        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(originalTypeName);
+        ff.addValidPrimaryKeyTargetsToEntityData(ff.entityDataByTypeName.get(originalTypeName));
+        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(parentTypeName);
         if (originalTypeName === parentTypeName) {
           return;
         }

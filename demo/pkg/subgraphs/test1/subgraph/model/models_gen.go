@@ -2,6 +2,19 @@
 
 package model
 
+type Employee struct {
+	ID               int     `json:"id"`
+	FieldThrowsError *string `json:"fieldThrowsError,omitempty"`
+}
+
+func (Employee) IsEntity() {}
+
+type Query struct {
+}
+
+type Subscription struct {
+}
+
 type TimestampedString struct {
 	// The value of the string.
 	Value string `json:"value"`

@@ -1,16 +1,23 @@
-import { cn } from '@/lib/utils';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { BiRename } from 'react-icons/bi';
-import { LuNetwork } from 'react-icons/lu';
-import { useMovable } from 'react-move-hook';
-import { Edge, Node, ReactFlowProvider } from 'reactflow';
-import { EmptyState } from '../empty-state';
-import { Card } from '../ui/card';
-import { CLI } from '../ui/cli';
-import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
-import { FetchFlow } from './fetch-flow';
-import { FetchWaterfall } from './fetch-waterfall';
-import { FetchNode, LoadStats } from './types';
+import { cn } from "@/lib/utils";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { BiRename } from "react-icons/bi";
+import { LuNetwork } from "react-icons/lu";
+import { useMovable } from "react-move-hook";
+import { Edge, Node, ReactFlowProvider } from "reactflow";
+import { EmptyState } from "../empty-state";
+import { Card } from "../ui/card";
+import { CLI } from "../ui/cli";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import { FetchFlow } from "./fetch-flow";
+import { FetchWaterfall } from "./fetch-waterfall";
+import { FetchNode, LoadStats } from "./types";
 
 const initialPaneWidth = 360;
 
@@ -19,11 +26,15 @@ export const TraceContext = createContext<{
   subgraphs: { id: string; name: string }[];
   headers: string;
   response: string;
+  clientValidationEnabled: boolean;
+  setClientValidationEnabled: (val: boolean) => void;
 }>({
   query: undefined,
   subgraphs: [],
   headers: "",
   response: "",
+  clientValidationEnabled: true,
+  setClientValidationEnabled: () => {},
 });
 
 const Trace = ({
@@ -211,7 +222,7 @@ const Trace = ({
     const parseJson = (json: any, parentId?: string): FetchNode | undefined => {
       const fetchNode = parseFetch(json.fetch, parentId);
 
-      json.fields.forEach((field: any) => {
+      json.fields?.forEach((field: any) => {
         if (field.value && field.value.node_type === "array") {
           field.value.items.forEach((fieldItem: any) => {
             if (fieldItem.node_type === "object") {

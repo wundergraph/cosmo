@@ -1,22 +1,50 @@
-export type EventType = 'subscribe' | 'publish' | 'request';
+export type NatsEventType = 'subscribe' | 'publish' | 'request';
+
+export type KafkaEventType = 'subscribe' | 'publish';
 
 export type StreamConfiguration = {
   consumerName: string;
   streamName: string;
 };
 
-export type EventConfiguration = {
+export type KafkaEventConfiguration = {
   fieldName: string;
-  sourceName: string;
+  providerId: string;
+  providerType: 'kafka';
+  topics: string[];
+  type: KafkaEventType;
+};
+
+export type NatsEventConfiguration = {
+  fieldName: string;
+  providerId: string;
+  providerType: 'nats';
   subjects: string[];
-  type: EventType;
+  type: NatsEventType;
   streamConfiguration?: StreamConfiguration;
+};
+
+export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguration;
+
+export type SubscriptionFilterValue = boolean | null | number | string;
+
+export type SubscriptionFieldCondition = {
+  fieldPath: string[];
+  values: SubscriptionFilterValue[];
+};
+
+export type SubscriptionCondition = {
+  and?: SubscriptionCondition[];
+  in?: SubscriptionFieldCondition;
+  not?: SubscriptionCondition;
+  or?: SubscriptionCondition[];
 };
 
 export type FieldConfiguration = {
   argumentNames: string[];
   fieldName: string;
   typeName: string;
+  subscriptionFilterCondition?: SubscriptionCondition;
   requiresAuthentication?: boolean;
   requiredScopes?: string[][];
 };

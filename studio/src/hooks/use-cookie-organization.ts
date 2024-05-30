@@ -1,20 +1,23 @@
-import { useCookies } from "react-cookie";
 import { useMemo } from "react";
+import useCookie from "@/hooks/use-cookie";
 
 const orgCookieName = "cosmo_org";
 
-export const useCookieOrganization = (): [string, (slug: string) => void] => {
-  const [cookies, setCookie] = useCookies([orgCookieName]);
-  const setOrgSlug = useMemo(() => {
+export const useCookieOrganization = (): [
+  string | null,
+  (slug: string) => void,
+  (slug: string) => void,
+] => {
+  const [value, update, remove] = useCookie(orgCookieName);
+  const set = useMemo(() => {
     return (slug: string) => {
-      setCookie(orgCookieName, slug, {
+      update(slug, {
         path: "/",
-        maxAge: 3600 * 24 * 365, // 1 year
+        expires: 365, // 1 year
         sameSite: "lax",
       });
     };
-  }, [setCookie]);
+  }, [update]);
 
-  // if the slug is a number, we need to stringify it otherwise the comparison will fail
-  return [cookies.cosmo_org?.toString(), setOrgSlug];
+  return [value, set, remove];
 };

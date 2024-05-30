@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { SQL, and, asc, eq, like, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { alias } from 'drizzle-orm/pg-core';
 import { FastifyBaseLogger } from 'fastify';
@@ -16,7 +16,21 @@ export class OrganizationInvitationRepository {
   ) {}
 
   // returns the members who have pending invites to the provided organization.
-  public getPendingInvitationsOfOrganization(input: { organizationId: string }): Promise<OrganizationInvitationDTO[]> {
+  public getPendingInvitationsOfOrganization(input: {
+    organizationId: string;
+    offset?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<OrganizationInvitationDTO[]> {
+    const conditions: SQL<unknown>[] = [
+      eq(organizationInvitations.organizationId, input.organizationId),
+      eq(organizationInvitations.accepted, false),
+    ];
+
+    if (input.search) {
+      conditions.push(like(users.email, `%${input.search}%`));
+    }
+
     return this.db
       .select({
         userID: users.id,
@@ -24,14 +38,31 @@ export class OrganizationInvitationRepository {
       })
       .from(organizationInvitations)
       .innerJoin(users, eq(users.id, organizationInvitations.userId))
+      .where(and(...conditions))
+      .orderBy(asc(organizationInvitations.createdAt))
+      .offset(input.offset ?? 0)
+      .limit(input.limit ?? 0)
+      .execute();
+  }
+
+  public async pendingInvitationsCount(organizationId: string, search?: string): Promise<number> {
+    const count = await this.db
+      .select({
+        count: sql<number>`cast(count(${organizationInvitations.id}) as int)`,
+      })
+      .from(organizationInvitations)
+      .innerJoin(users, eq(users.id, organizationInvitations.userId))
       .where(
         and(
-          eq(organizationInvitations.organizationId, input.organizationId),
+          eq(organizationInvitations.organizationId, organizationId),
           eq(organizationInvitations.accepted, false),
+          search ? like(users.email, `%${search}%`) : undefined,
         ),
       )
-      .orderBy(asc(organizationInvitations.createdAt))
+      .groupBy(organizationInvitations.organizationId)
       .execute();
+
+    return count[0]?.count || 0;
   }
 
   // returns the organizations to which the user has a pending invite.

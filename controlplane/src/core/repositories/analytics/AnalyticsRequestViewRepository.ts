@@ -268,7 +268,7 @@ export class AnalyticsRequestViewRepository {
             ClientVersion as clientVersion,
             IF(empty(OperationPersistedID), false, true) as isPersisted
           FROM
-            ${this.client.database}.traces_mv
+            ${this.client.database}.traces
           WHERE
             ${baseWhereSql}
             ${baseOrderSql || 'ORDER BY Timestamp DESC'}
@@ -291,7 +291,7 @@ export class AnalyticsRequestViewRepository {
             ) as errorsWithRate,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-            ${this.client.database}.traces_by_operation_quarter_hourly_mv
+            ${this.client.database}.traces_by_operation_quarter_hourly
           WHERE
             ${baseWhereSql}
           GROUP BY
@@ -318,7 +318,7 @@ export class AnalyticsRequestViewRepository {
             ) as errorsWithRate,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-            ${this.client.database}.traces_by_client_quarter_hourly_mv
+            ${this.client.database}.traces_by_client_quarter_hourly
           WHERE
             ${baseWhereSql}
           GROUP BY
@@ -338,7 +338,7 @@ export class AnalyticsRequestViewRepository {
             quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-            ${this.client.database}.traces_by_http_status_code_quarter_hourly_mv
+            ${this.client.database}.traces_by_http_status_code_quarter_hourly
           WHERE
             ${baseWhereSql}
           GROUP BY
@@ -365,7 +365,7 @@ export class AnalyticsRequestViewRepository {
     switch (name) {
       case AnalyticsViewGroupName.None: {
         totalCountQuery = `
-          SELECT COUNT(*) as count FROM ${this.client.database}.traces_mv
+          SELECT COUNT(*) as count FROM ${this.client.database}.traces
           WHERE
             ${baseWhereSql}
         `;
@@ -379,7 +379,7 @@ export class AnalyticsRequestViewRepository {
               OperationType as operationType,
               quantilesMerge(0.95)(DurationQuantiles)[1] as p95
             FROM
-              ${this.client.database}.traces_by_operation_quarter_hourly_mv
+              ${this.client.database}.traces_by_operation_quarter_hourly
             WHERE
               ${baseWhereSql}
             GROUP BY
@@ -396,7 +396,7 @@ export class AnalyticsRequestViewRepository {
             SELECT
               ClientName
             FROM
-              ${this.client.database}.traces_by_client_quarter_hourly_mv
+              ${this.client.database}.traces_by_client_quarter_hourly
             WHERE
               ${baseWhereSql}
             GROUP BY
@@ -413,7 +413,7 @@ export class AnalyticsRequestViewRepository {
             SELECT
               HttpStatusCode as httpStatusCode
             FROM
-              ${this.client.database}.traces_by_http_status_code_quarter_hourly_mv
+              ${this.client.database}.traces_by_http_status_code_quarter_hourly
             WHERE
               ${baseWhereSql}
             GROUP BY
@@ -444,7 +444,7 @@ export class AnalyticsRequestViewRepository {
 
     const allOperationNamesQuery = `
       SELECT DISTINCT OperationName, OrganizationID, FederatedGraphID
-        FROM ${this.client.database}.traces_by_operation_quarter_hourly_mv
+        FROM ${this.client.database}.traces_by_operation_quarter_hourly
       WHERE ${whereSql}
         ORDER BY Timestamp DESC
       LIMIT 100
@@ -471,7 +471,7 @@ export class AnalyticsRequestViewRepository {
 
     const query = `
       SELECT DISTINCT ClientName, OrganizationID, FederatedGraphID
-        FROM ${this.client.database}.traces_by_client_quarter_hourly_mv
+        FROM ${this.client.database}.traces_by_client_quarter_hourly
       WHERE ${whereSql}
         ORDER BY Timestamp DESC
       LIMIT 100
@@ -503,7 +503,7 @@ export class AnalyticsRequestViewRepository {
 
     const query = `
       SELECT DISTINCT ClientVersion, OrganizationID, FederatedGraphID
-        FROM ${this.client.database}.traces_by_client_quarter_hourly_mv
+        FROM ${this.client.database}.traces_by_client_quarter_hourly
       WHERE ${whereSql}
         ORDER BY Timestamp DESC
       LIMIT 100
@@ -534,7 +534,7 @@ export class AnalyticsRequestViewRepository {
 
     const query = `
       SELECT HttpStatusCode
-        FROM ${this.client.database}.traces_mv
+        FROM ${this.client.database}.traces
       WHERE ${whereSql}
         GROUP BY HttpStatusCode
       LIMIT 100
@@ -553,24 +553,54 @@ export class AnalyticsRequestViewRepository {
   private getBaseFiltersForGroup = (name: AnalyticsViewGroupName) => {
     const filters = { ...this.baseFilters };
 
+    let baseFiltersForGroup: BaseFilters = {};
+
     switch (name) {
       case AnalyticsViewGroupName.None: {
-        const { p95, ...rest } = filters;
-        return rest;
+        const {
+          traceId,
+          operationName,
+          operationType,
+          durationInNano,
+          statusCode,
+          httpStatusCode,
+          operationPersistedId,
+          operationHash,
+          clientName,
+          clientVersion,
+        } = filters;
+        baseFiltersForGroup = {
+          traceId,
+          operationName,
+          operationType,
+          durationInNano,
+          statusCode,
+          httpStatusCode,
+          operationPersistedId,
+          operationHash,
+          clientName,
+          clientVersion,
+        };
+        break;
       }
       case AnalyticsViewGroupName.OperationName: {
-        const { durationInNano, clientName, statusMessages, ...rest } = filters;
-        return rest;
+        const { operationName, operationType } = filters;
+        baseFiltersForGroup = { operationName, operationType };
+        break;
       }
       case AnalyticsViewGroupName.Client: {
         const { clientName, p95, clientVersion } = filters;
-        return { clientName, p95, clientVersion };
+        baseFiltersForGroup = { clientName, p95, clientVersion };
+        break;
       }
       case AnalyticsViewGroupName.HttpStatusCode: {
         const { p95, httpStatusCode } = filters;
-        return { p95, httpStatusCode };
+        baseFiltersForGroup = { p95, httpStatusCode };
+        break;
       }
     }
+
+    return baseFiltersForGroup;
   };
 
   private getFilters(
@@ -635,22 +665,11 @@ export class AnalyticsRequestViewRepository {
   // Omit fields that are not supported in the grouped views to prevent errors
   // in the generated sql queries
   private omitGroupedFilters(name: AnalyticsViewGroupName, filters: AnalyticsFilter[]) {
-    switch (name) {
-      case AnalyticsViewGroupName.None: {
-        return filters.filter((f) => f.field !== 'p95');
-      }
-      case AnalyticsViewGroupName.OperationName: {
-        return filters.filter(
-          (f) => !['durationInNano', 'clientName', 'clientVersion', 'statusMessages'].includes(f.field),
-        );
-      }
-      case AnalyticsViewGroupName.Client: {
-        return filters.filter((f) => ['clientName', 'p95', 'clientVersion'].includes(f.field));
-      }
-      case AnalyticsViewGroupName.HttpStatusCode: {
-        return filters.filter((f) => ['p95', 'httpStatusCode'].includes(f.field));
-      }
-    }
+    const baseFilters = this.getBaseFiltersForGroup(name);
+
+    const allowedColumnNames = new Set(Object.entries(baseFilters).map(([_, f]) => f.columnName));
+
+    return filters.filter((f) => allowedColumnNames.has(f.field));
   }
 
   private getSortOrder = (id?: string, desc?: boolean) => {

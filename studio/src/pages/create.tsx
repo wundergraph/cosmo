@@ -22,7 +22,7 @@ import {
   CheckCircledIcon,
   CheckIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOrganization,
@@ -70,12 +70,11 @@ const CreateOrganization: NextPageWithLayout = () => {
 };
 
 const OrganizationForm = () => {
-  const user = useUser();
   const router = useRouter();
 
   type OrganizationDetailsInput = z.infer<typeof schema>;
 
-  const { data: billing, isLoading } = useQuery(getBillingPlans.useQuery());
+  const { data: billing, isLoading } = useQuery(getBillingPlans);
 
   const availablePlans = billing?.plans?.filter(({ price }) => price > 0) || [];
 
@@ -111,7 +110,7 @@ const OrganizationForm = () => {
     mode: "onChange",
   });
 
-  const { mutate, isPending } = useMutation(createOrganization.useMutation());
+  const { mutate, isPending } = useMutation(createOrganization);
 
   const { toast } = useToast();
 
@@ -297,10 +296,7 @@ const OrganizationForm = () => {
           className="ml-auto"
           isLoading={isPending}
           type="submit"
-          disabled={
-            !form.formState.isValid ||
-            !user?.currentOrganization.roles.includes("admin")
-          }
+          disabled={!form.formState.isValid}
         >
           {availablePlans?.length
             ? "Continue to payment"

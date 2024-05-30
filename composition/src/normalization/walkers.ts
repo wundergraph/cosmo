@@ -15,6 +15,7 @@ import { NormalizationFactory } from './normalization-factory';
 import {
   BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
   BASE_SCALARS,
+  SUBSCRIPTION_FILTER_DEFINITION,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
 import {
@@ -50,6 +51,7 @@ import {
   SCHEMA,
   SERVICE_FIELD,
   SERVICE_OBJECT,
+  SUBSCRIPTION_FILTER,
 } from '../utils/string-constants';
 import {
   addEnumDefinitionDataByNode,
@@ -86,7 +88,7 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
       enter(node) {
         const name = node.name.value;
         if (EVENT_DIRECTIVE_NAMES.has(name)) {
-          nf.isEventDrivenSubgraph = true;
+          nf.edfsDirectiveReferences.add(name);
         }
         if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
           nf.isSubgraphVersionTwo = true;
@@ -94,6 +96,9 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
         }
         if (BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
           return false;
+        }
+        if (name === SUBSCRIPTION_FILTER) {
+          nf.directiveDefinitionByDirectiveName.set(SUBSCRIPTION_FILTER, SUBSCRIPTION_FILTER_DEFINITION);
         }
         nf.referencedDirectiveNames.add(name);
       },
@@ -113,6 +118,9 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
         }
         // The V1 directives are always injected
         if (BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(name)) {
+          return false;
+        }
+        if (name === SUBSCRIPTION_FILTER) {
           return false;
         }
         nf.directiveDefinitionByDirectiveName.set(name, node);
@@ -156,8 +164,8 @@ export function upsertDirectiveAndSchemaDefinitions(nf: NormalizationFactory, do
     },
   });
   /* It is possible that directives definitions are defined in the schema after the schema nodes that declare those
-     directives have been defined. Consequently, the directives can  only be validated after the walker has finished
-     collecting all directive definitions. */
+   * directives have been defined. Consequently, the directives can  only be validated after the walker has finished
+   * collecting all directive definitions. */
   for (const node of schemaNodes) {
     extractDirectives(
       node,
@@ -262,10 +270,14 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
       enter(node) {
         nf.childName = node.name.value;
         if (isParentRootType) {
-          nf.extractEventDirectivesToConfiguration(node);
           if (nf.childName === SERVICE_FIELD || nf.childName === ENTITIES_FIELD) {
             return false;
           }
+          nf.extractEventDirectivesToConfiguration(node);
+        }
+        // subscriptionFilter is temporarily an edfs-only feature
+        if (nf.edfsDirectiveReferences.size > 0) {
+          nf.validateSubscriptionFilterDirectiveLocation(node);
         }
         nf.lastChildNodeKind = node.kind;
         nf.lastChildNodeKind = node.kind;
@@ -310,11 +322,10 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         );
         const directivesByDirectiveName = nf.extractDirectivesAndAuthorization(
           node,
-          addInheritedDirectivesToFieldData(
-            parentData.directivesByDirectiveName,
-            new Map<string, ConstDirectiveNode[]>(),
-          ),
+          new Map<string, ConstDirectiveNode[]>(),
         );
+        // Add parent-level shareable and external to the field extraction and repeatable validation
+        addInheritedDirectivesToFieldData(parentData.directivesByDirectiveName, directivesByDirectiveName);
         const fieldData = addFieldDataByNode(
           parentData.fieldDataByFieldName,
           node,

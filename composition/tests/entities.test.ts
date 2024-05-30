@@ -17,7 +17,8 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
-  versionOneSchemaQueryAndPersistedDirectiveDefinitions,
+  versionOneRouterDefinitions,
+  versionTwoRouterDefinitions,
 } from './utils/utils';
 import { parse } from 'graphql';
 import { FIELDS, KEY } from '../src/utils/string-constants';
@@ -218,7 +219,7 @@ describe('Entity tests', () => {
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneSchemaQueryAndPersistedDirectiveDefinitions +
+          versionOneRouterDefinitions +
             `
       interface Interface {
         age: Int!
@@ -640,6 +641,960 @@ describe('Entity tests', () => {
         ]),
       );
     });
+
+    test('that if a target key can be satisfied, it will included in the router configuration #1.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphU, subgraphV]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+        type Entity {
+          a: Int!
+          b: Boolean!
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+      `,
+        ),
+      );
+      const u = federationResult?.subgraphConfigBySubgraphName.get('subgraph-u');
+      expect(u).toBeDefined();
+      const v = federationResult?.subgraphConfigBySubgraphName.get('subgraph-v');
+      expect(v).toBeDefined();
+      expect(u!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'a']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'id name' },
+                { fieldName: '', selectionSet: 'name', disableEntityResolver: true },
+              ],
+            },
+          ],
+        ]),
+      );
+      expect(v!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['name', 'b']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [{ fieldName: '', selectionSet: 'name' }],
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that if a target key can be satisfied, it will included in the router configuration #1.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphV, subgraphU]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+        type Entity {
+          a: Int!
+          b: Boolean!
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+      `,
+        ),
+      );
+      const u = federationResult?.subgraphConfigBySubgraphName.get('subgraph-u');
+      expect(u).toBeDefined();
+      const v = federationResult?.subgraphConfigBySubgraphName.get('subgraph-v');
+      expect(v).toBeDefined();
+      expect(u!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'a']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'id name' },
+                { fieldName: '', selectionSet: 'name', disableEntityResolver: true },
+              ],
+            },
+          ],
+        ]),
+      );
+      expect(v!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['name', 'b']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [{ fieldName: '', selectionSet: 'name' }],
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that if a target key can be satisfied, it will included in the router configuration #2.1', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphW, subgraphX, subgraphY]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+        type Entity {
+          a: Int!
+          b: Boolean!
+          c: Float!
+          id: ID!
+          object: Object!
+        }
+        
+        type NestedObject {
+          id: ID!
+        }
+        
+        type Object {
+          id: ID!
+          name: String!
+          nestedObject: NestedObject!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope
+      `,
+        ),
+      );
+      const w = federationResult?.subgraphConfigBySubgraphName.get('subgraph-w');
+      expect(w).toBeDefined();
+      const x = federationResult?.subgraphConfigBySubgraphName.get('subgraph-x');
+      expect(x).toBeDefined();
+      const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
+      expect(y).toBeDefined();
+      expect(w!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'a']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }' },
+                { fieldName: '', selectionSet: 'id object { name }' },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { name }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      expect(x!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['object', 'b']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [{ fieldName: '', selectionSet: 'object { id }' }],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+      expect(y!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'c']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'object { name }' },
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { name }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that if a target key can be satisfied, it will included in the router configuration #2.2', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphW, subgraphY, subgraphX]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+        type Entity {
+          a: Int!
+          b: Boolean!
+          c: Float!
+          id: ID!
+          object: Object!
+        }
+        
+        type NestedObject {
+          id: ID!
+        }
+        
+        type Object {
+          id: ID!
+          name: String!
+          nestedObject: NestedObject!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope
+      `,
+        ),
+      );
+      const w = federationResult?.subgraphConfigBySubgraphName.get('subgraph-w');
+      expect(w).toBeDefined();
+      const x = federationResult?.subgraphConfigBySubgraphName.get('subgraph-x');
+      expect(x).toBeDefined();
+      const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
+      expect(y).toBeDefined();
+      expect(w!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'a']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }' },
+                { fieldName: '', selectionSet: 'id object { name }' },
+                { fieldName: '', selectionSet: 'object { name }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      expect(x!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['object', 'b']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [{ fieldName: '', selectionSet: 'object { id }' }],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+      expect(y!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'c']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'object { name }' },
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { name }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that if a target key can be satisfied, it will included in the router configuration #2.3', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphX, subgraphW, subgraphY]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+        type Entity {
+          a: Int!
+          b: Boolean!
+          c: Float!
+          id: ID!
+          object: Object!
+        }
+        
+        type NestedObject {
+          id: ID!
+        }
+        
+        type Object {
+          id: ID!
+          name: String!
+          nestedObject: NestedObject!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope
+      `,
+        ),
+      );
+      const w = federationResult?.subgraphConfigBySubgraphName.get('subgraph-w');
+      expect(w).toBeDefined();
+      const x = federationResult?.subgraphConfigBySubgraphName.get('subgraph-x');
+      expect(x).toBeDefined();
+      const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
+      expect(y).toBeDefined();
+      expect(w!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'a']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }' },
+                { fieldName: '', selectionSet: 'id object { name }' },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { name }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      expect(x!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['object', 'b']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [{ fieldName: '', selectionSet: 'object { id }' }],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+      expect(y!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'c']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'object { name }' },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { name }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that if a target key can be satisfied, it will included in the router configuration #2.4', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphX, subgraphY, subgraphW]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+        type Entity {
+          a: Int!
+          b: Boolean!
+          c: Float!
+          id: ID!
+          object: Object!
+        }
+        
+        type NestedObject {
+          id: ID!
+        }
+        
+        type Object {
+          id: ID!
+          name: String!
+          nestedObject: NestedObject!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope
+      `,
+        ),
+      );
+      const w = federationResult?.subgraphConfigBySubgraphName.get('subgraph-w');
+      expect(w).toBeDefined();
+      const x = federationResult?.subgraphConfigBySubgraphName.get('subgraph-x');
+      expect(x).toBeDefined();
+      const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
+      expect(y).toBeDefined();
+      expect(w!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'a']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }' },
+                { fieldName: '', selectionSet: 'id object { name }' },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { name }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      expect(x!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['object', 'b']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [{ fieldName: '', selectionSet: 'object { id }' }],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+      expect(y!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'c']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'object { name }' },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { name }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that if a target key can be satisfied, it will included in the router configuration #2.5', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphY, subgraphW, subgraphX]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+        type Entity {
+          a: Int!
+          b: Boolean!
+          c: Float!
+          id: ID!
+          object: Object!
+        }
+        
+        type NestedObject {
+          id: ID!
+        }
+        
+        type Object {
+          id: ID!
+          name: String!
+          nestedObject: NestedObject!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope
+      `,
+        ),
+      );
+      const w = federationResult?.subgraphConfigBySubgraphName.get('subgraph-w');
+      expect(w).toBeDefined();
+      const x = federationResult?.subgraphConfigBySubgraphName.get('subgraph-x');
+      expect(x).toBeDefined();
+      const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
+      expect(y).toBeDefined();
+      expect(w!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'a']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }' },
+                { fieldName: '', selectionSet: 'id object { name }' },
+                { fieldName: '', selectionSet: 'object { name }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      expect(x!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['object', 'b']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [{ fieldName: '', selectionSet: 'object { id }' }],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+      expect(y!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'c']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'object { name }' },
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { name }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that if a target key can be satisfied, it will included in the router configuration #2.6', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphY, subgraphX, subgraphW]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+        type Entity {
+          a: Int!
+          b: Boolean!
+          c: Float!
+          id: ID!
+          object: Object!
+        }
+        
+        type NestedObject {
+          id: ID!
+        }
+        
+        type Object {
+          id: ID!
+          name: String!
+          nestedObject: NestedObject!
+        }
+        
+        type Query {
+          entities: [Entity!]!
+        }
+        
+        scalar openfed__Scope
+      `,
+        ),
+      );
+      const w = federationResult?.subgraphConfigBySubgraphName.get('subgraph-w');
+      expect(w).toBeDefined();
+      const x = federationResult?.subgraphConfigBySubgraphName.get('subgraph-x');
+      expect(x).toBeDefined();
+      const y = federationResult?.subgraphConfigBySubgraphName.get('subgraph-y');
+      expect(y).toBeDefined();
+      expect(w!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'a']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }' },
+                { fieldName: '', selectionSet: 'id object { name }' },
+                { fieldName: '', selectionSet: 'object { name }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+      expect(x!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['object', 'b']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [{ fieldName: '', selectionSet: 'object { id }' }],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+      expect(y!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object', 'c']),
+              isRootNode: true,
+              typeName: 'Entity',
+              keys: [
+                { fieldName: '', selectionSet: 'object { name }' },
+                { fieldName: '', selectionSet: 'object { id }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { nestedObject { id } }', disableEntityResolver: true },
+                { fieldName: '', selectionSet: 'id object { name }', disableEntityResolver: true },
+              ],
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name', 'nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
+    });
   });
 });
 
@@ -943,6 +1898,96 @@ const subgraphT: Subgraph = {
     type Entity @key(unknownArgument: 1, duplicateUnknownArgument: false, duplicateUnknownArgument: "string") @key(fields: "id", fields: "property") {
       id: ID!
       property: String!
+    }
+  `),
+};
+
+const subgraphU: Subgraph = {
+  name: 'subgraph-u',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(fields: "id, name") {
+      id: ID!
+      name: String!
+      a: Int!
+    }
+  `),
+};
+
+const subgraphV: Subgraph = {
+  name: 'subgraph-v',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "name") {
+      name: String!
+      b: Boolean!
+    }
+  `),
+};
+
+const subgraphW: Subgraph = {
+  name: 'subgraph-w',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(fields: "id object { nestedObject { id } }") @key(fields: "id object { name }") {
+      id: ID!
+      object: Object!
+      a: Int!
+    }
+    
+    type Object {
+      id: ID! @shareable
+      name: String!
+      nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphX: Subgraph = {
+  name: 'subgraph-x',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "object { id }") {
+      object: Object!
+      b: Boolean!
+    }
+    
+    type Object {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphY: Subgraph = {
+  name: 'subgraph-y',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "object { name }") {
+      id: ID! @shareable
+      object: Object!
+      c: Float!
+    }
+    
+    type Object {
+      id: ID! @shareable
+      name: String!
+      nestedObject: NestedObject! @shareable
+    }
+    
+    type NestedObject {
+      id: ID! @shareable
     }
   `),
 };

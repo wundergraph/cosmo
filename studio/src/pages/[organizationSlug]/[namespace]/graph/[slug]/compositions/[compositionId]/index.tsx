@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -31,18 +32,19 @@ import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { CubeIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Component2Icon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getCompositionDetails,
   getSdlBySchemaVersion,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { sentenceCase } from "change-case";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext } from "react";
-import { PiGitBranch } from "react-icons/pi";
+import { useContext, useState } from "react";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
+import { PiGitBranch } from "react-icons/pi";
 
 const CompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -54,13 +56,13 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   const tab = router.query.tab as string;
   const subgraph = router.query.subgraph as string;
 
+  const [schemaType, setSchemaType] = useState<"router" | "client">("client");
+
   const graphData = useContext(GraphContext);
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getCompositionDetails.useQuery({
-      compositionId: id,
-    }),
-  );
+  const { data, isLoading, error, refetch } = useQuery(getCompositionDetails, {
+    compositionId: id,
+  });
 
   const compositionSubgraph = data?.compositionSubgraphs.find(
     (s) => s.name === subgraph,
@@ -70,22 +72,25 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   const activeSubgraphName = activeSubgraph?.name;
   const activeSubgraphVersionId = activeSubgraph?.schemaVersionId;
 
-  const { data: sdlData, isLoading: fetchingSdl } = useQuery({
-    ...getSdlBySchemaVersion.useQuery({
+  const { data: sdlData, isLoading: fetchingSdl } = useQuery(
+    getSdlBySchemaVersion,
+    {
       targetId:
         tab === "input" ? activeSubgraph?.targetId : graphData?.graph?.targetId,
       schemaVersionId:
         tab === "input"
           ? activeSubgraphVersionId
           : data?.composition?.schemaVersionId,
-    }),
-    enabled:
-      tab === "input"
-        ? !!activeSubgraphName && !!activeSubgraphVersionId
-        : data?.composition && data.composition.schemaVersionId
-        ? true
-        : false,
-  });
+    },
+    {
+      enabled:
+        tab === "input"
+          ? !!activeSubgraphName && !!activeSubgraphVersionId
+          : data?.composition && data.composition.schemaVersionId
+          ? true
+          : false,
+    },
+  );
 
   if (isLoading || fetchingSdl) return <Loader fullscreen />;
 
@@ -251,9 +256,9 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
           </dl>
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-          <dl className="grid w-full flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
+          <dl className="scrollbar-custom grid w-full flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
             {routerConfigSignature || admissionError ? (
-              <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
+              <div className="flex-start col-span-full flex flex-1 flex-col gap-4">
                 <dt className="text-sm text-muted-foreground">Admission</dt>
                 <dd className="flex flex-col space-y-3">
                   <div className="flex items-center gap-2">
@@ -308,15 +313,15 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                 <dt className="text-sm text-muted-foreground">
                   Composition Inputs
                 </dt>
-                <dd className="flex flex-col gap-2">
+                <dd className="mt-2 flex flex-col gap-2">
                   {compositionSubgraphs.length === 0 ? (
                     <span className="text-sm">No subgraphs stored.</span>
                   ) : (
                     compositionSubgraphs.map((cs) => {
                       return (
                         <div className="flex flex-col gap-y-1" key={cs.id}>
-                          <div className="flex items-center gap-x-1.5 text-sm">
-                            <CubeIcon className="h-4 w-4" />
+                          <div className="flex items-start gap-x-1.5 text-sm">
+                            <CubeIcon className="mt-1 h-4 w-4 flex-shrink-0" />
                             <span>{cs.name}</span>
                           </div>
                           <span className="pl-6 text-xs">
@@ -339,7 +344,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                 <TabsList>
                   <TabsTrigger value="output" asChild>
                     <Link href={{ query: { ...router.query, tab: "output" } }}>
-                      Composed Schema
+                      Output Schema
                     </Link>
                   </TabsTrigger>
                   <TabsTrigger value="input" asChild>
@@ -366,16 +371,56 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                     </div>
                   ) : (
                     sdlData &&
-                    sdlData.sdl !== "" && (
+                    sdlData.sdl !== "full" && (
                       <div className="relative flex h-full min-h-[60vh] flex-col">
-                        <div className="-top-[60px] right-8 w-max px-5 md:absolute md:w-auto md:px-0">
+                        <div className="-top-[60px] right-8 flex w-max items-center gap-x-4 px-5 md:absolute md:w-auto md:px-0">
+                          <Select
+                            onValueChange={(v: typeof schemaType) =>
+                              setSchemaType(v)
+                            }
+                            value={schemaType}
+                          >
+                            <SelectTrigger>
+                              <SelectValue>
+                                {sentenceCase(schemaType)}
+                                Schema
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="client">
+                                Client Schema
+                                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                                  The schema available to the clients and
+                                  through introspection
+                                </p>
+                              </SelectItem>
+                              <Separator />
+                              <SelectItem value="router">
+                                Router Schema
+                                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                                  The full schema used by the router to plan
+                                  your operations
+                                </p>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
                           <SDLViewerActions
-                            sdl={sdlData.sdl}
+                            sdl={
+                              schemaType === "router"
+                                ? sdlData.sdl
+                                : sdlData.clientSchema
+                            }
                             size="icon"
                             targetName={graphData?.graph?.name}
                           />
                         </div>
-                        <SDLViewerMonaco schema={sdlData.sdl} />
+                        <SDLViewerMonaco
+                          schema={
+                            schemaType === "router"
+                              ? sdlData.sdl
+                              : sdlData.clientSchema
+                          }
+                        />
                       </div>
                     )
                   )}

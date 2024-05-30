@@ -78,6 +78,7 @@ message EngineConfiguration {
   string graphqlSchema = 4;
   repeated TypeConfiguration type_configurations = 5;
   map<string, string> string_storage = 6;
+  optional string graphql_client_schema = 7;
 }
 
 message DataSourceConfiguration {
@@ -93,7 +94,7 @@ message DataSourceConfiguration {
   repeated RequiredField keys = 10;
   repeated RequiredField provides = 11;
   repeated RequiredField requires = 12;
-  DataSourceCustom_Events custom_events = 13;
+  DataSourceCustomEvents custom_events = 13;
   repeated EntityInterfaceConfiguration entity_interfaces = 14;
   repeated EntityInterfaceConfiguration interface_objects = 15;
 }
@@ -117,6 +118,7 @@ message FieldConfiguration {
   string field_name = 2;
   repeated ArgumentConfiguration arguments_configuration = 3;
   AuthorizationConfiguration authorization_configuration = 4;
+  optional SubscriptionFilterCondition subscription_filter_condition = 5;
 }
 
 enum ArgumentRenderConfiguration {
@@ -199,22 +201,32 @@ enum EventType {
   SUBSCRIBE = 2;
 }
 
-message StreamConfiguration {
+message NatsStreamConfiguration {
   string consumer_name = 1;
   string stream_name = 2;
 }
 
-message EventConfiguration {
-  EventType type = 1;
-  string type_name = 2;
-  string field_name = 3;
-  repeated string subjects = 4;
-  string source_name = 5;
-  StreamConfiguration stream_configuration = 6;
+message NatsEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string subjects = 2;
+  NatsStreamConfiguration stream_configuration = 3;
 }
 
-message DataSourceCustom_Events {
-  repeated EventConfiguration events = 1;
+message KafkaEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string topics = 2;
+}
+
+message EngineEventConfiguration {
+  string provider_id = 1;
+  EventType type = 2;
+  string type_name = 3;
+  string field_name = 4;
+}
+
+message DataSourceCustomEvents {
+  repeated NatsEventConfiguration nats = 1;
+  repeated KafkaEventConfiguration kafka = 2;
 }
 
 message DataSourceCustom_Static {
@@ -269,6 +281,7 @@ message GraphQLSubscriptionConfiguration {
   /* @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. */
   optional bool useSSE = 3;
   optional wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
+  optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocketSubprotocol = 5;
 }
 
 message GraphQLFederationConfiguration {
@@ -284,4 +297,16 @@ message InternedString {
 message SingleTypeField {
   string type_name = 1;
   string field_name = 2;
+}
+
+message SubscriptionFieldCondition {
+  repeated string field_path = 1;
+  string json = 2;
+}
+
+message SubscriptionFilterCondition {
+  repeated SubscriptionFilterCondition and = 1;
+  optional SubscriptionFieldCondition in = 2;
+  optional SubscriptionFilterCondition not = 3;
+  repeated SubscriptionFilterCondition or = 4;
 }

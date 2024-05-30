@@ -1,10 +1,32 @@
-directive @edfs__request(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
-directive @edfs__publish(subject: String!, sourceName: String! = "default") on FIELD_DEFINITION
-directive @edfs__subscribe(subjects: [String!]!, sourceName: String! = "default", streamConfiguration: edfs__StreamConfiguration) on FIELD_DEFINITION
+directive @edfs__natsRequest(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
+directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+
+input edfs__NatsStreamConfiguration {
+    consumerName: String!
+    streamName: String!
+}
+
+scalar openfed__SubscriptionFilterValue
+
+input openfed__SubscriptionFieldCondition {
+    fieldPath: String!
+    values: [openfed__SubscriptionFilterValue]!
+}
+
+input openfed__SubscriptionFilterCondition {
+    AND: [openfed__SubscriptionFilterCondition!]
+    IN: openfed__SubscriptionFieldCondition
+    NOT: openfed__SubscriptionFilterCondition
+    OR: [openfed__SubscriptionFilterCondition!]
+}
 
 type Query {
-    employeeFromEvent(id: ID!): Employee! @edfs__request(subject: "getEmployee.{{ args.id }}")
-    employeeFromEventMyNats(employeeID: ID!): Employee! @edfs__request(subject: "getEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
+    employeeFromEvent(id: Int!): Employee! @edfs__natsRequest(subject: "getEmployee.{{ args.id }}")
+    employeeFromEventMyNats(employeeID: Int!): Employee! @edfs__natsRequest(subject: "getEmployeeMyNats.{{ args.employeeID }}", providerId: "my-nats")
 }
 
 input UpdateEmployeeInput {
@@ -13,14 +35,36 @@ input UpdateEmployeeInput {
 }
 
 type Mutation {
-    updateEmployee(id: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__publish(subject: "updateEmployee.{{ args.id }}")
-    updateEmployeeMyNats(employeeID: ID!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__publish(subject: "updateEmployeeMyNats.{{ args.employeeID }}", sourceName: "my-nats")
+    updateEmployeeMyKafka(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__kafkaPublish(topic: "employeeUpdated", providerId: "my-kafka")
+    updateEmployeeMyNats(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdatedMyNats.{{ args.employeeID }}", providerId: "my-nats")
 }
 
 type Subscription {
-    employeeUpdated(employeeID: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"])
-    employeeUpdatedMyNats(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], sourceName: "my-nats")
-    employeeUpdatedStream(id: ID!): Employee! @edfs__subscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName"})
+    employeeUpdated(employeeID: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.employeeID }}"])
+    employeeUpdatedMyKafka(employeeID: Int!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+    employeeUpdatedMyNats(id: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], providerId: "my-nats")
+    employeeUpdatedNatsStream(id: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName"})
+    filteredEmployeeUpdated(id: Int!): Employee!
+        @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.id }}"])
+        @openfed__subscriptionFilter(condition: { NOT: { IN: { fieldPath: "id", values: [2, 6, 9, 10, 12] } } })
+    filteredEmployeeUpdatedMyKafka(employeeID: ID!): Employee!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1, 3, 4, 7, 11] } })
+    filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [ID!]!, secondIds: [ID!]!): Employee!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["{{ args.firstIds }}", "{{ args.secondIds }}"] } })
+    filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: KafkaInput!): Employee!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: {
+            OR: [
+                { IN: { fieldPath: "id", values: ["{{ args.input.ids }}"] } },
+                { IN: { fieldPath: "id", values: ["1"] } },
+            ],
+        })
+}
+
+input KafkaInput {
+    ids: [Int!]!
 }
 
 type Employee @key(fields: "id", resolvable: false) {

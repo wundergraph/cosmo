@@ -2,10 +2,11 @@ package subgraph
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"reflect"
 	"sync"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 // This file will not be regenerated automatically.
@@ -13,8 +14,8 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	mux                sync.Mutex
-	PubSubBySourceName map[string]pubsub_datasource.PubSub
+	mux                    sync.Mutex
+	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
 }
 
 func (r *Resolver) Employees(ctx context.Context, obj model.RoleType) ([]*model.Employee, error) {
