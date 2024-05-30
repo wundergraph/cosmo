@@ -5,12 +5,12 @@ package epoller
 
 import (
 	"errors"
+	"fmt"
+	"golang.org/x/sys/unix"
 	"net"
 	"sync"
 	"syscall"
 	"time"
-
-	"golang.org/x/sys/unix"
 )
 
 var _ Poller = (*Epoll)(nil)
@@ -69,6 +69,9 @@ func (e *Epoll) Close(closeConns bool) error {
 func (e *Epoll) Add(conn net.Conn) error {
 	conn = newConnImpl(conn)
 	fd := socketFD(conn)
+
+	fmt.Println("Before syscall.SetNonblock")
+
 	if e := syscall.SetNonblock(int(fd), true); e != nil {
 		return errors.New("udev: unix.SetNonblock failed")
 	}
@@ -76,9 +79,20 @@ func (e *Epoll) Add(conn net.Conn) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
+	fmt.Println("Before unix.EpollCtl")
+
 	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{Events: unix.POLLIN | unix.POLLHUP, Fd: int32(fd)})
 	if err != nil {
-		return err
+		fmt.Println("Error on unix.EpollCtl", err)
+
+		fmt.Println("Test unix.EpollCtl only with unix.POLLIN", err)
+
+		err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{Events: unix.POLLIN, Fd: int32(fd)})
+
+		if err != nil {
+			fmt.Println("Error on unix.EpollCtl with unix.POLLIN", err)
+			return err
+		}
 	}
 	e.conns[fd] = conn
 	return nil
