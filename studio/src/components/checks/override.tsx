@@ -222,7 +222,10 @@ export const ConfigureOverride = () => {
   );
 
   const invalidateOverrides = () => {
-    const key = createConnectQueryKey(getAllOverrides);
+    const key = createConnectQueryKey(getAllOverrides, {
+      graphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    });
     client.invalidateQueries({
       queryKey: key,
     });
