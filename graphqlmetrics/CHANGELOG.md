@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.17.1...graphqlmetrics@0.18.0) (2024-05-31)
+
+### Features
+
+* support multiple/static NATS EDFS arg templates ([#841](https://github.com/wundergraph/cosmo/issues/841)) ([2c75870](https://github.com/wundergraph/cosmo/commit/2c75870cc65d5a43e864f69e39f202170257f9df)) (@Aenimus)
+
 ## [0.17.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.17.0...graphqlmetrics@0.17.1) (2024-05-29)
 
 **Note:** Version bump only for package graphqlmetrics
