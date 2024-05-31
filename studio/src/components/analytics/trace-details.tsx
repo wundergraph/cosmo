@@ -73,7 +73,12 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       set(
           routerSpan.attributes?.operationContent || "",
           routerSpan.attributes?.operationVariables || "",
-      ).catch((e) => console.error("Error formatting", e));
+      ).catch((e) => {
+        console.error("Error formatting. Printing content as it is.", e)
+
+        setContent(routerSpan.attributes?.operationContent || "");
+        setVariables(routerSpan.attributes?.operationVariables || "");
+      });
     }
 
   }, [data]);
@@ -100,7 +105,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       <div className="mb-3 mt-4">
         <div className="mb-1">Operation and Variables</div>
         <div className="text-xs text-muted-foreground">
-          To view the GraphQL variables of the operation, please enable variable
+          Content is truncated to 3KB. To view the GraphQL variables of the operation, please enable variable
           export in the router.{" "}
           <a
             target="_blank"
