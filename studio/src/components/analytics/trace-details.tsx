@@ -50,16 +50,28 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
     }
 
     const set = async (content: string, variables: string) => {
-      const formattedContent = await prettier.format(content, {
-        parser: "graphql",
-        plugins: [graphQLPlugin],
-      });
-      setContent(formattedContent);
-      const formattedVariables = await prettier.format(variables, {
-        parser: "json",
-        plugins: [parserBabel, prettierPluginEstree],
-      });
-      setVariables(formattedVariables);
+      let formattedContent = content;
+      try {
+        formattedContent = await prettier.format(content, {
+          parser: "graphql",
+          plugins: [graphQLPlugin],
+        });
+      } finally {
+        // In case of an error, we still want to set the content
+        setContent(formattedContent);
+      }
+
+      let formattedVariables = variables;
+
+      try {
+        formattedVariables = await prettier.format(variables, {
+          parser: "json",
+          plugins: [parserBabel, prettierPluginEstree],
+        });
+      } finally {
+        // In case of an error, we still want to set the content
+        setVariables(formattedVariables);
+      }
     };
 
     // Find the operation content and variables span
@@ -73,10 +85,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       set(
           routerSpan.attributes?.operationContent || "",
           routerSpan.attributes?.operationVariables || "",
-      ).catch(() => {
-        setContent(routerSpan.attributes?.operationContent || "");
-        setVariables(routerSpan.attributes?.operationVariables || "");
-      });
+      ).catch((e) => console.error("Error during formatting", e));
     }
 
   }, [data]);
