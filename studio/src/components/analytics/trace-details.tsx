@@ -73,9 +73,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       set(
           routerSpan.attributes?.operationContent || "",
           routerSpan.attributes?.operationVariables || "",
-      ).catch((e) => {
-        console.error("Error formatting. Printing content as it is.", e)
-
+      ).catch(() => {
         setContent(routerSpan.attributes?.operationContent || "");
         setVariables(routerSpan.attributes?.operationVariables || "");
       });
