@@ -50,16 +50,28 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
     }
 
     const set = async (content: string, variables: string) => {
-      const formattedContent = await prettier.format(content, {
-        parser: "graphql",
-        plugins: [graphQLPlugin],
-      });
-      setContent(formattedContent);
-      const formattedVariables = await prettier.format(variables, {
-        parser: "json",
-        plugins: [parserBabel, prettierPluginEstree],
-      });
-      setVariables(formattedVariables);
+      let formattedContent = content;
+      try {
+        formattedContent = await prettier.format(content, {
+          parser: "graphql",
+          plugins: [graphQLPlugin],
+        });
+      } finally {
+        // In case of an error, we still want to set the content
+        setContent(formattedContent);
+      }
+
+      let formattedVariables = variables;
+
+      try {
+        formattedVariables = await prettier.format(variables, {
+          parser: "json",
+          plugins: [parserBabel, prettierPluginEstree],
+        });
+      } finally {
+        // In case of an error, we still want to set the content
+        setVariables(formattedVariables);
+      }
     };
 
     // Find the operation content and variables span
@@ -73,7 +85,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       set(
           routerSpan.attributes?.operationContent || "",
           routerSpan.attributes?.operationVariables || "",
-      ).catch((e) => console.error("Error formatting", e));
+      ).catch((e) => console.error("Error during formatting", e));
     }
 
   }, [data]);
@@ -100,7 +112,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       <div className="mb-3 mt-4">
         <div className="mb-1">Operation and Variables</div>
         <div className="text-xs text-muted-foreground">
-          To view the GraphQL variables of the operation, please enable variable
+          Content is truncated to 3KB. To view the GraphQL variables of the operation, please enable variable
           export in the router.{" "}
           <a
             target="_blank"
