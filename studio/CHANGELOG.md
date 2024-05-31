@@ -4,6 +4,15 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.12](https://github.com/wundergraph/cosmo/compare/studio@0.77.11...studio@0.77.12) (2024-05-31)
+
+### Bug Fixes
+
+* clickhouse cardinality mismatch ([#669](https://github.com/wundergraph/cosmo/issues/669)) ([1908089](https://github.com/wundergraph/cosmo/commit/1908089a6cd62d8e60625555f1173102ce5d8f57)) (@thisisnithin)
+* display graphql operation and variables after truncation in trace detail view ([#843](https://github.com/wundergraph/cosmo/issues/843)) ([96e9483](https://github.com/wundergraph/cosmo/commit/96e9483ea27552355506681b4b33c9cb4ec2bea7)) (@StarpTech)
+* potential fix to always show graphql variables ([#842](https://github.com/wundergraph/cosmo/issues/842)) ([574e5dd](https://github.com/wundergraph/cosmo/commit/574e5dd5dde02371d4323201d1f2991688849e9d)) (@StarpTech)
+* render variables and content correctly in trace view ([757b58c](https://github.com/wundergraph/cosmo/commit/757b58c6018761e41534082ba191d4d961d21e0a)) (@StarpTech)
+
 ## [0.77.11](https://github.com/wundergraph/cosmo/compare/studio@0.77.10...studio@0.77.11) (2024-05-30)
 
 ### Bug Fixes

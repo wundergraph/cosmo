@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.11.2...aws-lambda-router@0.12.0) (2024-05-31)
+
+### Features
+
+* support multiple/static NATS EDFS arg templates ([#841](https://github.com/wundergraph/cosmo/issues/841)) ([2c75870](https://github.com/wundergraph/cosmo/commit/2c75870cc65d5a43e864f69e39f202170257f9df)) (@Aenimus)
+
 ## [0.11.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.11.1...aws-lambda-router@0.11.2) (2024-05-29)
 
 **Note:** Version bump only for package aws-lambda-router
