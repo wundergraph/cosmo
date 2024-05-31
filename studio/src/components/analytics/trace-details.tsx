@@ -50,7 +50,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       return;
     }
 
-    const setContentAndCheckValidity = async (content: string, variables: string) => {
+    const checkValidity = async (content: string, variables: string) => {
       try {
         await prettier.format(content, {
           parser: "graphql",
@@ -88,7 +88,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       setContent(content);
       setVariables(variables);
 
-      setContentAndCheckValidity(content, variables).then((isValid) => {
+      checkValidity(content, variables).then((isValid) => {
         if (!isValid) {
           setTruncated(true);
         }
