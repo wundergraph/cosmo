@@ -50,23 +50,21 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       return;
     }
 
-    const isValidContent = async (content: string, variables: string) => {
+    const setContentAndCheckValidity = async (content: string, variables: string) => {
       try {
-        const formattedContent = await prettier.format(content, {
+        await prettier.format(content, {
           parser: "graphql",
           plugins: [graphQLPlugin],
         });
-        setContent(formattedContent);
       } catch {
         return false
       }
 
       try {
-        const formattedVariables = await prettier.format(variables, {
+        await prettier.format(variables, {
           parser: "json",
           plugins: [parserBabel, prettierPluginEstree],
         });
-        setVariables(formattedVariables);
       } catch {
         return false
       }
@@ -90,7 +88,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       setContent(content);
       setVariables(variables);
 
-      isValidContent(content, variables).then((isValid) => {
+      setContentAndCheckValidity(content, variables).then((isValid) => {
         if (!isValid) {
           setTruncated(true);
         }
