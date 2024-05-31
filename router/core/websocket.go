@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"runtime"
 	"slices"
 	"sync"
 	"syscall"
@@ -125,7 +126,13 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 				handler.epoll = poller
 				handler.connections = make(map[int]*WebSocketConnectionHandler)
 				go handler.runPoller()
+			} else {
+				opts.Logger.Debug("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.",
+					zap.String("os", runtime.GOOS),
+				)
 			}
+		} else {
+			opts.Logger.Warn("Epoll is disabled. Websocket connections will be handled synchronously.")
 		}
 
 		return handler
@@ -313,8 +320,6 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			handler.Close()
 		}
 		return
-	} else {
-		h.logger.Warn("Epoll is only available on Linux and MacOS. Falling back to synchronous handling.")
 	}
 
 	// Handle messages sync when epoll is not available
