@@ -50,27 +50,26 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
     }
 
     const set = async (content: string, variables: string) => {
-      let formattedContent = content;
       try {
-        formattedContent = await prettier.format(content, {
+        const formattedContent = await prettier.format(content, {
           parser: "graphql",
           plugins: [graphQLPlugin],
         });
-      } finally {
-        // In case of an error, we still want to set the content
         setContent(formattedContent);
+      } catch {
+        // In case of an error, we still want to set the content
+        setContent(content);
       }
 
-      let formattedVariables = variables;
-
       try {
-        formattedVariables = await prettier.format(variables, {
+        const formattedVariables = await prettier.format(variables, {
           parser: "json",
           plugins: [parserBabel, prettierPluginEstree],
         });
-      } finally {
-        // In case of an error, we still want to set the content
         setVariables(formattedVariables);
+      } catch {
+        // In case of an error, we still want to set the content
+        setVariables(variables);
       }
     };
 
