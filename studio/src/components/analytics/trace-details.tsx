@@ -62,10 +62,6 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       setVariables(formattedVariables);
     };
 
-    if (!data) {
-      return;
-    }
-
     // Find the operation content and variables span
     // In that way, we don't rely on the order of the spans
 
