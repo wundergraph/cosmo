@@ -786,6 +786,8 @@ func (h *WebSocketConnectionHandler) executeSubscription(msg *wsproto.Message, i
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw, buf)
 			return
 		}
+
+		h.metrics.MetricStore().MeasureSubscriptionCount(h.ctx, setAttributesFromOperationContext(operationCtx)...)
 	}
 }
 
@@ -930,6 +932,10 @@ func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 	err := rw.protocol.Done(rw.id)
 	if err != nil {
 		return
+	}
+	err = h.metrics.MetricStore().Flush(h.ctx)
+	if err != nil {
+		h.logger.Debug("Failed to flush metric store", zap.Error(err))
 	}
 	_ = rw.Flush()
 }

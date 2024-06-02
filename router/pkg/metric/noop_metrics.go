@@ -2,8 +2,9 @@ package metric
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/attribute"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // This is dummy implementation of metric.Store interface to avoid nil checks in the code
@@ -30,6 +31,9 @@ func (n NoopMetrics) MeasureResponseSize(ctx context.Context, size int64, attr .
 }
 
 func (n NoopMetrics) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
+}
+
+func (n NoopMetrics) MeasureSubscriptionCount(ctx context.Context, attr ...attribute.KeyValue) {
 }
 
 func (n NoopMetrics) Flush(ctx context.Context) error {

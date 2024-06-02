@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,10 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -28,6 +33,8 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
 func TestWebSockets(t *testing.T) {
@@ -347,6 +354,136 @@ func TestWebSockets(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("subscription with metrics", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketReadTimeout = time.Millisecond * 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			type currentTimePayload struct {
+				Data struct {
+					CurrentTime struct {
+						UnixTime  float64 `json:"unixTime"`
+						Timestamp string  `json:"timestamp"`
+					} `json:"currentTime"`
+				} `json:"data"`
+			}
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload currentTimePayload
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+
+			unix1 := payload.Data.CurrentTime.UnixTime
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+
+			unix2 := payload.Data.CurrentTime.UnixTime
+			require.Greater(t, unix2, unix1)
+
+			// Sending a complete must stop the subscription
+			err = conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "complete",
+			})
+			require.NoError(t, err)
+
+			var complete testenv.WebSocketMessage
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+			require.Equal(t, "1", complete.ID)
+			require.Equal(t, "complete", complete.Type)
+
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			_, _, err = conn.ReadMessage()
+			require.Error(t, err)
+			var netErr net.Error
+			if errors.As(err, &netErr) {
+				require.True(t, netErr.Timeout())
+			} else {
+				require.Fail(t, "expected net.Error")
+			}
+
+			/**
+			* Metrics
+			 */
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			httpSubscriptionMetric := metricdata.Metrics{
+				Name:        "router.http.subscriptions",
+				Description: "Total number of subscriptions",
+				Unit:        "",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgOperationHash.String("13258717046432306894"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("ws"),
+								otel.WgOperationType.String("subscription"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgRouterConfigVersion.String(""),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Value: 1,
+						},
+					},
+				},
+			}
+
+			var receivedMetric *metricdata.Metrics
+			for _, m := range rm.ScopeMetrics[0].Metrics {
+				if m.Name == httpSubscriptionMetric.Name {
+					receivedMetric = &m
+					break
+				}
+			}
+
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.NotNil(t, receivedMetric, "%s metric not present", httpSubscriptionMetric.Name)
+
+			metricdatatest.AssertEqual(t, httpSubscriptionMetric, *receivedMetric, metricdatatest.IgnoreTimestamp())
+		})
+	})
+
 	t.Run("subscription with header propagation", func(t *testing.T) {
 		t.Parallel()
 		headerRules := config.HeaderRules{
