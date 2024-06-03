@@ -30,17 +30,6 @@ export const NamespaceSelector = () => {
   const applyParams = useApplyParams();
 
   useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
-
-  useEffect(() => {
     if (!data || data.namespaces.length === 0) return;
 
     if (!data.namespaces.some((ns) => ns.name === namespace)) {

@@ -361,17 +361,6 @@ const PendingInvitations = () => {
 
   const noOfPages = Math.ceil((data?.totalCount ?? 0) / limit);
 
-  useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
-
   if (isLoading) return <Loader fullscreen />;
 
   if (error || data?.response?.code !== EnumStatusCode.OK || !user)
@@ -442,17 +431,6 @@ const AcceptedMembers = () => {
   });
 
   const noOfPages = Math.ceil((data?.totalCount ?? 0) / limit);
-
-  useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -595,17 +573,6 @@ const MembersPage: NextPageWithLayout = () => {
     },
     search: debouncedSearch,
   });
-
-  useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
 
   return (
     <div className="flex h-full flex-col gap-y-6">

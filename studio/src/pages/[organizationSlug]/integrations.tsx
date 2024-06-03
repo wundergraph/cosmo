@@ -545,17 +545,6 @@ const IntegrationsPage: NextPageWithLayout = () => {
   );
 
   useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
-
-  useEffect(() => {
     if (!code) {
       setShouldCreate(false);
       return;
