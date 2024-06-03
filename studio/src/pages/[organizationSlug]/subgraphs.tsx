@@ -34,26 +34,12 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
 
   const applyParams = useApplyParams();
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getSubgraphs,
-    {
-      namespace,
-      query,
-      limit,
-      offset,
-    },
-  );
-
-  useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
+  const { data, isLoading, error, refetch } = useQuery(getSubgraphs, {
+    namespace,
+    query,
+    limit,
+    offset,
+  });
 
   let content;
 

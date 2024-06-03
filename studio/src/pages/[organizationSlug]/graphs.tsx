@@ -67,16 +67,6 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
   });
 
   // refetch the query when the organization changes
-  useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
 
   if (isLoading) return <Loader fullscreen />;
 
