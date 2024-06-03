@@ -14,6 +14,7 @@ import { useCookieOrganization } from "@/hooks/use-cookie-organization";
 export const UserContext = createContext<User | undefined>(undefined);
 
 const queryClient = new QueryClient();
+const sessionQueryClient = new QueryClient();
 
 const publicPaths = ["/login", "/signup"];
 
@@ -127,7 +128,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return failureCount < 3;
       },
     },
-    queryClient,
+    sessionQueryClient,
   );
 
   const [user, setUser] = useState<User>();
@@ -204,6 +205,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   }, [router, data, isFetching, error, cookieOrgSlug]);
+
+  useEffect(() => {
+    queryClient.resetQueries();
+  }, [transport]);
 
   if (!transport) {
     return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
