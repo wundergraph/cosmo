@@ -58,6 +58,7 @@ export class GitHubRepository {
   }
 
   async createCommitCheck(input: {
+    namespace: string;
     schemaCheckID: string;
     gitInfo: GitInfo;
     compositionErrors: PlainMessage<CompositionError>[];
@@ -78,6 +79,7 @@ export class GitHubRepository {
       organizationSlug,
       webBaseUrl,
       composedGraphs,
+      namespace,
     } = input;
 
     const installation = await this.db.query.gitInstallations.findFirst({
@@ -110,7 +112,7 @@ export class GitHubRepository {
     if (composedGraphs.length > 0) {
       const affectedGraphNames = composedGraphs.map((name) => ` - ${name}`).join('\n');
       summary += `\n\n**Affected Graphs:**\n${affectedGraphNames}`;
-      detailsUrl += `/graph/${composedGraphs[0]}/checks/${schemaCheckID}`;
+      detailsUrl += `/${namespace}/graph/${composedGraphs[0]}/checks/${schemaCheckID}`;
     }
 
     const {
