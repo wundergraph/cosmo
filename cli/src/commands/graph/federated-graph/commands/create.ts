@@ -30,6 +30,11 @@ export default (opts: BaseCommandOptions) => {
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
     [],
   );
+  command.option(
+    '--admission-webhook-secret <url>',
+    'The admission webhook secret is used to sign requests to the webhook url.',
+    [],
+  );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
   command.action(async (name, options) => {
     let readmeFile;
@@ -54,6 +59,7 @@ export default (opts: BaseCommandOptions) => {
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
         namespace: options.namespace,
         admissionWebhookURL: options.admissionWebhookUrl,
+        admissionWebhookSecret: options.admissionWebhookSecret,
       },
       {
         headers: getBaseHeaders(),

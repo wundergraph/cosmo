@@ -25,6 +25,11 @@ export default (opts: BaseCommandOptions) => {
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the contract graph.',
     [],
   );
+  command.option(
+    '--admission-webhook-secret <url>',
+    'The admission webhook secret is used to sign requests to the webhook url.',
+    [],
+  );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the contract.');
   command.action(async (name, options) => {
     let readmeFile;
@@ -49,6 +54,7 @@ export default (opts: BaseCommandOptions) => {
         excludeTags: options.exclude,
         routingUrl: options.routingUrl,
         admissionWebhookUrl: options.admissionWebhookUrl,
+        admissionWebhookSecret: options.admissionWebhookSecret,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
