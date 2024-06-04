@@ -1252,7 +1252,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const schema =
     (router.query.schemaType as string) === "router"
       ? data?.sdl
-      : data?.clientSchema;
+      : data?.clientSchema || data?.sdl;
 
   const { ast, isParsing } = useParseSchema(schema);
 
