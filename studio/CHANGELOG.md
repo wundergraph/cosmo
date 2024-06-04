@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.14](https://github.com/wundergraph/cosmo/compare/studio@0.77.13...studio@0.77.14) (2024-06-04)
+
+### Bug Fixes
+
+* set transport on org change ([#849](https://github.com/wundergraph/cosmo/issues/849)) ([d361c7c](https://github.com/wundergraph/cosmo/commit/d361c7c31f97f4d746c334a626193efbe0224048)) (@thisisnithin)
+
 ## [0.77.13](https://github.com/wundergraph/cosmo/compare/studio@0.77.12...studio@0.77.13) (2024-06-04)
 
 ### Bug Fixes
