@@ -12,7 +12,7 @@ data:
   config.yaml: |-
     # User-supplied common configuration:
     {{- if .Values.commonConfiguration }}
-    {{- .Values.commonConfiguration | nindent 4 }}
+    {{- tpl .Values.commonConfiguration . | nindent 4 }}
     {{- end }}
   logLevel: "{{ .Values.configuration.logLevel }}"
   devMode: "{{ .Values.configuration.devMode }}"
