@@ -1508,7 +1508,7 @@ export class FederatedGraphRepository {
             continue;
           }
 
-          // TODO store all the ff schema versionsof contracts and then loop through them to upload routerconfigs of the contracts
+          // TODO store all the ff schema versions of contracts and then loop through them to upload routerconfigs of the contracts
           for (const [contractName, resultContainer] of federationResultContainerByContractName.entries()) {
             const { errors: contractErrors, federationResult: result } = resultContainer;
 

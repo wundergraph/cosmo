@@ -18,10 +18,7 @@ import { websocketSubprotocolDescription } from '../../../constants.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
   command.description('Creates a feature flag on the control plane.');
-  command.argument(
-    '<name>',
-    'The name of the feature flag to create.',
-  );
+  command.argument('<name>', 'The name of the feature flag to create.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
   command.requiredOption(
     '-r, --routing-url <url>',

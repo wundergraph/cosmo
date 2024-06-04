@@ -17,7 +17,10 @@ export function routerConfigFromJsonString(configAsText: string, options?: Parti
   return RouterConfig.fromJsonString(configAsText, options);
 }
 
-export function ffRouterConfigFromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FeatureFlagRouterExecutionConfig {
+export function ffRouterConfigFromJson(
+  jsonValue: JsonValue,
+  options?: Partial<JsonReadOptions>,
+): FeatureFlagRouterExecutionConfig {
   options = {
     ...options,
     ignoreUnknownFields: true,

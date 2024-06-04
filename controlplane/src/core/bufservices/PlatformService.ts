@@ -5252,19 +5252,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespaceId: namespace.id,
           });
 
-          const composition = await composer.composeFederatedGraph(federatedGraph);
-          // TODO
-          await composer.deployComposition({
-            composedGraph: composition,
-            composedBy: authContext.userId,
+          await fedGraphRepo.composeAndDeployGraphs({
+            federatedGraphs: [federatedGraph],
+            actorId: authContext.userId,
             blobStorage: opts.blobStorage,
-            organizationId: authContext.organizationId,
-            admissionWebhookURL: federatedGraph.admissionWebhookURL,
             admissionConfig: {
               cdnBaseUrl: opts.cdnBaseUrl,
-              jwtSecret: opts.admissionWebhookJWTSecret,
+              webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
-            isFeatureFlagComposition: false,
           });
         });
 

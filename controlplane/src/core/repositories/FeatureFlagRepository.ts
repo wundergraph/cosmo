@@ -419,7 +419,7 @@ export class FeatureFlagRepository {
       featureFlagGroupWithEnabledFeatureFlags.push({
         id: enabledFeatureFlagGroup.id,
         name: enabledFeatureFlagGroup.name,
-        enabledFeatureFlags: enabledFeatureFlagsByGroup
+        enabledFeatureFlags: enabledFeatureFlagsByGroup,
       });
     }
     return featureFlagGroupWithEnabledFeatureFlags;
