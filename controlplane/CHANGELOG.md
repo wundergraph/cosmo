@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.88.10](https://github.com/wundergraph/cosmo/compare/controlplane@0.88.9...controlplane@0.88.10) (2024-06-04)
+
+### Bug Fixes
+
+* missing namespace in github check details link ([#847](https://github.com/wundergraph/cosmo/issues/847)) ([7f413c6](https://github.com/wundergraph/cosmo/commit/7f413c62633cfd082b15e724bb5c9b8118951e99)) (@thisisnithin)
+
+## [0.88.9](https://github.com/wundergraph/cosmo/compare/controlplane@0.88.8...controlplane@0.88.9) (2024-05-31)
+
+### Bug Fixes
+
+* clickhouse cardinality mismatch ([#669](https://github.com/wundergraph/cosmo/issues/669)) ([1908089](https://github.com/wundergraph/cosmo/commit/1908089a6cd62d8e60625555f1173102ce5d8f57)) (@thisisnithin)
+
+## [0.88.8](https://github.com/wundergraph/cosmo/compare/controlplane@0.88.7...controlplane@0.88.8) (2024-05-30)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.88.7](https://github.com/wundergraph/cosmo/compare/controlplane@0.88.6...controlplane@0.88.7) (2024-05-29)
 
 ### Bug Fixes

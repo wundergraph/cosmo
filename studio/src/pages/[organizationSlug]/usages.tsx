@@ -90,17 +90,6 @@ const UsagesPage: NextPageWithLayout = () => {
   const requestLimitRaw = useFeatureLimit("requests", 1000);
   const requestLimit = requestLimitRaw === -1 ? -1 : requestLimitRaw * 10 ** 6;
 
-  useEffect(() => {
-    if (
-      !user ||
-      !user.currentOrganization ||
-      !user.currentOrganization.slug ||
-      !refetch
-    )
-      return;
-    refetch();
-  }, [refetch, user, user?.currentOrganization.slug]);
-
   if (isLoading) return <Loader fullscreen />;
 
   if (error || data?.response?.code !== EnumStatusCode.OK)

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS cosmo.subgraph_latency_metrics_5_30 (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),
    FederatedGraphID LowCardinality(String) CODEC(ZSTD(3)),
    OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
-   SubgraphID String CODEC (ZSTD(3)),
+   SubgraphID LowCardinality(String) CODEC (ZSTD(3)),
    BucketCounts AggregateFunction(sumForEach, Array(UInt64)) CODEC(ZSTD(3)),
    ExplicitBounds Array(Float64) CODEC(ZSTD(3)),
    Sum SimpleAggregateFunction(sum, Float64) CODEC(ZSTD(3)),

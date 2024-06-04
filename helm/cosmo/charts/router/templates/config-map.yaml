@@ -12,7 +12,7 @@ data:
   config.yaml: |-
     # User-supplied common configuration:
     {{- if .Values.commonConfiguration }}
-    {{- .Values.commonConfiguration | nindent 4 }}
+    {{- tpl .Values.commonConfiguration . | nindent 4 }}
     {{- end }}
   logLevel: "{{ .Values.configuration.logLevel }}"
   devMode: "{{ .Values.configuration.devMode }}"
@@ -22,3 +22,8 @@ data:
   graphqlMetricsCollectorUrl: "{{ .Values.configuration.graphqlMetricsCollectorUrl }}"
   cdnUrl: "{{ .Values.configuration.cdnUrl }}"
   routerConfigPath: "{{ .Values.configuration.routerConfigPath }}"
+  prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
+  {{ if .Values.configuration.prometheus.enabled }}
+  prometheusListenAddr: "0.0.0.0:{{ .Values.configuration.prometheus.port }}"
+  prometheusPath: "{{ .Values.configuration.prometheus.path }}"
+  {{- end }}

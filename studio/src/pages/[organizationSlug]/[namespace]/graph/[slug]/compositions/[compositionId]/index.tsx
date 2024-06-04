@@ -408,7 +408,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                             sdl={
                               schemaType === "router"
                                 ? sdlData.sdl
-                                : sdlData.clientSchema
+                                : sdlData.clientSchema || sdlData.sdl
                             }
                             size="icon"
                             targetName={graphData?.graph?.name}
@@ -418,7 +418,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                           schema={
                             schemaType === "router"
                               ? sdlData.sdl
-                              : sdlData.clientSchema
+                              : sdlData.clientSchema || sdlData.sdl
                           }
                         />
                       </div>
