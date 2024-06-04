@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.15](https://github.com/wundergraph/cosmo/compare/studio@0.77.14...studio@0.77.15) (2024-06-04)
+
+### Bug Fixes
+
+* poor performance on sdl due to anchor tags ([#851](https://github.com/wundergraph/cosmo/issues/851)) ([d57fedb](https://github.com/wundergraph/cosmo/commit/d57fedbddcd39b0e2df4fed67faef486c6ea59cb)) (@thisisnithin)
+* sdl viewer slow performance due to line links ([#850](https://github.com/wundergraph/cosmo/issues/850)) ([908e55c](https://github.com/wundergraph/cosmo/commit/908e55c35ac4aaf3469491cd041191ed636af5fb)) (@thisisnithin)
+
 ## [0.77.14](https://github.com/wundergraph/cosmo/compare/studio@0.77.13...studio@0.77.14) (2024-06-04)
 
 ### Bug Fixes
