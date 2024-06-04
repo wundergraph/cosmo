@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.13](https://github.com/wundergraph/cosmo/compare/studio@0.77.12...studio@0.77.13) (2024-06-04)
+
+### Bug Fixes
+
+* fallback to router schema if client schema does not exist ([#848](https://github.com/wundergraph/cosmo/issues/848)) ([b6a9b03](https://github.com/wundergraph/cosmo/commit/b6a9b03b8a19ba539002b76e4687903288e71ca3)) (@thisisnithin)
+* reset queries on organization change ([#846](https://github.com/wundergraph/cosmo/issues/846)) ([9f967eb](https://github.com/wundergraph/cosmo/commit/9f967eb8ccfb16e7cf07fd14a6b85e58b776b1d0)) (@thisisnithin)
+* trace graphql data rendering ([#844](https://github.com/wundergraph/cosmo/issues/844)) ([1923d51](https://github.com/wundergraph/cosmo/commit/1923d51252e10751dce9d63a67143d3e41f2374f)) (@StarpTech)
+
 ## [0.77.12](https://github.com/wundergraph/cosmo/compare/studio@0.77.11...studio@0.77.12) (2024-05-31)
 
 ### Bug Fixes
