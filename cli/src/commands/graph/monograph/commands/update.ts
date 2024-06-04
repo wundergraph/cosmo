@@ -37,7 +37,7 @@ export default (opts: BaseCommandOptions) => {
     [],
   );
   command.option(
-    '--admission-webhook-secret <url>',
+    '--admission-webhook-secret [string]',
     'The admission webhook secret is used to sign requests to the webhook url.',
     [],
   );
