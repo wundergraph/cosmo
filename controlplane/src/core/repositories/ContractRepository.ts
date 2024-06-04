@@ -7,10 +7,11 @@ import * as schema from '../../db/schema.js';
 import { Composer, CompositionDeployResult, mapResultToComposedGraph } from '../composition/composer.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { composeSubgraphsForContract } from '../composition/composition.js';
+import { FederatedGraphDTO } from '../../types/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
-import { FederatedGraphDTO } from 'src/types/index.js';
+import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 
 export class ContractRepository {
   constructor(
@@ -103,6 +104,7 @@ export class ContractRepository {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(this.logger, tx);
       const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
+      const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
 
       if (!contractGraph.contract?.sourceFederatedGraphId) {
         return { contractErrors };
@@ -142,7 +144,8 @@ export class ContractRepository {
 
       contractErrors.push(...(errors || []));
 
-      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo);
+      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
+      // TODO
       const deployment = await composer.deployComposition({
         composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, errors, result),
         composedBy: actorId,
@@ -150,6 +153,7 @@ export class ContractRepository {
         organizationId: this.organizationId,
         admissionWebhookURL: contractGraph.admissionWebhookURL,
         admissionConfig,
+        isFeatureFlagComposition: false,
       });
 
       return { deployment, contractErrors };

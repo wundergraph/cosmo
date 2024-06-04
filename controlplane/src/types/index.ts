@@ -104,6 +104,19 @@ export interface SubgraphDTO {
   namespace: string;
   namespaceId: string;
   isV2Graph?: boolean;
+  isFeatureFlag?: boolean;
+}
+
+export interface FeatureFlagGroupDTO {
+  id: string;
+  name: string;
+  namespaceId: string;
+  labels: Label[];
+  creatorUserId?: string;
+  isEnabled: boolean;
+  organizationId: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface MigrationSubgraph {

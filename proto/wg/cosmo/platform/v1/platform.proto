@@ -133,6 +133,9 @@ message CreateFederatedSubgraphRequest {
   optional string readme = 7;
   string namespace = 8;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+  optional bool isFeatureFlag = 10;
+  // TODO to discuss with dustin
+  optional string baseSubgraphName = 11;
 }
 
 message DeleteFederatedGraphRequest {
@@ -167,6 +170,7 @@ message CompositionError {
   string message = 1;
   string federatedGraphName = 2;
   string namespace = 3;
+  string featureFlag = 4;
 }
 
 message DeploymentError {
@@ -1986,6 +1990,37 @@ message IsMemberLimitReachedResponse {
   int32 member_count = 3;  
 }
 
+message EnableFeatureFlagRequest {
+  string featureFlagName = 1;
+  string namespace = 2;
+  bool enabled = 3;
+}
+
+message EnableFeatureFlagResponse {
+  Response response = 1;
+}
+
+message CreateFeatureFlagGroupRequest {
+  string featureFlagGroupName = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+  repeated string featureFlagNames = 4;
+}
+
+message CreateFeatureFlagGroupResponse {
+  Response response = 1;
+}
+
+message EnableFeatureFlagGroupRequest {
+  string featureFlagGroupName = 1;
+  string namespace = 2;
+  bool enabled = 3;
+}
+
+message EnableFeatureFlagGroupResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // Namespaces
   rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {}
@@ -2200,6 +2235,13 @@ service PlatformService {
   rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
   // GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
   rpc GetUserAccessiblePermissions(GetUserAccessiblePermissionsRequest) returns (GetUserAccessiblePermissionsResponse) {}
+
+  // EnableFeatureFlag enables/disables a feature flags
+  rpc EnableFeatureFlag(EnableFeatureFlagRequest) returns (EnableFeatureFlagResponse) {}
+  // CreateFeatureFlagGroup creates a new group for the selected feature flags
+  rpc CreateFeatureFlagGroup(CreateFeatureFlagGroupRequest) returns (CreateFeatureFlagGroupResponse) {}
+  // EnableFeatureFlagGroup enables/disables a feature flag group
+  rpc EnableFeatureFlagGroup(EnableFeatureFlagGroupRequest) returns (EnableFeatureFlagGroupResponse) {}
 
   // Analytics
   rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {

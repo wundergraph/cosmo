@@ -23,6 +23,7 @@ export class GraphCompositionRepository {
     composedBy,
     admissionErrorString,
     deploymentErrorString,
+    isFeatureFlagComposition,
   }: {
     fedGraphSchemaVersionId: string;
     compositionErrorString: string;
@@ -32,6 +33,7 @@ export class GraphCompositionRepository {
     composedBy: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
+    isFeatureFlagComposition: boolean;
   }) {
     await this.db.transaction(async (tx) => {
       const insertedComposition = await tx
@@ -45,6 +47,7 @@ export class GraphCompositionRepository {
           createdBy: composedBy,
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
+          isFeatureFlagComposition,
         })
         .returning()
         .execute();

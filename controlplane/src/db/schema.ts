@@ -235,7 +235,136 @@ export const subgraphs = pgTable('subgraphs', {
     .references(() => targets.id, {
       onDelete: 'cascade',
     }),
+  isFeatureFlag: boolean('is_feature_flag').default(false).notNull(),
 });
+
+export const featureFlagsToSubgraph = pgTable(
+  'feature_flags_subgraphs',
+  {
+    featureFlagId: uuid('feature_flag_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    baseSubgraphId: uuid('base_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    isEnabled: boolean('is_enabled').default(false).notNull(),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.featureFlagId, t.baseSubgraphId] }),
+    };
+  },
+);
+
+export const featureFlagsToSubgraphRelations = relations(featureFlagsToSubgraph, ({ one }) => ({
+  baseSubgraph: one(subgraphs, {
+    fields: [featureFlagsToSubgraph.baseSubgraphId],
+    references: [subgraphs.id],
+  }),
+  featureFlag: one(subgraphs, {
+    fields: [featureFlagsToSubgraph.featureFlagId],
+    references: [subgraphs.id],
+  }),
+}));
+
+export const featureFlagGroups = pgTable('feature_flag_groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  namespaceId: uuid('namespace_id')
+    .notNull()
+    .references(() => namespaces.id, {
+      onDelete: 'cascade',
+    }),
+  labels: text('labels').array(),
+  isEnabled: boolean('is_enabled').default(false).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+  createdBy: uuid('created_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+});
+
+export const featureFlagGroupToFeatureFlags = pgTable(
+  'feature_flags_group_to_feature_flags',
+  {
+    featureFlagGroupId: uuid('feature_flag_group_id')
+      .notNull()
+      .references(() => featureFlagGroups.id, {
+        onDelete: 'cascade',
+      }),
+    featureFlagId: uuid('feature_flag_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.featureFlagId, t.featureFlagGroupId] }),
+    };
+  },
+);
+
+export const featureFlagGroupToFeatureFlagsRelations = relations(featureFlagGroupToFeatureFlags, ({ one }) => ({
+  featureFlagGroup: one(featureFlagGroups, {
+    fields: [featureFlagGroupToFeatureFlags.featureFlagGroupId],
+    references: [featureFlagGroups.id],
+  }),
+  featureFlag: one(subgraphs, {
+    fields: [featureFlagGroupToFeatureFlags.featureFlagId],
+    references: [subgraphs.id],
+  }),
+}));
+
+export const federatedGraphsToFFSchemaVersions = pgTable(
+  'federated_graphs_to_ff_schema_versions',
+  {
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    baseCompositionSchemaVersionId: uuid('base_composition_schema_version_id')
+      .notNull()
+      .references(() => schemaVersion.id, {
+        onDelete: 'cascade',
+      }),
+    composedSchemaVersionId: uuid('composed_schema_version_id')
+      .notNull()
+      .references(() => schemaVersion.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.federatedGraphId, t.baseCompositionSchemaVersionId, t.composedSchemaVersionId] }),
+    };
+  },
+);
+
+export const federatedGraphsToFFSchemaVersionsRelations = relations(federatedGraphsToFFSchemaVersions, ({ one }) => ({
+  federatedGraph: one(federatedGraphs, {
+    fields: [federatedGraphsToFFSchemaVersions.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+  schemaVersion: one(schemaVersion, {
+    fields: [federatedGraphsToFFSchemaVersions.composedSchemaVersionId],
+    references: [schemaVersion.id],
+  }),
+  baseSchemaVersion: one(schemaVersion, {
+    fields: [federatedGraphsToFFSchemaVersions.baseCompositionSchemaVersionId],
+    references: [schemaVersion.id],
+  }),
+}));
 
 export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }) => ({
   target: one(targets, {
@@ -1182,6 +1311,7 @@ export const graphCompositions = pgTable('graph_compositions', {
   createdBy: uuid('created_by').references(() => users.id, {
     onDelete: 'cascade',
   }),
+  isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
 });
 
 // stores the relation between the fedGraph schema versions and its respective subgraph schema versions

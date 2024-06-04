@@ -11,6 +11,8 @@ import OperationCommands from './operations/index.js';
 import RouterCommands from './router/index.js';
 import SchemaCommands from './subgraph/index.js';
 import ContractCommands from './contract/index.js';
+import FeatureFlagCommands from './feature-flag/index.js';
+import FeatureFlagGroupCommands from './feature-flag-group/index.js';
 
 const client = CreateClient({
   baseUrl: config.baseURL,
@@ -61,6 +63,18 @@ program.addCommand(
 );
 program.addCommand(
   ContractCommands({
+    client,
+  }),
+);
+
+program.addCommand(
+  FeatureFlagCommands({
+    client,
+  }),
+);
+
+program.addCommand(
+  FeatureFlagGroupCommands({
     client,
   }),
 );
