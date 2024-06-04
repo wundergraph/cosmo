@@ -225,58 +225,64 @@ export const SDLViewerMonaco = ({
           monaco.editor.setTheme("wg-dark");
         }
 
-        const model = editor.getModel();
-        if (model && enableLinking) {
-          const lineCount = model.getLineCount();
-          for (let lineNumber = 1; lineNumber <= lineCount; lineNumber++) {
-            editor.onMouseMove((e) => {
-              if (
-                e.target.position &&
-                e.target.position.lineNumber === lineNumber
-              ) {
-                const div = document.getElementById(`wrap-${lineNumber}`);
-                if (!div) {
-                  editor.changeViewZones((changeAccessor) => {
-                    const domNode = document.createElement("div");
-
-                    const marginDomNode = document.createElement("div");
-                    marginDomNode.className = "z-30";
-
-                    const wrapper = document.createElement("div");
-                    wrapper.className = "pl-2";
-                    marginDomNode.appendChild(wrapper);
-
-                    const anchor = document.createElement("a");
-                    anchor.href = `#L${lineNumber}`;
-                    anchor.id = "wrap-" + lineNumber;
-                    anchor.className = "h-10 cursor-pointer w-full";
-                    anchor.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
-                </svg>
-              `;
-
-                    wrapper.appendChild(anchor);
-
-                    changeAccessor.addZone({
-                      afterLineNumber: lineNumber - 1,
-                      heightInLines: 0,
-                      domNode,
-                      marginDomNode,
-                    });
-                  });
-                } else {
-                  div.style.visibility = "visible";
-                }
-              } else {
-                const div = document.getElementById(`wrap-${lineNumber}`);
-                if (div) {
-                  div.style.visibility = "hidden";
-                }
-              }
-            });
-          }
+        if (!enableLinking) {
+          return;
         }
+
+        editor.onMouseMove((e) => {
+          const lineNumber = e.target.position?.lineNumber;
+
+          if (e.target.position && lineNumber) {
+            const existingAnchor = document.getElementById(
+              `anchor-${lineNumber}`,
+            );
+            if (!existingAnchor) {
+              editor.changeViewZones((changeAccessor) => {
+                const domNode = document.createElement("div");
+
+                const marginDomNode = document.createElement("div");
+                marginDomNode.className = "mdn z-30";
+
+                const wrapper = document.createElement("div");
+                wrapper.className = "pl-2";
+                marginDomNode.appendChild(wrapper);
+
+                const anchor = document.createElement("a");
+                anchor.href = `#L${lineNumber}`;
+                anchor.id = "anchor-" + lineNumber;
+                anchor.className = "h-10 cursor-pointer w-full";
+                anchor.innerHTML = `
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                      </svg>
+                   `;
+
+                wrapper.appendChild(anchor);
+
+                changeAccessor.addZone({
+                  afterLineNumber: lineNumber - 1,
+                  heightInLines: 0,
+                  domNode,
+                  marginDomNode,
+                });
+              });
+            }
+
+            // remove anchors that are not for the currently hovered over line
+            Array.from(document.getElementsByClassName("mdn z-30"))
+              .filter((ele) => {
+                const anchor = ele.firstElementChild?.firstElementChild;
+                if (anchor) {
+                  const line = Number(anchor.id.split("-")[1]);
+                  if (line === lineNumber) {
+                    return false;
+                  }
+                }
+                return true;
+              })
+              .forEach((ele) => ele.remove());
+          }
+        });
       }}
     />
   );
