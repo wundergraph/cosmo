@@ -34,12 +34,10 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--admission-webhook-url <url>',
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the monograph.',
-    [],
   );
   command.option(
     '--admission-webhook-secret [string]',
     'The admission webhook secret is used to sign requests to the webhook url.',
-    [],
   );
 
   command.action(async (name, options) => {

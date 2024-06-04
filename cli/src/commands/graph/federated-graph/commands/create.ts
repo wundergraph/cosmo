@@ -28,12 +28,10 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--admission-webhook-url <url>',
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
-    [],
   );
   command.option(
     '--admission-webhook-secret [string]',
     'The admission webhook secret is used to sign requests to the webhook url.',
-    [],
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
   command.action(async (name, options) => {
