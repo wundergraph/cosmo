@@ -47,16 +47,16 @@ import {
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GenerateRouterTokenResponse,
-  GetAPIKeysResponse,
   GetAllDiscussionsResponse,
   GetAllOverridesResponse,
   GetAnalyticsViewResponse,
+  GetAPIKeysResponse,
   GetAuditLogsResponse,
   GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckOperationsResponse,
-  GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
+  GetCheckSummaryResponse,
   GetClientsResponse,
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
@@ -65,8 +65,8 @@ import {
   GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
-  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsBySubgraphLabelsResponse,
+  GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
@@ -85,8 +85,8 @@ import {
   GetOrganizationWebhookMetaResponse,
   GetPendingOrganizationMembersResponse,
   GetPersistedOperationsResponse,
-  GetRouterTokensResponse,
   GetRoutersResponse,
+  GetRouterTokensResponse,
   GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
   GetSubgraphMembersResponse,
@@ -107,11 +107,11 @@ import {
   MigrateMonographResponse,
   MoveGraphResponse,
   Permission,
+  PublishedOperation,
+  PublishedOperationStatus,
   PublishFederatedSubgraphResponse,
   PublishMonographResponse,
   PublishPersistedOperationsResponse,
-  PublishedOperation,
-  PublishedOperationStatus,
   RemoveInvitationResponse,
   RemoveOperationIgnoreAllOverrideResponse,
   RemoveOperationOverridesResponse,
@@ -121,14 +121,15 @@ import {
   RequestSeriesItem,
   Router,
   SetDiscussionResolutionResponse,
+  Subgraph,
   UpdateDiscussionCommentResponse,
   UpdateFeatureSettingsResponse,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateMonographResponse,
-  UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
+  UpdateOrgMemberRoleResponse,
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
@@ -136,7 +137,7 @@ import {
 import { isValidUrl, joinLabel } from '@wundergraph/cosmo-shared';
 import { subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, buildASTSchema, parse } from 'graphql';
+import { buildASTSchema, DocumentNode, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid/secure';
 import {
@@ -150,8 +151,8 @@ import {
   SubgraphDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
-import { Composer, RouterConfigUploadError, mapResultToComposedGraph } from '../composition/composer.js';
-import { buildSchema, composeSubgraphs, composeSubgraphsWithContracts } from '../composition/composition.js';
+import { Composer, RouterConfigUploadError } from '../composition/composer.js';
+import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { AuthenticationError, PublicError } from '../errors/errors.js';
@@ -190,10 +191,10 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { BillingService } from '../services/BillingService.js';
 import OidcProvider from '../services/OidcProvider.js';
 import {
+  collectOperationUsageStats,
   InspectorOperationResult,
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
-  collectOperationUsageStats,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -1153,6 +1154,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             createdBy: authContext.userId,
             labels: [label],
             routingUrl: req.graphUrl,
+            isEventDrivenGraph: false,
             readme: req.readme,
             subscriptionUrl: req.subscriptionUrl,
             subscriptionProtocol:
@@ -2798,7 +2800,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   details: `An Event-Driven Graph must not define a subscription protocol`,
                 },
                 compositionErrors: [],
-                admissionErrors: [],
+                deploymentErrors: [],
               };
             }
             if (req.websocketSubprotocol !== undefined) {
@@ -2808,7 +2810,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   details: `An Event-Driven Graph must not define a websocket subprotocol`,
                 },
                 compositionErrors: [],
-                admissionErrors: [],
+                deploymentErrors: [],
               };
             }
           } else {
@@ -2877,7 +2879,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               targetId: subgraph.targetId,
               labels: subgraph.labels,
               unsetLabels: false,
-              routingUrl: isEventDrivenGraph ? '' : subgraph.routingUrl,
               schemaSDL: subgraphSchemaSDL,
               updatedBy: authContext.userId,
               namespaceId: namespace.id,
@@ -4342,13 +4343,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespaceId: federatedGraph.namespaceId,
         });
 
-        const subgraphsDetails = subgraphs.map((s) => ({
+        const subgraphsDetails: PlainMessage<Subgraph>[] = subgraphs.map((s) => ({
           id: s.id,
           name: s.name,
           routingURL: s.routingUrl,
           labels: s.labels,
           lastUpdatedAt: s.lastUpdatedAt,
           targetId: s.targetId,
+          isEventDrivenGraph: s.isEventDrivenGraph,
           subscriptionUrl: s.subscriptionUrl,
           subscriptionProtocol: s.subscriptionProtocol,
           namespace: s.namespace,
@@ -7167,6 +7169,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             labels: g.labels,
             createdUserId: g.creatorUserId,
             targetId: g.targetId,
+            isEventDrivenGraph: g.isEventDrivenGraph,
             subscriptionUrl: g.subscriptionUrl,
             subscriptionProtocol: g.subscriptionProtocol,
             namespace: g.namespace,
@@ -7208,6 +7211,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             routingURL: subgraph.routingUrl,
             labels: subgraph.labels,
             targetId: subgraph.targetId,
+            isEventDrivenGraph: subgraph.isEventDrivenGraph,
             readme: subgraph.readme,
             subscriptionUrl: subgraph.subscriptionUrl,
             subscriptionProtocol: subgraph.subscriptionProtocol,

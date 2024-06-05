@@ -475,6 +475,7 @@ export class SubgraphRepository {
         schemaVersionId: insertedVersion[0].insertedId,
         targetId: subgraph.targetId,
         routingUrl: subgraph.routingUrl,
+        isEventDrivenGraph: subgraph.isEventDrivenGraph,
         subscriptionUrl: subgraph.subscriptionUrl,
         subscriptionProtocol: subgraph.subscriptionProtocol,
         websocketSubprotocol: subgraph.websocketSubprotocol,
