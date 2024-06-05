@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import { JWTPayload } from 'jose';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
@@ -31,6 +32,7 @@ export class AdmissionWebhookController {
   constructor(
     private logger: FastifyBaseLogger,
     private graphAdmissionWebhookURL?: string,
+    private graphAdmissionWebhookSecret?: string,
   ) {
     this.httpClient = axios.create({
       timeout: 30_000,
@@ -50,10 +52,19 @@ export class AdmissionWebhookController {
     this.logger.debug({ url, path: '/validate-config', ...req }, 'Sending admission validate-config webhook request');
 
     try {
+      const headers: Record<string, string> = {};
+      if (this.graphAdmissionWebhookSecret) {
+        const dataString = JSON.stringify(req);
+        headers['X-Cosmo-Signature-256'] = createHmac('sha256', this.graphAdmissionWebhookSecret)
+          .update(dataString)
+          .digest('hex');
+      }
+
       const res = await this.httpClient.request<ValidateConfigResponse>({
         method: 'POST',
         url: '/validate-config',
         data: req,
+        headers,
       });
 
       this.logger.debug(

@@ -927,6 +927,11 @@ export class CreateMonographRequest extends Message<CreateMonographRequest> {
    */
   websocketSubprotocol?: GraphQLWebsocketSubprotocol;
 
+  /**
+   * @generated from field: optional string admissionWebhookSecret = 10;
+   */
+  admissionWebhookSecret?: string;
+
   constructor(data?: PartialMessage<CreateMonographRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -944,6 +949,7 @@ export class CreateMonographRequest extends Message<CreateMonographRequest> {
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
+    { no: 10, name: "admissionWebhookSecret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateMonographRequest {
@@ -1042,6 +1048,11 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
    */
   admissionWebhookURL = "";
 
+  /**
+   * @generated from field: optional string admissionWebhookSecret = 7;
+   */
+  admissionWebhookSecret?: string;
+
   constructor(data?: PartialMessage<CreateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1056,6 +1067,7 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
     { no: 4, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "admissionWebhookSecret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphRequest {
@@ -4264,6 +4276,11 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
    */
   admissionWebhookURL?: string;
 
+  /**
+   * @generated from field: optional string admissionWebhookSecret = 8;
+   */
+  admissionWebhookSecret?: string;
+
   constructor(data?: PartialMessage<UpdateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4279,6 +4296,7 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "unset_label_matchers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "admissionWebhookSecret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphRequest {
@@ -4391,6 +4409,16 @@ export class UpdateMonographRequest extends Message<UpdateMonographRequest> {
    */
   websocketSubprotocol?: GraphQLWebsocketSubprotocol;
 
+  /**
+   * @generated from field: optional string admissionWebhookURL = 9;
+   */
+  admissionWebhookURL?: string;
+
+  /**
+   * @generated from field: optional string admissionWebhookSecret = 10;
+   */
+  admissionWebhookSecret?: string;
+
   constructor(data?: PartialMessage<UpdateMonographRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4407,6 +4435,8 @@ export class UpdateMonographRequest extends Message<UpdateMonographRequest> {
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
+    { no: 9, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "admissionWebhookSecret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateMonographRequest {
@@ -15459,6 +15489,11 @@ export class CreateContractRequest extends Message<CreateContractRequest> {
    */
   readme?: string;
 
+  /**
+   * @generated from field: optional string admission_webhook_secret = 8;
+   */
+  admissionWebhookSecret?: string;
+
   constructor(data?: PartialMessage<CreateContractRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15474,6 +15509,7 @@ export class CreateContractRequest extends Message<CreateContractRequest> {
     { no: 5, name: "admission_webhook_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "exclude_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "admission_webhook_secret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateContractRequest {
