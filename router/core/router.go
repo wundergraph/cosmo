@@ -2002,12 +2002,14 @@ func buildAttributesMapper(attributes []config.OtelAttribute) func(req *http.Req
 					hv := req.Header.Get(attr.ValueFrom.RequestHeader)
 					if hv != "" {
 						result = append(result, attribute.String(attr.Key, hv))
-					} else if attr.Value != "" {
-						result = append(result, attribute.String(attr.Key, attr.Value))
+					} else if attr.Default != "" {
+						result = append(result, attribute.String(attr.Key, attr.Default))
 					}
-				} else if attr.Value != "" {
-					result = append(result, attribute.String(attr.Key, attr.Value))
+				} else if attr.Default != "" {
+					result = append(result, attribute.String(attr.Key, attr.Default))
 				}
+			} else if attr.Default != "" {
+				result = append(result, attribute.String(attr.Key, attr.Default))
 			}
 		}
 

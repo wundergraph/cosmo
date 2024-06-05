@@ -97,7 +97,7 @@ type OtelAttributeFromValue struct {
 
 type OtelAttribute struct {
 	Key       string                  `yaml:"key"`
-	Value     string                  `yaml:"value"`
+	Default   string                  `yaml:"default"`
 	ValueFrom *OtelAttributeFromValue `yaml:"value_from,omitempty"`
 }
 

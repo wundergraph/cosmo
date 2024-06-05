@@ -242,18 +242,18 @@
                 "type": "string",
                 "description": "The key of the attribute."
               },
-              "value": {
+              "default": {
                 "type": "string",
-                "description": "The static value of the attribute."
+                "description": "The static value of the attribute. If the value is not set, the value_from is used. If both value and value_from are set, value_from has precedence. You can use default to fallback when value_from could not be resolved."
               },
               "value_from": {
                 "type": "object",
-                "description": "Defines a source for the attribute value e.g. from a request header. If both value and value_from are set, value_from will be used when no value could be extracted.",
+                "description": "Defines a source for the attribute value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
                 "additionalProperties": false,
                 "properties": {
                   "request_header": {
                     "type": "string",
-                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available."
+                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
                   }
                 }
               }
