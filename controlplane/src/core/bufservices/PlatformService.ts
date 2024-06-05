@@ -2242,6 +2242,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           try {
             const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
             await githubRepo.createCommitCheck({
+              namespace: namespace.name,
               schemaCheckID,
               gitInfo: req.gitInfo,
               compositionErrors,

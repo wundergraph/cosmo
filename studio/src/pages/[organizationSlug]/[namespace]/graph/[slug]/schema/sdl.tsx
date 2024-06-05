@@ -106,7 +106,7 @@ const SDLPage: NextPageWithLayout = () => {
         sdl:
           schemaType === "router"
             ? federatedGraphSdl?.sdl ?? ""
-            : federatedGraphSdl?.clientSchema,
+            : federatedGraphSdl?.clientSchema || federatedGraphSdl?.sdl,
         time: graphData?.graph?.lastUpdatedAt,
         versionId: federatedGraphSdl?.versionId,
       };

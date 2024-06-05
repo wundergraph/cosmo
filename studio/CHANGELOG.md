@@ -4,6 +4,27 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.15](https://github.com/wundergraph/cosmo/compare/studio@0.77.14...studio@0.77.15) (2024-06-04)
+
+### Bug Fixes
+
+* poor performance on sdl due to anchor tags ([#851](https://github.com/wundergraph/cosmo/issues/851)) ([d57fedb](https://github.com/wundergraph/cosmo/commit/d57fedbddcd39b0e2df4fed67faef486c6ea59cb)) (@thisisnithin)
+* sdl viewer slow performance due to line links ([#850](https://github.com/wundergraph/cosmo/issues/850)) ([908e55c](https://github.com/wundergraph/cosmo/commit/908e55c35ac4aaf3469491cd041191ed636af5fb)) (@thisisnithin)
+
+## [0.77.14](https://github.com/wundergraph/cosmo/compare/studio@0.77.13...studio@0.77.14) (2024-06-04)
+
+### Bug Fixes
+
+* set transport on org change ([#849](https://github.com/wundergraph/cosmo/issues/849)) ([d361c7c](https://github.com/wundergraph/cosmo/commit/d361c7c31f97f4d746c334a626193efbe0224048)) (@thisisnithin)
+
+## [0.77.13](https://github.com/wundergraph/cosmo/compare/studio@0.77.12...studio@0.77.13) (2024-06-04)
+
+### Bug Fixes
+
+* fallback to router schema if client schema does not exist ([#848](https://github.com/wundergraph/cosmo/issues/848)) ([b6a9b03](https://github.com/wundergraph/cosmo/commit/b6a9b03b8a19ba539002b76e4687903288e71ca3)) (@thisisnithin)
+* reset queries on organization change ([#846](https://github.com/wundergraph/cosmo/issues/846)) ([9f967eb](https://github.com/wundergraph/cosmo/commit/9f967eb8ccfb16e7cf07fd14a6b85e58b776b1d0)) (@thisisnithin)
+* trace graphql data rendering ([#844](https://github.com/wundergraph/cosmo/issues/844)) ([1923d51](https://github.com/wundergraph/cosmo/commit/1923d51252e10751dce9d63a67143d3e41f2374f)) (@StarpTech)
+
 ## [0.77.12](https://github.com/wundergraph/cosmo/compare/studio@0.77.11...studio@0.77.12) (2024-05-31)
 
 ### Bug Fixes
