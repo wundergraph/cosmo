@@ -19,7 +19,7 @@ func TestWrapHttpHandler(t *testing.T) {
 
 	t.Run("create a span for every request", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
-		h := NewMiddleware()
+		h := NewMiddleware(nil)
 
 		router := chi.NewRouter()
 
@@ -67,7 +67,7 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		for _, test := range statusCodeTests {
 			router := chi.NewRouter()
-			h := NewMiddleware()
+			h := NewMiddleware(nil)
 
 			statusCode := test.statusCode
 
