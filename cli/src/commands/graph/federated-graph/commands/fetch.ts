@@ -57,10 +57,10 @@ export default (opts: BaseCommandOptions) => {
 
       const cosmoSubgraphsConfig: {
         name: string;
-        routing_url: string;
         schema: {
           file: string;
         };
+        routing_url?: string;
         subscription?: {
           url: string;
           protocol: string;
@@ -90,15 +90,16 @@ export default (opts: BaseCommandOptions) => {
         if (!subgraphSDL) {
           continue;
         }
+        const routingUrl = subgraph.isEventDrivenGraph ? {} : { routing_url: subgraph.routingURL };
         const filePath = join(subgraphPath, `${subgraph.name}.graphql`);
         cosmoSubgraphsConfig.push({
           name: subgraph.name,
-          routing_url: subgraph.routingURL,
+          ...routingUrl,
           schema: {
             file: filePath,
           },
           subscription:
-            subgraph.subscriptionURL === ''
+            subgraph.subscriptionURL === '' || subgraph.isEventDrivenGraph
               ? undefined
               : { url: subgraph.subscriptionURL, protocol: subgraph.subscriptionProtocol },
         });

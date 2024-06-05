@@ -235,6 +235,7 @@ export const subgraphs = pgTable('subgraphs', {
     .references(() => targets.id, {
       onDelete: 'cascade',
     }),
+  isEventDrivenGraph: boolean('is_event_driven_graph').notNull().default(false),
 });
 
 export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }) => ({
