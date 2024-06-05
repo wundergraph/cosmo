@@ -7,6 +7,8 @@
   },
   "Telemetry": {
     "ServiceName": "cosmo-router",
+    "Attributes": [],
+    "ResourceAttributes": [],
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
