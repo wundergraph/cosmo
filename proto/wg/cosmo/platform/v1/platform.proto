@@ -99,6 +99,7 @@ message CreateMonographRequest {
   string admissionWebhookURL = 8;
   // The subscription protocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+  optional string admissionWebhookSecret = 10;
 }
 
 message CreateMonographResponse {
@@ -116,6 +117,7 @@ message CreateFederatedGraphRequest {
   optional string readme = 4;
   string namespace = 5;
   string admissionWebhookURL = 6;
+  optional string admissionWebhookSecret = 7;
 }
 
 message CreateFederatedSubgraphRequest {
@@ -540,6 +542,7 @@ message UpdateFederatedGraphRequest {
   string namespace = 5;
   optional bool unset_label_matchers = 6;
   optional string admissionWebhookURL = 7;
+  optional string admissionWebhookSecret = 8;
 }
 
 message UpdateFederatedGraphResponse {
@@ -557,6 +560,8 @@ message UpdateMonographRequest {
   optional string subscription_url = 6;
   optional string readme = 7;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 8;
+  optional string admissionWebhookURL = 9;
+  optional string admissionWebhookSecret = 10;
 }
 
 message UpdateMonographResponse {
@@ -1957,6 +1962,7 @@ message CreateContractRequest {
   string admission_webhook_url = 5;
   repeated string exclude_tags = 6;
   optional string readme = 7;
+  optional string admission_webhook_secret = 8;
 }
 
 message CreateContractResponse {

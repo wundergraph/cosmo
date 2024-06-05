@@ -29,7 +29,10 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--admission-webhook-url <url>',
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
-    [],
+  );
+  command.option(
+    '--admission-webhook-secret [string]',
+    'The admission webhook secret is used to sign requests to the webhook url.',
   );
 
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
@@ -54,6 +57,7 @@ export default (opts: BaseCommandOptions) => {
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
         admissionWebhookURL: options.admissionWebhookUrl,
+        admissionWebhookSecret: options.admissionWebhookSecret,
         unsetLabelMatchers: options.unsetLabelMatchers,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },

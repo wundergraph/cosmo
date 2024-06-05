@@ -31,6 +31,15 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
+  command.option(
+    '--admission-webhook-url <url>',
+    'The admission webhook url. This is the url that the controlplane will use to implement admission control for the monograph.',
+  );
+  command.option(
+    '--admission-webhook-secret [string]',
+    'The admission webhook secret is used to sign requests to the webhook url.',
+  );
+
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
@@ -65,6 +74,8 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        admissionWebhookURL: options.admissionWebhookUrl,
+        admissionWebhookSecret: options.admissionWebhookSecret,
       },
       {
         headers: getBaseHeaders(),

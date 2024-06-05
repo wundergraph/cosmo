@@ -84,6 +84,7 @@ export class FederatedGraphRepository {
     readme?: string;
     supportsFederation?: boolean;
     admissionWebhookURL?: string;
+    admissionWebhookSecret?: string;
   }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -110,6 +111,7 @@ export class FederatedGraphRepository {
         .values({
           targetId: insertedTarget[0].id,
           admissionWebhookURL,
+          admissionWebhookSecret: data.admissionWebhookSecret || null,
           routingUrl,
           supportsFederation: data.supportsFederation,
         })
@@ -174,6 +176,7 @@ export class FederatedGraphRepository {
     unsetLabelMatchers?: boolean;
     unsetAdmissionWebhookURL?: boolean;
     admissionWebhookURL?: string;
+    admissionWebhookSecret?: string;
     admissionConfig: {
       jwtSecret: string;
       cdnBaseUrl: string;
@@ -206,6 +209,14 @@ export class FederatedGraphRepository {
         await tx
           .update(federatedGraphs)
           .set({ admissionWebhookURL: admissionWebhookURL || null })
+          .where(eq(federatedGraphs.id, federatedGraph.id))
+          .execute();
+      }
+
+      if (data.admissionWebhookSecret !== undefined) {
+        await tx
+          .update(federatedGraphs)
+          .set({ admissionWebhookSecret: data.admissionWebhookSecret || null })
           .where(eq(federatedGraphs.id, federatedGraph.id))
           .execute();
       }
@@ -382,6 +393,7 @@ export class FederatedGraphRepository {
         blobStorage,
         organizationId: this.organizationId,
         admissionWebhookURL: data.federatedGraph.admissionWebhookURL,
+        admissionWebhookSecret: data.federatedGraph.admissionWebhookSecret,
         admissionConfig,
       });
 
@@ -456,6 +468,7 @@ export class FederatedGraphRepository {
         namespaceId: schema.namespaces.id,
         namespaceName: schema.namespaces.name,
         admissionWebhookURL: schema.federatedGraphs.admissionWebhookURL,
+        admissionWebhookSecret: schema.federatedGraphs.admissionWebhookSecret,
         supportsFederation: schema.federatedGraphs.supportsFederation,
       })
       .from(targets)
@@ -1431,6 +1444,7 @@ export class FederatedGraphRepository {
           blobStorage,
           organizationId: this.organizationId,
           admissionWebhookURL: federatedGraph.admissionWebhookURL,
+          admissionWebhookSecret: federatedGraph.admissionWebhookSecret,
           admissionConfig: {
             cdnBaseUrl: admissionConfig.cdnBaseUrl,
             jwtSecret: admissionConfig.webhookJWTSecret,
@@ -1465,6 +1479,7 @@ export class FederatedGraphRepository {
             blobStorage,
             organizationId: this.organizationId,
             admissionWebhookURL: contractGraph.admissionWebhookURL,
+            admissionWebhookSecret: federatedGraph.admissionWebhookSecret,
             admissionConfig: {
               cdnBaseUrl: admissionConfig.cdnBaseUrl,
               jwtSecret: admissionConfig.webhookJWTSecret,

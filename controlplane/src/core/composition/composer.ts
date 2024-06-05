@@ -129,12 +129,14 @@ export class Composer {
     organizationId,
     admissionConfig,
     admissionWebhookURL,
+    admissionWebhookSecret,
   }: {
     composedGraph: ComposedFederatedGraph;
     composedBy: string;
     blobStorage: BlobStorage;
     organizationId: string;
     admissionWebhookURL?: string;
+    admissionWebhookSecret?: string;
     admissionConfig: {
       jwtSecret: string;
       cdnBaseUrl: string;
@@ -198,7 +200,11 @@ export class Composer {
               },
             });
 
-            const admissionWebhookController = new AdmissionWebhookController(this.logger, admissionWebhookURL);
+            const admissionWebhookController = new AdmissionWebhookController(
+              this.logger,
+              admissionWebhookURL,
+              admissionWebhookSecret,
+            );
 
             const resp = await admissionWebhookController.validateConfig({
               privateConfigUrl: `${admissionConfig.cdnBaseUrl}/${s3PathDraft}?token=${token}`,
