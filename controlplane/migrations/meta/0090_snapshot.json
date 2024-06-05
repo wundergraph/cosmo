@@ -1,6 +1,6 @@
 {
-  "id": "5091c685-7352-4303-85e8-932e6040638f",
-  "prevId": "5db66736-7239-45f2-9253-c23dbd71d05c",
+  "id": "3ed79153-2165-4bea-bbd3-333ebcc192ea",
+  "prevId": "5091c685-7352-4303-85e8-932e6040638f",
   "version": "5",
   "dialect": "pg",
   "tables": {
@@ -3458,6 +3458,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "is_event_driven_graph": {
+          "name": "is_event_driven_graph",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},

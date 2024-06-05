@@ -1181,6 +1181,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespace: req.namespace,
             namespaceId: namespace.id,
             admissionWebhookURL: req.admissionWebhookURL,
+            admissionWebhookSecret: req.admissionWebhookSecret,
             supportsFederation: false,
           });
 
@@ -1337,6 +1338,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespace: req.namespace,
           namespaceId: namespace.id,
           admissionWebhookURL: req.admissionWebhookURL,
+          admissionWebhookSecret: req.admissionWebhookSecret,
         });
 
         if (!federatedGraph) {
@@ -1410,6 +1412,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             blobStorage: opts.blobStorage,
             organizationId: authContext.organizationId,
             admissionWebhookURL: federatedGraph.admissionWebhookURL,
+            admissionWebhookSecret: federatedGraph.admissionWebhookSecret,
             admissionConfig: {
               cdnBaseUrl: opts.cdnBaseUrl,
               jwtSecret: opts.admissionWebhookJWTSecret,
@@ -1563,6 +1566,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             namespace: req.namespace,
             namespaceId: namespace.id,
             admissionWebhookURL: req.admissionWebhookUrl,
+            admissionWebhookSecret: req.admissionWebhookSecret,
             supportsFederation: sourceGraph.supportsFederation,
           });
 
@@ -3834,6 +3838,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               cdnBaseUrl: opts.cdnBaseUrl,
               jwtSecret: opts.admissionWebhookJWTSecret,
             },
+            admissionWebhookURL: req.admissionWebhookURL,
+            admissionWebhookSecret: req.admissionWebhookSecret,
           });
 
           await subgraphRepo.update(
@@ -4002,6 +4008,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           namespaceId: federatedGraph.namespaceId,
           unsetLabelMatchers: req.unsetLabelMatchers,
           admissionWebhookURL: req.admissionWebhookURL,
+          admissionWebhookSecret: req.admissionWebhookSecret,
           admissionConfig: {
             cdnBaseUrl: opts.cdnBaseUrl,
             jwtSecret: opts.admissionWebhookJWTSecret,
@@ -5249,6 +5256,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             blobStorage: opts.blobStorage,
             organizationId: authContext.organizationId,
             admissionWebhookURL: federatedGraph.admissionWebhookURL,
+            admissionWebhookSecret: federatedGraph.admissionWebhookSecret,
             admissionConfig: {
               cdnBaseUrl: opts.cdnBaseUrl,
               jwtSecret: opts.admissionWebhookJWTSecret,
