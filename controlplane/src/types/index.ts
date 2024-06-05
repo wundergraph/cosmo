@@ -66,6 +66,7 @@ export interface FederatedGraphDTO {
   subgraphsCount: number;
   composedSchemaVersionId?: string;
   admissionWebhookURL?: string;
+  admissionWebhookSecret?: string;
   compositionId?: string;
   creatorUserId?: string;
   readme?: string;
