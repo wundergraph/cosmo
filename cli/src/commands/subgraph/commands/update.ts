@@ -104,9 +104,10 @@ export default (opts: BaseCommandOptions) => {
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 30, 120],
+          colWidths: [30, 30, 30, 120],
           wordWrap: true,
         });
 
@@ -121,6 +122,7 @@ export default (opts: BaseCommandOptions) => {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
+            compositionError.featureFlag,
             compositionError.message,
           ]);
         }

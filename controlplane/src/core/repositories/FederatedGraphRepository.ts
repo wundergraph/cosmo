@@ -1,15 +1,14 @@
 import { KeyObject } from 'node:crypto';
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
-import { FeatureFlagRouterExecutionConfig, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
-  ffRouterConfigFromJson,
-  ffRouterConfigFromJsonString,
   joinLabel,
   normalizeURL,
-  routerConfigFromJson,
+  routerConfigFromJson
 } from '@wundergraph/cosmo-shared';
 import {
+  SQL,
   and,
   asc,
   desc,
@@ -23,15 +22,13 @@ import {
   notExists,
   notInArray,
   or,
-  SQL,
   sql,
 } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
-import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
+import { SignJWT, generateKeyPair, importPKCS8 } from 'jose';
 import { uid } from 'uid/secure';
-import { Subgraph } from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -52,30 +49,27 @@ import {
   FederatedGraphListFilterOptions,
   GraphApiKeyDTO,
   Label,
-  RouterRequestKeysDTO,
-  SubgraphDTO,
+  RouterRequestKeysDTO
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import {
-  ComposeDeploymentError,
   Composer,
-  mapResultToComposedGraph,
   RouterConfigUploadError,
+  mapResultToComposedGraph
 } from '../composition/composer.js';
 import { composeSubgraphsWithContracts } from '../composition/composition.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { ContractRepository } from './ContractRepository.js';
+import {
+  CompositionPossibilities,
+  FeatureFlagRepository
+} from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 import { UserRepository } from './UserRepository.js';
-import {
-  CompositionPossibilities,
-  FeatureFlagGroupWithEnabledFeatureFlags,
-  FeatureFlagRepository,
-} from './FeatureFlagRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;

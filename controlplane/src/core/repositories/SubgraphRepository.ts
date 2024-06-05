@@ -975,9 +975,17 @@ export class SubgraphRepository {
     await this.db.delete(targets).where(eq(targets.id, targetID)).execute();
   }
 
-  public async byGraphLabelMatchers(data: { labelMatchers: string[]; namespaceId: string }): Promise<SubgraphDTO[]> {
+  public async byGraphLabelMatchers({
+    labelMatchers,
+    namespaceId,
+    isFeatureFlag,
+  }: {
+    labelMatchers: string[];
+    namespaceId: string;
+    isFeatureFlag?: boolean;
+  }): Promise<SubgraphDTO[]> {
     const groupedLabels: Label[][] = [];
-    for (const lm of data.labelMatchers) {
+    for (const lm of labelMatchers) {
       const labels = lm.split(',').map((l) => splitLabel(l));
       const normalizedLabels = normalizeLabels(labels);
       groupedLabels.push(normalizedLabels);
@@ -991,7 +999,7 @@ export class SubgraphRepository {
     }
 
     // Only get subgraphs that do not have any labels if the label matchers are empty.
-    if (data.labelMatchers.length === 0) {
+    if (labelMatchers.length === 0) {
       conditions.push(eq(targets.labels, []));
     }
 
@@ -1003,8 +1011,8 @@ export class SubgraphRepository {
         and(
           eq(targets.organizationId, this.organizationId),
           eq(targets.type, 'subgraph'),
-          eq(targets.namespaceId, data.namespaceId),
-          eq(schema.subgraphs.isFeatureFlag, false),
+          eq(targets.namespaceId, namespaceId),
+          eq(schema.subgraphs.isFeatureFlag, isFeatureFlag || false),
           ...conditions,
         ),
       )

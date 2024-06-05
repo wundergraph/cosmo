@@ -2,7 +2,7 @@ import { JsonValue } from '@bufbuild/protobuf';
 import { Subgraph } from '@wundergraph/composition';
 import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { ffRouterConfigFromJson, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, inArray } from 'drizzle-orm';
+import { SQL, and, eq, inArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
@@ -192,6 +192,50 @@ export class FeatureFlagRepository {
       .execute();
   }
 
+  public async getMatchedFeatureFlagGroups({
+    namespaceId,
+    labelMatchers,
+  }: {
+    namespaceId: string;
+    labelMatchers: string[];
+  }) {
+    const groupedLabels: Label[][] = [];
+    for (const lm of labelMatchers) {
+      const labels = lm.split(',').map((l) => splitLabel(l));
+      const normalizedLabels = normalizeLabels(labels);
+      groupedLabels.push(normalizedLabels);
+    }
+
+    const conditions: SQL<unknown>[] = [];
+    for (const labels of groupedLabels) {
+      const labelsSQL = labels.map((l) => `"${joinLabel(l)}"`).join(', ');
+      // At least one common label
+      conditions.push(sql.raw(`labels && '{${labelsSQL}}'`));
+    }
+
+    // Only get subgraphs that do not have any labels if the label matchers are empty.
+    if (labelMatchers.length === 0) {
+      conditions.push(eq(targets.labels, []));
+    }
+
+    const matchedFeatureFlagGroups = await this.db
+      .select({
+        id: featureFlagGroups.id,
+      })
+      .from(featureFlagGroups)
+      .where(
+        and(
+          eq(featureFlagGroups.namespaceId, namespaceId),
+          eq(featureFlagGroups.isEnabled, true),
+          eq(featureFlagGroups.organizationId, this.organizationId),
+          ...conditions,
+        ),
+      )
+      .execute();
+
+    return matchedFeatureFlagGroups;
+  }
+
   public async getEnabledFeatureFlagsBySubgraphIdAndLabels({
     subgraphId,
     namespaceId,
@@ -231,12 +275,24 @@ export class FeatureFlagRepository {
       )
       .execute();
 
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    const matchedFeatureFlags = await subgraphRepo.byGraphLabelMatchers({
+      namespaceId,
+      labelMatchers,
+      isFeatureFlag: true,
+    });
+
     const enabledFeatureFlags: SubgraphDTO[] = [];
     for (const ff of resp) {
       if (ff.schemaVersionId === null) {
         continue;
       }
-      // TODO perform label matching
+
+      // label matching
+      const matched = matchedFeatureFlags.some((m) => m.id === ff.id);
+      if (!matched) {
+        continue;
+      }
 
       const sv = await this.db.query.schemaVersion.findFirst({
         where: eq(schemaVersion.id, ff.schemaVersionId),
@@ -398,8 +454,18 @@ export class FeatureFlagRepository {
       namespaceId,
     });
 
+    // gets all the ffgs that match the label matchers
+    const matchedFeatureFlagGroups = await this.getMatchedFeatureFlagGroups({
+      namespaceId,
+      labelMatchers,
+    });
+
     for (const enabledFeatureFlagGroup of enabledFeatureFlagGroups) {
-      // TODO perform label matching - label of the group with fed graph
+      const matched = matchedFeatureFlagGroups.some((m) => m.id === enabledFeatureFlagGroup.id);
+      if (!matched) {
+        continue;
+      }
+
       const enabledFeatureFlagsByGroup = await this.getEnabledFeatureFlagsByGroupId({
         featureFlagGroupId: enabledFeatureFlagGroup.id,
       });
@@ -446,9 +512,7 @@ export class FeatureFlagRepository {
         namespaceId: subgraph.namespaceId,
         labelMatchers: fedGraphLabelMatchers,
       });
-      if (featureFlags.length === 0) {
-        continue;
-      }
+      
       // replace the subgraph with its feature flag
       const compositionSubgraphs = baseCompositionSubgraphs.filter((b) => b.name !== subgraph.name);
       const subgraphDTOs = subgraphs.filter((s) => s.name !== subgraph.name);
