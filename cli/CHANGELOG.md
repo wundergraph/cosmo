@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.56.0](https://github.com/wundergraph/cosmo/compare/wgc@0.55.5...wgc@0.56.0) (2024-06-05)
+
+### Features
+
+* admission webhook signature ([#852](https://github.com/wundergraph/cosmo/issues/852)) ([9212bb3](https://github.com/wundergraph/cosmo/commit/9212bb3aa3f3ca41f38c7944c3e6022c5fdc3ca8)) (@thisisnithin)
+
 ## [0.55.5](https://github.com/wundergraph/cosmo/compare/wgc@0.55.4...wgc@0.55.5) (2024-05-30)
 
 **Note:** Version bump only for package wgc
