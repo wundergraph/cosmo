@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"net/http"
 	"net/url"
 	"time"
@@ -152,7 +153,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 			// if the value is not a string, just append it as is because this is the JSON
 			// representation of the value. If it contains a template, we want to keep it as
 			// is to explode it later with the actual values
-			if dataType != jsonparser.String || plan.ContainsTemplateString(value) {
+			if dataType != jsonparser.String || argument_templates.ContainsArgumentTemplateString(value) {
 				values = append(values, string(value))
 				return
 			}
@@ -482,9 +483,10 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 
 	for _, keyConfiguration := range in.Keys {
 		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
-			TypeName:     keyConfiguration.TypeName,
-			FieldName:    keyConfiguration.FieldName,
-			SelectionSet: keyConfiguration.SelectionSet,
+			TypeName:              keyConfiguration.TypeName,
+			FieldName:             keyConfiguration.FieldName,
+			SelectionSet:          keyConfiguration.SelectionSet,
+			DisableEntityResolver: keyConfiguration.DisableEntityResolver,
 		})
 	}
 	for _, providesConfiguration := range in.Provides {

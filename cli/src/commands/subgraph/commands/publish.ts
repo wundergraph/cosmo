@@ -37,10 +37,6 @@ export default (opts: BaseCommandOptions) => {
     [],
   );
   command.option(
-    '--unset-labels',
-    'This will remove all labels. It will not add new labels if both this and --labels option is passed.',
-  );
-  command.option(
     '--subscription-url [url]',
     'The url used for subscriptions. If empty, it defaults to same url used for routing.',
   );
@@ -101,7 +97,6 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
-        unsetLabels: !!options.unsetLabels,
       },
       {
         headers: getBaseHeaders(),

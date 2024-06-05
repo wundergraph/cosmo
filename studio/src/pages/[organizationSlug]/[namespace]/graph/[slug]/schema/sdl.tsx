@@ -29,7 +29,7 @@ import useHash from "@/hooks/use-hash";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { Component2Icon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getFederatedGraphSDLByName,
@@ -54,10 +54,11 @@ const SDLPage: NextPageWithLayout = () => {
   const hash = useHash();
 
   const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(
-    getFederatedGraphSDLByName.useQuery({
+    getFederatedGraphSDLByName,
+    {
       name: graphName,
       namespace,
-    }),
+    },
   );
 
   const graphData = useContext(GraphContext);
@@ -65,14 +66,17 @@ const SDLPage: NextPageWithLayout = () => {
   let validGraph =
     graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
-  const { data: subgraphSdl, isLoading: loadingSubgraphSDL } = useQuery({
-    ...getSubgraphSDLFromLatestComposition.useQuery({
+  const { data: subgraphSdl, isLoading: loadingSubgraphSDL } = useQuery(
+    getSubgraphSDLFromLatestComposition,
+    {
       name: activeSubgraph,
       fedGraphName: graphName,
       namespace,
-    }),
-    enabled: !!graphData?.subgraphs && !!activeSubgraph,
-  });
+    },
+    {
+      enabled: !!graphData?.subgraphs && !!activeSubgraph,
+    },
+  );
 
   const subgraphs =
     graphData?.subgraphs.map((each) => {
@@ -102,7 +106,7 @@ const SDLPage: NextPageWithLayout = () => {
         sdl:
           schemaType === "router"
             ? federatedGraphSdl?.sdl ?? ""
-            : federatedGraphSdl?.clientSchema,
+            : federatedGraphSdl?.clientSchema || federatedGraphSdl?.sdl,
         time: graphData?.graph?.lastUpdatedAt,
         versionId: federatedGraphSdl?.versionId,
       };

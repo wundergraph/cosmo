@@ -1,7 +1,12 @@
+import { AnalyticsSelectedFilters } from "@/components/analytics/filters";
 import {
-  AnalyticsSelectedFilters
-} from "@/components/analytics/filters";
-import { ErrorMetricsCard, ErrorRateOverTimeCard, LatencyMetricsCard, MetricsFilters, RequestMetricsCard, useMetricsFilters } from "@/components/analytics/metrics";
+  ErrorMetricsCard,
+  ErrorRateOverTimeCard,
+  LatencyMetricsCard,
+  MetricsFilters,
+  RequestMetricsCard,
+  useMetricsFilters,
+} from "@/components/analytics/metrics";
 import { RefreshInterval } from "@/components/analytics/refresh-interval";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
@@ -21,16 +26,14 @@ import { Loader } from "@/components/ui/loader";
 import { Spacer } from "@/components/ui/spacer";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { NextPageWithLayout } from "@/lib/page";
-import {
-  ExclamationTriangleIcon
-} from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
   keepPreviousData,
   useIsFetching,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getGraphMetrics,
@@ -54,8 +57,9 @@ const OverviewToolbar = () => {
 
   const isFetching = useIsFetching();
 
-  let { data } = useQuery({
-    ...getGraphMetrics.useQuery({
+  const { data } = useQuery(
+    getGraphMetrics,
+    {
       namespace: graphContext?.graph?.namespace,
       federatedGraphName: graphContext?.graph?.name,
       dateRange: range
@@ -66,10 +70,12 @@ const OverviewToolbar = () => {
           },
       range,
       filters,
-    }),
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-  });
+    },
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   const { filtersList, selectedFilters, resetFilters } = useMetricsFilters(
     data?.filters ?? [],
@@ -131,14 +137,14 @@ const OverviewToolbar = () => {
           isLoading={!!isFetching}
           onClick={() => {
             client.invalidateQueries({
-              queryKey: getGraphMetrics.getQueryKey({
+              queryKey: createConnectQueryKey(getGraphMetrics, {
                 namespace: graphContext?.graph?.namespace,
                 federatedGraphName: graphContext?.graph?.name,
                 range,
               }),
             });
             client.invalidateQueries({
-              queryKey: getMetricsErrorRate.getQueryKey({
+              queryKey: createConnectQueryKey(getMetricsErrorRate, {
                 namespace: graphContext?.graph?.namespace,
                 federatedGraphName: graphContext?.graph?.name,
                 range,
@@ -165,8 +171,9 @@ const AnalyticsPage: NextPageWithLayout = () => {
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
 
-  let { data, isLoading, error, refetch } = useQuery({
-    ...getGraphMetrics.useQuery({
+  let { data, isLoading, error, refetch } = useQuery(
+    getGraphMetrics,
+    {
       namespace: graphContext?.graph?.namespace,
       federatedGraphName: graphContext?.graph?.name,
       range,
@@ -177,11 +184,13 @@ const AnalyticsPage: NextPageWithLayout = () => {
             end: formatISO(dateRange.end),
           },
       filters,
-    }),
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval,
-  });
+    },
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+      refetchInterval: refreshInterval,
+    },
+  );
 
   if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
     return (

@@ -32,7 +32,7 @@ import {
   PlusIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphChangelog } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -221,8 +221,9 @@ const ChangelogPage: NextPageWithLayout = () => {
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
 
-  const { data, isLoading, isSuccess, error, refetch } = useQuery({
-    ...getFederatedGraphChangelog.useQuery({
+  const { data, isLoading, isSuccess, error, refetch } = useQuery(
+    getFederatedGraphChangelog,
+    {
       name: router.query.slug as string,
       namespace: router.query.namespace as string,
       pagination: {
@@ -233,9 +234,11 @@ const ChangelogPage: NextPageWithLayout = () => {
         start: formatISO(startOfDay(startDate)),
         end: formatISO(endOfDay(endDate)),
       },
-    }),
-    enabled: false,
-  });
+    },
+    {
+      enabled: false,
+    },
+  );
 
   useEffect(() => {
     if (isSuccess && data) {

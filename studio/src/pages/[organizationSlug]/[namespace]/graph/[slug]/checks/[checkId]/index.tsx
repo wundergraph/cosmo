@@ -54,7 +54,7 @@ import {
   ReaderIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   forceCheckSuccess,
@@ -110,15 +110,18 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getCheckSummary.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getCheckSummary,
+    {
       checkId: id,
       graphName: graphContext?.graph?.name,
       namespace,
-    }),
-    enabled: !!graphContext?.graph?.name,
-    refetchOnWindowFocus: false,
-  });
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   const [checksRoute] = useSessionStorage<string | undefined>(
     "checks.route",
@@ -229,10 +232,9 @@ const CheckDetails = ({
   const tab = router.query.tab as string;
   const hash = router.asPath.split("#")?.[1];
 
-  const { data: allGraphsData } = useQuery(getFederatedGraphs.useQuery());
+  const { data: allGraphsData } = useQuery(getFederatedGraphs);
 
-  const { mutate: forceSuccess } = useMutation({
-    ...forceCheckSuccess.useMutation(),
+  const { mutate: forceSuccess } = useMutation(forceCheckSuccess, {
     onSuccess: (data) => {
       if (data.response?.code === EnumStatusCode.OK) {
         toast({ description: "Marked check as successful", duration: 3000 });

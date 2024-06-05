@@ -15,7 +15,12 @@ import {
   ExitIcon,
   TrashIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  createConnectQueryKey,
+} from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   deleteDiscussionComment,
@@ -64,29 +69,24 @@ export const Thread = ({
 
   const user = useUser();
 
-  const { data: membersData } = useQuery({
-    ...getOrganizationMembers.useQuery(),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetOrganizationMembers",
-      {},
-    ],
-  });
+  const { data: membersData } = useQuery(getOrganizationMembers);
 
   const {
     data: discussionData,
     isLoading,
     error,
     refetch,
-  } = useQuery({
-    ...getDiscussion.useQuery({
+  } = useQuery(
+    getDiscussion,
+    {
       discussionId,
-    }),
-    enabled: !!discussionId,
-  });
+    },
+    {
+      enabled: !!discussionId,
+    },
+  );
 
-  const { mutate: deleteDiscussion } = useMutation({
-    ...deleteDiscussionComment.useMutation(),
+  const { mutate: deleteDiscussion } = useMutation(deleteDiscussionComment, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
@@ -102,7 +102,7 @@ export const Thread = ({
       });
 
       client.invalidateQueries({
-        queryKey: getAllDiscussions.getQueryKey({
+        queryKey: createConnectQueryKey(getAllDiscussions, {
           schemaVersionId,
           targetId: discussionData?.discussion?.targetId,
         }),
@@ -112,8 +112,7 @@ export const Thread = ({
     },
   });
 
-  const { mutate: resolveDiscussion } = useMutation({
-    ...setDiscussionResolution.useMutation(),
+  const { mutate: resolveDiscussion } = useMutation(setDiscussionResolution, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
@@ -129,7 +128,7 @@ export const Thread = ({
       });
 
       client.invalidateQueries({
-        queryKey: getAllDiscussions.getQueryKey({
+        queryKey: createConnectQueryKey(getAllDiscussions, {
           schemaVersionId,
           targetId: discussionData?.discussion?.targetId,
         }),

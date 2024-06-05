@@ -12,12 +12,12 @@ import { calURL } from "@/lib/constants";
 import { formatMetric } from "@/lib/format-metric";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getOrganizationRequestsCount } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { CgDanger } from "react-icons/cg";
 import { IoWarningOutline } from "react-icons/io5";
 import {
@@ -83,14 +83,9 @@ export const CustomBarChart = ({
 
 const UsagesPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getOrganizationRequestsCount.useQuery(),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetOrganizationRequestsCount",
-      {},
-    ],
-  });
+  const { data, isLoading, error, refetch } = useQuery(
+    getOrganizationRequestsCount,
+  );
 
   const requestLimitRaw = useFeatureLimit("requests", 1000);
   const requestLimit = requestLimitRaw === -1 ? -1 : requestLimitRaw * 10 ** 6;

@@ -23,7 +23,7 @@ import {
   FiChevronDown,
   FiChevronUp,
 } from "react-icons/fi";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { Router } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { getRouters } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -371,13 +371,16 @@ const RoutersPage: NextPageWithLayout = () => {
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
 
-  const { data, isLoading, error, refetch } = useQuery({
-    ...getRouters.useQuery({
+  const { data, isLoading, error, refetch } = useQuery(
+    getRouters,
+    {
       fedGraphName: slug,
       namespace,
-    }),
-    refetchInterval: 15_000,
-  });
+    },
+    {
+      refetchInterval: 15_000,
+    },
+  );
 
   const columns: ColumnDef<Router, any>[] = [
     {
