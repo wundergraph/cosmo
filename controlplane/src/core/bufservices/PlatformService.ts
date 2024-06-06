@@ -1571,43 +1571,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetNamespaceDisplayName: contractGraph.namespace,
           });
 
-          // TODO
-          const { deployment, contractErrors } = await contractRepo.deployContract({
-            contractGraph: {
-              ...contractGraph,
-              contract,
-            },
+          const compositionErrors: PlainMessage<CompositionError>[] = [];
+          const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+          const composition = await fedGraphRepo.composeAndDeployGraphs({
+            federatedGraphs: [{ ...contractGraph, contract }],
             actorId: authContext.userId,
             blobStorage: opts.blobStorage,
             admissionConfig: {
               cdnBaseUrl: opts.cdnBaseUrl,
-              jwtSecret: opts.admissionWebhookJWTSecret,
+              webhookJWTSecret: opts.admissionWebhookJWTSecret,
             },
           });
 
-          const compositionErrors: PlainMessage<CompositionError>[] = [];
-          const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-
-          compositionErrors.push(
-            ...contractErrors.map((e) => ({
-              federatedGraphName: contractGraph.name,
-              namespace: contractGraph.namespace,
-              message: e.message,
-              featureFlag: '',
-            })),
-          );
-
-          if (deployment) {
-            // deploymentErrors.push(
-            //   ...deployment.errors
-            //     .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-            //     .map((e) => ({
-            //       federatedGraphName: contractGraph.name,
-            //       namespace: contractGraph.namespace,
-            //       message: e.message ?? '',
-            //     })),
-            // );
-          }
+          compositionErrors.push(...composition.compositionErrors);
+          deploymentErrors.push(...composition.deploymentErrors);
 
           if (compositionErrors.length > 0) {
             return {
@@ -1633,7 +1611,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.OK,
             },
-            compositionErrors: [],
+            compositionErrors,
             deploymentErrors,
           };
         });
@@ -1712,45 +1690,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           actorId: authContext.userId,
         });
 
-        const { deployment, contractErrors } = await contractRepo.deployContract({
-          contractGraph: {
-            ...graph,
-            contract: {
-              ...graph.contract,
-              ...updatedContractDetails,
+        const compositionErrors: PlainMessage<CompositionError>[] = [];
+        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+
+        const composition = await fedGraphRepo.composeAndDeployGraphs({
+          federatedGraphs: [
+            {
+              ...graph,
+              contract: {
+                ...graph.contract,
+                ...updatedContractDetails,
+              },
             },
-          },
+          ],
           actorId: authContext.userId,
           blobStorage: opts.blobStorage,
           admissionConfig: {
             cdnBaseUrl: opts.cdnBaseUrl,
-            jwtSecret: opts.admissionWebhookJWTSecret,
+            webhookJWTSecret: opts.admissionWebhookJWTSecret,
           },
         });
 
-        const compositionErrors: PlainMessage<CompositionError>[] = [];
-        const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-
-        compositionErrors.push(
-          ...contractErrors.map((e) => ({
-            federatedGraphName: graph.name,
-            namespace: graph.namespace,
-            message: e.message,
-            featureFlag: '',
-          })),
-        );
-        // TODO
-        if (deployment) {
-          // deploymentErrors.push(
-          //   ...deployment.errors
-          //     .filter((e) => e instanceof AdmissionError || e instanceof RouterConfigUploadError)
-          //     .map((e) => ({
-          //       federatedGraphName: graph.name,
-          //       namespace: graph.namespace,
-          //       message: e.message ?? '',
-          //     })),
-          // );
-        }
+        compositionErrors.push(...composition.compositionErrors);
+        deploymentErrors.push(...composition.deploymentErrors);
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
@@ -1807,7 +1769,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           deploymentErrors,
-          compositionErrors: [],
+          compositionErrors,
         };
       });
     },

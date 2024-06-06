@@ -1,17 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { federateSubgraphsContract } from '@wundergraph/composition';
-import { parse } from 'graphql';
 import * as schema from '../../db/schema.js';
-import { Composer, CompositionDeployResult, mapResultToComposedGraph } from '../composition/composer.js';
-import { BlobStorage } from '../blobstorage/index.js';
-import { composeSubgraphsForContract } from '../composition/composition.js';
 import { FederatedGraphDTO } from '../../types/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
-import { SubgraphRepository } from './SubgraphRepository.js';
-import { GraphCompositionRepository } from './GraphCompositionRepository.js';
-import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 
 export class ContractRepository {
   constructor(
@@ -81,88 +73,6 @@ export class ContractRepository {
     });
 
     return res?.contracts ?? [];
-  }
-
-  public deployContract({
-    contractGraph,
-    actorId,
-    blobStorage,
-    admissionConfig,
-  }: {
-    contractGraph: FederatedGraphDTO;
-    actorId: string;
-    blobStorage: BlobStorage;
-    admissionConfig: {
-      jwtSecret: string;
-      cdnBaseUrl: string;
-    };
-  }): Promise<{ contractErrors: Error[]; deployment?: CompositionDeployResult }> {
-    return this.db.transaction(async (tx) => {
-      const contractErrors: Error[] = [];
-
-      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
-      const compositionRepo = new GraphCompositionRepository(this.logger, tx);
-      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
-      const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
-      const graphCompostionRepo = new GraphCompositionRepository(this.logger, tx);
-
-      if (!contractGraph.contract?.sourceFederatedGraphId) {
-        return { contractErrors };
-      }
-
-      const sourceGraph = await fedGraphRepo.byId(contractGraph.contract.sourceFederatedGraphId);
-      if (!sourceGraph) {
-        throw new Error(`Could not find source graph ${contractGraph.contract.sourceFederatedGraphId}`);
-      }
-
-      const sourceGraphLatestValidRouterConfig = await fedGraphRepo.getLatestValidRouterConfig(sourceGraph.targetId);
-      if (!sourceGraphLatestValidRouterConfig) {
-        return { contractErrors };
-      }
-
-      const composition = await compositionRepo.getGraphCompositionBySchemaVersion({
-        schemaVersionId: sourceGraphLatestValidRouterConfig.schemaVersionId,
-        organizationId: this.organizationId,
-      });
-
-      if (!composition) {
-        return { contractErrors };
-      }
-
-      const subgraphs = await compositionRepo.getCompositionSubgraphs({
-        compositionId: composition.id,
-      });
-
-      const { errors, federationResult: result } = composeSubgraphsForContract(
-        subgraphs.map((s) => ({
-          name: s.name,
-          url: s.routingUrl,
-          definitions: parse(s.schemaSDL),
-        })),
-        new Set(contractGraph.contract.excludeTags),
-      );
-
-      contractErrors.push(...(errors || []));
-
-      const composer = new Composer(
-        this.logger,
-        fedGraphRepo,
-        subgraphRepo,
-        contractRepo,
-        featureFlagRepo,
-        graphCompostionRepo,
-      );
-      // TODO
-      const deployment = await composer.deployComposition({
-        composedGraph: mapResultToComposedGraph(contractGraph, subgraphs, errors, result),
-        composedBy: actorId,
-        organizationId: this.organizationId,
-        isFeatureFlagComposition: false,
-      });
-
-      return { deployment, contractErrors };
-    });
   }
 
   public deleteContractGraphs(sourceGraphId: string) {
