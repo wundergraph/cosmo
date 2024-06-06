@@ -395,7 +395,8 @@ export class FeatureFlagRepository {
         namespaceId: namespaces.id,
         namespaceName: namespaces.name,
         schemaVersionId: subgraphs.schemaVersionId,
-        isFeatureFlag: subgraphs.isFeatureGraph,
+        isFeatureGraph: subgraphs.isFeatureGraph,
+        isEventDrivenGraph: subgraphs.isEventDrivenGraph,
       })
       .from(featureGraphsToSubgraph)
       .innerJoin(subgraphs, eq(subgraphs.id, featureGraphsToSubgraph.featureGraphId))
@@ -511,8 +512,9 @@ export class FeatureFlagRepository {
         namespaceId: namespaces.id,
         namespaceName: namespaces.name,
         schemaVersionId: subgraphs.schemaVersionId,
-        isFeatureFlag: subgraphs.isFeatureGraph,
+        isFeatureGraph: subgraphs.isFeatureGraph,
         baseSubgraphId: featureGraphsToSubgraph.baseSubgraphId,
+        isEventDrivenGraph: subgraphs.isEventDrivenGraph,
       })
       .from(featureFlagToFeatureGraphs)
       .innerJoin(
