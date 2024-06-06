@@ -2,7 +2,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
-import { SetupTest, createFederatedGraph, createSubgraph } from './test-util.js';
+import { SetupTest, createFederatedGraph, createAndPublishSubgraph } from './test-util.js';
 
 let dbname = '';
 
@@ -25,7 +25,7 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -72,7 +72,7 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -117,7 +117,7 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -165,7 +165,7 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -211,7 +211,7 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -251,8 +251,8 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
-    await createSubgraph(client, subgraphName, prod, subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, prod, subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -297,7 +297,7 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -501,7 +501,7 @@ describe('Contracts', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
 
-    await createSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraphName, 'default', subgraphSchemaSDL, [label], 'http://localhost:8082');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -554,8 +554,8 @@ describe('Contracts', (ctx) => {
     const subgraph1SchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
     const subgraph2SchemaSDL = 'type Query { test: String! }';
 
-    await createSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label], 'http://localhost:8082');
-    await createSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label], 'http://localhost:8083');
+    await createAndPublishSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label], 'http://localhost:8083');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -611,8 +611,8 @@ describe('Contracts', (ctx) => {
     const subgraph1SchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
     const subgraph2SchemaSDL = 'type Query { test: String! }';
 
-    await createSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label], 'http://localhost:8082');
-    await createSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label], 'http://localhost:8083');
+    await createAndPublishSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label], 'http://localhost:8083');
 
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], 'http://localhost:8080');
 
@@ -732,8 +732,8 @@ describe('Contracts', (ctx) => {
     const subgraph1SchemaSDL = 'type Query { hello: String!, hi: String! @tag(name: "test") }';
     const subgraph2SchemaSDL = 'type Query { test: String! }';
 
-    await createSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label1], 'http://localhost:8082');
-    await createSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label2], 'http://localhost:8083');
+    await createAndPublishSubgraph(client, subgraph1Name, 'default', subgraph1SchemaSDL, [label1], 'http://localhost:8082');
+    await createAndPublishSubgraph(client, subgraph2Name, 'default', subgraph2SchemaSDL, [label2], 'http://localhost:8083');
 
     await createFederatedGraph(client, fedGraphName, 'default', [[joinLabel(label1), joinLabel(label2)].join(",")], 'http://localhost:8080');
 

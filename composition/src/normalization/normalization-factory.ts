@@ -238,6 +238,7 @@ export type NormalizationResult = {
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   parentExtensionDataByTypeName: Map<string, ObjectExtensionData>;
   originalTypeNameByRenamedTypeName: Map<string, string>;
+  isEventDrivenGraph: boolean;
   isVersionTwo: boolean;
   keyFieldNamesByParentTypeName: Map<string, Set<string>>;
   operationTypes: Map<string, OperationTypeNode>;
@@ -299,6 +300,7 @@ export class NormalizationFactory {
   parentExtensionDataByTypeName = new Map<string, ParentExtensionData>();
   interfaceTypeNamesWithAuthorizationDirectives = new Set<string>();
   isCurrentParentExtension = false;
+  isSubgraphEventDrivenGraph = false;
   isSubgraphVersionTwo = false;
   fieldSetDataByTypeName = new Map<string, FieldSetData>();
   heirFieldAuthorizationDataByTypeName = new Map<string, FieldAuthorizationData[]>();
@@ -1807,7 +1809,8 @@ export class NormalizationFactory {
         this.subgraphName,
       );
     }
-    if (this.edfsDirectiveReferences.size > 0) {
+    this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;
+    if (this.isSubgraphEventDrivenGraph) {
       this.validateEventDrivenSubgraph();
     }
     if (this.errors.length > 0) {
@@ -1828,6 +1831,7 @@ export class NormalizationFactory {
         entityInterfaces: this.entityInterfaces,
         parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         parentExtensionDataByTypeName: validParentExtensionOrphansByTypeName,
+        isEventDrivenGraph: this.isSubgraphEventDrivenGraph,
         isVersionTwo: this.isSubgraphVersionTwo,
         keyFieldNamesByParentTypeName: this.keyFieldNamesByParentTypeName,
         operationTypes: this.operationTypeNodeByTypeName,

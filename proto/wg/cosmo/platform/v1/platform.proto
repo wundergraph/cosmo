@@ -124,7 +124,7 @@ message CreateFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
   // routing_url is the URL of the service which will be used to route the requests to the subgraph.
-  string routing_url = 2;
+  optional string routing_url = 2;
   // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
   repeated Label labels = 3;
   // subscription protocol to use when subscribing to this subgraph
@@ -135,6 +135,7 @@ message CreateFederatedSubgraphRequest {
   optional string readme = 7;
   string namespace = 8;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
+  optional bool is_event_driven_graph = 10;
 }
 
 message DeleteFederatedGraphRequest {
@@ -318,6 +319,7 @@ message Subgraph {
   string namespace = 10;
   string subscriptionProtocol = 11;
   optional bool isV2Graph = 12;
+  bool isEventDrivenGraph = 13;
 }
 
 message GetSubgraphsResponse {
@@ -515,7 +517,7 @@ message GetFederatedResponse {
 
 message UpdateSubgraphRequest {
   string name = 1;
-  string routing_url = 2;
+  optional string routing_url = 2;
   repeated Label labels = 3;
   repeated string headers = 4;
   // subscription protocol to use when subscribing to this subgraph
@@ -588,7 +590,7 @@ message Pagination {
 
 message Sort {
   string id = 1;
-  bool desc = 2; 
+  bool desc = 2;
 }
 
 message AnalyticsConfig {
@@ -896,7 +898,7 @@ message Span {
 }
 
 message GetTraceRequest {
-  string id = 1;  
+  string id = 1;
 }
 
 message GetTraceResponse {
@@ -1712,7 +1714,7 @@ message GetFieldUsageRequest {
   string graph_name = 1;
   optional string namedType = 2;
   optional string typename = 3;
-  optional string field = 4; 
+  optional string field = 4;
   optional int32 range = 5;
   DateRange dateRange = 6;
   string namespace = 7;
@@ -1792,7 +1794,7 @@ message GetAllDiscussionsRequest {
 
 message Discussion {
   string id = 1;
-  string schema_version_id = 2; 
+  string schema_version_id = 2;
   string target_id = 3;
   int32 reference_line = 4;
   DiscussionComment openingComment = 5;
@@ -1808,7 +1810,7 @@ message DiscussionComment {
   bool is_deleted = 6;
 }
 
-message GetAllDiscussionsResponse {  
+message GetAllDiscussionsResponse {
   Response response = 1;
   repeated Discussion discussions = 2;
 }
@@ -1988,7 +1990,7 @@ message IsMemberLimitReachedRequest {}
 message IsMemberLimitReachedResponse {
   Response response = 1;
   bool limit_reached = 2;
-  int32 member_count = 3;  
+  int32 member_count = 3;
 }
 
 service PlatformService {
@@ -2004,7 +2006,7 @@ service PlatformService {
 
   rpc MoveFederatedGraph(MoveGraphRequest) returns (MoveGraphResponse) {}
   rpc MoveSubgraph(MoveGraphRequest) returns (MoveGraphResponse) {}
-  
+
   rpc MoveMonograph(MoveGraphRequest) returns (MoveGraphResponse) {}
   // CreateMonograph creates a monograph on the control plane.
   rpc CreateMonograph(CreateMonographRequest) returns (CreateMonographResponse) {}
@@ -2120,7 +2122,7 @@ service PlatformService {
   rpc GetLatestValidRouterConfig(GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
-  
+
   // CreateOrganizationWebhookConfig create a new webhook config for the organization
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}
   // GetOrganizationWebhookConfigs returns all webhooks for the organization
@@ -2141,7 +2143,7 @@ service PlatformService {
   // DeleteIntegration deletes an organization web integration hook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
-  // DeleteOrganization deletes an organization 
+  // DeleteOrganization deletes an organization
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}

@@ -77,11 +77,12 @@ export class SubgraphRepository {
     routingUrl: string;
     createdBy: string;
     labels: Label[];
+    namespaceId: string;
+    isEventDrivenGraph: boolean;
     subscriptionUrl?: string;
     subscriptionProtocol?: SubscriptionProtocol;
     websocketSubprotocol?: WebsocketSubprotocol;
     readme?: string;
-    namespaceId: string;
   }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -118,6 +119,7 @@ export class SubgraphRepository {
           targetId: insertedTarget[0].id,
           routingUrl,
           subscriptionUrl,
+          isEventDrivenGraph: data.isEventDrivenGraph,
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
           websocketSubprotocol: data.websocketSubprotocol || 'auto',
         })
@@ -164,6 +166,7 @@ export class SubgraphRepository {
         lastUpdatedAt: '',
         namespace: data.namespace,
         namespaceId: data.namespaceId,
+        isEventDrivenGraph: data.isEventDrivenGraph,
       } as SubgraphDTO;
     });
   }
@@ -171,17 +174,17 @@ export class SubgraphRepository {
   public async update(
     data: {
       targetId: string;
-      routingUrl?: string;
       labels: Label[];
-      subscriptionUrl?: string;
-      schemaSDL?: string;
-      subscriptionProtocol?: SubscriptionProtocol;
-      websocketSubprotocol?: WebsocketSubprotocol;
       updatedBy: string;
-      readme?: string;
       namespaceId: string;
       unsetLabels: boolean;
+      routingUrl?: string;
+      schemaSDL?: string;
+      subscriptionUrl?: string;
+      subscriptionProtocol?: SubscriptionProtocol;
+      websocketSubprotocol?: WebsocketSubprotocol;
       isV2Graph?: boolean;
+      readme?: string;
     },
     blobStorage: BlobStorage,
     admissionConfig: {
@@ -204,8 +207,6 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const targetRepo = new TargetRepository(tx, this.organizationId);
-      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
-      const composer = new Composer(this.logger, fedGraphRepo, subgraphRepo, contractRepo);
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
@@ -225,7 +226,7 @@ export class SubgraphRepository {
         }
       }
 
-      if (data.routingUrl && data.routingUrl !== subgraph.routingUrl) {
+      if (data.routingUrl !== undefined && data.routingUrl !== subgraph.routingUrl) {
         subgraphChanged = true;
         const url = normalizeURL(data.routingUrl);
         await tx
@@ -474,6 +475,7 @@ export class SubgraphRepository {
         schemaVersionId: insertedVersion[0].insertedId,
         targetId: subgraph.targetId,
         routingUrl: subgraph.routingUrl,
+        isEventDrivenGraph: subgraph.isEventDrivenGraph,
         subscriptionUrl: subgraph.subscriptionUrl,
         subscriptionProtocol: subgraph.subscriptionProtocol,
         websocketSubprotocol: subgraph.websocketSubprotocol,
@@ -638,6 +640,7 @@ export class SubgraphRepository {
         namespaceId: schema.namespaces.id,
         namespaceName: schema.namespaces.name,
         schemaVersionId: schema.subgraphs.schemaVersionId,
+        isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
       })
       .from(targets)
       .innerJoin(schema.subgraphs, eq(targets.id, schema.subgraphs.targetId))
@@ -680,6 +683,7 @@ export class SubgraphRepository {
       creatorUserId: resp[0].createdBy || undefined,
       namespace: resp[0].namespaceName,
       namespaceId: resp[0].namespaceId,
+      isEventDrivenGraph: resp[0].isEventDrivenGraph,
       isV2Graph,
     };
   }

@@ -280,7 +280,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.validateSubscriptionFilterDirectiveLocation(node);
         }
         nf.lastChildNodeKind = node.kind;
-        nf.lastChildNodeKind = node.kind;
         const fieldNamedTypeName = getTypeNodeNamedTypeName(node.type);
         if (!BASE_SCALARS.has(fieldNamedTypeName)) {
           nf.referencedTypeNames.add(fieldNamedTypeName);
