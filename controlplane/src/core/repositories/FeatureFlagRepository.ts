@@ -350,7 +350,7 @@ export class FeatureFlagRepository {
 
     // Only get subgraphs that do not have any labels if the label matchers are empty.
     if (labelMatchers.length === 0) {
-      conditions.push(eq(targets.labels, []));
+      conditions.push(eq(featureFlags.labels, []));
     }
 
     const matchedFeatureFlags = await this.db
@@ -440,7 +440,7 @@ export class FeatureFlagRepository {
         creatorUserId: ff.createdBy || undefined,
         schemaSDL: sv.schemaSDL,
         lastUpdatedAt: sv.createdAt.toISOString(),
-        labels: resp[0].labels?.map?.((l) => splitLabel(l)) ?? [],
+        labels: ff.labels?.map?.((l) => splitLabel(l)) ?? [],
         namespace: ff.namespaceName,
         schemaVersionId: sv.id,
       });
