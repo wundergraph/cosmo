@@ -1,1 +1,0 @@
-ALTER TABLE "subgraphs" ADD COLUMN "is_event_driven_graph" boolean DEFAULT false NOT NULL;
