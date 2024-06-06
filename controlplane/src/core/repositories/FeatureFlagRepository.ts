@@ -653,28 +653,6 @@ export class FeatureFlagRepository {
     ];
     const featureFlagGroupsToBeComposed: FeatureFlagGroupWithEnabledFeatureFlags[] = [];
     for (const subgraph of subgraphs) {
-      // for each subgraph, fetch its feature flags
-      const featureFlags = await this.getEnabledFeatureFlagsBySubgraphIdAndLabels({
-        subgraphId: subgraph.id,
-        namespaceId: subgraph.namespaceId,
-        labelMatchers: fedGraphLabelMatchers,
-      });
-
-      // replace the subgraph with its feature flag
-      const compositionSubgraphs = baseCompositionSubgraphs.filter((b) => b.name !== subgraph.name);
-      const subgraphDTOs = subgraphs.filter((s) => s.name !== subgraph.name);
-      for (const featureFlag of featureFlags) {
-        compositionPossibilities.push({
-          compositionSubgraphs: [
-            ...compositionSubgraphs,
-            { name: featureFlag.name, url: featureFlag.routingUrl, definitions: parse(featureFlag.schemaSDL) },
-          ],
-          isFeatureFlagComposition: true,
-          featureFlagName: featureFlag.name,
-          subgraphs: [...subgraphDTOs, featureFlag],
-        });
-      }
-
       // fetching all the ffgs which have ffs whose base subgraph id is the passed as input
       const enabledFeatureFlagGroups = await this.getEnabledFeatureFlagGroupsBySubgraphIdAndLabels({
         subgraphId: subgraph.id,

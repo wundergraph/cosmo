@@ -1,94 +1,120 @@
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  parseGraphQLSubscriptionProtocol,
-  parseGraphQLWebsocketSubprotocol,
-  splitLabel,
-} from '@wundergraph/cosmo-shared';
+import { splitLabel } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import ora from 'ora';
-import { resolve } from 'pathe';
 import pc from 'picocolors';
+import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { validateSubscriptionProtocols } from '../../../utils.js';
-import { websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
-  command.description('Creates a feature flag on the control plane.');
-  command.argument('<name>', 'The name of the feature flag to create.');
+  command.description('Creates a feature flag group on the control plane.');
+  command.argument('<name>', 'The name of the feature flag group to create.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
-  command.requiredOption(
-    '-r, --routing-url <url>',
-    'The routing url of your feature flag. This is the url that the feature flag will be accessible at.',
-  );
   command.option(
     '--label [labels...]',
     'The labels to apply to the feature flag. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
-  command.option(
-    '--subscription-url [url]',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.',
+  command.requiredOption(
+    '-ff, --feature-flags <featureFlags...>',
+    'The names of the feature flags which have to be the part of the group. The feature flags are passed in the format <featureFlag1> <featureFlag2> <featureFlag3>. The feature flag group must have at least 1 feature flags.',
   );
-  command.option(
-    '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the feature flag. The supported protocols are ws, sse, and sse_post.',
-  );
-  command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
-  command.option('--readme <path-to-readme>', 'The markdown file which describes the feature flag.');
-  command.requiredOption('--subgraph <subgraph>', 'The subgraph name for which the feature flag is to be created');
   command.action(async (name, options) => {
-    let readmeFile;
-    if (options.readme) {
-      readmeFile = resolve(process.cwd(), options.readme);
-      if (!existsSync(readmeFile)) {
-        program.error(
-          pc.red(
-            pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
+    if (!options.featureFlags || options.featureFlags.length === 0) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The feature flag group must have at least 1 feature flags. Please check the feature flags and try again.`,
           ),
-        );
-      }
+        ),
+      );
     }
 
-    validateSubscriptionProtocols({
-      subscriptionProtocol: options.subscriptionProtocol,
-      websocketSubprotocol: options.websocketSubprotocol,
-    });
-
-    const spinner = ora('Feature flag is being created...').start();
-    const resp = await opts.client.platform.createFederatedSubgraph(
+    const spinner = ora('Feature flag group is being created...').start();
+    const resp = await opts.client.platform.createFeatureFlagGroup(
       {
-        name,
+        featureFlagGroupName: name,
         namespace: options.namespace,
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
-        routingUrl: options.routingUrl,
-        // If the argument is provided but the URL is not, clear it
-        subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
-        subscriptionProtocol: options.subscriptionProtocol
-          ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
-          : undefined,
-        websocketSubprotocol: options.websocketSubprotocol
-          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
-          : undefined,
-        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
-        isFeatureFlag: true,
-        baseSubgraphName: options.subgraph,
+        featureFlagNames: options.featureFlags,
       },
       {
         headers: getBaseHeaders(),
       },
     );
 
-    if (resp.response?.code === EnumStatusCode.OK) {
-      spinner.succeed('Feature flag was created successfully.');
-    } else {
-      spinner.fail('Failed to create feature flag.');
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
+    switch (resp.response?.code) {
+      case EnumStatusCode.OK: {
+        spinner.succeed('Feature flag group was created successfully.');
+        break;
       }
-      process.exit(1);
+      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
+        spinner.warn('Federated Graph was created but with composition errors.');
+
+        const compositionErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 30, 120],
+          wordWrap: true,
+        });
+
+        console.log(
+          pc.yellow(
+            'But we found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. Please check the errors below:',
+          ),
+        );
+        for (const compositionError of resp.compositionErrors) {
+          compositionErrorsTable.push([
+            compositionError.federatedGraphName,
+            compositionError.namespace,
+            compositionError.featureFlag || '-',
+            compositionError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(compositionErrorsTable.toString());
+
+        break;
+      }
+      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
+        spinner.warn(
+          "The Federated Graph was set up, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+        );
+
+        const deploymentErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        for (const deploymentError of resp.deploymentErrors) {
+          deploymentErrorsTable.push([
+            deploymentError.federatedGraphName,
+            deploymentError.namespace,
+            deploymentError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(deploymentErrorsTable.toString());
+
+        break;
+      }
+      default: {
+        spinner.fail('Failed to create feature flag group.');
+        if (resp.response?.details) {
+          console.log(pc.red(pc.bold(resp.response?.details)));
+        }
+        process.exit(1);
+      }
     }
   });
 
