@@ -4,6 +4,7 @@ import { checkAuth } from '../auth/utils.js';
 import CreateFeatureFlagGroupCommand from './commands/create.js';
 import EnableFeatureFlagGroupCommand from './commands/enable.js';
 import DisableFeatureFlagGroupCommand from './commands/disable.js';
+import UpdateFeatureFlagGroupCommand from './commands/update.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('feature-flag-group');
@@ -12,6 +13,7 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(CreateFeatureFlagGroupCommand(opts));
   command.addCommand(EnableFeatureFlagGroupCommand(opts));
   command.addCommand(DisableFeatureFlagGroupCommand(opts));
+  command.addCommand(UpdateFeatureFlagGroupCommand(opts));
 
   command.hook('preAction', async () => {
     await checkAuth();

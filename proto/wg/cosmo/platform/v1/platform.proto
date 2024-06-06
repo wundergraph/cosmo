@@ -2008,6 +2008,21 @@ message CreateFeatureFlagGroupRequest {
 
 message CreateFeatureFlagGroupResponse {
   Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+}
+
+message UpdateFeatureFlagGroupRequest {
+  string featureFlagGroupName = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+  repeated string featureFlagNames = 4;
+}
+
+message UpdateFeatureFlagGroupResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 message EnableFeatureFlagGroupRequest {
@@ -2018,6 +2033,8 @@ message EnableFeatureFlagGroupRequest {
 
 message EnableFeatureFlagGroupResponse {
   Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
 }
 
 service PlatformService {
@@ -2239,6 +2256,8 @@ service PlatformService {
   rpc EnableFeatureFlag(EnableFeatureFlagRequest) returns (EnableFeatureFlagResponse) {}
   // CreateFeatureFlagGroup creates a new group for the selected feature flags
   rpc CreateFeatureFlagGroup(CreateFeatureFlagGroupRequest) returns (CreateFeatureFlagGroupResponse) {}
+  // UpdateFeatureFlagGroup updates a new group for the selected feature flags
+  rpc UpdateFeatureFlagGroup(UpdateFeatureFlagGroupRequest) returns (UpdateFeatureFlagGroupResponse) {}
   // EnableFeatureFlagGroup enables/disables a feature flag group
   rpc EnableFeatureFlagGroup(EnableFeatureFlagGroupRequest) returns (EnableFeatureFlagGroupResponse) {}
 

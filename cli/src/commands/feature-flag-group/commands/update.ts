@@ -1,59 +1,43 @@
-import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import Table from 'cli-table3';
+import { splitLabel } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
-import { resolve } from 'pathe';
-import pc from 'picocolors';
 import ora from 'ora';
-import { getBaseHeaders } from '../../../../core/config.js';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
+import pc from 'picocolors';
+import Table from 'cli-table3';
+import { getBaseHeaders } from '../../../core/config.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('create');
-  command.description('Creates a federated graph on the control plane.');
-  command.argument(
-    '<name>',
-    'The name of the federated graph to create. It is usually in the format of <org>.<env> and is used to uniquely identify your federated graph.',
-  );
-  command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
-  command.requiredOption(
-    '-r, --routing-url <url>',
-    'The routing url of your router. This is the url that the router will be accessible at.',
+  const command = new Command('update');
+  command.description('Updates a feature flag group on the control plane.');
+  command.argument('<name>', 'The name of the feature flag group to update.');
+  command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
+  command.option(
+    '--label [labels...]',
+    'The labels to apply to the feature flag. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
   command.option(
-    '--label-matcher [labels...]',
-    'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
+    '-ff, --feature-flags <featureFlags...>',
+    'The names of the feature flags which have to be the part of the group. These feature flags will replace the ones stored. The feature flags are passed in the format <featureFlag1> <featureFlag2> <featureFlag3>. The feature flag group must have at least 1 feature flags.',
   );
-  command.option(
-    '--admission-webhook-url <url>',
-    'The admission webhook url. This is the url that the controlplane will use to implement admission control for the federated graph.',
-    [],
-  );
-  command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
   command.action(async (name, options) => {
-    let readmeFile;
-    if (options.readme) {
-      readmeFile = resolve(process.cwd(), options.readme);
-      if (!existsSync(readmeFile)) {
-        program.error(
-          pc.red(
-            pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
+    if (options.featureFlags && options.featureFlags.length === 0) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The feature flag group must have at least 1 feature flags. Please check the feature flags and try again.`,
           ),
-        );
-      }
+        ),
+      );
     }
 
-    const spinner = ora('Federated Graph is being created...').start();
-
-    const resp = await opts.client.platform.createFederatedGraph(
+    const spinner = ora('Feature flag group is being updated...').start();
+    const resp = await opts.client.platform.updateFeatureFlagGroup(
       {
-        name,
-        routingUrl: options.routingUrl,
-        labelMatchers: options.labelMatcher,
-        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        featureFlagGroupName: name,
         namespace: options.namespace,
-        admissionWebhookURL: options.admissionWebhookUrl,
+        labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
+        featureFlagNames: options.featureFlags,
       },
       {
         headers: getBaseHeaders(),
@@ -62,11 +46,11 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed('Federated Graph was created successfully.');
+        spinner.succeed('Feature flag group was updated successfully.');
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn('Federated Graph was created but with composition errors.');
+        spinner.warn('Federated Graph was updated but with composition errors.');
 
         const compositionErrorsTable = new Table({
           head: [
@@ -125,9 +109,9 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to create federated graph.`);
+        spinner.fail('Failed to create feature flag group.');
         if (resp.response?.details) {
-          console.error(pc.red(pc.bold(resp.response?.details)));
+          console.log(pc.red(pc.bold(resp.response?.details)));
         }
         process.exit(1);
       }

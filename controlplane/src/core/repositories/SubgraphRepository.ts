@@ -29,12 +29,9 @@ import {
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { Composer } from '../composition/composer.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
-import { ContractRepository } from './ContractRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
-import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 

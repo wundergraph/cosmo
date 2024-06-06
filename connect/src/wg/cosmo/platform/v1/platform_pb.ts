@@ -15890,6 +15890,16 @@ export class CreateFeatureFlagGroupResponse extends Message<CreateFeatureFlagGro
    */
   response?: Response;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<CreateFeatureFlagGroupResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15899,6 +15909,8 @@ export class CreateFeatureFlagGroupResponse extends Message<CreateFeatureFlagGro
   static readonly typeName = "wg.cosmo.platform.v1.CreateFeatureFlagGroupResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagGroupResponse {
@@ -15915,6 +15927,110 @@ export class CreateFeatureFlagGroupResponse extends Message<CreateFeatureFlagGro
 
   static equals(a: CreateFeatureFlagGroupResponse | PlainMessage<CreateFeatureFlagGroupResponse> | undefined, b: CreateFeatureFlagGroupResponse | PlainMessage<CreateFeatureFlagGroupResponse> | undefined): boolean {
     return proto3.util.equals(CreateFeatureFlagGroupResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateFeatureFlagGroupRequest
+ */
+export class UpdateFeatureFlagGroupRequest extends Message<UpdateFeatureFlagGroupRequest> {
+  /**
+   * @generated from field: string featureFlagGroupName = 1;
+   */
+  featureFlagGroupName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Label labels = 3;
+   */
+  labels: Label[] = [];
+
+  /**
+   * @generated from field: repeated string featureFlagNames = 4;
+   */
+  featureFlagNames: string[] = [];
+
+  constructor(data?: PartialMessage<UpdateFeatureFlagGroupRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateFeatureFlagGroupRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "featureFlagGroupName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
+    { no: 4, name: "featureFlagNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagGroupRequest {
+    return new UpdateFeatureFlagGroupRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFeatureFlagGroupRequest {
+    return new UpdateFeatureFlagGroupRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFeatureFlagGroupRequest {
+    return new UpdateFeatureFlagGroupRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateFeatureFlagGroupRequest | PlainMessage<UpdateFeatureFlagGroupRequest> | undefined, b: UpdateFeatureFlagGroupRequest | PlainMessage<UpdateFeatureFlagGroupRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateFeatureFlagGroupRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateFeatureFlagGroupResponse
+ */
+export class UpdateFeatureFlagGroupResponse extends Message<UpdateFeatureFlagGroupResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
+  constructor(data?: PartialMessage<UpdateFeatureFlagGroupResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateFeatureFlagGroupResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagGroupResponse {
+    return new UpdateFeatureFlagGroupResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFeatureFlagGroupResponse {
+    return new UpdateFeatureFlagGroupResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFeatureFlagGroupResponse {
+    return new UpdateFeatureFlagGroupResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateFeatureFlagGroupResponse | PlainMessage<UpdateFeatureFlagGroupResponse> | undefined, b: UpdateFeatureFlagGroupResponse | PlainMessage<UpdateFeatureFlagGroupResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateFeatureFlagGroupResponse, a, b);
   }
 }
 
@@ -15976,6 +16092,16 @@ export class EnableFeatureFlagGroupResponse extends Message<EnableFeatureFlagGro
    */
   response?: Response;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
   constructor(data?: PartialMessage<EnableFeatureFlagGroupResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -15985,6 +16111,8 @@ export class EnableFeatureFlagGroupResponse extends Message<EnableFeatureFlagGro
   static readonly typeName = "wg.cosmo.platform.v1.EnableFeatureFlagGroupResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagGroupResponse {

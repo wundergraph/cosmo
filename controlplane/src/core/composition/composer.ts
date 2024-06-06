@@ -279,11 +279,13 @@ export class Composer {
       }
     }
 
-    await this.graphCompositionRepository.updateComposition({
-      fedGraphSchemaVersionId: federatedSchemaVersionId,
-      deploymentErrorString: deploymentError?.message,
-      admissionErrorString: admissionError?.message,
-    });
+    if (deploymentError || admissionError) {
+      await this.graphCompositionRepository.updateComposition({
+        fedGraphSchemaVersionId: federatedSchemaVersionId,
+        deploymentErrorString: deploymentError?.message,
+        admissionErrorString: admissionError?.message,
+      });
+    }
 
     const errors: ComposeDeploymentError[] = [];
 

@@ -1,5 +1,5 @@
 import { JsonValue } from '@bufbuild/protobuf';
-import { Subgraph } from '@wundergraph/composition';
+import { Subgraph, federateSubgraphs } from '@wundergraph/composition';
 import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { ffRouterConfigFromJson, joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, eq, inArray, sql } from 'drizzle-orm';
@@ -15,11 +15,13 @@ import {
   namespaces,
   schemaVersion,
   subgraphs,
+  subgraphsToFederatedGraph,
   targets,
 } from '../../db/schema.js';
-import { FeatureFlagGroupDTO, Label, SubgraphDTO } from '../../types/index.js';
+import { FeatureFlagGroupDTO, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export interface FeatureFlagGroupWithEnabledFeatureFlags {
   id: string;
@@ -85,6 +87,43 @@ export class FeatureFlagRepository {
         await tx.insert(featureFlagGroupToFeatureFlags).values(
           featureFlagIds.map((featureFlagId) => ({
             featureFlagGroupId: featureFlagGroup[0].id,
+            featureFlagId,
+          })),
+        );
+      }
+      return featureFlagGroup[0];
+    });
+  }
+
+  public updateFeatureFlagGroup({
+    featureFlagGroup,
+    labels,
+    featureFlagIds,
+  }: {
+    featureFlagGroup: FeatureFlagGroupDTO;
+    labels: Label[];
+    featureFlagIds: string[];
+  }) {
+    const uniqueLabels = normalizeLabels(labels);
+    return this.db.transaction(async (tx) => {
+      await tx
+        .update(featureFlagGroups)
+        .set({
+          labels: uniqueLabels.map((ul) => joinLabel(ul)),
+        })
+        .where(eq(featureFlagGroups.id, featureFlagGroup.id))
+        .execute();
+
+      if (featureFlagIds.length > 0) {
+        // delete all the feature flags of the group
+        await tx
+          .delete(featureFlagGroupToFeatureFlags)
+          .where(eq(featureFlagGroupToFeatureFlags.featureFlagGroupId, featureFlagGroup.id))
+          .execute();
+
+        await tx.insert(featureFlagGroupToFeatureFlags).values(
+          featureFlagIds.map((featureFlagId) => ({
+            featureFlagGroupId: featureFlagGroup.id,
             featureFlagId,
           })),
         );
@@ -245,6 +284,51 @@ export class FeatureFlagRepository {
         await tx.delete(targets).where(eq(targets.id, ffSubgraph.targetId));
       }
     });
+  }
+
+  public async getFederatedGraphsByFFG({
+    featureFlagGroupId,
+    namespaceId,
+  }: {
+    featureFlagGroupId: string;
+    namespaceId: string;
+  }): Promise<FederatedGraphDTO[]> {
+    const federatedGraphs: FederatedGraphDTO[] = [];
+    const featureFlagsOfGroup = await this.getEnabledFeatureFlagsByGroupId({ featureFlagGroupId, namespaceId });
+    if (featureFlagsOfGroup.length === 0) {
+      return [];
+    }
+    const baseSubgraphIds = featureFlagsOfGroup.map((f) => f.baseSubgraphId);
+
+    // fetches the federated graphs which contains all the base subgraphs of the ffg
+    const federatedGraphIds = await this.db
+      .select({
+        federatedGraphId: subgraphsToFederatedGraph.federatedGraphId,
+        count: sql<number>`cast(count(DISTINCT ${subgraphsToFederatedGraph.subgraphId}) as int)`,
+      })
+      .from(subgraphsToFederatedGraph)
+      .where(inArray(subgraphsToFederatedGraph.subgraphId, baseSubgraphIds))
+      .groupBy(subgraphsToFederatedGraph.federatedGraphId)
+      .having(({ count }) => eq(count, baseSubgraphIds.length))
+      .execute();
+
+    for (const fg of federatedGraphIds) {
+      const federatedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+      const federatedGraph = await federatedGraphRepo.byId(fg.federatedGraphId);
+      if (!federatedGraph) {
+        continue;
+      }
+      const matchedFeatureFlagGroups = await this.getMatchedFeatureFlagGroups({
+        namespaceId,
+        labelMatchers: federatedGraph.labelMatchers,
+      });
+      if (!matchedFeatureFlagGroups.some((m) => m.id === featureFlagGroupId)) {
+        continue;
+      }
+      federatedGraphs.push(federatedGraph);
+    }
+
+    return federatedGraphs;
   }
 
   public async getMatchedFeatureFlagGroups({
@@ -412,7 +496,13 @@ export class FeatureFlagRepository {
     return enabledFeatureFlagGroups;
   }
 
-  public async getEnabledFeatureFlagsByGroupId({ featureFlagGroupId }: { featureFlagGroupId: string }): Promise<
+  public async getEnabledFeatureFlagsByGroupId({
+    featureFlagGroupId,
+    namespaceId,
+  }: {
+    featureFlagGroupId: string;
+    namespaceId: string;
+  }): Promise<
     (SubgraphDTO & {
       baseSubgraphName: string;
       baseSubgraphId: string;
@@ -420,7 +510,7 @@ export class FeatureFlagRepository {
     })[]
   > {
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
-    const resp = await this.db
+    const ffs = await this.db
       .select({
         name: targets.name,
         labels: targets.labels,
@@ -451,13 +541,14 @@ export class FeatureFlagRepository {
         and(
           eq(featureFlagGroupToFeatureFlags.featureFlagGroupId, featureFlagGroupId),
           eq(featureFlagsToSubgraph.isEnabled, true),
+          eq(targets.namespaceId, namespaceId),
         ),
       )
       .execute();
 
     const enabledFetaureFlagsByGroup = [];
 
-    for (const ff of resp) {
+    for (const ff of ffs) {
       if (ff.schemaVersionId === null) {
         continue;
       }
@@ -482,7 +573,7 @@ export class FeatureFlagRepository {
         creatorUserId: ff.createdBy || undefined,
         schemaSDL: sv.schemaSDL,
         lastUpdatedAt: sv.createdAt.toISOString(),
-        labels: resp[0].labels?.map?.((l) => splitLabel(l)) ?? [],
+        labels: ffs[0].labels?.map?.((l) => splitLabel(l)) ?? [],
         namespace: ff.namespaceName,
         schemaVersionId: sv.id,
         baseSubgraphName: baseSubgraph.name,
@@ -523,6 +614,7 @@ export class FeatureFlagRepository {
 
       const enabledFeatureFlagsByGroup = await this.getEnabledFeatureFlagsByGroupId({
         featureFlagGroupId: enabledFeatureFlagGroup.id,
+        namespaceId,
       });
 
       // if there are no enabled feature flags in the group, then skip the group
