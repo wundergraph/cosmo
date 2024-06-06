@@ -215,10 +215,11 @@
         },
         "resource_attributes": {
           "type": "array",
-          "description": "The resource attributes to add to OTEL metrics and traces. The resource attributes identify the entity producing the traces and metrics. Because Prometheus metrics rely on the OpenTelemetry metrics, the resource attributes are also added to the Prometheus metrics.",
+          "description": "The resource attributes to add to OTEL metrics and traces. The resource attributes identify the entity producing the traces and metrics. Because Prometheus metrics rely on the OpenTelemetry metrics, the resource attributes are also added to the Prometheus target_info metric.",
           "items": {
             "type": "object",
             "additionalProperties": false,
+            "required": ["key", "value"],
             "properties": {
               "key": {
                 "type": "string",
@@ -226,7 +227,7 @@
               },
               "value": {
                 "type": "string",
-                "description": "The static value of the attribute."
+                "description": "The value of the attribute."
               }
             }
           }
@@ -237,6 +238,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
+            "required": ["key"],
             "properties": {
               "key": {
                 "type": "string",
@@ -244,7 +246,7 @@
               },
               "default": {
                 "type": "string",
-                "description": "The static value of the attribute. If the value is not set, the value_from is used. If both value and value_from are set, value_from has precedence. You can use default to fallback when value_from could not be resolved."
+                "description": "The default value of the attribute. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
               },
               "value_from": {
                 "type": "object",
