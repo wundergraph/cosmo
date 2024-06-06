@@ -90,11 +90,11 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-         spinner.fail('Failed to enable feature flag.');
-         if (resp.response?.details) {
-           console.log(pc.red(pc.bold(resp.response?.details)));
-         }
-         process.exit(1);
+        spinner.fail('Failed to enable feature flag.');
+        if (resp.response?.details) {
+          console.log(pc.red(pc.bold(resp.response?.details)));
+        }
+        process.exit(1);
       }
     }
   });
