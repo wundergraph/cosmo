@@ -17,7 +17,7 @@ export default (opts: BaseCommandOptions) => {
     'The labels to apply to the feature flag. The labels are passed in the format <key>=<value> <key>=<value>.',
   );
   command.option(
-    '-fg, --feature-graphs <featureGraphs...>',
+    '--fg, --feature-graphs <featureGraphs...>',
     'The names of the feature graphs which have to be the part of the feature flag. These feature graphs will replace the ones stored. The feature graphs are passed in the format <featureGraph1> <featureGraph2> <featureGraph3>. The feature flag must have at least 1 feature graphs.',
   );
   command.action(async (name, options) => {
