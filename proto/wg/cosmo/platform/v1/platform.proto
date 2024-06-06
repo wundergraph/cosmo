@@ -1989,16 +1989,6 @@ message IsMemberLimitReachedResponse {
   int32 member_count = 3;  
 }
 
-message EnableFeatureFlagRequest {
-  string featureFlagName = 1;
-  string namespace = 2;
-  bool enabled = 3;
-}
-
-message EnableFeatureFlagResponse {
-  Response response = 1;
-}
-
 message CreateFeatureFlagGroupRequest {
   string featureFlagGroupName = 1;
   string namespace = 2;
@@ -2252,8 +2242,6 @@ service PlatformService {
   // GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
   rpc GetUserAccessiblePermissions(GetUserAccessiblePermissionsRequest) returns (GetUserAccessiblePermissionsResponse) {}
 
-  // EnableFeatureFlag enables/disables a feature flags
-  rpc EnableFeatureFlag(EnableFeatureFlagRequest) returns (EnableFeatureFlagResponse) {}
   // CreateFeatureFlagGroup creates a new group for the selected feature flags
   rpc CreateFeatureFlagGroup(CreateFeatureFlagGroupRequest) returns (CreateFeatureFlagGroupResponse) {}
   // UpdateFeatureFlagGroup updates a new group for the selected feature flags

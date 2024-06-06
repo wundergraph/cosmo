@@ -3556,21 +3556,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetNamespaceDisplayName: subgraph.namespace,
           });
 
-          // // Collect all federated graphs that use this subgraph after deleting the subgraph
-          // const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
-          //   labels: subgraph.labels,
-          //   namespaceId: subgraph.namespaceId,
-          //   excludeContracts: true,
-          // });
-
-          // // Remove duplicates
-          // for (const federatedGraph of currentFederatedGraphs) {
-          //   const exists = affectedFederatedGraphs.find((g) => g.name === federatedGraph.name);
-          //   if (!exists) {
-          //     affectedFederatedGraphs.push(federatedGraph);
-          //   }
-          // }
-
           // Recompose and deploy all affected federated graphs and their respective contracts.
           // Collects all composition and deployment errors if any.
           const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
@@ -3616,65 +3601,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           deploymentErrors: [],
           compositionErrors: [],
-        };
-      });
-    },
-
-    enableFeatureFlag: (req, ctx) => {
-      let logger = getLogger(ctx, opts.logger);
-
-      return handleError<PlainMessage<EnableFeatureFlagResponse>>(ctx, logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        logger = enrichLogger(ctx, logger, authContext);
-        const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
-        const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-
-        req.namespace = req.namespace || DefaultNamespace;
-
-        if (!authContext.hasWriteAccess) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `The user does not have the permissions to perform this operation`,
-            },
-            compositionErrors: [],
-            admissionErrors: [],
-          };
-        }
-
-        const namespace = await namespaceRepo.byName(req.namespace);
-        if (!namespace) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Could not find namespace ${req.namespace}`,
-            },
-            graphs: [],
-          };
-        }
-
-        const subgraph = await subgraphRepo.byName(req.featureFlagName, req.namespace);
-        if (!subgraph || !subgraph.isFeatureFlag) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Feature flag '${req.featureFlagName}' not found`,
-            },
-          };
-        }
-
-        await featureFlagRepo.enableFeatureFlag({
-          featureFlagId: subgraph.id,
-          isEnabled: req.enabled,
-        });
-
-        // TODO enable/disable ffg based on the input
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
         };
       });
     },
