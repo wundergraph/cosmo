@@ -44,7 +44,6 @@ import {
   DeleteRouterTokenResponse,
   DeploymentError,
   EnableFeatureFlagGroupResponse,
-  EnableFeatureFlagResponse,
   EnableLintingForTheNamespaceResponse,
   Feature,
   FixSubgraphSchemaResponse,
