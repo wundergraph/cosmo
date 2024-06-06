@@ -29,22 +29,35 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option(
     '-r, --routing-url <url>',
-    'The routing url of your subgraph. This is the url that the subgraph will be accessible at (Only required to create the subgraph).',
+    'The routing URL of the subgraph. This is the URL at which the subgraph will be accessible.' +
+      ' This parameter is always ignored if the subgraph has already been created.' +
+      ' Required if the subgraph is not an Event-Driven Graph.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. Required to create the subgraph. This will overwrite existing labels.',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
+      ' This parameter is always ignored if the subgraph has already been created.',
     [],
   );
   command.option(
     '--subscription-url [url]',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.',
+    'The url used for subscriptions. If empty, it defaults to same url used for routing.' +
+      ' This parameter is always ignored if the subgraph has already been created.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.' +
+      ' This parameter is always ignored if the subgraph has already been created.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
-  command.option('--websocket-subprotocol <protocol>', websocketSubprotocolDescription);
+  command.option(
+    '--websocket-subprotocol <protocol>',
+    websocketSubprotocolDescription +
+      ' This parameter is always ignored if the subgraph has already been created.' +
+      ' Returns an error if the subgraph is an Event-Driven Graph.',
+  );
   command.option(
     '--fail-on-composition-error',
     'If set, the command will fail if the composition of the federated graph fails.',

@@ -792,7 +792,7 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     * DeleteOrganization deletes an organization 
+     * DeleteOrganization deletes an organization
      *
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganization
      */

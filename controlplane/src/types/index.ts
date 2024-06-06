@@ -66,6 +66,7 @@ export interface FederatedGraphDTO {
   subgraphsCount: number;
   composedSchemaVersionId?: string;
   admissionWebhookURL?: string;
+  admissionWebhookSecret?: string;
   compositionId?: string;
   creatorUserId?: string;
   readme?: string;
@@ -94,16 +95,17 @@ export interface SubgraphDTO {
   routingUrl: string;
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
-  websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
   schemaSDL: string;
   schemaVersionId: string;
   lastUpdatedAt: string;
   labels: Label[];
-  creatorUserId?: string;
-  readme?: string;
   namespace: string;
   namespaceId: string;
+  isEventDrivenGraph: boolean;
+  creatorUserId?: string;
   isV2Graph?: boolean;
+  readme?: string;
+  websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
   isFeatureGraph?: boolean;
 }
 

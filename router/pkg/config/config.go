@@ -43,11 +43,12 @@ type TracingExporter struct {
 }
 
 type Tracing struct {
-	Enabled               bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
-	SamplingRate          float64           `yaml:"sampling_rate" default:"1" envconfig:"TRACING_SAMPLING_RATE"`
-	ParentBasedSampler    bool              `yaml:"parent_based_sampler" default:"true" envconfig:"TRACING_PARENT_BASED_SAMPLER"`
-	Exporters             []TracingExporter `yaml:"exporters"`
-	Propagation           PropagationConfig `yaml:"propagation"`
+	Enabled            bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
+	SamplingRate       float64           `yaml:"sampling_rate" default:"1" envconfig:"TRACING_SAMPLING_RATE"`
+	ParentBasedSampler bool              `yaml:"parent_based_sampler" default:"true" envconfig:"TRACING_PARENT_BASED_SAMPLER"`
+	Exporters          []TracingExporter `yaml:"exporters"`
+	Propagation        PropagationConfig `yaml:"propagation"`
+
 	TracingGlobalFeatures `yaml:",inline"`
 }
 
@@ -85,10 +86,27 @@ type MetricsOTLP struct {
 	Exporters     []MetricsOTLPExporter `yaml:"exporters"`
 }
 
+type OtelResourceAttribute struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
+}
+
+type OtelAttributeFromValue struct {
+	RequestHeader string `yaml:"request_header"`
+}
+
+type OtelAttribute struct {
+	Key       string                  `yaml:"key"`
+	Default   string                  `yaml:"default"`
+	ValueFrom *OtelAttributeFromValue `yaml:"value_from,omitempty"`
+}
+
 type Telemetry struct {
-	ServiceName string  `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
-	Tracing     Tracing `yaml:"tracing"`
-	Metrics     Metrics `yaml:"metrics"`
+	ServiceName        string                  `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
+	Attributes         []OtelAttribute         `yaml:"attributes"`
+	ResourceAttributes []OtelResourceAttribute `yaml:"resource_attributes"`
+	Tracing            Tracing                 `yaml:"tracing"`
+	Metrics            Metrics                 `yaml:"metrics"`
 }
 
 type CORS struct {

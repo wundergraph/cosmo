@@ -57,10 +57,10 @@ export default (opts: BaseCommandOptions) => {
 
       const cosmoSubgraphsConfig: {
         name: string;
-        routing_url: string;
         schema: {
           file: string;
         };
+        routing_url?: string;
         subscription?: {
           url: string;
           protocol: string;
@@ -90,15 +90,20 @@ export default (opts: BaseCommandOptions) => {
         if (!subgraphSDL) {
           continue;
         }
+        /* The config.yaml should not define a routing URL if the subgraph is an EDG.
+         * The local routingUrl variable is an empty object when the subgraph is an EDG, and a set property otherwise.
+         * This variable is spread into the push to ensure the routing URL is only defined when necessary.
+         * */
+        const routingUrl = subgraph.isEventDrivenGraph ? {} : { routing_url: subgraph.routingURL };
         const filePath = join(subgraphPath, `${subgraph.name}.graphql`);
         cosmoSubgraphsConfig.push({
           name: subgraph.name,
-          routing_url: subgraph.routingURL,
+          ...routingUrl,
           schema: {
             file: filePath,
           },
           subscription:
-            subgraph.subscriptionURL === ''
+            subgraph.subscriptionURL === '' || subgraph.isEventDrivenGraph
               ? undefined
               : { url: subgraph.subscriptionURL, protocol: subgraph.subscriptionProtocol },
         });

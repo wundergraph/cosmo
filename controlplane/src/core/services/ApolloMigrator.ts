@@ -273,6 +273,7 @@ export default class ApolloMigrator {
             { key: 'name', value: sanitizedGraphName },
           ],
           routingUrl: subgraph.routingURL,
+          isEventDrivenGraph: false,
           subscriptionProtocol: 'ws',
         });
 

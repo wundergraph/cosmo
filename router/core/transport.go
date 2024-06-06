@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"net/http"
 	"net/url"
@@ -32,11 +33,12 @@ type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Requ
 type TransportPostHandler func(resp *http.Response, ctx RequestContext) *http.Response
 
 type CustomTransport struct {
-	roundTripper http.RoundTripper
-	preHandlers  []TransportPreHandler
-	postHandlers []TransportPostHandler
-	metricStore  metric.Store
-	logger       *zap.Logger
+	roundTripper    http.RoundTripper
+	preHandlers     []TransportPreHandler
+	postHandlers    []TransportPostHandler
+	metricStore     metric.Store
+	logger          *zap.Logger
+	attributeMapper func(r *http.Request) []attribute.KeyValue
 
 	sf *singleflight.Group
 }
@@ -47,10 +49,12 @@ func NewCustomTransport(
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
 	enableSingleFlight bool,
+	attributeMapper func(r *http.Request) []attribute.KeyValue,
 ) *CustomTransport {
 
 	ct := &CustomTransport{
-		metricStore: metricStore,
+		metricStore:     metricStore,
+		attributeMapper: attributeMapper,
 	}
 	if retryOptions.Enabled {
 		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
@@ -75,12 +79,18 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 		baseFields = append(baseFields, otel.WgSubgraphID.String(activeSubgraph.Id))
 	}
 
+	if ct.attributeMapper != nil {
+		baseFields = append(baseFields, ct.attributeMapper(reqContext.Request())...)
+	}
+
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), baseFields...)
 	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, baseFields...)
 
 	operationStartTime := time.Now()
 
 	return func(err error, resp *http.Response) {
+		defer inFlightDone()
+
 		if err != nil {
 			baseFields = append(baseFields, otel.WgRequestError.Bool(true))
 		}
@@ -92,8 +102,6 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 			baseFields = append(baseFields, semconv.HTTPStatusCode(resp.StatusCode))
 			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, baseFields...)
 		}
-
-		inFlightDone()
 	}
 }
 
@@ -278,6 +286,7 @@ type TransportFactory struct {
 	metricStore                   metric.Store
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
+	attributesMapper              func(r *http.Request) []attribute.KeyValue
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -291,6 +300,7 @@ type TransportOptions struct {
 	MetricStore                   metric.Store
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
+	AttributesMapper              func(r *http.Request) []attribute.KeyValue
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
@@ -303,6 +313,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
+		attributesMapper:              opts.AttributesMapper,
 	}
 }
 
@@ -330,6 +341,10 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 				commonAttributeValues = append(commonAttributeValues, otel.WgSubgraphName.String(subgraph.Name))
 			}
 
+			if t.attributesMapper != nil {
+				commonAttributeValues = append(commonAttributeValues, t.attributesMapper(reqContext.Request())...)
+			}
+
 			span.SetAttributes(commonAttributeValues...)
 
 		}),
@@ -340,6 +355,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 		t.retryOptions,
 		t.metricStore,
 		enableSingleFlight,
+		t.attributesMapper,
 	)
 
 	tp.preHandlers = t.preHandlers
