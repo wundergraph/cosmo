@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.12.0...aws-lambda-router@0.13.0) (2024-06-06)
+
+### Features
+
+* handle creating, publishing, and updating Event-Driven Graphs ([#855](https://github.com/wundergraph/cosmo/issues/855)) ([fc2a8f2](https://github.com/wundergraph/cosmo/commit/fc2a8f20b97a17d0927c589f81df66ff7abf78c5)) (@Aenimus)
+
 # [0.12.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.11.2...aws-lambda-router@0.12.0) (2024-05-31)
 
 ### Features

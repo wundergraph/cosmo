@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.57.0](https://github.com/wundergraph/cosmo/compare/wgc@0.56.0...wgc@0.57.0) (2024-06-06)
+
+### Features
+
+* handle creating, publishing, and updating Event-Driven Graphs ([#855](https://github.com/wundergraph/cosmo/issues/855)) ([fc2a8f2](https://github.com/wundergraph/cosmo/commit/fc2a8f20b97a17d0927c589f81df66ff7abf78c5)) (@Aenimus)
+
 # [0.56.0](https://github.com/wundergraph/cosmo/compare/wgc@0.55.5...wgc@0.56.0) (2024-06-05)
 
 ### Features
