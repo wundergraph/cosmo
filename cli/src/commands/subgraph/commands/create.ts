@@ -87,7 +87,7 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
-        isEventDrivenGraph: !!options.isEventDrivenGraph,
+        isEventDrivenGraph: !!options.eventDrivenGraph,
       },
       {
         headers: getBaseHeaders(),
