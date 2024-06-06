@@ -1101,9 +1101,9 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
   /**
    * routing_url is the URL of the service which will be used to route the requests to the subgraph.
    *
-   * @generated from field: string routing_url = 2;
+   * @generated from field: optional string routing_url = 2;
    */
-  routingUrl = "";
+  routingUrl?: string;
 
   /**
    * labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
@@ -1143,6 +1143,11 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
    */
   websocketSubprotocol?: GraphQLWebsocketSubprotocol;
 
+  /**
+   * @generated from field: optional bool is_event_driven_graph = 10;
+   */
+  isEventDrivenGraph?: boolean;
+
   constructor(data?: PartialMessage<CreateFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1152,13 +1157,14 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
   static readonly typeName = "wg.cosmo.platform.v1.CreateFederatedSubgraphRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
+    { no: 10, name: "is_event_driven_graph", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedSubgraphRequest {
@@ -2519,6 +2525,11 @@ export class Subgraph extends Message<Subgraph> {
    */
   isV2Graph?: boolean;
 
+  /**
+   * @generated from field: bool isEventDrivenGraph = 13;
+   */
+  isEventDrivenGraph = false;
+
   constructor(data?: PartialMessage<Subgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2539,6 +2550,7 @@ export class Subgraph extends Message<Subgraph> {
     { no: 10, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 11, name: "subscriptionProtocol", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 12, name: "isV2Graph", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 13, name: "isEventDrivenGraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {
@@ -4103,9 +4115,9 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
   name = "";
 
   /**
-   * @generated from field: string routing_url = 2;
+   * @generated from field: optional string routing_url = 2;
    */
-  routingUrl = "";
+  routingUrl?: string;
 
   /**
    * @generated from field: repeated wg.cosmo.platform.v1.Label labels = 3;
@@ -4160,7 +4172,7 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
   static readonly typeName = "wg.cosmo.platform.v1.UpdateSubgraphRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
