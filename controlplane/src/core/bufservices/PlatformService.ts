@@ -3651,8 +3651,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR,
               details: `The user does not have the permissions to perform this operation`,
             },
-            compositionErrors: [],
-            admissionErrors: [],
           };
         }
 
@@ -3663,7 +3661,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Could not find namespace ${req.namespace}`,
             },
-            graphs: [],
           };
         }
 
@@ -3673,8 +3670,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_INVALID_LABELS,
               details: `One or more labels were found to be invalid`,
             },
-            compositionErrors: [],
-            admissionErrors: [],
+          };
+        }
+
+        const ffg = await featureFlagRepo.getFeatureFlagGroupByName({
+          featureFlagGroupName: req.featureFlagGroupName,
+          namespaceId: namespace.id,
+        });
+        if (ffg) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `Feature flag group '${req.featureFlagGroupName}' already exists in the namespace`,
+            },
           };
         }
 
@@ -3705,6 +3713,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureFlagIds,
           createdBy: authContext.userId,
         });
+
+        // TODO fetch all the fedgraph which have to be composed and then compose
 
         return {
           response: {
