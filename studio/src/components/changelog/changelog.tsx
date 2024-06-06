@@ -1,11 +1,11 @@
+import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
-import { Changes, getDiffCount } from "./changes";
-import { PlusIcon, MinusIcon, ArrowRightIcon } from "@radix-ui/react-icons";
+import { MinusIcon, PlusIcon } from "@radix-ui/react-icons";
 import { FederatedGraphChangelogOutput } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
-import { useUser } from "@/hooks/use-user";
 import { useRouter } from "next/router";
-import { Separator } from "../ui/separator";
+import { PiCubeFocus } from "react-icons/pi";
+import { Changes, getDiffCount } from "./changes";
 
 export const Changelog = ({
   entries,
@@ -37,7 +37,8 @@ export const Changelog = ({
                     href={`/${user?.currentOrganization?.slug}/${namespace}/graph/${slug}/compositions/${compositionId}`}
                     className="flex items-center gap-x-1 text-sm text-primary hover:underline"
                   >
-                    View Composition
+                    <PiCubeFocus className="h-4 w-4" />
+                    Composition
                   </Link>
                   <p className="text-sm font-bold text-muted-foreground">
                     {id.slice(0, 6)}
