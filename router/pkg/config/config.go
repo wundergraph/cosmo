@@ -103,8 +103,8 @@ type OtelAttribute struct {
 
 type Telemetry struct {
 	ServiceName        string                  `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME"`
-	Attributes         []OtelAttribute         `yaml:"attributes" envconfig:"TELEMETRY_ATTRIBUTES"`
-	ResourceAttributes []OtelResourceAttribute `yaml:"resource_attributes" envconfig:"TELEMETRY_RESOURCE_ATTRIBUTES"`
+	Attributes         []OtelAttribute         `yaml:"attributes"`
+	ResourceAttributes []OtelResourceAttribute `yaml:"resource_attributes"`
 	Tracing            Tracing                 `yaml:"tracing"`
 	Metrics            Metrics                 `yaml:"metrics"`
 }
