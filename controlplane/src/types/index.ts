@@ -86,6 +86,7 @@ export interface FederatedGraphChangelogDTO {
     changeMessage: string;
     createdAt: string;
   }[];
+  compositionId: string;
 }
 
 export interface SubgraphDTO {

@@ -8884,10 +8884,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         logger = enrichLogger(ctx, logger, authContext);
 
         const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+        const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
 
         const changelogs = await fedRepo.fetchChangelogByVersion({
           schemaVersionId: req.schemaVersionId,
         });
+
+        const composition = await graphCompositionRepo.getGraphCompositionBySchemaVersion({
+          schemaVersionId: req.schemaVersionId,
+          organizationId: authContext.organizationId,
+        });
+
+        if (!composition) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Could not find composition linked to the changelog',
+            },
+          };
+        }
 
         return {
           response: {
@@ -8897,6 +8912,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             changelogs,
             schemaVersionId: req.schemaVersionId,
             createdAt: changelogs.length === 0 ? '' : changelogs[0].createdAt,
+            compositionId: composition?.id,
           },
         };
       });
