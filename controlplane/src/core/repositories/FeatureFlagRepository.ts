@@ -192,6 +192,50 @@ export class FeatureFlagRepository {
       .execute();
   }
 
+  public async getBaseSubgraphByFFId({ featureFlagId }: { featureFlagId: string }): Promise<SubgraphDTO | undefined> {
+    const baseSubgraph = await this.db
+      .select({
+        subgraphId: featureFlagsToSubgraph.baseSubgraphId,
+      })
+      .from(featureFlagsToSubgraph)
+      .where(eq(featureFlagsToSubgraph.featureFlagId, featureFlagId));
+
+    if (baseSubgraph.length === 0) {
+      return undefined;
+    }
+
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    const baseSubgraphDTO = await subgraphRepo.byId(baseSubgraph[0].subgraphId);
+    return baseSubgraphDTO;
+  }
+
+  public deleteFeatureFlagsBySubgraphId({ subgraphId, namespaceId }: { subgraphId: string; namespaceId: string }) {
+    return this.db.transaction(async (tx) => {
+      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
+      const ffs = await tx
+        .select({
+          subgraphId: subgraphs.id,
+          targetId: subgraphs.targetId,
+        })
+        .from(featureFlagsToSubgraph)
+        .innerJoin(subgraphs, eq(subgraphs.id, featureFlagsToSubgraph.featureFlagId))
+        .innerJoin(targets, eq(targets.id, subgraphs.targetId))
+        .where(and(eq(featureFlagsToSubgraph.baseSubgraphId, subgraphId), eq(targets.namespaceId, namespaceId)));
+
+      if (ffs.length === 0) {
+        return;
+      }
+
+      for (const ff of ffs) {
+        const ffSubgraph = await subgraphRepo.byId(ff.subgraphId);
+        if (!ffSubgraph) {
+          continue;
+        }
+        await tx.delete(targets).where(eq(targets.id, ffSubgraph.targetId));
+      }
+    });
+  }
+
   public async getMatchedFeatureFlagGroups({
     namespaceId,
     labelMatchers,
@@ -512,7 +556,7 @@ export class FeatureFlagRepository {
         namespaceId: subgraph.namespaceId,
         labelMatchers: fedGraphLabelMatchers,
       });
-      
+
       // replace the subgraph with its feature flag
       const compositionSubgraphs = baseCompositionSubgraphs.filter((b) => b.name !== subgraph.name);
       const subgraphDTOs = subgraphs.filter((s) => s.name !== subgraph.name);

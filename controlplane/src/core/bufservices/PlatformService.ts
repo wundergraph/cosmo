@@ -3486,9 +3486,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const composer = new Composer(logger, fedGraphRepo, subgraphRepo, contractRepo, featureFlagRepo);
           const auditLogRepo = new AuditLogRepository(tx);
 
+          let labels = subgraph.labels;
+          if (subgraph.isFeatureFlag) {
+            const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFFId({ featureFlagId: subgraph.id });
+            if (baseSubgraph) {
+              labels = baseSubgraph.labels;
+            }
+          } else {
+            await featureFlagRepo.deleteFeatureFlagsBySubgraphId({
+              subgraphId: subgraph.id,
+              namespaceId: subgraph.namespaceId,
+            });
+          }
+
           // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
           const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
-            labels: subgraph.labels,
+            labels,
             namespaceId: subgraph.namespaceId,
             excludeContracts: true,
           });
@@ -3509,20 +3522,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             targetNamespaceDisplayName: subgraph.namespace,
           });
 
-          // Collect all federated graphs that use this subgraph after deleting the subgraph
-          const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
-            labels: subgraph.labels,
-            namespaceId: subgraph.namespaceId,
-            excludeContracts: true,
-          });
+          // // Collect all federated graphs that use this subgraph after deleting the subgraph
+          // const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+          //   labels: subgraph.labels,
+          //   namespaceId: subgraph.namespaceId,
+          //   excludeContracts: true,
+          // });
 
-          // Remove duplicates
-          for (const federatedGraph of currentFederatedGraphs) {
-            const exists = affectedFederatedGraphs.find((g) => g.name === federatedGraph.name);
-            if (!exists) {
-              affectedFederatedGraphs.push(federatedGraph);
-            }
-          }
+          // // Remove duplicates
+          // for (const federatedGraph of currentFederatedGraphs) {
+          //   const exists = affectedFederatedGraphs.find((g) => g.name === federatedGraph.name);
+          //   if (!exists) {
+          //     affectedFederatedGraphs.push(federatedGraph);
+          //   }
+          // }
 
           // Recompose and deploy all affected federated graphs and their respective contracts.
           // Collects all composition and deployment errors if any.
